@@ -21,7 +21,7 @@
 
 	// Alive: allowed if OxyLoss > 0 OR health < 0
 	if(target.stat != DEAD)
-		if(target.getOxyLoss() > 0)
+		if(target.get_oxy_loss() > 0)
 			return TRUE
 		if(target.health < 0)
 			return TRUE
@@ -141,11 +141,11 @@
 	return do_cpr_internal(target, allow_auto_toggle = TRUE)
 
 /// Internal single CPR iteration used by auto-cycle (does not toggle auto-cycle again)
-/mob/living/carbon/human/proc/do_cpr_once(mob/living/carbon/target)
+/mob/living/proc/do_cpr_once(mob/living/carbon/target)
 	return do_cpr_internal(target, allow_auto_toggle = FALSE)
 
 /// Shared CPR implementation used by both manual and auto-cycle paths
-/mob/living/carbon/human/proc/do_cpr_internal(mob/living/carbon/target, allow_auto_toggle = TRUE)
+/mob/living/proc/do_cpr_internal(mob/living/carbon/target, allow_auto_toggle = TRUE)
 	if(!can_perform_cpr_on(target))
 		return FALSE
 
@@ -166,7 +166,7 @@
 		to_chat(src, span_warning("вы не дышите!"))
 		return FALSE
 
-	var/obj/item/organ/internal/lungs/human_lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
+	var/obj/item/organ/lungs/human_lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
 	if(isnull(human_lungs))
 		balloon_alert(src, "у вас нет легких!")
 		return FALSE
@@ -236,7 +236,7 @@
 		var/oxy_amt = has_chip ? CPR_OXY_HEAL_CHIP : CPR_OXY_HEAL_BASE
 		oxy_amt = round(oxy_amt * eff_mult)
 		if(oxy_amt > 0)
-			target.adjustOxyLoss(-min(target.getOxyLoss(), oxy_amt))
+			target.adjust_oxy_loss(-min(target.get_oxy_loss(), oxy_amt))
 
 	// Preservation window (alive or dead)
 	cpr_apply_preserve_window(target, has_chip)
@@ -247,7 +247,7 @@
 
 	return TRUE
 
-/mob/living/carbon/proc/handle_organs(seconds_per_tick, times_fired)
+/mob/living/carbon/handle_organs(seconds_per_tick, times_fired)
 	if(stat == DEAD)
 		if(reagents && (reagents.has_reagent(/datum/reagent/toxin/formaldehyde, 1) || reagents.has_reagent(/datum/reagent/cryostylane)))
 			return
@@ -255,7 +255,7 @@
 		if(world.time < cpr_preserve_until)
 			return
 
-		for(var/obj/item/organ/internal/organ in organs)
+		for(var/obj/item/organ/organ in organs)
 			// On-death is where organ decay is handled
 			if(organ?.owner)
 				organ.on_death(seconds_per_tick, times_fired)
@@ -266,6 +266,6 @@
 
 	// NOTE: organs_slot is sorted by GLOB.organ_process_order on insertion
 	for(var/slot in organs_slot)
-		var/obj/item/organ/internal/organ = organs_slot[slot]
+		var/obj/item/organ/organ = organs_slot[slot]
 		if(organ?.owner)
 			organ.on_life(seconds_per_tick, times_fired)
