@@ -11,6 +11,9 @@
 	/// Skill level this perk belongs to.
 	var/level = CY_SKILL_LEVEL_UNTRAINED
 
+	/// Skill typepath this perk belongs to. Optional, but useful for UI/logs.
+	var/skill_type = null
+
 /datum/cy_skill_perk/proc/on_gain(mob/living/owner)
 	return
 

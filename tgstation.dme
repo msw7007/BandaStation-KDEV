@@ -5656,6 +5656,8 @@
 #include "code\modules\mob\living\carbon\human\species_types\zombies.dm"
 #include "code\modules\mob\living\skills\_skill.dm"
 #include "code\modules\mob\living\skills\physical_skills.dm"
+#include "code\modules\mob\living\skills\professional_skills.dm"
+#include "code\modules\mob\living\skills\weapon_skills.dm"
 #include "code\modules\mob\living\skills\skill_holder.dm"
 #include "code\modules\mob\living\skills\skill_perk.dm"
 #include "code\modules\mob\living\stats\living_stats.dm"

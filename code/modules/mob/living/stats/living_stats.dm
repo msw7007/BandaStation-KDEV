@@ -50,3 +50,7 @@
 /mob/living/proc/get_cy_check_chance(stat_type, skill_type = null, difficulty = 0)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.get_check_chance(stat_type, skill_type, difficulty)
+
+/mob/living/proc/get_cy_skill_check_chance(skill_type, difficulty = 0)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_check_chance(skill_type, difficulty)

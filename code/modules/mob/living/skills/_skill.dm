@@ -21,6 +21,9 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 	/// Description for later UI.
 	var/desc = ""
 
+	/// Category marker for UI/filtering: physical, weapon, professional, etc.
+	var/category = "physical"
+
 	/// Stat typepath used in checks and stat capacity limits.
 	var/governing_stat = null
 
@@ -29,12 +32,28 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 	/// Weapon and professional skills should use FALSE.
 	var/limited_by_stat = TRUE
 
+	/// Maximum level for this skill.
+	/// Physical and professional skills use 6. Weapon skills use 5.
+	var/max_level = CY_SKILL_MAXIMUM_LEVEL
+
 	/// Assoc/list indexed by skill level.
-	/// Can hold strings, datum paths, or /datum/cy_skill_perk paths.
+	/// Can hold /datum/cy_skill_perk paths.
 	var/list/perks_by_level = list()
 
 /datum/cy_skill/proc/get_perks_for_level(level)
 	if(!length(perks_by_level))
 		return list()
 
-	return perks_by_level[level] || list()
+	var/list/perks = perks_by_level[level]
+	if(!length(perks))
+		return list()
+
+	return perks
+
+/datum/cy_skill/proc/get_all_perks_up_to_level(level)
+	var/list/all_perks = list()
+	for(var/current_level in 1 to min(level, max_level))
+		for(var/perk_type in get_perks_for_level(current_level))
+			all_perks += perk_type
+
+	return all_perks
