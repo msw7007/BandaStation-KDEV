@@ -30,3 +30,27 @@
 #define PIXEL_X_OFFSET "x"
 #define PIXEL_Y_OFFSET "y"
 #define PIXEL_Z_OFFSET "z"
+
+/// CyberPunk actor stat bounds.
+#define CY_STAT_MINIMUM 1
+#define CY_STAT_MAXIMUM 20
+#define CY_STAT_DEFAULT 5
+
+/// Check math from the character design block.
+#define CY_STAT_VALUE_PER_POINT 5
+#define CY_SKILL_VALUE_PER_LEVEL 10
+#define CY_LUCK_PERCENT_PER_POINT 2.5
+
+#define CY_CHECK_MINIMUM_CHANCE 1
+#define CY_CHECK_MAXIMUM_CHANCE 99
+
+#define CY_SKILL_MINIMUM_LEVEL 0
+#define CY_SKILL_MAXIMUM_LEVEL 6
+
+#define CY_SKILL_LEVEL_UNTRAINED 0
+#define CY_SKILL_LEVEL_BEGINNER 1
+#define CY_SKILL_LEVEL_SKILLED 2
+#define CY_SKILL_LEVEL_TRAINED 3
+#define CY_SKILL_LEVEL_EXPERT 4
+#define CY_SKILL_LEVEL_PROFESSIONAL 5
+#define CY_SKILL_LEVEL_MASTER 6

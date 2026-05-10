@@ -17,6 +17,8 @@
 	SSpoints_of_interest.make_point_of_interest(src)
 	update_fov()
 	gravity_setup()
+	ensure_cy_stat_holder()
+	ensure_cy_skill_holder()
 
 /mob/living/prepare_huds()
 	..()
