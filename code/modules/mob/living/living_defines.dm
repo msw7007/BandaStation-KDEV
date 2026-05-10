@@ -270,3 +270,10 @@
 	/// Stats and skill holders - don't access these directly, use living helpers
 	var/datum/cy_stat_holder/cy_stat_holder
 	var/datum/cy_skill_holder/cy_skill_holder
+
+	/// Current organization/allegiance prototype used by this living actor.
+	/// This is a shared immutable datum from GLOB.cy_organization_datums; do not qdel it from the mob.
+	var/datum/cy_organization/cy_organization
+
+	/// Stored typepath for saves/spawns and reinitialization.
+	var/cy_organization_type = /datum/cy_organization/neutral

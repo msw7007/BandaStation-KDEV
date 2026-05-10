@@ -1,0 +1,38 @@
+#ifndef CY_ORGANIZATION_DEFINES
+#define CY_ORGANIZATION_DEFINES
+
+#define CY_ORGANIZATION_KIND_NEUTRAL "neutral"
+#define CY_ORGANIZATION_KIND_CORPORATION "corporation"
+#define CY_ORGANIZATION_KIND_GOVERNMENT "government"
+#define CY_ORGANIZATION_KIND_CRIMINAL "criminal"
+#define CY_ORGANIZATION_KIND_WILD "wild"
+#define CY_ORGANIZATION_KIND_THREAT "threat"
+
+#define CY_ORGANIZATION_COMPATIBILITY_SAME 100
+#define CY_ORGANIZATION_COMPATIBILITY_PARENT 85
+#define CY_ORGANIZATION_COMPATIBILITY_ALLIED 65
+#define CY_ORGANIZATION_COMPATIBILITY_NEUTRAL 50
+#define CY_ORGANIZATION_COMPATIBILITY_HOSTILE 15
+
+#define CY_TECH_TAG_MEDICAL "medical"
+#define CY_TECH_TAG_GENETIC "genetic"
+#define CY_TECH_TAG_CHEMICAL "chemical"
+#define CY_TECH_TAG_STEALTH "stealth"
+#define CY_TECH_TAG_PRECISION "precision"
+#define CY_TECH_TAG_SPEED "speed"
+
+#define CY_TECH_TAG_ENGINEERING "engineering"
+#define CY_TECH_TAG_ARMOR "armor"
+#define CY_TECH_TAG_FORCE "force"
+#define CY_TECH_TAG_RELIABILITY "reliability"
+#define CY_TECH_TAG_AOE "aoe"
+#define CY_TECH_TAG_SHIELDS "shields"
+
+#define CY_TECH_TAG_LOGISTICS "logistics"
+#define CY_TECH_TAG_TRANSPORT "transport"
+#define CY_TECH_TAG_CONTROL "control"
+#define CY_TECH_TAG_TELEPORT "teleport"
+#define CY_TECH_TAG_INFLUENCE "influence"
+#define CY_TECH_TAG_MASS_PRODUCTION "mass_production"
+
+#endif

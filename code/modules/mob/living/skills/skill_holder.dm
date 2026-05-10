@@ -20,9 +20,13 @@
 	owner = null
 	stat_holder = null
 	skill_levels = null
-	for(var/skill_type in granted_skill_perks)
-		granted_skill_perks[skill_type].Cut()
-		QDEL_LIST(granted_skill_perks[skill_type])
+	if(granted_skill_perks)
+		for(var/skill_type in granted_skill_perks)
+			var/list/skill_perks = granted_skill_perks[skill_type]
+			if(!islist(skill_perks))
+				continue
+			QDEL_LIST(skill_perks)
+		granted_skill_perks.Cut()
 	granted_skill_perks = null
 	return ..()
 

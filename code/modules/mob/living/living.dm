@@ -19,6 +19,7 @@
 	gravity_setup()
 	ensure_cy_stat_holder()
 	ensure_cy_skill_holder()
+	ensure_cy_organization()
 
 /mob/living/prepare_huds()
 	..()
