@@ -680,7 +680,7 @@
 		owner.sync_pain_damage()
 	return changed
 
-/obj/item/bodypart/proc/get_pain_tracker()
+/obj/item/bodypart/proc/get_pain_tracker() as /datum/component/pain_tracker
 	var/datum/component/pain_tracker/pain_tracker = GetComponent(/datum/component/pain_tracker)
 	if(!pain_tracker)
 		pain_tracker = AddComponent(/datum/component/pain_tracker)

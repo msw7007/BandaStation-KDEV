@@ -19,6 +19,22 @@ function UnreadCountWidget(props: UnreadCountWidgetProps) {
   return <Box className="UnreadCount">{Math.min(value, 99)}</Box>;
 }
 
+const pageLabel: Record<string, string> = {
+  Status: 'Статус',
+  Admin: 'Администрация',
+  Debug: 'Логи',
+  OOC: 'OOC',
+  IC: 'IC',
+  Server: 'Сервер',
+  Tickets: 'Билеты',
+  MC: 'MC',
+  Special: 'Special',
+};
+
+function normalizePageName(name: string) {
+  return pageLabel[name] ?? name;
+}
+
 export function ChatTabs(props) {
   const { addChatPage, changeChatPage, pages, pagesRecord, currentPageId } =
     useChatPages();
@@ -26,18 +42,19 @@ export function ChatTabs(props) {
   const [, setSettingsVisible] = useAtom(settingsVisibleAtom);
 
   return (
-    <Stack align="center">
-      <Stack.Item>
-        <Tabs scrollable textAlign="center">
+    <Stack align="center" className="BandaCyberTabs">
+      <Stack.Item grow minWidth={0}>
+        <Tabs scrollable textAlign="center" className="BandaCyberTabs__List">
           {pages.map((page) => {
             const actual = pagesRecord[page];
             return (
               <Tabs.Tab
                 key={page}
                 selected={page === currentPageId}
+                className="BandaCyberTabs__Tab"
                 onClick={() => changeChatPage(actual)}
               >
-                {actual.name}
+                {normalizePageName(actual.name)}
                 {!actual.hideUnreadCount && actual.unreadCount > 0 && (
                   <UnreadCountWidget value={actual.unreadCount} />
                 )}
@@ -48,6 +65,7 @@ export function ChatTabs(props) {
       </Stack.Item>
       <Stack.Item>
         <Button
+          className="BandaCyberTabs__Add"
           color="transparent"
           icon="plus"
           onClick={() => {

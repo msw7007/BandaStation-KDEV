@@ -141,7 +141,12 @@ function ChoicedSelection(props: ChoicedSelectionProps) {
   }
 
   return (
-    <Stack fill vertical g={0} className="PreferencesMenu__ChoicedSelection">
+    <Stack
+      fill
+      vertical
+      g={0}
+      className="PreferencesMenu__ChoicedSelection PreferencesMenu__CatalogPopup"
+    >
       <Stack.Item>
         <Section
           fill
@@ -282,7 +287,6 @@ type PreferenceListProps = {
 };
 
 export function PreferenceList(props: PreferenceListProps) {
-  const { act } = useBackend<PreferencesMenuData>();
   const { preferences, randomizations } = props;
 
   return Object.entries(preferences).length > 0 ? (
@@ -406,19 +410,17 @@ export function MainPage(props: MainPageProps) {
       data.character_preferences.randomization.tts_seed;
     // BANDASTATION ADDITION END - TTS
   } else {
-    // We can't use random_name/is_accessible because the
-    // server doesn't know whether the random toggle is on.
     delete nonContextualPreferences.random_name;
   }
 
   const Character = (
-    <Section fill className="PreferencesMenu__Character">
+    <Section fill className="PreferencesMenu__Character PreferencesMenu__CharacterPreviewCard">
       <Stack fill vertical>
         <Stack.Item>
           <CharacterControls
             gender={data.character_preferences.misc.gender}
             handleOpenSpecies={props.openSpecies}
-            handleOpenAugmentations={() => setAugmentationInputOpen(true)} // BANDASTATION ADDITION - Feat: Augmentations
+            handleOpenAugmentations={() => setAugmentationInputOpen(true)}
             handleRotate={() => {
               act('rotate');
             }}
@@ -431,7 +433,7 @@ export function MainPage(props: MainPageProps) {
             handleDeleteCharacter={() => setDeleteCharacterPopupOpen(true)}
           />
         </Stack.Item>
-        <Stack.Item grow style={{ alignSelf: 'center' }}>
+        <Stack.Item grow className="PreferencesMenu__PreviewFrame">
           <CharacterPreview height="100%" id={data.character_preview_view} />
         </Stack.Item>
         <Stack.Item>
@@ -447,7 +449,7 @@ export function MainPage(props: MainPageProps) {
   );
 
   const MainFeatures = (
-    <Section fill scrollable pl={0.7} width={6.5} ml={-1}>
+    <Section className="PreferencesMenu__FeaturesRail" fill scrollable>
       <Stack vertical direction="column-reverse">
         {mainFeatures.map(([clothingKey, clothing]) => {
           const catalog = serverData?.[
@@ -477,7 +479,7 @@ export function MainPage(props: MainPageProps) {
   );
 
   return (
-    <Stack fill>
+    <Stack fill className="PreferencesMenu__MainLayout" g={1}>
       {augmentationInputOpen && (
         <BodyModificationsPage
           handleClose={() => setAugmentationInputOpen(false)}
@@ -489,19 +491,23 @@ export function MainPage(props: MainPageProps) {
           close={() => setDeleteCharacterPopupOpen(false)}
         />
       )}
-      <Stack.Item>
+      <Stack.Item className="PreferencesMenu__PreviewColumn" basis="27%">
         <Stack fill vertical>
-          <Stack.Item basis="50%">{Character}</Stack.Item>
-          <Stack.Item grow mr={1}>
-            <AlternativeNames names={data.character_preferences.names} />
+          <Stack.Item basis="53%">{Character}</Stack.Item>
+          <Stack.Item grow>
+            <div className="PreferencesMenu__AltNamesCard">
+              <AlternativeNames names={data.character_preferences.names} />
+            </div>
           </Stack.Item>
         </Stack>
       </Stack.Item>
-      <Stack.Item>{MainFeatures}</Stack.Item>
-      <Stack.Item grow>
+      <Stack.Item className="PreferencesMenu__RailColumn" basis="7%">
+        {MainFeatures}
+      </Stack.Item>
+      <Stack.Item className="PreferencesMenu__DetailsColumn" grow>
         <Stack fill vertical>
-          <Stack.Item basis="37.5%">
-            <Section fill scrollable>
+          <Stack.Item basis="42%">
+            <Section fill scrollable title="Внешность" className="PreferencesMenu__InfoPanel">
               <PreferenceList
                 preferences={contextualPreferences}
                 randomizations={getRandomization(
@@ -513,7 +519,7 @@ export function MainPage(props: MainPageProps) {
             </Section>
           </Stack.Item>
           <Stack.Item grow>
-            <Section fill scrollable>
+            <Section fill scrollable title="Профиль персонажа" className="PreferencesMenu__InfoPanel PreferencesMenu__InfoPanel--secondary">
               <PreferenceList
                 preferences={nonContextualPreferences}
                 randomizations={getRandomization(

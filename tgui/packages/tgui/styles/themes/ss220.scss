@@ -125,3 +125,32 @@
     }
   }
 }
+
+// CyberPunk 13 global red/cyan variant used by the preferences/lobby shell.
+.theme-ss220:root {
+  --primary-hue: 354;
+  --primary-saturation: 92%;
+  --primary-lightness: 52%;
+  --color-base: hsl(210, 48%, 4%);
+  --color-base-start: hsl(210, 48%, 7%);
+  --color-base-end: hsl(210, 52%, 2.8%);
+  --color-section: hsla(210, 44%, 7%, 0.96);
+  --color-primary: hsl(354, 100%, 58%);
+  --color-label: hsl(194, 70%, 66%);
+  --color-text: hsl(195, 36%, 92%);
+  --color-text-translucent: hsla(195, 36%, 92%, 0.72);
+  --color-border-primary: hsla(354, 100%, 58%, 0.78);
+  --color-border-secondary: hsla(194, 100%, 58%, 0.44);
+  --pref-background: hsla(210, 56%, 6%, 0.9);
+  --comp-background: hsla(210, 58%, 5%, 0.94);
+  --comp-border: hsla(354, 100%, 58%, 0.42);
+  --button-background-default: hsla(354, 72%, 18%, 0.88);
+  --button-background-selected: hsla(194, 78%, 20%, 0.9);
+  --input-background-lightness: 5;
+  --tooltip-background-lightness: 7;
+  --dimmer-background: hsla(210, 58%, 3%, 0.78);
+  --titlebar-background: hsla(354, 74%, 12%, 0.96);
+  --titlebar-text: hsl(354, 100%, 64%);
+  --titlebar-shadow-core: hsla(354, 100%, 58%, 0.72);
+  --titlebar-shadow-color: hsla(354, 100%, 58%, 0.22);
+}

@@ -33,9 +33,291 @@
 @include meta.load-css('./tgchat/chat-dark.scss');
 
 :root {
-  --chat-text-color: hsl(210, 50%, 80%);
+  --chat-text-color: hsl(195, 64%, 84%);
 
-  --color-base: hsl(0, 0%, 12.5%);
-  --color-section: hsl(from var(--color-base) h s calc(l - 4.2));
+  --color-base: hsl(213, 47%, 4%);
+  --color-section: hsl(213, 47%, 7%);
+  --color-primary: hsl(354, 100%, 59%);
+  --color-label: hsl(194, 85%, 67%);
+  --color-text: hsl(195, 45%, 91%);
+  --color-text-translucent: hsla(195, 45%, 91%, 0.72);
+  --color-border-primary: hsla(354, 100%, 59%, 0.62);
   --base-gradient-spread: 0;
+}
+
+body,
+#react-root {
+  background: #03060a;
+}
+
+.BandaCyberPanel {
+  --banda-red: #ff3046;
+  --banda-red-bright: #ff5064;
+  --banda-red-soft: rgba(255, 48, 70, 0.42);
+  --banda-red-faint: rgba(255, 48, 70, 0.13);
+  --banda-cyan: #24d2ff;
+  --banda-cyan-soft: rgba(36, 210, 255, 0.25);
+  --banda-bg: #03060a;
+  --banda-panel: rgba(5, 9, 13, 0.96);
+  --banda-panel-2: rgba(8, 13, 18, 0.94);
+  --banda-grid-red: rgba(255, 48, 70, 0.035);
+  --banda-grid-cyan: rgba(36, 210, 255, 0.03);
+  --banda-cut: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 90% 8%, rgba(36, 210, 255, 0.12), transparent 16rem),
+    radial-gradient(circle at 10% 92%, rgba(255, 48, 70, 0.12), transparent 18rem),
+    linear-gradient(180deg, rgba(4, 7, 11, 0.99), rgba(1, 3, 6, 0.99));
+  font-family: 'Bahnschrift', 'Rajdhani', 'Segoe UI Condensed', 'Arial Narrow', sans-serif;
+
+  .Stack {
+    min-width: 0;
+  }
+
+  .Section {
+    position: relative;
+    border: 1px solid var(--banda-red-soft);
+    border-radius: 0;
+    background:
+      linear-gradient(135deg, rgba(255, 48, 70, 0.065), transparent 35%),
+      linear-gradient(180deg, var(--banda-panel-2), var(--banda-panel));
+    clip-path: var(--banda-cut);
+    box-shadow:
+      inset 0 0 0 1px rgba(36, 210, 255, 0.06),
+      inset 0 0 22px rgba(0, 0, 0, 0.52),
+      0 0 18px rgba(255, 48, 70, 0.08);
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(36, 210, 255, 0.075);
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      pointer-events: none;
+    }
+
+    .Section__title {
+      min-height: 30px;
+      padding: 0 12px;
+      border-bottom: 1px solid rgba(255, 48, 70, 0.25);
+      background:
+        linear-gradient(90deg, rgba(120, 7, 20, 0.42), rgba(120, 7, 20, 0.12) 56%, transparent),
+        rgba(3, 6, 9, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+
+      &Text {
+        color: var(--banda-red-bright);
+        font-weight: 900;
+        text-shadow: 0 0 8px rgba(255, 48, 70, 0.55);
+      }
+    }
+  }
+
+  .Button {
+    min-height: 28px;
+    border: 1px solid rgba(255, 48, 70, 0.38);
+    border-radius: 0;
+    background:
+      linear-gradient(180deg, rgba(37, 7, 12, 0.94), rgba(7, 10, 14, 0.96));
+    color: #d6edf6;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+    box-shadow: inset 0 0 10px rgba(255, 48, 70, 0.08);
+
+    &:hover,
+    &--selected,
+    &.selected {
+      border-color: rgba(36, 210, 255, 0.72);
+      background:
+        linear-gradient(180deg, rgba(7, 39, 52, 0.96), rgba(7, 10, 14, 0.98));
+      color: #ffffff;
+      box-shadow:
+        inset 0 0 12px rgba(36, 210, 255, 0.18),
+        0 0 12px rgba(36, 210, 255, 0.1);
+    }
+  }
+
+  .Input,
+  .TextArea,
+  .Dropdown__control,
+  .NumberInput__content {
+    border: 1px solid rgba(255, 48, 70, 0.35);
+    border-radius: 0;
+    background: rgba(2, 5, 8, 0.96);
+    color: var(--color-text);
+  }
+
+  .BandaCyberPanel__Header {
+    margin: 0 0 4px;
+    border-color: rgba(255, 48, 70, 0.64);
+    background:
+      linear-gradient(90deg, rgba(150, 10, 25, 0.22), transparent 45%),
+      rgba(3, 6, 9, 0.96);
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+
+    .Section__content {
+      padding: 4px 6px !important;
+    }
+  }
+
+  .BandaCyberPanel__HeaderRow {
+    gap: 8px;
+  }
+
+  .BandaCyberPanel__TabsFrame {
+    min-height: 34px;
+    padding: 0 5px;
+    border: 1px solid rgba(255, 48, 70, 0.2);
+    background:
+      linear-gradient(180deg, rgba(8, 12, 16, 0.94), rgba(1, 3, 6, 0.96));
+    clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px);
+  }
+
+  .BandaCyberPanel__Controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .Button {
+      min-width: 30px;
+      height: 30px;
+      padding: 0 8px;
+    }
+  }
+
+  .BandaCyberPanel__Drawer,
+  .BandaCyberPanel__SettingsFrame {
+    margin-bottom: 4px;
+  }
+
+  .BandaCyberPanel__Drawer {
+    border-color: rgba(36, 210, 255, 0.42);
+    background:
+      linear-gradient(180deg, rgba(4, 18, 24, 0.96), rgba(3, 6, 9, 0.98));
+  }
+
+  .BandaCyberPanel__SettingsFrame {
+    .Section {
+      border-color: rgba(36, 210, 255, 0.34);
+    }
+  }
+
+  .BandaCyberPanel__ChatBox {
+    height: 100%;
+    border-color: rgba(255, 48, 70, 0.58);
+    background:
+      linear-gradient(var(--banda-grid-red) 1px, transparent 1px),
+      linear-gradient(90deg, var(--banda-grid-cyan) 1px, transparent 1px),
+      radial-gradient(circle at top right, rgba(36, 210, 255, 0.07), transparent 17rem),
+      rgba(2, 5, 8, 0.97);
+    background-size: 30px 30px, 30px 30px, auto, auto;
+
+    .Section__content {
+      height: 100%;
+      padding: 0 !important;
+    }
+  }
+
+  .BandaCyberPanel__ChatTitle {
+    position: absolute;
+    z-index: 2;
+    top: 8px;
+    left: 12px;
+    color: var(--banda-red-bright);
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255, 48, 70, 0.65);
+    pointer-events: none;
+  }
+
+  #chat-pane {
+    height: 100%;
+    padding: 28px 8px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--banda-red) rgba(8, 12, 16, 0.96);
+
+    &::-webkit-scrollbar {
+      width: 9px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(5, 8, 12, 0.96);
+      border-left: 1px solid rgba(255, 48, 70, 0.22);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--banda-red), #a81024);
+      border: 1px solid rgba(255, 48, 70, 0.55);
+    }
+  }
+
+  .BandaCyberTabs {
+    min-height: 32px;
+    gap: 4px;
+  }
+
+  .BandaCyberTabs__List {
+    width: 100%;
+
+    .Tabs__tab,
+    .BandaCyberTabs__Tab {
+      position: relative;
+      min-height: 30px;
+      padding: 0 9px;
+      border: 1px solid transparent;
+      border-bottom: 2px solid rgba(255, 48, 70, 0.18);
+      border-radius: 0;
+      background: transparent;
+      color: #8aa9b8;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.055em;
+      text-transform: uppercase;
+
+      &:hover,
+      &--selected,
+      &.selected {
+        border-color: rgba(255, 48, 70, 0.32);
+        border-bottom-color: var(--banda-red);
+        background:
+          linear-gradient(180deg, rgba(130, 8, 23, 0.34), rgba(4, 7, 11, 0.18));
+        color: #fff6f7;
+        text-shadow: 0 0 8px rgba(255, 48, 70, 0.65);
+        box-shadow: inset 0 -2px 0 var(--banda-red);
+      }
+    }
+  }
+
+  .BandaCyberTabs__Add {
+    min-width: 28px;
+    border-color: rgba(36, 210, 255, 0.26);
+    color: var(--banda-cyan);
+  }
+
+  .UnreadCount {
+    margin-left: 4px;
+    border: 1px solid rgba(36, 210, 255, 0.55);
+    border-radius: 0;
+    background: rgba(36, 210, 255, 0.18);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(36, 210, 255, 0.16);
+  }
+
+  .chatLine,
+  .chat-line,
+  .ChatLine {
+    color: #b8dce8;
+  }
+
+  .NoticeBox,
+  .Notifications__item {
+    border-radius: 0;
+    border-color: rgba(255, 48, 70, 0.4);
+    background: rgba(50, 8, 14, 0.92);
+  }
 }

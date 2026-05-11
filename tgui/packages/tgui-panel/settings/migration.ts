@@ -105,6 +105,12 @@ export function startSettingsMigration(next: MergedSettings): void {
   });
   draftSettings.initialized = true;
   draftSettings.view = defaultSettings.view; // Preserve view state
+  // CP13: keep the native BYOND statbrowser in the cyberpunk skin even for
+  // clients that already have old panel settings in byondStorage.
+  draftSettings.theme = 'dark';
+  draftSettings.statTabsStyle = 'classic';
+  draftSettings.statLinked = false;
+  draftSettings.statFontSize = 13;
 
   generalSettingsHandler(draftSettings);
   setMusicVolume(draftSettings.adminMusicVolume);

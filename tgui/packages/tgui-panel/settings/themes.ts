@@ -14,21 +14,21 @@ let setClientThemeTimer: NodeJS.Timeout;
  * This lets you switch client themes by using winset.
  *
  * If you change ANYTHING in interface/skin.dmf you need to change it here.
- *
  * There's no way round it. We're essentially changing the skin by hand.
  * It's painful but it works, and is the way Lummox suggested.
  */
 export function setClientTheme(name): void | Promise<void> {
-  // Transmit once for fast updates and again in a little while in case we won
-  // the race against statbrowser init.
-  clearInterval(setClientThemeTimer);
-  Byond.command(`.output statbrowser:set_theme ${name}`);
-  setClientThemeTimer = setTimeout(() => {
-    Byond.command(`.output statbrowser:set_theme ${name}`);
-  }, 1500);
+  const themeColor = COLORS[name.toUpperCase()] ?? COLORS.DARK;
 
-  const themeColor = COLORS[name.toUpperCase()];
-  if (!themeColor) return;
+  // Native BYOND statbrowser only understands its own small theme protocol.
+  // Feed it a dark theme, then hammer the skin controls with winset colors.
+  // Unsupported control ids/properties are ignored by BYOND, so this list is
+  // intentionally broad to cover tg upstream + downstream skin.dmf variants.
+  clearInterval(setClientThemeTimer);
+  applyNativeStatbrowserTheme(name, themeColor);
+  setClientThemeTimer = setTimeout(() => {
+    applyNativeStatbrowserTheme(name, themeColor);
+  }, 1500);
 
   return Byond.winset({
     // Main windows
@@ -40,11 +40,37 @@ export function setClientTheme(name): void | Promise<void> {
     'info.background-color': themeColor.BG_BASE,
     'info.text-color': themeColor.TEXT,
     'browseroutput.background-color': themeColor.BG_BASE,
+    'browseroutput.inner-background-color': themeColor.BG_BASE,
     'browseroutput.text-color': themeColor.TEXT,
     'outputwindow.background-color': themeColor.BG_BASE,
     'outputwindow.text-color': themeColor.TEXT,
     'mainwindow.background-color': themeColor.BG_BASE,
     'split.background-color': themeColor.BG_BASE,
+    // Right/native stat panel variants.
+    'statwindow.background-color': themeColor.BG_BASE,
+    'statwindow.inner-background-color': themeColor.BG_BASE,
+    'statwindow.text-color': themeColor.TEXT,
+    'statwindow.border-color': themeColor.BORDER,
+    'statpanel.background-color': themeColor.BG_BASE,
+    'statpanel.inner-background-color': themeColor.BG_BASE,
+    'statpanel.text-color': themeColor.TEXT,
+    'statpanel.border-color': themeColor.BORDER,
+    'statbrowser.background-color': themeColor.BG_BASE,
+    'statbrowser.inner-background-color': themeColor.BG_BASE,
+    'statbrowser.text-color': themeColor.TEXT,
+    'statbrowser.border-color': themeColor.BORDER,
+    'stat.background-color': themeColor.BG_BASE,
+    'stat.inner-background-color': themeColor.BG_BASE,
+    'stat.text-color': themeColor.TEXT,
+    'stat.border-color': themeColor.BORDER,
+    'stat_tabs.background-color': themeColor.BG_BASE,
+    'stat_tabs.text-color': themeColor.TEXT,
+    'stat_tabs.border-color': themeColor.BORDER,
+    // Status and verb tabs/output controls.
+    'output.background-color': themeColor.BG_BASE,
+    'output.inner-background-color': themeColor.BG_BASE,
+    'output.text-color': themeColor.TEXT,
+    'output.border-color': themeColor.BORDER,
     // Buttons
     'changelog.background-color': themeColor.BUTTON,
     'changelog.text-color': themeColor.TEXT,
@@ -60,9 +86,6 @@ export function setClientTheme(name): void | Promise<void> {
     'report-issue.text-color': themeColor.TEXT,
     'fullscreen-toggle.background-color': themeColor.BUTTON,
     'fullscreen-toggle.text-color': themeColor.TEXT,
-    // Status and verb tabs
-    'output.background-color': themeColor.BG_BASE,
-    'output.text-color': themeColor.TEXT,
     // Say, OOC, me Buttons etc.
     'saybutton.background-color': themeColor.BG_BASE,
     'saybutton.text-color': themeColor.TEXT,
@@ -73,10 +96,37 @@ export function setClientTheme(name): void | Promise<void> {
     'mebutton.background-color': themeColor.BG_BASE,
     'mebutton.text-color': themeColor.TEXT,
     'asset_cache_browser.background-color': themeColor.BG_BASE,
+    'asset_cache_browser.inner-background-color': themeColor.BG_BASE,
     'asset_cache_browser.text-color': themeColor.TEXT,
     'tooltip.background-color': themeColor.BG_BASE,
     'tooltip.text-color': themeColor.TEXT,
     'input.background-color': themeColor.BG_SECOND,
     'input.text-color': themeColor.TEXT,
+  });
+}
+
+function applyNativeStatbrowserTheme(name, themeColor): void {
+  // `statbrowser` is a native BYOND output target, not the React chat panel.
+  // It currently has limited protocol commands; real deep styling beyond these
+  // requires replacing the native panel with a custom tgui window.
+  const nativeTheme = name === 'light' ? 'light' : 'dark';
+  Byond.command(`.output statbrowser:set_theme ${nativeTheme}`);
+  Byond.command('.output statbrowser:set_tabs_style classic');
+  Byond.command('.output statbrowser:set_font_size 13px');
+
+  // These skin ids exist on some downstreams and are ignored on others.
+  Byond.winset({
+    'statbrowser.background-color': themeColor.BG_BASE,
+    'statbrowser.inner-background-color': themeColor.BG_BASE,
+    'statbrowser.text-color': themeColor.TEXT,
+    'statbrowser.border-color': themeColor.BORDER,
+    'statwindow.background-color': themeColor.BG_BASE,
+    'statwindow.inner-background-color': themeColor.BG_BASE,
+    'statwindow.text-color': themeColor.TEXT,
+    'statwindow.border-color': themeColor.BORDER,
+    'output.background-color': themeColor.BG_BASE,
+    'output.inner-background-color': themeColor.BG_BASE,
+    'output.text-color': themeColor.TEXT,
+    'output.border-color': themeColor.BORDER,
   });
 }

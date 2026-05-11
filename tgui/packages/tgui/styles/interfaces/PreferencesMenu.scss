@@ -788,3 +788,365 @@ $department_map: (
     margin: 0;
   }
 }
+
+// -----------------------------------------------------------------------------
+// CyberPunk 13 / BandaStation lobby-grade preferences skin.
+// Visual-only pass: keeps the existing actions/data flow intact.
+// -----------------------------------------------------------------------------
+.theme-ss220 .Window:has(.PreferencesMenu--BandaCyber) {
+  --banda-red: #ff263c;
+  --banda-red-deep: #670814;
+  --banda-red-soft: rgba(255, 38, 60, 0.36);
+  --banda-cyan: #29d7ff;
+  --banda-cyan-soft: rgba(41, 215, 255, 0.28);
+  --banda-gold: #ffbf3f;
+  --banda-bg: #03070b;
+  --banda-panel: rgba(5, 11, 16, 0.96);
+  --banda-panel-soft: rgba(8, 19, 27, 0.88);
+  --banda-grid-red: rgba(255, 38, 60, 0.055);
+
+  background:
+    radial-gradient(circle at 78% 18%, rgba(41, 215, 255, 0.13), transparent 16rem),
+    radial-gradient(circle at 18% 92%, rgba(255, 38, 60, 0.12), transparent 18rem),
+    linear-gradient(180deg, #071018 0%, #020509 100%);
+
+  .TitleBar {
+    height: 34px;
+    background:
+      linear-gradient(90deg, rgba(125, 11, 24, 0.92), rgba(32, 8, 13, 0.96) 62%, rgba(7, 13, 18, 0.98)),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+    border-bottom: 1px solid rgba(255, 38, 60, 0.72);
+    box-shadow: 0 0 22px rgba(255, 38, 60, 0.16), inset 0 -1px rgba(41, 215, 255, 0.16);
+    clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+  }
+
+  .TitleBar__title {
+    color: #ff4052;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255, 38, 60, 0.72);
+  }
+
+  .TitleBar__statusIcon {
+    color: var(--banda-cyan) !important;
+    filter: drop-shadow(0 0 5px rgba(41, 215, 255, 0.8));
+  }
+
+  .TitleBar__buttons .Button,
+  .TitleBar__close,
+  .PreferencesMenu__WindowSwitch {
+    border-radius: 0 !important;
+    border: 1px solid rgba(41, 215, 255, 0.42) !important;
+    background: rgba(4, 16, 24, 0.9) !important;
+    color: var(--banda-cyan) !important;
+  }
+
+  .TitleBar__close:hover,
+  .PreferencesMenu__WindowSwitch:hover {
+    background: rgba(255, 38, 60, 0.18) !important;
+    color: #fff !important;
+    box-shadow: 0 0 14px rgba(255, 38, 60, 0.28);
+  }
+
+  .Window__rest {
+    top: 34px;
+  }
+}
+
+.PreferencesMenu--BandaCyber {
+  --color-primary: #ff263c;
+  --color-section: rgba(5, 11, 16, 0.94);
+  --color-base: #040a0f;
+  --pref-background: rgba(8, 19, 27, 0.86);
+  --comp-background: rgba(3, 9, 14, 0.96);
+  --comp-border: rgba(255, 38, 60, 0.42);
+  --input-background: rgba(2, 7, 11, 0.98);
+  --input-border-color: rgba(255, 38, 60, 0.56);
+  --tab-background: rgba(5, 10, 14, 0.82);
+  --tab-background-hover: rgba(26, 64, 78, 0.7);
+  --tab-background-selected: rgba(116, 12, 24, 0.82);
+  --tab-color: #88b6c7;
+  --tab-color-selected: #fff4f4;
+  --tab-border-radius: 0;
+  --tabs-container-background: rgba(2, 6, 9, 0.9);
+  --section-background: rgba(5, 11, 16, 0.94);
+
+  overflow: hidden;
+  color: #dcecf2;
+  font-family: 'Bahnschrift', 'Rajdhani', 'Segoe UI Condensed', 'Arial Narrow', sans-serif;
+  background:
+    linear-gradient(rgba(255, 38, 60, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 215, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 28% 18%, rgba(41, 215, 255, 0.08), transparent 24rem),
+    radial-gradient(circle at 100% 90%, rgba(255, 38, 60, 0.1), transparent 24rem),
+    #03070b;
+  background-size: 28px 28px, 28px 28px, auto, auto, auto;
+
+  &::before,
+  &::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    z-index: 3;
+  }
+
+  &::before {
+    inset: 10px;
+    border: 1px solid rgba(255, 38, 60, 0.28);
+    clip-path: polygon(22px 0, calc(100% - 44px) 0, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 24px 100%, 0 calc(100% - 24px), 0 22px);
+    box-shadow: inset 0 0 34px rgba(255, 38, 60, 0.05);
+  }
+
+  &::after {
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 35%, rgba(255, 38, 60, 0.025));
+    mix-blend-mode: screen;
+  }
+
+  .PreferencesMenu__CharacterPage,
+  > .Stack {
+    padding: 14px;
+    gap: 8px !important;
+  }
+
+  .Section {
+    border: 1px solid rgba(255, 38, 60, 0.46);
+    border-radius: 0;
+    background:
+      linear-gradient(135deg, rgba(255, 38, 60, 0.07), transparent 34%),
+      linear-gradient(180deg, rgba(9, 18, 24, 0.98), rgba(2, 7, 11, 0.96));
+    box-shadow:
+      inset 0 0 0 1px rgba(41, 215, 255, 0.055),
+      inset 0 0 26px rgba(0, 0, 0, 0.64),
+      0 0 18px rgba(0, 0, 0, 0.46);
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  }
+
+  .Section__title {
+    min-height: 26px;
+    padding: 0 !important;
+    background: linear-gradient(90deg, rgba(125, 11, 24, 0.95), rgba(52, 9, 17, 0.7) 60%, transparent);
+    border-bottom: 1px solid rgba(255, 38, 60, 0.5);
+    color: #ff4255;
+    text-align: left !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 8px rgba(255, 38, 60, 0.75);
+  }
+
+  .Section__titleText {
+    font-size: 11px !important;
+    font-weight: 900;
+    color: #ff4255 !important;
+  }
+
+  .Section__content {
+    scrollbar-width: thin;
+    scrollbar-color: #ff263c rgba(4, 11, 16, 0.9);
+  }
+
+  .PreferencesMenu__TopShell {
+    border-color: rgba(255, 38, 60, 0.72);
+    background:
+      linear-gradient(90deg, rgba(64, 7, 14, 0.92), rgba(5, 10, 14, 0.98) 48%, rgba(64, 7, 14, 0.74)),
+      linear-gradient(rgba(255, 38, 60, 0.05) 1px, transparent 1px);
+    background-size: auto, 24px 24px;
+    box-shadow: 0 0 24px rgba(255, 38, 60, 0.12);
+
+    .Section__title {
+      background: transparent;
+      border-bottom: 1px solid rgba(255, 38, 60, 0.42);
+    }
+  }
+
+  .PreferencesMenu__TopShellTitle {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 4px 9px;
+  }
+
+  .PreferencesMenu__TopShellEyebrow {
+    font-size: 9px;
+    color: var(--banda-cyan, #29d7ff);
+    letter-spacing: 0.15em;
+  }
+
+  .PreferencesMenu__TopShellName {
+    color: #ff4052;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .PreferencesMenu__PrimaryTabs,
+  .Tabs {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: rgba(2, 5, 8, 0.92) !important;
+    border-top: 1px solid rgba(41, 215, 255, 0.16);
+  }
+
+  .Tab {
+    min-height: 34px;
+    border-right: 1px solid rgba(255, 38, 60, 0.22);
+    border-radius: 0 !important;
+    color: #88b6c7;
+    background: linear-gradient(180deg, rgba(8, 15, 21, 0.92), rgba(4, 8, 12, 0.96));
+    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+
+    &:hover {
+      color: #e9fbff;
+      background: linear-gradient(180deg, rgba(9, 48, 62, 0.62), rgba(4, 8, 12, 0.96));
+    }
+
+    &--selected {
+      color: #fff4f5;
+      background:
+        linear-gradient(180deg, rgba(126, 12, 25, 0.95), rgba(42, 8, 14, 0.96)) !important;
+      box-shadow: inset 0 -2px #29d7ff, inset 0 0 16px rgba(255, 38, 60, 0.14);
+      text-shadow: 0 0 8px rgba(255, 38, 60, 0.82);
+    }
+  }
+
+  .Tab__left {
+    color: #29d7ff;
+    text-shadow: 0 0 6px rgba(41, 215, 255, 0.75);
+  }
+
+  .PreferencesMenu__PageViewport {
+    padding-top: 7px;
+  }
+
+  .PreferencesMenu__Character {
+    min-width: 235px;
+    border-color: rgba(41, 215, 255, 0.48);
+    background:
+      radial-gradient(circle at 50% 42%, rgba(41, 215, 255, 0.1), transparent 9rem),
+      linear-gradient(rgba(41, 215, 255, 0.045) 1px, transparent 1px),
+      rgba(2, 9, 14, 0.96);
+    background-size: auto, 22px 22px, auto;
+  }
+
+  .PreferencesMenu__CharacterControls {
+    gap: 4px;
+    padding: 5px;
+    border: 1px solid rgba(41, 215, 255, 0.35);
+    background: rgba(3, 13, 19, 0.94);
+  }
+
+  .PreferencesMenu__CharacterControls .Button,
+  .Button,
+  .ImageButton,
+  .Input,
+  .TextArea,
+  .Dropdown__control,
+  .Toggle {
+    border-radius: 0 !important;
+  }
+
+  .Button,
+  .ImageButton {
+    border: 1px solid rgba(255, 38, 60, 0.38) !important;
+    background: linear-gradient(180deg, rgba(43, 9, 15, 0.92), rgba(5, 11, 16, 0.96)) !important;
+    color: #dff6ff !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.36);
+
+    &:hover,
+    &--selected {
+      border-color: rgba(41, 215, 255, 0.82) !important;
+      color: #fff !important;
+      background: linear-gradient(180deg, rgba(8, 53, 70, 0.96), rgba(5, 11, 16, 0.96)) !important;
+      box-shadow: inset 0 0 14px rgba(41, 215, 255, 0.14), 0 0 10px rgba(41, 215, 255, 0.14);
+    }
+  }
+
+  .PreferencesMenu__Name .Button {
+    border-color: rgba(41, 215, 255, 0.56) !important;
+    background: rgba(2, 11, 17, 0.98) !important;
+    color: #dff7ff !important;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .PreferencesMenu__AltName {
+    border-color: rgba(41, 215, 255, 0.26);
+    background: rgba(2, 10, 15, 0.8);
+    border-radius: 0;
+  }
+
+  .PreferencesMenu__AltName--explanation,
+  .PreferencesMenu__Preference--desc {
+    color: rgba(155, 207, 222, 0.72);
+  }
+
+  .PreferencesMenu__Preference {
+    margin-bottom: 7px;
+    padding: 7px 8px;
+    border: 1px solid rgba(255, 38, 60, 0.34);
+    border-radius: 0;
+    outline: none;
+    background:
+      linear-gradient(90deg, rgba(255, 38, 60, 0.045), transparent 50%),
+      rgba(5, 12, 18, 0.88);
+  }
+
+  .PreferencesMenu__Preference--name {
+    color: #ff4052;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-size: 11px;
+  }
+
+  .Dropdown,
+  .Dropdown__control,
+  .Input,
+  .TextArea {
+    background: rgba(2, 7, 11, 0.98) !important;
+    color: #e8fbff !important;
+    border-color: rgba(255, 38, 60, 0.52) !important;
+  }
+
+  .Dropdown:hover,
+  .Dropdown__control:hover,
+  .Input:hover,
+  .TextArea:hover,
+  .Input:focus,
+  .TextArea:focus {
+    border-color: rgba(41, 215, 255, 0.76) !important;
+    box-shadow: 0 0 10px rgba(41, 215, 255, 0.1);
+  }
+
+  .PreferencesMenu__ChoicedSelection,
+  .PreferencesMenu__ProfilePopup {
+    border: 1px solid rgba(255, 38, 60, 0.54);
+    background: rgba(4, 10, 15, 0.98);
+    box-shadow: 0 0 28px rgba(0, 0, 0, 0.72), 0 0 20px rgba(255, 38, 60, 0.12);
+  }
+
+  .ColorInput__Color {
+    border-radius: 0;
+    border-color: rgba(41, 215, 255, 0.72);
+  }
+}
+
+.theme-ss220 .TitleBar {
+  background: linear-gradient(90deg, rgba(125, 11, 24, 0.92), rgba(32, 8, 13, 0.96) 62%, rgba(7, 13, 18, 0.98));
+  border-bottom-color: rgba(255, 38, 60, 0.72);
+  box-shadow: 0 0 22px rgba(255, 38, 60, 0.16), inset 0 -1px rgba(41, 215, 255, 0.16);
+}
+
+.theme-ss220 .TitleBar__title {
+  color: #ff4052;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(255, 38, 60, 0.72);
+}

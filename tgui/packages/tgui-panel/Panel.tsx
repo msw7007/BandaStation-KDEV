@@ -6,7 +6,7 @@
 
 import { useAtom, useAtomValue } from 'jotai';
 import { Pane } from 'tgui/layouts';
-import { Button, Section, Stack } from 'tgui-core/components';
+import { Box, Button, Section, Stack } from 'tgui-core/components';
 import { visibleAtom } from './audio/atoms';
 import { NowPlayingWidget } from './audio/NowPlayingWidget';
 import { ChatPanel } from './chat/ChatPanel';
@@ -41,49 +41,51 @@ export function Panel(props) {
   useKeepAlive();
 
   return (
-    <Pane theme={settings.theme} canSuspend={false}>
-      <Stack fill vertical>
+    <Pane
+      className="BandaCyberPanel"
+      theme={settings.theme}
+      canSuspend={false}
+    >
+      <Stack fill vertical g={0.75}>
         <Stack.Item>
-          <Section fitted>
-            <Stack mr={1} align="center">
-              <Stack.Item grow>
-                <ChatTabs />
+          <Section fitted className="BandaCyberPanel__Header">
+            <Stack align="center" className="BandaCyberPanel__HeaderRow">
+              <Stack.Item grow minWidth={0}>
+                <Box className="BandaCyberPanel__TabsFrame">
+                  <ChatTabs />
+                </Box>
               </Stack.Item>
               <Stack.Item>
-                <PingIndicator />
-              </Stack.Item>
-              {/* BANDASTATION ADD START - Emote Panel */}
-              <Stack.Item>
-                <Button
-                  color="grey"
-                  selected={emotes.visible}
-                  icon="face-grin-beam"
-                  tooltip="Панель эмоций"
-                  tooltipPosition="bottom-start"
-                  onClick={toggleEmotes}
-                />
-              </Stack.Item>
-              {/* BANDASTATION ADD END - Emote Panel */}
-              <Stack.Item>
-                <Button
-                  color="grey"
-                  selected={audioVisible}
-                  icon="music"
-                  tooltip="Проигрыватель музыки"
-                  tooltipPosition="bottom-start"
-                  onClick={() => setAudioVisible((v) => !v)}
-                />
-              </Stack.Item>
-              <Stack.Item>
-                <Button
-                  icon={settingsVisible ? 'times' : 'cog'}
-                  selected={settingsVisible}
-                  tooltip={
-                    settingsVisible ? 'Закрыть настройки' : 'Открыть настройки'
-                  }
-                  tooltipPosition="bottom-start"
-                  onClick={() => setSettingsVisible((v) => !v)}
-                />
+                <Box className="BandaCyberPanel__Controls">
+                  <PingIndicator />
+                  {/* BANDASTATION ADD START - Emote Panel */}
+                  <Button
+                    color="grey"
+                    selected={emotes.visible}
+                    icon="face-grin-beam"
+                    tooltip="Панель эмоций"
+                    tooltipPosition="bottom-start"
+                    onClick={toggleEmotes}
+                  />
+                  {/* BANDASTATION ADD END - Emote Panel */}
+                  <Button
+                    color="grey"
+                    selected={audioVisible}
+                    icon="music"
+                    tooltip="Проигрыватель музыки"
+                    tooltipPosition="bottom-start"
+                    onClick={() => setAudioVisible((v) => !v)}
+                  />
+                  <Button
+                    icon={settingsVisible ? 'times' : 'cog'}
+                    selected={settingsVisible}
+                    tooltip={
+                      settingsVisible ? 'Закрыть настройки' : 'Открыть настройки'
+                    }
+                    tooltipPosition="bottom-start"
+                    onClick={() => setSettingsVisible((v) => !v)}
+                  />
+                </Box>
               </Stack.Item>
             </Stack>
           </Section>
@@ -91,7 +93,7 @@ export function Panel(props) {
         {/* BANDASTATION ADD START - Emote Panel */}
         {emotes.visible && (
           <Stack.Item>
-            <Section>
+            <Section className="BandaCyberPanel__Drawer" title="Эмоции">
               <EmotePanel />
             </Section>
           </Stack.Item>
@@ -99,18 +101,26 @@ export function Panel(props) {
         {/* BANDASTATION ADD END - Emote Panel */}
         {audioVisible && (
           <Stack.Item>
-            <Section>
+            <Section className="BandaCyberPanel__Drawer" title="Аудио">
               <NowPlayingWidget />
             </Section>
           </Stack.Item>
         )}
         {settingsVisible && (
           <Stack.Item>
-            <SettingsPanel />
+            <Box className="BandaCyberPanel__SettingsFrame">
+              <SettingsPanel />
+            </Box>
           </Stack.Item>
         )}
-        <Stack.Item grow>
-          <Section fill fitted position="relative">
+        <Stack.Item grow minHeight={0}>
+          <Section
+            fill
+            fitted
+            position="relative"
+            className="BandaCyberPanel__ChatBox"
+          >
+            <Box className="BandaCyberPanel__ChatTitle">Консоль сообщений</Box>
             <Pane.Content scrollable id="chat-pane">
               <ChatPanel lineHeight={settings.lineHeight} />
             </Pane.Content>

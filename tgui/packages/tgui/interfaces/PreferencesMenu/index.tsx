@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Button } from 'tgui-core/components';
+import { Button, Stack } from 'tgui-core/components';
 import { exhaustiveCheck } from 'tgui-core/exhaustive';
 import { fetchRetry } from 'tgui-core/http';
 
@@ -23,23 +23,33 @@ export function PreferencesMenu() {
   const { act, data } = useBackend<PreferencesMenuData>();
   const { window } = data;
 
-  const [title, setTitle] = useState('Настройки');
+  const [title, setTitle] = useState('Настройки');
   const isCharacterWindow = window === PrefsWindow.Character;
 
   return (
     <Window
-      width={900}
-      height={741}
+      width={1120}
+      height={760}
       title={title}
       theme="ss220"
       buttons={
-        <Button
-          icon={isCharacterWindow ? 'cog' : 'user'}
-          onClick={() => act('change_preferences_window')}
-        />
+        <Stack g={0.5} align="center">
+          <Stack.Item>
+            <Button
+              className="PreferencesMenu__WindowSwitch"
+              icon={isCharacterWindow ? 'cog' : 'user'}
+              tooltip={isCharacterWindow ? 'Настройки игры' : 'Настройки персонажа'}
+              tooltipPosition="bottom-start"
+              onClick={() => act('change_preferences_window')}
+            />
+          </Stack.Item>
+        </Stack>
       }
     >
-      <Window.Content className="PreferencesMenu">
+      <Window.Content
+        fitted
+        className="PreferencesMenu PreferencesMenu--BandaCyber"
+      >
         <Suspense fallback={<LoadingScreen />}>
           <PrefsWindowInner setTitle={setTitle} />
         </Suspense>
@@ -79,6 +89,7 @@ function PrefsWindowInner(props) {
       content = <GamePreferenceWindow />;
       break;
     case PrefsWindow.Keybindings:
+      title = 'Клавиши управления';
       content = (
         <GamePreferenceWindow
           startingPage={GamePreferencesSelectedPage.Keybindings}

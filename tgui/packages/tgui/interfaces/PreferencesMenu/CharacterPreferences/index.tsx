@@ -32,8 +32,8 @@ type ProfileProps = {
 function CharacterProfiles(props: ProfileProps) {
   const { activeSlot, onClick, profiles } = props;
   return (
-    <div className="PreferencesMenu__ChoicedSelection Characters">
-      <Section fill scrollable title="Персонажи">
+    <div className="PreferencesMenu__ChoicedSelection Characters PreferencesMenu__ProfilePopup">
+      <Section fill scrollable title="Список персонажей">
         <Stack fill vertical>
           {profiles.map((profile, slot) => (
             <Stack.Item key={slot}>
@@ -97,7 +97,7 @@ export function CharacterPreferenceWindow(props) {
       exhaustiveCheck(currentPage);
   }
 
-  function CharacterSelection(props) {
+  function CharacterSelection() {
     return (
       <Floating
         placement="bottom-end"
@@ -119,16 +119,24 @@ export function CharacterPreferenceWindow(props) {
   }
 
   return (
-    <Stack fill vertical>
+    <Stack fill vertical className="PreferencesMenu__CharacterPage">
       <Stack.Item>
         <Section
           fitted
+          className="PreferencesMenu__TopShell"
           title={
-            data.character_profiles[data.active_slot - 1] || 'Новый персонаж'
+            <div className="PreferencesMenu__TopShellTitle">
+              <div className="PreferencesMenu__TopShellEyebrow">
+                Настройка персонажа
+              </div>
+              <div className="PreferencesMenu__TopShellName">
+                {data.character_profiles[data.active_slot - 1] || 'Новый персонаж'}
+              </div>
+            </div>
           }
           buttons={<CharacterSelection />}
         >
-          <Tabs fluid textAlign="center">
+          <Tabs fluid textAlign="center" className="PreferencesMenu__PrimaryTabs">
             <PageButton
               icon="user"
               currentPage={currentPage}
@@ -183,7 +191,13 @@ export function CharacterPreferenceWindow(props) {
           </Tabs>
         </Section>
       </Stack.Item>
-      <Stack.Item grow position="relative" overflowX="hidden" overflowY="auto">
+      <Stack.Item
+        grow
+        position="relative"
+        overflowX="hidden"
+        overflowY="auto"
+        className="PreferencesMenu__PageViewport"
+      >
         {pageContents}
       </Stack.Item>
     </Stack>
