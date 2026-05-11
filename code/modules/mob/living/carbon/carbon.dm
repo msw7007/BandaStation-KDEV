@@ -426,9 +426,10 @@
 	var/total_burn = 0
 	var/total_brute = 0
 	for(var/obj/item/bodypart/BP as anything in get_bodyparts())
-		total_brute += (BP.brute_dam * BP.body_damage_coeff)
-		total_burn += (BP.burn_dam * BP.body_damage_coeff)
-	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - total_burn - total_brute, DAMAGE_PRECISION))
+		total_brute += (BP.get_brute_damage() * BP.body_damage_coeff)
+		total_burn += (BP.get_burn_damage() * BP.body_damage_coeff)
+	var/pain_body_damage = max(get_pain_loss() - 200, 0)
+	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - get_psychic_loss() - pain_body_damage - total_burn - total_brute, DAMAGE_PRECISION))
 	update_stat()
 	update_stamina()
 
@@ -438,10 +439,10 @@
 	if(((maxHealth - total_burn) < husk_threshold) && stat == DEAD )
 		become_husk(BURN)
 	med_hud_set_health()
-	if(stat == SOFT_CRIT)
-		add_movespeed_modifier(/datum/movespeed_modifier/carbon_softcrit)
+	if(stat == HARD_CRIT)
+		add_movespeed_modifier(/datum/movespeed_modifier/carbon_critical)
 	else
-		remove_movespeed_modifier(/datum/movespeed_modifier/carbon_softcrit)
+		remove_movespeed_modifier(/datum/movespeed_modifier/carbon_critical)
 	SEND_SIGNAL(src, COMSIG_LIVING_HEALTH_UPDATE)
 
 /mob/living/carbon/update_sight()
@@ -549,7 +550,7 @@
 	if(!client)
 		return
 
-	if(health <= crit_threshold && !HAS_TRAIT(src, TRAIT_NOCRITOVERLAY))
+	if(health <= critical_health_threshold && !HAS_TRAIT(src, TRAIT_NOCRITOVERLAY))
 		var/severity = 0
 		switch(health)
 			if(-20 to -10)
@@ -596,9 +597,9 @@
 		clear_fullscreen("critvision")
 
 	//Oxygen damage overlay
-	if(oxyloss)
+	if(oxygenloss)
 		var/severity = 0
-		switch(oxyloss)
+		switch(oxygenloss)
 			if(10 to 20)
 				severity = 1
 			if(20 to 25)
@@ -666,10 +667,10 @@
 
 /mob/living/carbon/set_health(new_value)
 	. = ..()
-	if(. > hardcrit_threshold)
-		if(health <= hardcrit_threshold && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
+	if(. > critical_health_threshold)
+		if(health <= critical_health_threshold && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
 			ADD_TRAIT(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT)
-	else if(health > hardcrit_threshold)
+	else if(health > critical_health_threshold)
 		REMOVE_TRAIT(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT)
 	if(CONFIG_GET(flag/near_death_experience))
 		if(. > HEALTH_THRESHOLD_NEARDEATH)
@@ -683,17 +684,15 @@
 	if(HAS_TRAIT(src, TRAIT_GODMODE))
 		return
 	if(stat != DEAD)
-		if(health <= HEALTH_THRESHOLD_DEAD && !HAS_TRAIT(src, TRAIT_NODEATH))
+		if((health <= instant_death_threshold || brain_dead) && !HAS_TRAIT(src, TRAIT_NODEATH))
 			death()
 			return
 		if(HAS_TRAIT_FROM(src, TRAIT_DISSECTED, AUTOPSY_TRAIT))
 			REMOVE_TRAIT(src, TRAIT_DISSECTED, AUTOPSY_TRAIT)
-		if(health <= hardcrit_threshold && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
+		if(health <= critical_health_threshold && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
 			set_stat(HARD_CRIT)
 		else if(HAS_TRAIT(src, TRAIT_KNOCKEDOUT))
 			set_stat(UNCONSCIOUS)
-		else if(health <= crit_threshold && !HAS_TRAIT(src, TRAIT_NOSOFTCRIT))
-			set_stat(SOFT_CRIT)
 		else
 			set_stat(CONSCIOUS)
 	update_damage_hud()

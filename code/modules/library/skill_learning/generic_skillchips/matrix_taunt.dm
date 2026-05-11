@@ -24,7 +24,7 @@
 	SIGNAL_HANDLER
 	if(key != "taunt" || !intentional)
 		return
-	if((source.maxHealth - (source.get_stamina_loss() + TAUNT_STAMINA_COST)) <= source.crit_threshold)
+	if((source.maxHealth - (source.get_stamina_loss() + TAUNT_STAMINA_COST)) <= source.critical_health_threshold)
 		source.balloon_alert(source, "too tired!")
 		return COMPONENT_CANT_EMOTE
 

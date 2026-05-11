@@ -61,6 +61,14 @@
 
 	/// Used in [carbon/proc/check_breath] and [lungs/proc/check_breath]]
 	var/co2overloadtime = null
+	/// Current blood oxygenation ratio. 1 is normal, below 0.7 starts hurting the brain/body.
+	var/blood_oxygenation = 1
+	/// Current blood pressure delta supplied by the heart. Also scales bleeding.
+	var/blood_pressure_delta = 1
+	/// Current useful air ratio in the lungs. Bad or missing breath lowers this; blood oxygenation turns it into suffocation damage.
+	var/lung_air_quality = 1
+	/// Internal guard: oxyloss is written only while blood oxygenation is being resolved.
+	var/tmp/resolving_blood_oxygenation = FALSE
 
 	var/obj/item/food/meat/slab/type_of_meat = /obj/item/food/meat/slab
 

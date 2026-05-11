@@ -260,7 +260,7 @@
 		var/mob/living/carbon/carbon_target = target
 		if(iscarbon(target))
 			var/obj/item/bodypart/limb = pick(carbon_target.get_bodyparts())
-			limb.force_wound_upwards(/datum/wound/slash/flesh/severe)
+			limb.force_wound_upwards(/datum/wound/slash/flesh/critical)
 		return
 	throw_blade(pick(valid_turfs), target)
 

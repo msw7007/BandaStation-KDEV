@@ -35,7 +35,7 @@
 	/// above this overdoses happen
 	var/overdose_threshold = 0
 	/// above this the big bad overdoses happen
-	var/overdose_crit_threshold = 0 // BANDASTATION ADDITION: NEW CHEMS
+	var/overdose_critical_health_threshold = 0 // BANDASTATION ADDITION: NEW CHEMS
 	/// You fucked up and this is now triggering its overdose effects, purge that shit quick.
 	var/overdosed = FALSE
 	/// You really fucked up and now getting the worst of the worse.

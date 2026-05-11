@@ -160,7 +160,7 @@
 
 /obj/item/reagent_containers/hypospray/medipen/suicide_act(mob/living/carbon/user)
 	user.visible_message(span_suicide("[user] begins to choke on \the [src]! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
-	return OXYLOSS//ironic. he could save others from oxyloss, but not himself.
+	return OXYLOSS//ironic. he could save others from oxygenloss, but not himself.
 
 /obj/item/reagent_containers/hypospray/medipen/inject(mob/living/affected_mob, mob/user)
 	. = ..()

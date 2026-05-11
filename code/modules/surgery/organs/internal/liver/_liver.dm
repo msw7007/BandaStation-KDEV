@@ -84,6 +84,21 @@
 /obj/item/organ/liver/proc/handle_chemical(mob/living/carbon/organ_owner, datum/reagent/chem, seconds_per_tick)
 	SIGNAL_HANDLER
 
+/obj/item/organ/liver/proc/filter_toxin_damage(amount)
+	if(amount <= 0 || !filterToxins || (organ_flags & ORGAN_FAILING))
+		return amount
+	if(HAS_TRAIT(owner, TRAIT_LIVERLESS_METABOLISM))
+		return amount
+
+	var/liver_health_percent = clamp((maxHealth - damage) / max(maxHealth, 1), 0, 1)
+	var/filter_capacity = toxTolerance * liver_health_percent
+	if(filter_capacity <= 0)
+		return amount
+
+	var/filtered_amount = min(amount, filter_capacity)
+	apply_organ_damage((filtered_amount / max(toxTolerance, 1)) / max(liver_resistance, 0.1))
+	return max(amount - filtered_amount, 0)
+
 /obj/item/organ/liver/examine(mob/user)
 	. = ..()
 

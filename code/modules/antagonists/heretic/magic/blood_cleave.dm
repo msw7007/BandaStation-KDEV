@@ -56,7 +56,7 @@
 /datum/action/cooldown/spell/pointed/cleave/long
 	name = "Lesser Cleave"
 	cooldown_time = 60 SECONDS
-	wound_type = /datum/wound/slash/flesh/severe
+	wound_type = /datum/wound/slash/flesh/critical
 
 /obj/effect/temp_visual/cleave
 	icon = 'icons/effects/eldritch.dmi'

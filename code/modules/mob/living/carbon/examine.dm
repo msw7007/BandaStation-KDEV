@@ -95,7 +95,7 @@
 		if(body_part.get_damage() < body_part.max_damage) //we don't care if it's stamcritted
 			damage_text = "обмякла и безжизненна"
 		else
-			damage_text = (body_part.brute_dam >= body_part.burn_dam) ? body_part.heavy_brute_msg : body_part.heavy_burn_msg
+			damage_text = (body_part.get_brute_damage() >= body_part.get_burn_damage()) ? body_part.heavy_brute_msg : body_part.heavy_burn_msg
 		. += span_boldwarning("[capitalize(t_His)] [body_part.ru_plaintext_zone[NOMINATIVE] || body_part.plaintext_zone] выглядит [damage_text]!")
 
 	//stores missing limbs
@@ -229,7 +229,7 @@
 		switch(stat)
 			if(UNCONSCIOUS, HARD_CRIT)
 				. += span_notice("[t_He] не реагирует на [t_him] окружение и, кажется, спит.")
-			if(SOFT_CRIT)
+			if(UNCONSCIOUS)
 				. += span_notice("[t_He] едва находится в сознании.")
 			if(CONSCIOUS)
 				if(HAS_TRAIT(src, TRAIT_DUMB))

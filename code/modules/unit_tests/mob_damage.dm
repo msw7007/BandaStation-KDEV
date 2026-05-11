@@ -31,6 +31,9 @@
 	// Testing the proc ordered_healing()
 	test_ordered_healing(dummy)
 
+	// Testing BandaStation split damage types
+	test_split_damage_types(dummy)
+
 	// testing with godmode enabled
 	test_godmode(dummy)
 
@@ -348,48 +351,48 @@
 	if(!test_apply_damage(dummy, -1, included_types = TOXLOSS|STAMINALOSS, biotypes = MOB_ORGANIC))
 		TEST_FAIL("ABOVE FAILURE: human did not get healed with biotypes = MOB_ORGANIC")
 
-/// Testing oxyloss with the TRAIT_NOBREATH
+/// Testing oxygenloss with the TRAIT_NOBREATH
 /datum/unit_test/mob_damage/proc/test_nobreath(mob/living/carbon/human/consistent/dummy)
 	// Heal up, so that errors from the previous tests we won't cause this one to fail
 	dummy.fully_heal(HEAL_DAMAGE)
 
-	// TRAIT_NOBREATH is supposed to prevent oxyloss damage (but not healing). Let's make sure that's the case.
+	// TRAIT_NOBREATH is supposed to prevent oxygenloss damage (but not healing). Let's make sure that's the case.
 	ADD_TRAIT(dummy, TRAIT_NOBREATH, TRAIT_SOURCE_UNIT_TESTS)
-	// force some oxyloss here
+	// force some oxygenloss here
 	dummy.set_oxy_loss(2, updating_health = FALSE, forced = TRUE)
 
-	// Try to take more oxyloss damage with TRAIT_NOBREATH. It should not work.
+	// Try to take more oxygenloss damage with TRAIT_NOBREATH. It should not work.
 	if(!test_apply_damage(dummy, 2, expected = 0, amount_after = dummy.get_oxy_loss(), included_types = OXYLOSS))
-		TEST_FAIL("ABOVE FAILURE: failed test_nobreath! mob took oxyloss damage while having TRAIT_NOBREATH")
+		TEST_FAIL("ABOVE FAILURE: failed test_nobreath! mob took oxygenloss damage while having TRAIT_NOBREATH")
 
-	// Make sure we are still be able to heal the oxyloss. This should work.
+	// Make sure we are still be able to heal the oxygenloss. This should work.
 	if(!test_apply_damage(dummy, -2, amount_after = dummy.get_oxy_loss()-2, included_types = OXYLOSS))
-		TEST_FAIL("ABOVE FAILURE: failed test_nobreath! mob could not heal oxyloss damage while having TRAIT_NOBREATH")
+		TEST_FAIL("ABOVE FAILURE: failed test_nobreath! mob could not heal oxygenloss damage while having TRAIT_NOBREATH")
 
 	REMOVE_TRAIT(dummy, TRAIT_NOBREATH, TRAIT_SOURCE_UNIT_TESTS)
 
-/// Testing toxloss with TRAIT_TOXINLOVER and TRAIT_TOXIMMUNE
+/// Testing toxinloss with TRAIT_TOXINLOVER and TRAIT_TOXIMMUNE
 /datum/unit_test/mob_damage/proc/test_toxintraits(mob/living/carbon/human/consistent/dummy)
 	// Heal up, so that errors from the previous tests we won't cause this one to fail
 	dummy.fully_heal(HEAL_DAMAGE)
 
-	// TRAIT_TOXINLOVER is supposed to invert toxin damage and healing. Things that would normally cause toxloss now heal it, and vice versa.
+	// TRAIT_TOXINLOVER is supposed to invert toxin damage and healing. Things that would normally cause toxinloss now heal it, and vice versa.
 	ADD_TRAIT(dummy, TRAIT_TOXINLOVER, TRAIT_SOURCE_UNIT_TESTS)
-	// force some toxloss here
+	// force some toxinloss here
 	dummy.set_tox_loss(2, updating_health = FALSE, forced = TRUE)
 
-	// Try to take more toxloss damage with TRAIT_TOXINLOVER. It should heal instead.
+	// Try to take more toxinloss damage with TRAIT_TOXINLOVER. It should heal instead.
 	if(!test_apply_damage(dummy, 2, expected = 2, amount_after = dummy.get_tox_loss()-2, included_types = TOXLOSS))
 		TEST_FAIL("ABOVE FAILURE: failed test_toxintraits! mob did not heal from toxin damage with TRAIT_TOXINLOVER")
 
-	// If we try to heal the toxloss we should take damage instead
+	// If we try to heal the toxinloss we should take damage instead
 	if(!test_apply_damage(dummy, -2, expected = -2, amount_after = dummy.get_tox_loss()+2, included_types = TOXLOSS))
 		TEST_FAIL("ABOVE FAILURE: failed test_toxintraits! mob did not take damage from toxin healing with TRAIT_TOXINLOVER")
 
 	// TOXIMMUNE trait should prevent the damage you get from being healed by toxins medicines while having TRAIT_TOXINLOVER
 	ADD_TRAIT(dummy, TRAIT_TOXIMMUNE, TRAIT_SOURCE_UNIT_TESTS)
 
-	// need to force apply some toxin damage since the TOXIMUNNE trait sets toxloss to 0 upon being added
+	// need to force apply some toxin damage since the TOXIMUNNE trait sets toxinloss to 0 upon being added
 	dummy.set_tox_loss(2, updating_health = FALSE, forced = TRUE)
 
 	// try to 'heal' again - this time it should just do nothing because we should be immune to any sort of toxin damage - including from inverted healing
@@ -437,6 +440,43 @@
 		"[src] should have 0 burn damage, but has [dummy.get_fire_loss()] instead!")
 	TEST_ASSERT_EQUAL(dummy.get_tox_loss(), 0, \
 		"[src] should have 0 toxin damage, but has [dummy.get_tox_loss()] instead!")
+
+/datum/unit_test/mob_damage/proc/test_split_damage_types(mob/living/carbon/human/consistent/dummy)
+	dummy.fully_heal(HEAL_DAMAGE)
+	dummy.adjust_pain_loss(-200, updating_health = FALSE, forced = TRUE)
+	dummy.set_psychic_loss(0, updating_health = FALSE, forced = TRUE)
+
+	dummy.adjust_brute_loss(9, updating_health = FALSE)
+	TEST_ASSERT_EQUAL(round(dummy.get_brute_loss(), 1), 9, "BRUTE should be the sum of physical subtypes.")
+	TEST_ASSERT_EQUAL(round(dummy.get_blunt_loss(), 1), 3, "Generic BRUTE should distribute one third into BLUNT.")
+	TEST_ASSERT_EQUAL(round(dummy.get_pierce_loss(), 1), 3, "Generic BRUTE should distribute one third into PIERCE.")
+	TEST_ASSERT_EQUAL(round(dummy.get_slash_loss(), 1), 3, "Generic BRUTE should distribute one third into SLASH.")
+
+	dummy.adjust_brute_loss(-9, updating_health = FALSE)
+	TEST_ASSERT_EQUAL(round(dummy.get_brute_loss(), 1), 0, "Generic BRUTE healing should heal all physical subtypes.")
+
+	dummy.adjust_fire_loss(12, updating_health = FALSE)
+	TEST_ASSERT_EQUAL(round(dummy.get_fire_loss(), 1), 12, "BURN should be the sum of thermal subtypes.")
+	TEST_ASSERT_EQUAL(round(dummy.get_heat_loss(), 1), 4, "Generic BURN should distribute one third into FIRE.")
+	TEST_ASSERT_EQUAL(round(dummy.get_cold_loss(), 1), 4, "Generic BURN should distribute one third into COLD.")
+	TEST_ASSERT_EQUAL(round(dummy.get_acid_loss(), 1), 4, "Generic BURN should distribute one third into ACID.")
+
+	dummy.adjust_fire_loss(-12, updating_health = FALSE)
+	TEST_ASSERT_EQUAL(round(dummy.get_fire_loss(), 1), 0, "Generic BURN healing should heal all thermal subtypes.")
+
+	dummy.apply_damage(7, BLUNT, spread_damage = TRUE)
+	TEST_ASSERT_EQUAL(round(dummy.get_blunt_loss(), 1), 7, "Direct BLUNT damage should only increase BLUNT.")
+	TEST_ASSERT_EQUAL(round(dummy.get_brute_loss(), 1), 7, "Direct BLUNT damage should still count as BRUTE.")
+
+	dummy.apply_damage(5, FIRE, spread_damage = TRUE)
+	TEST_ASSERT_EQUAL(round(dummy.get_heat_loss(), 1), 5, "Direct FIRE damage should only increase FIRE.")
+	TEST_ASSERT_EQUAL(round(dummy.get_fire_loss(), 1), 5, "Direct FIRE damage should still count as BURN.")
+
+	dummy.apply_damage(11, PAIN, spread_damage = TRUE)
+	TEST_ASSERT_EQUAL(round(dummy.get_pain_loss(), 1), 11, "PAIN should be tracked independently on bodyparts.")
+
+	dummy.apply_damage(13, PSYCHIC)
+	TEST_ASSERT_EQUAL(round(dummy.get_psychic_loss(), 1), 13, "PSYCHIC should be tracked independently on the mob.")
 
 /// Tests that mob damage procs are working as intended for basic and simple mobs
 /datum/unit_test/mob_damage/animal
@@ -512,9 +552,9 @@
 
 	// overhealing
 
-	// heal 11 points of toxloss (should take care of all 4 brute damage remaining)
+	// heal 11 points of toxinloss (should take care of all 4 brute damage remaining)
 	if(!apply_damage(test_mob, -11, expected = 4, included_types = TOXLOSS))
-		TEST_FAIL("ABOVE FAILURE: failed test_sanity_simple! toxloss was not applied correctly")
+		TEST_FAIL("ABOVE FAILURE: failed test_sanity_simple! toxinloss was not applied correctly")
 	// heal the remaining point of staminaloss
 	if(!apply_damage(test_mob, -11, expected = 1, included_types = STAMINALOSS))
 		TEST_FAIL("ABOVE FAILURE: failed test_sanity_simple! failed to heal staminaloss correctly")
@@ -534,30 +574,30 @@
 	TEST_ASSERT_EQUAL(damage_returned, -7, \
 		"take_bodypart_damage() should have returned -7, but returned [damage_returned] instead on a [type_string] mob!")
 
-	TEST_ASSERT_EQUAL(test_mob.bruteloss, 7, \
-		"Mouse should have 7 brute damage, instead they have [test_mob.bruteloss] on a [type_string] mob!")
-	TEST_ASSERT_EQUAL(test_mob.fireloss, 0, \
-		"Mouse should have 0 burn damage, instead they have [test_mob.fireloss] on a [type_string] mob!")
+	TEST_ASSERT_EQUAL(test_mob.get_brute_loss(), 7, \
+		"Mouse should have 7 brute damage, instead they have [test_mob.get_brute_loss()] on a [type_string] mob!")
+	TEST_ASSERT_EQUAL(test_mob.get_fire_loss(), 0, \
+		"Mouse should have 0 burn damage, instead they have [test_mob.get_fire_loss()] on a [type_string] mob!")
 
 	// heal 4 brute, 1 burn
 	damage_returned = test_mob.heal_bodypart_damage(4, 1, updating_health = FALSE)
 	TEST_ASSERT_EQUAL(damage_returned, 5, \
 		"heal_bodypart_damage() should have returned 5, but returned [damage_returned] instead on a [type_string] mob!")
 
-	TEST_ASSERT_EQUAL(test_mob.bruteloss, 2, \
-		"Mouse should have 2 brute damage, instead they have [test_mob.bruteloss] on a [type_string] mob!")
-	TEST_ASSERT_EQUAL(test_mob.fireloss, 0, \
-		"Mouse should have 0 burn damage, instead they have [test_mob.fireloss] on a [type_string] mob!")
+	TEST_ASSERT_EQUAL(test_mob.get_brute_loss(), 2, \
+		"Mouse should have 2 brute damage, instead they have [test_mob.get_brute_loss()] on a [type_string] mob!")
+	TEST_ASSERT_EQUAL(test_mob.get_fire_loss(), 0, \
+		"Mouse should have 0 burn damage, instead they have [test_mob.get_fire_loss()] on a [type_string] mob!")
 
 	// heal 1 brute, 1 burn
 	damage_returned = test_mob.heal_overall_damage(1, 1, updating_health = FALSE)
 	TEST_ASSERT_EQUAL(damage_returned, 2, \
 		"heal_overall_damage() should have returned 2, but returned [damage_returned] instead on a [type_string] mob!")
 
-	TEST_ASSERT_EQUAL(test_mob.bruteloss, 0, \
-		"Mouse should have 0 brute damage, instead they have [test_mob.bruteloss] on a [type_string] mob!")
-	TEST_ASSERT_EQUAL(test_mob.fireloss, 0, \
-		"Mouse should have 0 burn damage, instead they have [test_mob.fireloss] on a [type_string] mob!")
+	TEST_ASSERT_EQUAL(test_mob.get_brute_loss(), 0, \
+		"Mouse should have 0 brute damage, instead they have [test_mob.get_brute_loss()] on a [type_string] mob!")
+	TEST_ASSERT_EQUAL(test_mob.get_fire_loss(), 0, \
+		"Mouse should have 0 burn damage, instead they have [test_mob.get_fire_loss()] on a [type_string] mob!")
 
 	// take 50 brute, 50 burn
 	damage_returned = test_mob.take_overall_damage(3, 3, updating_health = FALSE)

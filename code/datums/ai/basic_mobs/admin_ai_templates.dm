@@ -41,7 +41,7 @@
 	if (isnull(minimum_stat))
 		var/static/list/stat_types = list(
 			"Conscious" = CONSCIOUS,
-			"Soft Crit" = SOFT_CRIT,
+			"Soft Crit" = UNCONSCIOUS,
 			"Unconscious" = UNCONSCIOUS,
 			"Hard Crit" = HARD_CRIT,
 			"Dead (will probably get stuck punching a corpse forever)" = DEAD,

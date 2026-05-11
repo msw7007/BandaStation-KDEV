@@ -150,7 +150,7 @@
 			"[WOUND_PICK_LOWEST_SEVERITY]",
 			"[WOUND_PICK_HIGHEST_SEVERITY]"
 		)))
-		carbon_occupant.cause_wound_of_type_and_severity(WOUND_BLUNT, head_to_wound, WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_SEVERE, pick_mode)
+		carbon_occupant.cause_wound_of_type_and_severity(WOUND_BLUNT, head_to_wound, WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_CRITICAL, pick_mode)
 		carbon_occupant.playsound_local(src, 'sound/items/weapons/flash_ring.ogg', 50)
 		carbon_occupant.set_eye_blur_if_lower(rand(10 SECONDS, 20 SECONDS))
 

@@ -43,7 +43,7 @@
  * We can promote a wound from a lesser to a higher severity this way, but we give up if we have a wound of the given type and fail to roll a higher severity, so no sidegrades/downgrades
  *
  * Arguments:
- * * woundtype- Either WOUND_BLUNT, WOUND_SLASH, WOUND_PIERCE, or WOUND_BURN based on the attack type.
+ * * woundtype- Either WOUND_BLUNT, WOUND_SLASH, WOUND_PIERCE, WOUND_BURN, WOUND_COLD, or WOUND_ACID based on the attack type.
  * * damage- How much damage is tied to this attack, since wounding potential scales with damage in an attack (see: WOUND_DAMAGE_EXPONENT)
  * * wound_bonus- The wound_bonus of an attack
  * * exposed_wound_bonus- The exposed_wound_bonus of an attack
@@ -238,7 +238,7 @@
 			if (wound_clothing)
 				if(wounding_type == WOUND_SLASH)
 					clothes.take_damage_zone(body_zone, damage, BRUTE)
-				else if(wounding_type == WOUND_BURN)
+				else if(IS_BURN_WOUNDING_TYPE(wounding_type))
 					clothes.take_damage_zone(body_zone, damage, BURN)
 
 	injury_mod += wound_bonus

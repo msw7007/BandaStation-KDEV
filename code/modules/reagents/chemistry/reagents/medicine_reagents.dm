@@ -990,7 +990,7 @@
 
 /datum/reagent/medicine/atropine/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
-	if(affected_mob.health <= affected_mob.crit_threshold)
+	if(affected_mob.health <= affected_mob.critical_health_threshold)
 		var/need_mob_update
 		need_mob_update = affected_mob.adjust_tox_loss(-4 * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_biotype = affected_biotype)
 		need_mob_update += affected_mob.adjust_brute_loss(-4 * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_bodytype = affected_bodytype)
@@ -1033,7 +1033,7 @@
 		return
 
 	var/need_mob_update
-	if(affected_mob.health <= affected_mob.crit_threshold)
+	if(affected_mob.health <= affected_mob.critical_health_threshold)
 		var/heal = -1 * metabolization_ratio * seconds_per_tick
 		need_mob_update = affected_mob.adjust_tox_loss(heal, updating_health = FALSE, required_biotype = affected_biotype)
 		need_mob_update += affected_mob.adjust_brute_loss(heal, updating_health = FALSE, required_bodytype = affected_bodytype)

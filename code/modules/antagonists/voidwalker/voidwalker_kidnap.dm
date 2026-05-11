@@ -45,7 +45,7 @@ GLOBAL_LIST_EMPTY(voidwalker_void)
 	/// how much do we heal per food?
 	var/heal_per_food = 15
 	/// Traits given to the wisp driver
-	var/wisp_driver_traits = list(TRAIT_STASIS, TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT, TRAIT_HANDS_BLOCKED)
+	var/wisp_driver_traits = list(TRAIT_STASIS, TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT, TRAIT_HANDS_BLOCKED)
 
 /obj/effect/wisp_mobile/Entered(atom/movable/arrived, atom/old_loc, list/atom/old_locs)
 	. = ..()

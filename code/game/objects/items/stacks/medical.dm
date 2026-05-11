@@ -289,8 +289,8 @@
 		var/datum/wound/burn/flesh/any_burn_wound = locate() in affecting.wounds
 		var/can_heal_burn_wounds = (flesh_regeneration || sanitization) && any_burn_wound?.can_be_ointmented_or_meshed()
 		var/can_suture_bleeding = stop_bleeding && affecting.cached_bleed_rate > 0
-		var/brute_to_heal = heal_brute && affecting.brute_dam > 0
-		var/burn_to_heal = heal_burn && affecting.burn_dam > 0
+		var/brute_to_heal = heal_brute && affecting.get_brute_damage() > 0
+		var/burn_to_heal = heal_burn && affecting.get_burn_damage() > 0
 
 		if(!brute_to_heal && !burn_to_heal && !can_heal_burn_wounds && !can_suture_bleeding)
 			if(!silent)
@@ -298,7 +298,7 @@
 					carbon_patient.balloon_alert(user, "[affecting.plaintext_zone] не кровоточит или не повреждена!")
 				else if(!burn_to_heal && (flesh_regeneration || sanitization) && any_burn_wound) // no burns, existing burn wounds are treated
 					carbon_patient.balloon_alert(user, "[affecting.plaintext_zone] полностью обработана - дайте время!")
-				else if(!affecting.brute_dam && !affecting.burn_dam) // not hurt at all
+				else if(!affecting.get_brute_damage() && !affecting.get_burn_damage()) // not hurt at all
 					carbon_patient.balloon_alert(user, "[affecting.plaintext_zone] не повреждена!")
 				else // probably hurt in some way but we are not the right item for this
 					carbon_patient.balloon_alert(user, "не вылечить [affecting.plaintext_zone] с помощью [declent_ru(name, GENITIVE)]!")
@@ -786,7 +786,7 @@
 	patient.emote("scream")
 	for(var/obj/item/bodypart/bone as anything in patient.get_bodyparts())
 		// fine to just, use these raw, its a meme anyway
-		var/datum/wound/blunt/bone/severe/oof_ouch = new
+		var/datum/wound/blunt/bone/critical/oof_ouch = new
 		oof_ouch.apply_wound(bone, wound_source = "bone gel")
 		var/datum/wound/blunt/bone/critical/oof_OUCH = new
 		oof_OUCH.apply_wound(bone, wound_source = "bone gel")

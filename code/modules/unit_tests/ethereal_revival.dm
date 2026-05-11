@@ -30,7 +30,7 @@
 	var/obj/item/bodypart/leg/left_leg = victim.get_bodypart(BODY_ZONE_L_LEG)
 	left_leg.dismember()
 	var/obj/item/bodypart/leg/right_leg = victim.get_bodypart(BODY_ZONE_R_LEG)
-	var/datum/wound/slash/flesh/severe/crit_wound = new()
+	var/datum/wound/slash/flesh/critical/crit_wound = new()
 	crit_wound.apply_wound(right_leg)
 	kill_and_revive(victim, respawn_heart)
 

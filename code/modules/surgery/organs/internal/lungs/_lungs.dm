@@ -72,6 +72,7 @@
 	/// All incoming breaths will have their pressure multiplied against this. Higher values allow more air to be breathed at once,
 	/// while lower values can cause suffocation in low pressure environments.
 	var/received_pressure_mult = 1
+	var/puncture_count = 0
 
 	var/oxy_breath_dam_min = MIN_TOXIC_GAS_DAMAGE
 	var/oxy_breath_dam_max = MAX_TOXIC_GAS_DAMAGE
@@ -98,7 +99,7 @@
 	var/cold_level_1_damage = COLD_GAS_DAMAGE_LEVEL_1 //Keep in mind with gas damage levels, you can set these to be negative, if you want someone to heal, instead.
 	var/cold_level_2_damage = COLD_GAS_DAMAGE_LEVEL_2
 	var/cold_level_3_damage = COLD_GAS_DAMAGE_LEVEL_3
-	var/cold_damage_type = BURN
+	var/cold_damage_type = COLD
 
 	var/hot_message = "your face burning and a searing heat"
 	var/heat_level_1_threshold = 360
@@ -107,7 +108,7 @@
 	var/heat_level_1_damage = HEAT_GAS_DAMAGE_LEVEL_1
 	var/heat_level_2_damage = HEAT_GAS_DAMAGE_LEVEL_2
 	var/heat_level_3_damage = HEAT_GAS_DAMAGE_LEVEL_3
-	var/heat_damage_type = BURN
+	var/heat_damage_type = FIRE
 
 	var/crit_stabilizing_reagent = /datum/reagent/medicine/epinephrine
 
@@ -261,9 +262,7 @@
 		breather.clear_alert(ALERT_NOT_ENOUGH_OXYGEN)
 
 	breathe_gas_volume(breath, /datum/gas/oxygen, /datum/gas/carbon_dioxide)
-	// Heal mob if not in crit.
-	if(breather.health >= breather.crit_threshold && breather.oxyloss)
-		breather.adjust_oxy_loss(-5)
+	breather.set_lung_air_quality(1)
 
 /// Maximum Oxygen effects. "Too much O2!"
 /obj/item/organ/lungs/proc/too_much_oxygen(mob/living/carbon/breather, datum/gas_mixture/breath, o2_pp, old_o2_pp)
@@ -308,9 +307,7 @@
 
 	// Inhale N2, exhale equivalent amount of CO2. Look ma, sideways breathing!
 	breathe_gas_volume(breath, /datum/gas/nitrogen, /datum/gas/carbon_dioxide)
-	// Heal mob if not in crit.
-	if(breather.health >= breather.crit_threshold && breather.oxyloss)
-		breather.adjust_oxy_loss(-5)
+	breather.set_lung_air_quality(1)
 
 /// Maximum CO2 effects. "Too much CO2!"
 /obj/item/organ/lungs/proc/too_much_co2(mob/living/carbon/breather, datum/gas_mixture/breath, co2_pp, old_co2_pp)
@@ -362,9 +359,7 @@
 		breather.clear_alert(ALERT_NOT_ENOUGH_PLASMA)
 	// Inhale Plasma, exhale equivalent amount of CO2.
 	breathe_gas_volume(breath, /datum/gas/plasma, /datum/gas/carbon_dioxide)
-	// Heal mob if not in crit.
-	if(breather.health >= breather.crit_threshold && breather.oxyloss)
-		breather.adjust_oxy_loss(-5)
+	breather.set_lung_air_quality(1)
 
 /// Maximum Plasma effects. "Too much Plasma!"
 /obj/item/organ/lungs/proc/too_much_plasma(mob/living/carbon/breather, datum/gas_mixture/breath, plasma_pp, old_plasma_pp)
@@ -415,7 +410,7 @@
 	breathe_gas_volume(breath, /datum/gas/halon)
 	// Metabolize to reagent.
 	if(halon_pp > gas_stimulation_min)
-		breather.adjust_oxy_loss(5)
+		breather.adjust_lung_air_quality(-0.25)
 		breather.reagents.add_reagent(/datum/reagent/halon, max(0, 1 - breather.reagents.get_reagent_amount(/datum/reagent/halon)))
 
 /// Sleeping gas with healing properties.
@@ -627,9 +622,7 @@
 	else if(HAS_TRAIT(breather, TRAIT_NO_BREATHLESS_DAMAGE))
 		// The lungs can breathe anyways. What are you? Some bottom-feeding, scum-sucking algae eater?
 		breather.failed_last_breath = FALSE
-		// Vacuum-adapted lungs regenerate oxyloss even when breathing nothing.
-		if(breather.health >= breather.crit_threshold && breather.oxyloss)
-			breather.adjust_oxy_loss(-5)
+		breather.set_lung_air_quality(1)
 	else
 		// Can't breathe!
 		breather.failed_last_breath = TRUE
@@ -742,7 +735,7 @@
 	if(prob(20))
 		suffocator.emote("gasp")
 	// If mob is at critical health, check if they can be damaged further.
-	if(suffocator.health < suffocator.crit_threshold)
+	if(suffocator.health < suffocator.critical_health_threshold)
 		// Mob is immune to damage at critical health.
 		if(HAS_TRAIT(suffocator, TRAIT_NOCRITDAMAGE))
 			return
@@ -752,13 +745,10 @@
 	// Low pressure.
 	if(breath_pp)
 		var/ratio = safe_breath_min / breath_pp
-		suffocator.apply_damage(min(5 * ratio, HUMAN_MAX_OXYLOSS), OXY)
+		suffocator.set_lung_air_quality(clamp(1 / ratio, 0, 1))
 		return mole_count * ratio / 6
 	// Zero pressure.
-	if(suffocator.health >= suffocator.crit_threshold)
-		suffocator.apply_damage(HUMAN_MAX_OXYLOSS, OXY)
-	else
-		suffocator.apply_damage(HUMAN_CRIT_MAX_OXYLOSS, OXY)
+	suffocator.set_lung_air_quality(0)
 
 
 /obj/item/organ/lungs/proc/handle_breath_temperature(datum/gas_mixture/breath, mob/living/carbon/human/breather) // called by human/life, handles temperatures
@@ -854,6 +844,9 @@
 		var/do_i_cough = SPT_PROB((damage < high_threshold) ? 2.5 : 5, seconds_per_tick) // between : past high
 		if(do_i_cough)
 			owner.emote("cough")
+	else if(puncture_count && SPT_PROB(2.5, seconds_per_tick))
+		puncture_count--
+		adjust_received_pressure_mult(0.25)
 	if(organ_flags & ORGAN_FAILING && owner.stat == CONSCIOUS)
 		owner.visible_message(span_danger("[owner] grabs [owner.p_their()] throat, struggling for breath!"), span_userdanger("You suddenly feel like you can't breathe!"))
 		failed = TRUE
@@ -1086,6 +1079,12 @@
 /obj/item/organ/lungs/proc/set_received_pressure_mult(new_value)
 	received_pressure_mult = max(new_value, 0)
 	update_bronchodilation_alerts()
+
+/obj/item/organ/lungs/proc/add_lung_puncture()
+	if(puncture_count >= 4)
+		return
+	puncture_count++
+	adjust_received_pressure_mult(-0.25)
 
 #define LUNG_CAPACITY_ALERT_BUFFER 0.003
 /// Depending on [received_pressure_mult], gives either a bronchocontraction or bronchoconstriction alert to our owner (if we have one), or clears the alert

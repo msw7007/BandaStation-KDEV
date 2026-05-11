@@ -103,7 +103,7 @@
 			patient_state = "Unconscious"
 		if(DEAD)
 			patient_state = "*Dead*"
-		if(SOFT_CRIT, HARD_CRIT)
+		if(UNCONSCIOUS, HARD_CRIT)
 			patient_state = "Critical"
 		else
 			patient_state = "Unknown"
@@ -155,7 +155,7 @@
 	ex_patient.AdjustUnconscious(-4 SECONDS * seconds_per_tick)
 	if(ex_patient.reagents.get_reagent_amount(/datum/reagent/medicine/epinephrine) < 5 \
 	&& ex_patient.reagents.get_reagent_amount(/datum/reagent/medicine/c2/penthrite) <= 0 \
-	&& ex_patient.stat >= SOFT_CRIT)
+	&& ex_patient.stat >= UNCONSCIOUS)
 		ex_patient.reagents.add_reagent(/datum/reagent/medicine/epinephrine, 5)
 	if(ex_patient.reagents.get_reagent_amount(/datum/reagent/toxin/formaldehyde) <= 0 && ex_patient.stat == DEAD)
 		ex_patient.reagents.add_reagent(/datum/reagent/toxin/formaldehyde, 3)

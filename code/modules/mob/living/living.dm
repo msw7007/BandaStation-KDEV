@@ -827,7 +827,12 @@
 /mob/living/proc/updatehealth()
 	if(HAS_TRAIT(src, TRAIT_GODMODE))
 		return
-	set_health(maxHealth - get_oxy_loss() - get_tox_loss() - get_fire_loss() - get_brute_loss())
+	var/pain_overflow = max(get_pain_loss() - 200, 0)
+	set_health(maxHealth - get_oxy_loss() - get_tox_loss() - get_fire_loss() - get_brute_loss() - get_psychic_loss() - pain_overflow)
+	if(health <= critical_health_threshold && !clinical_death_started_at)
+		clinical_death_started_at = world.time
+	else if(health > critical_health_threshold)
+		clinical_death_started_at = null
 	update_stat()
 	med_hud_set_health()
 	med_hud_set_status()
@@ -878,7 +883,7 @@
  *
  * Arguments
  * * full_heal_flags - Optional. If supplied, [/mob/living/fully_heal] will be called with these flags before revival.
- * * excess_healing - Optional. If supplied, this number will be used to apply a bit of healing to the mob. Currently, 1 "excess healing" translates to -1 oxyloss, -1 toxloss, +2 blood, -5 to all organ damage.
+ * * excess_healing - Optional. If supplied, this number will be used to apply a bit of healing to the mob. Currently, 1 "excess healing" translates to -1 oxygenloss, -1 toxinloss, +2 blood, -5 to all organ damage.
  * * force_grab_ghost - We grab the ghost of the mob on revive. If TRUE, we force grab the ghost (includes suiciders). If FALSE, we do not. See [/mob/grab_ghost].
  *
  */
@@ -1003,6 +1008,8 @@
 
 	if(heal_flags & HEAL_ADMIN)
 		REMOVE_TRAIT(src, TRAIT_SUICIDED, REF(src))
+		brain_dead = FALSE
+		clinical_death_started_at = null
 
 	updatehealth()
 	stop_sound_channel(CHANNEL_HEARTBEAT)
@@ -1030,7 +1037,7 @@
 /// Checks if we are actually able to ressuscitate this mob.
 /// (We don't want to revive then to have them instantly die again)
 /mob/living/proc/can_be_revived()
-	if(health <= HEALTH_THRESHOLD_DEAD)
+	if(health <= instant_death_threshold || brain_dead)
 		return FALSE
 	return TRUE
 
@@ -1448,11 +1455,11 @@
 		stamina.icon_state = "stamina_dead"
 		return
 
-	var/stam_crit_threshold = maxHealth - crit_threshold
+	var/stam_critical_health_threshold = max_stamina
 	if(shown_stamina_loss == null)
 		shown_stamina_loss = get_stamina_loss()
 
-	if(shown_stamina_loss >= stam_crit_threshold)
+	if(shown_stamina_loss >= stam_critical_health_threshold)
 		stamina.icon_state = "stamina_crit"
 	else if(shown_stamina_loss > 0 && maxHealth > 0)
 		stamina.icon_state = "stamina_[ceil(shown_stamina_loss / (maxHealth * 0.2))]"
@@ -2424,11 +2431,6 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 			if(stat >= UNCONSCIOUS)
 				ADD_TRAIT(src, TRAIT_IMMOBILIZED, TRAIT_KNOCKEDOUT)
 			add_traits(list(TRAIT_HANDS_BLOCKED, TRAIT_INCAPACITATED, TRAIT_FLOORED), STAT_TRAIT)
-		if(SOFT_CRIT)
-			if(stat >= UNCONSCIOUS)
-				ADD_TRAIT(src, TRAIT_IMMOBILIZED, TRAIT_KNOCKEDOUT) //adding trait sources should come before removing to avoid unnecessary updates
-			if(pulledby)
-				REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PULLED_WHILE_SOFTCRIT_TRAIT)
 		if(UNCONSCIOUS)
 			if(stat != HARD_CRIT)
 				cure_blind(UNCONSCIOUS_TRAIT)
@@ -2446,17 +2448,10 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 				REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, TRAIT_KNOCKEDOUT)
 			remove_traits(list(TRAIT_HANDS_BLOCKED, TRAIT_INCAPACITATED, TRAIT_FLOORED, TRAIT_CRITICAL_CONDITION), STAT_TRAIT)
 			log_combat(src, src, "regained consciousness")
-		if(SOFT_CRIT)
-			if(pulledby)
-				ADD_TRAIT(src, TRAIT_IMMOBILIZED, PULLED_WHILE_SOFTCRIT_TRAIT) //adding trait sources should come before removing to avoid unnecessary updates
-			if(. >= UNCONSCIOUS)
-				REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, TRAIT_KNOCKEDOUT)
-			ADD_TRAIT(src, TRAIT_CRITICAL_CONDITION, STAT_TRAIT)
-			log_combat(src, src, "entered soft crit")
 		if(UNCONSCIOUS)
 			if(. != HARD_CRIT)
 				become_blind(UNCONSCIOUS_TRAIT)
-			if(health <= crit_threshold && !HAS_TRAIT(src, TRAIT_NOSOFTCRIT))
+			if(health <= critical_health_threshold)
 				ADD_TRAIT(src, TRAIT_CRITICAL_CONDITION, STAT_TRAIT)
 			else
 				REMOVE_TRAIT(src, TRAIT_CRITICAL_CONDITION, STAT_TRAIT)
@@ -2466,13 +2461,14 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 				become_blind(UNCONSCIOUS_TRAIT)
 			ADD_TRAIT(src, TRAIT_CRITICAL_CONDITION, STAT_TRAIT)
 			ADD_TRAIT(src, TRAIT_DEAF, STAT_TRAIT)
-			log_combat(src, src, "entered hard crit")
+			log_combat(src, src, "entered clinical critical condition")
 		if(DEAD)
 			REMOVE_TRAIT(src, TRAIT_CRITICAL_CONDITION, STAT_TRAIT)
 			ADD_TRAIT(src, TRAIT_DEAF, STAT_TRAIT)
 			remove_from_alive_mob_list()
 			add_to_dead_mob_list()
 			log_combat(src, src, "died")
+
 
 ///Reports the event of the change in value of the buckled variable.
 /mob/living/proc/set_buckled(new_buckled)
@@ -2507,11 +2503,6 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	update_incapacitated()
 	if(. == FALSE) //null is a valid value here, we only want to return if FALSE is explicitly passed.
 		return
-	if(pulledby)
-		if(!. && stat == SOFT_CRIT)
-			ADD_TRAIT(src, TRAIT_IMMOBILIZED, PULLED_WHILE_SOFTCRIT_TRAIT)
-	else if(. && stat == SOFT_CRIT)
-		REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PULLED_WHILE_SOFTCRIT_TRAIT)
 
 
 /// Updates the grab state of the mob and updates movespeed

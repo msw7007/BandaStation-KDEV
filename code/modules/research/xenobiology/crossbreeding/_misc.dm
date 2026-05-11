@@ -16,14 +16,14 @@ Slimecrossing Items
 /datum/saved_bodypart
 	var/obj/item/bodypart/old_part
 	var/bodypart_type
-	var/brute_dam
-	var/burn_dam
+	var/brute_damage
+	var/burn_damage
 
 /datum/saved_bodypart/New(obj/item/bodypart/part)
 	old_part = part
 	bodypart_type = part.type
-	brute_dam = part.brute_dam
-	burn_dam = part.burn_dam
+	brute_damage = part.get_brute_damage()
+	burn_damage = part.get_burn_damage()
 
 /mob/living/carbon/proc/apply_saved_bodyparts(list/datum/saved_bodypart/parts)
 	var/list/dont_chop = list()
@@ -35,7 +35,7 @@ Slimecrossing Items
 		if(!already || already != saved_part.old_part)
 			saved_part.old_part.replace_limb(src)
 		saved_part.old_part.heal_damage(INFINITY, INFINITY, null, FALSE)
-		saved_part.old_part.receive_damage(saved_part.brute_dam, saved_part.burn_dam, wound_bonus=CANT_WOUND)
+		saved_part.old_part.receive_damage(saved_part.brute_damage, saved_part.burn_damage, wound_bonus=CANT_WOUND)
 		dont_chop[zone] = TRUE
 
 /mob/living/carbon/proc/save_bodyparts()

@@ -173,7 +173,7 @@
 		if(CONSCIOUS)
 			data["patient"]["stat"] = "В сознании"
 			data["patient"]["statstate"] = "good"
-		if(SOFT_CRIT)
+		if(UNCONSCIOUS)
 			data["patient"]["stat"] = "Крит. состояние"
 			data["patient"]["statstate"] = "average"
 		if(UNCONSCIOUS, HARD_CRIT)

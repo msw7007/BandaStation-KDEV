@@ -21,10 +21,9 @@
 /// for jokey/meme wounds like stubbed toe, no standard messages/sounds or second winds
 #define WOUND_SEVERITY_TRIVIAL 0
 #define WOUND_SEVERITY_MODERATE 1
-#define WOUND_SEVERITY_SEVERE 2
-#define WOUND_SEVERITY_CRITICAL 3
+#define WOUND_SEVERITY_CRITICAL 2
 /// outright dismemberment of limb
-#define WOUND_SEVERITY_LOSS 4
+#define WOUND_SEVERITY_LOSS 3
 
 // how much blood the limb needs to be losing per tick (not counting laying down/self grasping modifiers) to get the different bleed icons
 #define BLEED_OVERLAY_LOW 0.5
@@ -35,7 +34,6 @@
 GLOBAL_LIST_INIT(wound_severities_chronological, list(
 	"[WOUND_SEVERITY_TRIVIAL]",
 	"[WOUND_SEVERITY_MODERATE]",
-	"[WOUND_SEVERITY_SEVERE]",
 	"[WOUND_SEVERITY_CRITICAL]"
 ))
 
@@ -48,6 +46,12 @@ GLOBAL_LIST_INIT(wound_severities_chronological, list(
 #define WOUND_PIERCE "wound_pierce"
 /// any concentrated burn attack (lasers really). rolls for burning wounds
 #define WOUND_BURN "wound_burn"
+/// cold thermal damage. rolls for frostbite wounds
+#define WOUND_COLD "wound_cold"
+/// acid/chemical thermal damage. rolls for chemical burn wounds
+#define WOUND_ACID "wound_acid"
+
+#define IS_BURN_WOUNDING_TYPE(wounding_type) ((wounding_type) == WOUND_BURN || (wounding_type) == WOUND_COLD || (wounding_type) == WOUND_ACID)
 
 /// Mainly a define used for wound_pregen_data, if a pregen data instance expects this, it will accept any and all wound types, even none at all
 #define WOUND_ALL "wound_all"
@@ -218,6 +222,12 @@ GLOBAL_LIST_INIT(wounding_types_to_series, list(
 		WOUND_SERIES_FLESH_SLASH_BLEED,
 	),
 	WOUND_BURN = list(
+		WOUND_SERIES_FLESH_BURN_BASIC,
+	),
+	WOUND_COLD = list(
+		WOUND_SERIES_FLESH_BURN_BASIC,
+	),
+	WOUND_ACID = list(
 		WOUND_SERIES_FLESH_BURN_BASIC,
 	),
 	WOUND_PIERCE = list(

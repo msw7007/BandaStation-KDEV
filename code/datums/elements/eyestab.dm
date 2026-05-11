@@ -116,7 +116,7 @@
 			var/picked_side = pick(valid_sides)
 			to_chat(target, span_userdanger("You feel searing pain shoot though your [picked_side == RIGHT_EYE_SCAR ? "right" : "left"] eye!"))
 			// oof ouch my eyes
-			var/datum/wound/pierce/bleed/severe/eye/eye_puncture = new
+			var/datum/wound/pierce/bleed/critical/eye/eye_puncture = new
 			eye_puncture.apply_wound(eyes.bodypart_owner, wound_source = "eye stab", right_side = picked_side)
 			eyes.apply_scar(picked_side)
 

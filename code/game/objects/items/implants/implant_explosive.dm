@@ -214,18 +214,18 @@
 	. = ..()
 	if(.)
 		RegisterSignal(target, COMSIG_LIVING_HEALTH_UPDATE, PROC_REF(check_health))
-		target.add_traits(list(TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT), IMPLANT_TRAIT)
+		target.add_traits(list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT), IMPLANT_TRAIT)
 
 /obj/item/implant/explosive/deniability/removed(mob/target, silent = FALSE, special = FALSE)
 	. = ..()
 	if(.)
 		UnregisterSignal(target, COMSIG_LIVING_HEALTH_UPDATE)
-		target.remove_traits(list(TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT), IMPLANT_TRAIT)
+		target.remove_traits(list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT), IMPLANT_TRAIT)
 
 /obj/item/implant/explosive/deniability/proc/check_health(mob/living/source)
 	SIGNAL_HANDLER
 
-	if(source.health < source.crit_threshold)
+	if(source.health < source.critical_health_threshold)
 		INVOKE_ASYNC(src, PROC_REF(activate), "deniability")
 
 /obj/item/implant/explosive/deathmatch

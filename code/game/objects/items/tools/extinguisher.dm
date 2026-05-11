@@ -114,7 +114,7 @@
 
 	wallopee.visible_message(span_danger("[user] brings [src] heavily down on [wallopee]'s [head_name]."), span_userdanger("[user] brings [src] heavily down on your [head_name]!"))
 
-	var/min_wound = head_to_bash.get_wound_threshold_of_wound_type(WOUND_BLUNT, WOUND_SEVERITY_SEVERE, return_value_if_no_wound = 30, wound_source = src)
+	var/min_wound = head_to_bash.get_wound_threshold_of_wound_type(WOUND_BLUNT, WOUND_SEVERITY_CRITICAL, return_value_if_no_wound = 30, wound_source = src)
 	var/max_wound = head_to_bash.get_wound_threshold_of_wound_type(WOUND_BLUNT, WOUND_SEVERITY_CRITICAL, return_value_if_no_wound = 50, wound_source = src)
 
 	wallopee.apply_damage(src.force * 3, src.damtype, head_to_bash, wound_bonus = rand(min_wound, max_wound + 10), attacking_item = src)

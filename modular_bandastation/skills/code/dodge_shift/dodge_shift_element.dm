@@ -92,7 +92,7 @@
 		return FAILED_BLOCK
 
 	// Check if we have enough stamina to dodge
-	if(stamina_cost > 0 && (source.maxHealth - (source.get_stamina_loss() + stamina_cost)) <= source.crit_threshold)
+	if(stamina_cost > 0 && (source.maxHealth - (source.get_stamina_loss() + stamina_cost)) <= source.critical_health_threshold)
 		return FAILED_BLOCK
 
 	perform_dodge(source, hit_by, attack_text)
@@ -119,7 +119,7 @@
 		return NONE
 
 	// Check if we have enough stamina to dodge
-	if(stamina_cost > 0 && (source.maxHealth - (source.get_stamina_loss() + stamina_cost)) <= source.crit_threshold)
+	if(stamina_cost > 0 && (source.maxHealth - (source.get_stamina_loss() + stamina_cost)) <= source.critical_health_threshold)
 		return NONE
 
 	perform_dodge(source, hitting_projectile, hitting_projectile.name)

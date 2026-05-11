@@ -23,7 +23,7 @@
 	return FALSE
 
 /mob/living/silicon/adjust_oxy_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype, required_respiration_type) //immune to oxygen damage
-	if(isAI(src)) //ais are snowflakes and use oxyloss for being in AI cards and having no battery
+	if(isAI(src)) //ais are snowflakes and use oxygenloss for being in AI cards and having no battery
 		return ..()
 
 	return FALSE

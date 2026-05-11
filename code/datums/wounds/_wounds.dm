@@ -53,7 +53,7 @@
 	/// The volume of [sound_effect]
 	var/sound_volume = 70
 
-	/// Either WOUND_SEVERITY_TRIVIAL (meme wounds like stubbed toe), WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_SEVERE, or WOUND_SEVERITY_CRITICAL (or maybe WOUND_SEVERITY_LOSS)
+	/// Either WOUND_SEVERITY_TRIVIAL (meme wounds like stubbed toe), WOUND_SEVERITY_MODERATE, or WOUND_SEVERITY_CRITICAL (or maybe WOUND_SEVERITY_LOSS)
 	var/severity = WOUND_SEVERITY_MODERATE
 
 	/// Who owns the body part that we're wounding
@@ -225,7 +225,7 @@
 		var/msg = span_danger("[capitalize(limb.ru_plaintext_zone[NOMINATIVE] || limb.plaintext_zone)] [victim.declent_ru(GENITIVE)] [occur_text]!")
 		var/vis_dist = COMBAT_MESSAGE_RANGE
 
-		if(severity > WOUND_SEVERITY_SEVERE)
+		if(severity >= WOUND_SEVERITY_CRITICAL)
 			msg = "<b>[msg]</b>"
 			vis_dist = DEFAULT_MESSAGE_RANGE
 
@@ -478,8 +478,6 @@
 	switch(severity)
 		if(WOUND_SEVERITY_MODERATE)
 			victim.reagents.add_reagent(/datum/reagent/determination, WOUND_DETERMINATION_MODERATE)
-		if(WOUND_SEVERITY_SEVERE)
-			victim.reagents.add_reagent(/datum/reagent/determination, WOUND_DETERMINATION_SEVERE)
 		if(WOUND_SEVERITY_CRITICAL)
 			victim.reagents.add_reagent(/datum/reagent/determination, WOUND_DETERMINATION_CRITICAL)
 		if(WOUND_SEVERITY_LOSS)
@@ -676,8 +674,6 @@
 			return span_danger("[undiagnosed_name || name].")
 		if(WOUND_SEVERITY_MODERATE)
 			return span_warning("[undiagnosed_name || name].")
-		if(WOUND_SEVERITY_SEVERE)
-			return span_boldwarning("[undiagnosed_name || name]!")
 		if(WOUND_SEVERITY_CRITICAL)
 			return span_boldwarning("[undiagnosed_name || name]!!")
 
@@ -740,8 +736,6 @@
 			return "Тривиальная"
 		if(WOUND_SEVERITY_MODERATE)
 			return "Умеренная"
-		if(WOUND_SEVERITY_SEVERE)
-			return "<b>Тяжелая</b>"
 		if(WOUND_SEVERITY_CRITICAL)
 			return "<b>Критическая</b>"
 

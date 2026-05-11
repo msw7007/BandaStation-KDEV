@@ -61,7 +61,7 @@
 
 	else if(isanimal_or_basicmob(parent))
 		var/mob/living/animal = parent
-		brute_loss = animal.bruteloss
+		brute_loss = animal.get_brute_loss()
 		rewind_type = PROC_REF(rewind_animal)
 
 	else if(isobj(parent))
@@ -119,7 +119,7 @@
 		parent.AddComponent(type, 1, rewind_interval, TRUE)
 
 	var/mob/living/master = parent
-	master.bruteloss = brute_loss
+	master.adjust_blunt_loss(brute_loss)
 	master.updatehealth()
 	rewind_living()
 

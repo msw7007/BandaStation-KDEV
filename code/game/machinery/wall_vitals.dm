@@ -267,7 +267,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/vitals_reader/advanced, 32)
 
 	for(var/body_zone in GLOB.all_body_zones)
 		var/obj/item/bodypart/real_part = patient.get_bodypart(body_zone)
-		var/bodypart_color = isnull(real_part) ? COLOR_GRAY : percent_to_color((real_part.brute_dam + real_part.burn_dam) / real_part.max_damage)
+		var/bodypart_color = isnull(real_part) ? COLOR_GRAY : percent_to_color(real_part.get_damage() / real_part.max_damage)
 		returned_overlays += construct_overlay("human_[body_zone]", bodypart_color)
 
 	if(CAN_HAVE_BLOOD(patient))
@@ -424,7 +424,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/vitals_reader/advanced, 32)
 
 	var/patient_stat = patient.stat
 	if(machine_stat & (EMPED|EMAGGED))
-		patient_stat = pick(CONSCIOUS, SOFT_CRIT, HARD_CRIT, DEAD, DEAD, DEAD)
+		patient_stat = pick(CONSCIOUS, UNCONSCIOUS, HARD_CRIT, DEAD, DEAD, DEAD)
 
 	switch(patient_stat)
 		if(DEAD)
@@ -437,11 +437,11 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/vitals_reader/advanced, 32)
 			if(last_reported_stat != HARD_CRIT)
 				beep_message("lets out an alternating beep.")
 				last_reported_stat = HARD_CRIT
-		if(SOFT_CRIT)
+		if(UNCONSCIOUS)
 			COOLDOWN_START(src, beep_cd, 7 SECONDS)
-			if(last_reported_stat != SOFT_CRIT)
+			if(last_reported_stat != UNCONSCIOUS)
 				beep_message("lets out a high pitch beep.")
-				last_reported_stat = SOFT_CRIT
+				last_reported_stat = UNCONSCIOUS
 		else
 			COOLDOWN_START(src, beep_cd, 7 SECONDS)
 			if(last_reported_stat != CONSCIOUS)
@@ -555,7 +555,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/vitals_reader/advanced, 32)
 	var/datum/port/output/patient_brute_damage
 	/// Outputs total burn damage
 	var/datum/port/output/patient_burn_damage
-	/// Outputs total oxyloss damage
+	/// Outputs total oxygenloss damage
 	var/datum/port/output/patient_oxy_loss
 	/// Outputs total toxin damage
 	var/datum/port/output/patient_tox_loss

@@ -658,7 +658,7 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	if(isnull(affecting) || !IS_ROBOTIC_LIMB(affecting))
 		return NONE
 
-	if (!affecting.burn_dam)
+	if (!affecting.get_burn_damage())
 		balloon_alert(user, "limb not damaged")
 		return ITEM_INTERACT_BLOCKING
 

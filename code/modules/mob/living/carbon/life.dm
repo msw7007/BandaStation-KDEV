@@ -25,6 +25,7 @@
 
 		if(.) //not dead
 			handle_blood(seconds_per_tick)
+			handle_blood_oxygenation(seconds_per_tick)
 
 		if(stat != DEAD) // still not dead (blood could have changed that)
 			for(var/key in mind?.addiction_points)
@@ -33,6 +34,10 @@
 
 	if(stat != DEAD)
 		handle_bodyparts(seconds_per_tick)
+	if(stat != DEAD)
+		handle_pain_damage(seconds_per_tick)
+	if(stat != DEAD)
+		handle_psychic_damage(seconds_per_tick)
 
 	if(stat != DEAD)
 		return TRUE
@@ -83,11 +88,8 @@
 	if(lungs?.organ_flags & ORGAN_FAILING)
 		losebreath++
 	else if(!get_organ_slot(ORGAN_SLOT_BREATHING_TUBE))
-		if(health <= HEALTH_THRESHOLD_FULLCRIT || pulledby?.grab_state >= GRAB_KILL)
-			losebreath++  //You can't breath at all when in critical or when being choked, so you're going to miss a breath
-
-		else if(health <= crit_threshold)
-			losebreath += 0.25 //You're having trouble breathing in soft crit, so you'll miss a breath one in four times
+		if(health <= critical_health_threshold || pulledby?.grab_state >= GRAB_KILL)
+			losebreath++  //You can't breath at all when in clinical critical condition or when being choked.
 
 	//Suffocate
 	if(losebreath >= 1) //You've missed a breath, take oxy damage
@@ -175,7 +177,7 @@
 		// Simulates breathing zero moles of gas.
 		has_moles = FALSE
 		// Extra damage, let God sort ’em out!
-		adjust_oxy_loss(2)
+		set_lung_air_quality(0)
 
 	/// Minimum O2 before suffocation.
 	var/safe_oxygen_min = 16
@@ -224,9 +226,7 @@
 	else if(can_breathe_vacuum)
 		// The mob can breathe anyways. What are you? Some bottom-feeding, scum-sucking algae eater?
 		failed_last_breath = FALSE
-		// Vacuum-adapted lungs regenerate oxyloss even when breathing nothing.
-		if(health >= crit_threshold)
-			adjust_oxy_loss(-5)
+		set_lung_air_quality(1)
 	else
 		// Can't breathe! Lungs are missing, and/or breath is empty.
 		. = FALSE
@@ -258,9 +258,7 @@
 		if(o2_pp)
 			// Inhale O2.
 			oxygen_used = breath_gases[/datum/gas/oxygen][MOLES]
-			// Heal mob if not in crit.
-			if(health >= crit_threshold)
-				adjust_oxy_loss(-5)
+			set_lung_air_quality(1)
 	// Exhale equivalent amount of CO2.
 	if(o2_pp)
 		breath_gases[/datum/gas/oxygen][MOLES] -= oxygen_used
@@ -280,11 +278,10 @@
 			if(!HAS_TRAIT(src, TRAIT_ANOSMIA))
 				throw_alert(ALERT_TOO_MUCH_CO2, /atom/movable/screen/alert/too_much_co2)
 			Unconscious(6 SECONDS)
-			// Lets hurt em a little, let them know we mean business.
-			adjust_oxy_loss(3)
+			adjust_lung_air_quality(-0.2)
 			// They've been in here 30s now, start to kill them for their own good!
 			if((world.time - co2overloadtime) > 30 SECONDS)
-				adjust_oxy_loss(8)
+				adjust_lung_air_quality(-0.4)
 	else
 		// Reset side-effects.
 		co2overloadtime = 0
@@ -410,7 +407,7 @@
 	if(prob(20))
 		emote("gasp")
 	// Mob is at critical health, check if they can be damaged further.
-	if(health < crit_threshold)
+	if(health <= critical_health_threshold)
 		// Mob is immune to damage at critical health.
 		if(HAS_TRAIT(src, TRAIT_NOCRITDAMAGE))
 			return
@@ -420,13 +417,10 @@
 	// Low pressure.
 	if(breath_pp)
 		var/ratio = safe_breath_min / breath_pp
-		adjust_oxy_loss(min(5 * ratio, 3))
+		set_lung_air_quality(clamp(1 / ratio, 0, 1))
 		return true_pp * ratio / 6
 	// Zero pressure.
-	if(health >= crit_threshold)
-		adjust_oxy_loss(3)
-	else
-		adjust_oxy_loss(1)
+	set_lung_air_quality(0)
 
 /// Fourth and final link in a breath chain
 /mob/living/carbon/proc/handle_breath_temperature(datum/gas_mixture/breath)
@@ -451,6 +445,82 @@
 
 /mob/living/carbon/proc/handle_blood(seconds_per_tick)
 	return
+
+/mob/living/carbon/proc/get_lung_oxygenation_efficiency()
+	if(HAS_TRAIT(src, TRAIT_NOBREATH))
+		return 1
+	var/obj/item/organ/lungs/lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
+	if(!lungs)
+		return 0
+	if(lungs.organ_flags & ORGAN_FAILING)
+		return 0
+	return clamp((1 - (lungs.damage / lungs.maxHealth)) * lungs.received_pressure_mult * lung_air_quality, 0, 1.5)
+
+/mob/living/carbon/proc/set_lung_air_quality(amount)
+	lung_air_quality = clamp(amount, 0, 1.5)
+
+/mob/living/carbon/proc/adjust_lung_air_quality(amount)
+	set_lung_air_quality(lung_air_quality + amount)
+
+/mob/living/carbon/proc/get_heart_pressure_delta()
+	if(!needs_heart())
+		return 1
+	var/obj/item/organ/heart/heart = get_organ_slot(ORGAN_SLOT_HEART)
+	if(!heart || !heart.is_beating() || (heart.organ_flags & ORGAN_FAILING))
+		return 0
+	var/pressure = 1 - (heart.damage / heart.maxHealth)
+	if(reagents)
+		if(reagents.has_reagent(/datum/reagent/medicine/epinephrine, needs_metabolizing = TRUE))
+			pressure += 0.2
+		if(reagents.has_reagent(/datum/reagent/medicine/atropine, needs_metabolizing = TRUE))
+			pressure += 0.1
+		if(reagents.has_reagent(/datum/reagent/medicine/stimulants, needs_metabolizing = TRUE) || reagents.has_reagent(/datum/reagent/nitrium_high_metabolization, needs_metabolizing = TRUE) || reagents.has_reagent(/datum/reagent/nitrium_low_metabolization, needs_metabolizing = TRUE))
+			pressure += 0.15
+		if(reagents.has_reagent(/datum/reagent/medicine/morphine, needs_metabolizing = TRUE))
+			pressure -= 0.2
+		if(reagents.has_reagent(/datum/reagent/consumable/ethanol, needs_metabolizing = TRUE, check_subtypes = TRUE))
+			pressure -= 0.1
+	return clamp(pressure, 0, 1.5)
+
+/mob/living/carbon/proc/handle_blood_oxygenation(seconds_per_tick)
+	var/blood_ratio = CAN_HAVE_BLOOD(src) ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1.5) : 1
+	blood_pressure_delta = get_heart_pressure_delta()
+	blood_oxygenation = clamp(blood_ratio * blood_pressure_delta * get_lung_oxygenation_efficiency(), 0, 1.5)
+
+	if(blood_oxygenation < 0.7)
+		var/oxygen_debt = 0.7 - blood_oxygenation
+		resolving_blood_oxygenation = TRUE
+		adjust_oxy_loss(oxygen_debt * 10 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+		resolving_blood_oxygenation = FALSE
+		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/oxygenation, multiplicative_slowdown = min(oxygen_debt * 3, 2.5))
+		adjust_organ_loss(ORGAN_SLOT_BRAIN, oxygen_debt * 1.5 * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
+		if(blood_oxygenation < 0.5)
+			adjust_organ_loss(ORGAN_SLOT_HEART, (0.5 - blood_oxygenation) * 1.2 * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
+		if(blood_oxygenation < 0.35 && SPT_PROB(8, seconds_per_tick))
+			Unconscious(rand(1 SECONDS, 2 SECONDS))
+	else
+		if(get_oxy_loss())
+			resolving_blood_oxygenation = TRUE
+			adjust_oxy_loss(-((blood_oxygenation - 0.7) * 4 * seconds_per_tick), updating_health = FALSE, forced = TRUE)
+			resolving_blood_oxygenation = FALSE
+		if(blood_oxygenation > 1.05)
+			add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/oxygenation, multiplicative_slowdown = -min((blood_oxygenation - 1) * 0.8, 0.35))
+			add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/oxygenation, multiplicative_slowdown = -min((blood_oxygenation - 1) * 0.8, 0.35))
+		else
+			remove_movespeed_modifier(/datum/movespeed_modifier/oxygenation)
+			remove_actionspeed_modifier(/datum/actionspeed_modifier/oxygenation)
+
+	updatehealth()
+
+/mob/living/carbon/proc/handle_pain_damage(seconds_per_tick)
+	if(painloss <= 200 || HAS_TRAIT(src, TRAIT_ANALGESIA))
+		return
+	var/excess_pain = painloss - 200
+	adjust_psychic_loss((excess_pain / 400) * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	if(SPT_PROB(min(excess_pain / 8, 18), seconds_per_tick))
+		Knockdown(rand(1 SECONDS, 2 SECONDS))
+	if(SPT_PROB(min(excess_pain / 12, 10), seconds_per_tick))
+		dropItemToGround(get_active_held_item())
 
 /mob/living/carbon/reagent_tick(datum/reagent/chem, seconds_per_tick)
 	. = ..()

@@ -69,7 +69,7 @@
 		flesh_healing = max(flesh_healing - (0.5 * bandage_factor * seconds_per_tick), 0) // good bandages multiply the length of flesh healing
 
 	// if we have little/no infection, the limb doesn't have much burn damage, and our nutrition is good, heal some flesh
-	if(infection <= WOUND_INFECTION_MODERATE && (limb.burn_dam < 5) && (victim.nutrition >= NUTRITION_LEVEL_FED))
+	if(infection <= WOUND_INFECTION_MODERATE && (limb.get_burn_damage() < 5) && (victim.nutrition >= NUTRITION_LEVEL_FED))
 		flesh_healing += 0.2
 
 	// here's the check to see if we're cleared up
@@ -311,35 +311,57 @@
 
 	threshold_minimum = 40
 
-/datum/wound/burn/flesh/severe
-	name = "Ожог третьей степени"
-	desc = "Пациент страдает от сильнейших ожогов с полным проникновением в кожу, что создает серьезный риск инфекции и значительно снижает целостность конечности."
-	treat_text = "Немедленно примените лечебные средства, такие как синтплоть или регенеративная сетка, к ране. \
-		Продезинфицируйте рану и хирургически удалите инфицированную кожу, затем оберните чистой марлей или используйте мазь для предотвращения дальнейшего заражения. \
-		Если конечность отмерла, ее необходимо ампутировать, заменить имплантатом или лечить криогеникой."
-	treat_text_short = "Примените лечебные средства, такие как регенеративная сетка, синтплоть или криогеника, и продезинфицируйте / удалите инфицированные участки. \
-		Чистая марля или мазь замедлят скорость распространения инфекции."
-	examine_desc = "выглядит сильно обугленной, с агрессивными красными пятнами"
-	occur_text = "обугливается, обнажая разрушенные ткани и распространяя ярко-красные ожоги"
-	severity = WOUND_SEVERITY_SEVERE
-	damage_multiplier_penalty = 1.2
-	series_threshold_penalty = 40
-	status_effect_type = /datum/status_effect/wound/burn/flesh/severe
-	treatable_by = list(/obj/item/flashlight/pen/paramedic)
-	infection_rate = 0.07 // appx 9 minutes to reach sepsis without any treatment
-	flesh_damage = 12.5
-	scar_keyword = "burnsevere"
+/datum/wound/burn/flesh/moderate/cold
+	name = "Холодовой ожог второй степени"
+	desc = "The patient's skin has been damaged by severe cold exposure."
+	examine_desc = "is pale, blistered, and stiff from cold exposure"
+	occur_text = "turns pale and blisters from the cold"
+	damage_multiplier_penalty = 1.05
+	flesh_damage = 4
+	scar_keyword = "coldburnmoderate"
 
-	simple_desc = "Кожа пациента сильно обожжена, что значительно ослабляет конечность и усугубляет дальнейшие повреждения!!"
-	simple_treat_text = "<b>Бинты ускорят восстановление</b>, как и <b>мазь или регенеративная сетка</b>. <b>Спейсациллин, стерилизин и шахтерская мазь</b> помогут справиться с инфекцией."
-	homemade_treat_text = "<b>Полезный чай</b> ускорит восстановление. <b>Соль</b> или, предпочтительно, <b>соленная вода</b>, продезинфицируют рану, но особенно первая вызовет раздражение кожи и обезвоживание, что ускорит развитие инфекции. <b>Космический очиститель</b> можно использовать в качестве дезинфицирующего средства в крайнем случае."
+/datum/wound_pregen_data/flesh_cold_burn
+	abstract = TRUE
+	required_wounding_type = WOUND_COLD
+	required_limb_biostate = BIO_FLESH
+	wound_series = WOUND_SERIES_FLESH_BURN_BASIC
+
+/datum/wound_pregen_data/flesh_cold_burn/frostbite
+	abstract = FALSE
+	wound_path_to_generate = /datum/wound/burn/flesh/moderate/cold
+	threshold_minimum = 40
 
 /datum/wound_pregen_data/flesh_burn/third_degree
-	abstract = FALSE
+	abstract = TRUE
 
-	wound_path_to_generate = /datum/wound/burn/flesh/severe
+	wound_path_to_generate = /datum/wound/burn/flesh/critical
 
 	threshold_minimum = 80
+
+/datum/wound_pregen_data/flesh_cold_burn/deep_frostbite
+	abstract = FALSE
+	wound_path_to_generate = /datum/wound/burn/flesh/critical
+	threshold_minimum = 80
+
+/datum/wound/burn/flesh/moderate/acid
+	name = "Средний химический ожог"
+	desc = "The patient's skin has been chemically burned by acid."
+	examine_desc = "is covered with irritated chemical burns"
+	occur_text = "hisses and blisters under chemical burns"
+	damage_multiplier_penalty = 1.15
+	flesh_damage = 7
+	scar_keyword = "acidburnmoderate"
+
+/datum/wound_pregen_data/flesh_acid_burn
+	abstract = TRUE
+	required_wounding_type = WOUND_ACID
+	required_limb_biostate = BIO_FLESH
+	wound_series = WOUND_SERIES_FLESH_BURN_BASIC
+
+/datum/wound_pregen_data/flesh_acid_burn/chemical_burn
+	abstract = FALSE
+	wound_path_to_generate = /datum/wound/burn/flesh/moderate/acid
+	threshold_minimum = 45
 
 /datum/wound/burn/flesh/critical
 	name = "Катастрофический ожог"
@@ -370,10 +392,24 @@
 
 	wound_path_to_generate = /datum/wound/burn/flesh/critical
 
-	threshold_minimum = 140
+	threshold_minimum = 95
 
-///special severe wound caused by sparring interference or other god related punishments.
-/datum/wound/burn/flesh/severe/brand
+/datum/wound/burn/flesh/critical/acid
+	name = "Критический химический ожог"
+	desc = "The patient's tissues have been destroyed by acid."
+	examine_desc = "is dissolving into catastrophic chemical burns"
+	occur_text = "dissolves into a catastrophic chemical burn"
+	damage_multiplier_penalty = 1.35
+	flesh_damage = 24
+	scar_keyword = "acidburncritical"
+
+/datum/wound_pregen_data/flesh_acid_burn/critical_chemical_burn
+	abstract = FALSE
+	wound_path_to_generate = /datum/wound/burn/flesh/critical/acid
+	threshold_minimum = 75
+
+///special critical wound caused by sparring interference or other god related punishments.
+/datum/wound/burn/flesh/critical/brand
 	name = "Святое клеймо"
 	desc = "Пациент страдает от сильных ожогов от загадочного клейма, что создают серьезный риск инфекции и сильно снижают целостность конечности."
 	examine_desc = "похоже, что на коже были выжжены священные символы, оставившие сильные ожоги."
@@ -385,20 +421,20 @@
 	abstract = FALSE
 	can_be_randomly_generated = FALSE
 
-	wound_path_to_generate = /datum/wound/burn/flesh/severe/brand
-/// special severe wound caused by the cursed slot machine.
+	wound_path_to_generate = /datum/wound/burn/flesh/critical/brand
+/// special critical wound caused by the cursed slot machine.
 
-/datum/wound/burn/flesh/severe/cursed_brand
+/datum/wound/burn/flesh/critical/cursed_brand
 	name = "Древнее клеймо"
 	desc = "Пациент страдает от сильных ожогов нанесённых клеймом с причудливым орнаментом, что создают серьезный риск инфекции и сильно снижают целостность конечности."
 	examine_desc = "похоже, что на коже были выжжены причудливые символы, оставившие сильные ожоги."
 	occur_text = "быстро обугливается в узор, который можно описать только как сочетание нескольких финансовых символов, выжженных на коже"
 
-/datum/wound/burn/flesh/severe/cursed_brand/get_limb_examine_description()
+/datum/wound/burn/flesh/critical/cursed_brand/get_limb_examine_description()
 	return span_warning("На коже этой конечности выжжены причудливые символы, с углублениями по всей поверхности.")
 
 /datum/wound_pregen_data/flesh_burn/third_degree/cursed_brand
 	abstract = FALSE
 	can_be_randomly_generated = FALSE
 
-	wound_path_to_generate = /datum/wound/burn/flesh/severe/cursed_brand
+	wound_path_to_generate = /datum/wound/burn/flesh/critical/cursed_brand

@@ -1,7 +1,7 @@
 /// Test getting over a certain threshold of oxy damage results in KO
-/datum/unit_test/oxyloss_suffocation
+/datum/unit_test/oxygenloss_suffocation
 
-/datum/unit_test/oxyloss_suffocation/Run()
+/datum/unit_test/oxygenloss_suffocation/Run()
 	var/mob/living/carbon/human/dummy = allocate(/mob/living/carbon/human/consistent)
 
 	dummy.set_oxy_loss(75)

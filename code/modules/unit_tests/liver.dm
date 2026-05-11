@@ -49,8 +49,8 @@
 	mrbones.Life(SSMOBS_DT)
 	var/expected_remaining_damage = DAMAGE_AMOUNT - (1.25 * SECONDS_PER_TICK)
 	// Milk also heals brute on its own, so we may be more healed than expected
-	TEST_ASSERT(damaged_parts[1].brute_dam <= expected_remaining_damage,
-		"Milk did not heal the expected amount of damage (expected at least [expected_remaining_damage], got [damaged_parts[1].brute_dam])")
+	TEST_ASSERT(damaged_parts[1].get_brute_damage() <= expected_remaining_damage,
+		"Milk did not heal the expected amount of damage (expected at least [expected_remaining_damage], got [damaged_parts[1].get_brute_damage()])")
 
 /datum/unit_test/liver/skeleton/Destroy()
 	SSmobs.ignite()

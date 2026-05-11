@@ -615,7 +615,7 @@
 					var/total_burn = H.get_fire_loss()
 
 					var/need_mob_update = FALSE
-					//If the body has been fixed so that they would not be in crit when defibbed, give them oxyloss to put them back into crit
+					//If the body has been fixed so that they would not be in crit when defibbed, give them oxygenloss to put them back into crit
 					if (H.health > HALFWAYCRITDEATH)
 						need_mob_update += H.adjust_oxy_loss(H.health - HALFWAYCRITDEATH, updating_health = FALSE)
 					else

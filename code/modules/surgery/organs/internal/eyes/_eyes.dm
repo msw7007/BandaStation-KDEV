@@ -258,7 +258,7 @@
 	to_chat(owner, span_userdanger("You feel searing pain shoot though your [picked_side == RIGHT_EYE_SCAR ? "right" : "left"] eye!"))
 	// oof ouch my eyes
 	apply_organ_damage(rand((maxHealth - high_threshold) * 0.5, maxHealth - low_threshold))
-	var/datum/wound/pierce/bleed/severe/eye/eye_puncture = new
+	var/datum/wound/pierce/bleed/critical/eye/eye_puncture = new
 	eye_puncture.apply_wound(bodypart_owner, wound_source = "bullet impact", right_side = picked_side)
 	apply_scar(picked_side)
 

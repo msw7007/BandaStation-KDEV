@@ -185,7 +185,7 @@
 			owner.adjust_confusion(15 SECONDS)
 			if(iscarbon(owner))
 				var/mob/living/carbon/carbon_owner = owner
-				carbon_owner.vomit(VOMIT_CATEGORY_DEFAULT) // Vomiting clears toxloss - consider this a blessing
+				carbon_owner.vomit(VOMIT_CATEGORY_DEFAULT) // Vomiting clears toxinloss - consider this a blessing
 		ADD_TRAIT(owner, TRAIT_FEARLESS, TRAIT_STATUS_EFFECT(id))
 	else
 		REMOVE_TRAIT(owner, TRAIT_FEARLESS, TRAIT_STATUS_EFFECT(id))
@@ -194,13 +194,13 @@
 	if(drunk_value >= 71)
 		owner.set_eye_blur_if_lower((drunk_value * 2 SECONDS) - 140 SECONDS)
 
-	// Over 81, we will gain constant toxloss
+	// Over 81, we will gain constant toxinloss
 	if(drunk_value >= 81)
 		owner.adjust_tox_loss(1)
 		if(owner.stat == CONSCIOUS && prob(5))
 			to_chat(owner, span_warning("Maybe you should lie down for a bit..."))
 
-	// Over 91, we gain even more toxloss, brain damage, and have a chance of dropping into a long sleep
+	// Over 91, we gain even more toxinloss, brain damage, and have a chance of dropping into a long sleep
 	if(drunk_value >= 91)
 		owner.adjust_tox_loss(1)
 		owner.adjust_organ_loss(ORGAN_SLOT_BRAIN, 0.4)

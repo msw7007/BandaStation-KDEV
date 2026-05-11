@@ -120,7 +120,7 @@
 	. = ..()
 	message_animal_or_basic = initial(message_animal_or_basic)
 	if(!user.can_speak() || user.get_oxy_loss() >= 50)
-		return //stop the sound if oxyloss too high/cant speak
+		return //stop the sound if oxygenloss too high/cant speak
 	var/mob/living/carbon/carbon_user = user
 	// For masks that give unique death sounds
 	if(istype(carbon_user) && isclothing(carbon_user.wear_mask) && carbon_user.wear_mask.unique_death)
@@ -229,7 +229,7 @@
 	message = "gasps in shock!"
 	message_mime = "gasps in silent shock!"
 	emote_type = EMOTE_VISIBLE | EMOTE_AUDIBLE
-	stat_allowed = SOFT_CRIT
+	stat_allowed = UNCONSCIOUS
 BANDASTATION REMOVAL - END */
 /datum/emote/living/giggle
 	key = "giggle"

@@ -22,30 +22,30 @@
 	return ..()
 
 /datum/status_effect/unholy_determination/on_apply()
-	owner.add_traits(list(TRAIT_COAGULATING, TRAIT_NOCRITDAMAGE, TRAIT_NOSOFTCRIT), TRAIT_STATUS_EFFECT(id))
+	owner.add_traits(list(TRAIT_COAGULATING, TRAIT_NOCRITDAMAGE, TRAIT_NO_CRIT_UNCONSCIOUS), TRAIT_STATUS_EFFECT(id))
 	if(owner.get_blood_volume() < BLOOD_VOLUME_OKAY)
 		owner.set_blood_volume(BLOOD_VOLUME_OKAY)
 	return TRUE
 
 /datum/status_effect/unholy_determination/on_remove()
-	owner.remove_traits(list(TRAIT_COAGULATING, TRAIT_NOCRITDAMAGE, TRAIT_NOSOFTCRIT), TRAIT_STATUS_EFFECT(id))
+	owner.remove_traits(list(TRAIT_COAGULATING, TRAIT_NOCRITDAMAGE, TRAIT_NO_CRIT_UNCONSCIOUS), TRAIT_STATUS_EFFECT(id))
 
 /datum/status_effect/unholy_determination/tick(seconds_between_ticks)
 	// The amount we heal of each damage type per tick. If we're missing legs we heal better because we can't dodge.
 	var/healing_amount = (heal_per_second * seconds_between_ticks) + (heal_per_second * (2 - owner.usable_legs))
 
 	// In softcrit you're, strong enough to stay up.
-	if(owner.health <= owner.crit_threshold && owner.health >= owner.hardcrit_threshold)
+	if(owner.health <= owner.critical_health_threshold && owner.health >= owner.critical_health_threshold)
 		if(prob(5))
 			to_chat(owner, span_hypnophrase("Ваше тело готово сдаться, но вы продолжаете бороться!"))
 		healing_amount *= 2
 	// ...But reach hardcrit and you're done. You now die faster.
-	if (owner.health < owner.hardcrit_threshold)
+	if (owner.health < owner.critical_health_threshold)
 		if(prob(5))
 			to_chat(owner, span_big(span_hypnophrase("Вы не сможете долго держаться...")))
 		healing_amount *= -0.5
 
-	if(owner.health > owner.crit_threshold && prob(4))
+	if(owner.health > owner.critical_health_threshold && prob(4))
 		owner.set_jitter_if_lower(20 SECONDS)
 		owner.set_dizzy_if_lower(10 SECONDS)
 		owner.adjust_hallucinations_up_to(6 SECONDS, 48 SECONDS)

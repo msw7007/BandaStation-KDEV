@@ -308,7 +308,7 @@
 	var/mob/living/carbon/human/patient = allocate(/mob/living/carbon/human/consistent)
 	var/obj/item/bodypart/chest/chest = patient.get_bodypart(BODY_ZONE_CHEST)
 
-	var/datum/wound/slash/flesh/severe/wound = new()
+	var/datum/wound/slash/flesh/critical/wound = new()
 	wound.surgery_states = SURGERY_SKIN_CUT | SURGERY_VESSELS_UNCLAMPED
 	wound.apply_wound(chest)
 
@@ -325,7 +325,7 @@
 	var/mob/living/carbon/human/patient = allocate(/mob/living/carbon/human/consistent)
 	var/obj/item/bodypart/chest/chest = patient.get_bodypart(BODY_ZONE_CHEST)
 
-	var/datum/wound/slash/flesh/severe/wound = new()
+	var/datum/wound/slash/flesh/critical/wound = new()
 	wound.surgery_states = SURGERY_SKIN_CUT | SURGERY_VESSELS_UNCLAMPED | SURGERY_BONE_DRILLED
 	wound.apply_wound(chest)
 

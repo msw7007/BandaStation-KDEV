@@ -127,7 +127,7 @@
 	if(isnull(owner.client))
 		return
 
-	if(owner.stat == SOFT_CRIT)
+	if(owner.stat == UNCONSCIOUS)
 		if(beat != BEAT_SLOW)
 			beat = BEAT_SLOW
 			to_chat(owner, span_notice("You feel your heart slow down..."))
@@ -244,7 +244,7 @@
 	if(organ_flags & ORGAN_EMP)
 		return
 
-	if(stabilization_available && owner.health <= owner.crit_threshold)
+	if(stabilization_available && owner.health <= owner.critical_health_threshold)
 		stabilize_heart()
 
 	// Wound healing is intentionally tied to blood volume.
@@ -259,18 +259,18 @@
 		wounded_owner.coagulant_effect(1 * seconds_per_tick)
 
 /obj/item/organ/heart/cybernetic/proc/stabilize_heart()
-	ADD_TRAIT(owner, TRAIT_NOSOFTCRIT, ORGAN_TRAIT)
+	ADD_TRAIT(owner, TRAIT_NO_CRIT_UNCONSCIOUS, ORGAN_TRAIT)
 	stabilization_available = FALSE
 
-	addtimer(TRAIT_CALLBACK_REMOVE(owner, TRAIT_NOSOFTCRIT, ORGAN_TRAIT), stabilization_duration)
+	addtimer(TRAIT_CALLBACK_REMOVE(owner, TRAIT_NO_CRIT_UNCONSCIOUS, ORGAN_TRAIT), stabilization_duration)
 
 	addtimer(VARSET_CALLBACK(src, stabilization_available, TRUE), 5 MINUTES, TIMER_DELETE_ME)
 
 // Largely a sanity check
 /obj/item/organ/heart/cybernetic/on_mob_remove(mob/living/carbon/heart_owner, special = FALSE, movement_flags)
 	. = ..()
-	if(HAS_TRAIT_FROM(heart_owner, TRAIT_NOSOFTCRIT, ORGAN_TRAIT))
-		REMOVE_TRAIT(heart_owner, TRAIT_NOSOFTCRIT, ORGAN_TRAIT)
+	if(HAS_TRAIT_FROM(heart_owner, TRAIT_NO_CRIT_UNCONSCIOUS, ORGAN_TRAIT))
+		REMOVE_TRAIT(heart_owner, TRAIT_NO_CRIT_UNCONSCIOUS, ORGAN_TRAIT)
 
 /obj/item/organ/heart/cybernetic/tier2
 	name = "cybernetic heart"

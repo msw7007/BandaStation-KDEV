@@ -605,6 +605,9 @@
 	if(!ispath(effect, /datum/status_effect))
 		CRASH("adjust_timed_status_effect: called with an invalid effect type. (Got: [effect])")
 
+	if(duration > 0)
+		duration *= get_psychic_status_duration_multiplier()
+
 	// If we have a max duration set, we need to check our duration does not exceed it
 	if(isnum(max_duration))
 		if(max_duration <= 0)
@@ -652,6 +655,9 @@
 
 	if(!ispath(effect, /datum/status_effect))
 		CRASH("set_timed_status_effect: called with an invalid effect type. (Got: [effect])")
+
+	if(duration > 0)
+		duration *= get_psychic_status_duration_multiplier()
 
 	var/datum/status_effect/existing = has_status_effect(effect)
 	if(existing)

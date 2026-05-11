@@ -15,7 +15,7 @@
 	return !HAS_TRAIT(src, TRAIT_NOBLOOD)
 
 /// Returns the blood volume of the mob.
-/// Apply modifiers when reading blood volume for oxyloss damage, HUDs and analyzers.
+/// Apply modifiers when reading blood volume for oxygenloss damage, HUDs and analyzers.
 /// Don't apply modifiers when using blood itself, like in spells and reagent transfers.
 /mob/living/proc/get_blood_volume(apply_modifiers = FALSE)
 	return CAN_HAVE_BLOOD(src) ? blood_volume : 0 // Overriding blood setting code can cause blood_volume to be non-zero even when a mob shouldn't have blood.
@@ -26,7 +26,7 @@
 	if (!apply_modifiers)
 		return blood_volume // Default behavior, returns the real blood volume.
 	if (HAS_TRAIT(src, TRAIT_GODMODE))
-		return default_blood_volume // Makes TRAIT_GODMODE grant immunity to the effects of bleeding. (oxyloss, passing out, etc.)
+		return default_blood_volume // Makes TRAIT_GODMODE grant immunity to the effects of bleeding. (oxygenloss, passing out, etc.)
 
 	var/amount = blood_volume
 
@@ -177,7 +177,7 @@
 	var/bleed_rate = get_bleed_rate()
 
 	if(bleed_rate)
-		bleed(bleed_rate * seconds_per_tick)
+		bleed(bleed_rate * max(blood_pressure_delta, 0.15) * seconds_per_tick)
 		bleed_warn(bleed_rate)
 
 	for (var/obj/item/bodypart/bodypart as anything in get_bodyparts())
@@ -249,17 +249,7 @@
 				investigate_log("has died of bloodloss.", INVESTIGATE_DEATHS)
 				death()
 
-	// Blood ratio! if you have 280 blood, this equals 0.5 as that's half of the current value, 560.
-	var/effective_blood_ratio = modified_blood_volume / BLOOD_VOLUME_NORMAL
-	var/target_oxyloss = max((1 - effective_blood_ratio) * 100, 0)
-
-	// If your ratio is less than one (you're missing any blood) and your oxyloss is under missing blood %, start getting oxy damage.
-	// This damage accrues faster the less blood you have.
-	// If the damage surpasses the KO threshold for oxyloss, then we'll always tick up so you die eventually
-	if(target_oxyloss > 0 && (get_oxy_loss() < target_oxyloss || (target_oxyloss >= OXYLOSS_PASSOUT_THRESHOLD && stat >= UNCONSCIOUS)))
-		// At roughly half blood this equals to 3 oxyloss per tick. At 90% blood it's close to 0.5
-		var/rounded_oxyloss = round(0.01 * (BLOOD_VOLUME_NORMAL - modified_blood_volume), 0.25) * seconds_per_tick
-		adjust_oxy_loss(rounded_oxyloss, updating_health = TRUE)
+	// Blood oxygen damage is handled by carbon blood_oxygenation so it can account for heart pressure and lung efficiency together.
 
 /// Has each bodypart update its bleed/wound overlay icon states
 /mob/living/carbon/proc/update_bodypart_bleed_overlays()

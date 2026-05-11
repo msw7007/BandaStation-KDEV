@@ -48,7 +48,7 @@
 		if("Asleep")
 			return !!organism.IsSleeping() && !organism.IsUnconscious()
 		if("Critical")
-			return state == SOFT_CRIT || state == HARD_CRIT
+			return state == HARD_CRIT
 		if("Unconscious")
 			return state == UNCONSCIOUS || state == HARD_CRIT || !!organism.IsUnconscious()
 		if("Deceased")

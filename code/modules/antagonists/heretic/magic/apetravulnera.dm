@@ -39,7 +39,7 @@
 
 	var/a_limb_got_damaged = FALSE
 	for(var/obj/item/bodypart/bodypart in cast_on.get_bodyparts())
-		if(bodypart.brute_dam < 15)
+		if(bodypart.get_brute_damage() < 15)
 			continue
 		a_limb_got_damaged = TRUE
 		var/datum/wound/slash/crit_wound = new wound_type()

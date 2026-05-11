@@ -165,7 +165,7 @@
 	if(isnull(affecting) || !IS_ROBOTIC_LIMB(affecting))
 		return NONE
 
-	if (!affecting.brute_dam)
+	if (!affecting.get_brute_damage())
 		balloon_alert(user, "limb not damaged")
 		return ITEM_INTERACT_BLOCKING
 

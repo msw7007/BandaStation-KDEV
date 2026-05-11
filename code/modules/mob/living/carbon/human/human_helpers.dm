@@ -363,8 +363,8 @@
 		to_chat(user, span_warning("[capitalize(affecting.declent_ru(NOMINATIVE))] уже в хорошем состоянии!"))
 		return FALSE
 
-	var/brute_damaged = affecting.brute_dam > 0
-	var/burn_damaged = affecting.burn_dam > 0
+	var/brute_damaged = affecting.get_brute_damage() > 0
+	var/burn_damaged = affecting.get_burn_damage() > 0
 
 	var/nothing_to_heal = ((brute_heal <= 0 || !brute_damaged) && (burn_heal <= 0 || !burn_damaged))
 	if (nothing_to_heal)

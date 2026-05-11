@@ -195,8 +195,6 @@
 // blunt
 /datum/status_effect/wound/blunt/bone/moderate
 	id = "disjoint"
-/datum/status_effect/wound/blunt/bone/severe
-	id = "hairline"
 /datum/status_effect/wound/blunt/bone/critical
 	id = "compound"
 
@@ -204,21 +202,15 @@
 
 /datum/status_effect/wound/slash/flesh/moderate
 	id = "abrasion"
-/datum/status_effect/wound/slash/flesh/severe
-	id = "laceration"
 /datum/status_effect/wound/slash/flesh/critical
 	id = "avulsion"
 // pierce
 /datum/status_effect/wound/pierce/moderate
 	id = "breakage"
-/datum/status_effect/wound/pierce/severe
-	id = "puncture"
 /datum/status_effect/wound/pierce/critical
 	id = "rupture"
 // burns
 /datum/status_effect/wound/burn/flesh/moderate
 	id = "seconddeg"
-/datum/status_effect/wound/burn/flesh/severe
-	id = "thirddeg"
 /datum/status_effect/wound/burn/flesh/critical
 	id = "fourthdeg"

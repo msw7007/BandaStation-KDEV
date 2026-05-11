@@ -1,7 +1,7 @@
 /// A space dragon's fire breath, toasts lunch AND buffs your friends
 /datum/action/cooldown/mob_cooldown/fire_breath/carp
 	desc = "Огненное дыхание Космического дракона не только поджигает врагов, но и ускоряет космических карпов."
-	fire_damage = 30
+	heat_damage = 30
 	mech_damage = 50
 	fire_range = 20
 	fire_temperature = 700 // Even hotter than a megafauna for some reason

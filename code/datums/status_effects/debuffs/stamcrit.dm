@@ -76,9 +76,9 @@
 	SIGNAL_HANDLER
 	if (isbasicmob(owner))
 		var/mob/living/basic/basic_owner = owner
-		if(basic_owner.staminaloss < basic_owner.stamina_crit_threshold)
+		if(basic_owner.staminaloss < basic_owner.stamina_critical_health_threshold)
 			qdel(src)
 		return
 
-	if(owner.maxHealth - owner.get_stamina_loss() > owner.crit_threshold)
+	if(owner.maxHealth - owner.get_stamina_loss() > owner.critical_health_threshold)
 		qdel(src)

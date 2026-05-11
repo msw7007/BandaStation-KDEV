@@ -154,7 +154,7 @@
 
 		playsound(src, drop_sound, 100, TRUE)
 		if(head)
-			if (blade_sharpness >= GUILLOTINE_DECAP_MIN_SHARP || head.brute_dam >= 100)
+			if (blade_sharpness >= GUILLOTINE_DECAP_MIN_SHARP || head.get_brute_damage() >= 100)
 				head.dismember()
 				log_combat(user, victim, "beheaded", src)
 				victim.regenerate_icons()

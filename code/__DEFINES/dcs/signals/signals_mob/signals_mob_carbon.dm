@@ -159,7 +159,7 @@
 	#define HANDLE_BLOOD_HANDLED (1<<0)
 	/// Return to skip default nutrition -> blood conversion
 	#define HANDLE_BLOOD_NO_NUTRITION_DRAIN (1<<1)
-	/// Return to skip oxyloss and similar effects from blood level
+	/// Return to skip oxygenloss and similar effects from blood level
 	#define HANDLE_BLOOD_NO_OXYLOSS (1<<2)
 
 /// from /datum/status_effect/limp/proc/check_step(mob/whocares, OldLoc, Dir, forced) iodk where it should go

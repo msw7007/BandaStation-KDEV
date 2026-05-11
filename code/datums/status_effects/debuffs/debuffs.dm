@@ -268,7 +268,7 @@
 		var/mob/living/carbon/carbon_owner = owner
 		carbon_owner.handle_dreams()
 
-	if(prob(8) && owner.health > owner.crit_threshold)
+	if(prob(8) && owner.health > owner.critical_health_threshold)
 		owner.emote("snore")
 
 /atom/movable/screen/alert/status_effect/asleep
@@ -916,7 +916,7 @@
 /datum/status_effect/ants/tick(seconds_between_ticks)
 	var/mob/living/carbon/human/victim = owner
 	victim.apply_damage(max(0.1, round((ants_remaining * damage_per_ant), 0.1)) * seconds_between_ticks, BRUTE, spread_damage = TRUE) //Scales with # of ants (lowers with time). Roughly 10 brute over 50 seconds.
-	if(victim.stat <= SOFT_CRIT) //Makes sure people don't scratch at themselves while they're in a critical condition
+	if(victim.stat <= UNCONSCIOUS) //Makes sure people don't scratch at themselves while they're in a critical condition
 		if(prob(15))
 			switch(rand(1,2))
 				if(1)

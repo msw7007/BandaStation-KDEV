@@ -280,9 +280,9 @@
 			mendicant_transfer_limb = pick(mendicant_organic_limbs)
 
 		// Transfer at most 35 damage, by default.
-		var/brute_damage = min(affected_limb.brute_dam, 35 * heal_multiplier)
+		var/brute_damage = min(affected_limb.get_brute_damage(), 35 * heal_multiplier)
 		// no double dipping
-		var/burn_damage = min(affected_limb.burn_dam, (35 * heal_multiplier) - brute_damage)
+		var/burn_damage = min(affected_limb.get_burn_damage(), (35 * heal_multiplier) - brute_damage)
 		if((brute_damage || burn_damage) && total_damage_healed < (35 * heal_multiplier))
 			total_damage_healed += brute_damage + burn_damage
 			. = TRUE
@@ -296,9 +296,6 @@
 		// Force light wounds onto you.
 		for(var/datum/wound/iter_wound as anything in affected_limb.wounds)
 			switch(iter_wound.severity)
-				if(WOUND_SEVERITY_SEVERE) // half and half
-					if(prob(50 * heal_multiplier))
-						continue
 				if(WOUND_SEVERITY_CRITICAL)
 					if(heal_multiplier < 1.5) // need buffs to transfer crit wounds
 						continue

@@ -17,8 +17,6 @@
 			return span_danger("It's leaking blood from a small [LOWER_TEXT(undiagnosed_name || name)].")
 		if(WOUND_SEVERITY_MODERATE)
 			return span_warning("It's leaking blood from a [LOWER_TEXT(undiagnosed_name || name)].")
-		if(WOUND_SEVERITY_SEVERE)
-			return span_boldwarning("It's leaking blood from a serious [LOWER_TEXT(undiagnosed_name || name)]!")
 		if(WOUND_SEVERITY_CRITICAL)
 			return span_boldwarning("It's leaking blood from a major [LOWER_TEXT(undiagnosed_name || name)]!!")
 
@@ -325,39 +323,12 @@
 
 	threshold_minimum = 20
 
-/datum/wound/slash/flesh/severe
-	name = "Открытый разрез"
-	desc = "Кожа пациента разорвана, что вызывает значительную потерю крови."
-	treat_text = "Быстро наложите повязку или зашейте рану, \
-		или воспользуйтесь средствами для остановки крови или прижиганием. \
-		После этого рекомендуется принимать добавки железа или соляно-глюкозные растворы, а также отдохнуть."
-	treat_text_short = "Примените повязку, швы, средства для свертывания крови или прижигание."
-	examine_desc = "имеет серьезный порез"
-	occur_text = "разрывается, и вены начинают брызгать кровью"
-	sound_effect = 'sound/effects/wounds/blood2.ogg'
-	severity = WOUND_SEVERITY_SEVERE
-	initial_flow = 2.75
-	minimum_flow = 2
-	clot_rate = 0.02
-	series_threshold_penalty = 25
-	demotes_to = /datum/wound/slash/flesh/moderate
-	status_effect_type = /datum/status_effect/wound/slash/flesh/severe
-	scar_keyword = "slashsevere"
-	surgery_states = SURGERY_SKIN_CUT | SURGERY_VESSELS_UNCLAMPED
-
-	simple_treat_text = "<b>Наложение повязки</b> на рану является важным и уменьшит потерю крови. После этого рану можно <b>зашить</b>, желательно, чтобы пациент отдыхал и/или держал свою рану."
-	homemade_treat_text = "Простыни можно разорвать, чтобы сделать <b>самодельный бинт</b>. <b>Мука, соль и соленая вода</b>, нанесенные на кожу, помогут, но чистая поваренная соль НЕ рекомендуется. Падение на землю и удерживание раны снизит кровотечение."
-
 /datum/wound_pregen_data/flesh_slash/laceration
-	abstract = FALSE
+	abstract = TRUE
 
-	wound_path_to_generate = /datum/wound/slash/flesh/severe
+	wound_path_to_generate = /datum/wound/slash/flesh/critical
 
 	threshold_minimum = 50
-
-/datum/wound/slash/flesh/severe/update_descriptions()
-	if(!limb.can_bleed())
-		occur_text = "обнажает глубокий разрез"
 
 /datum/wound/slash/flesh/critical
 	name = "Авульсивный разрез"
@@ -372,9 +343,9 @@
 	severity = WOUND_SEVERITY_CRITICAL
 	initial_flow = 3.75
 	minimum_flow = 3.5
-	clot_rate = -0.012 // critical cuts actively get worse instead of better
+	clot_rate = -0.012
 	threshold_penalty = 15
-	demotes_to = /datum/wound/slash/flesh/severe
+	demotes_to = /datum/wound/slash/flesh/moderate
 	status_effect_type = /datum/status_effect/wound/slash/flesh/critical
 	scar_keyword = "slashcritical"
 	surgery_states = SURGERY_SKIN_OPEN | SURGERY_VESSELS_UNCLAMPED
@@ -383,14 +354,14 @@
 	homemade_treat_text = "Простыни можно порвать, чтобы сделать <b>самодельный бинт</b>. <b>Мука, соль и соленая вода</b>, нанесенные на кожу, помогут. Падение на землю и удерживание раны снизит кровотечение."
 
 /datum/wound/slash/flesh/critical/update_descriptions()
-	if (!limb.can_bleed())
+	if(!limb.can_bleed())
 		occur_text = "раскрывается огромной зияющей раной"
 
 /datum/wound_pregen_data/flesh_slash/avulsion
 	abstract = FALSE
 
 	wound_path_to_generate = /datum/wound/slash/flesh/critical
-	threshold_minimum = 80
+	threshold_minimum = 55
 
 /datum/wound/slash/flesh/moderate/many_cuts
 	name = "Многочисленные небольшие резаные раны"
@@ -404,7 +375,6 @@
 
 	wound_path_to_generate = /datum/wound/slash/flesh/moderate/many_cuts
 
-// Subtype for cleave (heretic spell)
 /datum/wound/slash/flesh/critical/cleave
 	name = "Горячий глубокий порез"
 	examine_desc = "разорвана, фонтанируя кровью"

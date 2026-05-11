@@ -1,4 +1,18 @@
 
+/mob/living/proc/normalize_cy_damage_type(damagetype, sharpness = NONE)
+	switch(damagetype)
+		if(BRUTE)
+			if(sharpness & SHARP_POINTY)
+				return PIERCE
+			if(sharpness & SHARP_EDGED)
+				return SLASH
+			return BLUNT
+		if(BURN)
+			return FIRE
+		if(BRAIN)
+			return PSYCHIC
+	return damagetype
+
 /**
  * Applies damage to this mob.
  *
@@ -6,7 +20,7 @@
  *
  * Arguuments:
  * * damage - Amount of damage
- * * damagetype - What type of damage to do. one of [BRUTE], [BURN], [TOX], [OXY], [STAMINA], [BRAIN].
+ * * damagetype - What type of damage to do. Prefer exact CP channels: [BLUNT], [PIERCE], [SLASH], [FIRE], [COLD], [ACID_DAMAGE], [TOX], [OXY], [PSYCHIC], [PAIN].
  * * def_zone - What body zone is being hit. Or a reference to what bodypart is being hit.
  * * blocked - Percent modifier to damage. 100 = 100% less damage dealt, 50% = 50% less damage dealt.
  * * forced - "Force" exactly the damage dealt. This means it skips damage modifier from blocked.
@@ -22,7 +36,7 @@
  */
 /mob/living/proc/apply_damage(
 	damage = 0,
-	damagetype = BRUTE,
+	damagetype = BLUNT,
 	def_zone = null,
 	blocked = 0,
 	forced = FALSE,
@@ -36,6 +50,10 @@
 )
 	SHOULD_CALL_PARENT(TRUE)
 	var/damage_amount = damage
+	if(damagetype == BRAIN)
+		damagetype = PSYCHIC
+	else if(damagetype != BRUTE && damagetype != BURN)
+		damagetype = normalize_cy_damage_type(damagetype, sharpness)
 	if(!forced)
 		damage_amount *= ((100 - blocked) / 100)
 		damage_amount *= get_incoming_damage_modifier(damage_amount, damagetype, def_zone, sharpness, attack_direction, attacking_item)
@@ -50,40 +68,82 @@
 			if(isbodypart(def_zone))
 				var/obj/item/bodypart/actual_hit = def_zone
 				var/delta = actual_hit.get_damage()
-				if(actual_hit.receive_damage(
-					brute = damage_amount,
-					burn = 0,
-					forced = forced,
-					wound_bonus = wound_bonus,
-					exposed_wound_bonus = exposed_wound_bonus,
-					sharpness = sharpness,
-					attack_direction = attack_direction,
-					damage_source = attacking_item,
-					wound_clothing = wound_clothing,
-				))
+				if(actual_hit.receive_damage(brute = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
 					update_damage_overlays()
-				damage_dealt = actual_hit.get_damage() - delta // Unfortunately bodypart receive_damage doesn't return damage dealt so we do it manually
+				damage_dealt = actual_hit.get_damage() - delta
 			else
 				damage_dealt = -1 * adjust_brute_loss(damage_amount, forced = forced)
+		if(BLUNT)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				var/delta = actual_hit.get_damage()
+				if(actual_hit.receive_damage(blunt = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = NONE, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
+					update_damage_overlays()
+				damage_dealt = actual_hit.get_damage() - delta
+			else
+				damage_dealt = -1 * adjust_blunt_loss(damage_amount, forced = forced)
+		if(PIERCE)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				var/delta = actual_hit.get_damage()
+				if(actual_hit.receive_damage(pierce = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = SHARP_POINTY, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
+					update_damage_overlays()
+				damage_dealt = actual_hit.get_damage() - delta
+			else
+				damage_dealt = -1 * adjust_pierce_loss(damage_amount, forced = forced)
+		if(SLASH)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				var/delta = actual_hit.get_damage()
+				if(actual_hit.receive_damage(slash = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = SHARP_EDGED, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
+					update_damage_overlays()
+				damage_dealt = actual_hit.get_damage() - delta
+			else
+				damage_dealt = -1 * adjust_slash_loss(damage_amount, forced = forced)
 		if(BURN)
 			if(isbodypart(def_zone))
 				var/obj/item/bodypart/actual_hit = def_zone
 				var/delta = actual_hit.get_damage()
-				if(actual_hit.receive_damage(
-					brute = 0,
-					burn = damage_amount,
-					forced = forced,
-					wound_bonus = wound_bonus,
-					exposed_wound_bonus = exposed_wound_bonus,
-					sharpness = sharpness,
-					attack_direction = attack_direction,
-					damage_source = attacking_item,
-					wound_clothing = wound_clothing,
-				))
+				if(actual_hit.receive_damage(burn = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
 					update_damage_overlays()
-				damage_dealt = actual_hit.get_damage() - delta // See above
+				damage_dealt = actual_hit.get_damage() - delta
 			else
 				damage_dealt = -1 * adjust_fire_loss(damage_amount, forced = forced)
+		if(FIRE)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				var/delta = actual_hit.get_damage()
+				if(actual_hit.receive_damage(fire = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
+					update_damage_overlays()
+				damage_dealt = actual_hit.get_damage() - delta
+			else
+				damage_dealt = -1 * adjust_heat_loss(damage_amount, forced = forced)
+		if(COLD)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				var/delta = actual_hit.get_damage()
+				if(actual_hit.receive_damage(cold = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
+					update_damage_overlays()
+				damage_dealt = actual_hit.get_damage() - delta
+			else
+				damage_dealt = -1 * adjust_cold_loss(damage_amount, forced = forced)
+		if(ACID_DAMAGE)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				var/delta = actual_hit.get_damage()
+				if(actual_hit.receive_damage(acid = damage_amount, forced = forced, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, attack_direction = attack_direction, damage_source = attacking_item, wound_clothing = wound_clothing))
+					update_damage_overlays()
+				damage_dealt = actual_hit.get_damage() - delta
+			else
+				damage_dealt = -1 * adjust_acid_loss(damage_amount, forced = forced)
+		if(PSYCHIC)
+			damage_dealt = -1 * adjust_psychic_loss(damage_amount, forced = forced)
+		if(PAIN)
+			if(isbodypart(def_zone))
+				var/obj/item/bodypart/actual_hit = def_zone
+				damage_dealt = -1 * actual_hit.adjust_pain_damage(damage_amount)
+			else
+				damage_dealt = -1 * adjust_pain_loss(damage_amount, forced = forced)
 		if(TOX)
 			damage_dealt = -1 * adjust_tox_loss(damage_amount, forced = forced)
 		if(OXY)
@@ -128,8 +188,24 @@
 	switch(damagetype)
 		if(BRUTE)
 			return adjust_brute_loss(heal_amount, update_health)
+		if(BLUNT)
+			return adjust_blunt_loss(heal_amount, update_health)
+		if(PIERCE)
+			return adjust_pierce_loss(heal_amount, update_health)
+		if(SLASH)
+			return adjust_slash_loss(heal_amount, update_health)
 		if(BURN)
 			return adjust_fire_loss(heal_amount, update_health)
+		if(FIRE)
+			return adjust_heat_loss(heal_amount, update_health)
+		if(COLD)
+			return adjust_cold_loss(heal_amount, update_health)
+		if(ACID_DAMAGE)
+			return adjust_acid_loss(heal_amount, update_health)
+		if(PSYCHIC)
+			return adjust_psychic_loss(heal_amount, update_health)
+		if(PAIN)
+			return adjust_pain_loss(heal_amount, update_health)
 		if(TOX)
 			return adjust_tox_loss(heal_amount, update_health)
 		if(OXY)
@@ -146,8 +222,24 @@
 	switch(damagetype)
 		if(BRUTE)
 			return get_brute_loss()
+		if(BLUNT)
+			return get_blunt_loss()
+		if(PIERCE)
+			return get_pierce_loss()
+		if(SLASH)
+			return get_slash_loss()
 		if(BURN)
 			return get_fire_loss()
+		if(FIRE)
+			return get_heat_loss()
+		if(COLD)
+			return get_cold_loss()
+		if(ACID_DAMAGE)
+			return get_acid_loss()
+		if(PSYCHIC)
+			return get_psychic_loss()
+		if(PAIN)
+			return get_pain_loss()
 		if(TOX)
 			return get_tox_loss()
 		if(OXY)
@@ -157,28 +249,57 @@
 
 /// return the total damage of all types which update your health
 /mob/living/proc/get_total_damage(precision = DAMAGE_PRECISION)
-	return round(get_brute_loss() + get_fire_loss() + get_tox_loss() + get_oxy_loss(), precision)
+	return round(get_brute_loss() + get_fire_loss() + get_tox_loss() + get_oxy_loss() + get_psychic_loss() + max(get_pain_loss() - 200, 0), precision)
 
 /// Applies multiple damages at once via [apply_damage][/mob/living/proc/apply_damage]
 /mob/living/proc/apply_damages(
-	brute = 0,
-	burn = 0,
+	blunt = 0,
+	pierce = 0,
+	slash = 0,
+	heat = 0,
+	cold = 0,
+	caustic = 0,
 	tox = 0,
 	oxy = 0,
+	psychic = 0,
+	pain = 0,
 	def_zone = null,
 	blocked = 0,
 	stamina = 0,
 	brain = 0,
+	brute = 0,
+	burn = 0,
 )
 	var/total_damage = 0
+	// Legacy aggregate inputs are split immediately; exact channels remain source of truth.
 	if(brute)
-		total_damage += apply_damage(brute, BRUTE, def_zone, blocked)
+		blunt += brute / 3
+		pierce += brute / 3
+		slash += brute / 3
 	if(burn)
-		total_damage += apply_damage(burn, BURN, def_zone, blocked)
+		heat += burn / 3
+		cold += burn / 3
+		caustic += burn / 3
+	if(blunt)
+		total_damage += apply_damage(blunt, BLUNT, def_zone, blocked)
+	if(pierce)
+		total_damage += apply_damage(pierce, PIERCE, def_zone, blocked)
+	if(slash)
+		total_damage += apply_damage(slash, SLASH, def_zone, blocked)
+	if(heat)
+		total_damage += apply_damage(heat, FIRE, def_zone, blocked)
+	if(cold)
+		total_damage += apply_damage(cold, COLD, def_zone, blocked)
+	if(caustic)
+		total_damage += apply_damage(caustic, ACID_DAMAGE, def_zone, blocked)
 	if(tox)
 		total_damage += apply_damage(tox, TOX, def_zone, blocked)
 	if(oxy)
 		total_damage += apply_damage(oxy, OXY, def_zone, blocked)
+	if(psychic)
+		total_damage += apply_damage(psychic, PSYCHIC, def_zone, blocked)
+	if(pain)
+		total_damage += apply_damage(pain, PAIN, def_zone, blocked)
 	if(stamina)
 		total_damage += apply_damage(stamina, STAMINA, def_zone, blocked)
 	if(brain)
@@ -267,7 +388,19 @@
 	return 1
 
 /mob/living/proc/get_brute_loss()
-	return bruteloss
+	return round(get_blunt_loss() + get_pierce_loss() + get_slash_loss(), DAMAGE_PRECISION)
+
+/mob/living/proc/sync_physical_damage()
+	return get_brute_loss()
+
+/mob/living/proc/get_blunt_loss()
+	return bluntloss
+
+/mob/living/proc/get_pierce_loss()
+	return pierceloss
+
+/mob/living/proc/get_slash_loss()
+	return slashloss
 
 /mob/living/proc/can_adjust_brute_loss(amount, forced, required_bodytype)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
@@ -279,10 +412,47 @@
 /mob/living/proc/adjust_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
 	if (!can_adjust_brute_loss(amount, forced, required_bodytype))
 		return 0
-	. = bruteloss
-	bruteloss = clamp((bruteloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
-	. -= bruteloss
+	var/split_amount = amount / 3
+	. = adjust_blunt_loss(split_amount, FALSE, TRUE, required_bodytype)
+	. += adjust_pierce_loss(split_amount, FALSE, TRUE, required_bodytype)
+	. += adjust_slash_loss(split_amount, FALSE, TRUE, required_bodytype)
 	if(!.) // no change, no need to update
+		return 0
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/adjust_blunt_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+	if (!can_adjust_brute_loss(amount, forced, required_bodytype))
+		return 0
+	. = bluntloss
+	bluntloss = clamp((bluntloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= bluntloss
+	sync_physical_damage()
+	if(!.)
+		return 0
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/adjust_pierce_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+	if (!can_adjust_brute_loss(amount, forced, required_bodytype))
+		return 0
+	. = pierceloss
+	pierceloss = clamp((pierceloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= pierceloss
+	sync_physical_damage()
+	if(!.)
+		return 0
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/adjust_slash_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+	if (!can_adjust_brute_loss(amount, forced, required_bodytype))
+		return 0
+	. = slashloss
+	slashloss = clamp((slashloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= slashloss
+	sync_physical_damage()
+	if(!.)
 		return 0
 	if(updating_health)
 		updatehealth()
@@ -291,17 +461,14 @@
 /mob/living/proc/set_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return FALSE
-	. = bruteloss
-	bruteloss = amount
-
-	if(!.) // no change, no need to update
+	var/current = get_brute_loss()
+	var/diff = amount - current
+	if(!diff)
 		return FALSE
-	if(updating_health)
-		updatehealth()
-	. -= bruteloss
+	return adjust_brute_loss(diff, updating_health, forced, required_bodytype)
 
 /mob/living/proc/get_oxy_loss()
-	return oxyloss
+	return oxygenloss
 
 /mob/living/proc/can_adjust_oxy_loss(amount, forced, required_biotype, required_respiration_type)
 	if(!forced)
@@ -322,9 +489,9 @@
 /mob/living/proc/adjust_oxy_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype = ALL, required_respiration_type = ALL)
 	if(!can_adjust_oxy_loss(amount, forced, required_biotype, required_respiration_type))
 		return 0
-	. = oxyloss
-	oxyloss = clamp((oxyloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
-	. -= oxyloss
+	. = oxygenloss
+	oxygenloss = clamp((oxygenloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= oxygenloss
 	if(!.) // no change, no need to update
 		return FALSE
 	if(updating_health)
@@ -342,16 +509,16 @@
 		else
 			if(!(affected_lungs.respiration_type & required_respiration_type))
 				return FALSE
-	. = oxyloss
-	oxyloss = amount
-	. -= oxyloss
+	. = oxygenloss
+	oxygenloss = amount
+	. -= oxygenloss
 	if(!.) // no change, no need to update
 		return FALSE
 	if(updating_health)
 		updatehealth()
 
 /mob/living/proc/get_tox_loss()
-	return toxloss
+	return toxinloss
 
 /mob/living/proc/can_adjust_tox_loss(amount, forced, required_biotype = ALL)
 	if(!forced && (HAS_TRAIT(src, TRAIT_GODMODE) || !(mob_biotypes & required_biotype)))
@@ -376,9 +543,9 @@
 	else if(!forced && HAS_TRAIT(src, TRAIT_TOXIMMUNE)) //Prevents toxin damage, but not healing
 		amount = min(amount, 0)
 
-	. = toxloss
-	toxloss = clamp((toxloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
-	. -= toxloss
+	. = toxinloss
+	toxinloss = clamp((toxinloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= toxinloss
 
 	if(!.) // no change, no need to update
 		return FALSE
@@ -392,16 +559,28 @@
 		return FALSE
 	if(!forced && !(mob_biotypes & required_biotype))
 		return FALSE
-	. = toxloss
-	toxloss = amount
-	. -= toxloss
+	. = toxinloss
+	toxinloss = amount
+	. -= toxinloss
 	if(!.) // no change, no need to update
 		return FALSE
 	if(updating_health)
 		updatehealth()
 
 /mob/living/proc/get_fire_loss()
-	return fireloss
+	return round(get_heat_loss() + get_cold_loss() + get_acid_loss(), DAMAGE_PRECISION)
+
+/mob/living/proc/sync_burn_damage()
+	return get_fire_loss()
+
+/mob/living/proc/get_heat_loss()
+	return heatloss
+
+/mob/living/proc/get_cold_loss()
+	return coldloss
+
+/mob/living/proc/get_acid_loss()
+	return causticloss
 
 /mob/living/proc/can_adjust_fire_loss(amount, forced, required_bodytype)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
@@ -413,24 +592,145 @@
 /mob/living/proc/adjust_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
 	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
 		return 0
-	. = fireloss
-	fireloss = clamp((fireloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
-	. -= fireloss
+	var/split_amount = amount / 3
+	. = adjust_heat_loss(split_amount, FALSE, TRUE, required_bodytype)
+	. += adjust_cold_loss(split_amount, FALSE, TRUE, required_bodytype)
+	. += adjust_acid_loss(split_amount, FALSE, TRUE, required_bodytype)
 	if(. == 0) // no change, no need to update
 		return
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/adjust_heat_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
+		return 0
+	. = heatloss
+	heatloss = clamp((heatloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= heatloss
+	sync_burn_damage()
+	if(. == 0)
+		return 0
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/adjust_cold_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
+		return 0
+	. = coldloss
+	coldloss = clamp((coldloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= coldloss
+	sync_burn_damage()
+	if(. == 0)
+		return 0
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/adjust_acid_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
+		return 0
+	. = causticloss
+	causticloss = clamp((causticloss + (amount * CONFIG_GET(number/damage_multiplier))), 0, maxHealth * 2)
+	. -= causticloss
+	sync_burn_damage()
+	if(. == 0)
+		return 0
 	if(updating_health)
 		updatehealth()
 
 /mob/living/proc/set_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return 0
-	. = fireloss
-	fireloss = amount
-	. -= fireloss
-	if(. == 0) // no change, no need to update
+	var/current = get_fire_loss()
+	var/diff = amount - current
+	if(!diff)
+		return FALSE
+	return adjust_fire_loss(diff, updating_health, forced, required_bodytype)
+
+/mob/living/proc/get_psychic_loss()
+	return psychicloss
+
+/mob/living/proc/get_psychic_status_duration_multiplier()
+	var/current_psychic = get_psychic_loss()
+	if(current_psychic < 50)
+		return 1
+	return 1 + min((current_psychic - 50) / 150, 1)
+
+/mob/living/proc/adjust_psychic_loss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	. = psychicloss
+	psychicloss = clamp((psychicloss + amount), 0, maxHealth * 2)
+	. -= psychicloss
+	if(amount > 0 && .)
+		last_psychic_damage = world.time
+	if(. == 0)
 		return 0
 	if(updating_health)
 		updatehealth()
+
+/mob/living/proc/set_psychic_loss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	var/current = get_psychic_loss()
+	var/diff = amount - current
+	if(!diff)
+		return FALSE
+	return adjust_psychic_loss(diff, updating_health, forced)
+
+/mob/living/proc/get_pain_loss()
+	return painloss
+
+/mob/living/proc/sync_pain_damage()
+	return
+
+/mob/living/proc/adjust_pain_loss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	. = painloss
+	painloss = clamp((painloss + amount), 0, maxHealth * 2)
+	. -= painloss
+	if(. == 0)
+		return 0
+	if(updating_health)
+		updatehealth()
+
+/mob/living/proc/handle_psychic_damage(seconds_per_tick)
+	if(!psychicloss)
+		return
+	if(last_psychic_damage && world.time >= last_psychic_damage + 10 SECONDS)
+		adjust_psychic_loss(-1.5 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	switch(psychicloss)
+		if(120 to INFINITY)
+			if(SPT_PROB(12, seconds_per_tick))
+				adjust_confusion(4 SECONDS)
+			if(SPT_PROB(8, seconds_per_tick))
+				adjust_eye_blur(4 SECONDS)
+			if(SPT_PROB(6, seconds_per_tick))
+				dropItemToGround(get_active_held_item())
+			if(SPT_PROB(4, seconds_per_tick))
+				step(src, pick(GLOB.cardinals))
+			if(SPT_PROB(3, seconds_per_tick))
+				addtimer(CALLBACK(src, TYPE_PROC_REF(/mob, emote), pick("scream", "laugh", "cry")), 0)
+			if(SPT_PROB(2, seconds_per_tick))
+				Stun(1 SECONDS)
+			if(SPT_PROB(0.75, seconds_per_tick) && iscarbon(src))
+				var/mob/living/carbon/psychic_victim = src
+				psychic_victim.gain_trauma_type(BRAIN_TRAUMA_SPECIAL, TRAUMA_RESILIENCE_WOUND)
+		if(80 to 120)
+			if(SPT_PROB(8, seconds_per_tick))
+				adjust_confusion(3 SECONDS)
+			if(SPT_PROB(4, seconds_per_tick))
+				adjust_eye_blur(3 SECONDS)
+			if(SPT_PROB(3, seconds_per_tick))
+				dropItemToGround(get_active_held_item())
+		if(45 to 80)
+			if(SPT_PROB(5, seconds_per_tick))
+				adjust_jitter(2 SECONDS)
+			if(SPT_PROB(3, seconds_per_tick))
+				adjust_confusion(1 SECONDS)
+		if(20 to 45)
+			if(SPT_PROB(2, seconds_per_tick))
+				adjust_dizzy(1 SECONDS)
 
 /mob/living/proc/adjust_organ_loss(slot, amount, maximum, required_organ_flag)
 	return

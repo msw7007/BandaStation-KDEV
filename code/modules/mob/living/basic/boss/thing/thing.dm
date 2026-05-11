@@ -88,11 +88,11 @@
 /mob/living/basic/boss/thing/adjust_health(amount, updating_health = TRUE, forced = FALSE)
 	if(phase_invulnerability_timer || phase == 3 || stat || amount <= 0)
 		return ..()
-	var/potential_excess = bruteloss + amount - (maxHealth/3)*phase
+	var/potential_excess = get_brute_loss() + amount - (maxHealth/3)*phase
 	if(potential_excess > 0)
 		amount -= potential_excess
 	. = ..()
-	if(bruteloss >= (maxHealth/3)*phase)
+	if(get_brute_loss() >= (maxHealth/3)*phase)
 		phase_health_depleted()
 
 /mob/living/basic/boss/thing/proc/phase_health_depleted()

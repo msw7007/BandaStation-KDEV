@@ -112,7 +112,7 @@
 
 	owner.adjust_blood_volume(5 * seconds_per_tick, maximum = BLOOD_VOLUME_NORMAL)
 
-	if(owner.health <= owner.crit_threshold)
+	if(owner.health <= owner.critical_health_threshold)
 		activate_survival(owner)
 
 	if(SSmobs.times_fired % (1 SECONDS))
@@ -199,7 +199,7 @@
 
 /datum/status_effect/voltaic_overdrive/tick(seconds_between_ticks)
 	. = ..()
-	if(owner.health > owner.crit_threshold)
+	if(owner.health > owner.critical_health_threshold)
 		return
 	var/needs_update = FALSE
 	needs_update += owner.heal_overall_damage(brute = 5, burn = 5, updating_health = FALSE)
@@ -217,7 +217,7 @@
 	owner.reagents.add_reagent(/datum/reagent/medicine/coagulant, 5)
 	owner.add_filter("emp_shield", 2, outline_filter(1, "#639BFF"))
 	to_chat(owner, span_revendanger("Вы чувствуете прилив сил! Со щитом или на щите!"))
-	owner.add_traits(list(TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), REF(src))
+	owner.add_traits(list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), REF(src))
 
 /datum/status_effect/voltaic_overdrive/on_remove()
 	. = ..()
@@ -225,7 +225,7 @@
 	owner.remove_movespeed_mod_immunities(type, /datum/movespeed_modifier/damage_slowdown)
 	owner.remove_filter("emp_shield")
 	owner.balloon_alert(owner, "ваше сердце слабнет")
-	owner.remove_traits(list(TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), REF(src))
+	owner.remove_traits(list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), REF(src))
 
 /// Called when an organ is lost in the owner. In the event the owner just lost their voltaic (presumably, the one giving this effect), ends the buff and clears the overlay.
 /datum/status_effect/voltaic_overdrive/proc/on_organ_lost(mob/living/carbon/source, obj/item/organ/organ, special)

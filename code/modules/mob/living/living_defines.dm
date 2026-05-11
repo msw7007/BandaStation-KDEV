@@ -21,20 +21,43 @@
 	/// The mob's current health.
 	var/health = MAX_LIVING_HEALTH
 
-	/// The max amount of stamina damage we can have at once (Does NOT effect stamcrit thresholds. See crit_threshold)
+	/// The max amount of stamina damage we can have at once (Does NOT effect stamcrit thresholds. See critical_health_threshold)
 	var/max_stamina = 120
 	///Stamina damage, or exhaustion. You recover it slowly naturally, and are knocked down if it gets too high. Holodeck and hallucinations deal this.
 	var/staminaloss = 0
 
 	//Damage related vars, NOTE: THESE SHOULD ONLY BE MODIFIED BY PROCS
-	///Brutal damage caused by brute force (punching, being clubbed by a toolbox ect... this also accounts for pressure damage)
-	var/bruteloss = 0
-	///Oxygen depravation damage (no air in lungs)
-	var/oxyloss = 0
-	///Toxic damage caused by being poisoned or radiated
-	var/toxloss = 0
-	///Burn damage caused by being way too hot, too cold or burnt.
-	var/fireloss = 0
+	/// Blunt physical trauma.
+	var/bluntloss = 0
+	/// Piercing physical trauma.
+	var/pierceloss = 0
+	/// Slashing physical trauma.
+	var/slashloss = 0
+	/// Oxygen deprivation damage, derived from breathing, blood volume, heart pressure and lung efficiency.
+	var/oxygenloss = 0
+	/// Toxic damage caused by being poisoned or radiated. Liver should route most toxin pressure before this becomes body-wide.
+	var/toxinloss = 0
+	/// Heat and flame trauma.
+	var/heatloss = 0
+	/// Cold and freezing trauma.
+	var/coldloss = 0
+	/// Caustic and corrosion trauma.
+	var/causticloss = 0
+	/// Psychological trauma. This is nonlethal by itself and decays after fresh psychic pressure stops.
+	var/psychicloss = 0
+	/// Last world.time when psychic damage was received.
+	var/last_psychic_damage = 0
+	/// Pain load. For carbons this is normally the sum of bodypart and organ pain.
+	var/painloss = 0
+	/// TRUE once the brain is destroyed badly enough that normal revival must not work.
+	var/brain_dead = FALSE
+	/// World time when the mob first entered clinical critical condition.
+	var/clinical_death_started_at
+
+	/// when the mob enters clinical critical condition
+	var/critical_health_threshold = HEALTH_THRESHOLD_CRIT
+	/// When the mob reaches final instant-death threshold.
+	var/instant_death_threshold = HEALTH_THRESHOLD_DEAD
 
 	/// The movement intent of the mob (run/wal)
 	var/move_intent = MOVE_INTENT_RUN
@@ -42,10 +65,6 @@
 	/// Rate at which fire stacks should decay from this mob
 	var/fire_stack_decay_rate = -0.05
 
-	/// when the mob goes from "normal" to crit
-	var/crit_threshold = HEALTH_THRESHOLD_CRIT
-	///When the mob enters hard critical state and is fully incapacitated.
-	var/hardcrit_threshold = HEALTH_THRESHOLD_FULLCRIT
 
 	//Damage dealing vars! These are meaningless outside of specific instances where it's checked and defined.
 	/// Lower bound of damage done by unarmed melee attacks. Mob code is a mess, only works where this is checked for.

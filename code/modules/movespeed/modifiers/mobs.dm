@@ -31,6 +31,14 @@
 	blacklisted_movetypes = FLOATING
 	variable = TRUE
 
+/datum/movespeed_modifier/pain_slowdown
+	blacklisted_movetypes = FLOATING
+	variable = TRUE
+
+/datum/movespeed_modifier/oxygenation
+	blacklisted_movetypes = FLOATING
+	variable = TRUE
+
 /// Movespeed modifier applied by worn equipment.
 /datum/movespeed_modifier/equipment_speedmod
 	variable = TRUE
@@ -123,8 +131,8 @@
 	variable = TRUE
 	flags = IGNORE_NOSLOW
 
-/datum/movespeed_modifier/carbon_softcrit
-	multiplicative_slowdown = SOFTCRIT_ADD_SLOWDOWN
+/datum/movespeed_modifier/carbon_critical
+	multiplicative_slowdown = CRITICAL_ADD_SLOWDOWN
 	flags = IGNORE_NOSLOW
 
 /datum/movespeed_modifier/carbon_crawling

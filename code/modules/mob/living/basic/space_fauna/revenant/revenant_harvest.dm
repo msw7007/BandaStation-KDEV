@@ -94,7 +94,7 @@
 	to_chat(src, span_revenminor("Вы начинаете поглощать эссенцию из души [target]."))
 	if(target.stat != DEAD)
 		to_chat(target, span_warning("Вы испытываете ужасно неприятное ощущение опустошения по мере того, как ваша хватка за жизнь ослабевает..."))
-	if(target.stat == SOFT_CRIT)
+	if(target.stat == UNCONSCIOUS)
 		target.Stun(46)
 
 	apply_status_effect(/datum/status_effect/revenant/revealed, 5 SECONDS)

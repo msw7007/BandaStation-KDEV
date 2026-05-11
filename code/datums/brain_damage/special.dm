@@ -18,7 +18,7 @@
 	if(SPT_PROB(2, seconds_per_tick))
 		if(prob(33) && (owner.IsStun() || owner.IsParalyzed() || owner.IsUnconscious()))
 			speak("unstun", TRUE)
-		else if(prob(60) && owner.health <= owner.crit_threshold)
+		else if(prob(60) && owner.health <= owner.critical_health_threshold)
 			speak("heal", TRUE)
 		else if(prob(30) && owner.combat_mode)
 			speak("aggressive")
@@ -275,11 +275,11 @@
 	lose_text = span_warning("Вы понимаете, что снова можете чувствовать боль.")
 
 /datum/brain_trauma/special/tenacity/on_gain()
-	owner.add_traits(list(TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), TRAUMA_TRAIT)
+	owner.add_traits(list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), TRAUMA_TRAIT)
 	. = ..()
 
 /datum/brain_trauma/special/tenacity/on_lose()
-	owner.remove_traits(list(TRAIT_NOSOFTCRIT, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), TRAUMA_TRAIT)
+	owner.remove_traits(list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_NOHARDCRIT, TRAIT_ANALGESIA), TRAUMA_TRAIT)
 	..()
 
 /datum/brain_trauma/special/death_whispers
@@ -724,3 +724,40 @@
 	while(!ismob(axe_loc) && !isarea(axe_loc) && !isnull(axe_loc))
 		axe_loc = axe_loc.loc
 	return axe_loc
+
+/datum/brain_trauma/special/implant_rejection
+	name = "Implant Rejection"
+	desc = "The patient's brain rejects implanted hardware, causing recurring pain and erratic device feedback."
+	scan_desc = "psychosomatic implant rejection"
+	symptoms = "Implanted organs cause pain, disorientation and psychic stress."
+	gain_text = span_warning("Every implant in your body suddenly feels wrong.")
+	lose_text = span_notice("Your implanted hardware feels tolerable again.")
+
+/datum/brain_trauma/special/implant_rejection/on_life(seconds_per_tick)
+	var/implants = 0
+	for(var/obj/item/organ/cyberimp/implant as anything in owner.organs)
+		if(implant.owner == owner)
+			implants++
+	if(!implants)
+		return
+	owner.adjust_pain_loss(0.35 * implants * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	owner.adjust_psychic_loss(0.08 * implants * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	if(SPT_PROB(2 * implants, seconds_per_tick))
+		owner.set_jitter_if_lower(2 SECONDS)
+
+/datum/brain_trauma/special/fragmented_memory
+	name = "Fragmented Memory"
+	desc = "The patient's memory continuity is repeatedly disrupted by psychic brain damage."
+	scan_desc = "fragmented memory continuity"
+	symptoms = "Confusion, brief blank-outs, false memories and delayed reactions."
+	gain_text = span_warning("Your memories stop lining up.")
+	lose_text = span_notice("Your thoughts settle back into sequence.")
+
+/datum/brain_trauma/special/fragmented_memory/on_life(seconds_per_tick)
+	if(SPT_PROB(4, seconds_per_tick))
+		owner.adjust_confusion(3 SECONDS)
+	if(SPT_PROB(2, seconds_per_tick))
+		owner.set_eye_blur_if_lower(2 SECONDS)
+	if(SPT_PROB(1, seconds_per_tick))
+		to_chat(owner, span_warning("For a moment, you cannot remember what you were doing."))
+		owner.Stun(1 SECONDS)

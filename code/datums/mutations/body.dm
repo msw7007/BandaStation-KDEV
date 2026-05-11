@@ -674,7 +674,7 @@
 	text_lose_indication = span_notice("Ты внезапно чувствуешь себя как обычный человек.")
 	difficulty = 24
 	synchronizer_coeff = 1
-	mutation_traits = list(TRAIT_NOSOFTCRIT, TRAIT_ANALGESIA)
+	mutation_traits = list(TRAIT_NO_CRIT_UNCONSCIOUS, TRAIT_ANALGESIA)
 
 /datum/mutation/inexorable/on_acquiring(mob/living/carbon/human/acquirer)
 	. = ..()
@@ -692,15 +692,15 @@
 
 /datum/mutation/inexorable/proc/check_health(...)
 	SIGNAL_HANDLER
-	if(owner.health > owner.crit_threshold || owner.stat != CONSCIOUS)
+	if(owner.health > owner.critical_health_threshold || owner.stat != CONSCIOUS)
 		REMOVE_TRAIT(owner, TRAIT_SOFTSPOKEN, REF(src))
 	else
 		ADD_TRAIT(owner, TRAIT_SOFTSPOKEN, REF(src))
 
 /datum/mutation/inexorable/on_life(seconds_per_tick)
-	if(owner.health > owner.crit_threshold || owner.stat != CONSCIOUS || HAS_TRAIT(owner, TRAIT_STASIS))
+	if(owner.health > owner.critical_health_threshold || owner.stat != CONSCIOUS || HAS_TRAIT(owner, TRAIT_STASIS))
 		return
-	if(HAS_TRAIT(owner, TRAIT_NOCRITDAMAGE) && owner.health <= owner.hardcrit_threshold + 10)
+	if(HAS_TRAIT(owner, TRAIT_NOCRITDAMAGE) && owner.health <= owner.critical_health_threshold + 10)
 		return
 	// Gives you 30 seconds of being in fake soft crit... give or take
 	if(HAS_TRAIT(owner, TRAIT_TOXIMMUNE) || HAS_TRAIT(owner, TRAIT_TOXINLOVER))

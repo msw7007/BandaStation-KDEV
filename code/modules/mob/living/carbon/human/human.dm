@@ -193,7 +193,7 @@
 				if(get_brute_loss())
 					to_chat(human_user, "<b>Анализ ушибов на коже:</b>")
 					for(var/obj/item/bodypart/BP as anything in get_bodyparts())
-						var/brutedamage = BP.brute_dam
+						var/brutedamage = BP.get_brute_damage()
 						if(brutedamage > 0)
 							status = "имеет незначительные ушибы."
 							span = "notice"
@@ -208,7 +208,7 @@
 				if(get_fire_loss())
 					to_chat(human_user, "<b>Анализ ожогов на коже:</b>")
 					for(var/obj/item/bodypart/BP as anything in get_bodyparts())
-						var/burndamage = BP.burn_dam
+						var/burndamage = BP.get_burn_damage()
 						if(burndamage > 0)
 							status = "имеет незначительные ожоги."
 							span = "notice"
@@ -545,7 +545,7 @@
 			balloon_alert(src, "у вас не получается провести СЛР!")
 			return FALSE
 
-		if (target.health > target.crit_threshold)
+		if (target.health > target.critical_health_threshold)
 			return FALSE
 
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] проводит СЛР [target.declent_ru(DATIVE)]!"), span_notice("Вы проводите СЛР [target.declent_ru(DATIVE)]."))
@@ -563,7 +563,7 @@
 			target.adjust_oxy_loss(-min(target.get_oxy_loss(), 7))
 			to_chat(target, span_unconscious("Вы чувствуете глоток свежего воздуха, входящий в ваши легкие... Вам становится лучше..."))
 
-		if (target.health <= target.crit_threshold)
+		if (target.health <= target.critical_health_threshold)
 			if (!panicking)
 				to_chat(src, span_warning("[capitalize(target.declent_ru(NOMINATIVE))] всё ещё лежит! Вы стараетесь усерднее!"))
 			panicking = TRUE

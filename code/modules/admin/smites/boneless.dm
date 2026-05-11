@@ -13,7 +13,6 @@
 	for(var/obj/item/bodypart/limb as anything in carbon_target.get_bodyparts())
 		var/severity = pick_weight(alist(
 			WOUND_SEVERITY_MODERATE = 1,
-			WOUND_SEVERITY_SEVERE = 2,
-			WOUND_SEVERITY_CRITICAL = 2,
+			WOUND_SEVERITY_CRITICAL = 4,
 		))
 		carbon_target.cause_wound_of_type_and_severity(WOUND_BLUNT, limb, severity)

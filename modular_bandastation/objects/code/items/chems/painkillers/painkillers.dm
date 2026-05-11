@@ -4,7 +4,6 @@
 	color = "#8a8686"
 	metabolization_rate = REAGENTS_METABOLISM * 0.5
 	overdose_threshold = 30
-	overdose_crit_threshold = 50
 	ph = 7.4
 	taste_description = "горечи"
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS

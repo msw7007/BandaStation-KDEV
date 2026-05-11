@@ -365,8 +365,8 @@
 			var/obj/item/bodypart/chaplains_limb = chaplain.get_bodypart(affected_limb.body_zone)
 			if(!chaplains_limb || !IS_ORGANIC_LIMB(chaplains_limb))
 				chaplains_limb = pick(chaplains_limbs)
-			var/brute_damage = affected_limb.brute_dam
-			var/burn_damage = affected_limb.burn_dam
+			var/brute_damage = affected_limb.get_brute_damage()
+			var/burn_damage = affected_limb.get_burn_damage()
 			if((brute_damage || burn_damage))
 				transferred = TRUE
 				affected_limb.heal_damage(brute_damage, burn_damage, required_bodytype = BODYTYPE_ORGANIC)

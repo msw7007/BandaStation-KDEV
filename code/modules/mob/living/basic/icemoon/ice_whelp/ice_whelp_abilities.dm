@@ -6,7 +6,7 @@
 	button_icon_state = "fireball"
 	cooldown_time = 6 SECONDS
 	fire_range = 7
-	fire_damage = 10
+	heat_damage = 10
 	fire_delay = 0.85 DECISECONDS
 	fire_temperature = ICE_WHELP_FIRE_TEMP
 	/// Time to warn people about what we are doing

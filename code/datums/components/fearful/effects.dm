@@ -48,7 +48,7 @@
 	if (terror_buildup > TERROR_BUILDUP_TERROR || SPT_PROB(1 + FEAR_SCALING(4, TERROR_BUILDUP_FEAR, TERROR_BUILDUP_TERROR), seconds_per_tick))
 		owner.set_stutter_if_lower(10 SECONDS)
 
-/// Can randomly give you some oxyloss, and cause a heart attack past TERROR_BUILDUP_HEART_ATTACK
+/// Can randomly give you some oxygenloss, and cause a heart attack past TERROR_BUILDUP_HEART_ATTACK
 /datum/terror_handler/heart_problems
 	handler_type = TERROR_HANDLER_EFFECT
 	default = TRUE

@@ -96,8 +96,8 @@
 		var/has_any_wounds = length(limb.wounds) >= 1
 		dmgreport += "<tr>"
 		dmgreport += "<td><b>[capitalize(limb.name)]:</b></td>"
-		dmgreport += "<td>[limb.brute_dam > 0 ? ceil(limb.brute_dam) : "0"]</td>"
-		dmgreport += "<td>[limb.burn_dam > 0 ? ceil(limb.burn_dam) : "0"]</td>"
+		dmgreport += "<td>[limb.get_brute_damage() > 0 ? ceil(limb.get_brute_damage()) : "0"]</td>"
+		dmgreport += "<td>[limb.get_burn_damage() > 0 ? ceil(limb.get_burn_damage()) : "0"]</td>"
 		if(zone == BODY_ZONE_CHEST) // tox/oxy is stored in the chest
 			dmgreport += "<td>[tox_loss > 0 ? ceil(tox_loss) : "0"]</td>"
 			dmgreport += "<td>[oxy_loss > 0 ? ceil(oxy_loss) : "0"]</td>"

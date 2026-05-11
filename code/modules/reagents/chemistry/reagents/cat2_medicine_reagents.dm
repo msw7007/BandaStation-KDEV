@@ -36,7 +36,7 @@
 		if(CONSCIOUS) //bad
 			thou_shall_heal = max(death_is_coming/20, 3)
 			need_mob_update += affected_mob.adjust_oxy_loss(2 * metabolization_ratio * seconds_per_tick, TRUE, required_biotype = affected_biotype, required_respiration_type = affected_respiration_type)
-		if(SOFT_CRIT) //meh convert
+		if(UNCONSCIOUS) //meh convert
 			thou_shall_heal = round(death_is_coming/13,0.1)
 			need_mob_update += affected_mob.adjust_oxy_loss(1 * metabolization_ratio * seconds_per_tick, TRUE, required_biotype = affected_biotype, required_respiration_type = affected_respiration_type)
 			good_kind_of_healing = TRUE
@@ -590,7 +590,7 @@
 	var/static/list/subject_traits = list(
 		TRAIT_STABLEHEART,
 		TRAIT_NOHARDCRIT,
-		TRAIT_NOSOFTCRIT,
+		TRAIT_NO_CRIT_UNCONSCIOUS,
 		TRAIT_NOCRITDAMAGE,
 	)
 
@@ -610,7 +610,7 @@
 	. = ..()
 	var/need_mob_update
 	need_mob_update = affected_mob.adjust_organ_loss(ORGAN_SLOT_STOMACH, 0.25 * metabolization_ratio * seconds_per_tick, required_organ_flag = affected_organ_flags)
-	if(affected_mob.health <= HEALTH_THRESHOLD_CRIT && affected_mob.health > (affected_mob.crit_threshold + HEALTH_THRESHOLD_FULLCRIT * (2 * normalise_creation_purity()))) //we cannot save someone below our lowered crit threshold.
+	if(affected_mob.health <= HEALTH_THRESHOLD_CRIT && affected_mob.health > (affected_mob.critical_health_threshold + HEALTH_THRESHOLD_CRIT * (2 * normalise_creation_purity()))) //we cannot save someone below our lowered crit threshold.
 
 		need_mob_update += affected_mob.adjust_tox_loss(-2 * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_biotype = affected_biotype)
 		need_mob_update += affected_mob.adjust_brute_loss(-2 * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_bodytype = affected_bodytype)
@@ -627,7 +627,7 @@
 		if(SPT_PROB(18, seconds_per_tick))
 			to_chat(affected_mob,span_danger("Your body is trying to give up, but your heart is still beating!"))
 
-	if(affected_mob.health <= (affected_mob.crit_threshold + HEALTH_THRESHOLD_FULLCRIT*(2*normalise_creation_purity()))) //certain death below this threshold
+	if(affected_mob.health <= (affected_mob.critical_health_threshold + HEALTH_THRESHOLD_CRIT*(2*normalise_creation_purity()))) //certain death below this threshold
 		REMOVE_TRAIT(affected_mob, TRAIT_STABLEHEART, type) //we have to remove the stable heart trait before we give them a heart attack
 		affected_mob.remove_traits(subject_traits, type)
 		to_chat(affected_mob, span_danger("You feel something rupturing inside your chest!"))

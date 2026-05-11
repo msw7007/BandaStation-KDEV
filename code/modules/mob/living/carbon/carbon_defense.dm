@@ -534,6 +534,13 @@
 			hit_clothes.take_damage(damage_amount, damage_type, damage_flag, 0)
 
 /mob/living/carbon/adjust_oxy_loss(amount, updating_health = TRUE, forced, required_biotype, required_respiration_type)
+	if(!resolving_blood_oxygenation)
+		if(amount > 0)
+			adjust_lung_air_quality(-(amount / 20))
+		else if(amount < 0)
+			adjust_lung_air_quality(abs(amount) / 20)
+		check_passout()
+		return 0
 	if(!forced && HAS_TRAIT(src, TRAIT_NOBREATH))
 		amount = min(amount, 0) //Prevents oxy damage but not healing
 
@@ -546,25 +553,33 @@
 		return
 
 /mob/living/carbon/set_oxy_loss(amount, updating_health = TRUE, forced, required_biotype, required_respiration_type)
+	if(!resolving_blood_oxygenation)
+		var/diff = amount - get_oxy_loss()
+		if(diff > 0)
+			adjust_lung_air_quality(-(diff / 20))
+		else if(diff < 0)
+			adjust_lung_air_quality(abs(diff) / 20)
+		check_passout()
+		return 0
 	. = ..()
 	check_passout()
 
 /**
-* Check to see if we should be passed out from oxyloss
+* Check to see if we should be passed out from oxygenloss
 */
 /mob/living/carbon/proc/check_passout()
-	var/mob_oxyloss = get_oxy_loss()
-	if(mob_oxyloss >= OXYLOSS_PASSOUT_THRESHOLD && !HAS_TRAIT(src, TRAIT_NO_OXYLOSS_PASSOUT))
+	var/mob_oxygenloss = get_oxy_loss()
+	if(mob_oxygenloss >= OXYLOSS_PASSOUT_THRESHOLD && !HAS_TRAIT(src, TRAIT_NO_OXYLOSS_PASSOUT))
 		if(!HAS_TRAIT_FROM(src, TRAIT_KNOCKEDOUT, OXYLOSS_TRAIT))
 			ADD_TRAIT(src, TRAIT_KNOCKEDOUT, OXYLOSS_TRAIT)
-	else if(mob_oxyloss < OXYLOSS_PASSOUT_THRESHOLD)
+	else if(mob_oxygenloss < OXYLOSS_PASSOUT_THRESHOLD)
 		REMOVE_TRAIT(src, TRAIT_KNOCKEDOUT, OXYLOSS_TRAIT)
 
 /mob/living/carbon/get_organic_health()
 	. = health
 	for (var/obj/item/bodypart/limb as anything in get_bodyparts())
 		if (!IS_ORGANIC_LIMB(limb))
-			. += (limb.brute_dam * limb.body_damage_coeff) + (limb.burn_dam * limb.body_damage_coeff)
+			. += (limb.get_brute_damage() * limb.body_damage_coeff) + (limb.get_burn_damage() * limb.body_damage_coeff)
 
 /mob/living/carbon/grabbedby(mob/living/user, supress_message = FALSE)
 	if(user != src)

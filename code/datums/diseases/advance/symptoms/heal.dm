@@ -368,16 +368,16 @@
 	switch(living_host.stat)
 		if(UNCONSCIOUS, HARD_CRIT)
 			return power * 0.9
-		if(SOFT_CRIT)
+		if(UNCONSCIOUS)
 			return power * 0.5
-	if(living_host.get_brute_loss() + living_host.get_fire_loss() >= living_host.maxHealth * 0.7 && !active_coma && !(HAS_TRAIT(living_host, TRAIT_NOSOFTCRIT)))
+	if(living_host.get_brute_loss() + living_host.get_fire_loss() >= living_host.maxHealth * 0.7 && !active_coma && !(HAS_TRAIT(living_host, TRAIT_NO_CRIT_UNCONSCIOUS)))
 		to_chat(living_host, span_warning("You feel yourself slip into a regenerative coma..."))
 		active_coma = TRUE
 		addtimer(CALLBACK(src, PROC_REF(coma), living_host), 6 SECONDS)
 
 
 /datum/symptom/heal/coma/proc/coma(mob/living/living_host)
-	if(QDELETED(living_host) || living_host.stat == DEAD || HAS_TRAIT(living_host, TRAIT_NOSOFTCRIT))
+	if(QDELETED(living_host) || living_host.stat == DEAD || HAS_TRAIT(living_host, TRAIT_NO_CRIT_UNCONSCIOUS))
 		return
 	living_host.fakedeath("regenerative_coma", !deathgasp)
 	addtimer(CALLBACK(src, PROC_REF(uncoma), living_host), 30 SECONDS)

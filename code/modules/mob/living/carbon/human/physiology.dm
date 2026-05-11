@@ -4,8 +4,24 @@
 	/// IE: A brute mod of 0.9 = 10% less brute damage.
 	/// Only applies to damage dealt via [apply_damage][/mob/living/proc/apply_damage] unless factored in manually.
 	var/brute_mod = 1
+	/// Multiplier to blunt damage received.
+	var/blunt_mod = 1
+	/// Multiplier to piercing damage received.
+	var/pierce_mod = 1
+	/// Multiplier to slashing damage received.
+	var/slash_mod = 1
 	/// Multiplier to burn damage received
 	var/burn_mod = 1
+	/// Multiplier to fire damage received.
+	var/fire_mod = 1
+	/// Multiplier to cold damage received.
+	var/cold_damage_mod = 1
+	/// Multiplier to acid damage received.
+	var/acid_mod = 1
+	/// Multiplier to psychic damage received.
+	var/psychic_mod = 1
+	/// Multiplier to pain received.
+	var/pain_mod = 1
 	/// Multiplier to toxin damage received
 	var/tox_mod = 1
 	/// Multiplier to oxygen damage received

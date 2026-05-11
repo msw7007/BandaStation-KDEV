@@ -46,7 +46,7 @@
 	message_mime = "sobs silently."
 	emote_type = EMOTE_AUDIBLE | EMOTE_VISIBLE
 	vary = TRUE
-	stat_allowed = SOFT_CRIT
+	stat_allowed = UNCONSCIOUS
 
 /datum/emote/living/carbon/cry/run_emote(mob/user, params, type_override, intentional)
 	. = ..()

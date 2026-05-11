@@ -90,8 +90,6 @@
 	switch(W.severity)
 		if(WOUND_SEVERITY_MODERATE)
 			visibility = 2
-		if(WOUND_SEVERITY_SEVERE)
-			visibility = 3
 		if(WOUND_SEVERITY_CRITICAL)
 			visibility = 5
 		if(WOUND_SEVERITY_LOSS)
@@ -106,7 +104,7 @@
 		LAZYADD(victim.all_scars, src)
 
 /// Used to "load" a persistent scar
-/datum/scar/proc/load(obj/item/bodypart/BP, version, description, specific_location, severity = WOUND_SEVERITY_SEVERE, required_limb_biostate = BIO_STANDARD_UNJOINTED, char_slot, check_any_biostates = FALSE)
+/datum/scar/proc/load(obj/item/bodypart/BP, version, description, specific_location, severity = WOUND_SEVERITY_CRITICAL, required_limb_biostate = BIO_STANDARD_UNJOINTED, char_slot, check_any_biostates = FALSE)
 	if(!BP.scarrable)
 		qdel(src)
 		return
@@ -136,8 +134,6 @@
 	switch(severity)
 		if(WOUND_SEVERITY_MODERATE)
 			visibility = 2
-		if(WOUND_SEVERITY_SEVERE)
-			visibility = 3
 		if(WOUND_SEVERITY_CRITICAL)
 			visibility = 5
 		if(WOUND_SEVERITY_LOSS)
@@ -157,8 +153,6 @@
 	switch(severity)
 		if(WOUND_SEVERITY_MODERATE)
 			msg = span_tinynoticeital("[msg]")
-		if(WOUND_SEVERITY_SEVERE)
-			msg = span_smallnoticeital("[msg]")
 		if(WOUND_SEVERITY_CRITICAL)
 			msg = span_smallnoticeital("<b>[msg]</b>")
 		if(WOUND_SEVERITY_LOSS)

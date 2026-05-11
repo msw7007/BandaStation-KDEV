@@ -68,8 +68,24 @@
 	switch(damagetype)
 		if(BRUTE)
 			final_mod *= physiology.brute_mod
+		if(BLUNT)
+			final_mod *= physiology.blunt_mod
+		if(PIERCE)
+			final_mod *= physiology.pierce_mod
+		if(SLASH)
+			final_mod *= physiology.slash_mod
 		if(BURN)
 			final_mod *= physiology.burn_mod
+		if(FIRE)
+			final_mod *= physiology.fire_mod
+		if(COLD)
+			final_mod *= physiology.cold_damage_mod
+		if(ACID_DAMAGE)
+			final_mod *= physiology.acid_mod
+		if(PSYCHIC)
+			final_mod *= physiology.psychic_mod
+		if(PAIN)
+			final_mod *= physiology.pain_mod
 		if(TOX)
 			final_mod *= physiology.tox_mod
 		if(OXY)
@@ -85,15 +101,65 @@
 /mob/living/carbon/get_brute_loss()
 	var/amount = 0
 	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
-		amount += bodypart.brute_dam
+		amount += bodypart.get_brute_damage()
 	return round(amount, DAMAGE_PRECISION)
 
 /mob/living/carbon/get_fire_loss()
 	var/amount = 0
 	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
-		amount += bodypart.burn_dam
+		amount += bodypart.get_burn_damage()
 	return round(amount, DAMAGE_PRECISION)
 
+/mob/living/carbon/get_blunt_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.blunt_dam
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/get_pierce_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.pierce_dam
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/get_slash_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.slash_dam
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/get_heat_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.heat_dam
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/get_cold_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.cold_dam
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/get_acid_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.acid_dam
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/get_pain_loss()
+	var/amount = 0
+	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
+		amount += bodypart.get_pain_damage()
+	return round(amount, DAMAGE_PRECISION)
+
+/mob/living/carbon/sync_pain_damage()
+	painloss = get_pain_loss()
+	if(painloss > 100)
+		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown, TRUE, multiplicative_slowdown = min(painloss / 150, 3))
+		add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown, TRUE, multiplicative_slowdown = min(painloss / 200, 2))
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown)
+		remove_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown)
 
 /**
  * Returns the amount of bruteloss across all bodyparts meeting the matching bodytype.
@@ -107,7 +173,7 @@
 	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
 		if(!(bodypart.bodytype & required_bodytype))
 			continue
-		amount += bodypart.brute_dam
+		amount += bodypart.get_brute_damage()
 	return round(amount, DAMAGE_PRECISION)
 
 /**
@@ -122,7 +188,7 @@
 	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
 		if(!(bodypart.bodytype & required_bodytype))
 			continue
-		amount += bodypart.burn_dam
+		amount += bodypart.get_burn_damage()
 	return round(amount, DAMAGE_PRECISION)
 
 /mob/living/carbon/adjust_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
@@ -132,6 +198,30 @@
 		. = take_overall_damage(brute = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
 	else
 		. = heal_overall_damage(brute = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
+
+/mob/living/carbon/adjust_blunt_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+	if(!can_adjust_brute_loss(amount, forced, required_bodytype))
+		return 0
+	if(amount > 0)
+		. = take_overall_damage(blunt = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+	else
+		. = heal_overall_damage(blunt = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
+
+/mob/living/carbon/adjust_pierce_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+	if(!can_adjust_brute_loss(amount, forced, required_bodytype))
+		return 0
+	if(amount > 0)
+		. = take_overall_damage(pierce = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+	else
+		. = heal_overall_damage(pierce = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
+
+/mob/living/carbon/adjust_slash_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+	if(!can_adjust_brute_loss(amount, forced, required_bodytype))
+		return 0
+	if(amount > 0)
+		. = take_overall_damage(slash = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+	else
+		. = heal_overall_damage(slash = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
 
 /mob/living/carbon/set_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
@@ -150,6 +240,60 @@
 	else
 		. = heal_overall_damage(burn = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
 
+/mob/living/carbon/adjust_heat_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
+		return 0
+	if(amount > 0)
+		. = take_overall_damage(fire = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+	else
+		. = heal_overall_damage(fire = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
+
+/mob/living/carbon/adjust_cold_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
+		return 0
+	if(amount > 0)
+		. = take_overall_damage(cold = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+	else
+		. = heal_overall_damage(cold = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
+
+/mob/living/carbon/adjust_acid_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
+		return 0
+	if(amount > 0)
+		. = take_overall_damage(acid = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+	else
+		. = heal_overall_damage(acid = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
+
+/mob/living/carbon/adjust_pain_loss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	if(amount > 0)
+		var/list/obj/item/bodypart/parts = get_bodyparts()
+		while(parts.len && amount > 0)
+			var/obj/item/bodypart/picked = pick(parts)
+			var/pain_per_part = round(amount / parts.len, DAMAGE_PRECISION)
+			var/old_pain = picked.get_pain_damage()
+			. += picked.adjust_pain_damage(pain_per_part)
+			amount = round(amount - (picked.get_pain_damage() - old_pain), DAMAGE_PRECISION)
+			parts -= picked
+	else
+		var/healing = abs(amount)
+		var/list/obj/item/bodypart/parts = get_bodyparts()
+		while(parts.len && healing > 0)
+			var/obj/item/bodypart/picked = pick(parts)
+			var/old_pain = picked.get_pain_damage()
+			. += picked.adjust_pain_damage(-healing)
+			healing = round(healing - (old_pain - picked.get_pain_damage()), DAMAGE_PRECISION)
+			parts -= picked
+	sync_pain_damage()
+	if(. && updating_health)
+		updatehealth()
+
+/mob/living/carbon/can_adjust_oxy_loss(amount, forced, required_biotype, required_respiration_type)
+	if(!resolving_blood_oxygenation)
+		return FALSE
+	return ..()
+
 /mob/living/carbon/set_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return FALSE
@@ -159,7 +303,21 @@
 		return FALSE
 	return adjust_fire_loss(diff, updating_health, forced, required_bodytype)
 
+/mob/living/carbon/human/proc/route_toxin_damage_through_organs(amount)
+	if(amount <= 0 || HAS_TRAIT(src, TRAIT_TOXINLOVER) || HAS_TRAIT(src, TRAIT_TOXIMMUNE))
+		return amount
+	if(HAS_TRAIT(src, TRAIT_LIVERLESS_METABOLISM))
+		return amount
+
+	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
+	if(!liver)
+		return amount * 1.25
+
+	return liver.filter_toxin_damage(amount)
+
 /mob/living/carbon/human/adjust_tox_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype = ALL)
+	if(amount > 0 && !forced && !HAS_TRAIT(src, TRAIT_GODMODE) && (mob_biotypes & required_biotype))
+		amount = route_toxin_damage_through_organs(amount)
 	. = ..()
 	if(. >= 0) // 0 = no damage, + values = healed damage
 		return .
@@ -177,7 +335,7 @@
 
 /mob/living/carbon/received_stamina_damage(current_level, amount_actual, amount)
 	. = ..()
-	if((maxHealth - current_level) <= crit_threshold && stat != DEAD)
+	if((maxHealth - current_level) <= critical_health_threshold && stat != DEAD)
 		apply_status_effect(/datum/status_effect/incapacitating/stamcrit)
 
 /**
@@ -244,7 +402,7 @@
 			continue
 		if(!isnull(target_zone) && BP.body_zone != target_zone)
 			continue
-		if((brute && BP.brute_dam) || (burn && BP.burn_dam))
+		if((brute && BP.get_brute_damage()) || (burn && BP.get_burn_damage()))
 			parts += BP
 	return parts
 
@@ -254,7 +412,7 @@
 	for(var/obj/item/bodypart/BP as anything in get_bodyparts())
 		if(required_bodytype && !(BP.bodytype & required_bodytype))
 			continue
-		if(BP.brute_dam + BP.burn_dam < BP.max_damage)
+		if(BP.get_damage() < BP.max_damage)
 			parts += BP
 	return parts
 
@@ -310,28 +468,44 @@
 		update_damage_overlays()
 	return (damage_calculator - picked.get_damage())
 
-/mob/living/carbon/heal_overall_damage(brute = 0, burn = 0, stamina = 0, required_bodytype, updating_health = TRUE, forced = FALSE)
+/mob/living/carbon/heal_overall_damage(brute = 0, burn = 0, stamina = 0, required_bodytype, updating_health = TRUE, forced = FALSE, blunt = 0, pierce = 0, slash = 0, fire = 0, cold = 0, acid = 0)
 	. = FALSE
 	// treat negative args as positive
 	brute = abs(brute)
 	burn = abs(burn)
+	if(brute)
+		blunt += brute / 3
+		pierce += brute / 3
+		slash += brute / 3
+	if(burn)
+		fire += burn / 3
+		cold += burn / 3
+		acid += burn / 3
 
-	var/list/obj/item/bodypart/parts = get_damaged_bodyparts(brute, burn, required_bodytype)
+	var/list/obj/item/bodypart/parts = get_damaged_bodyparts(brute || blunt || pierce || slash, burn || fire || cold || acid, required_bodytype)
 
 	var/update = NONE
-	while(parts.len && (brute > 0 || burn > 0))
+	while(parts.len && (blunt > 0 || pierce > 0 || slash > 0 || fire > 0 || cold > 0 || acid > 0))
 		var/obj/item/bodypart/picked = pick(parts)
 
-		var/brute_was = picked.brute_dam
-		var/burn_was = picked.burn_dam
+		var/blunt_was = picked.blunt_dam
+		var/pierce_was = picked.pierce_dam
+		var/slash_was = picked.slash_dam
+		var/fire_was = picked.heat_dam
+		var/cold_was = picked.cold_dam
+		var/acid_was = picked.acid_dam
 		. += picked.get_damage()
 
-		update |= picked.heal_damage(brute, burn, updating_health = FALSE, forced = forced, required_bodytype = required_bodytype)
+		update |= picked.heal_damage(updating_health = FALSE, forced = forced, required_bodytype = required_bodytype, blunt = blunt, pierce = pierce, slash = slash, fire = fire, cold = cold, acid = acid)
 
 		. -= picked.get_damage() // return the net amount of damage healed
 
-		brute = round(brute - (brute_was - picked.brute_dam), DAMAGE_PRECISION)
-		burn = round(burn - (burn_was - picked.burn_dam), DAMAGE_PRECISION)
+		blunt = round(blunt - (blunt_was - picked.blunt_dam), DAMAGE_PRECISION)
+		pierce = round(pierce - (pierce_was - picked.pierce_dam), DAMAGE_PRECISION)
+		slash = round(slash - (slash_was - picked.slash_dam), DAMAGE_PRECISION)
+		fire = round(fire - (fire_was - picked.heat_dam), DAMAGE_PRECISION)
+		cold = round(cold - (cold_was - picked.cold_dam), DAMAGE_PRECISION)
+		acid = round(acid - (acid_was - picked.acid_dam), DAMAGE_PRECISION)
 
 		parts -= picked
 
@@ -343,32 +517,52 @@
 	if(update)
 		update_damage_overlays()
 
-/mob/living/carbon/take_overall_damage(brute = 0, burn = 0, stamina = 0, updating_health = TRUE, forced = FALSE, required_bodytype)
+/mob/living/carbon/take_overall_damage(brute = 0, burn = 0, stamina = 0, updating_health = TRUE, forced = FALSE, required_bodytype, blunt = 0, pierce = 0, slash = 0, fire = 0, cold = 0, acid = 0)
 	. = FALSE
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return
 	// treat negative args as positive
 	brute = abs(brute)
 	burn = abs(burn)
+	if(brute)
+		blunt += brute / 3
+		pierce += brute / 3
+		slash += brute / 3
+	if(burn)
+		fire += burn / 3
+		cold += burn / 3
+		acid += burn / 3
 
 	var/list/obj/item/bodypart/parts = get_damageable_bodyparts(required_bodytype)
 	var/update = NONE
-	while(parts.len && (brute > 0 || burn > 0))
+	while(parts.len && (blunt > 0 || pierce > 0 || slash > 0 || fire > 0 || cold > 0 || acid > 0))
 		var/obj/item/bodypart/picked = pick(parts)
-		var/brute_per_part = round(brute/parts.len, DAMAGE_PRECISION)
-		var/burn_per_part = round(burn/parts.len, DAMAGE_PRECISION)
+		var/blunt_per_part = round(blunt/parts.len, DAMAGE_PRECISION)
+		var/pierce_per_part = round(pierce/parts.len, DAMAGE_PRECISION)
+		var/slash_per_part = round(slash/parts.len, DAMAGE_PRECISION)
+		var/fire_per_part = round(fire/parts.len, DAMAGE_PRECISION)
+		var/cold_per_part = round(cold/parts.len, DAMAGE_PRECISION)
+		var/acid_per_part = round(acid/parts.len, DAMAGE_PRECISION)
 
-		var/brute_was = picked.brute_dam
-		var/burn_was = picked.burn_dam
+		var/blunt_was = picked.blunt_dam
+		var/pierce_was = picked.pierce_dam
+		var/slash_was = picked.slash_dam
+		var/fire_was = picked.heat_dam
+		var/cold_was = picked.cold_dam
+		var/acid_was = picked.acid_dam
 		. += picked.get_damage()
 
 		// disabling wounds from these for now cuz your entire body snapping cause your heart stopped would suck
-		update |= picked.receive_damage(brute_per_part, burn_per_part, blocked = FALSE, updating_health = FALSE, forced = forced, required_bodytype = required_bodytype, wound_bonus = CANT_WOUND)
+		update |= picked.receive_damage(blocked = FALSE, updating_health = FALSE, forced = forced, required_bodytype = required_bodytype, wound_bonus = CANT_WOUND, blunt = blunt_per_part, pierce = pierce_per_part, slash = slash_per_part, fire = fire_per_part, cold = cold_per_part, acid = acid_per_part)
 
 		. -= picked.get_damage() // return the net amount of damage healed
 
-		brute = round(brute - (picked.brute_dam - brute_was), DAMAGE_PRECISION)
-		burn = round(burn - (picked.burn_dam - burn_was), DAMAGE_PRECISION)
+		blunt = round(blunt - (picked.blunt_dam - blunt_was), DAMAGE_PRECISION)
+		pierce = round(pierce - (picked.pierce_dam - pierce_was), DAMAGE_PRECISION)
+		slash = round(slash - (picked.slash_dam - slash_was), DAMAGE_PRECISION)
+		fire = round(fire - (picked.heat_dam - fire_was), DAMAGE_PRECISION)
+		cold = round(cold - (picked.cold_dam - cold_was), DAMAGE_PRECISION)
+		acid = round(acid - (picked.acid_dam - acid_was), DAMAGE_PRECISION)
 
 		parts -= picked
 

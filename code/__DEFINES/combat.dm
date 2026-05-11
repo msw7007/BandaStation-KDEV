@@ -5,8 +5,22 @@
 //Damage defines //TODO: merge these down to reduce on defines
 /// Physical fracturing and warping of the material.
 #define BRUTE "brute"
+/// Blunt physical trauma.
+#define BLUNT "blunt"
+/// Piercing physical trauma.
+#define PIERCE "pierce"
+/// Slashing physical trauma.
+#define SLASH "slash"
 /// Scorching and charring of the material.
 #define BURN "burn"
+/// Cold and freezing trauma.
+#define COLD "cold"
+/// Acid and corrosion trauma.
+#define ACID_DAMAGE "acid_damage"
+/// Psychological trauma.
+#define PSYCHIC "psychic"
+/// Pain load. Tracked separately from lethal damage.
+#define PAIN "pain"
 /// Poisoning. Mostly caused by reagents.
 #define TOX "toxin"
 /// Suffocation.
@@ -85,11 +99,10 @@ DEFINE_BITFIELD(status_flags, list(
 ))
 
 //Health Defines
-#define HEALTH_THRESHOLD_CRIT 0
-#define HEALTH_THRESHOLD_FULLCRIT -30
-#define HEALTH_THRESHOLD_DEAD -100
+#define HEALTH_THRESHOLD_CRIT -100
+#define HEALTH_THRESHOLD_DEAD -200
 
-#define HEALTH_THRESHOLD_NEARDEATH -90 //Not used mechanically, but to determine if someone is so close to death they hear the other side
+#define HEALTH_THRESHOLD_NEARDEATH -180 //Not used mechanically, but to determine if someone is so close to death they hear the other side
 
 //Actual combat defines
 
@@ -127,8 +140,8 @@ DEFINE_BITFIELD(status_flags, list(
 //Grab breakout odds
 #define BASE_GRAB_RESIST_CHANCE 60 //base chance for whether or not you can escape from a grab
 
-//slowdown when in softcrit. Note that crawling slowdown will also apply at the same time!
-#define SOFTCRIT_ADD_SLOWDOWN 2
+//slowdown when in critical condition. Note that crawling slowdown will also apply at the same time!
+#define CRITICAL_ADD_SLOWDOWN 2
 //slowdown when crawling
 #define CRAWLING_ADD_SLOWDOWN 4
 

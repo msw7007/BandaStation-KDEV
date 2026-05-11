@@ -1280,6 +1280,7 @@
 #include "code\datums\components\orbiter.dm"
 #include "code\datums\components\overlay_lighting.dm"
 #include "code\datums\components\palette.dm"
+#include "code\datums\components\pain_tracker.dm"
 #include "code\datums\components\parry.dm"
 #include "code\datums\components\payment.dm"
 #include "code\datums\components\pellet_cloud.dm"

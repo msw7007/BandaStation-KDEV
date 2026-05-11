@@ -40,8 +40,7 @@
 		to_chat(user, span_warning("У цели нет выбранной органической части тела или она не является органической."), confidential = TRUE)
 		return FALSE
 
-	var/severity = blunt_type == CHOICE_SEVERE_TYPE ? WOUND_SEVERITY_SEVERE : \
-					blunt_type == CHOICE_MODERATE_TYPE ? WOUND_SEVERITY_MODERATE : WOUND_SEVERITY_CRITICAL
+	var/severity = blunt_type == CHOICE_MODERATE_TYPE ? WOUND_SEVERITY_MODERATE : WOUND_SEVERITY_CRITICAL
 	carbon_target.cause_wound_of_type_and_severity(WOUND_BLUNT, bodypart, severity)
 
 #undef CHOICE_CRITICAL_TYPE

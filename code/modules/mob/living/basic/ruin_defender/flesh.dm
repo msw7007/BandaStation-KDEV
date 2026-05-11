@@ -121,7 +121,7 @@
 			continue
 		if(bodypart.bodypart_flags & BODYPART_UNREMOVABLE)
 			continue
-		if(bodypart.brute_dam < 20)
+		if(bodypart.get_brute_damage() < 20)
 			continue
 		zone_candidates += bodypart.body_zone
 

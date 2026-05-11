@@ -163,7 +163,7 @@
 	var/mob_status = (!target.appears_alive() ? span_alert("<b>Мёртв</b>") : "<b>[round(target.health / target.maxHealth, 0.01) * 100]% здоровья</b>")
 
 	if(HAS_TRAIT(target, TRAIT_FAKEDEATH) && target.stat != DEAD)
-		// if we don't appear to actually be in a "dead state", add fake oxyloss
+		// if we don't appear to actually be in a "dead state", add fake oxygenloss
 		if(oxy_loss + tox_loss + fire_loss + brute_loss < 200)
 			oxy_loss += 200 - (oxy_loss + tox_loss + fire_loss + brute_loss)
 			oxy_loss = clamp(oxy_loss, 0, 200)
@@ -256,13 +256,13 @@
 						continue
 					var/has_any_embeds = LAZYLEN(limb.embedded_objects) >= 1
 					var/has_any_wounds = length(limb.wounds) >= 1
-					var/is_damaged = limb.burn_dam > 0 || limb.brute_dam > 0
+					var/is_damaged = limb.get_burn_damage() > 0 || limb.get_brute_damage() > 0
 					if(!is_damaged && (zone != BODY_ZONE_CHEST || (tox_loss <= 0 && oxy_loss <= 0)) && !has_any_embeds && !has_any_wounds)
 						continue
 					dmgreport += "<tr>"
 					dmgreport += "<td><font color='#cc3333'>[capitalize((limb.bodytype & BODYTYPE_ROBOTIC) ? limb.name : limb.plaintext_zone)]:</font></td>"
-					dmgreport += "<td><font color='#cc3333'>[limb.brute_dam > 0 ? ceil(limb.brute_dam) : "0"]</font></td>"
-					dmgreport += "<td><font color='#ff9933'>[limb.burn_dam > 0 ? ceil(limb.burn_dam) : "0"]</font></td>"
+					dmgreport += "<td><font color='#cc3333'>[limb.get_brute_damage() > 0 ? ceil(limb.get_brute_damage()) : "0"]</font></td>"
+					dmgreport += "<td><font color='#ff9933'>[limb.get_burn_damage() > 0 ? ceil(limb.get_burn_damage()) : "0"]</font></td>"
 					if(zone == BODY_ZONE_CHEST) // tox/oxy is stored in the chest
 						dmgreport += "<td><font color='#00cc66'>[tox_loss > 0 ? ceil(tox_loss) : "0"]</font></td>"
 						dmgreport += "<td><font color='#33ccff'>[oxy_loss > 0 ? ceil(oxy_loss) : "0"]</font></td>"

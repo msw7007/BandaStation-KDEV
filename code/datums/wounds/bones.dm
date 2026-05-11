@@ -157,7 +157,7 @@
 			// This is not arm wound, so we don't care
 			return
 
-	if(gun.recoil > 0 && severity >= WOUND_SEVERITY_SEVERE && prob(25 * (severity - 1)))
+	if(gun.recoil > 0 && severity >= WOUND_SEVERITY_CRITICAL && prob(25 * (severity - 1)))
 		if(!HAS_TRAIT(victim, TRAIT_ANALGESIA))
 			to_chat(victim, span_danger("The fracture in your [limb.ru_plaintext_zone[PREPOSITIONAL]] explodes with pain as [gun] kicks back!"))
 		victim.apply_damage(rand(1, 3) * (severity - 1) * gun.weapon_weight, BRUTE, limb, wound_bonus = CANT_WOUND, wound_clothing = FALSE)
@@ -364,42 +364,10 @@
 	victim.emote("scream")
 	qdel(src)
 
-/*
-	Severe (Hairline Fracture)
-*/
-
-/datum/wound/blunt/bone/severe
-	name = "Закрытый перелом"
-	desc = "Кость пациента имеет трещину, вызывая сильную боль и снижение функциональности конечности."
-	treat_text = "Вылечить хирургически. В случае крайней необходимости нанесение костного геля на пораженную область позволит зажить со временем. \
-		Также можно использовать шину или перевязывание медицинской марлей, чтобы предотвратить ухудшение трещины."
-	treat_text_short = "Хирургическое лечение или нанесение костного геля. Можно также использовать шину или повязку из марли."
-	examine_desc = "выглядит ужасно опухшей, с зазубренными буграми, указывающими на трещины в кости"
-	occur_text = "осыпается костной крошкой, и образуется синяк"
-
-	severity = WOUND_SEVERITY_SEVERE
-	interaction_efficiency_penalty = 2
-	limp_slowdown = 6
-	limp_chance = 60
-	series_threshold_penalty = 30
-	treatable_by = list(/obj/item/stack/medical/wrap/sticky_tape/surgical, /obj/item/stack/medical/bone_gel)
-	status_effect_type = /datum/status_effect/wound/blunt/bone/severe
-	scar_keyword = "bluntsevere"
-	brain_trauma_group = BRAIN_TRAUMA_MILD
-	trauma_cycle_cooldown = 1.5 MINUTES
-	internal_bleeding_chance = 40
-	wound_flags = (ACCEPTS_GAUZE | MANGLES_INTERIOR)
-	regen_ticks_needed = 120 // ticks every 2 seconds, 240 seconds, so roughly 4 minutes default
-
-	simple_desc = "Кость пациента треснула посередине, значительно снижая функциональность конечности."
-	simple_treat_text = "<b>Перевязывание</b> раны уменьшит её влияние до тех пор, пока не будет проведено <b>хирургическое лечение</b> с использованием костного геля и хирургической ленты."
-	homemade_treat_text = "<b>Костный гель и хирургическая лента</b> могут быть нанесены непосредственно на рану, хотя это довольно сложно для большинства людей сделать самостоятельно, если только они не приняли одну или несколько <b>обезболивающих</b> (известно, что морфин и шахтерская мазь помогают)."
-
-
 /datum/wound_pregen_data/bone/hairline
-	abstract = FALSE
+	abstract = TRUE
 
-	wound_path_to_generate = /datum/wound/blunt/bone/severe
+	wound_path_to_generate = /datum/wound/blunt/bone/critical
 
 	threshold_minimum = 60
 
@@ -444,7 +412,7 @@
 
 	wound_path_to_generate = /datum/wound/blunt/bone/critical
 
-	threshold_minimum = 115
+	threshold_minimum = 75
 
 // doesn't make much sense for "a" bone to stick out of your head
 /datum/wound/blunt/bone/critical/apply_wound(obj/item/bodypart/L, silent = FALSE, datum/wound/old_wound = null, smited = FALSE, attack_direction = null, wound_source = "Unknown", replacing = FALSE)
@@ -566,7 +534,7 @@
 				. += "[span_notice("Примечание: Регенерация костей в процессе. Кости восстановлены на [round(regen_ticks_current*100/regen_ticks_needed)]%.")]\n"
 
 	if(limb.body_zone == BODY_ZONE_HEAD)
-		. += "Обнаружена черепная травма: Пациент будет страдать от случайных приступов [severity == WOUND_SEVERITY_SEVERE ? "незначительных" : "серьезных"] травм головного мозга до восстановления кости."
+		. += "Обнаружена черепная травма: Пациент будет страдать от случайных приступов серьезных травм головного мозга до восстановления кости."
 	else if(limb.body_zone == BODY_ZONE_CHEST && CAN_HAVE_BLOOD(victim))
 		. += "Обнаружена травма грудной клетки: Дальнейшая травма груди, вероятно, усугубит внутреннее кровотечение до восстановления кости."
 	. += "</div>"

@@ -1,6 +1,6 @@
 
 
-//NOTE: Breathing happens once per FOUR TICKS, unless the last breath fails. In which case it happens once per ONE TICK! So oxyloss healing is done once per 4 ticks while oxyloss damage is applied once per tick!
+//NOTE: Breathing happens once per FOUR TICKS, unless the last breath fails. In which case it happens once per ONE TICK! So oxygenloss healing is done once per 4 ticks while oxygenloss damage is applied once per tick!
 
 // bitflags for the percentual amount of protection a piece of clothing which covers the body part offers.
 // Used with human/proc/get_heat_protection() and human/proc/get_cold_protection()
@@ -45,9 +45,71 @@
 	handle_heart(seconds_per_tick)
 	// Handles liver failure effects, if we lack a liver
 	handle_liver(seconds_per_tick)
+	handle_stomach(seconds_per_tick)
+	handle_toxin_organ_damage(seconds_per_tick)
 	// For special species interactions
 	dna.species.spec_life(src, seconds_per_tick)
 	return stat != DEAD
+
+/mob/living/carbon/human/proc/handle_stomach(seconds_per_tick)
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER) || isnull(dna?.species?.mutantstomach))
+		return
+
+	var/obj/item/organ/stomach/stomach = get_organ_slot(ORGAN_SLOT_STOMACH)
+	if(stomach && !(stomach.organ_flags & ORGAN_FAILING))
+		return
+
+	var/digestion_penalty = stomach ? 0.2 : 0.35
+	adjust_tox_loss(digestion_penalty * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	if(nutrition > NUTRITION_LEVEL_STARVING)
+		adjust_nutrition(-HUNGER_FACTOR * seconds_per_tick)
+	if(SPT_PROB(stomach ? 1 : 2, seconds_per_tick))
+		vomit(vomit_flags = MOB_VOMIT_MESSAGE | MOB_VOMIT_HARM, lost_nutrition = 3, purge_ratio = 0.03)
+
+/mob/living/carbon/human/proc/handle_toxin_organ_damage(seconds_per_tick)
+	var/toxin_load = get_tox_loss()
+	if(toxin_load < 10 || HAS_TRAIT(src, TRAIT_TOXIMMUNE) || HAS_TRAIT(src, TRAIT_TOXINLOVER))
+		return
+
+	var/toxin_pressure = clamp((toxin_load - 10) / 90, 0.05, 1)
+	var/organ_damage = 0.25 * toxin_pressure * seconds_per_tick
+	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
+	if(liver && !(liver.organ_flags & ORGAN_FAILING))
+		liver.apply_organ_damage(organ_damage * 1.5)
+		return
+
+	var/list/fallback_organs = list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_STOMACH, ORGAN_SLOT_EYES, ORGAN_SLOT_EARS)
+	if(toxin_load >= 60)
+		fallback_organs += ORGAN_SLOT_BRAIN
+	adjust_organ_loss(pick(fallback_organs), organ_damage)
+
+/mob/living/carbon/proc/apply_targeted_toxin_organ_damage(datum/reagent/toxin/source_toxin, seconds_per_tick, metabolization_ratio)
+	return
+
+/mob/living/carbon/human/apply_targeted_toxin_organ_damage(datum/reagent/toxin/source_toxin, seconds_per_tick, metabolization_ratio)
+	if(!source_toxin || HAS_TRAIT(src, TRAIT_TOXIMMUNE) || HAS_TRAIT(src, TRAIT_TOXINLOVER))
+		return
+
+	var/list/target_organs = source_toxin.toxin_target_organs
+	if(!length(target_organs))
+		target_organs = list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_STOMACH)
+
+	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
+	var/liver_working = liver && !(liver.organ_flags & ORGAN_FAILING)
+	var/metabolism_scale = (0.2 * REAGENTS_METABOLISM) / source_toxin.metabolization_rate
+	var/organ_damage = metabolism_scale * max(source_toxin.toxpwr, 1) * source_toxin.normalise_creation_purity() * metabolization_ratio * seconds_per_tick
+	if(liver_working)
+		liver.apply_organ_damage(organ_damage * 0.5 * source_toxin.liver_damage_multiplier, required_organ_flag = source_toxin.affected_organ_flags)
+		if(liver.damage < liver.high_threshold)
+			return
+	else
+		organ_damage *= 1.5
+
+	var/damage_per_organ = organ_damage / length(target_organs)
+	for(var/organ_slot as anything in target_organs)
+		adjust_organ_loss(organ_slot, damage_per_organ, required_organ_flag = source_toxin.affected_organ_flags)
+	if(ORGAN_SLOT_BRAIN in target_organs)
+		adjust_psychic_loss(organ_damage * 0.25, updating_health = FALSE, forced = TRUE)
 
 /mob/living/carbon/human/calculate_affecting_pressure(pressure)
 	var/chest_covered = !get_bodypart(BODY_ZONE_CHEST)
@@ -81,11 +143,7 @@
 	if(human_lungs)
 		return human_lungs.check_breath(breath, src)
 
-	if(health >= crit_threshold)
-		adjust_oxy_loss(HUMAN_MAX_OXYLOSS + 1)
-	else if(!HAS_TRAIT(src, TRAIT_NOCRITDAMAGE))
-		adjust_oxy_loss(HUMAN_CRIT_MAX_OXYLOSS)
-
+	set_lung_air_quality(0)
 	failed_last_breath = TRUE
 
 	var/datum/species/human_species = dna.species
@@ -294,7 +352,7 @@
 		return
 
 	if(we_breath)
-		adjust_oxy_loss(4 * seconds_per_tick)
+		set_lung_air_quality(min(lung_air_quality, 0.35))
 		Unconscious(80)
 	// Tissues die without blood circulation
 	adjust_brute_loss(1 * seconds_per_tick)

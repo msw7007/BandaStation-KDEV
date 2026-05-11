@@ -4,7 +4,7 @@
  * Decreases stage speed
  * Greatly decreases transmissibility
  * Moderate Level.
- * Bonus: Inflicts spikes of oxyloss
+ * Bonus: Inflicts spikes of oxygenloss
  */
 
 /datum/symptom/choking
@@ -79,7 +79,7 @@ Asphyxiation
 	Decreases transmittability.
 
 Bonus
-	Inflicts large spikes of oxyloss
+	Inflicts large spikes of oxygenloss
 	Introduces Asphyxiating drugs to the system
 	Causes cardiac arrest on dying victims.
 

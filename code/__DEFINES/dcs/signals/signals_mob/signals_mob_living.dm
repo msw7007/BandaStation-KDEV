@@ -95,9 +95,9 @@
 #define COMSIG_LIVING_ADJUST_BRUTE_DAMAGE "living_adjust_brute_damage"
 /// Send when fireloss is modified (type, amount, forced)
 #define COMSIG_LIVING_ADJUST_BURN_DAMAGE "living_adjust_burn_damage"
-/// Send when oxyloss is modified (type, amount, forced)
+/// Send when oxygenloss is modified (type, amount, forced)
 #define COMSIG_LIVING_ADJUST_OXY_DAMAGE "living_adjust_oxy_damage"
-/// Send when toxloss is modified (type, amount, forced)
+/// Send when toxinloss is modified (type, amount, forced)
 #define COMSIG_LIVING_ADJUST_TOX_DAMAGE "living_adjust_tox_damage"
 /// Send when staminaloss is modified (type, amount, forced)
 #define COMSIG_LIVING_ADJUST_STAMINA_DAMAGE "living_adjust_stamina_damage"

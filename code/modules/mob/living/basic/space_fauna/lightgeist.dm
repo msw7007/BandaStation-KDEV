@@ -104,7 +104,7 @@
 		return target.get_brute_loss() > 0 || target.get_fire_loss() > 0
 	var/mob/living/carbon/carbon_target = target
 	for (var/obj/item/bodypart/part in carbon_target.get_bodyparts())
-		if (!part.brute_dam && !part.burn_dam)
+		if (!part.get_brute_damage() && !part.get_burn_damage())
 			continue
 		if (!(part.bodytype & required_bodytype))
 			continue

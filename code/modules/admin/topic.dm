@@ -705,7 +705,7 @@
 			switch (subject.stat)
 				if(CONSCIOUS)
 					status = "Alive"
-				if(SOFT_CRIT)
+				if(UNCONSCIOUS)
 					status = "<font color='orange'><b>Dying</b></font>"
 				if(UNCONSCIOUS)
 					status = "<font color='orange'><b>Unconscious</b></font>"

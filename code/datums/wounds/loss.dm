@@ -49,9 +49,9 @@
 	set_limb(dismembered_part)
 	second_wind()
 	log_wound(victim, src)
-	if(dismembered_part.can_bleed() && wounding_type != WOUND_BURN && victim.get_blood_volume())
+	if(dismembered_part.can_bleed() && !IS_BURN_WOUNDING_TYPE(wounding_type) && victim.get_blood_volume())
 		victim.spray_blood(attack_direction, severity)
-	dismembered_part.dismember(wounding_type == WOUND_BURN ? BURN : BRUTE, wounding_type = wounding_type)
+	dismembered_part.dismember(IS_BURN_WOUNDING_TYPE(wounding_type) ? BURN : BRUTE, wounding_type = wounding_type)
 	qdel(src)
 	return TRUE
 
@@ -82,4 +82,6 @@
 			if(WOUND_BURN)
 				occur_text = "сгорает, превратившись в пыль!"
 
+	if(!occur_text)
+		occur_text = IS_BURN_WOUNDING_TYPE(wounding_type) ? "is destroyed by thermal damage!" : "is torn away!"
 	return occur_text

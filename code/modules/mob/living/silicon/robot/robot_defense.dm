@@ -235,8 +235,8 @@ GLOBAL_LIST_INIT(blacklisted_borg_hats, typecacheof(list( //Hats that don't real
 #define MODERATE_DAMAGE_UPPER_BOUND 2/3
 
 /mob/living/silicon/robot/proc/update_damage_particles()
-	var/brute_percent = bruteloss / maxHealth
-	var/burn_percent = fireloss / maxHealth
+	var/brute_percent = get_brute_loss() / maxHealth
+	var/burn_percent = get_fire_loss() / maxHealth
 
 	var/old_smoke = smoke_particles
 	if (brute_percent > MODERATE_DAMAGE_UPPER_BOUND)

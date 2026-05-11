@@ -11,7 +11,7 @@
 	click_cd_override = 0 // Click cooldown is also handled explicitly.
 
 	var/leech_rate = 0
-	var/oxyloss_rate = 0
+	var/oxygenloss_rate = 0
 
 	var/leech_grab_delay = 1 SECONDS
 
@@ -128,7 +128,7 @@
 		leech.consume_blood(-target.adjust_blood_volume(-leech_rate), target.get_blood_synth_content())
 
 		if (target.stat != DEAD)
-			target.adjust_oxy_loss(oxyloss_rate) // It's really weird if they just stand there until they literally drop dead from going below BLOOD_VOLUME_SURVIVE.
+			target.adjust_oxy_loss(oxygenloss_rate) // It's really weird if they just stand there until they literally drop dead from going below BLOOD_VOLUME_SURVIVE.
 
 		playsound(target, 'sound/effects/wounds/splatter.ogg', vol = 80, vary = TRUE, ignore_walls = FALSE)
 
@@ -262,12 +262,12 @@
 
 /datum/action/cooldown/mob_cooldown/blood_worm/leech/hatchling
 	leech_rate = BLOOD_VOLUME_NORMAL * 0.05 // 28 units of blood, 5 points of health, or 6.25% of a hatchling blood worm's health
-	oxyloss_rate = 11 // crosses from 44 to 55 at 5 seconds (50 is unconscious)
+	oxygenloss_rate = 11 // crosses from 44 to 55 at 5 seconds (50 is unconscious)
 
 /datum/action/cooldown/mob_cooldown/blood_worm/leech/juvenile
 	leech_rate = BLOOD_VOLUME_NORMAL * 0.075 // 42 units of blood, 7.5 points of health, or 6.25% of a juvenile blood worm's health
-	oxyloss_rate = 15 // crosses from 45 to 60 at 4 seconds (50 is unconscious)
+	oxygenloss_rate = 15 // crosses from 45 to 60 at 4 seconds (50 is unconscious)
 
 /datum/action/cooldown/mob_cooldown/blood_worm/leech/adult
 	leech_rate = BLOOD_VOLUME_NORMAL * 0.1 // 56 units of blood, 10 points of health, or 5.55% of an adult blood worm's health
-	oxyloss_rate = 20 // crosses from 40 to 60 at 3 seconds (50 is unconscious)
+	oxygenloss_rate = 20 // crosses from 40 to 60 at 3 seconds (50 is unconscious)

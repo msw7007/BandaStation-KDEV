@@ -146,7 +146,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 			message_mods -= RADIO_EXTENSION
 
 	switch(stat)
-		if(SOFT_CRIT)
+		if(UNCONSCIOUS)
 			message_mods[WHISPER_MODE] = MODE_WHISPER
 		if(UNCONSCIOUS)
 			return

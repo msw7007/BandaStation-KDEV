@@ -19,6 +19,8 @@
 	var/silent_toxin = FALSE
 	///The afflicted must be above this health value in order for the toxin to deal damage
 	var/health_required = -100
+	/// Specific organs additionally attacked by this toxin after liver filtration starts failing.
+	var/list/toxin_target_organs
 
 // Are you a bad enough dude to poison your own plants?
 /datum/reagent/toxin/on_hydroponics_apply(obj/machinery/hydroponics/mytray, mob/user)
@@ -28,6 +30,7 @@
 	. = ..()
 	if(toxpwr && affected_mob.health > health_required)
 		if(affected_mob.adjust_tox_loss(METABOLIZE_FREE_CONSTANT(0.5) * toxpwr * normalise_creation_purity() * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_biotype = affected_biotype))
+			affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 			return UPDATE_MOB_HEALTH
 
 /datum/reagent/toxin/amatoxin
@@ -219,6 +222,7 @@
 	toxpwr = initial(toxpwr)
 
 /datum/reagent/toxin/lexorin
+	toxin_target_organs = list(ORGAN_SLOT_LUNGS)
 	name = "Lexorin"
 	description = "A powerful poison used to stop respiration."
 	color = "#7DC3A0"
@@ -235,6 +239,7 @@
 	if(!HAS_TRAIT(affected_mob, TRAIT_NOBREATH))
 		affected_mob.adjust_oxy_loss(2.5 * normalise_creation_purity() * metabolization_ratio * seconds_per_tick, FALSE, required_biotype = affected_biotype, required_respiration_type = affected_respiration_type)
 		affected_mob.losebreath += 1 * normalise_creation_purity() * metabolization_ratio * seconds_per_tick
+		affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 		. = UPDATE_MOB_HEALTH
 		if(SPT_PROB(10, seconds_per_tick))
 			affected_mob.emote("gasp")
@@ -374,6 +379,7 @@
 		return UPDATE_MOB_HEALTH
 
 /datum/reagent/toxin/mindbreaker
+	toxin_target_organs = list(ORGAN_SLOT_BRAIN)
 	name = "Mindbreaker Toxin"
 	description = "A powerful hallucinogen, not to be messed with. However, for some mental patients it instead counteracts their symptoms and anchors them to reality."
 	color = "#B31008" // rgb: 139, 166, 233
@@ -397,6 +403,9 @@
 	// otherwise it creates hallucinations. truly a miracle medicine.
 	else
 		affected_mob.adjust_hallucinations(5 SECONDS * metabolization_ratio * seconds_per_tick)
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
+	affected_mob.adjust_psychic_loss(0.5 * normalise_creation_purity() * metabolization_ratio * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	return UPDATE_MOB_HEALTH
 
 /datum/reagent/toxin/mindbreaker/fish
 	name = "Jellyfish Hallucinogen"
@@ -552,6 +561,7 @@
 	affected_mob.ignite_mob()
 
 /datum/reagent/toxin/chloralhydrate
+	toxin_target_organs = list(ORGAN_SLOT_BRAIN)
 	name = "Chloral Hydrate"
 	description = "A powerful sedative that induces confusion and drowsiness before putting its target to sleep."
 	silent_toxin = TRUE
@@ -567,6 +577,7 @@
 
 /datum/reagent/toxin/chloralhydrate/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 	switch(current_cycle)
 		if(2 to 11)
 			affected_mob.adjust_confusion(0.67 SECONDS * normalise_creation_purity() * metabolization_ratio * seconds_per_tick)
@@ -825,6 +836,7 @@
 	current_size = RESIZE_DEFAULT_SIZE
 
 /datum/reagent/toxin/fentanyl
+	toxin_target_organs = list(ORGAN_SLOT_LUNGS, ORGAN_SLOT_BRAIN)
 	name = "Fentanyl"
 	description = "Inhibits brain function and causes toxin damage before eventually knocking out the patient."
 	color = "#64916E"
@@ -841,7 +853,9 @@
 	. = ..()
 	var/need_mob_update
 	need_mob_update = affected_mob.adjust_organ_loss(ORGAN_SLOT_BRAIN, 3 * metabolization_ratio * normalise_creation_purity() * seconds_per_tick, 150)
-	if(affected_mob.toxloss <= 60)
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
+	need_mob_update = TRUE
+	if(affected_mob.get_tox_loss() <= 60)
 		need_mob_update += affected_mob.adjust_tox_loss(1 * metabolization_ratio * normalise_creation_purity() * seconds_per_tick, updating_health = FALSE, required_biotype = affected_biotype)
 	if(current_cycle > 4)
 		affected_mob.add_mood_event("smacked out", /datum/mood_event/narcotic_heavy, name)
@@ -851,6 +865,7 @@
 		return UPDATE_MOB_HEALTH
 
 /datum/reagent/toxin/cyanide
+	toxin_target_organs = list(ORGAN_SLOT_HEART, ORGAN_SLOT_BRAIN)
 	name = "Cyanide"
 	description = "An infamous poison known for its use in assassination. Causes small amounts of toxin damage with a small chance of oxygen damage or a stun."
 	color = "#00B4FF"
@@ -865,6 +880,7 @@
 /datum/reagent/toxin/cyanide/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
 	var/need_mob_update = FALSE
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 	if(SPT_PROB(2.5, seconds_per_tick))
 		affected_mob.losebreath += 1
 		need_mob_update = TRUE
@@ -922,6 +938,7 @@
 		return ..() || .
 
 /datum/reagent/toxin/initropidril
+	toxin_target_organs = list(ORGAN_SLOT_HEART)
 	name = "Initropidril"
 	description = "A powerful poison with insidious effects. It can cause stuns, lethal breathing failure, and cardiac arrest."
 	silent_toxin = TRUE
@@ -933,6 +950,7 @@
 
 /datum/reagent/toxin/initropidril/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 	if(!SPT_PROB(13, seconds_per_tick))
 		return
 	var/picked_option = rand(1,3)
@@ -956,6 +974,7 @@
 		return UPDATE_MOB_HEALTH
 
 /datum/reagent/toxin/pancuronium
+	toxin_target_organs = list(ORGAN_SLOT_LUNGS)
 	name = "Pancuronium"
 	description = "An undetectable toxin that swiftly incapacitates its victim. May also cause breathing failure."
 	silent_toxin = TRUE
@@ -968,6 +987,7 @@
 
 /datum/reagent/toxin/pancuronium/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 	if(current_cycle > 10)
 		affected_mob.Stun(80 * metabolization_ratio * seconds_per_tick)
 	if(SPT_PROB(10, seconds_per_tick))
@@ -1054,6 +1074,7 @@
 	affected_mob.overeatduration = 0
 
 /datum/reagent/toxin/coniine
+	toxin_target_organs = list(ORGAN_SLOT_LUNGS)
 	name = "Coniine"
 	description = "Coniine metabolizes extremely slowly, but deals high amounts of toxin damage and stops breathing."
 	color = "#7DC3A0"
@@ -1064,6 +1085,7 @@
 
 /datum/reagent/toxin/coniine/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 	if(affected_mob.losebreath < 5)
 		affected_mob.losebreath = min(affected_mob.losebreath + 41.67 * metabolization_ratio * seconds_per_tick, 5)
 		return UPDATE_MOB_HEALTH
@@ -1100,6 +1122,7 @@
 		to_chat(affected_mob, span_userdanger("You feel something lumpy come up as you vomit."))
 
 /datum/reagent/toxin/curare
+	toxin_target_organs = list(ORGAN_SLOT_LUNGS)
 	name = "Curare"
 	description = "Causes slight toxin damage followed by chain-stunning and oxygen damage."
 	color = "#191919"
@@ -1110,6 +1133,7 @@
 
 /datum/reagent/toxin/curare/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	affected_mob.apply_targeted_toxin_organ_damage(src, seconds_per_tick, metabolization_ratio)
 	if(current_cycle > 11)
 		affected_mob.Paralyze(240 * metabolization_ratio * seconds_per_tick)
 	if(affected_mob.adjust_oxy_loss(2 * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_biotype = affected_biotype, required_respiration_type = affected_respiration_type))

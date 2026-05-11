@@ -84,10 +84,18 @@
 	// Damage variables
 	///A mutiplication of the burn and brute damage that the limb's stored damage contributes to its attached mob's overall wellbeing.
 	var/body_damage_coeff = LIMB_BODY_DAMAGE_COEFFICIENT_TOTAL
-	///The current amount of brute damage the limb has
-	var/brute_dam = 0
-	///The current amount of burn damage the limb has
-	var/burn_dam = 0
+	/// Current blunt physical trauma.
+	var/blunt_dam = 0
+	/// Current piercing physical trauma.
+	var/pierce_dam = 0
+	/// Current slashing physical trauma.
+	var/slash_dam = 0
+	/// Current heat and flame trauma.
+	var/heat_dam = 0
+	/// Current cold and freezing trauma.
+	var/cold_dam = 0
+	/// Current acid and corrosion trauma.
+	var/acid_dam = 0
 	///The maximum brute OR burn damage a bodypart can take. Once we hit this cap, no more damage of either type!
 	var/max_damage = 0
 
@@ -342,10 +350,12 @@
 	SHOULD_CALL_PARENT(TRUE)
 
 	. = ..()
-	if(brute_dam > DAMAGE_PRECISION)
-		. += span_warning("У этой конечности [brute_dam > 30 ? "тяжёлые" : "лёгкие"] ушибы.")
-	if(burn_dam > DAMAGE_PRECISION)
-		. += span_warning("У этой конечности [burn_dam > 30 ? "тяжёлые" : "лёгкие"] ожоги.")
+	var/brute_damage = get_brute_damage()
+	var/burn_damage = get_burn_damage()
+	if(brute_damage > DAMAGE_PRECISION)
+		. += span_warning("У этой конечности [brute_damage > 30 ? "тяжёлые" : "лёгкие"] ушибы.")
+	if(burn_damage > DAMAGE_PRECISION)
+		. += span_warning("У этой конечности [burn_damage > 30 ? "тяжёлые" : "лёгкие"] ожоги.")
 
 	for(var/datum/wound/wound as anything in wounds)
 		var/wound_desc = wound.get_limb_examine_description()
@@ -362,7 +372,7 @@
 /obj/item/bodypart/proc/check_for_injuries(mob/living/carbon/human/examiner)
 
 	var/list/check_list = list()
-	var/list/limb_damage = list(BRUTE = brute_dam, BURN = burn_dam)
+	var/list/limb_damage = list(BRUTE = get_brute_damage(), BURN = get_burn_damage())
 
 	SEND_SIGNAL(src, COMSIG_BODYPART_CHECKED_FOR_INJURY, examiner, check_list, limb_damage)
 	SEND_SIGNAL(examiner, COMSIG_CARBON_CHECKING_BODYPART, src, check_list, limb_damage)
@@ -664,6 +674,108 @@
 //Return TRUE to get whatever mob this is in to update health.
 /obj/item/bodypart/proc/on_life(seconds_per_tick)
 	SHOULD_CALL_PARENT(TRUE)
+	var/datum/component/pain_tracker/pain_tracker = get_pain_tracker()
+	var/changed = pain_tracker.process_pain(seconds_per_tick)
+	if(owner)
+		owner.sync_pain_damage()
+	return changed
+
+/obj/item/bodypart/proc/get_pain_tracker()
+	var/datum/component/pain_tracker/pain_tracker = GetComponent(/datum/component/pain_tracker)
+	if(!pain_tracker)
+		pain_tracker = AddComponent(/datum/component/pain_tracker)
+	return pain_tracker
+
+/obj/item/bodypart/proc/get_residual_pain()
+	return get_pain_tracker().get_residual_pain()
+
+/obj/item/bodypart/proc/apply_damage_pain(blunt = 0, pierce = 0, slash = 0, fire = 0, cold = 0, acid = 0)
+	if(!owner || owner.stat == DEAD || HAS_TRAIT(owner, TRAIT_ANALGESIA))
+		return
+	var/pain_amount = (blunt * 1.25 + pierce + slash * 0.8 + fire * 1.2 + cold * 0.7 + acid * 1.4) * 1.5
+	if(pain_amount > 0)
+		adjust_pain_damage(pain_amount, update_owner = FALSE)
+		owner.sync_pain_damage()
+
+/obj/item/bodypart/proc/apply_organ_spillover(blunt = 0, pierce = 0, slash = 0, fire = 0, cold = 0, acid = 0)
+	if(!owner || (!blunt && !pierce && !slash && !fire && !cold && !acid))
+		return
+	var/list/obj/item/organ/contained_organs = list()
+	for(var/obj/item/organ/organ as anything in contents)
+		if(organ.owner != owner)
+			continue
+		contained_organs += organ
+	if(!length(contained_organs))
+		return
+	if(blunt > 0)
+		var/obj/item/organ/target = pick(contained_organs)
+		target.apply_organ_damage(blunt * 0.1)
+	if(pierce > 0)
+		var/obj/item/organ/target = pick(contained_organs)
+		target.apply_organ_damage(pierce * 0.25)
+		if(istype(target, /obj/item/organ/lungs))
+			var/obj/item/organ/lungs/punctured_lungs = target
+			punctured_lungs.add_lung_puncture()
+	if(slash > 0)
+		var/obj/item/organ/target = pick(contained_organs)
+		target.apply_organ_damage(slash * 0.15)
+		if(istype(target, /obj/item/organ/lungs) && slash >= 10)
+			var/obj/item/organ/lungs/cut_lungs = target
+			cut_lungs.add_lung_puncture()
+	if(fire > 0 || cold > 0 || acid > 0)
+		var/thermal_damage = (fire * 0.08) + (cold * 0.06) + (acid * 0.12)
+		for(var/obj/item/organ/organ as anything in contained_organs)
+			organ.apply_organ_damage(thermal_damage)
+
+/obj/item/bodypart/proc/apply_physical_damage_effects(blunt = 0, pierce = 0, slash = 0, attack_direction = null, damage_source)
+	if(!owner)
+		return
+
+	if(blunt >= 8 && prob(min(blunt * 2, 45)))
+		var/wound_severity = blunt >= 25 ? WOUND_SEVERITY_CRITICAL : WOUND_SEVERITY_MODERATE
+		owner.cause_wound_of_type_and_severity(WOUND_BLUNT, src, wound_severity, wound_source = damage_source)
+
+	if(pierce >= 6 && can_bleed())
+		var/bleed_amount = pierce * 0.15
+		if(body_zone in list(BODY_ZONE_CHEST, BODY_ZONE_HEAD, BODY_ZONE_PRECISE_GROIN))
+			bleed_amount *= 1.75
+		owner.bleed(bleed_amount)
+		if(pierce >= 12)
+			owner.cause_wound_of_type_and_severity(WOUND_PIERCE, src, WOUND_SEVERITY_CRITICAL, wound_source = damage_source)
+		var/obj/item/organ/heart/heart = owner.get_organ_slot(ORGAN_SLOT_HEART)
+		if(heart && body_zone == BODY_ZONE_CHEST && prob(min(pierce * 2, 35)))
+			heart.apply_organ_damage(pierce * 0.15)
+
+	if(slash >= 6 && can_bleed())
+		owner.bleed(slash * 0.2)
+		if(slash >= 14)
+			owner.cause_wound_of_type_and_severity(WOUND_SLASH, src, WOUND_SEVERITY_CRITICAL, wound_source = damage_source)
+		if(slash >= 25 && (dismemberable_by_wound() || dismemberable_by_total_damage()))
+			try_dismember(WOUND_SLASH, slash, CANT_WOUND, 0)
+
+/obj/item/bodypart/proc/apply_thermal_damage_effects(fire = 0, cold = 0, acid = 0, damage_source)
+	if(!owner)
+		return
+
+	if(fire >= 5)
+		owner.adjust_fire_stacks(min(fire / 10, 2))
+		if(fire >= 12 && prob(min(fire * 1.5, 35)))
+			owner.ignite_mob()
+		owner.adjust_bodytemperature(fire * TEMPERATURE_DAMAGE_COEFFICIENT * 0.2)
+
+	if(cold >= 5)
+		owner.adjust_bodytemperature(-cold * TEMPERATURE_DAMAGE_COEFFICIENT * 0.35, 50)
+		if(cold >= 10 && prob(min(cold * 2, 40)))
+			owner.cause_wound_of_type_and_severity(WOUND_COLD, src, cold >= 22 ? WOUND_SEVERITY_CRITICAL : WOUND_SEVERITY_MODERATE, wound_source = damage_source)
+
+	if(acid >= 4)
+		if(can_bleed())
+			owner.bleed(acid * 0.1)
+		if(acid >= 8)
+			owner.cause_wound_of_type_and_severity(WOUND_ACID, src, acid >= 18 ? WOUND_SEVERITY_CRITICAL : WOUND_SEVERITY_MODERATE, wound_source = damage_source)
+		for(var/obj/item/organ/organ as anything in contents)
+			if(organ.owner == owner)
+				organ.apply_organ_damage(acid * 0.05)
 
 /**
  * #receive_damage
@@ -684,43 +796,78 @@
  * attack_direction - The direction the bodypart is attacked from, used to send blood flying in the opposite direction.
  * damage_source - The source of damage, typically a weapon.
  */
-/obj/item/bodypart/proc/receive_damage(brute = 0, burn = 0, blocked = 0, updating_health = TRUE, forced = FALSE, required_bodytype = null, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE, attack_direction = null, damage_source, wound_clothing = TRUE)
+/obj/item/bodypart/proc/receive_damage(brute = 0, burn = 0, blocked = 0, updating_health = TRUE, forced = FALSE, required_bodytype = null, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE, attack_direction = null, damage_source, wound_clothing = TRUE, blunt = 0, pierce = 0, slash = 0, fire = 0, cold = 0, acid = 0)
 	SHOULD_CALL_PARENT(TRUE)
 
 	var/hit_percent = forced ? 1 : (100-blocked)/100
-	if((!brute && !burn) || hit_percent <= 0)
+	if((!brute && !burn && !blunt && !pierce && !slash && !fire && !cold && !acid) || hit_percent <= 0)
 		return FALSE
 	if (!forced)
 		if(!isnull(owner))
 			if (HAS_TRAIT(owner, TRAIT_GODMODE))
 				return FALSE
-			if (SEND_SIGNAL(owner, COMSIG_CARBON_LIMB_DAMAGED, src, brute, burn) & COMPONENT_PREVENT_LIMB_DAMAGE)
+			var/signaled_brute = brute + blunt + pierce + slash
+			var/signaled_burn = burn + fire + cold + acid
+			if (SEND_SIGNAL(owner, COMSIG_CARBON_LIMB_DAMAGED, src, signaled_brute, signaled_burn) & COMPONENT_PREVENT_LIMB_DAMAGE)
 				return FALSE
 		if(required_bodytype && !(bodytype & required_bodytype))
 			return FALSE
 
 	var/dmg_multi = CONFIG_GET(number/damage_multiplier) * hit_percent
-	brute = round(max(brute * dmg_multi * brute_modifier, 0), DAMAGE_PRECISION)
-	burn = round(max(burn * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
+	if(brute)
+		blunt += brute / 3
+		pierce += brute / 3
+		slash += brute / 3
+	if(burn)
+		fire += burn / 3
+		cold += burn / 3
+		acid += burn / 3
+
+	blunt = round(max(blunt * dmg_multi * brute_modifier, 0), DAMAGE_PRECISION)
+	pierce = round(max(pierce * dmg_multi * brute_modifier, 0), DAMAGE_PRECISION)
+	slash = round(max(slash * dmg_multi * brute_modifier, 0), DAMAGE_PRECISION)
+	fire = round(max(fire * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
+	cold = round(max(cold * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
+	acid = round(max(acid * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
+	brute = blunt + pierce + slash
+	burn = fire + cold + acid
 
 	if(!brute && !burn)
 		return FALSE
-
-	brute *= wound_damage_multiplier
-	burn *= wound_damage_multiplier
 
 	/*
 	// START WOUND HANDLING
 	*/
 
-	// what kind of wounds we're gonna roll for, take the greater between brute and burn, then if it's brute, we subdivide based on sharpness
-	var/wounding_type = (brute > burn ? WOUND_BLUNT : WOUND_BURN)
-	var/wounding_dmg = max(brute, burn)
+	var/wound_blunt = blunt * wound_damage_multiplier
+	var/wound_pierce = pierce * wound_damage_multiplier
+	var/wound_slash = slash * wound_damage_multiplier
+	var/wound_fire = fire * wound_damage_multiplier
+	var/wound_cold = cold * wound_damage_multiplier
+	var/wound_acid = acid * wound_damage_multiplier
 
-	if(wounding_type == WOUND_BLUNT && sharpness)
+	var/wounding_type = WOUND_BLUNT
+	var/wounding_dmg = wound_blunt
+	if(wound_pierce > wounding_dmg)
+		wounding_type = WOUND_PIERCE
+		wounding_dmg = wound_pierce
+	if(wound_slash > wounding_dmg)
+		wounding_type = WOUND_SLASH
+		wounding_dmg = wound_slash
+	if(wound_fire > wounding_dmg)
+		wounding_type = WOUND_BURN
+		wounding_dmg = wound_fire
+	if(wound_cold > wounding_dmg)
+		wounding_type = WOUND_COLD
+		wounding_dmg = wound_cold
+	if(wound_acid > wounding_dmg)
+		wounding_type = WOUND_ACID
+		wounding_dmg = wound_acid
+
+	if(wounding_type == WOUND_BLUNT && sharpness && wound_blunt == wound_pierce && wound_blunt == wound_slash)
 		if(sharpness & SHARP_EDGED)
 			wounding_type = WOUND_SLASH
-		else if (sharpness & SHARP_POINTY)
+		else if(sharpness & SHARP_POINTY)
 			wounding_type = WOUND_PIERCE
 
 	if(owner) // i tried to modularize the below, but the modifications to wounding_dmg and wounding_type cant be extracted to a proc
@@ -768,15 +915,34 @@
 	var/can_inflict = max_damage - get_damage()
 	var/total_damage = brute + burn
 	if(total_damage > can_inflict && total_damage > 0) // TODO: the second part of this check should be removed once disabling is all done
-		brute = round(brute * (can_inflict / total_damage),DAMAGE_PRECISION)
-		burn = round(burn * (can_inflict / total_damage),DAMAGE_PRECISION)
+		var/damage_ratio = can_inflict / total_damage
+		blunt = round(blunt * damage_ratio, DAMAGE_PRECISION)
+		pierce = round(pierce * damage_ratio, DAMAGE_PRECISION)
+		slash = round(slash * damage_ratio, DAMAGE_PRECISION)
+		fire = round(fire * damage_ratio, DAMAGE_PRECISION)
+		cold = round(cold * damage_ratio, DAMAGE_PRECISION)
+		acid = round(acid * damage_ratio, DAMAGE_PRECISION)
+		brute = blunt + pierce + slash
+		burn = fire + cold + acid
 
 	if(can_inflict <= 0)
 		return FALSE
-	if(brute)
-		set_brute_dam(brute_dam + brute)
-	if(burn)
-		set_burn_dam(burn_dam + burn)
+	if(blunt)
+		set_blunt_dam(blunt_dam + blunt)
+	if(pierce)
+		set_pierce_dam(pierce_dam + pierce)
+	if(slash)
+		set_slash_dam(slash_dam + slash)
+	if(fire)
+		set_heat_dam(heat_dam + fire)
+	if(cold)
+		set_cold_dam(cold_dam + cold)
+	if(acid)
+		set_acid_dam(acid_dam + acid)
+	apply_damage_pain(blunt = blunt, pierce = pierce, slash = slash, fire = fire, cold = cold, acid = acid)
+	apply_organ_spillover(blunt = blunt, pierce = pierce, slash = slash, fire = fire, cold = cold, acid = acid)
+	apply_physical_damage_effects(blunt = blunt, pierce = pierce, slash = slash, attack_direction = attack_direction, damage_source = damage_source)
+	apply_thermal_damage_effects(fire = fire, cold = cold, acid = acid, damage_source = damage_source)
 
 	if(owner)
 		if(can_be_disabled)
@@ -879,16 +1045,32 @@
 //Heals brute and burn damage for the organ. Returns 1 if the damage-icon states changed at all.
 //Damage cannot go below zero.
 //Cannot remove negative damage (i.e. apply damage)
-/obj/item/bodypart/proc/heal_damage(brute, burn, updating_health = TRUE, forced = FALSE, required_bodytype)
+/obj/item/bodypart/proc/heal_damage(brute = 0, burn = 0, updating_health = TRUE, forced = FALSE, required_bodytype, blunt = 0, pierce = 0, slash = 0, fire = 0, cold = 0, acid = 0)
 	SHOULD_CALL_PARENT(TRUE)
 
 	if(!forced && required_bodytype && !(bodytype & required_bodytype)) //So we can only heal certain kinds of limbs, ie robotic vs organic.
 		return
 
 	if(brute)
-		set_brute_dam(round(max(brute_dam - brute, 0), DAMAGE_PRECISION))
+		blunt += brute / 3
+		pierce += brute / 3
+		slash += brute / 3
 	if(burn)
-		set_burn_dam(round(max(burn_dam - burn, 0), DAMAGE_PRECISION))
+		fire += burn / 3
+		cold += burn / 3
+		acid += burn / 3
+	if(blunt)
+		set_blunt_dam(round(max(blunt_dam - blunt, 0), DAMAGE_PRECISION))
+	if(pierce)
+		set_pierce_dam(round(max(pierce_dam - pierce, 0), DAMAGE_PRECISION))
+	if(slash)
+		set_slash_dam(round(max(slash_dam - slash, 0), DAMAGE_PRECISION))
+	if(fire)
+		set_heat_dam(round(max(heat_dam - fire, 0), DAMAGE_PRECISION))
+	if(cold)
+		set_cold_dam(round(max(cold_dam - cold, 0), DAMAGE_PRECISION))
+	if(acid)
+		set_acid_dam(round(max(acid_dam - acid, 0), DAMAGE_PRECISION))
 
 	if(owner)
 		if(can_be_disabled)
@@ -902,27 +1084,109 @@
 	set_brute_dam(brute_damage)
 	set_burn_dam(burn_damage)
 
-///Proc to hook behavior associated to the change of the brute_dam variable's value.
+/obj/item/bodypart/proc/get_brute_damage()
+	return round(blunt_dam + pierce_dam + slash_dam, DAMAGE_PRECISION)
+
+/obj/item/bodypart/proc/get_burn_damage()
+	return round(heat_dam + cold_dam + acid_dam, DAMAGE_PRECISION)
+
+/obj/item/bodypart/proc/get_pain_damage()
+	return get_pain_tracker().get_pain()
+
+/obj/item/bodypart/proc/sync_brute_damage()
+	return get_brute_damage()
+
+/obj/item/bodypart/proc/sync_burn_damage()
+	return get_burn_damage()
+
+///Compatibility setter for aggregate brute damage. Splits evenly into blunt, pierce, and slash.
 /obj/item/bodypart/proc/set_brute_dam(new_value)
 	PROTECTED_PROC(TRUE)
 
-	if(brute_dam == new_value)
-		return
-	. = brute_dam
-	brute_dam = new_value
+	var/split_value = new_value / 3
+	set_blunt_dam(split_value)
+	set_pierce_dam(split_value)
+	set_slash_dam(split_value)
 
-///Proc to hook behavior associated to the change of the burn_dam variable's value.
+/obj/item/bodypart/proc/set_blunt_dam(new_value)
+	PROTECTED_PROC(TRUE)
+
+	new_value = round(max(new_value, 0), DAMAGE_PRECISION)
+	if(blunt_dam == new_value)
+		return
+	. = blunt_dam
+	blunt_dam = new_value
+	sync_brute_damage()
+
+/obj/item/bodypart/proc/set_pierce_dam(new_value)
+	PROTECTED_PROC(TRUE)
+
+	new_value = round(max(new_value, 0), DAMAGE_PRECISION)
+	if(pierce_dam == new_value)
+		return
+	. = pierce_dam
+	pierce_dam = new_value
+	sync_brute_damage()
+
+/obj/item/bodypart/proc/set_slash_dam(new_value)
+	PROTECTED_PROC(TRUE)
+
+	new_value = round(max(new_value, 0), DAMAGE_PRECISION)
+	if(slash_dam == new_value)
+		return
+	. = slash_dam
+	slash_dam = new_value
+	sync_brute_damage()
+
+///Compatibility setter for aggregate burn damage. Splits evenly into fire, cold, and acid.
 /obj/item/bodypart/proc/set_burn_dam(new_value)
 	PROTECTED_PROC(TRUE)
 
-	if(burn_dam == new_value)
+	var/split_value = new_value / 3
+	set_heat_dam(split_value)
+	set_cold_dam(split_value)
+	set_acid_dam(split_value)
+
+/obj/item/bodypart/proc/set_heat_dam(new_value)
+	PROTECTED_PROC(TRUE)
+
+	new_value = round(max(new_value, 0), DAMAGE_PRECISION)
+	if(heat_dam == new_value)
 		return
-	. = burn_dam
-	burn_dam = new_value
+	. = heat_dam
+	heat_dam = new_value
+	sync_burn_damage()
+
+/obj/item/bodypart/proc/set_cold_dam(new_value)
+	PROTECTED_PROC(TRUE)
+
+	new_value = round(max(new_value, 0), DAMAGE_PRECISION)
+	if(cold_dam == new_value)
+		return
+	. = cold_dam
+	cold_dam = new_value
+	sync_burn_damage()
+
+/obj/item/bodypart/proc/set_acid_dam(new_value)
+	PROTECTED_PROC(TRUE)
+
+	new_value = round(max(new_value, 0), DAMAGE_PRECISION)
+	if(acid_dam == new_value)
+		return
+	. = acid_dam
+	acid_dam = new_value
+	sync_burn_damage()
+
+/obj/item/bodypart/proc/adjust_pain_damage(amount, maximum = max_damage, update_owner = TRUE)
+	. = get_pain_tracker().adjust_pain(amount, maximum)
+	if(can_be_disabled)
+		update_disabled()
+	if(owner && update_owner)
+		owner.updatehealth()
 
 //Returns total damage.
 /obj/item/bodypart/proc/get_damage()
-	return brute_dam + burn_dam
+	return get_brute_damage() + get_burn_damage()
 
 //Checks disabled status thresholds
 /obj/item/bodypart/proc/update_disabled(update_limbs = TRUE)
@@ -939,7 +1203,13 @@
 		set_disabled(TRUE, update_limbs)
 		return
 
-	var/total_damage = brute_dam + burn_dam
+	var/total_damage = get_damage()
+	var/current_pain = get_pain_damage()
+	if(current_pain >= max_damage * 0.8)
+		set_disabled(TRUE, update_limbs)
+		return
+	if(bodypart_disabled && current_pain > max_damage * 0.4)
+		return
 
 	// this block of checks is for limbs that can be disabled, but not through pure damage (AKA limbs that suffer wounds, human/monkey parts and such)
 	if(disabling_threshold_percentage == LIMB_NO_DISABLE)
@@ -1133,8 +1403,8 @@
 /obj/item/bodypart/proc/update_bodypart_damage_state()
 	SHOULD_CALL_PARENT(TRUE)
 
-	var/tbrute = round( (brute_dam/max_damage)*3, 1 )
-	var/tburn = round( (burn_dam/max_damage)*3, 1 )
+	var/tbrute = round((get_brute_damage() / max_damage) * 3, 1)
+	var/tburn = round((get_burn_damage() / max_damage) * 3, 1)
 	if((tbrute != brutestate) || (tburn != burnstate))
 		brutestate = tbrute
 		burnstate = tburn
@@ -1727,14 +1997,14 @@
 	// 3 hits to crit with an ion rifle on someone fully augged at a total of 100.8 damage, although im p sure mood can boost max hp above 100
 	// dont forget emps pierce armor, debilitate augs, and usually comes with splash damage e.g. ion rifles or grenades
 	var/time_needed = AUGGED_LIMB_EMP_PARALYZE_TIME
-	var/brute_damage = AUGGED_LIMB_EMP_BRUTE_DAMAGE
-	var/burn_damage = AUGGED_LIMB_EMP_BURN_DAMAGE
+	var/blunt_damage = AUGGED_LIMB_EMP_BRUTE_DAMAGE
+	var/heat_damage = AUGGED_LIMB_EMP_BURN_DAMAGE
 	if(severity == EMP_HEAVY)
 		time_needed *= 2
-		brute_damage *= 2
-		burn_damage *= 2
+		blunt_damage *= 2
+		heat_damage *= 2
 
-	receive_damage(brute_damage, burn_damage)
+	receive_damage(blunt = blunt_damage, fire = heat_damage)
 	do_sparks(number = 1, cardinal_only = FALSE, source = owner || src)
 
 	if(can_be_disabled && (get_damage() / max_damage) >= robotic_emp_paralyze_damage_percent_threshold)

@@ -10,7 +10,7 @@
 #define MOVE_INTENT_WALK "walk"
 #define MOVE_INTENT_RUN "run"
 
-/// Amount of oxyloss that KOs a human
+/// Amount of oxygenloss that KOs a human
 #define OXYLOSS_PASSOUT_THRESHOLD 50
 //Blood levels
 #define BLOOD_VOLUME_MAXIMUM 2000
@@ -1000,7 +1000,7 @@ GLOBAL_LIST_INIT(layers_to_offset, list(
 #define HEAL_BURN (1<<2)
 /// Heals all toxin damage, slime people included.
 #define HEAL_TOX (1<<3)
-/// Heals all oxyloss.
+/// Heals all oxygenloss.
 #define HEAL_OXY (1<<4)
 /// Heals all stamina damage.
 #define HEAL_STAM (1<<5)

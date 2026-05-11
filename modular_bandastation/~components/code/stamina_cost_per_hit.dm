@@ -78,7 +78,7 @@
 	else
 		attack_cost = HAS_TRAIT(parent, TRAIT_WIELDED) ? stamina_cost_wielded_on_atom : stamina_cost_on_atom
 
-	if(!ignore_exhaustion && ((user.maxHealth - (user.get_stamina_loss() + attack_cost)) <= user.crit_threshold))
+	if(!ignore_exhaustion && ((user.maxHealth - (user.get_stamina_loss() + attack_cost)) <= user.critical_health_threshold))
 		user.balloon_alert(user, "нет сил!")
 		return COMPONENT_CANCEL_ATTACK_CHAIN
 

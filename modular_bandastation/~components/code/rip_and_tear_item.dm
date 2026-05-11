@@ -128,7 +128,7 @@
 			user.balloon_alert(user, "заняты!")
 			return
 
-		if(!ignore_exhaustion && ((user.maxHealth - (user.get_stamina_loss() + get_stamina_cost())) <= user.crit_threshold))
+		if(!ignore_exhaustion && ((user.maxHealth - (user.get_stamina_loss() + get_stamina_cost())) <= user.critical_health_threshold))
 			user.balloon_alert(user, "вы слишком устали!")
 			return
 

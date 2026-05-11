@@ -92,7 +92,7 @@
 	return list("конечность должна иметь трещину") + ..()
 
 /datum/surgery_operation/limb/repair_hairline/state_check(obj/item/bodypart/limb)
-	if(!(locate(/datum/wound/blunt/bone/severe) in limb.wounds))
+	if(!(locate(/datum/wound/blunt/bone/critical) in limb.wounds))
 		return FALSE
 	return TRUE
 
@@ -134,7 +134,7 @@
 
 /datum/surgery_operation/limb/reset_compound/get_time_modifiers(obj/item/bodypart/limb, mob/living/surgeon, tool)
 	. = ..()
-	for(var/datum/wound/blunt/bone/severe/bone_wound in limb.wounds)
+	for(var/datum/wound/blunt/bone/critical/bone_wound in limb.wounds)
 		if(HAS_TRAIT(bone_wound, TRAIT_WOUND_SCANNED))
 			. *= 0.5
 

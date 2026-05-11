@@ -544,7 +544,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 /datum/species/proc/spec_life(mob/living/carbon/human/H, seconds_per_tick)
 	SHOULD_CALL_PARENT(TRUE)
-	if(HAS_TRAIT(H, TRAIT_NOBREATH) && (H.health < H.crit_threshold) && !HAS_TRAIT(H, TRAIT_NOCRITDAMAGE))
+	if(HAS_TRAIT(H, TRAIT_NOBREATH) && (H.health < H.critical_health_threshold) && !HAS_TRAIT(H, TRAIT_NOCRITDAMAGE))
 		H.adjust_brute_loss(0.5 * seconds_per_tick)
 
 /datum/species/proc/can_equip(obj/item/I, slot, disable_warning, mob/living/carbon/human/H, bypass_equip_delay_self = FALSE, ignore_equipped = FALSE, indirect_action = FALSE)
@@ -757,7 +757,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	if(SEND_SIGNAL(target, COMSIG_CARBON_PRE_HELP, user, attacker_style) & COMPONENT_BLOCK_HELP_ACT)
 		return TRUE
 
-	if(target.body_position == STANDING_UP || (target.appears_alive() && target.stat != SOFT_CRIT && target.stat != HARD_CRIT))
+	if(target.body_position == STANDING_UP || (target.appears_alive() && target.stat != UNCONSCIOUS && target.stat != HARD_CRIT))
 		target.help_shake_act(user)
 		if(target != user)
 			log_combat(user, target, "shaken")
@@ -1234,7 +1234,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			INVOKE_ASYNC(humi, TYPE_PROC_REF(/mob, emote), "scream")
 
 		// Apply the damage to all body parts
-		humi.apply_damage(burn_damage, BURN, spread_damage = TRUE, wound_clothing = FALSE)
+		humi.apply_damage(burn_damage, FIRE, spread_damage = TRUE, wound_clothing = FALSE)
 
 	// For cold damage, we cap at the threshold if you're dead
 	if(humi.get_fire_loss() >= abs(HEALTH_THRESHOLD_DEAD) && humi.stat == DEAD)
@@ -1246,7 +1246,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	var/cold_damage_limit = bodytemp_cold_damage_limit + (is_hulk ? BODYTEMP_HULK_COLD_DAMAGE_LIMIT_MODIFIER : 0)
 
 	if(humi.coretemperature < cold_damage_limit && !HAS_TRAIT(humi, TRAIT_RESISTCOLD))
-		var/damage_type = is_hulk ? BRUTE : BURN // Why?
+		var/damage_type = is_hulk ? BRUTE : COLD // Why?
 		var/damage_mod = coldmod * humi.physiology.cold_mod * (is_hulk ? HULK_COLD_DAMAGE_MOD : 1)
 		// Can't be a switch due to http://www.byond.com/forum/post/2750423
 		if(humi.coretemperature in 201 to cold_damage_limit)
@@ -1287,9 +1287,6 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		switch(existing_burn.severity)
 			if(WOUND_SEVERITY_MODERATE)
 				if(humi.bodytemperature > BODYTEMP_HEAT_WOUND_LIMIT + 400) // 800k
-					severity = WOUND_SEVERITY_SEVERE
-			if(WOUND_SEVERITY_SEVERE)
-				if(humi.bodytemperature > BODYTEMP_HEAT_WOUND_LIMIT + 2800) // 3200k
 					severity = WOUND_SEVERITY_CRITICAL
 	else // If we have no burn apply the lowest level burn
 		severity = WOUND_SEVERITY_MODERATE
@@ -1303,7 +1300,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	if(humi.bodytemperature > BODYTEMP_HEAT_WOUND_LIMIT + 2800)
 		burn_damage = HEAT_DAMAGE_LEVEL_3
 
-	humi.apply_damage(burn_damage * seconds_per_tick, BURN, bodypart, wound_clothing = FALSE)
+	humi.apply_damage(burn_damage * seconds_per_tick, FIRE, bodypart, wound_clothing = FALSE)
 
 /// Handle the air pressure of the environment
 /datum/species/proc/handle_environment_pressure(mob/living/carbon/human/H, datum/gas_mixture/environment, seconds_per_tick)
@@ -1990,7 +1987,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			new_part = new path()
 			new_part.replace_limb(target)
 			new_part.update_limb(is_creating = TRUE)
-			new_part.set_initial_damage(old_part.brute_dam, old_part.burn_dam)
+			new_part.set_initial_damage(old_part.get_brute_damage(), old_part.get_burn_damage())
 		qdel(old_part)
 
 /// Creates body parts for the target completely from scratch based on the species

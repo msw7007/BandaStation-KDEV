@@ -170,7 +170,7 @@
 			return "Живой"
 		if(UNCONSCIOUS)
 			return "Без сознания"
-		if(SOFT_CRIT, HARD_CRIT)
+		if(HARD_CRIT)
 			return "В крите"
 		if(DEAD)
 			if(isnewplayer(user))

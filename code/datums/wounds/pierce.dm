@@ -15,8 +15,6 @@
 			return span_danger("It's leaking blood from a small [LOWER_TEXT(undiagnosed_name || name)].")
 		if(WOUND_SEVERITY_MODERATE)
 			return span_warning("It's leaking blood from a [LOWER_TEXT(undiagnosed_name || name)].")
-		if(WOUND_SEVERITY_SEVERE)
-			return span_boldwarning("It's leaking blood from a serious [LOWER_TEXT(undiagnosed_name || name)]!")
 		if(WOUND_SEVERITY_CRITICAL)
 			return span_boldwarning("It's leaking blood from a major [LOWER_TEXT(undiagnosed_name || name)]!!")
 
@@ -261,37 +259,11 @@
 		examine_desc = "имеет небольшое круглое отверстие"
 		occur_text = "разрывает небольшое отверстие"
 
-/datum/wound/pierce/bleed/severe
-	name = "Открытая колотая рана"
-	desc = "Внутренние ткани пациента повреждены, что вызывает значительное внутреннее кровотечение и снижение стабильности конечности."
-	treat_text = "Быстро примените повязку или швы к ране, используйте средства для свертывания крови или соляно-глюкозный раствор, \
-		прижигание или в крайних случаях - воздействие на рану сильным холодом или вакуумом. \
-		Следует дополнить лечение добавками железа и периодом отдыха."
-	treat_text_short = "Примените повязку, швы, средства для свертывания крови или прижигание."
-	examine_desc = "проколота насквозь, с кусочками ткани, закрывающими открытое отверстие"
-	occur_text = "брызжет сильным фонтаном крови, обнажая проколотую рану"
-	sound_effect = 'sound/effects/wounds/pierce2.ogg'
-	severity = WOUND_SEVERITY_SEVERE
-	initial_flow = 2
-	gauzed_clot_rate = 0.5
-	clot_rate = 0.02
-	internal_bleeding_chance = 60
-	internal_bleeding_coefficient = 2
-	series_threshold_penalty = 35
-	status_effect_type = /datum/status_effect/wound/pierce/severe
-	scar_keyword = "piercesevere"
-
-	simple_treat_text = "<b>Перевязывание</b> раны необходимо и поможет уменьшить кровотечение. После этого рану можно <b>зашить</b>, предпочтительно когда пациент отдыхает и/или держит свою рану."
-	homemade_treat_text = "Простыни можно разорвать, чтобы сделать <b>самодельный бинт</b>. <b>Мука, поваренная соль или соль, смешанная с водой</b> могут быть нанесены непосредственно на рану, чтобы остановить кровотечение, хотя неразмешанная соль будет раздражать кожу и ухудшать естественное заживление. Падение на землю и удерживание раны снизит кровотечение."
-
-/datum/wound/pierce/bleed/severe/update_descriptions()
-	if(!limb.can_bleed())
-		occur_text = "разрывает отверстие"
-
 /datum/wound_pregen_data/flesh_pierce/open_puncture
 	abstract = FALSE
+	can_be_randomly_generated = FALSE
 
-	wound_path_to_generate = /datum/wound/pierce/bleed/severe
+	wound_path_to_generate = /datum/wound/pierce/bleed/critical
 
 	threshold_minimum = 50
 
@@ -300,26 +272,21 @@
 		return 0
 	return weight
 
-/datum/wound/pierce/bleed/severe/projectile
-	name = "Открытое пулевое ранение"
-	examine_desc = "пробито насквозь, с кусочками ткани, закрывающими аккуратно разорванную дыру"
-	clot_rate = 0
-
 /datum/wound_pregen_data/flesh_pierce/open_puncture/projectile
-	wound_path_to_generate = /datum/wound/pierce/bleed/severe/projectile
+	wound_path_to_generate = /datum/wound/pierce/bleed/critical
 
 /datum/wound_pregen_data/flesh_pierce/open_puncture/projectile/get_weight(obj/item/bodypart/limb, woundtype, damage, attack_direction, damage_source)
 	if (!isprojectile(damage_source))
 		return 0
 	return weight
 
-/datum/wound/pierce/bleed/severe/eye
+/datum/wound/pierce/bleed/critical/eye
 	name = "Прокол глазного яблока"
 	desc = "Глаз пациента получил серьёзные повреждения, вызывающее сильное кровотечение из глазной полости."
 	occur_text = "брызжет кровь, обнажая раздавленное глазное яблоко"
 	var/right_side = FALSE
 
-/datum/wound/pierce/bleed/severe/eye/apply_wound(obj/item/bodypart/limb, silent, datum/wound/old_wound, smited, attack_direction, wound_source, replacing, right_side)
+/datum/wound/pierce/bleed/critical/eye/apply_wound(obj/item/bodypart/limb, silent, datum/wound/old_wound, smited, attack_direction, wound_source, replacing, right_side)
 	var/obj/item/organ/eyes/eyes = locate() in limb
 	if (!istype(eyes))
 		return FALSE
@@ -329,12 +296,12 @@
 	RegisterSignal(limb, COMSIG_BODYPART_UPDATE_WOUND_OVERLAY, PROC_REF(wound_overlay))
 	limb.update_part_wound_overlay()
 
-/datum/wound/pierce/bleed/severe/eye/remove_wound(ignore_limb, replaced, destroying)
+/datum/wound/pierce/bleed/critical/eye/remove_wound(ignore_limb, replaced, destroying)
 	if (!isnull(limb))
 		UnregisterSignal(limb, COMSIG_BODYPART_UPDATE_WOUND_OVERLAY)
 	return ..()
 
-/datum/wound/pierce/bleed/severe/eye/proc/wound_overlay(obj/item/bodypart/source, limb_bleed_rate)
+/datum/wound/pierce/bleed/critical/eye/proc/wound_overlay(obj/item/bodypart/source, limb_bleed_rate)
 	SIGNAL_HANDLER
 
 	if (limb_bleed_rate <= BLEED_OVERLAY_LOW || limb_bleed_rate > BLEED_OVERLAY_GUSH)
@@ -347,7 +314,7 @@
 	return COMPONENT_PREVENT_WOUND_OVERLAY_UPDATE
 
 /datum/wound_pregen_data/flesh_pierce/open_puncture/eye
-	wound_path_to_generate = /datum/wound/pierce/bleed/severe/eye
+	wound_path_to_generate = /datum/wound/pierce/bleed/critical/eye
 	viable_zones = list(BODY_ZONE_HEAD)
 	can_be_randomly_generated = FALSE
 
@@ -356,7 +323,7 @@
 		return FALSE
 	return ..()
 
-/datum/wound/pierce/bleed/severe/magicalearpain //what happens if you try to listen to the heartbeat of a corrupt heart while not a heretic
+/datum/wound/pierce/bleed/critical/magicalearpain //what happens if you try to listen to the heartbeat of a corrupt heart while not a heretic
 	name = "Кровоточащие уши"
 	desc = "Уши пациента сильно кровоточат, так как кровь каким-то неизвестным образом просачивается через внутреннюю поверхность уха."
 	examine_desc = "всё покрыто кровью, из ушей течёт чёрно-фиолетовая жидкость"
@@ -364,11 +331,11 @@
 	internal_bleeding_chance = 0 // just your ears
 
 /datum/wound_pregen_data/flesh_pierce/open_puncture/magicalearpain
-	wound_path_to_generate = /datum/wound/pierce/bleed/severe/magicalearpain
+	wound_path_to_generate = /datum/wound/pierce/bleed/critical/magicalearpain
 	viable_zones = list(BODY_ZONE_HEAD)
 	can_be_randomly_generated = FALSE
 
-/datum/wound/pierce/bleed/severe/magicalearpain/apply_wound(obj/item/bodypart/limb, silent, datum/wound/old_wound, smited, attack_direction, wound_source, replacing)
+/datum/wound/pierce/bleed/critical/magicalearpain/apply_wound(obj/item/bodypart/limb, silent, datum/wound/old_wound, smited, attack_direction, wound_source, replacing)
 	var/obj/item/organ/ears/ears = locate() in limb
 	if (!istype(ears))
 		return FALSE
@@ -403,4 +370,4 @@
 
 	wound_path_to_generate = /datum/wound/pierce/bleed/critical
 
-	threshold_minimum = 100
+	threshold_minimum = 70

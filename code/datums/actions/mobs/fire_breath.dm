@@ -15,7 +15,7 @@
 	/// 'How much' fire do we expose the turf to?
 	var/fire_volume = DRAKE_FIRE_EXPOSURE
 	/// How much damage do you take when engulfed?
-	var/fire_damage = 20
+	var/heat_damage = 20
 	/// How much damage to mechs take when engulfed?
 	var/mech_damage = 45
 
@@ -77,7 +77,7 @@
 		to_chat(barbecued, span_userdanger("Вы заморожены ледяным дыханием [source]!"))
 	else
 		to_chat(barbecued, span_userdanger("Вас подожгло огненное дыхание [source]!"))
-	barbecued.adjust_fire_loss(fire_damage)
+	barbecued.adjust_fire_loss(heat_damage)
 
 /// Shoot three lines of fire in a sort of fork pattern approximating a cone
 /datum/action/cooldown/mob_cooldown/fire_breath/cone

@@ -490,7 +490,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 		TRAIT_NOCRITOVERLAY,
 		TRAIT_NODEATH,
 		TRAIT_NOHARDCRIT,
-		TRAIT_NOSOFTCRIT,
+		TRAIT_NO_CRIT_UNCONSCIOUS,
 		TRAIT_STABLEHEART,
 		TRAIT_NO_OXYLOSS_PASSOUT,
 	)
@@ -532,7 +532,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 	need_mob_update += affected_mob.adjust_organ_loss(ORGAN_SLOT_HEART, 4 * ((1 + creation_impurity) * metabolization_ratio * seconds_per_tick), required_organ_flag = affected_organ_flags)
 	if(affected_mob.health < HEALTH_THRESHOLD_CRIT)
 		affected_mob.add_movespeed_modifier(/datum/movespeed_modifier/reagent/nooartrium)
-	if(affected_mob.health < HEALTH_THRESHOLD_FULLCRIT)
+	if(affected_mob.health < HEALTH_THRESHOLD_CRIT)
 		affected_mob.add_actionspeed_modifier(/datum/actionspeed_modifier/nooartrium)
 	var/obj/item/organ/heart/heart = affected_mob.get_organ_slot(ORGAN_SLOT_HEART)
 	if(!heart || heart.organ_flags & ORGAN_FAILING)
@@ -1326,7 +1326,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 
 		if(20)
 			for(var/obj/item/bodypart/leg/leg in affected_mob.get_bodyparts())
-				affected_mob.cause_wound_of_type_and_severity(WOUND_BLUNT, leg, WOUND_SEVERITY_SEVERE)
+				affected_mob.cause_wound_of_type_and_severity(WOUND_BLUNT, leg, WOUND_SEVERITY_CRITICAL)
 			to_chat(affected_mob, span_warning("Your bones fragment horribly as the gravity pounds on you!"))
 
 		if(30)
@@ -1338,4 +1338,4 @@ Basically, we fill the time between now and 2s from now with hands based off the
 	. = ..()
 	affected_mob.AddElement(/datum/element/squish, 120 SECONDS)
 	for(var/obj/item/bodypart/leg/leg in affected_mob.get_bodyparts())
-		affected_mob.cause_wound_of_type_and_severity(WOUND_SLASH, leg, WOUND_SEVERITY_SEVERE)
+		affected_mob.cause_wound_of_type_and_severity(WOUND_SLASH, leg, WOUND_SEVERITY_CRITICAL)

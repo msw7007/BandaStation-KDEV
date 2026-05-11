@@ -348,9 +348,9 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 // Flags for the empath component
 /// Can the empath see if a living mob has combat mode on
 #define EMPATH_SEE_COMBAT (1<<0)
-/// Can the empath see if living mob has over 10 oxyloss
+/// Can the empath see if living mob has over 10 oxygenloss
 #define EMPATH_SEE_OXY (1<<1)
-/// Can the empath see if living mob has over 10 toxloss
+/// Can the empath see if living mob has over 10 toxinloss
 #define EMPATH_SEE_TOX (1<<2)
 /// Can the empath see if living mob's sanity is at distressed or below
 #define EMPATH_SEE_SANITY (1<<3)

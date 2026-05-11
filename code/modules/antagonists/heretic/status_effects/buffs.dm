@@ -111,8 +111,6 @@
 			switch(wound.severity)
 				if(WOUND_SEVERITY_MODERATE)
 					heal_amt = 1
-				if(WOUND_SEVERITY_SEVERE)
-					heal_amt = 3
 				if(WOUND_SEVERITY_CRITICAL)
 					heal_amt = 6
 			var/datum/wound_pregen_data/pregen_data = GLOB.all_wound_pregen_data[wound.type]

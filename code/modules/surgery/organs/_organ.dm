@@ -256,10 +256,13 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	damage = clamp(damage + damage_amount, 0, maximum)
 	SEND_SIGNAL(src, COMSIG_ORGAN_ADJUST_DAMAGE, damage_amount, maximum, required_organ_flag)
 	. = (prev_damage - damage) // return net damage
+	var/damage_delta = damage - prev_damage
+	if(damage_delta > 0)
+		on_damage_received(damage_delta)
 	var/message = check_damage_thresholds()
 	prev_damage = damage
 
-	if(message && owner && owner.stat <= SOFT_CRIT)
+	if(message && owner && owner.stat <= UNCONSCIOUS)
 		to_chat(owner, message)
 
 ///SETS an organ's damage to the amount "damage_amount", and in doing so clears or sets the failing flag, good for when you have an effect that should fix an organ if broken
@@ -313,6 +316,14 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 /obj/item/organ/proc/on_low_damage_received()
 	return
 
+/obj/item/organ/proc/on_damage_received(damage_delta)
+	if(!owner || owner.stat == DEAD || IS_ROBOTIC_ORGAN(src))
+		return
+	if(!HAS_TRAIT(owner, TRAIT_ANALGESIA))
+		owner.adjust_pain_loss(damage_delta * 0.75, updating_health = FALSE, forced = TRUE)
+	if(slot == ORGAN_SLOT_BRAIN)
+		owner.adjust_psychic_loss(damage_delta * 0.2, updating_health = FALSE, forced = TRUE)
+
 ///Called when the damage goes below the low damage threshold
 /obj/item/organ/proc/on_low_damage_healed()
 	return
@@ -327,6 +338,9 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 
 ///Called when the organ enters failing stage
 /obj/item/organ/proc/on_begin_failure()
+	if(owner && slot == ORGAN_SLOT_BRAIN)
+		owner.brain_dead = TRUE
+		owner.updatehealth()
 	return
 
 ///Called when the organ recovers from failing stage

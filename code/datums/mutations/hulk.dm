@@ -66,7 +66,7 @@
 	source.say("WAAAAAAAAAAAAAAGH!", forced="hulk")
 
 /datum/mutation/hulk/on_life(seconds_per_tick)
-	if(owner.health < owner.crit_threshold)
+	if(owner.health < owner.critical_health_threshold)
 		on_losing(owner)
 		to_chat(owner, span_danger("You suddenly feel very weak."))
 		qdel(src)
@@ -268,7 +268,7 @@
 	mutation_traits = list(
 		TRAIT_CHUNKYFINGERS,
 		TRAIT_HULK,
-		TRAIT_NOSOFTCRIT,
+		TRAIT_NO_CRIT_UNCONSCIOUS,
 		TRAIT_NOHARDCRIT,
 		TRAIT_PUSHIMMUNE,
 		TRAIT_STUNIMMUNE,

@@ -42,7 +42,7 @@
 				. += "[p_They()] appear[p_s()] to be an [deployed ? "active" : "empty"] AI shell."
 			else if(!client)
 				. += "[p_They()] appear[p_s()] to be in stand-by mode." //afk
-		if(SOFT_CRIT, UNCONSCIOUS, HARD_CRIT)
+		if(UNCONSCIOUS, UNCONSCIOUS, HARD_CRIT)
 			. += span_warning("[p_They()] do[p_es()]n't seem to be responding.")
 		if(DEAD)
 			. += span_deadsay("[p_They()] look[p_s()] like its system is corrupted and requires a reset.")

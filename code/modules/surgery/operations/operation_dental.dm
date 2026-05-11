@@ -129,7 +129,7 @@
 	check_flags = NONE
 
 /datum/action/item_action/activate_pill/IsAvailable(feedback)
-	if(owner.stat > SOFT_CRIT)
+	if(owner.stat > UNCONSCIOUS)
 		return FALSE
 	return ..()
 

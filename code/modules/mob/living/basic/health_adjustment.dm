@@ -11,11 +11,11 @@
 	. = FALSE
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return 0
-	. = bruteloss // bruteloss value before applying damage
-	bruteloss = round(clamp(bruteloss + amount, 0, maxHealth * 2), DAMAGE_PRECISION)
+	. = bluntloss // bluntloss value before applying damage
+	bluntloss = round(clamp(bluntloss + amount, 0, maxHealth * 2), DAMAGE_PRECISION)
 	if(updating_health)
 		updatehealth()
-	return . - bruteloss
+	return . - bluntloss
 
 /mob/living/basic/get_damage_mod(damage_type)
 	var/modifier = ..()
@@ -75,8 +75,8 @@
 
 /mob/living/basic/received_stamina_damage(current_level, amount_actual, amount)
 	. = ..()
-	if (stat == DEAD || stamina_crit_threshold == BASIC_MOB_NO_STAMCRIT)
+	if (stat == DEAD || stamina_critical_health_threshold == BASIC_MOB_NO_STAMCRIT)
 		return
 
-	if (100 / (max_stamina / current_level) >= stamina_crit_threshold)
+	if (100 / (max_stamina / current_level) >= stamina_critical_health_threshold)
 		apply_status_effect(/datum/status_effect/incapacitating/stamcrit)

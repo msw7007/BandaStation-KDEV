@@ -175,7 +175,7 @@
 		return (target.get_brute_loss() > 0 && heal_brute) || (target.get_fire_loss() > 0 && heal_burn)
 	var/mob/living/carbon/carbon_target = target
 	for (var/obj/item/bodypart/part in carbon_target.get_bodyparts())
-		if (!(part.brute_dam && heal_brute) && !(part.burn_dam && heal_burn))
+		if (!(part.get_brute_damage() && heal_brute) && !(part.get_burn_damage() && heal_burn))
 			continue
 		if (!isnull(required_bodytype) && !(part.bodytype & required_bodytype))
 			continue

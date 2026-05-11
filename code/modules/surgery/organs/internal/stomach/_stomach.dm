@@ -66,6 +66,10 @@
 			handle_hunger(humi, seconds_per_tick)
 
 	var/mob/living/carbon/body = owner
+	if(organ_flags & ORGAN_FAILING)
+		body.adjust_tox_loss(0.75 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	else if(damage > high_threshold)
+		body.adjust_tox_loss(0.15 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 
 	// digest food, sent all reagents that can metabolize to the body
 	for(var/datum/reagent/bit as anything in reagents?.reagent_list)

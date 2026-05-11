@@ -261,7 +261,7 @@
 	research_tree_icon_path = 'icons/ui_icons/antags/heretic/knowledge.dmi'
 	research_tree_icon_state = "blade_upgrade_flesh"
 	///What type of wound do we apply on hit
-	var/wound_type = /datum/wound/slash/flesh/severe
+	var/wound_type = /datum/wound/slash/flesh/critical
 
 /datum/heretic_knowledge/blade_upgrade/flesh/do_melee_effects(mob/living/source, mob/living/target, obj/item/melee/sickly_blade/blade)
 	if(!iscarbon(target) || source == target)

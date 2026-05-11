@@ -20,7 +20,7 @@
 	///How slow will we get when we lose all our stamina?
 	var/max_stamina_slowdown = 3
 	///Percentage of max stamina loss we need to lose in order to get stunned
-	var/stamina_crit_threshold = 100
+	var/stamina_critical_health_threshold = 100
 
 	///how much damage this basic mob does to objects, if any.
 	var/obj_damage = 0

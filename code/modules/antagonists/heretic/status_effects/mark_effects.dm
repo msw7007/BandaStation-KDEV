@@ -65,7 +65,7 @@
 	if(ishuman(owner))
 		var/mob/living/carbon/human/human_owner = owner
 		var/obj/item/bodypart/bodypart = pick(human_owner.get_bodyparts())
-		human_owner.cause_wound_of_type_and_severity(WOUND_SLASH, bodypart, WOUND_SEVERITY_SEVERE)
+		human_owner.cause_wound_of_type_and_severity(WOUND_SLASH, bodypart, WOUND_SEVERITY_CRITICAL)
 
 	return ..()
 

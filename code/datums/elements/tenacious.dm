@@ -27,7 +27,7 @@
 /datum/element/tenacious/proc/on_stat_change(mob/living/carbon/human/target, new_stat)
 	SIGNAL_HANDLER
 
-	if(new_stat == SOFT_CRIT)
+	if(new_stat == UNCONSCIOUS)
 		target.balloon_alert(target, "your tenacity kicks in")
 		target.add_movespeed_modifier(/datum/movespeed_modifier/tenacious)
 	else if(target.remove_movespeed_modifier(/datum/movespeed_modifier/tenacious))

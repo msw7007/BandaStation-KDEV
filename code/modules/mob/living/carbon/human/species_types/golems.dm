@@ -12,7 +12,7 @@
 		TRAIT_NODISMEMBER,
 		TRAIT_NOFAT,
 		TRAIT_NOFIRE,
-		TRAIT_NOSOFTCRIT,
+		TRAIT_NO_CRIT_UNCONSCIOUS,
 		TRAIT_NO_AUGMENTS,
 		TRAIT_NO_DNA_COPY,
 		TRAIT_NO_PLASMA_TRANSFORM,
@@ -92,12 +92,12 @@
 	if(source.nutrition <= 20)
 		// this is "hard crit" for golems
 		source.Unconscious(1.5 SECONDS * seconds_per_tick)
-	if(source.nutrition <= 100 || source.health < source.crit_threshold)
+	if(source.nutrition <= 100 || source.health < source.critical_health_threshold)
 		// and this is "crit damage" for golems
 		var/drain = 1
 		if(source.nutrition <= 50)
 			drain *= 2
-		if(source.health < source.crit_threshold)
+		if(source.health < source.critical_health_threshold)
 			drain *= 2
 		source.adjust_nutrition(-1 * drain * seconds_per_tick, forced = TRUE)
 	if(source.nutrition > NUTRITION_LEVEL_FAT)

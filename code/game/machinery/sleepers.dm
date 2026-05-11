@@ -187,7 +187,7 @@
 			if(CONSCIOUS)
 				data["occupant"]["stat"] = "Conscious"
 				data["occupant"]["statstate"] = "good"
-			if(SOFT_CRIT)
+			if(UNCONSCIOUS)
 				data["occupant"]["stat"] = "Conscious"
 				data["occupant"]["statstate"] = "average"
 			if(UNCONSCIOUS, HARD_CRIT)

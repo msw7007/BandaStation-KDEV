@@ -13,7 +13,7 @@
 		return FALSE
 
 	var/obj/item/bodypart/affecting = limb_owner.get_bodypart(BODY_ZONE_CHEST)
-	affecting.receive_damage(clamp(brute_dam/2 * affecting.body_damage_coeff, 15, 50), clamp(burn_dam/2 * affecting.body_damage_coeff, 0, 50), wound_bonus=CANT_WOUND) //Damage the chest based on limb's existing damage
+	affecting.receive_damage(clamp(get_brute_damage() / 2 * affecting.body_damage_coeff, 15, 50), clamp(get_burn_damage() / 2 * affecting.body_damage_coeff, 0, 50), wound_bonus=CANT_WOUND) //Damage the chest based on limb's existing damage
 	if(!silent)
 		limb_owner.visible_message(span_danger("<B>[limb_owner]'s [name] is violently dismembered!</B>"))
 	INVOKE_ASYNC(limb_owner, TYPE_PROC_REF(/mob, emote), "scream")
@@ -31,7 +31,7 @@
 
 	limb_owner.update_equipment_speed_mods() // Update in case speed affecting item unequipped by dismemberment
 	var/turf/owner_location = limb_owner.loc
-	if(wounding_type != WOUND_BURN && istype(owner_location) && can_bleed())
+	if(!IS_BURN_WOUNDING_TYPE(wounding_type) && istype(owner_location) && can_bleed())
 		limb_owner.add_splatter_floor(owner_location)
 
 	if(QDELETED(src)) //Could have dropped into lava/explosion/chasm/whatever
@@ -66,7 +66,7 @@
 		return FALSE
 
 	. = list()
-	if(wounding_type != WOUND_BURN && isturf(chest_owner.loc) && can_bleed())
+	if(!IS_BURN_WOUNDING_TYPE(wounding_type) && isturf(chest_owner.loc) && can_bleed())
 		chest_owner.add_splatter_floor(chest_owner.loc)
 	playsound(get_turf(chest_owner), 'sound/misc/splort.ogg', 80, TRUE)
 

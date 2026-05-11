@@ -6,7 +6,7 @@
 #define ATTACK_STAGE_FOUR 35
 ///If we reduce heart damage enough, it will recover on its own.
 #define ATTACK_CURE_THRESHOLD 160
-///What is the max oxyloss we're willing to deal, to prevent people from passing out early.
+///What is the max oxygenloss we're willing to deal, to prevent people from passing out early.
 #define OXYLOSS_MAXIMUM 40
 
 /datum/status_effect/heart_attack
@@ -42,7 +42,7 @@
 		qdel(src)
 		return
 
-	var/oxyloss_sum = 0 //A sum of the oxyloss we will inflict by the end of this cycle.
+	var/oxygenloss_sum = 0 //A sum of the oxygenloss we will inflict by the end of this cycle.
 
 	if(time_until_stoppage > ATTACK_STAGE_THREE)
 		if(SPT_PROB(5, seconds_between_ticks))
@@ -53,7 +53,7 @@
 		if(SPT_PROB(10, seconds_between_ticks))
 			owner.emote("cough")
 			owner.adjust_stamina_loss(10)
-			oxyloss_sum += 4
+			oxygenloss_sum += 4
 
 	if(time_until_stoppage <= ATTACK_STAGE_THREE) //At this point, we start with chat messages and make it clear that something is very wrong.
 		if(!visible)
@@ -65,13 +65,13 @@
 			if(SPT_PROB(15, seconds_between_ticks))
 				human_owner.vomit(VOMIT_CATEGORY_DEFAULT, lost_nutrition = 95)
 			owner.emote("cough")
-			oxyloss_sum += 1
+			oxygenloss_sum += 1
 		if(SPT_PROB(8, seconds_between_ticks))
 			to_chat(owner, span_danger("You feel very weak and dizzy..."))
 			owner.adjust_confusion_up_to(6 SECONDS, 10 SECONDS)
 			owner.adjust_stamina_loss(20)
 			owner.emote("cough")
-			oxyloss_sum += 8
+			oxygenloss_sum += 8
 
 	if(time_until_stoppage <= ATTACK_STAGE_FOUR) //And now we compound it with even worse effects.
 
@@ -90,12 +90,12 @@
 				to_chat(owner, span_userdanger("As you cough, your chest surges in pain and darkness closes in around your sight."))
 				owner.adjust_temp_blindness(2 SECONDS)
 				owner.adjust_eye_blur_up_to(4 SECONDS, 20 SECONDS)
-			oxyloss_sum += 8
+			oxygenloss_sum += 8
 			owner.Paralyze(1 SECONDS)
-		oxyloss_sum += 3
+		oxygenloss_sum += 3
 
 	if(owner.get_oxy_loss() < OXYLOSS_MAXIMUM) //A bad enough roll on the verge of passing out might still push you over into unconciousness for a few seconds...?
-		owner.adjust_oxy_loss(oxyloss_sum)
+		owner.adjust_oxy_loss(oxygenloss_sum)
 
 	if(time_until_stoppage <= 0)
 		if(owner.stat == CONSCIOUS)
@@ -168,7 +168,7 @@
 	var/static/list/subject_traits = list(
 		TRAIT_STABLEHEART,
 		TRAIT_NOHARDCRIT,
-		TRAIT_NOSOFTCRIT,
+		TRAIT_NO_CRIT_UNCONSCIOUS,
 		TRAIT_NOCRITDAMAGE,
 	)
 
