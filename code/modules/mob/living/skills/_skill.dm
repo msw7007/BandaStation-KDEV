@@ -40,6 +40,15 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 	/// Can hold /datum/cy_skill_perk paths.
 	var/list/perks_by_level = list()
 
+/datum/cy_skill/New()
+	. = ..()
+	if(length(perks_by_level))
+		return
+
+	perks_by_level = list()
+	for(var/current_level in 1 to max_level)
+		perks_by_level[current_level] = list(cy_generic_skill_perk_for_level(current_level))
+
 /datum/cy_skill/proc/get_perks_for_level(level)
 	if(!length(perks_by_level))
 		return list()

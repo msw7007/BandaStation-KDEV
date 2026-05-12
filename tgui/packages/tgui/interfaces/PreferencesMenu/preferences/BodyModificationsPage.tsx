@@ -55,7 +55,7 @@ export const BodyModificationsPage = (props: BodyModificationsProps) => {
   );
 };
 
-const BodyModificationsPageInner = (props: {
+export const BodyModificationsPageInner = (props: {
   bodyModification: BodyModification[];
 }) => {
   const { act, data } = useBackend<PreferencesMenuData>();

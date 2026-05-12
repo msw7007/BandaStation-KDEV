@@ -4,7 +4,7 @@
 #define LIP_STYLE_LOWER "Lower"
 
 /datum/preference/choiced/lip_style
-	category = PREFERENCE_CATEGORY_SECONDARY_FEATURES
+	category = PREFERENCE_CATEGORY_MANUALLY_RENDERED
 	priority = PREFERENCE_PRIORITY_BODY_TYPE
 	savefile_key = "lip_style"
 	savefile_identifier = PREFERENCE_CHARACTER
@@ -19,7 +19,7 @@
 	)
 
 /datum/preference/choiced/lip_style/create_default_value()
-	return LIP_STYLE_NONE
+	return LIP_STYLE_FULL
 
 /datum/preference/choiced/lip_style/apply_to_human(mob/living/carbon/human/target, value)
 	target.update_lips(get_lip_style(value), target.lip_color, null, update = FALSE)
@@ -36,7 +36,7 @@
 	return null
 
 /datum/preference/color/lip_color
-	category = PREFERENCE_CATEGORY_SUPPLEMENTAL_FEATURES
+	category = PREFERENCE_CATEGORY_SECONDARY_FEATURES
 	priority = PREFERENCE_PRORITY_LATE_BODY_TYPE
 	savefile_key = "lip_color"
 	savefile_identifier = PREFERENCE_CHARACTER
@@ -46,10 +46,7 @@
 	return COLOR_WHITE
 
 /datum/preference/color/lip_color/is_accessible(datum/preferences/preferences)
-	if(!..(preferences))
-		return FALSE
-
-	return preferences.read_preference(/datum/preference/choiced/lip_style) != LIP_STYLE_NONE
+	return ..(preferences)
 
 /datum/preference/color/lip_color/apply_to_human(mob/living/carbon/human/target, value)
 	target.update_lips(target.lip_style, value, null, update = FALSE)

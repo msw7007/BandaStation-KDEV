@@ -3,6 +3,10 @@
 	var/atom/movable/screen/map_view/examine_panel_screen/examine_panel_screen
 	/// Flavor text
 	var/flavor_text
+	/// Flavor text shown while the face is hidden.
+	var/hidden_flavor_text
+	/// Four short appearance descriptors picked in character preferences.
+	var/list/appearance_descriptors
 
 /datum/component/examine_panel/Initialize(flavor_override)
 	if(!iscarbon(parent) && !issilicon(parent))
@@ -13,6 +17,8 @@
 	if(iscarbon(parent))
 		var/mob/living/carbon/carbon = parent
 		flavor_text = carbon.dna.features["flavor_text"]
+		hidden_flavor_text = carbon.dna.features["hidden_flavor_text"]
+		appearance_descriptors = carbon.dna.features["appearance_descriptors"]
 		return
 	if(issilicon(parent))
 		var/mob/living/silicon/silicon = parent
@@ -39,11 +45,15 @@
 	var/preview_text = copytext_char(flavor_text, 1, FLAVOR_PREVIEW_LIMIT)
 	// What examine_tgui.dm uses to determine if flavor text appears as "Obscured".
 	var/face_obscured = (source.wear_mask && (source.wear_mask.flags_inv & HIDEFACE)) || (source.head && (source.head.flags_inv & HIDEFACE))
+	var/visible_flavor_text = face_obscured ? hidden_flavor_text : flavor_text
+	if(!length(visible_flavor_text) && face_obscured)
+		visible_flavor_text = "Their face is hidden."
+	preview_text = copytext_char(visible_flavor_text, 1, FLAVOR_PREVIEW_LIMIT)
 
 	if (!(face_obscured))
 		flavor_text_link = span_notice("[preview_text]... <a href='byond://?src=[REF(src)];lookup_info=open_examine_panel'>Раскрыть описание</a>")
 	else
-		flavor_text_link = span_notice("<a href='byond://?src=[REF(src)];lookup_info=open_examine_panel'>Раскрыть описание</a>")
+		flavor_text_link = span_notice("[preview_text] <a href='byond://?src=[REF(src)];lookup_info=open_examine_panel'>Раскрыть описание</a>")
 	if (flavor_text_link)
 		return flavor_text_link
 
@@ -103,17 +113,25 @@
 	var/list/data = list()
 
 	var/tgui_flavor_text = flavor_text
+	var/list/tgui_descriptors = appearance_descriptors
 	var/obscured
 
 	if(ishuman(parent))
 		var/mob/living/carbon/human/holder_human = parent
 		obscured = (holder_human.wear_mask && (holder_human.wear_mask.flags_inv & HIDEFACE)) || (holder_human.head && (holder_human.head.flags_inv & HIDEFACE))
-		tgui_flavor_text = obscured ? "Скрывает лицо" : flavor_text
+		if(obscured)
+			tgui_flavor_text = hidden_flavor_text || "Their face is hidden."
+		else
+			tgui_flavor_text = flavor_text
 
 	var/name = obscured ? "Неизвестный" : parent
+
+	if(obscured)
+		tgui_flavor_text = hidden_flavor_text || "Their face is hidden."
 
 	data["obscured"] = obscured ? TRUE : FALSE
 	data["character_name"] = name
 	data["assigned_map"] = examine_panel_screen.assigned_map
 	data["flavor_text"] = tgui_flavor_text
+	data["appearance_descriptors"] = tgui_descriptors
 	return data

@@ -3,6 +3,7 @@
 #define TTS_JOB_REPLACEMENTS "tts_job_replacements"
 
 #define FILE_CLEANUP_DELAY 30 SECONDS
+#define TTS_FALLBACK_SOUND 'sound/announcer/vox_fem/talk.ogg'
 
 SUBSYSTEM_DEF(tts220)
 	name = "Text-to-Speech 220"
@@ -313,6 +314,8 @@ SUBSYSTEM_DEF(tts220)
 		provider.timed_out_requests++
 		log_game(span_warning("Error connecting to [provider.name] TTS API. Please inform a maintainer or server host."))
 		message_admins(span_warning("Error connecting to [provider.name] TTS API. Please inform a maintainer or server host."))
+		tts_request_failed++
+		complete_tts_request_with_fallback(filename)
 		return
 
 	if(response.status_code != 200)
@@ -327,20 +330,39 @@ SUBSYSTEM_DEF(tts220)
 				tts_errors += "[response.status_code]"
 				tts_errors["[response.status_code]"] = 1
 		tts_error_raw = response.error
+		complete_tts_request_with_fallback(filename)
 		return
-
-	tts_request_succeeded++
 
 	var/voice = provider.process_response(response)
 	if(!voice)
+		tts_request_failed++
+		complete_tts_request_with_fallback(filename)
 		return
 
+	tts_request_succeeded++
 	rustutils_file_write_b64decode(voice, "[filename].ogg")
 
 	if(!CONFIG_GET(flag/tts_cache_enabled))
 		addtimer(CALLBACK(src, PROC_REF(cleanup_tts_file), "[filename].ogg"), FILE_CLEANUP_DELAY)
 
 	for(var/datum/callback/cb in tts_queue[filename])
+		cb.InvokeAsync()
+		tts_queue[filename] -= cb
+
+	tts_queue -= filename
+
+/datum/controller/subsystem/tts220/proc/complete_tts_request_with_fallback(filename)
+	if(!fexists("[filename].ogg"))
+		rustg_file_write("", "[filename].ogg")
+		fdel("[filename].ogg")
+		if(!fcopy(TTS_FALLBACK_SOUND, "[filename].ogg"))
+			tts_queue -= filename
+			return
+
+	if(!CONFIG_GET(flag/tts_cache_enabled))
+		addtimer(CALLBACK(src, PROC_REF(cleanup_tts_file), "[filename].ogg"), FILE_CLEANUP_DELAY)
+
+	for(var/datum/callback/cb as anything in tts_queue[filename])
 		cb.InvokeAsync()
 		tts_queue[filename] -= cb
 
@@ -598,3 +620,4 @@ SUBSYSTEM_DEF(tts220)
 #undef TTS_JOB_REPLACEMENTS
 
 #undef FILE_CLEANUP_DELAY
+#undef TTS_FALLBACK_SOUND

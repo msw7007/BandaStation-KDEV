@@ -10,11 +10,18 @@ type Data = {
   obscured: BooleanLike;
   assigned_map: string;
   flavor_text: string;
+  appearance_descriptors?: string[];
 };
 
 export const ExaminePanel = (props) => {
   const { act, data } = useBackend<Data>();
-  const { character_name, obscured, assigned_map, flavor_text } = data;
+  const {
+    character_name,
+    obscured,
+    assigned_map,
+    flavor_text,
+    appearance_descriptors = [],
+  } = data;
   return (
     <Window title="Подробное описание" width={600} height={350} theme="ntos">
       <Window.Content>
@@ -38,6 +45,13 @@ export const ExaminePanel = (props) => {
                   {flavor_text}
                 </Section>
               </Stack.Item>
+              {appearance_descriptors.length > 0 && (
+                <Stack.Item>
+                  <Section title="Appearance">
+                    {appearance_descriptors.join(', ')}
+                  </Section>
+                </Stack.Item>
+              )}
             </Stack>
           </Stack.Item>
         </Stack>

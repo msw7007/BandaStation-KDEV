@@ -295,6 +295,30 @@
 /mob/living/carbon/human/proc/get_base_mob_height()
 	return base_mob_height
 
+/// Applies a player-configured uniform sprite scale without replacing other transform state.
+/mob/living/carbon/human/proc/set_sprite_size(new_size = RESIZE_DEFAULT_SIZE)
+	if(new_size <= 0)
+		new_size = RESIZE_DEFAULT_SIZE
+	if(sprite_size == new_size)
+		return
+
+	var/resize = new_size / sprite_size
+	sprite_size = new_size
+	update_transform(resize)
+
+/// Applies a player-configured horizontal sprite scale without touching the vertical scale.
+/mob/living/carbon/human/proc/set_sprite_width(new_width = RESIZE_DEFAULT_SIZE)
+	if(new_width <= 0)
+		new_width = RESIZE_DEFAULT_SIZE
+	if(sprite_width == new_width)
+		return
+
+	var/resize = new_width / sprite_width
+	sprite_width = new_width
+	var/matrix/new_transform = matrix(transform)
+	new_transform.Scale(resize, 1)
+	animate(src, transform = new_transform, time = UPDATE_TRANSFORM_ANIMATION_TIME, easing = SINE_EASING)
+
 /**
  * Makes a full copy of src and returns it.
  * Attempts to copy as much as possible to be a close to the original.

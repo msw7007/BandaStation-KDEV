@@ -81,7 +81,7 @@ export const VoicePage = () => {
   return <VoicePageInner text_to_speech={serverData.text_to_speech} />;
 };
 
-const VoicePageInner = (props: { text_to_speech: TtsData }) => {
+export const VoicePageInner = (props: { text_to_speech: TtsData }) => {
   const { data } = useBackend<PreferencesMenuData>();
   const { tts_seed } = data;
   const { providers, seeds, phrases } = props.text_to_speech;

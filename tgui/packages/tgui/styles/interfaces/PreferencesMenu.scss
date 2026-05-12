@@ -963,9 +963,19 @@ $department_map: (
 
   .PreferencesMenu__TopShellTitle {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 100%;
     padding: 4px 9px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .PreferencesMenu__TopShellProfileButton {
+    margin-left: auto;
+    padding-right: 4px;
+    transform: translateY(-2px);
   }
 
   .PreferencesMenu__TopShellEyebrow {

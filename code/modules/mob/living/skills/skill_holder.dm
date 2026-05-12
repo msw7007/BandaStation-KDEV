@@ -8,6 +8,9 @@
 	/// Assoc list: skill typepath = level.
 	var/list/skill_levels = list()
 
+	/// Assoc list: skill typepath = stored experience.
+	var/list/skill_experience = list()
+
 	/// Assoc list: skill typepath = list(perk typepath = perk datum instance).
 	var/list/granted_skill_perks = list()
 
@@ -20,6 +23,7 @@
 	owner = null
 	stat_holder = null
 	skill_levels = null
+	skill_experience = null
 	if(granted_skill_perks)
 		for(var/skill_type in granted_skill_perks)
 			var/list/skill_perks = granted_skill_perks[skill_type]
@@ -111,6 +115,37 @@
 
 /datum/cy_skill_holder/proc/adjust_skill_level(skill_type, amount, ignore_stat_limit = FALSE)
 	return set_skill_level(skill_type, get_skill_level(skill_type) + amount, ignore_stat_limit)
+
+/datum/cy_skill_holder/proc/get_skill_experience(skill_type)
+	if(!is_valid_skill(skill_type))
+		return 0
+
+	return skill_experience[skill_type] || 0
+
+/datum/cy_skill_holder/proc/get_skill_level_from_experience(skill_type, experience)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(!skill)
+		return CY_SKILL_MINIMUM_LEVEL
+
+	return clamp(round(experience / CY_SKILL_EXPERIENCE_PER_LEVEL), CY_SKILL_MINIMUM_LEVEL, skill.max_level)
+
+/datum/cy_skill_holder/proc/set_skill_experience(skill_type, experience, apply_level = TRUE, ignore_stat_limit = FALSE)
+	if(!is_valid_skill(skill_type))
+		return FALSE
+
+	experience = max(0, round(experience))
+	if(!experience)
+		skill_experience -= skill_type
+	else
+		skill_experience[skill_type] = experience
+
+	if(apply_level)
+		set_skill_level(skill_type, get_skill_level_from_experience(skill_type, experience), ignore_stat_limit)
+
+	return TRUE
+
+/datum/cy_skill_holder/proc/adjust_skill_experience(skill_type, amount, apply_level = TRUE, ignore_stat_limit = FALSE)
+	return set_skill_experience(skill_type, get_skill_experience(skill_type) + amount, apply_level, ignore_stat_limit)
 
 /datum/cy_skill_holder/proc/get_check_chance(stat_type, skill_type = null, difficulty = 0)
 	if(!stat_holder)

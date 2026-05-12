@@ -126,15 +126,19 @@ export function CharacterPreferenceWindow(props) {
           className="PreferencesMenu__TopShell"
           title={
             <div className="PreferencesMenu__TopShellTitle">
-              <div className="PreferencesMenu__TopShellEyebrow">
-                Настройка персонажа
+              <div>
+                <div className="PreferencesMenu__TopShellEyebrow">
+                  Настройка персонажа
+                </div>
+                <div className="PreferencesMenu__TopShellName">
+                  {data.character_profiles[data.active_slot - 1] || 'Новый персонаж'}
+                </div>
               </div>
-              <div className="PreferencesMenu__TopShellName">
-                {data.character_profiles[data.active_slot - 1] || 'Новый персонаж'}
+              <div className="PreferencesMenu__TopShellProfileButton">
+                <CharacterSelection />
               </div>
             </div>
           }
-          buttons={<CharacterSelection />}
         >
           <Tabs fluid textAlign="center" className="PreferencesMenu__PrimaryTabs">
             <PageButton

@@ -90,6 +90,10 @@
 	VAR_PRIVATE/base_mob_height = HUMAN_HEIGHT_MEDIUM
 	/// Actual height of the mob. Don't touch this one, it is set via update_mob_height()
 	VAR_FINAL/mob_height = HUMAN_HEIGHT_MEDIUM
+	/// Player-configured uniform sprite scale.
+	var/sprite_size = RESIZE_DEFAULT_SIZE
+	/// Player-configured horizontal sprite scale.
+	var/sprite_width = RESIZE_DEFAULT_SIZE
 
 	/// Tracks how long in seconds we've been in a low pressure environment
 	VAR_FINAL/seconds_in_low_pressure = 0

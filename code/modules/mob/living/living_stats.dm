@@ -47,6 +47,18 @@
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.adjust_skill_level(skill_type, amount, ignore_stat_limit)
 
+/mob/living/proc/get_cy_skill_experience(skill_type)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_experience(skill_type)
+
+/mob/living/proc/set_cy_skill_experience(skill_type, experience, apply_level = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.set_skill_experience(skill_type, experience, apply_level, ignore_stat_limit)
+
+/mob/living/proc/adjust_cy_skill_experience(skill_type, amount, apply_level = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.adjust_skill_experience(skill_type, amount, apply_level, ignore_stat_limit)
+
 /mob/living/proc/get_cy_check_chance(stat_type, skill_type = null, difficulty = 0)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.get_check_chance(stat_type, skill_type, difficulty)

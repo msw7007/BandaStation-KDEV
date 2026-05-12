@@ -12,12 +12,13 @@ import {
   Input,
   Section,
   Stack,
+  Tabs,
 } from 'tgui-core/components';
 import { capitalize, createSearch } from 'tgui-core/string';
 import { CharacterPreview } from '../../common/CharacterPreview';
 import { Preference } from '../components/Preference';
 import { RandomizationButton } from '../components/RandomizationButton';
-import { BodyModificationsPage } from '../preferences/BodyModificationsPage';
+import { BodyModificationsPageInner } from '../preferences/BodyModificationsPage';
 import { features } from '../preferences/features';
 import {
   type FeatureChoicedServerData,
@@ -34,6 +35,7 @@ import { useRandomToggleState } from '../useRandomToggleState';
 import { useServerPrefs } from '../useServerPrefs';
 import { DeleteCharacterPopup } from './DeleteCharacterPopup';
 import { AlternativeNames, NameInput } from './names';
+import { VoicePageInner } from './VoicePage';
 
 type CharacterControlsProps = {
   handleRotate: () => void;
@@ -284,14 +286,28 @@ function sortPreferences(array: [string, unknown][]) {
 type PreferenceListProps = {
   preferences: Record<string, unknown>;
   randomizations: Record<string, RandomSetting>;
+  orderedKeys?: string[];
 };
 
 export function PreferenceList(props: PreferenceListProps) {
   const { preferences, randomizations } = props;
+  const preferenceEntries = Object.entries(preferences);
+  const orderedEntries = props.orderedKeys
+    ? [
+        ...props.orderedKeys
+          .filter((key) => key in preferences)
+          .map((key) => [key, preferences[key]] as [string, unknown]),
+        ...sortPreferences(
+          preferenceEntries.filter(
+            ([key]) => !props.orderedKeys?.includes(key),
+          ),
+        ),
+      ]
+    : sortPreferences(preferenceEntries);
 
-  return Object.entries(preferences).length > 0 ? (
+  return preferenceEntries.length > 0 ? (
     <Stack vertical>
-      {sortPreferences(Object.entries(preferences)).map(
+      {orderedEntries.map(
         ([featureId, value]) => {
           const feature = features[featureId];
           const randomSetting = randomizations[featureId];
@@ -367,13 +383,759 @@ type MainPageProps = {
   openSpecies: () => void;
 };
 
+const appearancePreferenceOrder = [
+  'body_type',
+  'body_height',
+  'sprite_size',
+  'sprite_width',
+  'breasts_size',
+  'butt_size',
+  'belly_size',
+  'lip_color',
+  'tts_voice',
+  'tts_voice_pitch',
+  'tts_voice_color',
+  'appearance_descriptor_1',
+  'appearance_descriptor_2',
+  'appearance_descriptor_3',
+  'appearance_descriptor_4',
+  'flavor_text',
+  'hidden_flavor_text',
+];
+
+const genitalPreferenceOrder = [
+  'penis_enabled',
+  'penis_size',
+  'testicles_size',
+  'vagina_enabled',
+  'vagina_size',
+  'anus_size',
+];
+
+const characteristicPreferenceOrder = [
+  'characteristic_strength',
+  'characteristic_dexterity',
+  'characteristic_perception',
+  'characteristic_intelligence',
+  'characteristic_spirit',
+  'characteristic_charisma',
+  'characteristic_luck',
+  'combat_power_melee',
+  'combat_heavy_weapons',
+  'combat_grappling',
+  'combat_toughness',
+  'combat_fast_melee',
+  'combat_light_weapons',
+  'combat_acrobatics',
+  'combat_evasion',
+  'combat_precise_melee',
+  'combat_throwing',
+  'combat_weakspot_analysis',
+  'combat_concentration',
+  'combat_improved_code',
+  'combat_fast_code',
+  'combat_hacking',
+  'combat_intelligence_composure',
+  'combat_survival',
+  'combat_endurance',
+  'combat_athletics',
+  'combat_compatibility',
+  'combat_stealth',
+  'combat_theft',
+  'combat_inspiration',
+  'combat_style',
+  'weapon_knives',
+  'weapon_one_handed_chopping',
+  'weapon_two_handed_chopping',
+  'weapon_one_handed_piercing',
+  'weapon_two_handed_piercing',
+  'weapon_one_handed_slashing',
+  'weapon_two_handed_slashing',
+  'weapon_one_handed_blunt',
+  'weapon_two_handed_blunt',
+  'weapon_light_firearms',
+  'weapon_medium_firearms',
+  'weapon_heavy_firearms',
+  'professional_medicine',
+  'professional_chemistry',
+  'professional_electricity',
+  'professional_construction',
+  'professional_invention',
+  'professional_analysis',
+  'professional_mining',
+  'professional_driving',
+  'professional_cooking',
+  'professional_gardening',
+  'professional_music',
+];
+
+const CHARACTERISTIC_BASE_VALUE = 5;
+const CHARACTERISTIC_POINT_BUDGET = 2;
+const CHARACTERISTIC_TOTAL_BUDGET =
+  CHARACTERISTIC_BASE_VALUE * 7 + CHARACTERISTIC_POINT_BUDGET;
+const WEAPON_POINT_BUDGET = 8;
+const PROFESSIONAL_POINT_BUDGET = 8;
+
+const characteristicDefinitions = [
+  {
+    id: 'characteristic_dexterity',
+    label: 'Dexterity',
+    statKey: 'dexterity',
+    linkedSkills: [
+      'combat_fast_melee',
+      'combat_light_weapons',
+      'combat_acrobatics',
+      'combat_evasion',
+    ],
+    left: '32%',
+    top: '3%',
+  },
+  {
+    id: 'characteristic_strength',
+    label: 'Strength',
+    statKey: 'strength',
+    linkedSkills: [
+      'combat_power_melee',
+      'combat_heavy_weapons',
+      'combat_grappling',
+      'combat_toughness',
+    ],
+    left: '50%',
+    top: '0%',
+  },
+  {
+    id: 'characteristic_perception',
+    label: 'Accuracy',
+    statKey: 'perception',
+    linkedSkills: [
+      'combat_precise_melee',
+      'combat_throwing',
+      'combat_weakspot_analysis',
+      'combat_concentration',
+    ],
+    left: '68%',
+    top: '3%',
+  },
+  {
+    id: 'characteristic_luck',
+    label: 'Luck',
+    statKey: 'luck',
+    linkedSkills: [],
+    left: '50%',
+    top: '31%',
+  },
+  {
+    id: 'characteristic_intelligence',
+    label: 'Intelligence',
+    statKey: 'intelligence',
+    linkedSkills: [
+      'combat_improved_code',
+      'combat_fast_code',
+      'combat_hacking',
+      'combat_intelligence_composure',
+    ],
+    left: '32%',
+    top: '60%',
+  },
+  {
+    id: 'characteristic_charisma',
+    label: 'Charisma',
+    statKey: 'charisma',
+    linkedSkills: [
+      'combat_stealth',
+      'combat_theft',
+      'combat_inspiration',
+      'combat_style',
+    ],
+    left: '50%',
+    top: '69%',
+  },
+  {
+    id: 'characteristic_spirit',
+    label: 'Spirit',
+    statKey: 'spirit',
+    linkedSkills: [
+      'combat_survival',
+      'combat_endurance',
+      'combat_athletics',
+      'combat_compatibility',
+    ],
+    left: '68%',
+    top: '60%',
+  },
+];
+
+const skillDefinitions = [
+  { id: 'combat_power_melee', label: 'Power melee', group: 'combat' },
+  { id: 'combat_heavy_weapons', label: 'Heavy weapons', group: 'combat' },
+  { id: 'combat_grappling', label: 'Grappling', group: 'combat' },
+  { id: 'combat_toughness', label: 'Toughness', group: 'combat' },
+  { id: 'combat_fast_melee', label: 'Fast melee', group: 'combat' },
+  { id: 'combat_light_weapons', label: 'Light weapons', group: 'combat' },
+  { id: 'combat_acrobatics', label: 'Acrobatics', group: 'combat' },
+  { id: 'combat_evasion', label: 'Evasion', group: 'combat' },
+  { id: 'combat_precise_melee', label: 'Precise melee', group: 'combat' },
+  { id: 'combat_throwing', label: 'Throwing', group: 'combat' },
+  { id: 'combat_weakspot_analysis', label: 'Weakspot analysis', group: 'combat' },
+  { id: 'combat_concentration', label: 'Concentration', group: 'combat' },
+  { id: 'combat_improved_code', label: 'Improved code', group: 'combat' },
+  { id: 'combat_fast_code', label: 'Fast code', group: 'combat' },
+  { id: 'combat_hacking', label: 'Hacking', group: 'combat' },
+  {
+    id: 'combat_intelligence_composure',
+    label: 'Composure',
+    group: 'combat',
+  },
+  { id: 'combat_survival', label: 'Survival', group: 'combat' },
+  { id: 'combat_endurance', label: 'Endurance', group: 'combat' },
+  { id: 'combat_athletics', label: 'Athletics', group: 'combat' },
+  { id: 'combat_compatibility', label: 'Compatibility', group: 'combat' },
+  { id: 'combat_stealth', label: 'Stealth', group: 'combat' },
+  { id: 'combat_theft', label: 'Theft', group: 'combat' },
+  { id: 'combat_inspiration', label: 'Inspiration', group: 'combat' },
+  { id: 'combat_style', label: 'Style', group: 'combat' },
+] as const;
+
+const weaponSkillDefinitions = [
+  { id: 'weapon_knives', label: 'Knives' },
+  { id: 'weapon_one_handed_chopping', label: 'One-handed chopping' },
+  { id: 'weapon_two_handed_chopping', label: 'Two-handed chopping' },
+  { id: 'weapon_one_handed_piercing', label: 'One-handed piercing' },
+  { id: 'weapon_two_handed_piercing', label: 'Two-handed piercing' },
+  { id: 'weapon_one_handed_slashing', label: 'One-handed slashing' },
+  { id: 'weapon_two_handed_slashing', label: 'Two-handed slashing' },
+  { id: 'weapon_one_handed_blunt', label: 'One-handed blunt' },
+  { id: 'weapon_two_handed_blunt', label: 'Two-handed blunt' },
+  { id: 'weapon_light_firearms', label: 'Light firearms' },
+  { id: 'weapon_medium_firearms', label: 'Medium firearms' },
+  { id: 'weapon_heavy_firearms', label: 'Heavy firearms' },
+] as const;
+
+const professionalSkillDefinitions = [
+  { id: 'professional_medicine', label: 'Medicine', group: 'professional' },
+  { id: 'professional_chemistry', label: 'Chemistry', group: 'professional' },
+  { id: 'professional_electricity', label: 'Electricity', group: 'professional' },
+  {
+    id: 'professional_construction',
+    label: 'Construction',
+    group: 'professional',
+  },
+  { id: 'professional_invention', label: 'Invention', group: 'professional' },
+  { id: 'professional_analysis', label: 'Analysis', group: 'professional' },
+  { id: 'professional_mining', label: 'Mining', group: 'professional' },
+  { id: 'professional_driving', label: 'Driving', group: 'professional' },
+  { id: 'professional_cooking', label: 'Cooking', group: 'professional' },
+  { id: 'professional_gardening', label: 'Gardening', group: 'professional' },
+  { id: 'professional_music', label: 'Music', group: 'professional' },
+] as const;
+
+const characteristicIds = characteristicDefinitions.map(({ id }) => id);
+const weaponSkillIds = weaponSkillDefinitions.map(({ id }) => id);
+const professionalSkillIds = professionalSkillDefinitions.map(({ id }) => id);
+
+function getPreferenceNumber(
+  preferences: Record<string, unknown>,
+  key: string,
+  fallback = 0,
+): number {
+  return Number(preferences[key] ?? fallback);
+}
+
+function getUsedPoints(
+  preferences: Record<string, unknown>,
+  keys: readonly string[],
+): number {
+  return keys.reduce((sum, key) => sum + getPreferenceNumber(preferences, key), 0);
+}
+
+type HexControlProps = {
+  label: string;
+  value: number;
+  onClick?: () => void;
+  onMinus: () => void;
+  onPlus: () => void;
+  selected?: boolean;
+  small?: boolean;
+};
+
+function HexControl(props: HexControlProps) {
+  const { label, value, selected, small } = props;
+  const size = small ? '4.9rem' : '6.35rem';
+  return (
+    <div
+      style={{
+        alignItems: 'center',
+        aspectRatio: '1 / 0.92',
+        background: selected
+          ? 'linear-gradient(145deg, rgba(35,255,245,0.24), rgba(255,45,72,0.18))'
+          : 'linear-gradient(145deg, rgba(255,45,72,0.16), rgba(35,255,245,0.05))',
+        border: selected
+          ? '1px solid rgba(35,255,245,0.92)'
+          : '1px solid rgba(255,55,68,0.52)',
+        boxShadow: selected
+          ? '0 0 22px rgba(35,255,245,0.24), inset 0 0 28px rgba(255,45,72,0.13)'
+          : 'inset 0 0 22px rgba(255,45,72,0.09)',
+        clipPath:
+          'polygon(24% 0%, 76% 0%, 100% 50%, 76% 100%, 24% 100%, 0% 50%)',
+        cursor: props.onClick ? 'pointer' : 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        height: size,
+        justifyContent: 'center',
+        padding: small ? '0.4rem 0.55rem' : '0.6rem 0.75rem',
+        position: 'relative',
+        textAlign: 'center',
+        width: size,
+      }}
+      onClick={props.onClick}
+    >
+      <Box
+        bold
+        color={selected ? 'blue' : 'label'}
+        fontSize={small ? 0.68 : 0.82}
+        style={{ textTransform: 'uppercase' }}
+      >
+        {label}
+      </Box>
+      <Box bold fontSize={small ? 1.1 : 1.42} mt={0.25}>
+        {value}
+      </Box>
+      <div
+        style={{
+          display: 'flex',
+          gap: 0,
+          justifyContent: 'center',
+          marginTop: small ? '0.1rem' : '0.2rem',
+        }}
+      >
+        <button
+          style={{
+            background: 'rgba(5, 18, 24, 0.92)',
+            border: '1px solid rgba(35,255,245,0.72)',
+            color: '#5ffcff',
+            cursor: 'pointer',
+            height: small ? '1rem' : '1.15rem',
+            lineHeight: small ? '0.75rem' : '0.9rem',
+            padding: 0,
+            width: small ? '1rem' : '1.15rem',
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            props.onMinus();
+          }}
+        >
+          -
+        </button>
+        <button
+          style={{
+            background: 'rgba(5, 18, 24, 0.92)',
+            border: '1px solid rgba(35,255,245,0.72)',
+            borderLeft: 0,
+            color: '#5ffcff',
+            cursor: 'pointer',
+            height: small ? '1rem' : '1.15rem',
+            lineHeight: small ? '0.75rem' : '0.9rem',
+            padding: 0,
+            width: small ? '1rem' : '1.15rem',
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            props.onPlus();
+          }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type SkillAdjustRowProps = {
+  label: string;
+  value: number;
+  onMinus: () => void;
+  onPlus: () => void;
+};
+
+function SkillAdjustRow(props: SkillAdjustRowProps) {
+  return (
+    <Stack align="center" g={1}>
+      <Stack.Item grow>{props.label}</Stack.Item>
+      <Stack.Item bold color="label" width="1.4rem" textAlign="center">
+        {props.value}
+      </Stack.Item>
+      <Stack.Item>
+        <Button compact onClick={props.onMinus}>
+          -
+        </Button>
+        <Button compact onClick={props.onPlus}>
+          +
+        </Button>
+      </Stack.Item>
+    </Stack>
+  );
+}
+
+type PerkNodeProps = {
+  level: number;
+  selected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+};
+
+function PerkNode(props: PerkNodeProps) {
+  return (
+    <button
+      disabled={props.disabled}
+      style={{
+        background: props.selected
+          ? 'linear-gradient(145deg, rgba(35,255,245,0.38), rgba(255,45,72,0.22))'
+          : 'linear-gradient(145deg, rgba(255,45,72,0.13), rgba(8,18,25,0.96))',
+        border: props.selected
+          ? '1px solid rgba(35,255,245,0.95)'
+          : '1px solid rgba(255,55,68,0.48)',
+        boxShadow: props.selected
+          ? '0 0 12px rgba(35,255,245,0.22), inset 0 0 12px rgba(35,255,245,0.12)'
+          : 'inset 0 0 10px rgba(255,45,72,0.08)',
+        clipPath:
+          'polygon(24% 0%, 76% 0%, 100% 50%, 76% 100%, 24% 100%, 0% 50%)',
+        color: props.disabled ? 'rgba(120,145,150,0.55)' : '#bff9ff',
+        cursor: props.disabled ? 'default' : 'pointer',
+        fontWeight: 900,
+        height: '2.15rem',
+        lineHeight: '1.9rem',
+        opacity: props.disabled ? 0.55 : 1,
+        padding: 0,
+        textAlign: 'center',
+        width: '2.4rem',
+      }}
+      onClick={props.onClick}
+    >
+      {props.level}
+    </button>
+  );
+}
+
+function CharacterStatsPanel() {
+  const { act, data } = useBackend<PreferencesMenuData>();
+  const preferences = data.character_preferences.non_contextual;
+  const [selectedCharacteristicId, setSelectedCharacteristicId] = useState<
+    string | null
+  >(null);
+
+  const selectedCharacteristic = characteristicDefinitions.find(
+    ({ id }) => id === selectedCharacteristicId,
+  );
+  const characteristicUsed = characteristicIds.reduce(
+    (sum, key) =>
+      sum + getPreferenceNumber(preferences, key, CHARACTERISTIC_BASE_VALUE),
+    0,
+  );
+  const weaponUsed = getUsedPoints(preferences, weaponSkillIds);
+  const professionalUsed = getUsedPoints(preferences, professionalSkillIds);
+  const attributePointsLeft = Math.max(
+    0,
+    CHARACTERISTIC_TOTAL_BUDGET - characteristicUsed,
+  );
+
+  const setPreference = (key: string, value: number) => {
+    if (!(key in preferences)) {
+      return;
+    }
+    createSetPreference(act, key)(value);
+  };
+
+  const getCharacteristicValue = (key: string) =>
+    getPreferenceNumber(preferences, key, CHARACTERISTIC_BASE_VALUE);
+
+  const getBranchUsed = (characteristic: (typeof characteristicDefinitions)[number]) =>
+    getUsedPoints(preferences, characteristic.linkedSkills);
+
+  const adjustCharacteristic = (
+    characteristic: (typeof characteristicDefinitions)[number],
+    delta: number,
+  ) => {
+    const currentValue = getCharacteristicValue(characteristic.id);
+    const nextValue = Math.min(20, Math.max(1, currentValue + delta));
+    if (nextValue === currentValue || nextValue < getBranchUsed(characteristic)) {
+      return;
+    }
+
+    const usedWithoutCurrent = characteristicUsed - currentValue;
+    if (usedWithoutCurrent + nextValue > CHARACTERISTIC_TOTAL_BUDGET) {
+      return;
+    }
+
+    setPreference(characteristic.id, nextValue);
+  };
+
+  const setBranchSkillLevel = (
+    characteristic: (typeof characteristicDefinitions)[number],
+    key: string,
+    nextValue: number,
+  ) => {
+    const currentValue = getPreferenceNumber(preferences, key);
+    nextValue = Math.min(6, Math.max(0, nextValue));
+    const branchLimit = getCharacteristicValue(characteristic.id);
+    const usedWithoutCurrent = getBranchUsed(characteristic) - currentValue;
+    if (nextValue === currentValue || usedWithoutCurrent + nextValue > branchLimit) {
+      return;
+    }
+
+    setPreference(key, nextValue);
+  };
+
+  const adjustBudgetSkill = (
+    key: string,
+    delta: number,
+    keys: readonly string[],
+    budget: number,
+    maximum: number,
+  ) => {
+    const currentValue = getPreferenceNumber(preferences, key);
+    const nextValue = Math.min(maximum, Math.max(0, currentValue + delta));
+    const usedWithoutCurrent = getUsedPoints(preferences, keys) - currentValue;
+    if (nextValue === currentValue || usedWithoutCurrent + nextValue > budget) {
+      return;
+    }
+
+    setPreference(key, nextValue);
+  };
+
+  const renderSkillList = (
+    title: string,
+    definitions: readonly { id: string; label: string }[],
+    keys: readonly string[],
+    used: number,
+    budget: number,
+    maximum: number,
+  ) => {
+    return (
+      <Section
+        fill
+        title={title}
+        buttons={
+          <Box color={used < budget ? 'good' : 'average'}>
+            {budget - used}/{budget}
+          </Box>
+        }
+      >
+        <Stack vertical g={0.5}>
+          {definitions.map(({ id, label }) => (
+            <SkillAdjustRow
+              key={id}
+              label={label}
+              value={getPreferenceNumber(preferences, id)}
+              onMinus={() => adjustBudgetSkill(id, -1, keys, budget, maximum)}
+              onPlus={() => adjustBudgetSkill(id, 1, keys, budget, maximum)}
+            />
+          ))}
+        </Stack>
+      </Section>
+    );
+  };
+
+  return (
+    <Stack vertical g={2}>
+      <Section
+        title={selectedCharacteristic?.label || 'Characteristics'}
+        buttons={
+          selectedCharacteristic ? (
+            <Button
+              compact
+              icon="arrow-left"
+              onClick={() => setSelectedCharacteristicId(null)}
+            />
+          ) : (
+            <Box color={attributePointsLeft > 0 ? 'good' : 'average'}>
+              AP {attributePointsLeft}
+            </Box>
+          )
+        }
+      >
+        {!selectedCharacteristic && (
+          <div
+            style={{
+              background:
+                'radial-gradient(circle at 50% 46%, rgba(35,255,245,0.1), rgba(255,45,72,0.07) 34%, rgba(5,8,14,0.05) 58%)',
+              minHeight: '23.5rem',
+              position: 'relative',
+            }}
+          >
+            {characteristicDefinitions.map((characteristic) => (
+              <div
+                key={characteristic.id}
+                style={{
+                  left: characteristic.left,
+                  position: 'absolute',
+                  top: characteristic.top,
+                  transform: 'translate(-50%, 0)',
+                }}
+              >
+                <HexControl
+                  label={characteristic.label}
+                  value={getCharacteristicValue(characteristic.id)}
+                  onClick={() => setSelectedCharacteristicId(characteristic.id)}
+                  onMinus={() => adjustCharacteristic(characteristic, -1)}
+                  onPlus={() => adjustCharacteristic(characteristic, 1)}
+                  selected={characteristic.id === 'characteristic_luck'}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        {selectedCharacteristic && (
+          <Stack vertical>
+            <Stack.Item>
+              <Stack align="center" justify="space-between">
+                <Stack.Item color="label">
+                  {getBranchUsed(selectedCharacteristic)}/
+                  {getCharacteristicValue(selectedCharacteristic.id)}
+                </Stack.Item>
+                <Stack.Item>
+                  <HexControl
+                    label={selectedCharacteristic.label}
+                    value={getCharacteristicValue(selectedCharacteristic.id)}
+                    onMinus={() => adjustCharacteristic(selectedCharacteristic, -1)}
+                    onPlus={() => adjustCharacteristic(selectedCharacteristic, 1)}
+                    selected
+                    small
+                  />
+                </Stack.Item>
+              </Stack>
+            </Stack.Item>
+            <Stack.Item>
+              <div
+                style={{
+                  display: 'grid',
+                  gap: '0.85rem',
+                  gridTemplateColumns: 'repeat(4, minmax(5.2rem, 1fr))',
+                }}
+              >
+                {selectedCharacteristic.linkedSkills.map((id) => {
+                  const skill = skillDefinitions.find((entry) => entry.id === id);
+                  if (!skill) {
+                    return null;
+                  }
+                  const value = getPreferenceNumber(preferences, id);
+                  const branchLimit = getCharacteristicValue(
+                    selectedCharacteristic.id,
+                  );
+                  const usedWithoutCurrent =
+                    getBranchUsed(selectedCharacteristic) - value;
+
+                  return (
+                    <div key={id} style={{ minWidth: 0, textAlign: 'center' }}>
+                      <Box
+                        bold
+                        color="label"
+                        fontSize={0.78}
+                        mb={0.4}
+                        style={{
+                          minHeight: '1.9rem',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {skill.label}
+                      </Box>
+                      <div
+                        style={{
+                          alignItems: 'center',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.12rem',
+                        }}
+                      >
+                        {[1, 2, 3, 4, 5, 6].map((level) => {
+                          const selected = value >= level;
+                          const nextValue = selected ? level - 1 : level;
+                          const disabled =
+                            !selected && usedWithoutCurrent + level > branchLimit;
+
+                          return (
+                            <div
+                              key={level}
+                              style={{
+                                marginLeft: level % 2 ? '-0.95rem' : '0.95rem',
+                              }}
+                            >
+                              <PerkNode
+                                level={level}
+                                selected={selected}
+                                disabled={disabled}
+                                onClick={() =>
+                                  setBranchSkillLevel(
+                                    selectedCharacteristic,
+                                    id,
+                                    nextValue,
+                                  )
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Stack.Item>
+          </Stack>
+        )}
+      </Section>
+      <Stack>
+        <Stack.Item grow basis="50%">
+          {renderSkillList(
+            'Weapon mastery',
+            weaponSkillDefinitions,
+            weaponSkillIds,
+            weaponUsed,
+            WEAPON_POINT_BUDGET,
+            5,
+          )}
+        </Stack.Item>
+        <Stack.Item grow basis="50%">
+          {renderSkillList(
+            'Professional',
+            professionalSkillDefinitions,
+            professionalSkillIds,
+            professionalUsed,
+            PROFESSIONAL_POINT_BUDGET,
+            6,
+          )}
+        </Stack.Item>
+      </Stack>
+    </Stack>
+  );
+}
+
+function pickPreferences(
+  source: Record<string, unknown>,
+  keys: string[],
+): Record<string, unknown> {
+  return Object.fromEntries(
+    keys.filter((key) => key in source).map((key) => [key, source[key]]),
+  );
+}
+
+function omitPreferences(
+  source: Record<string, unknown>,
+  keys: string[],
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(source).filter(([key]) => !keys.includes(key)),
+  );
+}
+
 export function MainPage(props: MainPageProps) {
   const { act, data } = useBackend<PreferencesMenuData>();
 
   const [deleteCharacterPopupOpen, setDeleteCharacterPopupOpen] =
     useState(false);
   const [randomToggleEnabled] = useRandomToggleState();
-  const [augmentationInputOpen, setAugmentationInputOpen] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState<
+    'info' | 'appearance' | 'stats' | 'augmentations'
+  >('info');
 
   const serverData = useServerPrefs();
 
@@ -420,7 +1182,7 @@ export function MainPage(props: MainPageProps) {
           <CharacterControls
             gender={data.character_preferences.misc.gender}
             handleOpenSpecies={props.openSpecies}
-            handleOpenAugmentations={() => setAugmentationInputOpen(true)}
+            handleOpenAugmentations={() => setSelectedBlock('augmentations')}
             handleRotate={() => {
               act('rotate');
             }}
@@ -478,14 +1240,104 @@ export function MainPage(props: MainPageProps) {
     </Section>
   );
 
-  return (
-    <Stack fill className="PreferencesMenu__MainLayout" g={1}>
-      {augmentationInputOpen && (
-        <BodyModificationsPage
-          handleClose={() => setAugmentationInputOpen(false)}
+  const appearancePreferences = {
+    ...pickPreferences(nonContextualPreferences, appearancePreferenceOrder),
+    ...contextualPreferences,
+    ...pickPreferences(nonContextualPreferences, genitalPreferenceOrder),
+  };
+  const appearanceOrderedKeys = [
+    ...appearancePreferenceOrder,
+    ...Object.keys(contextualPreferences),
+    ...genitalPreferenceOrder,
+  ];
+  const infoPreferences = omitPreferences(nonContextualPreferences, [
+    ...appearancePreferenceOrder,
+    ...genitalPreferenceOrder,
+    ...characteristicPreferenceOrder,
+  ]);
+
+  const DetailsPanel = (
+    <Section
+      fill
+      scrollable
+      title={
+        <Tabs>
+          <Tabs.Tab
+            icon="address-card"
+            selected={selectedBlock === 'info'}
+            onClick={() => setSelectedBlock('info')}
+          >
+            Info
+          </Tabs.Tab>
+          <Tabs.Tab
+            icon="user"
+            selected={selectedBlock === 'appearance'}
+            onClick={() => setSelectedBlock('appearance')}
+          >
+            Appearance
+          </Tabs.Tab>
+          <Tabs.Tab
+            icon="chart-line"
+            selected={selectedBlock === 'stats'}
+            onClick={() => setSelectedBlock('stats')}
+          >
+            Stats
+          </Tabs.Tab>
+          <Tabs.Tab
+            icon="robot"
+            selected={selectedBlock === 'augmentations'}
+            onClick={() => setSelectedBlock('augmentations')}
+          >
+            Augmentations
+          </Tabs.Tab>
+        </Tabs>
+      }
+      className="PreferencesMenu__InfoPanel"
+    >
+      {selectedBlock === 'info' && (
+        <PreferenceList
+          preferences={infoPreferences}
+          randomizations={getRandomization(
+            infoPreferences,
+            serverData,
+            randomBodyEnabled,
+          )}
         />
       )}
+      {selectedBlock === 'appearance' && (
+        <Stack vertical>
+          <Stack.Item>
+            <PreferenceList
+              preferences={appearancePreferences}
+              orderedKeys={appearanceOrderedKeys}
+              randomizations={getRandomization(
+                appearancePreferences,
+                serverData,
+                randomBodyEnabled,
+              )}
+            />
+          </Stack.Item>
+          {!!data.tts_enabled && serverData && (
+            <Stack.Item>
+              <VoicePageInner text_to_speech={serverData.text_to_speech} />
+            </Stack.Item>
+          )}
+        </Stack>
+      )}
+      {selectedBlock === 'stats' && <CharacterStatsPanel />}
+      {selectedBlock === 'augmentations' &&
+        (serverData ? (
+          <BodyModificationsPageInner
+            bodyModification={serverData.body_modifications}
+          />
+        ) : (
+          <Icon name="spinner" spin />
+        ))}
+    </Section>
+  );
 
+  return (
+    <Stack fill className="PreferencesMenu__MainLayout" g={1}>
       {deleteCharacterPopupOpen && (
         <DeleteCharacterPopup
           close={() => setDeleteCharacterPopupOpen(false)}
@@ -505,32 +1357,7 @@ export function MainPage(props: MainPageProps) {
         {MainFeatures}
       </Stack.Item>
       <Stack.Item className="PreferencesMenu__DetailsColumn" grow>
-        <Stack fill vertical>
-          <Stack.Item basis="42%">
-            <Section fill scrollable title="Внешность" className="PreferencesMenu__InfoPanel">
-              <PreferenceList
-                preferences={contextualPreferences}
-                randomizations={getRandomization(
-                  contextualPreferences,
-                  serverData,
-                  randomBodyEnabled,
-                )}
-              />
-            </Section>
-          </Stack.Item>
-          <Stack.Item grow>
-            <Section fill scrollable title="Профиль персонажа" className="PreferencesMenu__InfoPanel PreferencesMenu__InfoPanel--secondary">
-              <PreferenceList
-                preferences={nonContextualPreferences}
-                randomizations={getRandomization(
-                  nonContextualPreferences,
-                  serverData,
-                  randomBodyEnabled,
-                )}
-              />
-            </Section>
-          </Stack.Item>
-        </Stack>
+        {DetailsPanel}
       </Stack.Item>
     </Stack>
   );

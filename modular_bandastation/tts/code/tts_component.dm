@@ -1,6 +1,8 @@
 /datum/component/tts_component
 	var/datum/tts_seed/tts_seed = null
 	var/list/effects = list()
+	/// Character-selected voice color. Rendering hooks can use this when they need a stable per-character TTS color.
+	var/voice_color = COLOR_WHITE
 
 /datum/component/tts_component/RegisterWithParent()
 	RegisterSignal(parent, COMSIG_ATOM_TTS_SEED_CHANGE, PROC_REF(tts_seed_change))
