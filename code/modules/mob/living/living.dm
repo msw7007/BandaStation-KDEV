@@ -47,6 +47,8 @@
 	if(imaginary_group)
 		imaginary_group -= src
 		QDEL_LIST(imaginary_group)
+	QDEL_NULL(cy_skill_holder)
+	QDEL_NULL(cy_stat_holder)
 	QDEL_LAZYLIST(diseases)
 	QDEL_LAZYLIST(quirks)
 	return ..()

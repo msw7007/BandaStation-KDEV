@@ -655,6 +655,13 @@
 		return 1
 	return 1 + min((current_psychic - 50) / 150, 1)
 
+/mob/living/proc/get_psychic_recovery_rate()
+	var/recovery_rate = 1.5
+	if(cy_stat_holder)
+		var/spirit = cy_stat_holder.get_stat(/datum/cy_stat/spirit)
+		recovery_rate *= 1 + ((spirit - CY_STAT_DEFAULT) * 0.05)
+	return max(0.5, recovery_rate)
+
 /mob/living/proc/adjust_psychic_loss(amount, updating_health = TRUE, forced = FALSE)
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return 0
@@ -698,13 +705,15 @@
 	if(!psychicloss)
 		return
 	if(last_psychic_damage && world.time >= last_psychic_damage + 10 SECONDS)
-		adjust_psychic_loss(-1.5 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+		adjust_psychic_loss(-get_psychic_recovery_rate() * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 	switch(psychicloss)
 		if(120 to INFINITY)
 			if(SPT_PROB(12, seconds_per_tick))
 				adjust_confusion(4 SECONDS)
 			if(SPT_PROB(8, seconds_per_tick))
 				adjust_eye_blur(4 SECONDS)
+			if(SPT_PROB(6, seconds_per_tick))
+				adjust_hallucinations_up_to(8 SECONDS, 45 SECONDS)
 			if(SPT_PROB(6, seconds_per_tick))
 				dropItemToGround(get_active_held_item())
 			if(SPT_PROB(4, seconds_per_tick))
@@ -713,14 +722,13 @@
 				addtimer(CALLBACK(src, TYPE_PROC_REF(/mob, emote), pick("scream", "laugh", "cry")), 0)
 			if(SPT_PROB(2, seconds_per_tick))
 				Stun(1 SECONDS)
-			if(SPT_PROB(0.75, seconds_per_tick) && iscarbon(src))
-				var/mob/living/carbon/psychic_victim = src
-				psychic_victim.gain_trauma_type(BRAIN_TRAUMA_SPECIAL, TRAUMA_RESILIENCE_WOUND)
 		if(80 to 120)
 			if(SPT_PROB(8, seconds_per_tick))
 				adjust_confusion(3 SECONDS)
 			if(SPT_PROB(4, seconds_per_tick))
 				adjust_eye_blur(3 SECONDS)
+			if(SPT_PROB(3, seconds_per_tick))
+				adjust_hallucinations_up_to(4 SECONDS, 25 SECONDS)
 			if(SPT_PROB(3, seconds_per_tick))
 				dropItemToGround(get_active_held_item())
 		if(45 to 80)

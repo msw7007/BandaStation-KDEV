@@ -1,3 +1,11 @@
+/datum/cy_skill_check_result
+	var/success = FALSE
+	var/chance = CY_CHECK_MINIMUM_CHANCE
+	var/experience_awarded = 0
+	var/difficulty = 0
+	var/stat_type
+	var/skill_type
+
 /datum/cy_skill_holder
 	/// Usually a /mob/living, later can be a phantom NPC profile datum.
 	var/datum/owner
@@ -110,11 +118,28 @@
 	else
 		skill_levels[skill_type] = level
 
+	sync_skill_experience_to_level(skill_type, level)
 	refresh_skill_perks(skill_type, old_level, level)
 	return TRUE
 
 /datum/cy_skill_holder/proc/adjust_skill_level(skill_type, amount, ignore_stat_limit = FALSE)
 	return set_skill_level(skill_type, get_skill_level(skill_type) + amount, ignore_stat_limit)
+
+/datum/cy_skill_holder/proc/sync_skill_experience_to_level(skill_type, level)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(!skill)
+		return
+
+	var/current_experience = get_skill_experience(skill_type)
+	var/minimum_experience = level * CY_SKILL_EXPERIENCE_PER_LEVEL
+	var/maximum_experience = ((level + 1) * CY_SKILL_EXPERIENCE_PER_LEVEL) - 1
+	if(level >= skill.max_level)
+		maximum_experience = INFINITY
+
+	if(current_experience < minimum_experience)
+		skill_experience[skill_type] = minimum_experience
+	else if(current_experience > maximum_experience)
+		skill_experience[skill_type] = maximum_experience
 
 /datum/cy_skill_holder/proc/get_skill_experience(skill_type)
 	if(!is_valid_skill(skill_type))
@@ -127,7 +152,11 @@
 	if(!skill)
 		return CY_SKILL_MINIMUM_LEVEL
 
-	return clamp(round(experience / CY_SKILL_EXPERIENCE_PER_LEVEL), CY_SKILL_MINIMUM_LEVEL, skill.max_level)
+	var/level = round(experience / CY_SKILL_EXPERIENCE_PER_LEVEL)
+	if(level * CY_SKILL_EXPERIENCE_PER_LEVEL > experience)
+		level--
+
+	return clamp(level, CY_SKILL_MINIMUM_LEVEL, skill.max_level)
 
 /datum/cy_skill_holder/proc/set_skill_experience(skill_type, experience, apply_level = TRUE, ignore_stat_limit = FALSE)
 	if(!is_valid_skill(skill_type))
@@ -158,6 +187,8 @@
 	var/chance = (stat_value * CY_STAT_VALUE_PER_POINT)
 	chance += (skill_level * CY_SKILL_VALUE_PER_LEVEL)
 	chance += (luck_value * CY_LUCK_PERCENT_PER_POINT)
+	if(skill_type)
+		chance = modify_check_chance_by_perks(skill_type, chance)
 	chance -= difficulty
 
 	return clamp(round(chance), CY_CHECK_MINIMUM_CHANCE, CY_CHECK_MAXIMUM_CHANCE)
@@ -169,6 +200,49 @@
 
 	return get_check_chance(skill.governing_stat, skill_type, difficulty)
 
+/datum/cy_skill_holder/proc/get_skill_check_experience(skill_type, difficulty = 0, success = TRUE)
+	if(!is_valid_skill(skill_type))
+		return 0
+
+	var/base_experience = CY_SKILL_CHECK_EXPERIENCE_BASE + max(0, round(difficulty / CY_SKILL_CHECK_EXPERIENCE_DIFFICULTY_DIVISOR))
+	base_experience *= success ? CY_SKILL_CHECK_EXPERIENCE_SUCCESS_MULTIPLIER : CY_SKILL_CHECK_EXPERIENCE_FAILURE_MULTIPLIER
+	base_experience = modify_experience_gain_by_perks(skill_type, base_experience)
+
+	return max(1, round(base_experience))
+
+/datum/cy_skill_holder/proc/award_skill_check_experience(skill_type, difficulty = 0, success = TRUE, ignore_stat_limit = FALSE)
+	var/experience = get_skill_check_experience(skill_type, difficulty, success)
+	if(!experience)
+		return 0
+
+	if(!adjust_skill_experience(skill_type, experience, TRUE, ignore_stat_limit))
+		return 0
+
+	return experience
+
+/datum/cy_skill_holder/proc/perform_check(stat_type, skill_type = null, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_check_result/result = new
+	result.stat_type = stat_type
+	result.skill_type = skill_type
+	result.difficulty = difficulty
+	result.chance = get_check_chance(stat_type, skill_type, difficulty)
+	result.success = prob(result.chance)
+	if(grant_experience && skill_type)
+		result.experience_awarded = award_skill_check_experience(skill_type, difficulty, result.success, ignore_stat_limit)
+
+	return result
+
+/datum/cy_skill_holder/proc/roll_check(stat_type, skill_type = null, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_check_result/result = perform_check(stat_type, skill_type, difficulty, grant_experience, ignore_stat_limit)
+	return result.success
+
+/datum/cy_skill_holder/proc/roll_skill_check(skill_type, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(!skill || !skill.governing_stat)
+		return FALSE
+
+	return roll_check(skill.governing_stat, skill_type, difficulty, grant_experience, ignore_stat_limit)
+
 /datum/cy_skill_holder/proc/get_granted_perk_list(skill_type)
 	var/list/perk_list = granted_skill_perks[skill_type]
 	if(!perk_list)
@@ -176,6 +250,70 @@
 		granted_skill_perks[skill_type] = perk_list
 
 	return perk_list
+
+/datum/cy_skill_holder/proc/get_skill_perk_check_bonus(skill_type)
+	var/bonus = 0
+	var/list/perk_list = granted_skill_perks[skill_type]
+	if(!length(perk_list))
+		return bonus
+	for(var/perk_type in perk_list)
+		var/datum/cy_skill_perk/perk = perk_list[perk_type]
+		bonus += perk.check_bonus
+
+	return bonus
+
+/datum/cy_skill_holder/proc/modify_check_chance_by_perks(skill_type, chance)
+	var/list/perk_list = granted_skill_perks[skill_type]
+	if(!length(perk_list))
+		return chance
+	for(var/perk_type in perk_list)
+		var/datum/cy_skill_perk/perk = perk_list[perk_type]
+		chance = perk.modify_check_chance(chance)
+
+	return chance
+
+/datum/cy_skill_holder/proc/get_skill_perk_experience_bonus(skill_type)
+	var/bonus = 0
+	var/list/perk_list = granted_skill_perks[skill_type]
+	if(!length(perk_list))
+		return bonus
+	for(var/perk_type in perk_list)
+		var/datum/cy_skill_perk/perk = perk_list[perk_type]
+		bonus += perk.experience_bonus
+
+	return bonus
+
+/datum/cy_skill_holder/proc/modify_experience_gain_by_perks(skill_type, experience)
+	var/list/perk_list = granted_skill_perks[skill_type]
+	if(!length(perk_list))
+		return experience
+	for(var/perk_type in perk_list)
+		var/datum/cy_skill_perk/perk = perk_list[perk_type]
+		experience = perk.modify_experience_gain(experience)
+
+	return experience
+
+/datum/cy_skill_holder/proc/get_skill_perk_work_speed_bonus(skill_type)
+	var/bonus = 0
+	var/list/perk_list = granted_skill_perks[skill_type]
+	if(!length(perk_list))
+		return bonus
+	for(var/perk_type in perk_list)
+		var/datum/cy_skill_perk/perk = perk_list[perk_type]
+		bonus = perk.modify_work_speed_modifier(bonus)
+
+	return bonus
+
+/datum/cy_skill_holder/proc/get_skill_perk_quality_bonus(skill_type)
+	var/bonus = 0
+	var/list/perk_list = granted_skill_perks[skill_type]
+	if(!length(perk_list))
+		return bonus
+	for(var/perk_type in perk_list)
+		var/datum/cy_skill_perk/perk = perk_list[perk_type]
+		bonus = perk.modify_quality_modifier(bonus)
+
+	return bonus
 
 /datum/cy_skill_holder/proc/grant_skill_perk(skill_type, perk_type)
 	if(!is_valid_skill(skill_type) || !ispath(perk_type, /datum/cy_skill_perk))

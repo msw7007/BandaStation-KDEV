@@ -290,6 +290,10 @@
 	var/datum/cy_stat_holder/cy_stat_holder
 	var/datum/cy_skill_holder/cy_skill_holder
 
+	/// Character needs. Nutrition remains the legacy food reserve on /mob.
+	var/hydration = NEED_LEVEL_NORMAL
+	var/rest = NEED_LEVEL_NORMAL
+
 	/// Current organization/allegiance prototype used by this living actor.
 	/// This is a shared immutable datum from GLOB.cy_organization_datums; do not qdel it from the mob.
 	var/datum/cy_organization/cy_organization

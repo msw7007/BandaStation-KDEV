@@ -487,6 +487,17 @@
 #define DOOR_CRUSH_DAMAGE 20 //the amount of damage that airlocks deal when they crush you
 
 #define HUNGER_FACTOR 0.05 //factor at which mob nutrition decreases
+#define THIRST_FACTOR 0.04
+#define FATIGUE_FACTOR 0.02
+#define HYDRATION_REAGENT_FACTOR 1.2
+#define CONSUMABLE_HYDRATION_FACTOR 0.15
+#define REST_RECOVERY_FACTOR 0.12
+
+#define NEED_LEVEL_FULL 550
+#define NEED_LEVEL_WELL 450
+#define NEED_LEVEL_NORMAL 350
+#define NEED_LEVEL_LOW 250
+#define NEED_LEVEL_CRITICAL 150
 #define ETHEREAL_DISCHARGE_RATE (1e-3 * STANDARD_ETHEREAL_CHARGE) // Rate at which ethereal stomach charge decreases
 /// How much nutrition eating clothes as moth gives and drains
 #define CLOTHING_NUTRITION_GAIN 15

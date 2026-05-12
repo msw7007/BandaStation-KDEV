@@ -243,6 +243,7 @@ SUBSYSTEM_DEF(tts220)
 	set waitfor = FALSE
 
 	if(!is_enabled)
+		play_tts_fallback(speaker, listener, is_local, preSFX, postSFX, channel_override)
 		return
 	if(!message)
 		return
@@ -251,6 +252,7 @@ SUBSYSTEM_DEF(tts220)
 	if(ispath(tts_seed) && SStts220.tts_seeds[initial(tts_seed.name)])
 		tts_seed = SStts220.tts_seeds[initial(tts_seed.name)]
 	if(!istype(tts_seed))
+		play_tts_fallback(speaker, listener, is_local, preSFX, postSFX, channel_override)
 		return
 
 	tts_wanted++
@@ -258,8 +260,10 @@ SUBSYSTEM_DEF(tts220)
 
 	var/datum/tts_provider/provider = tts_seed.provider
 	if(!provider.is_enabled)
+		play_tts_fallback(speaker, listener, is_local, preSFX, postSFX, channel_override)
 		return
 	if(provider.throttle_check())
+		play_tts_fallback(speaker, listener, is_local, preSFX, postSFX, channel_override)
 		return
 
 	var/dirty_text = message
@@ -305,6 +309,19 @@ SUBSYSTEM_DEF(tts220)
 	queue_request(text, tts_seed, CALLBACK(src, PROC_REF(get_tts_callback), filename, tts_seed))
 
 	LAZYADD(tts_queue[filename], play_tts_cb)
+
+/datum/controller/subsystem/tts220/proc/play_tts_fallback(
+	atom/speaker,
+	mob/listener,
+	is_local = TRUE,
+	preSFX = null,
+	postSFX = null,
+	channel_override = null,
+)
+	if(!listener?.client)
+		return
+
+	output_tts(speaker, listener, TTS_FALLBACK_SOUND, is_local, preSFX, postSFX, channel_override)
 
 /datum/controller/subsystem/tts220/proc/get_tts_callback(filename, datum/tts_seed/seed, datum/http_response/response)
 	var/datum/tts_provider/provider = seed.provider

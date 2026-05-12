@@ -1,4 +1,5 @@
 #define MAX_APPEARANCE_FLAVOR_LEN 4096
+#define MAX_NETWORK_HANDLE_LEN 64
 #define APPEARANCE_DESCRIPTOR_COUNT 4
 
 #define APPEARANCE_DESCRIPTOR_NONE "plain"
@@ -25,6 +26,34 @@
 #define SPRITE_WIDTH_NARROW "Narrow"
 #define SPRITE_WIDTH_MEDIUM "Medium"
 #define SPRITE_WIDTH_WIDE "Wide"
+
+#define APPEARANCE_TATTOO_NONE "None"
+#define APPEARANCE_TATTOO_GEOMETRIC "Geometric lines"
+#define APPEARANCE_TATTOO_TRIBAL "Tribal pattern"
+#define APPEARANCE_TATTOO_FLORAL "Floral pattern"
+#define APPEARANCE_TATTOO_SCRIPT "Script marks"
+#define APPEARANCE_TATTOO_CIRCUIT "Circuit traces"
+#define APPEARANCE_TATTOO_SCARIFICATION "Scarification"
+
+/datum/preference/text/network_nickname
+	category = PREFERENCE_CATEGORY_NON_CONTEXTUAL
+	savefile_identifier = PREFERENCE_CHARACTER
+	savefile_key = "network_nickname"
+	maximum_value_length = MAX_NETWORK_HANDLE_LEN
+	should_update_preview = FALSE
+
+/datum/preference/text/network_nickname/apply_to_human(mob/living/carbon/human/target, value)
+	target.dna.features["network_nickname"] = value
+
+/datum/preference/text/znet_avatar
+	category = PREFERENCE_CATEGORY_NON_CONTEXTUAL
+	savefile_identifier = PREFERENCE_CHARACTER
+	savefile_key = "znet_avatar"
+	maximum_value_length = MAX_NETWORK_HANDLE_LEN
+	should_update_preview = FALSE
+
+/datum/preference/text/znet_avatar/apply_to_human(mob/living/carbon/human/target, value)
+	target.dna.features["znet_avatar"] = value
 
 /datum/preference/text/flavor_text
 	category = PREFERENCE_CATEGORY_NON_CONTEXTUAL
@@ -174,6 +203,67 @@
 	target.set_sprite_width(width_values[value] || RESIZE_DEFAULT_SIZE)
 	target.dna.features["sprite_width"] = value
 
+/datum/preference/choiced/appearance_tattoo
+	abstract_type = /datum/preference/choiced/appearance_tattoo
+	category = PREFERENCE_CATEGORY_SECONDARY_FEATURES
+	savefile_identifier = PREFERENCE_CHARACTER
+	priority = PREFERENCE_PRORITY_LATE_BODY_TYPE
+	can_randomize = FALSE
+	var/tattoo_key
+
+/datum/preference/choiced/appearance_tattoo/init_possible_values()
+	return list(
+		APPEARANCE_TATTOO_NONE,
+		APPEARANCE_TATTOO_GEOMETRIC,
+		APPEARANCE_TATTOO_TRIBAL,
+		APPEARANCE_TATTOO_FLORAL,
+		APPEARANCE_TATTOO_SCRIPT,
+		APPEARANCE_TATTOO_CIRCUIT,
+		APPEARANCE_TATTOO_SCARIFICATION,
+	)
+
+/datum/preference/choiced/appearance_tattoo/create_default_value()
+	return APPEARANCE_TATTOO_NONE
+
+/datum/preference/choiced/appearance_tattoo/apply_to_human(mob/living/carbon/human/target, value)
+	if(!islist(target.dna.features["appearance_tattoos"]))
+		target.dna.features["appearance_tattoos"] = list()
+
+	target.dna.features["appearance_tattoos"][tattoo_key] = value
+
+/datum/preference/choiced/appearance_tattoo/head
+	savefile_key = "tattoo_head"
+	tattoo_key = "head"
+
+/datum/preference/choiced/appearance_tattoo/torso
+	savefile_key = "tattoo_torso"
+	tattoo_key = "torso"
+
+/datum/preference/choiced/appearance_tattoo/left_arm
+	savefile_key = "tattoo_left_arm"
+	tattoo_key = "left_arm"
+
+/datum/preference/choiced/appearance_tattoo/right_arm
+	savefile_key = "tattoo_right_arm"
+	tattoo_key = "right_arm"
+
+/datum/preference/choiced/appearance_tattoo/legs
+	savefile_key = "tattoo_legs"
+	tattoo_key = "legs"
+
+/datum/preference/color/appearance_tattoo_color
+	category = PREFERENCE_CATEGORY_SECONDARY_FEATURES
+	savefile_identifier = PREFERENCE_CHARACTER
+	savefile_key = "tattoo_color"
+	priority = PREFERENCE_PRORITY_LATE_BODY_TYPE
+	can_randomize = FALSE
+
+/datum/preference/color/appearance_tattoo_color/create_default_value()
+	return COLOR_BLACK
+
+/datum/preference/color/appearance_tattoo_color/apply_to_human(mob/living/carbon/human/target, value)
+	target.dna.features["appearance_tattoo_color"] = value
+
 /datum/preference/color/tts_voice_color
 	category = PREFERENCE_CATEGORY_NON_CONTEXTUAL
 	savefile_identifier = PREFERENCE_CHARACTER
@@ -192,6 +282,7 @@
 		tts_component.voice_color = value
 
 #undef MAX_APPEARANCE_FLAVOR_LEN
+#undef MAX_NETWORK_HANDLE_LEN
 #undef APPEARANCE_DESCRIPTOR_COUNT
 
 #undef APPEARANCE_DESCRIPTOR_NONE
@@ -218,3 +309,11 @@
 #undef SPRITE_WIDTH_NARROW
 #undef SPRITE_WIDTH_MEDIUM
 #undef SPRITE_WIDTH_WIDE
+
+#undef APPEARANCE_TATTOO_NONE
+#undef APPEARANCE_TATTOO_GEOMETRIC
+#undef APPEARANCE_TATTOO_TRIBAL
+#undef APPEARANCE_TATTOO_FLORAL
+#undef APPEARANCE_TATTOO_SCRIPT
+#undef APPEARANCE_TATTOO_CIRCUIT
+#undef APPEARANCE_TATTOO_SCARIFICATION

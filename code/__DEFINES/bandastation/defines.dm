@@ -33,3 +33,26 @@
 
 #define SQUASH_WITH_HANDS_DELAY 1.5 SECONDS
 #define RCD_NO_SKILLCHIP_DELAY_MULTIPLIER 1.5
+
+#ifndef COMSIG_CARBON_VULPKANIN_SNIFF
+#define COMSIG_CARBON_VULPKANIN_SNIFF "carbon_vulpkanin_sniff"
+#endif
+
+#ifndef CHECK_DIGI_LEGS
+/// Check if we draw digitigrade legs on the mob. Based on code in human_update_icons.dm
+#define CHECK_DIGI_LEGS(mob) (iscarbon(mob) && (mob.bodyshape & BODYSHAPE_DIGITIGRADE) && !mob.is_digitigrade_squished())
+#endif
+
+#ifndef HUMAN_EVIL_LAUGH_SOUNDS_MALE
+#define HUMAN_EVIL_LAUGH_SOUNDS_MALE list(\
+	'modular_bandastation/emote_panel/audio/human/male/evil_laugh_male_1.ogg',\
+	'modular_bandastation/emote_panel/audio/human/male/evil_laugh_male_2.ogg',\
+	)
+#endif
+
+#ifndef HUMAN_EVIL_LAUGH_SOUNDS_FEMALE
+#define HUMAN_EVIL_LAUGH_SOUNDS_FEMALE list(\
+	'modular_bandastation/emote_panel/audio/human/female/evil_laugh_female_1.ogg',\
+	'modular_bandastation/emote_panel/audio/human/female/evil_laugh_female_2.ogg',\
+	)
+#endif

@@ -399,6 +399,12 @@ const appearancePreferenceOrder = [
   'appearance_descriptor_2',
   'appearance_descriptor_3',
   'appearance_descriptor_4',
+  'tattoo_head',
+  'tattoo_torso',
+  'tattoo_left_arm',
+  'tattoo_right_arm',
+  'tattoo_legs',
+  'tattoo_color',
   'flavor_text',
   'hidden_flavor_text',
 ];
@@ -475,11 +481,17 @@ const CHARACTERISTIC_TOTAL_BUDGET =
   CHARACTERISTIC_BASE_VALUE * 7 + CHARACTERISTIC_POINT_BUDGET;
 const WEAPON_POINT_BUDGET = 8;
 const PROFESSIONAL_POINT_BUDGET = 8;
+const PERK_CHECK_BONUS_PER_LEVEL = 2;
+const PERK_EXPERIENCE_BONUS_PER_LEVEL = 5;
+const PERK_WORK_SPEED_BONUS_PER_LEVEL = 1;
+const PERK_QUALITY_BONUS_PER_LEVEL = 1;
 
 const characteristicDefinitions = [
   {
     id: 'characteristic_dexterity',
     label: 'Dexterity',
+    description:
+      'Speed, fine control, evasive motion, light weapons and acrobatics.',
     statKey: 'dexterity',
     linkedSkills: [
       'combat_fast_melee',
@@ -487,12 +499,14 @@ const characteristicDefinitions = [
       'combat_acrobatics',
       'combat_evasion',
     ],
-    left: '32%',
-    top: '3%',
+    left: '4.8rem',
+    top: '3.2rem',
   },
   {
     id: 'characteristic_strength',
     label: 'Strength',
+    description:
+      'Raw force, heavy gear, grappling, durability and direct melee pressure.',
     statKey: 'strength',
     linkedSkills: [
       'combat_power_melee',
@@ -500,12 +514,14 @@ const characteristicDefinitions = [
       'combat_grappling',
       'combat_toughness',
     ],
-    left: '50%',
-    top: '0%',
+    left: '9.6rem',
+    top: '0',
   },
   {
     id: 'characteristic_perception',
     label: 'Accuracy',
+    description:
+      'Precision, weak-point reading, throwing and focused offensive timing.',
     statKey: 'perception',
     linkedSkills: [
       'combat_precise_melee',
@@ -513,20 +529,24 @@ const characteristicDefinitions = [
       'combat_weakspot_analysis',
       'combat_concentration',
     ],
-    left: '68%',
-    top: '3%',
+    left: '14.4rem',
+    top: '3.2rem',
   },
   {
     id: 'characteristic_luck',
     label: 'Luck',
+    description:
+      'A global edge in uncertain checks. Luck is central and has no internal perk branch.',
     statKey: 'luck',
     linkedSkills: [],
-    left: '50%',
-    top: '31%',
+    left: '9.6rem',
+    top: '6.4rem',
   },
   {
     id: 'characteristic_intelligence',
     label: 'Intelligence',
+    description:
+      'Coding, hacking, fast problem solving and mental composure under pressure.',
     statKey: 'intelligence',
     linkedSkills: [
       'combat_improved_code',
@@ -534,12 +554,14 @@ const characteristicDefinitions = [
       'combat_hacking',
       'combat_intelligence_composure',
     ],
-    left: '32%',
-    top: '60%',
+    left: '4.8rem',
+    top: '9.6rem',
   },
   {
     id: 'characteristic_charisma',
     label: 'Charisma',
+    description:
+      'Style, social pressure, stealth, theft and the ability to inspire others.',
     statKey: 'charisma',
     linkedSkills: [
       'combat_stealth',
@@ -547,12 +569,14 @@ const characteristicDefinitions = [
       'combat_inspiration',
       'combat_style',
     ],
-    left: '50%',
-    top: '69%',
+    left: '9.6rem',
+    top: '12.8rem',
   },
   {
     id: 'characteristic_spirit',
     label: 'Spirit',
+    description:
+      'Survival, endurance, athletic drive and compatibility with body stress.',
     statKey: 'spirit',
     linkedSkills: [
       'combat_survival',
@@ -560,40 +584,41 @@ const characteristicDefinitions = [
       'combat_athletics',
       'combat_compatibility',
     ],
-    left: '68%',
-    top: '60%',
+    left: '14.4rem',
+    top: '9.6rem',
   },
 ];
 
 const skillDefinitions = [
-  { id: 'combat_power_melee', label: 'Power melee', group: 'combat' },
-  { id: 'combat_heavy_weapons', label: 'Heavy weapons', group: 'combat' },
-  { id: 'combat_grappling', label: 'Grappling', group: 'combat' },
-  { id: 'combat_toughness', label: 'Toughness', group: 'combat' },
-  { id: 'combat_fast_melee', label: 'Fast melee', group: 'combat' },
-  { id: 'combat_light_weapons', label: 'Light weapons', group: 'combat' },
-  { id: 'combat_acrobatics', label: 'Acrobatics', group: 'combat' },
-  { id: 'combat_evasion', label: 'Evasion', group: 'combat' },
-  { id: 'combat_precise_melee', label: 'Precise melee', group: 'combat' },
-  { id: 'combat_throwing', label: 'Throwing', group: 'combat' },
-  { id: 'combat_weakspot_analysis', label: 'Weakspot analysis', group: 'combat' },
-  { id: 'combat_concentration', label: 'Concentration', group: 'combat' },
-  { id: 'combat_improved_code', label: 'Improved code', group: 'combat' },
-  { id: 'combat_fast_code', label: 'Fast code', group: 'combat' },
-  { id: 'combat_hacking', label: 'Hacking', group: 'combat' },
+  { id: 'combat_power_melee', label: 'Power melee', description: 'Direct force and pressure in close combat.', group: 'combat' },
+  { id: 'combat_heavy_weapons', label: 'Heavy weapons', description: 'Control of heavy melee tools and oversized weapons.', group: 'combat' },
+  { id: 'combat_grappling', label: 'Grappling', description: 'Clinches, holds, throws and body control.', group: 'combat' },
+  { id: 'combat_toughness', label: 'Toughness', description: 'Staying useful while hurt, strained or pressured.', group: 'combat' },
+  { id: 'combat_fast_melee', label: 'Fast melee', description: 'Quick close-range attacks and tempo shifts.', group: 'combat' },
+  { id: 'combat_light_weapons', label: 'Light weapons', description: 'Short blades, light tools and quick weapon handling.', group: 'combat' },
+  { id: 'combat_acrobatics', label: 'Acrobatics', description: 'Mobility, balance and aggressive movement.', group: 'combat' },
+  { id: 'combat_evasion', label: 'Evasion', description: 'Dodging, disengaging and slipping pressure.', group: 'combat' },
+  { id: 'combat_precise_melee', label: 'Precise melee', description: 'Accurate strikes and clean targeting in melee.', group: 'combat' },
+  { id: 'combat_throwing', label: 'Throwing', description: 'Thrown weapons, arcs and target leading.', group: 'combat' },
+  { id: 'combat_weakspot_analysis', label: 'Weakspot analysis', description: 'Reading armor, injuries and exposed openings.', group: 'combat' },
+  { id: 'combat_concentration', label: 'Concentration', description: 'Keeping aim and action quality under stress.', group: 'combat' },
+  { id: 'combat_improved_code', label: 'Improved code', description: 'Cleaner code interactions and more reliable systems work.', group: 'combat' },
+  { id: 'combat_fast_code', label: 'Fast code', description: 'Rapid system interaction and shorter execution windows.', group: 'combat' },
+  { id: 'combat_hacking', label: 'Hacking', description: 'Intrusion, bypass and hostile system control.', group: 'combat' },
   {
     id: 'combat_intelligence_composure',
     label: 'Composure',
+    description: 'Mental control when the situation becomes chaotic.',
     group: 'combat',
   },
-  { id: 'combat_survival', label: 'Survival', group: 'combat' },
-  { id: 'combat_endurance', label: 'Endurance', group: 'combat' },
-  { id: 'combat_athletics', label: 'Athletics', group: 'combat' },
-  { id: 'combat_compatibility', label: 'Compatibility', group: 'combat' },
-  { id: 'combat_stealth', label: 'Stealth', group: 'combat' },
-  { id: 'combat_theft', label: 'Theft', group: 'combat' },
-  { id: 'combat_inspiration', label: 'Inspiration', group: 'combat' },
-  { id: 'combat_style', label: 'Style', group: 'combat' },
+  { id: 'combat_survival', label: 'Survival', description: 'Keeping yourself alive in hostile conditions.', group: 'combat' },
+  { id: 'combat_endurance', label: 'Endurance', description: 'Long effort, fatigue tolerance and sustained pressure.', group: 'combat' },
+  { id: 'combat_athletics', label: 'Athletics', description: 'Running, climbing, jumping and full-body work.', group: 'combat' },
+  { id: 'combat_compatibility', label: 'Compatibility', description: 'Body adaptation and stability under augmentation stress.', group: 'combat' },
+  { id: 'combat_stealth', label: 'Stealth', description: 'Quiet movement and staying unnoticed.', group: 'combat' },
+  { id: 'combat_theft', label: 'Theft', description: 'Taking, hiding and manipulating small valuables.', group: 'combat' },
+  { id: 'combat_inspiration', label: 'Inspiration', description: 'Lifting group momentum and keeping allies moving.', group: 'combat' },
+  { id: 'combat_style', label: 'Style', description: 'Presence, intimidation and performative confidence.', group: 'combat' },
 ] as const;
 
 const weaponSkillDefinitions = [
@@ -612,26 +637,104 @@ const weaponSkillDefinitions = [
 ] as const;
 
 const professionalSkillDefinitions = [
-  { id: 'professional_medicine', label: 'Medicine', group: 'professional' },
-  { id: 'professional_chemistry', label: 'Chemistry', group: 'professional' },
-  { id: 'professional_electricity', label: 'Electricity', group: 'professional' },
+  {
+    id: 'professional_medicine',
+    label: 'Medicine',
+    description: 'Treatment, diagnosis, field stabilization and surgery support.',
+    group: 'professional',
+    left: '16%',
+    top: '9%',
+  },
+  {
+    id: 'professional_chemistry',
+    label: 'Chemistry',
+    description: 'Reagents, reactions, mixtures and safe handling of substances.',
+    group: 'professional',
+    left: '27%',
+    top: '0%',
+  },
+  {
+    id: 'professional_electricity',
+    label: 'Electricity',
+    description: 'Power systems, wiring, devices and electrical repair.',
+    group: 'professional',
+    left: '73%',
+    top: '0%',
+  },
   {
     id: 'professional_construction',
     label: 'Construction',
+    description: 'Structures, repairs, assembly and heavy station work.',
     group: 'professional',
+    left: '84%',
+    top: '9%',
   },
-  { id: 'professional_invention', label: 'Invention', group: 'professional' },
-  { id: 'professional_analysis', label: 'Analysis', group: 'professional' },
-  { id: 'professional_mining', label: 'Mining', group: 'professional' },
-  { id: 'professional_driving', label: 'Driving', group: 'professional' },
-  { id: 'professional_cooking', label: 'Cooking', group: 'professional' },
-  { id: 'professional_gardening', label: 'Gardening', group: 'professional' },
-  { id: 'professional_music', label: 'Music', group: 'professional' },
+  {
+    id: 'professional_invention',
+    label: 'Invention',
+    description: 'Research, prototyping and unusual technical solutions.',
+    group: 'professional',
+    left: '14%',
+    top: '32%',
+  },
+  {
+    id: 'professional_analysis',
+    label: 'Analysis',
+    description: 'Reading data, evidence, anomalies and indirect signs.',
+    group: 'professional',
+    left: '86%',
+    top: '32%',
+  },
+  {
+    id: 'professional_mining',
+    label: 'Mining',
+    description: 'Extraction, prospecting and hazardous industrial labor.',
+    group: 'professional',
+    left: '16%',
+    top: '55%',
+  },
+  {
+    id: 'professional_driving',
+    label: 'Driving',
+    description: 'Vehicle handling, maneuvering and transport control.',
+    group: 'professional',
+    left: '84%',
+    top: '55%',
+  },
+  {
+    id: 'professional_cooking',
+    label: 'Cooking',
+    description: 'Food preparation, kitchen flow and ingredient handling.',
+    group: 'professional',
+    left: '29%',
+    top: '73%',
+  },
+  {
+    id: 'professional_gardening',
+    label: 'Gardening',
+    description: 'Hydroponics, plant care and harvest quality.',
+    group: 'professional',
+    left: '50%',
+    top: '77%',
+  },
+  {
+    id: 'professional_music',
+    label: 'Music',
+    description: 'Performance, rhythm, audience control and artistic skill.',
+    group: 'professional',
+    left: '71%',
+    top: '73%',
+  },
 ] as const;
 
 const characteristicIds = characteristicDefinitions.map(({ id }) => id);
 const weaponSkillIds = weaponSkillDefinitions.map(({ id }) => id);
 const professionalSkillIds = professionalSkillDefinitions.map(({ id }) => id);
+
+type TooltipInfo = {
+  title: string;
+  body: string;
+};
 
 function getPreferenceNumber(
   preferences: Record<string, unknown>,
@@ -648,19 +751,40 @@ function getUsedPoints(
   return keys.reduce((sum, key) => sum + getPreferenceNumber(preferences, key), 0);
 }
 
+function getPerkEffectText(level: number) {
+  return [
+    `+${level * PERK_CHECK_BONUS_PER_LEVEL}% skill checks`,
+    `+${level * PERK_EXPERIENCE_BONUS_PER_LEVEL}% skill experience`,
+    `+${level * PERK_WORK_SPEED_BONUS_PER_LEVEL}% work speed`,
+    `+${level * PERK_QUALITY_BONUS_PER_LEVEL}% result quality`,
+  ].join(', ');
+}
+
+function getPerkTooltip(
+  skill: { label: string; description: string },
+  level: number,
+) {
+  return {
+    title: `${skill.label} ${level}`,
+    body: `${skill.description} ${getPerkEffectText(level)}.`,
+  };
+}
+
 type HexControlProps = {
   label: string;
   value: number;
   onClick?: () => void;
   onMinus: () => void;
   onPlus: () => void;
+  onHover?: () => void;
+  onUnhover?: () => void;
   selected?: boolean;
   small?: boolean;
 };
 
 function HexControl(props: HexControlProps) {
   const { label, value, selected, small } = props;
-  const size = small ? '4.9rem' : '6.35rem';
+  const size = small ? '4.9rem' : '6.4rem';
   return (
     <div
       style={{
@@ -688,11 +812,13 @@ function HexControl(props: HexControlProps) {
         width: size,
       }}
       onClick={props.onClick}
+      onMouseEnter={props.onHover}
+      onMouseLeave={props.onUnhover}
     >
       <Box
         bold
         color={selected ? 'blue' : 'label'}
-        fontSize={small ? 0.68 : 0.82}
+        fontSize={small ? 0.68 : 0.76}
         style={{ textTransform: 'uppercase' }}
       >
         {label}
@@ -781,6 +907,8 @@ type PerkNodeProps = {
   selected: boolean;
   disabled: boolean;
   onClick: () => void;
+  onHover?: () => void;
+  onUnhover?: () => void;
 };
 
 function PerkNode(props: PerkNodeProps) {
@@ -802,29 +930,64 @@ function PerkNode(props: PerkNodeProps) {
         color: props.disabled ? 'rgba(120,145,150,0.55)' : '#bff9ff',
         cursor: props.disabled ? 'default' : 'pointer',
         fontWeight: 900,
-        height: '2.15rem',
-        lineHeight: '1.9rem',
+        height: '2.6rem',
+        lineHeight: '2.28rem',
         opacity: props.disabled ? 0.55 : 1,
         padding: 0,
         textAlign: 'center',
-        width: '2.4rem',
+        width: '2.6rem',
       }}
       onClick={props.onClick}
+      onMouseEnter={props.onHover}
+      onMouseLeave={props.onUnhover}
     >
       {props.level}
     </button>
   );
 }
 
+function StatsTooltip(props: { info: TooltipInfo | null }) {
+  if (!props.info) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        background:
+          'linear-gradient(135deg, rgba(5,14,20,0.96), rgba(55,5,15,0.92))',
+        border: '1px solid rgba(35,255,245,0.65)',
+        bottom: '0.75rem',
+        boxShadow:
+          '0 0 18px rgba(35,255,245,0.18), inset 0 0 20px rgba(255,45,72,0.12)',
+        left: '0.75rem',
+        maxWidth: '24rem',
+        padding: '0.55rem 0.75rem',
+        pointerEvents: 'none',
+        position: 'absolute',
+        zIndex: 5,
+      }}
+    >
+      <Box bold color="blue" fontSize={0.9} mb={0.3}>
+        {props.info.title}
+      </Box>
+      <Box color="label" fontSize={0.82}>
+        {props.info.body}
+      </Box>
+    </div>
+  );
+}
+
 function CharacterStatsPanel() {
   const { act, data } = useBackend<PreferencesMenuData>();
   const preferences = data.character_preferences.non_contextual;
-  const [selectedCharacteristicId, setSelectedCharacteristicId] = useState<
-    string | null
+  const [selectedBranch, setSelectedBranch] = useState<
+    { kind: 'characteristic'; id: string } | null
   >(null);
+  const [tooltipInfo, setTooltipInfo] = useState<TooltipInfo | null>(null);
 
   const selectedCharacteristic = characteristicDefinitions.find(
-    ({ id }) => id === selectedCharacteristicId,
+    ({ id }) => selectedBranch?.kind === 'characteristic' && id === selectedBranch.id,
   );
   const characteristicUsed = characteristicIds.reduce(
     (sum, key) =>
@@ -935,176 +1098,226 @@ function CharacterStatsPanel() {
     );
   };
 
+  const perkHoneycombPositions = [
+    { left: '0', top: '0' },
+    { left: '1.95rem', top: '1.3rem' },
+    { left: '0', top: '2.6rem' },
+    { left: '1.95rem', top: '3.9rem' },
+    { left: '0', top: '5.2rem' },
+    { left: '1.95rem', top: '6.5rem' },
+  ];
+
+  const renderPerkHoneycomb = (
+    skill: { id: string; label: string; description: string },
+    value: number,
+    disabledForLevel: (level: number) => boolean,
+    setLevel: (level: number) => void,
+  ) => (
+    <div key={skill.id} style={{ minWidth: 0, textAlign: 'center' }}>
+      <Box
+        bold
+        color="label"
+        fontSize={0.78}
+        mb={0.4}
+        style={{
+          minHeight: '1.9rem',
+          textTransform: 'uppercase',
+        }}
+      >
+        {skill.label}
+      </Box>
+      <div
+        style={{
+          height: '9.1rem',
+          margin: '0 auto',
+          position: 'relative',
+          width: '4.55rem',
+        }}
+      >
+        {[1, 2, 3, 4, 5, 6].map((level) => {
+          const selected = value >= level;
+          const nextValue = selected ? level - 1 : level;
+          const position = perkHoneycombPositions[level - 1];
+
+          return (
+            <div
+              key={level}
+              style={{
+                left: position.left,
+                position: 'absolute',
+                top: position.top,
+              }}
+            >
+              <PerkNode
+                level={level}
+                selected={selected}
+                disabled={!selected && disabledForLevel(level)}
+                onClick={() => setLevel(nextValue)}
+                onHover={() => setTooltipInfo(getPerkTooltip(skill, level))}
+                onUnhover={() => setTooltipInfo(null)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const selectedTitle = selectedCharacteristic?.label || 'Characteristics';
+
   return (
     <Stack vertical g={2}>
       <Section
-        title={selectedCharacteristic?.label || 'Characteristics'}
+        title={selectedTitle}
         buttons={
-          selectedCharacteristic ? (
+          selectedBranch ? (
             <Button
               compact
               icon="arrow-left"
-              onClick={() => setSelectedCharacteristicId(null)}
+              onClick={() => {
+                setSelectedBranch(null);
+                setTooltipInfo(null);
+              }}
             />
           ) : (
-            <Box color={attributePointsLeft > 0 ? 'good' : 'average'}>
-              AP {attributePointsLeft}
-            </Box>
+            <Stack align="center" g={1}>
+              <Stack.Item color={attributePointsLeft > 0 ? 'good' : 'average'}>
+                AP {attributePointsLeft}
+              </Stack.Item>
+              <Stack.Item
+                color={
+                  professionalUsed < PROFESSIONAL_POINT_BUDGET
+                    ? 'good'
+                    : 'average'
+                }
+              >
+                PP {PROFESSIONAL_POINT_BUDGET - professionalUsed}
+              </Stack.Item>
+            </Stack>
           )
         }
       >
-        {!selectedCharacteristic && (
-          <div
-            style={{
-              background:
-                'radial-gradient(circle at 50% 46%, rgba(35,255,245,0.1), rgba(255,45,72,0.07) 34%, rgba(5,8,14,0.05) 58%)',
-              minHeight: '23.5rem',
-              position: 'relative',
-            }}
-          >
-            {characteristicDefinitions.map((characteristic) => (
+        {!selectedBranch && (
+          <Stack vertical g={1.25}>
+            <Stack.Item>
               <div
-                key={characteristic.id}
                 style={{
-                  left: characteristic.left,
-                  position: 'absolute',
-                  top: characteristic.top,
-                  transform: 'translate(-50%, 0)',
+                  background:
+                    'radial-gradient(circle at 50% 39%, rgba(35,255,245,0.12), rgba(255,45,72,0.08) 30%, rgba(5,8,14,0.05) 63%)',
+                  margin: '0 auto',
+                  width: '25.6rem',
+                  height: '19.2rem',
+                  position: 'relative',
                 }}
               >
-                <HexControl
-                  label={characteristic.label}
-                  value={getCharacteristicValue(characteristic.id)}
-                  onClick={() => setSelectedCharacteristicId(characteristic.id)}
-                  onMinus={() => adjustCharacteristic(characteristic, -1)}
-                  onPlus={() => adjustCharacteristic(characteristic, 1)}
-                  selected={characteristic.id === 'characteristic_luck'}
-                />
+                {characteristicDefinitions.map((characteristic) => (
+                  <div
+                    key={characteristic.id}
+                    style={{
+                      left: characteristic.left,
+                      position: 'absolute',
+                      top: characteristic.top,
+                    }}
+                  >
+                    <HexControl
+                      label={characteristic.label}
+                      value={getCharacteristicValue(characteristic.id)}
+                      onClick={
+                        characteristic.linkedSkills.length
+                          ? () =>
+                              setSelectedBranch({
+                                kind: 'characteristic',
+                                id: characteristic.id,
+                              })
+                          : undefined
+                      }
+                      onMinus={() => adjustCharacteristic(characteristic, -1)}
+                      onPlus={() => adjustCharacteristic(characteristic, 1)}
+                      onHover={() =>
+                        setTooltipInfo({
+                          title: characteristic.label,
+                          body: characteristic.description,
+                        })
+                      }
+                      onUnhover={() => setTooltipInfo(null)}
+                      selected={characteristic.id === 'characteristic_luck'}
+                    />
+                  </div>
+                ))}
+                <StatsTooltip info={tooltipInfo} />
               </div>
-            ))}
-          </div>
-        )}
-        {selectedCharacteristic && (
-          <Stack vertical>
+            </Stack.Item>
             <Stack.Item>
-              <Stack align="center" justify="space-between">
-                <Stack.Item color="label">
-                  {getBranchUsed(selectedCharacteristic)}/
-                  {getCharacteristicValue(selectedCharacteristic.id)}
+              <Stack align="stretch" g={1.25}>
+                <Stack.Item basis="50%">
+                  {renderSkillList(
+                    'Weapon mastery',
+                    weaponSkillDefinitions,
+                    weaponSkillIds,
+                    weaponUsed,
+                    WEAPON_POINT_BUDGET,
+                    5,
+                  )}
                 </Stack.Item>
-                <Stack.Item>
-                  <HexControl
-                    label={selectedCharacteristic.label}
-                    value={getCharacteristicValue(selectedCharacteristic.id)}
-                    onMinus={() => adjustCharacteristic(selectedCharacteristic, -1)}
-                    onPlus={() => adjustCharacteristic(selectedCharacteristic, 1)}
-                    selected
-                    small
-                  />
+                <Stack.Item basis="50%">
+                  {renderSkillList(
+                    'Professional',
+                    professionalSkillDefinitions,
+                    professionalSkillIds,
+                    professionalUsed,
+                    PROFESSIONAL_POINT_BUDGET,
+                    6,
+                  )}
                 </Stack.Item>
               </Stack>
             </Stack.Item>
-            <Stack.Item>
-              <div
-                style={{
-                  display: 'grid',
-                  gap: '0.85rem',
-                  gridTemplateColumns: 'repeat(4, minmax(5.2rem, 1fr))',
-                }}
-              >
-                {selectedCharacteristic.linkedSkills.map((id) => {
-                  const skill = skillDefinitions.find((entry) => entry.id === id);
-                  if (!skill) {
-                    return null;
-                  }
-                  const value = getPreferenceNumber(preferences, id);
-                  const branchLimit = getCharacteristicValue(
-                    selectedCharacteristic.id,
-                  );
-                  const usedWithoutCurrent =
-                    getBranchUsed(selectedCharacteristic) - value;
-
-                  return (
-                    <div key={id} style={{ minWidth: 0, textAlign: 'center' }}>
-                      <Box
-                        bold
-                        color="label"
-                        fontSize={0.78}
-                        mb={0.4}
-                        style={{
-                          minHeight: '1.9rem',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {skill.label}
-                      </Box>
-                      <div
-                        style={{
-                          alignItems: 'center',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.12rem',
-                        }}
-                      >
-                        {[1, 2, 3, 4, 5, 6].map((level) => {
-                          const selected = value >= level;
-                          const nextValue = selected ? level - 1 : level;
-                          const disabled =
-                            !selected && usedWithoutCurrent + level > branchLimit;
-
-                          return (
-                            <div
-                              key={level}
-                              style={{
-                                marginLeft: level % 2 ? '-0.95rem' : '0.95rem',
-                              }}
-                            >
-                              <PerkNode
-                                level={level}
-                                selected={selected}
-                                disabled={disabled}
-                                onClick={() =>
-                                  setBranchSkillLevel(
-                                    selectedCharacteristic,
-                                    id,
-                                    nextValue,
-                                  )
-                                }
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Stack.Item>
           </Stack>
         )}
+        {selectedCharacteristic && (
+          <div style={{ minHeight: '29rem', position: 'relative' }}>
+            <Stack vertical>
+              <Stack.Item>
+                <Box color="label">
+                  {getBranchUsed(selectedCharacteristic)}/
+                  {getCharacteristicValue(selectedCharacteristic.id)}
+                </Box>
+              </Stack.Item>
+              <Stack.Item>
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: '2rem',
+                    gridTemplateColumns: 'repeat(4, minmax(7.2rem, 1fr))',
+                    marginTop: '1.6rem',
+                  }}
+                >
+                  {selectedCharacteristic.linkedSkills.map((id) => {
+                    const skill = skillDefinitions.find((entry) => entry.id === id);
+                    if (!skill) {
+                      return null;
+                    }
+                    const value = getPreferenceNumber(preferences, id);
+                    const branchLimit = getCharacteristicValue(
+                      selectedCharacteristic.id,
+                    );
+                    const usedWithoutCurrent =
+                      getBranchUsed(selectedCharacteristic) - value;
+
+                    return renderPerkHoneycomb(
+                      skill,
+                      value,
+                      (level) => usedWithoutCurrent + level > branchLimit,
+                      (level) =>
+                        setBranchSkillLevel(selectedCharacteristic, id, level),
+                    );
+                  })}
+                </div>
+              </Stack.Item>
+            </Stack>
+            <StatsTooltip info={tooltipInfo} />
+          </div>
+        )}
       </Section>
-      <Stack>
-        <Stack.Item grow basis="50%">
-          {renderSkillList(
-            'Weapon mastery',
-            weaponSkillDefinitions,
-            weaponSkillIds,
-            weaponUsed,
-            WEAPON_POINT_BUDGET,
-            5,
-          )}
-        </Stack.Item>
-        <Stack.Item grow basis="50%">
-          {renderSkillList(
-            'Professional',
-            professionalSkillDefinitions,
-            professionalSkillIds,
-            professionalUsed,
-            PROFESSIONAL_POINT_BUDGET,
-            6,
-          )}
-        </Stack.Item>
-      </Stack>
     </Stack>
   );
 }

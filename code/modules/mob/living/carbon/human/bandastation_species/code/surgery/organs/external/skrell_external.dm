@@ -40,7 +40,7 @@
 
 /datum/action/item_action/organ_action/headpocket
 	name = "Полость в щупальцах"
-	button_icon = 'modular_bandastation/species/icons/hud/actions.dmi'
+	button_icon = 'code/modules/mob/living/carbon/human/bandastation_species/icons/hud/actions.dmi'
 	button_icon_state = "skrell_headpocket"
 
 // MARK: Storage

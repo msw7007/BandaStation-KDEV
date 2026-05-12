@@ -59,6 +59,22 @@
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.adjust_skill_experience(skill_type, amount, apply_level, ignore_stat_limit)
 
+/mob/living/proc/get_cy_skill_perk_check_bonus(skill_type)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_perk_check_bonus(skill_type)
+
+/mob/living/proc/get_cy_skill_perk_experience_bonus(skill_type)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_perk_experience_bonus(skill_type)
+
+/mob/living/proc/get_cy_skill_perk_work_speed_bonus(skill_type)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_perk_work_speed_bonus(skill_type)
+
+/mob/living/proc/get_cy_skill_perk_quality_bonus(skill_type)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_perk_quality_bonus(skill_type)
+
 /mob/living/proc/get_cy_check_chance(stat_type, skill_type = null, difficulty = 0)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.get_check_chance(stat_type, skill_type, difficulty)
@@ -66,3 +82,30 @@
 /mob/living/proc/get_cy_skill_check_chance(skill_type, difficulty = 0)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.get_skill_check_chance(skill_type, difficulty)
+
+/mob/living/proc/get_cy_skill_check_experience(skill_type, difficulty = 0, success = TRUE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.get_skill_check_experience(skill_type, difficulty, success)
+
+/mob/living/proc/award_cy_skill_check_experience(skill_type, difficulty = 0, success = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.award_skill_check_experience(skill_type, difficulty, success, ignore_stat_limit)
+
+/mob/living/proc/perform_cy_check(stat_type, skill_type = null, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.perform_check(stat_type, skill_type, difficulty, grant_experience, ignore_stat_limit)
+
+/mob/living/proc/perform_cy_skill_check(skill_type, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(!skill || !skill.governing_stat)
+		return null
+	return skills.perform_check(skill.governing_stat, skill_type, difficulty, grant_experience, ignore_stat_limit)
+
+/mob/living/proc/roll_cy_check(stat_type, skill_type = null, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.roll_check(stat_type, skill_type, difficulty, grant_experience, ignore_stat_limit)
+
+/mob/living/proc/roll_cy_skill_check(skill_type, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
+	return skills.roll_skill_check(skill_type, difficulty, grant_experience, ignore_stat_limit)

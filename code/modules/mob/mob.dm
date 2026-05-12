@@ -1503,6 +1503,38 @@
 	else
 		living_flags |= QUEUE_NUTRITION_UPDATE
 
+/mob/living/proc/adjust_hydration(change, forced = FALSE)
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER) && !forced)
+		return hydration
+	hydration = clamp(hydration + change, 0, NEED_LEVEL_FULL)
+	return hydration
+
+/mob/living/proc/set_hydration(set_to, forced = FALSE)
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER) && !forced)
+		return hydration
+	hydration = clamp(set_to, 0, NEED_LEVEL_FULL)
+	return hydration
+
+/mob/living/proc/adjust_rest(change, forced = FALSE)
+	rest = clamp(rest + change, 0, NEED_LEVEL_FULL)
+	return rest
+
+/mob/living/proc/set_rest(set_to, forced = FALSE)
+	rest = clamp(set_to, 0, NEED_LEVEL_FULL)
+	return rest
+
+/mob/living/proc/get_need_status(value)
+	switch(value)
+		if(NEED_LEVEL_WELL to INFINITY)
+			return "full"
+		if(NEED_LEVEL_NORMAL to NEED_LEVEL_WELL)
+			return "well"
+		if(NEED_LEVEL_LOW to NEED_LEVEL_NORMAL)
+			return "normal"
+		if(NEED_LEVEL_CRITICAL to NEED_LEVEL_LOW)
+			return "low"
+	return "critical"
+
 /// Updates nutrition related effects
 /mob/living/proc/update_nutrition()
 	mob_mood?.update_nutrition_moodlets()

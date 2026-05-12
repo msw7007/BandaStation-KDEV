@@ -229,6 +229,7 @@
 
 	var/water_adaptation = HAS_TRAIT(affected_mob, TRAIT_WATER_ADAPTATION)
 	var/blood_restored = water_adaptation ? 0.3 : 0.1
+	affected_mob.adjust_hydration(HYDRATION_REAGENT_FACTOR * metabolization_ratio * seconds_per_tick)
 	affected_mob.adjust_blood_volume(0.5 * blood_restored * metabolization_ratio * seconds_per_tick) // water is good for you!
 	var/drunkness_restored = water_adaptation ? -0.5 : -0.25
 	affected_mob.adjust_drunk_effect(0.5 * drunkness_restored * metabolization_ratio * seconds_per_tick) // and even sobers you up slowly!!

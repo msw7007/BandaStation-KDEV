@@ -46,10 +46,71 @@
 	// Handles liver failure effects, if we lack a liver
 	handle_liver(seconds_per_tick)
 	handle_stomach(seconds_per_tick)
+	handle_needs(seconds_per_tick)
 	handle_toxin_organ_damage(seconds_per_tick)
 	// For special species interactions
 	dna.species.spec_life(src, seconds_per_tick)
 	return stat != DEAD
+
+/mob/living/carbon/human/proc/handle_needs(seconds_per_tick)
+	if(!HAS_TRAIT(src, TRAIT_NOHUNGER))
+		if(nutrition <= NUTRITION_LEVEL_STARVING)
+			adjust_stamina_loss(0.6 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+			if(SPT_PROB(1.5, seconds_per_tick))
+				adjust_dizzy(2 SECONDS)
+
+	handle_hydration_need(seconds_per_tick)
+	handle_rest_need(seconds_per_tick)
+
+/mob/living/carbon/human/proc/handle_hydration_need(seconds_per_tick)
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		return
+
+	adjust_hydration(-THIRST_FACTOR * seconds_per_tick)
+	switch(hydration)
+		if(-INFINITY to NEED_LEVEL_CRITICAL)
+			adjust_tox_loss(0.2 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+			adjust_stamina_loss(0.35 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+			if(SPT_PROB(2, seconds_per_tick))
+				adjust_eye_blur(2 SECONDS)
+			if(SPT_PROB(1.5, seconds_per_tick))
+				adjust_confusion(1 SECONDS)
+		if(NEED_LEVEL_CRITICAL to NEED_LEVEL_LOW)
+			adjust_stamina_loss(0.15 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+			if(SPT_PROB(1, seconds_per_tick))
+				adjust_jitter(1 SECONDS)
+
+/mob/living/carbon/human/proc/handle_rest_need(seconds_per_tick)
+	var/resting_body = resting || body_position == LYING_DOWN || IsSleeping()
+	if(client && stat == CONSCIOUS && !resting_body)
+		adjust_rest(-FATIGUE_FACTOR * seconds_per_tick)
+	else if(rest < NEED_LEVEL_FULL)
+		var/recovery_rate = REST_RECOVERY_FACTOR
+		if(IsSleeping())
+			recovery_rate *= 4
+		else if(resting_body)
+			recovery_rate *= 2
+		adjust_rest(recovery_rate * seconds_per_tick)
+
+	switch(rest)
+		if(-INFINITY to NEED_LEVEL_CRITICAL)
+			adjust_stamina_loss(0.4 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+			if(SPT_PROB(1, seconds_per_tick))
+				adjust_confusion(1 SECONDS)
+			if(SPT_PROB(0.7, seconds_per_tick))
+				adjust_drowsiness(2 SECONDS)
+		if(NEED_LEVEL_CRITICAL to NEED_LEVEL_LOW)
+			adjust_stamina_loss(0.15 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+			if(SPT_PROB(0.75, seconds_per_tick))
+				adjust_dizzy(1 SECONDS)
+
+/mob/living/carbon/human/get_status_tab_items()
+	. = ..()
+	. += "Nutrition: [round(nutrition)]/[NUTRITION_LEVEL_FULL]"
+	. += "Hydration: [get_need_status(hydration)] ([round(hydration)]/[NEED_LEVEL_FULL])"
+	. += "Rest: [get_need_status(rest)] ([round(rest)]/[NEED_LEVEL_FULL])"
+	if(psychicloss)
+		. += "Psychic pressure: [round(psychicloss)]"
 
 /mob/living/carbon/human/proc/handle_stomach(seconds_per_tick)
 	if(HAS_TRAIT(src, TRAIT_NOHUNGER) || isnull(dna?.species?.mutantstomach))
