@@ -831,9 +831,10 @@
 		return
 	var/pain_overflow = max(get_pain_loss() - 200, 0)
 	set_health(maxHealth - get_oxy_loss() - get_tox_loss() - get_fire_loss() - get_brute_loss() - pain_overflow)
-	if(health <= critical_health_threshold && !clinical_death_started_at)
+	if(health <= clinical_death_threshold && !clinical_death_started_at)
 		clinical_death_started_at = world.time
-	else if(health > critical_health_threshold)
+		on_cy_enter_clinical_death()
+	else if(health > clinical_death_threshold)
 		clinical_death_started_at = null
 	update_stat()
 	med_hud_set_health()

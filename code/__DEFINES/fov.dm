@@ -1,5 +1,4 @@
 /// Field of vision defines.
-#define FOV_100_DEGREES 100
 #define FOV_90_DEGREES 90
 #define FOV_180_DEGREES 180
 #define FOV_270_DEGREES 270
@@ -13,8 +12,6 @@
 
 /// Range at which FOV effects treat nearsightness as blind and play
 #define NEARSIGHTNESS_FOV_BLINDNESS 2
-/// Default living-mob FOV for Cyberpunk sensory rules.
-#define CY_DEFAULT_FOV_DEGREES FOV_100_DEGREES
 
 //Fullscreen overlay resolution in tiles for the clients view.
 /// The fullscreen overlay in tiles for x axis

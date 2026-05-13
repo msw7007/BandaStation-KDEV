@@ -54,10 +54,12 @@
 	/// World time when the mob first entered clinical critical condition.
 	var/clinical_death_started_at
 
-	/// when the mob enters clinical critical condition
-	var/critical_health_threshold = HEALTH_THRESHOLD_CRIT
-	/// When the mob reaches final instant-death threshold.
-	var/instant_death_threshold = HEALTH_THRESHOLD_DEAD
+	/// Cyberpunk hard-crit threshold. 0 health is critical per character spec.
+	var/critical_health_threshold = CY_HEALTH_CRIT_THRESHOLD
+	/// Cyberpunk clinical death threshold. This starts organ decay and memory loss, but is not final death.
+	var/clinical_death_threshold = CY_HEALTH_CLINICAL_DEATH_THRESHOLD
+	/// Final death threshold. Brain death still kills immediately.
+	var/instant_death_threshold = CY_HEALTH_FINAL_DEATH_THRESHOLD
 
 	/// The movement intent of the mob (run/wal)
 	var/move_intent = MOVE_INTENT_RUN
@@ -304,3 +306,16 @@
 
 	/// Stored typepath for saves/spawns and reinitialization.
 	var/cy_organization_type = /datum/cy_organization/neutral
+
+	/// Cyberpunk stealth state.
+	var/cy_stealth_mode = FALSE
+	var/cy_chameleon_level = 0
+	var/cy_last_stealth_move_time = 0
+
+	/// Cyberpunk perception modes.
+	var/cy_look_mode = FALSE
+	var/cy_listen_mode = FALSE
+
+	/// Clone/ghost loop hooks.
+	var/mob/living/cy_original_body
+	var/cy_body_abandoned_at

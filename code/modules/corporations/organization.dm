@@ -25,7 +25,7 @@ GLOBAL_LIST_EMPTY(cy_organization_datums)
 	var/organization_kind = CY_ORGANIZATION_KIND_NEUTRAL
 
 	/// Parent organization type. Example: San Yon -> Ben conglomerate.
-	var/parent_organization
+	var/datum/cy_organization/parent_organization
 
 	/// Tags used later by demons, implants, equipment, contracts and Storyteller.
 	var/list/tech_tags = list()
@@ -48,14 +48,6 @@ GLOBAL_LIST_EMPTY(cy_organization_datums)
 
 	return null
 
-/datum/cy_organization/proc/get_root() as /datum/cy_organization
-	var/datum/cy_organization/current = src
-	var/list/seen = list()
-	while(current?.get_parent() && !(current.type in seen))
-		seen += current.type
-		current = current.get_parent()
-	return current
-
 /datum/cy_organization/proc/is_same_or_child_of(organization_type)
 	if(!ispath(organization_type, /datum/cy_organization))
 		return FALSE
@@ -64,11 +56,9 @@ GLOBAL_LIST_EMPTY(cy_organization_datums)
 		return TRUE
 
 	var/datum/cy_organization/current = src
-	var/list/seen = list()
-	while(current?.get_parent() && !(current.type in seen))
-		seen += current.type
+	while(current)
 		current = current.get_parent()
-		if(current.type == organization_type)
+		if(current?.type == organization_type)
 			return TRUE
 
 	return FALSE
@@ -88,9 +78,6 @@ GLOBAL_LIST_EMPTY(cy_organization_datums)
 
 	var/datum/cy_organization/other = get_cy_organization_datum(organization_type)
 	if(other?.is_same_or_child_of(type))
-		return CY_ORGANIZATION_COMPATIBILITY_PARENT
-
-	if(other && get_root()?.type == other.get_root()?.type)
 		return CY_ORGANIZATION_COMPATIBILITY_PARENT
 
 	if(organization_type in allied_organization_types)

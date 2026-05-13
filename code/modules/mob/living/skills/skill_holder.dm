@@ -257,6 +257,11 @@
 	if(!amount)
 		return 0
 
+	if(get_skill_level(skill_type) >= CY_SKILL_AUTO_LEVEL_LIMIT)
+		var/mob/living/carbon/human/human_owner = owner
+		if(!istype(human_owner) || !human_owner.is_cy_comfortably_sleeping())
+			return 0
+
 	var/old_experience = get_skill_experience(skill_type)
 	if(!set_skill_experience(skill_type, old_experience + amount, TRUE, ignore_stat_limit, null))
 		return 0
@@ -294,7 +299,7 @@
 
 	var/ticks = FLOOR(awake_training_experience_timer / CY_AWAKE_TRAINING_EXPERIENCE_INTERVAL, 1)
 	awake_training_experience_timer -= ticks * CY_AWAKE_TRAINING_EXPERIENCE_INTERVAL
-	var/experience = ticks * CY_AWAKE_TRAINING_EXPERIENCE_AMOUNT
+	var/experience = max(1, round(ticks * CY_AWAKE_TRAINING_EXPERIENCE_AMOUNT * max(mood_modifier, 0)))
 	adjust_distributable_experience(experience)
 	return experience
 

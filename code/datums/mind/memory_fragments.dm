@@ -179,28 +179,31 @@
 	cy_memory_rebuild_in_progress = FALSE
 	return TRUE
 
-/datum/mind/proc/get_cy_memory_intelligence()
-	return current ? current.get_cy_stat(/datum/cy_stat/intelligence) : CY_STAT_DEFAULT
-
 /datum/mind/proc/get_cy_temporary_memory_limit()
-	return CY_MEMORY_TEMPORARY_BASE_LIMIT + (get_cy_memory_intelligence() * CY_MEMORY_TEMPORARY_PER_INTELLIGENCE)
+	var/mob/living/living_current = current
+	var/intelligence = istype(living_current) ? living_current.get_cy_stat(/datum/cy_stat/intelligence) : CY_STAT_DEFAULT
+	return max(30, CY_MEMORY_FRAGMENT_LIMIT + (intelligence - CY_STAT_DEFAULT) * 12)
 
 /datum/mind/proc/get_cy_quick_memory_limit()
-	return CY_MEMORY_QUICK_BASE_LIMIT + (get_cy_memory_intelligence() * CY_MEMORY_QUICK_PER_INTELLIGENCE)
+	var/mob/living/living_current = current
+	var/intelligence = istype(living_current) ? living_current.get_cy_stat(/datum/cy_stat/intelligence) : CY_STAT_DEFAULT
+	return max(1, round(intelligence / 2))
 
-/datum/mind/proc/add_cy_quick_memory(datum/memory/source_memory)
-	if(!source_memory)
-		return null
-
-	var/datum/memory/copied_memory = source_memory.quick_copy_memory(src)
-	cy_quick_memories[source_memory.type] = copied_memory
+/datum/mind/proc/add_cy_quick_memory(datum/cy_memory_fragment/fragment)
+	if(!fragment)
+		return FALSE
+	cy_quick_memories += fragment.copy_fragment()
 	while(length(cy_quick_memories) > get_cy_quick_memory_limit())
-		var/oldest_key
-		for(var/key in cy_quick_memories)
-			oldest_key = key
-			break
-		var/datum/memory/oldest_memory = cy_quick_memories[oldest_key]
-		cy_quick_memories -= oldest_key
-		qdel(oldest_memory)
+		var/datum/cy_memory_fragment/oldest = cy_quick_memories[1]
+		cy_quick_memories.Cut(1, 2)
+		qdel(oldest)
+	return TRUE
 
-	return copied_memory
+/datum/mind/proc/add_cy_deep_memory(key, value)
+	if(!key)
+		return FALSE
+	LAZYSET(cy_deep_memories, key, value)
+	return TRUE
+
+/datum/mind/proc/get_cy_deep_memory(key)
+	return LAZYACCESS(cy_deep_memories, key)

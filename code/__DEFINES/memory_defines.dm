@@ -82,16 +82,8 @@
 /// Key or traumatic memories. These resist death degradation.
 #define CY_MEMORY_IMPORTANCE_HIGH 3
 
-/// Base amount of temporary chat/event fragments a mind keeps. Intelligence extends this.
-#define CY_MEMORY_TEMPORARY_BASE_LIMIT 120
-/// Extra temporary chat/event fragments per Intelligence point.
-#define CY_MEMORY_TEMPORARY_PER_INTELLIGENCE 12
-/// Base amount of quick-memory snapshots a mind keeps. Intelligence extends this.
-#define CY_MEMORY_QUICK_BASE_LIMIT 4
-/// Extra quick-memory snapshots per Intelligence point.
-#define CY_MEMORY_QUICK_PER_INTELLIGENCE 1
-/// Legacy cap alias for code that still asks for the flat temporary-memory limit.
-#define CY_MEMORY_FRAGMENT_LIMIT CY_MEMORY_TEMPORARY_BASE_LIMIT
+/// How many chat/event fragments a mind keeps. Oldest fragments are discarded first.
+#define CY_MEMORY_FRAGMENT_LIMIT 180
 /// Fragments this close to death are usually lost outright.
 #define CY_MEMORY_DEATH_ERASE_WINDOW (2 MINUTES)
 /// Fragments this close to death are heavily damaged.
