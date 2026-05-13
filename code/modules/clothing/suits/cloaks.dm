@@ -54,35 +54,25 @@
 	desc = "Worn by the Head of Personnel. It smells faintly of bureaucracy."
 	icon_state = "hopcloak"
 
-/obj/item/clothing/neck/cloak/skill_reward
-	var/associated_skill_path = /datum/cy_skill
-	var/element_type = /datum/element/skill_reward
+/obj/item/clothing/neck/cloak/legendary
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE
 
-/obj/item/clothing/neck/cloak/skill_reward/Initialize(mapload)
-	. = ..()
-	AddElement(element_type, associated_skill_path)
-
-/obj/item/clothing/neck/cloak/skill_reward/gaming
+/obj/item/clothing/neck/cloak/legendary/gaming
 	name = "legendary gamer's cloak"
 	desc = "Worn by the most skilled professional gamers on the station, this legendary cloak is only attainable by achieving true gaming enlightenment. This status symbol represents the awesome might of a being of focus, commitment, and sheer fucking will. Something casual gamers will never begin to understand."
 	icon_state = "gamercloak"
-	associated_skill_path = /datum/cy_skill/charisma/style
 
-/obj/item/clothing/neck/cloak/skill_reward/cleaning
+/obj/item/clothing/neck/cloak/legendary/cleaning
 	name = "legendary cleaner's cloak"
 	desc = "Worn by the most skilled custodians, this legendary cloak is only attainable by achieving janitorial enlightenment. This status symbol represents a being not only extensively trained in grime combat, but one who is willing to use an entire arsenal of cleaning supplies to its full extent to wipe grime's miserable ass off the face of the station."
 	icon_state = "cleanercloak"
-	associated_skill_path = /datum/cy_skill/professional/analysis
 
-/obj/item/clothing/neck/cloak/skill_reward/mining
+/obj/item/clothing/neck/cloak/legendary/mining
 	name = "legendary miner's cloak"
 	desc = "Worn by the most skilled miners, this legendary cloak is only attainable by achieving true mineral enlightenment. This status symbol represents a being who has forgotten more about rocks than most miners will ever know, a being who has moved mountains and filled valleys."
 	icon_state = "minercloak"
-	associated_skill_path = /datum/cy_skill/professional/mining
 
-/obj/item/clothing/neck/cloak/skill_reward/playing
+/obj/item/clothing/neck/cloak/legendary/playing
 	name = "legendary veteran's cloak"
 	desc = "Worn by the wisest of veteran employees, this legendary cloak is only attainable by maintaining a living employment agreement with Nanotrasen for over <b>five thousand hours</b>. This status symbol represents a being is better than you in nearly every quantifiable way, simple as that."
 	icon_state = "playercloak"
-	element_type = /datum/element/skill_reward/veteran

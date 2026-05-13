@@ -5,7 +5,7 @@
 
 /datum/action/item_action/chameleon/change/neck/initialize_blacklist()
 	. = ..()
-	chameleon_blacklist |= typecacheof(/obj/item/clothing/neck/cloak/skill_reward)
+	chameleon_blacklist |= typecacheof(/obj/item/clothing/neck/cloak/legendary)
 
 /datum/action/item_action/chameleon/change/stamp
 	chameleon_type = /obj/item/stamp

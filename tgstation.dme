@@ -1695,7 +1695,6 @@
 #include "code\datums\elements\shuttle_construction_turf.dm"
 #include "code\datums\elements\sideway_movement.dm"
 #include "code\datums\elements\simple_flying.dm"
-#include "code\datums\elements\skill_reward.dm"
 #include "code\datums\elements\skittish.dm"
 #include "code\datums\elements\slapcrafting.dm"
 #include "code\datums\elements\slow_target_click_cd_attack.dm"

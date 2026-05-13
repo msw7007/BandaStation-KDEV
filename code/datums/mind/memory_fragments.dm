@@ -14,7 +14,7 @@
 	var/datum/cy_memory_fragment/fragment = new(text, speaker, where, channel, kind, importance, when)
 	cy_memory_fragments += fragment
 
-	while(length(cy_memory_fragments) > CY_MEMORY_FRAGMENT_LIMIT)
+	while(length(cy_memory_fragments) > get_cy_temporary_memory_limit())
 		var/datum/cy_memory_fragment/oldest = cy_memory_fragments[1]
 		cy_memory_fragments.Cut(1, 2)
 		qdel(oldest)
@@ -168,7 +168,7 @@
 		messages += list(fragment.chat_replay_message_data())
 
 	cy_memory_rebuild_in_progress = TRUE
-	target.tgui_panel.window.send_message("chat/memorySet", list("messages" = messages), TRUE)
+	target.tgui_panel.window.send_message("chat/memoryRewrite", list("messages" = messages), TRUE)
 	addtimer(CALLBACK(src, PROC_REF(finish_cy_memory_chat_replace)), 1 SECONDS)
 	return TRUE
 
@@ -178,3 +178,29 @@
 /datum/mind/proc/finish_cy_memory_chat_replace()
 	cy_memory_rebuild_in_progress = FALSE
 	return TRUE
+
+/datum/mind/proc/get_cy_memory_intelligence()
+	return current ? current.get_cy_stat(/datum/cy_stat/intelligence) : CY_STAT_DEFAULT
+
+/datum/mind/proc/get_cy_temporary_memory_limit()
+	return CY_MEMORY_TEMPORARY_BASE_LIMIT + (get_cy_memory_intelligence() * CY_MEMORY_TEMPORARY_PER_INTELLIGENCE)
+
+/datum/mind/proc/get_cy_quick_memory_limit()
+	return CY_MEMORY_QUICK_BASE_LIMIT + (get_cy_memory_intelligence() * CY_MEMORY_QUICK_PER_INTELLIGENCE)
+
+/datum/mind/proc/add_cy_quick_memory(datum/memory/source_memory)
+	if(!source_memory)
+		return null
+
+	var/datum/memory/copied_memory = source_memory.quick_copy_memory(src)
+	cy_quick_memories[source_memory.type] = copied_memory
+	while(length(cy_quick_memories) > get_cy_quick_memory_limit())
+		var/oldest_key
+		for(var/key in cy_quick_memories)
+			oldest_key = key
+			break
+		var/datum/memory/oldest_memory = cy_quick_memories[oldest_key]
+		cy_quick_memories -= oldest_key
+		qdel(oldest_memory)
+
+	return copied_memory

@@ -289,6 +289,10 @@
 	/// Stats and skill holders - don't access these directly, use living helpers
 	var/datum/cy_stat_holder/cy_stat_holder
 	var/datum/cy_skill_holder/cy_skill_holder
+	/// Multiplicative Cyberpunk experience modifier, built from cy_experience_multiplier_reasons.
+	var/cy_experience_multiplier = 1
+	/// Assoc list: source = additive multiplier delta.
+	var/list/cy_experience_multiplier_reasons = list()
 
 	/// Character needs. Nutrition remains the legacy food reserve on /mob.
 	var/hydration = NEED_LEVEL_NORMAL

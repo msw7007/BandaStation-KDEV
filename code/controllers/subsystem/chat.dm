@@ -19,19 +19,14 @@ SUBSYSTEM_DEF(chat)
 	/// Assosciates a ckey with their next sequence number.
 	var/list/client_to_sequence_number = list()
 
-/datum/controller/subsystem/chat/proc/generate_payload(client/target, list/message_data)
-	var/list/payload_data = message_data.Copy()
-	var/datum/cy_memory_fragment/memory_fragment = target.mob?.mind?.add_cy_chat_payload_memory(payload_data)
-	if(memory_fragment)
-		payload_data["cyMemoryId"] = memory_fragment.memory_id
-		payload_data["cyMemoryTracked"] = TRUE
-
+/datum/controller/subsystem/chat/proc/generate_payload(client/target, message_data)
 	var/sequence = client_to_sequence_number[target.ckey]
 	client_to_sequence_number[target.ckey] += 1
 
 	var/datum/chat_payload/payload = new
 	payload.sequence = sequence
-	payload.content = payload_data
+	payload.content = message_data
+	record_cy_chat_payload_memory(target, message_data)
 
 	if(!(target.ckey in client_to_reliability_history))
 		client_to_reliability_history[target.ckey] = list()
@@ -102,3 +97,23 @@ SUBSYSTEM_DEF(chat)
 			"[client.byond_build]",
 		),
 	)
+
+
+/datum/controller/subsystem/chat/proc/record_cy_chat_payload_memory(client/target, list/message_data)
+	if(!target?.mob?.mind || !islist(message_data))
+		return
+	if(message_data["skipMemory"])
+		return
+
+	var/message_type = message_data["type"] || MESSAGE_TYPE_INFO
+	if(!cy_message_type_is_temporary_memory(message_type))
+		return
+
+	target.mob.mind.add_cy_chat_payload_memory(message_data)
+
+/proc/cy_message_type_is_temporary_memory(message_type)
+	switch(message_type)
+		if(MESSAGE_TYPE_LOCALCHAT, MESSAGE_TYPE_RADIO, MESSAGE_TYPE_COMBAT, MESSAGE_TYPE_INFO, MESSAGE_TYPE_WARNING)
+			return TRUE
+
+	return FALSE

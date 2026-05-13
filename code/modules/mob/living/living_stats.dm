@@ -76,8 +76,19 @@
 	return skills.adjust_distributable_experience(amount)
 
 /mob/living/proc/spend_cy_distributable_experience_on_skill(skill_type, amount, ignore_stat_limit = FALSE)
+	if(!can_spend_cy_distributable_experience_on_skill(skill_type))
+		return 0
+
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.spend_distributable_experience_on_skill(skill_type, amount, ignore_stat_limit)
+
+/mob/living/proc/can_spend_cy_distributable_experience_on_skill(skill_type)
+	if(get_cy_skill_level(skill_type) < CY_SKILL_AUTO_LEVEL_LIMIT)
+		return TRUE
+	return is_cy_comfortably_sleeping()
+
+/mob/living/proc/is_cy_comfortably_sleeping()
+	return stat != DEAD && IsSleeping()
 
 /mob/living/proc/process_cy_awake_training_experience(seconds_per_tick, mood_modifier = 1)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
@@ -121,6 +132,21 @@
 /mob/living/proc/get_cy_skill_value_modifier(skill_type)
 	return get_cy_skill_level(skill_type) + get_cy_skill_perk_quality_bonus(skill_type)
 
+/mob/living/proc/get_cy_weapon_skill_level_for_item(obj/item/weapon)
+	var/skill_type = weapon?.get_cy_weapon_skill_type(src)
+	if(!skill_type)
+		return 0
+	return get_cy_skill_level(skill_type)
+
+/mob/living/proc/get_cy_weapon_skill_damage_multiplier(obj/item/weapon)
+	return 1 + (get_cy_weapon_skill_level_for_item(weapon) * CY_WEAPON_SKILL_DAMAGE_PER_LEVEL)
+
+/mob/living/proc/get_cy_weapon_skill_cooldown_multiplier(obj/item/weapon)
+	return max(0.1, 1 - (get_cy_weapon_skill_level_for_item(weapon) * CY_WEAPON_SKILL_COOLDOWN_REDUCTION_PER_LEVEL))
+
+/mob/living/proc/get_cy_weapon_skill_armour_bypass(obj/item/weapon)
+	return get_cy_weapon_skill_level_for_item(weapon) * CY_WEAPON_SKILL_ARMOUR_BYPASS_PER_LEVEL
+
 /mob/living/proc/get_cy_check_chance(stat_type, skill_type = null, difficulty = 0)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.get_check_chance(stat_type, skill_type, difficulty)
@@ -155,3 +181,8 @@
 /mob/living/proc/roll_cy_skill_check(skill_type, difficulty = 0, grant_experience = TRUE, ignore_stat_limit = FALSE)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.roll_skill_check(skill_type, difficulty, grant_experience, ignore_stat_limit)
+
+/mob/living/proc/roll_cy_passive_skill_check(skill_type, required_level = CY_SKILL_MINIMUM_LEVEL, difficulty = 35, grant_experience = TRUE, ignore_stat_limit = FALSE)
+	if(get_cy_skill_level(skill_type) < required_level)
+		return FALSE
+	return roll_cy_skill_check(skill_type, difficulty, grant_experience, ignore_stat_limit)

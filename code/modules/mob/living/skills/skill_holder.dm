@@ -294,7 +294,7 @@
 
 	var/ticks = FLOOR(awake_training_experience_timer / CY_AWAKE_TRAINING_EXPERIENCE_INTERVAL, 1)
 	awake_training_experience_timer -= ticks * CY_AWAKE_TRAINING_EXPERIENCE_INTERVAL
-	var/experience = max(1, round(ticks * CY_AWAKE_TRAINING_EXPERIENCE_AMOUNT * max(mood_modifier, 0)))
+	var/experience = ticks * CY_AWAKE_TRAINING_EXPERIENCE_AMOUNT
 	adjust_distributable_experience(experience)
 	return experience
 

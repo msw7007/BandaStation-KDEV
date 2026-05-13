@@ -13,3 +13,5 @@
 #define MOVESPEED_ID_MOB_WALK_RUN "mob_walk_run"
 
 #define MOVESPEED_ID_MIDAS_BLIGHT "midas_blight_debuff"
+
+#define MOVESPEED_ID_CY_MOOD "cy_mood"

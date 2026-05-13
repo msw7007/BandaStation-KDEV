@@ -1182,6 +1182,7 @@
 	if(can_be_disabled)
 		update_disabled()
 	if(owner && update_owner)
+		owner.sync_pain_damage()
 		owner.updatehealth()
 
 //Returns total damage.

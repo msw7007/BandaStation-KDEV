@@ -1628,32 +1628,49 @@
 	set name = "Memories"
 	set category = "IC"
 	set desc = "View your character's memories."
-	if(!mind)
-		var/fail_message = "У вас нет разума!"
-		if(isobserver(src))
-			fail_message += " Вы должны поучавствовать в раунде, чтобы получить разум."
-		to_chat(src, span_warning(fail_message))
-		return
-	if(!mind.memory_panel)
-		mind.memory_panel = new(usr, mind)
-	mind.memory_panel.ui_interact(usr)
+	return open_memory_panel()
+	// if(!mind)
+	// 	var/fail_message = "У вас нет разума!"
+	// 	if(isobserver(src))
+	// 		fail_message += " Вы должны поучавствовать в раунде, чтобы получить разум."
+	// 	to_chat(src, span_warning(fail_message))
+	// 	return
+	// if(!mind.memory_panel)
+	// 	mind.memory_panel = new(usr, mind)
+	// mind.memory_panel.ui_interact(usr)
 
 /mob/verb/add_memory_record()
 	set name = "Add Memory Record"
 	set category = "IC"
 	set desc = "Write a permanent memory note."
-	if(!mind)
-		to_chat(src, span_warning("У вас нет разума!"))
-		return
-	var/title = tgui_input_text(src, "Название записи", "Добавить запись в память", max_length = MAX_NAME_LEN)
+	return add_memory_record_to_mind()
+	// if(!mind)
+	// 	to_chat(src, span_warning("У вас нет разума!"))
+	// 	return
+	// var/title = tgui_input_text(src, "Название записи", "Добавить запись в память", max_length = MAX_NAME_LEN)
+	// if(isnull(title))
+	// 	return
+	// var/text = tgui_input_text(src, "Текст записи", "Добавить запись в память", max_length = MAX_MESSAGE_LEN)
+	// if(!text)
+	// 	return
+	// mind.add_manual_memory_note(title, text)
+	// to_chat(src, span_notice("Запись добавлена в глубокую память."))
+	// mind.memory_panel?.ui_interact(src)
+
+/mob/proc/add_memory_record_to_mind(datum/mind/target_mind = mind)
+	if(!target_mind)
+		to_chat(src, span_warning("You have no mind!"))
+		return FALSE
+	var/title = tgui_input_text(src, "Record title", "Add memory record", max_length = MAX_NAME_LEN)
 	if(isnull(title))
-		return
-	var/text = tgui_input_text(src, "Текст записи", "Добавить запись в память", max_length = MAX_MESSAGE_LEN)
+		return FALSE
+	var/text = tgui_input_text(src, "Record text", "Add memory record", max_length = MAX_MESSAGE_LEN)
 	if(!text)
-		return
-	mind.add_manual_memory_note(title, text)
-	to_chat(src, span_notice("Запись добавлена в глубокую память."))
-	mind.memory_panel?.ui_interact(src)
+		return FALSE
+	target_mind.add_manual_memory_note(title, text)
+	to_chat(src, span_notice("The record was added to deep memory."))
+	target_mind.memory_panel?.ui_interact(src)
+	return TRUE
 
 ///Shows a tgui window with memories
 /mob/proc/open_memory_panel()
@@ -1704,12 +1721,7 @@
 		var/datum/memory/memory = mind_reference.memories[memory_key]
 		memories += list(list("name" = memory.name, "quality" = memory.story_value))
 
-	var/list/fragments = list()
-	for(var/datum/cy_memory_fragment/fragment as anything in mind_reference?.cy_memory_fragments)
-		fragments += list(fragment.fragment_ui_data())
-
 	data["memories"] = memories
-	data["fragments"] = fragments
 	return data
 
 /datum/memory_panel/ui_act(action, list/params)
@@ -1723,16 +1735,17 @@
 	var/mob/user = usr
 	if(!user || !mind_reference || user.mind != mind_reference)
 		return FALSE
+	return user.add_memory_record_to_mind(mind_reference)
 
-	var/title = tgui_input_text(user, "Название записи", "Добавить запись в память", max_length = MAX_NAME_LEN)
-	if(isnull(title))
-		return TRUE
-	var/text = tgui_input_text(user, "Текст записи", "Добавить запись в память", max_length = MAX_MESSAGE_LEN)
-	if(!text)
-		return TRUE
-	mind_reference.add_manual_memory_note(title, text)
-	to_chat(user, span_notice("Запись добавлена в глубокую память."))
-	return TRUE
+	// var/title = tgui_input_text(user, "Название записи", "Добавить запись в память", max_length = MAX_NAME_LEN)
+	// if(isnull(title))
+	// 	return TRUE
+	// var/text = tgui_input_text(user, "Текст записи", "Добавить запись в память", max_length = MAX_MESSAGE_LEN)
+	// if(!text)
+	// 	return TRUE
+	// mind_reference.add_manual_memory_note(title, text)
+	// to_chat(user, span_notice("Запись добавлена в глубокую память."))
+	// return TRUE
 
 /mob/verb/view_skills()
 	set category = "IC"

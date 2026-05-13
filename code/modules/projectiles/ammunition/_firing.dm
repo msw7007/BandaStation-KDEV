@@ -20,6 +20,9 @@
 	var/next_delay = click_cooldown_override || CLICK_CD_RANGE
 	if(HAS_TRAIT(user, TRAIT_DOUBLE_TAP))
 		next_delay = round(next_delay * 0.5)
+	if(isgun(fired_from))
+		var/obj/item/gun/firing_gun = fired_from
+		next_delay *= user.get_cy_weapon_skill_cooldown_multiplier(firing_gun)
 	user.changeNext_move(next_delay)
 
 	if(!tk_firing(user, fired_from))
@@ -62,6 +65,9 @@
 		loaded_projectile.stamina *= gun.projectile_damage_multiplier * integrity_mult
 
 		loaded_projectile.speed *= gun.projectile_speed_multiplier * integrity_mult
+		loaded_projectile.damage *= user.get_cy_weapon_skill_damage_multiplier(gun)
+		loaded_projectile.stamina *= user.get_cy_weapon_skill_damage_multiplier(gun)
+		loaded_projectile.armour_penetration += user.get_cy_weapon_skill_armour_bypass(gun)
 
 		loaded_projectile.wound_bonus += gun.projectile_wound_bonus
 		loaded_projectile.wound_bonus *= loaded_projectile.wound_bonus >= 0 ? 1 : 2 - integrity_mult

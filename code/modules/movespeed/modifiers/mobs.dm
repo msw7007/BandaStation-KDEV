@@ -198,3 +198,9 @@
 
 /datum/movespeed_modifier/tail_dragger
 	multiplicative_slowdown = 4
+
+/datum/movespeed_modifier/mood
+	id = MOVESPEED_ID_CY_MOOD
+	blacklisted_movetypes = FLOATING
+	variable = TRUE
+	multiplicative_slowdown = 0

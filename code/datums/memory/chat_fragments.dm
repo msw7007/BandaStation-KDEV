@@ -99,6 +99,11 @@
 		return "..."
 	return jointext(result, " ")
 
+/datum/cy_memory_fragment/proc/get_display_text()
+	if(recalled_speaker_name)
+		return "[recalled_speaker_name]: [recalled_text]"
+	return recalled_text
+
 /datum/cy_memory_fragment/proc/fragment_ui_data()
 	return list(
 		"id" = memory_id,

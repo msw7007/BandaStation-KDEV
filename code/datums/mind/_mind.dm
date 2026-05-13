@@ -100,6 +100,8 @@
 
 	/// Control memory fragment with limit for memory system
 	var/list/cy_memory_fragments = list()
+	/// Fast-access memory snapshots. These are not deep memories and are bounded by Intelligence.
+	var/list/cy_quick_memories = list()
 	/// Prevents newly emitted death/rejuvenation/system chatter from being recorded as the character's temporary memory.
 	var/cy_memory_suppress_until = 0
 	/// TRUE while damaged memory is being replayed back into the client chat.
@@ -114,6 +116,7 @@
 	QDEL_NULL(antag_hud)
 	QDEL_LIST_ASSOC_VAL(memories)
 	QDEL_LIST(cy_memory_fragments)
+	QDEL_LIST_ASSOC_VAL(cy_quick_memories)
 	QDEL_NULL(memory_panel)
 	QDEL_LIST(antag_datums)
 	set_current(null)

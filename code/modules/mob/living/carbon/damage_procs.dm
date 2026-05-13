@@ -154,9 +154,15 @@
 
 /mob/living/carbon/sync_pain_damage()
 	painloss = get_pain_loss()
-	if(painloss > 100)
-		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown, TRUE, multiplicative_slowdown = min(painloss / 150, 3))
-		add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown, TRUE, multiplicative_slowdown = min(painloss / 200, 2))
+	if(stat == DEAD || HAS_TRAIT(src, TRAIT_ANALGESIA))
+		remove_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown)
+		remove_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown)
+		return
+
+	if(painloss > CY_PAIN_THRESHOLD)
+		var/excess_pain = painloss - CY_PAIN_THRESHOLD
+		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown, TRUE, multiplicative_slowdown = min(excess_pain / CY_PAIN_MOVESPEED_DIVISOR, CY_PAIN_MAX_MOVESPEED_SLOWDOWN))
+		add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown, TRUE, multiplicative_slowdown = min(excess_pain / CY_PAIN_ACTIONSPEED_DIVISOR, CY_PAIN_MAX_ACTIONSPEED_SLOWDOWN))
 	else
 		remove_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown)
 		remove_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown)

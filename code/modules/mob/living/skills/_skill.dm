@@ -103,33 +103,3 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 			return "Master"
 
 	return "Unknown"
-
-/proc/cy_skill_from_legacy_skill(skill_type)
-	if(!skill_type)
-		return null
-
-	var/static/legacy_skill_map
-	if(!legacy_skill_map)
-		legacy_skill_map = list(
-			text2path("/datum/skill/athletics") = /datum/cy_skill/spirit/athletics,
-			text2path("/datum/skill/mining") = /datum/cy_skill/professional/mining,
-			text2path("/datum/skill/fishing") = /datum/cy_skill/spirit/survival,
-			text2path("/datum/skill/gaming") = /datum/cy_skill/professional/analysis,
-			text2path("/datum/skill/cleaning") = /datum/cy_skill/professional/construction,
-		)
-
-	return legacy_skill_map[skill_type]
-
-/proc/cy_legacy_skill_level_to_cy_skill_level(level)
-	return clamp(round(level) - 1, CY_SKILL_MINIMUM_LEVEL, CY_SKILL_MAXIMUM_LEVEL)
-
-/proc/cy_skill_level_to_legacy_skill_level(level)
-	return clamp(round(level) + 1, 1, 7)
-
-/proc/cy_legacy_experience_to_cy_skill_experience(experience)
-	var/legacy_to_cy_scale = (CY_SKILL_MAXIMUM_LEVEL * CY_SKILL_EXPERIENCE_PER_LEVEL) / 2500
-	return max(0, round(experience * legacy_to_cy_scale))
-
-/proc/cy_skill_experience_to_legacy_experience(experience)
-	var/cy_to_legacy_scale = 2500 / (CY_SKILL_MAXIMUM_LEVEL * CY_SKILL_EXPERIENCE_PER_LEVEL)
-	return max(0, round(experience * cy_to_legacy_scale))

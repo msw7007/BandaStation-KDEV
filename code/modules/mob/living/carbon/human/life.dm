@@ -47,10 +47,17 @@
 	handle_liver(seconds_per_tick)
 	handle_stomach(seconds_per_tick)
 	handle_needs(seconds_per_tick)
+	process_cy_character_progression(seconds_per_tick)
 	handle_toxin_organ_damage(seconds_per_tick)
 	// For special species interactions
 	dna.species.spec_life(src, seconds_per_tick)
 	return stat != DEAD
+
+/mob/living/carbon/human/proc/process_cy_character_progression(seconds_per_tick)
+	if(!client || stat != CONSCIOUS || IsSleeping())
+		return
+	var/mood_multiplier = mob_mood?.get_cy_training_experience_multiplier() || 1
+	process_cy_awake_training_experience(seconds_per_tick, mood_multiplier)
 
 /mob/living/carbon/human/proc/handle_needs(seconds_per_tick)
 	if(!HAS_TRAIT(src, TRAIT_NOHUNGER))
@@ -61,44 +68,48 @@
 
 	handle_hydration_need(seconds_per_tick)
 	handle_rest_need(seconds_per_tick)
-	update_need_stat_modifiers()
-	handle_awake_training_experience(seconds_per_tick)
+	update_cy_need_stat_modifiers()
 
-/mob/living/carbon/human/proc/get_need_stage(current_value, full_value)
-	var/ratio = clamp(current_value / full_value, 0, 1)
-	if(ratio <= 0)
-		return CY_NEED_STAGE_EMPTY
-	if(ratio <= 0.25)
-		return CY_NEED_STAGE_CRITICAL
-	if(ratio <= 0.5)
-		return CY_NEED_STAGE_LOW
+/mob/living/carbon/human/proc/get_cy_hunger_stage()
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		return 0
+	switch(nutrition)
+		if(-INFINITY to NUTRITION_LEVEL_STARVING)
+			return CY_NEED_STAGE_EMPTY
+		if(NUTRITION_LEVEL_STARVING to NUTRITION_LEVEL_VERY_HUNGRY)
+			return CY_NEED_STAGE_CRITICAL
+		if(NUTRITION_LEVEL_VERY_HUNGRY to NUTRITION_LEVEL_HUNGRY)
+			return CY_NEED_STAGE_LOW
 	return 0
 
-/mob/living/carbon/human/proc/update_need_stat_modifiers()
-	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
-		clear_cy_stat_modifier(/datum/cy_stat/spirit, "need_hunger")
-		clear_cy_stat_modifier(/datum/cy_stat/dexterity, "need_hunger")
-		clear_cy_stat_modifier(/datum/cy_stat/spirit, "need_thirst")
-		clear_cy_stat_modifier(/datum/cy_stat/dexterity, "need_thirst")
-	else
-		var/hunger_stage = get_need_stage(nutrition, NUTRITION_LEVEL_FULL)
-		set_cy_stat_modifier(/datum/cy_stat/spirit, "need_hunger", -hunger_stage)
-		set_cy_stat_modifier(/datum/cy_stat/dexterity, "need_hunger", -hunger_stage)
+/mob/living/carbon/human/proc/get_cy_need_stage(value)
+	switch(value)
+		if(-INFINITY to 0)
+			return CY_NEED_STAGE_EMPTY
+		if(0 to NEED_LEVEL_CRITICAL)
+			return CY_NEED_STAGE_CRITICAL
+		if(NEED_LEVEL_CRITICAL to NEED_LEVEL_LOW)
+			return CY_NEED_STAGE_LOW
+	return 0
 
-		var/thirst_stage = get_need_stage(hydration, NEED_LEVEL_FULL)
-		set_cy_stat_modifier(/datum/cy_stat/spirit, "need_thirst", -thirst_stage)
-		set_cy_stat_modifier(/datum/cy_stat/dexterity, "need_thirst", -thirst_stage)
+/mob/living/carbon/human/proc/update_cy_need_stat_modifiers()
+	var/hunger_stage = get_cy_hunger_stage()
+	var/thirst_stage = HAS_TRAIT(src, TRAIT_NOHUNGER) ? 0 : get_cy_need_stage(hydration)
+	var/sleep_stage = get_cy_need_stage(rest)
 
-	var/rest_stage = get_need_stage(rest, NEED_LEVEL_FULL)
-	set_cy_stat_modifier(/datum/cy_stat/perception, "need_rest", -rest_stage)
-	set_cy_stat_modifier(/datum/cy_stat/charisma, "need_rest", -rest_stage)
+	set_cy_stat_modifier(/datum/cy_stat/spirit, "cy_need_hunger", -hunger_stage)
+	set_cy_stat_modifier(/datum/cy_stat/dexterity, "cy_need_hunger", -hunger_stage)
+	set_cy_stat_modifier(/datum/cy_stat/spirit, "cy_need_thirst", -thirst_stage)
+	set_cy_stat_modifier(/datum/cy_stat/dexterity, "cy_need_thirst", -thirst_stage)
+	set_cy_stat_modifier(/datum/cy_stat/perception, "cy_need_sleep", -sleep_stage)
+	set_cy_stat_modifier(/datum/cy_stat/charisma, "cy_need_sleep", -sleep_stage)
 
-/mob/living/carbon/human/proc/handle_awake_training_experience(seconds_per_tick)
-	if(stat != CONSCIOUS || IsSleeping())
-		return
-
-	var/mood_multiplier = mob_mood ? mob_mood.get_cy_training_experience_multiplier() : 1
-	process_cy_awake_training_experience(seconds_per_tick, mood_multiplier)
+/mob/living/carbon/human/is_cy_comfortably_sleeping()
+	if(!..())
+		return FALSE
+	if(!HAS_TRAIT(src, TRAIT_NOHUNGER) && (nutrition <= NUTRITION_LEVEL_STARVING || hydration <= NEED_LEVEL_CRITICAL))
+		return FALSE
+	return rest >= NEED_LEVEL_LOW
 
 /mob/living/carbon/human/proc/handle_hydration_need(seconds_per_tick)
 	if(HAS_TRAIT(src, TRAIT_NOHUNGER))

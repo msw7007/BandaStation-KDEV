@@ -200,7 +200,7 @@
 /mob/living/attackby(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(..())
 		return TRUE
-	user.changeNext_move(attacking_item.attack_speed)
+	user.changeNext_move(attacking_item.attack_speed * user.get_cy_weapon_skill_cooldown_multiplier(attacking_item))
 	return attacking_item.attack(src, user, modifiers, attack_modifiers)
 
 /mob/living/attackby_secondary(obj/item/weapon, mob/living/user, list/modifiers, list/attack_modifiers)
@@ -214,6 +214,32 @@
 			user.changeNext_move(weapon.attack_speed)
 
 	return result
+
+/obj/item/proc/get_cy_weapon_skill_type(mob/living/user)
+	if(istype(src, /obj/item/gun))
+		if(w_class >= WEIGHT_CLASS_BULKY)
+			return /datum/cy_skill/weapon/heavy_firearms
+		if(w_class >= WEIGHT_CLASS_NORMAL)
+			return /datum/cy_skill/weapon/medium_firearms
+		return /datum/cy_skill/weapon/light_firearms
+
+	if(!force && !throwforce)
+		return null
+
+	if(istype(src, /obj/item/knife))
+		return /datum/cy_skill/weapon/knives
+
+	var/two_handed = w_class >= WEIGHT_CLASS_BULKY
+	if(istype(src, /obj/item/fireaxe) || istype(src, /obj/item/melee/energy/axe))
+		return two_handed ? /datum/cy_skill/weapon/two_handed_chopping : /datum/cy_skill/weapon/one_handed_chopping
+
+	var/current_sharpness = get_sharpness()
+	if(current_sharpness & SHARP_POINTY)
+		return two_handed ? /datum/cy_skill/weapon/two_handed_piercing : /datum/cy_skill/weapon/one_handed_piercing
+	if(current_sharpness & SHARP_EDGED)
+		return two_handed ? /datum/cy_skill/weapon/two_handed_slashing : /datum/cy_skill/weapon/one_handed_slashing
+
+	return two_handed ? /datum/cy_skill/weapon/two_handed_blunt : /datum/cy_skill/weapon/one_handed_blunt
 
 /**
  * Called from [/mob/living/proc/attackby]
@@ -329,18 +355,20 @@
 	if(!LAZYACCESS(attack_modifiers, SILENCE_DEFAULT_MESSAGES))
 		send_item_attack_message(attacking_item, user, targeting_human_readable, targeting)
 
+	var/cy_weapon_armour_penetration = attacking_item.armour_penetration + user.get_cy_weapon_skill_armour_bypass(attacking_item)
 	var/armor_block = min(run_armor_check(
 			def_zone = targeting,
 			attack_flag = MELEE,
 			absorb_text = span_notice("Ваша броня защитила вашу [targeting_human_readable]!"),
 			soften_text = span_warning("Ваша броня смягчила удар, нанесенный в вашу [targeting_human_readable]!"),
-			armour_penetration = attacking_item.armour_penetration,
+			armour_penetration = cy_weapon_armour_penetration,
 			weak_against_armour = attacking_item.weak_against_armour,
 		), ARMOR_MAX_BLOCK)
 
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	if(mob_biotypes & (MOB_ROBOTIC|MOB_MINERAL|MOB_SKELETAL)) // this should probably check hit bodypart for humanoids
 		final_force *= attacking_item.get_demolition_modifier(src)
+	final_force *= user.get_cy_weapon_skill_damage_multiplier(attacking_item)
 
 	var/wounding = attacking_item.wound_bonus
 	if((attacking_item.item_flags & SURGICAL_TOOL) && !user.combat_mode && HAS_TRAIT(user, TRAIT_READY_TO_OPERATE))
@@ -348,7 +376,7 @@
 
 	if(user != src)
 		// This doesn't factor in armor, or most damage modifiers (physiology). Your mileage may vary
-		if(check_block(attacking_item, final_force, "[attacking_item.declent_ru(ACCUSATIVE)]", MELEE_ATTACK, attacking_item.armour_penetration, attacking_item.damtype))
+		if(check_block(attacking_item, final_force, "[attacking_item.declent_ru(ACCUSATIVE)]", MELEE_ATTACK, cy_weapon_armour_penetration, attacking_item.damtype))
 			return ATTACK_FAILED
 
 	SEND_SIGNAL(attacking_item, COMSIG_ITEM_ATTACK_ZONE, src, user, targeting)

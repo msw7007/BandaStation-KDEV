@@ -567,6 +567,10 @@
 	if(user && HAS_TRAIT(user, TRAIT_DOUBLE_TAP))
 		modified_burst_delay = ROUND_UP(burst_delay * 0.5)
 		modified_fire_delay = ROUND_UP(fire_delay * 0.5)
+	if(user)
+		var/cy_fire_delay_multiplier = user.get_cy_weapon_skill_cooldown_multiplier(src)
+		modified_burst_delay *= cy_fire_delay_multiplier
+		modified_fire_delay *= cy_fire_delay_multiplier
 
 	if(burst_size > 1)
 		firing_burst = TRUE

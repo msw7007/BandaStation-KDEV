@@ -1,4 +1,4 @@
-import { Box, Button, Dimmer, Section, Stack } from 'tgui-core/components';
+import { Button, Dimmer, Section, Stack } from 'tgui-core/components';
 
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
@@ -132,28 +132,32 @@ const MemoryQuality = (props) => {
 };
 
 export const MemoryPanel = (props) => {
-  const { data } = useBackend();
+  const { act, data } = useBackend();
   const memories = data.memories || [];
-  const fragments = data.fragments || [];
   return (
-    <Window title="Memory Panel" width={520} height={620}>
+    <Window title="Memory Panel" width={520} height={520}>
       <Window.Content>
         <Section
           maxHeight="32px"
           title="Memories"
           buttons={
-            <Button
-              color="transparent"
-              tooltip={`
-                These are your memories. You gain them from doing notable things
-                and you can use them in art!
-              `}
-              tooltipPosition="bottom-start"
-              icon="info"
-            />
+            <>
+              <Button icon="plus" onClick={() => act('add_memory_record')}>
+                Add record
+              </Button>
+              <Button
+                color="transparent"
+                tooltip={`
+                  These are permanent character memories. Temporary chat memory
+                  is shown in chat and may be damaged by death.
+                `}
+                tooltipPosition="bottom-start"
+                icon="info"
+              />
+            </>
           }
         />
-        {(!memories.length && !fragments.length && (
+        {(!memories.length && (
           <Dimmer fontSize="28px" align="center">
             You have no memories!
           </Dimmer>
@@ -168,52 +172,6 @@ export const MemoryPanel = (props) => {
             ))}
           </Stack>
         )}
-        <Section
-          mt={1}
-          title="Recalled Events"
-          buttons={
-            <Button
-              color="transparent"
-              tooltip={`
-                These are mutable fragments of what your character heard
-                and experienced. Death can erase, blur, or rename them.
-              `}
-              tooltipPosition="bottom-start"
-              icon="brain"
-            />
-          }
-        >
-          {!fragments.length && (
-            <Box color="label" textAlign="center">
-              No recalled fragments.
-            </Box>
-          )}
-          {!!fragments.length && (
-            <Stack vertical>
-              {fragments.map((fragment, index) => (
-                <Stack.Item key={`${fragment.time}-${index}`}>
-                  <Section
-                    title={`${fragment.time} ${fragment.speaker}`}
-                    buttons={
-                      <Box color={fragment.degradation ? 'average' : 'good'}>
-                        {fragment.channel}
-                      </Box>
-                    }
-                  >
-                    <Box italic={!!fragment.degradation}>
-                      {fragment.text}
-                    </Box>
-                    {!!fragment.where && (
-                      <Box color="label" fontSize="0.9em" mt={0.5}>
-                        {fragment.where}
-                      </Box>
-                    )}
-                  </Section>
-                </Stack.Item>
-              ))}
-            </Stack>
-          )}
-        </Section>
       </Window.Content>
     </Window>
   );

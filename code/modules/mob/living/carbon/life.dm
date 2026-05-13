@@ -513,9 +513,9 @@
 	updatehealth()
 
 /mob/living/carbon/proc/handle_pain_damage(seconds_per_tick)
-	if(painloss <= 200 || HAS_TRAIT(src, TRAIT_ANALGESIA))
+	if(painloss <= CY_PAIN_THRESHOLD || HAS_TRAIT(src, TRAIT_ANALGESIA))
 		return
-	var/excess_pain = painloss - 200
+	var/excess_pain = painloss - CY_PAIN_THRESHOLD
 	adjust_psychic_loss((excess_pain / 400) * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 	if(SPT_PROB(min(excess_pain / 8, 18), seconds_per_tick))
 		Knockdown(rand(1 SECONDS, 2 SECONDS))

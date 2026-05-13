@@ -63,7 +63,3 @@
 	equip_delay_other = 12 SECONDS
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE
 	extrapower = TRUE
-
-/obj/item/clothing/gloves/boxing/golden/Initialize(mapload)
-	. = ..()
-	AddElement(/datum/element/skill_reward, /datum/cy_skill/spirit/athletics)
