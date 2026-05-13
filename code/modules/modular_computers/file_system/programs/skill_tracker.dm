@@ -15,37 +15,39 @@
 	var/list/skills = list()
 	data["skills"] = skills
 
-	var/datum/mind/targetmind = user.mind
-	if(targetmind)
-		for (var/type in GLOB.skill_types)
-			var/datum/skill/skill = GetSkillRef(type)
-			var/lvl_num = targetmind.get_skill_level(type)
-			var/lvl_name = uppertext(targetmind.get_skill_level_name(type))
-			var/exp = targetmind.get_skill_exp(type)
-			var/xp_prog_to_level = targetmind.exp_needed_to_level_up(type)
-			var/xp_req_to_level = 0
-			if (xp_prog_to_level && lvl_num < length(SKILL_EXP_LIST)) // is it even possible to level up?
-				xp_req_to_level = SKILL_EXP_LIST[lvl_num+1] - SKILL_EXP_LIST[lvl_num]
+	var/mob/living/target = user
+	if(!istype(target))
+		return data
 
-			var/list/skilldata = list(
-				"name" = skill.name,
-				"desc" = skill.desc,
-				"title" = skill.title,
-				"lvl_name" = lvl_name
-			)
-			if (exp && xp_req_to_level)
-				skilldata["progress_percent"] = (xp_req_to_level-xp_prog_to_level)/xp_req_to_level
-				skilldata["overall_percent"] = exp / SKILL_EXP_LIST[length(SKILL_EXP_LIST)]
-			if (lvl_num >= length(SKILL_EXP_LIST) && !(type in targetmind.skills_rewarded))
-				skilldata["reward"] = TRUE
-			skills[++skills.len] = skilldata
+	var/datum/cy_skill_holder/holder = target.ensure_cy_skill_holder()
+	for(var/type in get_all_cy_skill_types())
+		var/datum/cy_skill/skill = get_cy_skill_datum(type)
+		if(!skill)
+			continue
+		var/lvl_num = target.get_cy_skill_level(type)
+		var/exp = target.get_cy_skill_experience(type)
+		var/max_exp = holder.get_total_experience_for_level(skill.max_level)
+		var/list/skilldata = list(
+			"name" = skill.name,
+			"desc" = skill.desc,
+			"title" = skill.category,
+			"lvl_name" = uppertext(get_cy_skill_level_name(lvl_num)),
+		)
+		if(lvl_num < skill.max_level)
+			var/xp_req_to_level = holder.get_experience_required_for_next_level(lvl_num)
+			var/xp_prog = exp - holder.get_total_experience_for_level(lvl_num)
+			if(xp_req_to_level)
+				skilldata["progress_percent"] = clamp(xp_prog / xp_req_to_level, 0, 1)
+		if(max_exp)
+			skilldata["overall_percent"] = clamp(exp / max_exp, 0, 1)
+		skills[++skills.len] = skilldata
 
 	return data
 
 /datum/computer_file/program/skill_tracker/proc/find_skilltype(name)
-	for(var/type in GLOB.skill_types)
-		var/datum/skill/skill = GetSkillRef(type)
-		if(skill.name == name)
+	for(var/type in get_all_cy_skill_types())
+		var/datum/cy_skill/skill = get_cy_skill_datum(type)
+		if(skill?.name == name || skill?.id == name)
 			return type
 
 	return null
@@ -54,10 +56,4 @@
 	. = ..()
 	switch(action)
 		if("PRG_reward")
-			var/skill_type = find_skilltype(params["skill"])
-			if(skill_type)
-				var/datum/skill/skill = GetSkillRef(skill_type)
-				var/datum/mind/mind = ui.user.mind
-				var/new_level = mind.get_skill_level(skill_type)
-				skill.try_skill_reward(mind, new_level)
-				return TRUE
+			return TRUE

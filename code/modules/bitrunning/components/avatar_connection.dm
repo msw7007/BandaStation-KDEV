@@ -81,8 +81,7 @@
 	update_avatar_id()
 	avatar.mind.set_assigned_role(SSjob.get_job_type(/datum/job/bit_avatar))
 
-	for(var/skill_type in old_mind.known_skills)
-		avatar.mind.set_experience(skill_type, old_mind.get_skill_exp(skill_type), silent = TRUE)
+	avatar.copy_cy_skill_progress_from(old_body)
 
 	avatar.playsound_local(avatar, 'sound/effects/magic/blink.ogg', 25, TRUE)
 	avatar.set_static_vision(2 SECONDS)
@@ -315,9 +314,7 @@
 	if(isnull(old_mind) || isnull(old_body))
 		return
 
-	for(var/skill_type in avatar.mind.known_skills)
-		old_mind.set_experience(skill_type, avatar.mind.get_skill_exp(skill_type), silent = TRUE)
-		avatar.mind.set_experience(skill_type, 0, silent = TRUE)
+	old_body.copy_cy_skill_progress_from(avatar)
 
 	ghost.mind = old_mind
 	if(old_body.stat != DEAD)

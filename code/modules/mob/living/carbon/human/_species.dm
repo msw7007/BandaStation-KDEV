@@ -817,7 +817,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	// Out athletics skill is used to set our potential base damage roll. It won't increase our potential damage roll, but will make our unarmed attack more consistent.
 	// For a normal human arm, this would cap at 10, and for a normal human leg, this would go up to 14.
-	lower_unarmed_damage =  min(lower_unarmed_damage + (user.mind?.get_skill_level(/datum/skill/athletics) || 0), upper_unarmed_damage)
+	lower_unarmed_damage =  min(lower_unarmed_damage + (user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) || 0), upper_unarmed_damage)
 
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
@@ -948,7 +948,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 /// Handles the stagger combo effect of our punch. Follows the same logic as the above proc, target is our owner, user is our attacker.
 /datum/species/proc/stagger_combo(mob/living/carbon/human/user, mob/living/carbon/human/target, atk_verb = "ударяет", limb_accuracy = 0, armor_block = 0)
 	// Randomly determines the effects of our punch. Limb accuracy is a bonus, armor block is a defense, attacker athletics provides a minor to significant bonus.
-	var/roll_them_bones = rand(-20, 20) + limb_accuracy - armor_block + ((user.mind?.get_skill_modifier(/datum/skill/athletics, SKILL_RANDS_MODIFIER) / 2) || 0)
+	var/roll_them_bones = rand(-20, 20) + limb_accuracy - armor_block + ((user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics) / 2) || 0)
 
 	switch(roll_them_bones)
 		if (-INFINITY to 0) //Mostly a gimmie, this one just keeps them staggered briefly

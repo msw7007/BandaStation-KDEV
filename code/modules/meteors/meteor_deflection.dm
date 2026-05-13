@@ -30,7 +30,8 @@
 		return TRUE
 
 	if(istype(attacking_item, /obj/item/melee/baseball_bat))
-		if(user.mind?.get_skill_level(/datum/skill/athletics) < SKILL_LEVEL_EXPERT)
+		var/mob/living/living_user = user
+		if(!istype(living_user) || living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) < CY_SKILL_LEVEL_EXPERT)
 			to_chat(user, span_warning("\The [parent] is too heavy for you!"))
 			return FALSE
 		playsound(parent, 'sound/items/baseballhit.ogg', 100, TRUE)
@@ -58,7 +59,7 @@
 		return FALSE
 	var/mob/living/livinguser = user
 
-	if(livinguser.combat_mode && livinguser.mind?.get_skill_level(/datum/skill/athletics) >= SKILL_LEVEL_LEGENDARY)
+	if(livinguser.combat_mode && livinguser.get_cy_skill_level(/datum/cy_skill/spirit/athletics) >= CY_SKILL_LEVEL_MASTER)
 		check_punch_award(livinguser)
 		playsound(parent, SFX_PUNCH, 50, TRUE)
 		redirection_proc.Invoke(livinguser)

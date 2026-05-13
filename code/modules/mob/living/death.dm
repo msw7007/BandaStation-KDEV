@@ -233,6 +233,7 @@
 	set_stat(DEAD)
 	timeofdeath = world.time
 	station_timestamp_timeofdeath = round_timestamp()
+	mind?.degrade_cy_memories_on_death(src, gibbed)
 	var/turf/death_turf = get_turf(src)
 	var/area/death_area = get_area(src)
 	// Display a death message if the mob is a player mob (has an active mind)

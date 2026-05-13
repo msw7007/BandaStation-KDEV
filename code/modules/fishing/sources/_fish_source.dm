@@ -174,7 +174,9 @@ GLOBAL_LIST_INIT(specific_fish_icons, generate_specific_fish_icons())
 
 	// Difficulty modifier added by the fisher's skill level
 	if(!(challenge.special_effects & FISHING_MINIGAME_RULE_NO_EXP))
-		. += fisherman.mind?.get_skill_modifier(/datum/skill/fishing, SKILL_VALUE_MODIFIER)
+		var/mob/living/living_fisherman = fisherman
+		if(istype(living_fisherman))
+			. += living_fisherman.get_cy_skill_value_modifier(/datum/cy_skill/spirit/survival)
 
 	if(challenge.special_effects & FISHING_MINIGAME_RULE_KILL)
 		challenge.RegisterSignal(src, COMSIG_FISH_SOURCE_REWARD_DISPENSED, TYPE_PROC_REF(/datum/fishing_challenge, hurt_fish))

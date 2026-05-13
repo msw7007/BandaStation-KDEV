@@ -540,7 +540,7 @@
 
 	new_profile.age = target.age
 	new_profile.physique = target.physique
-	new_profile.athletics_level = target.mind?.get_skill_level(/datum/skill/athletics) || SKILL_LEVEL_NONE
+	new_profile.athletics_level = target.get_cy_skill_level(/datum/cy_skill/spirit/athletics) || CY_SKILL_LEVEL_UNTRAINED
 
 	// Grab the target's quirks.
 	for(var/datum/quirk/target_quirk as anything in target.quirks)
@@ -777,7 +777,7 @@
 	user.socks = chosen_profile.socks
 	user.age = chosen_profile.age
 	user.physique = chosen_profile.physique
-	user.mind?.set_level(/datum/skill/athletics, chosen_profile.athletics_level, silent = TRUE)
+	user.set_cy_skill_level(/datum/cy_skill/spirit/athletics, chosen_profile.athletics_level, TRUE)
 	user.voice = chosen_profile.voice
 	user.voice_filter = chosen_profile.voice_filter
 

@@ -6,9 +6,9 @@
 	/// Keep it short and useful. Avoid in-jokes, these are for new players.
 	var/description
 
-	/// Innate skill levels unlocked at roundstart. Based on config.jobs_have_minimal_access config setting, for example with a skeleton crew. Format is list(/datum/skill/foo = SKILL_EXP_NOVICE) with exp as an integer or as per code/_DEFINES/skills.dm
+	/// Innate skill experience unlocked at roundstart. Based on config.jobs_have_minimal_access config setting, for example with a skeleton crew. Format is list(/datum/cy_skill/foo = experience).
 	var/list/skills
-	/// Innate skill levels unlocked at roundstart. Based on config.jobs_have_minimal_access config setting, for example with a full crew. Format is list(/datum/skill/foo = SKILL_EXP_NOVICE) with exp as an integer or as per code/_DEFINES/skills.dm
+	/// Innate skill experience unlocked at roundstart. Based on config.jobs_have_minimal_access config setting, for example with a full crew. Format is list(/datum/cy_skill/foo = experience).
 	var/list/minimal_skills
 
 	/// Tells the given channels that the given mob is the new department head. See communications.dm for valid channels.
@@ -177,7 +177,7 @@
 
 	if(roundstart_experience)
 		for(var/i in roundstart_experience)
-			spawned_human.mind.adjust_experience(i, roundstart_experience[i], TRUE)
+			spawned_human.award_cy_raw_skill_experience(i, roundstart_experience[i], TRUE)
 
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_JOB_AFTER_SPAWN, src, spawned, player_client)
 

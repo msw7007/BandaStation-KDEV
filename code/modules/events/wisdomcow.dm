@@ -46,7 +46,7 @@
 	normal_run_option = "Random Wisdom"
 
 /datum/event_admin_setup/listed_options/wisdom_cow_wisdom/get_list()
-	return subtypesof(/datum/skill)
+	return get_all_cy_skill_types()
 
 /datum/event_admin_setup/listed_options/wisdom_cow_wisdom/apply_to_event(datum/round_event/wisdomcow/event)
 	event.selected_wisdom = chosen

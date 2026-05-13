@@ -1,7 +1,7 @@
 import { loadStyleSheet } from 'common/assets';
 import { EventBus } from 'tgui-core/eventbus';
 import { playMusic, stopMusic } from '../audio/handlers';
-import { chatMessage } from '../chat/handlers';
+import { chatMemoryRewrite, chatMessage } from '../chat/handlers';
 import * as emotes from '../emotes/handlers'; // BANDASTATION ADDITON: Emote panel
 import { pingReply, pingSoft } from '../ping/handlers';
 import {
@@ -18,6 +18,7 @@ const listeners = {
   'audio/playMusic': playMusic,
   'audio/stopMusic': stopMusic,
   'chat/message': chatMessage,
+  'chat/memoryRewrite': chatMemoryRewrite,
   'emotes/setList': emotes.setEmotesList, // BANDASTATION ADDITON: Emote panel
   'emotes/toggle': emotes.toggleEmotes, // BANDASTATION ADDITON: Emote panel
   'ping/reply': pingReply,

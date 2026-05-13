@@ -1683,18 +1683,42 @@
 	var/list/data = list()
 	var/list/memories = list()
 
-	for(var/memory_key in user?.mind.memories)
-		var/datum/memory/memory = user.mind.memories[memory_key]
+	for(var/memory_key in mind_reference?.memories)
+		var/datum/memory/memory = mind_reference.memories[memory_key]
 		memories += list(list("name" = memory.name, "quality" = memory.story_value))
 
+	var/list/fragments = list()
+	for(var/datum/cy_memory_fragment/fragment as anything in mind_reference?.cy_memory_fragments)
+		fragments += list(fragment.fragment_ui_data())
+
 	data["memories"] = memories
+	data["fragments"] = fragments
 	return data
 
 /mob/verb/view_skills()
 	set category = "IC"
 	set name = "View Skills"
 
-	mind?.print_levels(src)
+	if(!isliving(src))
+		to_chat(src, span_notice("You have no trainable skills."))
+		return
+
+	var/mob/living/living_user = src
+	var/list/skill_lines = list()
+	for(var/skill_type in get_all_cy_skill_types())
+		var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+		if(!skill)
+			continue
+		var/level = living_user.get_cy_skill_level(skill_type)
+		if(level <= CY_SKILL_LEVEL_UNTRAINED)
+			continue
+		skill_lines += "[skill.name]: [get_cy_skill_level_name(level)]"
+
+	if(!length(skill_lines))
+		to_chat(src, span_notice("You have no trained skills."))
+		return
+
+	to_chat(src, span_notice("Your skills: [english_list(skill_lines)]."))
 
 /mob/key_down(key, client/client, full_key)
 	..()

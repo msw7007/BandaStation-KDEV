@@ -233,10 +233,10 @@
 		if(new_owner.reagents.has_reagent(workout_reagent))
 			food_boost += supplementary_reagents_bonus[workout_reagent]
 
-	var/skill_level_boost = (new_owner.mind?.get_skill_level(/datum/skill/athletics) - 1) * 2 SECONDS
+	var/skill_level_boost = (new_owner.get_cy_skill_level(/datum/cy_skill/spirit/athletics) - 1) * 2 SECONDS
 	bonus_time = (bonus_time + food_boost + skill_level_boost) * modifier
 
-	var/exhaustion_limit = new_owner.mind?.get_skill_modifier(/datum/skill/athletics, SKILL_VALUE_MODIFIER)
+	var/exhaustion_limit = new_owner.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics)
 	if(duration + bonus_time >= exhaustion_limit)
 		duration = exhaustion_limit
 		to_chat(new_owner, span_userdanger("Your muscles are exhausted! Might be a good idea to sleep..."))
@@ -252,12 +252,12 @@
 /datum/status_effect/exercised/refresh(effect, bonus_time)
 	duration += workout_duration(owner, bonus_time)
 	owner.clear_mood_event("exercise") // we need to reset the old mood event in case our fitness skill changes
-	owner.add_mood_event("exercise", /datum/mood_event/exercise, owner.mind.get_skill_level(/datum/skill/athletics))
+	owner.add_mood_event("exercise", /datum/mood_event/exercise, owner.get_cy_skill_level(/datum/cy_skill/spirit/athletics))
 
 /datum/status_effect/exercised/on_apply()
 	if(!owner.mind)
 		return FALSE
-	owner.add_mood_event("exercise", /datum/mood_event/exercise, owner.mind.get_skill_level(/datum/skill/athletics))
+	owner.add_mood_event("exercise", /datum/mood_event/exercise, owner.get_cy_skill_level(/datum/cy_skill/spirit/athletics))
 	return TRUE
 
 /datum/status_effect/exercised/on_remove()

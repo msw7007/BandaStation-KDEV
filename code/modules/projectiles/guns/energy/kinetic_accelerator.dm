@@ -255,7 +255,7 @@
 			var/skill_modifier = 1
 			// If there is a mind, check for skill modifier to allow them to reload faster.
 			if(carbon_firer.mind)
-				skill_modifier = carbon_firer.mind.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER)
+				skill_modifier = carbon_firer.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining)
 			kinetic_gun.attempt_reload(kinetic_gun.recharge_time * skill_modifier) //If you hit a mineral, you might get a quicker reload. epic gamer style.
 	var/obj/effect/temp_visual/kinetic_blast/K = new /obj/effect/temp_visual/kinetic_blast(target_turf)
 	K.color = color

@@ -1229,10 +1229,10 @@
 
 	if(tool_behaviour == TOOL_MINING)
 		if(user.mind)
-			skill_modifier = user.mind.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER)
+			skill_modifier = user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining)
 
-			if(user.mind.get_skill_level(/datum/skill/mining) >= SKILL_LEVEL_JOURNEYMAN && prob(user.mind.get_skill_modifier(/datum/skill/mining, SKILL_PROBS_MODIFIER))) // we check if the skill level is greater than Journeyman and then we check for the probality for that specific level.
-				mineral_scan_pulse(get_turf(user), SKILL_LEVEL_JOURNEYMAN - 2, scanner = src) //SKILL_LEVEL_JOURNEYMAN = 3 So to get range of 1+ we have to subtract 2 from it,.
+			if(user.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_TRAINED && prob(user.get_cy_skill_probability_bonus(/datum/cy_skill/professional/mining))) // we check if the skill level is greater than Journeyman and then we check for the probality for that specific level.
+				mineral_scan_pulse(get_turf(user), CY_SKILL_LEVEL_TRAINED - 2, scanner = src) //CY_SKILL_LEVEL_TRAINED = 3 So to get range of 1+ we have to subtract 2 from it,.
 
 	delay *= toolspeed * skill_modifier
 

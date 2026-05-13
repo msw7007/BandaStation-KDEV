@@ -71,3 +71,22 @@
 #define STORY_FLAG_DATED (1<<0)
 /// Don't style this story
 #define STORY_FLAG_NO_STYLE (1<<1)
+
+// Cyberiad character memory fragments.
+/// Routine chatter and low-value events.
+#define CY_MEMORY_IMPORTANCE_LOW 1
+/// Normal IC memories.
+#define CY_MEMORY_IMPORTANCE_NORMAL 2
+/// Key or traumatic memories. These resist death degradation.
+#define CY_MEMORY_IMPORTANCE_HIGH 3
+
+/// How many chat/event fragments a mind keeps. Oldest fragments are discarded first.
+#define CY_MEMORY_FRAGMENT_LIMIT 180
+/// Fragments this close to death are usually lost outright.
+#define CY_MEMORY_DEATH_ERASE_WINDOW (2 MINUTES)
+/// Fragments this close to death are heavily damaged.
+#define CY_MEMORY_DEATH_SHATTER_WINDOW (7 MINUTES)
+/// Fragments this close to death are blurred.
+#define CY_MEMORY_DEATH_HAZE_WINDOW (15 MINUTES)
+/// Every step spent dead before a new body adds another degradation pass.
+#define CY_MEMORY_DEAD_TIME_DEGRADATION_STEP (5 MINUTES)

@@ -28,7 +28,7 @@
 	subject.dna.copy_dna(dna)
 	age = subject.age
 	physique = subject.physique
-	athletics_level = subject.mind?.get_skill_level(/datum/skill/athletics) || SKILL_LEVEL_NONE
+	athletics_level = subject.get_cy_skill_level(/datum/cy_skill/spirit/athletics) || CY_SKILL_LEVEL_UNTRAINED
 	height = subject.mob_height
 
 	quirks = list()
@@ -63,7 +63,7 @@
 	subject.real_name = name
 	subject.age = age
 	subject.physique = physique
-	subject.mind?.set_level(/datum/skill/athletics, athletics_level, silent = TRUE)
+	subject.set_cy_skill_level(/datum/cy_skill/spirit/athletics, athletics_level, TRUE)
 	subject.voice = voice
 	subject.voice_filter = voice_filter
 

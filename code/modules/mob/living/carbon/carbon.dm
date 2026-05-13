@@ -429,7 +429,7 @@
 		total_brute += (BP.get_brute_damage() * BP.body_damage_coeff)
 		total_burn += (BP.get_burn_damage() * BP.body_damage_coeff)
 	var/pain_body_damage = max(get_pain_loss() - 200, 0)
-	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - get_psychic_loss() - pain_body_damage - total_burn - total_brute, DAMAGE_PRECISION))
+	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - pain_body_damage - total_burn - total_brute, DAMAGE_PRECISION))
 	update_stat()
 	update_stamina()
 

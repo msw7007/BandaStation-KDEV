@@ -14,7 +14,7 @@
 	. = ..()
 	src.granted_wisdom = granted_wisdom
 	if(!granted_wisdom)
-		src.granted_wisdom = pick(GLOB.skill_types)
+		src.granted_wisdom = pick(get_all_cy_skill_types())
 	src.granted_experience = granted_experience
 	if(granted_experience < 0)
 		name = "unwise cow"
@@ -43,7 +43,7 @@
 /mob/living/basic/cow/wisdom/attack_hand(mob/living/carbon/user, list/modifiers)
 	if(!stat && !user.combat_mode)
 		to_chat(user, span_nicegreen("[src] whispers you some intense wisdoms and then disappears!"))
-		user.mind?.adjust_experience(granted_wisdom, granted_experience)
+		user.award_cy_raw_skill_experience(granted_wisdom, granted_experience)
 		do_smoke(1, src, get_turf(src))
 		qdel(src)
 		return

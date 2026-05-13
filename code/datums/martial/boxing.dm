@@ -119,7 +119,7 @@
 	var/attack_sound = active_arm.unarmed_attack_sound
 
 	// Out athletics skill is added as a damage bonus
-	var/athletics_skill =  attacker.mind?.get_skill_level(/datum/skill/athletics)
+	var/athletics_skill =  attacker.get_cy_skill_level(/datum/cy_skill/spirit/athletics)
 
 	// If true, grants experience for punching; we only gain experience if we punch another boxer.
 	var/grant_experience = FALSE
@@ -253,10 +253,10 @@
 		skill_experience_adjustment(attacker, defender, (damage/lower_force))
 
 	//Determine our attackers athletics level as a knockout probability bonus
-	var/attacker_athletics_skill =  (attacker.mind?.get_skill_modifier(/datum/skill/athletics, SKILL_RANDS_MODIFIER) + base_unarmed_effectiveness)
+	var/attacker_athletics_skill =  (attacker.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics) + base_unarmed_effectiveness)
 
 	// Defender boxing skill and armor block are used as a defense here. This has already factored in base_unarmed_effectiveness from the attacker
-	var/defender_athletics_skill =  clamp(defender.mind?.get_skill_modifier(/datum/skill/athletics, SKILL_RANDS_MODIFIER), 0, 100)
+	var/defender_athletics_skill =  clamp(defender.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics), 0, 100)
 
 	//Determine our final probability, using a clamp to stop any prob() weirdness.
 	var/final_knockout_probability = clamp(round(attacker_athletics_skill - defender_athletics_skill, 1), 0 , 100)
@@ -320,7 +320,7 @@
 	var/gravity_modifier = boxer.has_gravity() > STANDARD_GRAVITY ? 1 : 2
 
 	//You gotta sleep before you get any experience!
-	boxer.mind?.adjust_experience(/datum/skill/athletics, round(experience_value / gravity_modifier, 1))
+	boxer.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(experience_value / gravity_modifier, 1))
 	boxer.apply_status_effect(/datum/status_effect/exercised)
 
 /// Handles our blocking signals, similar to hit_reaction() on items. Only blocks while the boxer is in throw mode.
@@ -338,7 +338,7 @@
 	var/base_unarmed_effectiveness = active_arm.unarmed_effectiveness
 
 	// Out athletics skill is added to our block potential
-	var/athletics_skill_rands =  boxer.mind?.get_skill_modifier(/datum/skill/athletics, SKILL_RANDS_MODIFIER)
+	var/athletics_skill_rands =  boxer.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics)
 
 	var/block_chance = base_unarmed_effectiveness + athletics_skill_rands
 
@@ -515,7 +515,7 @@
 	var/gravity_modifier = boxer.has_gravity() > STANDARD_GRAVITY ? 2 : 1
 	var/big_game_bonus = (defender.maxHealth / 500)
 
-	boxer.mind?.adjust_experience(/datum/skill/athletics, round(experience_value * (gravity_modifier + big_game_bonus), 1))
+	boxer.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(experience_value * (gravity_modifier + big_game_bonus), 1))
 
 #undef LEFT_RIGHT_COMBO
 #undef RIGHT_LEFT_COMBO

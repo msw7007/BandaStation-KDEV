@@ -131,7 +131,9 @@
 		gamers[gamer] = ORION_GAMER_PAMPHLET //next report send a pamph
 
 		gamer.client.give_award(/datum/award/achievement/misc/gamer, gamer) // PSYCH REPORT NOTE: patient kept rambling about how they did it for an "achievement", recommend continued holding for observation
-		gamer.mind?.adjust_experience(/datum/skill/gaming, 50) // cheevos make u better
+		if(isliving(gamer))
+			var/mob/living/living_gamer = gamer
+			living_gamer.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 50) // cheevos make u better
 
 /obj/machinery/computer/arcade/orion_trail/ui_interact(mob/user, datum/tgui/ui)
 	. = ..()
@@ -193,9 +195,9 @@
 	var/gamer_skill_rands = 0
 
 	if(gamer?.mind)
-		gamer_skill_level = gamer.mind.get_skill_level(/datum/skill/gaming)
-		gamer_skill = gamer.mind.get_skill_modifier(/datum/skill/gaming, SKILL_PROBS_MODIFIER)
-		gamer_skill_rands = gamer.mind.get_skill_modifier(/datum/skill/gaming, SKILL_RANDS_MODIFIER)
+		gamer_skill_level = gamer.get_cy_skill_level(/datum/cy_skill/charisma/style)
+		gamer_skill = gamer.get_cy_skill_probability_bonus(/datum/cy_skill/charisma/style)
+		gamer_skill_rands = gamer.get_cy_skill_value_modifier(/datum/cy_skill/charisma/style)
 
 	var/xp_gained = 0
 
@@ -232,7 +234,7 @@
 				win(gamer)
 				xp_gained += 34
 				return
-			gamer.mind.adjust_experience(/datum/skill/gaming, xp_gained+1)
+			gamer.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, xp_gained+1)
 			food -= (alive+lings_aboard)*2
 			fuel -= 5
 			turns += 1
@@ -365,7 +367,7 @@
 		name = "The Orion Trail"
 		desc = "Learn how our ancestors got to Orion, and have fun in the process!"
 
-	gamer?.mind?.adjust_experience(/datum/skill/gaming, 10)//learning from your mistakes is the first rule of roguelikes
+	gamer?.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 10)//learning from your mistakes is the first rule of roguelikes
 	return reason
 
 //Add Random/Specific crewmember
@@ -424,7 +426,7 @@
 			gamer.death()
 		set_game_over(gamer, "Your last pioneer committed suicide.")
 		if(killed_crew >= ORION_STARTING_CREW_COUNT)
-			gamer.mind?.adjust_experience(/datum/skill/gaming, -15)//no cheating by spamming game overs
+			gamer.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, -15)//no cheating by spamming game overs
 			report_player(gamer)
 	else if(obj_flags & EMAGGED)
 		if(findtext(gamer.name, sheriff))

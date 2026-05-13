@@ -432,13 +432,11 @@
 	affected_mob.adjust_organ_loss(ORGAN_SLOT_BRAIN, 0.1 * metabolization_ratio * seconds_per_tick, required_organ_flag = affected_organ_flags)
 	// 5x if you want to OD, you can potentially go higher, but good luck managing the brain damage.
 	var/amt = max(round(volume/3, 0.1), 1)
-	affected_mob?.mind?.experience_multiplier_reasons |= type
-	affected_mob?.mind?.experience_multiplier_reasons[type] = 1 * amt * metabolization_ratio * seconds_per_tick
+	affected_mob.set_cy_experience_multiplier(type, 1 * amt * metabolization_ratio * seconds_per_tick)
 
 /datum/reagent/drug/maint/powder/on_mob_end_metabolize(mob/living/affected_mob)
 	. = ..()
-	affected_mob?.mind?.experience_multiplier_reasons[type] = null
-	affected_mob?.mind?.experience_multiplier_reasons -= type
+	affected_mob.set_cy_experience_multiplier(type, 0)
 
 /datum/reagent/drug/maint/powder/overdose_process(mob/living/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()

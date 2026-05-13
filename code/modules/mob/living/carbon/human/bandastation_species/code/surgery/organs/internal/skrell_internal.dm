@@ -16,7 +16,7 @@
 	disliked_foodtypes = SEAFOOD
 	toxic_foodtypes = ALCOHOL | MEAT
 
-/obj/item/organ/tongue/get_possible_languages()
+/obj/item/organ/tongue/skrell/get_possible_languages()
 	return ..() + /datum/language/qurvolious
 
 /obj/item/organ/heart/skrell

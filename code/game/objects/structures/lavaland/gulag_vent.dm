@@ -42,7 +42,7 @@
 	if (!succeeded)
 		return
 	var/stamina_damage_to_inflict = HAS_TRAIT(user, TRAIT_STRENGTH) ? 60 : 120 //Decreases the amount of stamina damage inflicted by half if you're STRONG
-	living_user.mind?.adjust_experience(/datum/skill/athletics, 10)
+	living_user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, 10)
 	living_user.apply_status_effect(/datum/status_effect/exercised)
 
 	var/obj/item/boulder/gulag_boulder = new spawned_boulder(get_turf(living_user))

@@ -229,7 +229,7 @@
 		experience *= 2
 
 	wearer.adjust_stamina_loss(stamina_exhaustion)
-	wearer.mind?.adjust_experience(/datum/skill/athletics, experience)
+	wearer.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, experience)
 	wearer.apply_status_effect(/datum/status_effect/exercised)
 
 ///The internal fishing rod of the athletic fishing gloves. The more athletic you're, the easier the minigame will be.
@@ -252,7 +252,8 @@
 	return list()
 
 /obj/item/fishing_rod/mob_fisher/athletic/hook_hit(atom/atom_hit_by_hook_projectile, mob/user)
-	difficulty_modifier = -3 * (user.mind?.get_skill_level(/datum/skill/athletics) - 1)
+	var/mob/living/living_user = user
+	difficulty_modifier = istype(living_user) ? -3 * (living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) - 1) : 0
 	return ..()
 
 /obj/item/fishing_rod/mob_fisher/athletic/proc/noodling_is_dangerous(datum/source, atom/movable/reward, mob/living/user)

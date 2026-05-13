@@ -902,8 +902,8 @@
 
 	var/carrydelay = 5 SECONDS //if you have latex you are faster at grabbing
 	var/skills_space
-	var/fitness_level = mind?.get_skill_level(/datum/skill/athletics) - 1
-	var/experience_reward = ATHLETICS_SKILL_MISC_EXP
+	var/fitness_level = get_cy_skill_level(/datum/cy_skill/spirit/athletics)
+	var/experience_reward = CY_ATHLETICS_MISC_EXPERIENCE
 	if(HAS_TRAIT(src, TRAIT_QUICKER_CARRY))
 		carrydelay -= 2 SECONDS
 		experience_reward *= 3
@@ -935,7 +935,7 @@
 		visible_message(span_warning("[capitalize(declent_ru(DATIVE))] не удается поднять [target.declent_ru(ACCUSATIVE)] на плечи!"))
 		return
 
-	mind?.adjust_experience(/datum/skill/athletics, round(experience_reward/(fitness_level || 1), 1)) //Get a bit fitter every time we fireman carry successfully. Deadlift your friends for gains!
+	award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(experience_reward/(fitness_level || 1), 1)) //Get a bit fitter every time we fireman carry successfully. Deadlift your friends for gains!
 
 	return buckle_mob(target, TRUE, TRUE, CARRIER_NEEDS_ARM)
 

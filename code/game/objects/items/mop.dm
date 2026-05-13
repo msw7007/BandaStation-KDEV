@@ -68,7 +68,7 @@
 	reagents.expose(cleaned_turf, TOUCH, 10) //Needed for proper floor wetting.
 	var/val2remove = 1
 	if(cleaner?.mind)
-		val2remove = round(cleaner.mind.get_skill_modifier(/datum/skill/cleaning, SKILL_SPEED_MODIFIER), 0.1)
+		val2remove = round(cleaner.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/analysis), 0.1)
 	reagents.remove_all(val2remove) //reaction() doesn't use up the reagents
 
 /obj/item/mop/advanced

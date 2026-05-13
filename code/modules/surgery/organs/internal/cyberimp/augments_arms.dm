@@ -555,7 +555,7 @@
 	// The upper damage, calculated first as it will be used to cap our potential lower damage.
 	var/potential_upper_damage = attacking_bodypart.unarmed_damage_high + (HAS_TRAIT(source, TRAIT_STRENGTH) ? 2 : 0)
 	// The lower damage, which is capped by potential_upper_damage
-	var/potential_lower_damage = min(attacking_bodypart.unarmed_damage_low + (source.mind?.get_skill_level(/datum/skill/athletics) || 0), potential_upper_damage)
+	var/potential_lower_damage = min(attacking_bodypart.unarmed_damage_low + (source.get_cy_skill_level(/datum/cy_skill/spirit/athletics) || 0), potential_upper_damage)
 	// Finally, we determine the actual damage roll.
 	var/potential_damage = rand(potential_lower_damage, potential_upper_damage)
 	// This value is used to determine armour penetration.

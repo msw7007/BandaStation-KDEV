@@ -380,7 +380,7 @@
 		var/skill_modifier = 1
 		// If there is a mind, check for skill modifier to allow them to reload faster.
 		if(carbon_firer.mind && used_crusher)
-			skill_modifier = carbon_firer.mind.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER)
+			skill_modifier = carbon_firer.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining)
 			used_crusher.attempt_recharge_projectile(used_crusher.charge_time * skill_modifier) //If you hit a mineral, you might get a quicker reload. epic gamer style.
 
 	return ..()

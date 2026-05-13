@@ -61,6 +61,44 @@
 
 	handle_hydration_need(seconds_per_tick)
 	handle_rest_need(seconds_per_tick)
+	update_need_stat_modifiers()
+	handle_awake_training_experience(seconds_per_tick)
+
+/mob/living/carbon/human/proc/get_need_stage(current_value, full_value)
+	var/ratio = clamp(current_value / full_value, 0, 1)
+	if(ratio <= 0)
+		return CY_NEED_STAGE_EMPTY
+	if(ratio <= 0.25)
+		return CY_NEED_STAGE_CRITICAL
+	if(ratio <= 0.5)
+		return CY_NEED_STAGE_LOW
+	return 0
+
+/mob/living/carbon/human/proc/update_need_stat_modifiers()
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		clear_cy_stat_modifier(/datum/cy_stat/spirit, "need_hunger")
+		clear_cy_stat_modifier(/datum/cy_stat/dexterity, "need_hunger")
+		clear_cy_stat_modifier(/datum/cy_stat/spirit, "need_thirst")
+		clear_cy_stat_modifier(/datum/cy_stat/dexterity, "need_thirst")
+	else
+		var/hunger_stage = get_need_stage(nutrition, NUTRITION_LEVEL_FULL)
+		set_cy_stat_modifier(/datum/cy_stat/spirit, "need_hunger", -hunger_stage)
+		set_cy_stat_modifier(/datum/cy_stat/dexterity, "need_hunger", -hunger_stage)
+
+		var/thirst_stage = get_need_stage(hydration, NEED_LEVEL_FULL)
+		set_cy_stat_modifier(/datum/cy_stat/spirit, "need_thirst", -thirst_stage)
+		set_cy_stat_modifier(/datum/cy_stat/dexterity, "need_thirst", -thirst_stage)
+
+	var/rest_stage = get_need_stage(rest, NEED_LEVEL_FULL)
+	set_cy_stat_modifier(/datum/cy_stat/perception, "need_rest", -rest_stage)
+	set_cy_stat_modifier(/datum/cy_stat/charisma, "need_rest", -rest_stage)
+
+/mob/living/carbon/human/proc/handle_awake_training_experience(seconds_per_tick)
+	if(stat != CONSCIOUS || IsSleeping())
+		return
+
+	var/mood_multiplier = mob_mood ? mob_mood.get_cy_training_experience_multiplier() : 1
+	process_cy_awake_training_experience(seconds_per_tick, mood_multiplier)
 
 /mob/living/carbon/human/proc/handle_hydration_need(seconds_per_tick)
 	if(HAS_TRAIT(src, TRAIT_NOHUNGER))

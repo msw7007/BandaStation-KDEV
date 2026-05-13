@@ -162,8 +162,8 @@ GLOBAL_LIST_EMPTY(fishing_challenges_by_user)
 			special_effects |= FISHING_MINIGAME_RULE_KILL
 
 	//Finish the minigame faster at higher skill. The value modifiers for fishing are negative values btw.
-	completion_loss += user.mind?.get_skill_modifier(/datum/skill/fishing, SKILL_VALUE_MODIFIER)/5
-	completion_gain -= user.mind?.get_skill_modifier(/datum/skill/fishing, SKILL_VALUE_MODIFIER)/7.5
+	completion_loss += user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/survival)/5
+	completion_gain -= user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/survival)/7.5
 
 	reeling_velocity *= rod.bait_speed_mult
 	completion_gain *= rod.completion_speed_mult
@@ -358,12 +358,12 @@ GLOBAL_LIST_EMPTY(fishing_challenges_by_user)
 
 	if(!QDELETED(user) && user.mind && start_time && !(special_effects & FISHING_MINIGAME_RULE_NO_EXP))
 		var/seconds_spent = (world.time - start_time) * 0.1
-		var/extra_exp_malus = user.mind.get_skill_level(/datum/skill/fishing) - difficulty * 0.1
+		var/extra_exp_malus = user.get_cy_skill_level(/datum/cy_skill/spirit/survival) - difficulty * 0.1
 		if(extra_exp_malus > 0)
 			experience_multiplier /= (1 + extra_exp_malus * EXPERIENCE_MALUS_MULT)
 		experience_multiplier *= used_rod.experience_multiplier
-		user.mind.adjust_experience(/datum/skill/fishing, round(seconds_spent * FISHING_SKILL_EXP_PER_SECOND * experience_multiplier))
-		if(user.mind.get_skill_level(/datum/skill/fishing) >= SKILL_LEVEL_LEGENDARY)
+		user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, round(seconds_spent * CY_FISHING_EXPERIENCE_PER_SECOND * experience_multiplier))
+		if(user.get_cy_skill_level(/datum/cy_skill/spirit/survival) >= CY_SKILL_LEVEL_MASTER)
 			user.client?.give_award(/datum/award/achievement/skill/legendary_fisher, user)
 
 	if(!win)
@@ -533,7 +533,7 @@ GLOBAL_LIST_EMPTY(fishing_challenges_by_user)
 	if(!get_difficulty() || difficulty == old_difficulty)
 		return
 	bait_height = initial(bait_height) * used_rod.bait_height_mult
-	experience_multiplier -= difficulty * FISHING_SKILL_DIFFIULTY_EXP_MULT
+	experience_multiplier -= difficulty * CY_FISHING_DIFFICULTY_EXPERIENCE_MULTIPLIER
 	mover.reset_difficulty_values()
 	adjust_to_difficulty()
 
@@ -541,7 +541,7 @@ GLOBAL_LIST_EMPTY(fishing_challenges_by_user)
 	mover.adjust_to_difficulty()
 	bait_height -= round(difficulty * BAIT_HEIGHT_DIFFICULTY_MALUS)
 	bait_pixel_height = round(MINIGAME_BAIT_HEIGHT * (bait_height/initial(bait_height)), 1)
-	experience_multiplier += difficulty * FISHING_SKILL_DIFFIULTY_EXP_MULT
+	experience_multiplier += difficulty * CY_FISHING_DIFFICULTY_EXPERIENCE_MULTIPLIER
 	fishing_hud.hud_bait.adjust_to_difficulty(src)
 
 ///Get the difficulty and other variables, than start the minigame

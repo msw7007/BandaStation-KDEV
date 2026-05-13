@@ -70,6 +70,9 @@
 /datum/mood/proc/clear_parent_ref()
 	SIGNAL_HANDLER
 
+	mob_parent.clear_cy_stat_modifier(/datum/cy_stat/luck, "mood")
+	mob_parent.remove_movespeed_modifier(/datum/movespeed_modifier/mood)
+	mob_parent.remove_actionspeed_modifier(/datum/actionspeed_modifier/mood)
 	unmodify_hud()
 	mob_parent.lose_area_sensitivity(MOOD_DATUM_TRAIT)
 	UnregisterSignal(mob_parent, list(COMSIG_MOB_HUD_CREATED, COMSIG_ENTER_AREA, COMSIG_EXIT_AREA, COMSIG_LIVING_REVIVE, COMSIG_MOB_STATCHANGE, COMSIG_QDELETING))
@@ -301,8 +304,50 @@
 		if (MOOD_HAPPY4 to INFINITY)
 			mood_level = MOOD_LEVEL_HAPPY4
 
+	update_cy_mood_effects()
 	update_mood_icon()
 	SEND_SIGNAL(mob_parent, COMSIG_CARBON_MOOD_UPDATE)
+
+/datum/mood/proc/get_cy_mood_value()
+	return clamp(round(mood), CY_MOOD_MINIMUM, CY_MOOD_MAXIMUM)
+
+/datum/mood/proc/get_cy_mood_steps()
+	return FLOOR(abs(get_cy_mood_value()) / CY_MOOD_STAT_STEP, 1)
+
+/datum/mood/proc/get_cy_training_experience_multiplier()
+	var/cy_mood = get_cy_mood_value()
+	var/steps = FLOOR(abs(cy_mood) / CY_MOOD_STAT_STEP, 1)
+	if(cy_mood > 0)
+		return 1 + (steps * abs(CY_MOOD_POSITIVE_ACTIONSPEED_PER_STEP))
+	if(cy_mood < 0)
+		return max(0.25, 1 - (steps * CY_MOOD_NEGATIVE_SLOWDOWN_PER_STEP))
+	return 1
+
+/datum/mood/proc/update_cy_mood_effects()
+	if(!mob_parent)
+		return
+
+	var/cy_mood = get_cy_mood_value()
+	var/steps = FLOOR(abs(cy_mood) / CY_MOOD_STAT_STEP, 1)
+	var/luck_modifier = 0
+	if(cy_mood > 0)
+		luck_modifier = steps
+	else if(cy_mood < 0)
+		luck_modifier = -steps
+
+	mob_parent.set_cy_stat_modifier(/datum/cy_stat/luck, "mood", luck_modifier)
+
+	if(cy_mood < 0 && steps)
+		var/slowdown = steps * CY_MOOD_NEGATIVE_SLOWDOWN_PER_STEP
+		mob_parent.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/mood, TRUE, multiplicative_slowdown = slowdown)
+		mob_parent.add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/mood, TRUE, multiplicative_slowdown = slowdown)
+		return
+
+	mob_parent.remove_movespeed_modifier(/datum/movespeed_modifier/mood)
+	if(cy_mood > 0 && steps)
+		mob_parent.add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/mood, TRUE, multiplicative_slowdown = steps * CY_MOOD_POSITIVE_ACTIONSPEED_PER_STEP)
+	else
+		mob_parent.remove_actionspeed_modifier(/datum/actionspeed_modifier/mood)
 
 /// Updates the mob's mood icon
 /datum/mood/proc/update_mood_icon()

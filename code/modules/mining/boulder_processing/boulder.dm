@@ -152,7 +152,7 @@
 /obj/item/boulder/proc/manual_process(obj/item/weapon, mob/living/user, override_speed_multiplier, continued = FALSE)
 	var/process_speed = 0
 	//Handle weapon conditions.
-	var/skill_modifier = user.mind?.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER) || 1
+	var/skill_modifier = user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining) || 1
 	if(weapon)
 		if(HAS_TRAIT(weapon, TRAIT_INSTANTLY_PROCESSES_BOULDERS))
 			durability = 0
@@ -185,8 +185,8 @@
 		convert_to_ore()
 		to_chat(user, span_notice("You finish working on \the [src], and it crumbles into ore."))
 		playsound(src, 'sound/effects/rock/rock_break.ogg', 50)
-		user.mind?.adjust_experience(/datum/skill/mining, MINING_SKILL_BOULDER_SIZE_XP * 0.2)
-		user.mind?.adjust_experience(/datum/skill/athletics, MINING_SKILL_BOULDER_SIZE_XP * 0.2)
+		user.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, CY_MINING_BOULDER_SIZE_EXPERIENCE * 0.2)
+		user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, CY_MINING_BOULDER_SIZE_EXPERIENCE * 0.2)
 		qdel(src)
 		return
 	var/msg = (durability == 1 ? "is crumbling!" : "looks weaker!")

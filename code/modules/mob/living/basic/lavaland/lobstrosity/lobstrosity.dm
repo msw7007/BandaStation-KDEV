@@ -36,7 +36,7 @@
 	/// At which speed do we amputate limbs
 	var/snip_speed = 5 SECONDS
 	///Lobstrosities are natural anglers. This rapresent their proficiency at fishing when not mindless
-	var/base_fishing_level = SKILL_LEVEL_APPRENTICE
+	var/base_fishing_level = CY_SKILL_LEVEL_SKILLED
 	/// Things we will eat if we see them (arms, chiefly)
 	var/static/list/target_foods = list(/obj/item/bodypart/arm, /obj/item/fish/lavaloop)
 
@@ -103,8 +103,8 @@
 
 /mob/living/basic/mining/lobstrosity/mind_initialize()
 	. = ..()
-	if(mind.get_skill_level(/datum/skill/fishing) < base_fishing_level)
-		mind.set_level(/datum/skill/fishing, base_fishing_level, TRUE)
+	if(get_cy_skill_level(/datum/cy_skill/spirit/survival) < base_fishing_level)
+		set_cy_skill_level(/datum/cy_skill/spirit/survival, base_fishing_level, TRUE)
 
 /// Lavaland lobster variant, it basically just looks different
 /mob/living/basic/mining/lobstrosity/lava
@@ -165,7 +165,7 @@
 	snip_speed = 6.5 SECONDS
 	charge_type = /datum/action/cooldown/mob_cooldown/charge/basic_charge/lobster/shrimp
 	charge_command = /datum/pet_command/use_ability/lob_charge/shrimp
-	base_fishing_level = SKILL_LEVEL_NOVICE
+	base_fishing_level = CY_SKILL_LEVEL_BEGINNER
 	/// What do we become when we grow up?
 	var/mob/living/basic/mining/lobstrosity/grow_type = /mob/living/basic/mining/lobstrosity
 

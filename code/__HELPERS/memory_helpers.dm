@@ -125,3 +125,4 @@
 	for(var/memory_path in memories)
 		var/datum/memory/prime_memory = memories[memory_path]
 		new_memorizer.memories[memory_path] = prime_memory.quick_copy_memory(new_memorizer)
+	copy_cy_memory_fragments_to(new_memorizer, additional_degradation = 1)

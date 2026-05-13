@@ -25,7 +25,7 @@
 		should_modify_speech = CALLBACK(src, PROC_REF(should_modify_speech))\
 	)
 
-/obj/item/organ/tongue/get_possible_languages()
+/obj/item/organ/tongue/tajaran/get_possible_languages()
 	return ..() + /datum/language/siiktajr
 
 /obj/item/organ/tongue/tajaran/on_mob_insert(mob/living/carbon/owner)

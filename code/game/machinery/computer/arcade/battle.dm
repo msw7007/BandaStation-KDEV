@@ -236,7 +236,7 @@
 	player_gold += enemy_gold_reward
 	if(user)
 		var/exp_gained = DEFAULT_EXP_GAIN * all_worlds[player_current_world]
-		user.mind?.adjust_experience(/datum/skill/gaming, exp_gained)
+		user.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, exp_gained)
 		user.won_game()
 	SSblackbox.record_feedback("nested tally", "arcade_results", 1, list("win", (obj_flags & EMAGGED ? "emagged":"normal")))
 	playsound(loc, 'sound/machines/arcade/win.ogg', 40)
@@ -360,7 +360,7 @@
 			SStgui.update_uis(src)
 			return
 		//we couldn't heal ourselves or steal MP, we'll just attack instead.
-	var/skill_level = user?.mind?.get_skill_level(/datum/skill/gaming) || 1
+	var/skill_level = user?.get_cy_skill_level(/datum/cy_skill/charisma/style) || 1
 	var/chance_at_counterattack = 40 + (skill_level * 5) //at level 1 this is 45, at legendary this is 75
 	var/damage_dealt = (defending_flags & BATTLE_ATTACK_FLAG_DEFEND) ? rand(5, 10) : rand(15, 20)
 	if((defending_flags & BATTLE_ATTACK_FLAG_COUNTERATTACK) && prob(chance_at_counterattack))

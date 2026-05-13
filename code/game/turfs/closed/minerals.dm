@@ -257,7 +257,8 @@
 		return
 	var/mining_speed = mining_arms ? tool_mine_speed : hand_mine_speed
 	TIMER_COOLDOWN_START(src, REF(user), mining_speed)
-	var/skill_modifier = user.mind?.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER) || 1
+	var/mob/living/living_user = user
+	var/skill_modifier = istype(living_user) ? living_user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining) : 1
 	balloon_alert(user, "pulling out pieces...")
 	if(!do_after(user, mining_speed * skill_modifier, target = src))
 		TIMER_COOLDOWN_END(src, REF(user)) //if we fail we can start again immediately
@@ -282,9 +283,9 @@
 		var/mob/living/carbon/human/H = user
 		if(exp_multiplier)
 			if (mineral_type && (mineral_amt > 0))
-				H.mind.adjust_experience(/datum/skill/mining, initial(mineral_type.mine_experience) * mineral_amt * exp_multiplier)
+				H.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, initial(mineral_type.mine_experience) * mineral_amt * exp_multiplier)
 			else
-				H.mind.adjust_experience(/datum/skill/mining, 4 * exp_multiplier)
+				H.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, 4 * exp_multiplier)
 
 	for(var/obj/effect/temp_visual/mining_overlay/M in src)
 		qdel(M)
@@ -1240,7 +1241,8 @@
 	if(!ishuman(user))
 		to_chat(usr, span_warning("Only a more advanced species could break a rock such as this one!"))
 		return FALSE
-	if(user.mind?.get_skill_level(/datum/skill/mining) >= SKILL_LEVEL_MASTER)
+	var/mob/living/living_user = user
+	if(istype(living_user) && living_user.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_PROFESSIONAL)
 		. = ..()
 	else
 		to_chat(usr, span_warning("The rock seems to be too strong to destroy. Maybe I can break it once I become a master miner."))
@@ -1253,7 +1255,7 @@
 	if(!ishuman(user))
 		return // see attackby
 	var/mob/living/carbon/human/H = user
-	if(!(H.mind?.get_skill_level(/datum/skill/mining) >= SKILL_LEVEL_MASTER))
+	if(!(H.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_PROFESSIONAL))
 		return
 	drop_ores()
 	H.client.give_award(/datum/award/achievement/skill/legendary_miner, H)
@@ -1265,7 +1267,7 @@
 	addtimer(CALLBACK(src, PROC_REF(AfterChange), flags, old_type), 1, TIMER_UNIQUE)
 	playsound(src, 'sound/effects/break_stone.ogg', 50, TRUE) //beautiful destruction
 	mined.update_visuals()
-	H.mind?.adjust_experience(/datum/skill/mining, 100) //yay!
+	H.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, 100) //yay!
 
 /turf/closed/mineral/strong/proc/drop_ores()
 	if(prob(10))

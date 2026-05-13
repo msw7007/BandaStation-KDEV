@@ -36,7 +36,7 @@
 	return COMPONENT_EQUIPPED_FAILED
 
 /datum/element/skill_reward/proc/check_equippable(mob/living/user)
-	return user.mind?.get_skill_level(associated_skill) >= SKILL_LEVEL_LEGENDARY
+	return user.get_cy_skill_level(associated_skill) >= CY_SKILL_LEVEL_MASTER
 
 /**
  * Welp, the code is pretty much the same, except for one tiny detail, I suppose it's ok to make a subtype of this element.

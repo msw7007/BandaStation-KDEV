@@ -21,7 +21,7 @@
 		to_chat(user, span_userdanger("The guillotine drops on your arm, and the machine sucks it in!"))
 		chopchop.dismember()
 		qdel(chopchop)
-		user.mind?.adjust_experience(/datum/skill/gaming, 100)
+		user.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 100)
 		user.won_game()
 		victory_tickets(rand(6,10))
 		return

@@ -168,7 +168,7 @@
 		return
 	var/skillcheck = 1
 	if(user?.mind)
-		skillcheck = user.mind.get_skill_modifier(/datum/skill/cleaning, SKILL_SPEED_MODIFIER)
+		skillcheck = user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/analysis)
 	if(prob(skillcheck*100)) //higher level = more uses assuming RNG is nice
 		uses--
 	if(uses <= 0)

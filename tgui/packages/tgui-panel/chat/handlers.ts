@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { saveChatToStorage } from './helpers';
 import { chatRenderer } from './renderer';
 
 const sequences: number[] = [];
@@ -9,7 +10,12 @@ const messageSchema = z.object({
   content: z.any(),
 });
 
+const memoryRewriteSchema = z.object({
+  messages: z.array(z.any()).optional(),
+});
+
 type ChatMessage = z.infer<typeof messageSchema>;
+type MemoryRewrite = z.infer<typeof memoryRewriteSchema>;
 
 function pushMessage(message: ChatMessage): void {
   sequences.push(message.sequence);
@@ -55,4 +61,18 @@ export function chatMessage(payload: string): void {
   }
 
   pushMessage(message);
+}
+
+export function chatMemoryRewrite(payload: string): void {
+  let rewrite: MemoryRewrite;
+  try {
+    const parsed = JSON.parse(payload);
+    rewrite = memoryRewriteSchema.parse(parsed);
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+
+  chatRenderer.rewriteMemoryChat(rewrite.messages || []);
+  saveChatToStorage();
 }

@@ -71,21 +71,12 @@
 
 	var/list/learned_recipes //List of learned recipe TYPES.
 
-	///List of skills the user has received a reward for. Should not be used to keep track of currently known skills. Lazy list because it shouldnt be filled often
-	var/list/skills_rewarded
-	///Assoc list of skills. Use SKILL_LVL to access level, and SKILL_EXP to access skill's exp.
-	var/list/known_skills = list()
 	///Weakref to thecharacter we joined in as- either at roundstart or latejoin, so we know for persistent scars if we ended as the same person or not
 	var/datum/weakref/original_character
 	/// The index for what character slot, if any, we were loaded from, so we can track persistent scars on a per-character basis. Each character slot gets PERSISTENT_SCAR_SLOTS scar slots
 	var/original_character_slot_index
 	/// The index for our current scar slot, so we don't have to constantly check the savefile (unlike the slots themselves, this index is independent of selected char slot, and increments whenever a valid char is joined with)
 	var/current_scar_slot_index
-
-	///Skill multiplier, adjusts how much xp you get/loose from adjust_xp. Dont override it directly, add your reason to experience_multiplier_reasons and use that as a key to put your value in there.
-	var/experience_multiplier = 1
-	///Skill multiplier list, just slap your multiplier change onto this with the type it is coming from as key.
-	var/list/experience_multiplier_reasons = list()
 
 	/// A lazy list of roles to display that this mind has, stuff like "Traitor" or "Special Creature"
 	var/list/special_roles
@@ -107,15 +98,18 @@
 	/// Counts how many humanoid deaths we've seen
 	var/deaths_witnessed = 0
 
+	/// Control memory fragment with limit for memory system
+	var/list/cy_memory_fragments = list()
+
 /datum/mind/New(_key)
 	key = _key
-	init_known_skills()
 	set_assigned_role(SSjob.get_job_type(/datum/job/unassigned)) // Unassigned by default.
 
 /datum/mind/Destroy()
 	SSticker.minds -= src
 	QDEL_NULL(antag_hud)
 	QDEL_LIST_ASSOC_VAL(memories)
+	QDEL_LIST(cy_memory_fragments)
 	QDEL_NULL(memory_panel)
 	QDEL_LIST(antag_datums)
 	set_current(null)
@@ -184,7 +178,11 @@
 		new_character.mind.set_current(null)
 
 	var/mob/living/old_current = current
+	var/sync_memory_chat = FALSE
 	if(old_current)
+		if(old_current.stat == DEAD && old_current != new_character && old_current.timeofdeath)
+			sync_memory_chat = degrade_cy_memories_for_dead_time(world.time - old_current.timeofdeath)
+
 		//transfer anyone observing the old character to the new one
 		old_current.transfer_observers_to(new_character)
 
@@ -215,6 +213,8 @@
 	if(new_character.client)
 		LAZYCLEARLIST(new_character.client.recent_examines)
 		new_character.client.init_verbs() // re-initialize character specific verbs
+		if(sync_memory_chat)
+			sync_cy_memory_fragments_to_chat()
 
 	SEND_SIGNAL(src, COMSIG_MIND_TRANSFERRED, old_current)
 	SEND_SIGNAL(current, COMSIG_MOB_MIND_TRANSFERRED_INTO, old_current, src)

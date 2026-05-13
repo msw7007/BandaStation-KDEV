@@ -66,4 +66,4 @@
 
 /obj/item/clothing/gloves/boxing/golden/Initialize(mapload)
 	. = ..()
-	AddElement(/datum/element/skill_reward, /datum/skill/athletics)
+	AddElement(/datum/element/skill_reward, /datum/cy_skill/spirit/athletics)

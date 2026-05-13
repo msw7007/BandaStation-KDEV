@@ -52,7 +52,7 @@
 	var/list/effects = list(new /obj/effect/temp_visual/climbing_hook(interacting_with, away_dir), new /obj/effect/temp_visual/climbing_hook(user_turf, away_dir))
 
 	// Our climbers athletics ability
-	var/fitness_level = user.mind?.get_skill_level(/datum/skill/athletics)
+	var/fitness_level = user.get_cy_skill_level(/datum/cy_skill/spirit/athletics)
 
 	// Misc bonuses to the climb speed.
 	var/misc_multiplier = 1
@@ -65,7 +65,7 @@
 
 	if(do_after(user, final_climb_time, interacting_with))
 		user.forceMove(interacting_with)
-		user.mind?.adjust_experience(/datum/skill/athletics, round((ATHLETICS_SKILL_MISC_EXP)/(fitness_level || 1), 1)) //get some experience for our trouble, especially since this costs us a climbing rope use
+		user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round((CY_ATHLETICS_MISC_EXPERIENCE)/(fitness_level || 1), 1)) //get some experience for our trouble, especially since this costs us a climbing rope use
 
 	QDEL_LIST(effects)
 	return ITEM_INTERACT_SUCCESS

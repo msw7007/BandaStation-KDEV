@@ -1,4 +1,4 @@
-import { Button, Dimmer, Section, Stack } from 'tgui-core/components';
+import { Box, Button, Dimmer, Section, Stack } from 'tgui-core/components';
 
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
@@ -132,10 +132,11 @@ const MemoryQuality = (props) => {
 };
 
 export const MemoryPanel = (props) => {
-  const { act, data } = useBackend();
+  const { data } = useBackend();
   const memories = data.memories || [];
+  const fragments = data.fragments || [];
   return (
-    <Window title="Memory Panel" width={400} height={500}>
+    <Window title="Memory Panel" width={520} height={620}>
       <Window.Content>
         <Section
           maxHeight="32px"
@@ -152,7 +153,7 @@ export const MemoryPanel = (props) => {
             />
           }
         />
-        {(!memories && (
+        {(!memories.length && !fragments.length && (
           <Dimmer fontSize="28px" align="center">
             You have no memories!
           </Dimmer>
@@ -167,6 +168,52 @@ export const MemoryPanel = (props) => {
             ))}
           </Stack>
         )}
+        <Section
+          mt={1}
+          title="Recalled Events"
+          buttons={
+            <Button
+              color="transparent"
+              tooltip={`
+                These are mutable fragments of what your character heard
+                and experienced. Death can erase, blur, or rename them.
+              `}
+              tooltipPosition="bottom-start"
+              icon="brain"
+            />
+          }
+        >
+          {!fragments.length && (
+            <Box color="label" textAlign="center">
+              No recalled fragments.
+            </Box>
+          )}
+          {!!fragments.length && (
+            <Stack vertical>
+              {fragments.map((fragment, index) => (
+                <Stack.Item key={`${fragment.time}-${index}`}>
+                  <Section
+                    title={`${fragment.time} ${fragment.speaker}`}
+                    buttons={
+                      <Box color={fragment.degradation ? 'average' : 'good'}>
+                        {fragment.channel}
+                      </Box>
+                    }
+                  >
+                    <Box italic={!!fragment.degradation}>
+                      {fragment.text}
+                    </Box>
+                    {!!fragment.where && (
+                      <Box color="label" fontSize="0.9em" mt={0.5}>
+                        {fragment.where}
+                      </Box>
+                    )}
+                  </Section>
+                </Stack.Item>
+              ))}
+            </Stack>
+          )}
+        </Section>
       </Window.Content>
     </Window>
   );

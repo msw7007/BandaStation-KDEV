@@ -120,7 +120,7 @@
 	var/cleaning_duration = base_cleaning_duration
 	if(user.mind) //higher cleaning skill can make the duration shorter
 		//offsets the multiplier you get from cleaning skill, but doesn't allow the duration to be longer than the base duration
-		cleaning_duration = (cleaning_duration * min(user.mind.get_skill_modifier(/datum/skill/cleaning, SKILL_SPEED_MODIFIER)+skill_duration_modifier_offset, 1))
+		cleaning_duration = (cleaning_duration * min(user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/analysis)+skill_duration_modifier_offset, 1))
 	// Assoc list, collects all items being cleaned with its value being any blood on it
 	var/list/all_cleaned = list()
 	all_cleaned[target] = GET_ATOM_BLOOD_DNA(target) || list()
@@ -130,10 +130,10 @@
 		clean_succeeded = TRUE
 		for(var/obj/effect/decal/cleanable/cleanable_decal in target) //it's important to do this before you wash all of the cleanables off
 			if(call_wash && grant_xp)
-				user.mind?.adjust_experience(/datum/skill/cleaning, round(cleanable_decal.beauty / CLEAN_SKILL_BEAUTY_ADJUSTMENT))
+				user.award_cy_raw_skill_experience(/datum/cy_skill/professional/analysis, round(cleanable_decal.beauty / CY_CLEANING_BEAUTY_EXPERIENCE_ADJUSTMENT))
 			all_cleaned[cleanable_decal] = GET_ATOM_BLOOD_DNA(cleanable_decal)
 		if(call_wash && target.wash(cleaning_strength) && grant_xp)
-			user.mind?.adjust_experience(/datum/skill/cleaning, round(CLEAN_SKILL_GENERIC_WASH_XP))
+			user.award_cy_raw_skill_experience(/datum/cy_skill/professional/analysis, round(CY_CLEANING_GENERIC_WASH_EXPERIENCE))
 
 	on_cleaned_callback?.Invoke(source, target, user, clean_succeeded, all_cleaned)
 	//remove the cleaning overlay

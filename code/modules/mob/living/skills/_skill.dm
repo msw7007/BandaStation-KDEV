@@ -11,6 +11,25 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 
 	return skill
 
+/proc/get_all_cy_skill_types()
+	return GLOB.cy_physical_skill_types + GLOB.cy_weapon_skill_types + GLOB.cy_professional_skill_types
+
+/proc/get_cy_skill_level_name(level)
+	switch(level)
+		if(CY_SKILL_LEVEL_BEGINNER)
+			return "Beginner"
+		if(CY_SKILL_LEVEL_SKILLED)
+			return "Skilled"
+		if(CY_SKILL_LEVEL_TRAINED)
+			return "Trained"
+		if(CY_SKILL_LEVEL_EXPERT)
+			return "Expert"
+		if(CY_SKILL_LEVEL_PROFESSIONAL)
+			return "Professional"
+		if(CY_SKILL_LEVEL_MASTER to INFINITY)
+			return "Master"
+	return "Untrained"
+
 /datum/cy_skill
 	/// Player-facing name.
 	var/name = "Unknown skill"

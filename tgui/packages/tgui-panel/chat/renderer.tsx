@@ -21,10 +21,21 @@ import {
   MAX_VISIBLE_MESSAGES,
   MESSAGE_PRUNE_INTERVAL,
   MESSAGE_TYPE_INTERNAL,
+  MESSAGE_TYPE_COMBAT,
+  MESSAGE_TYPE_ENTERTAINMENT,
+  MESSAGE_TYPE_INFO,
+  MESSAGE_TYPE_LOCALCHAT,
+  MESSAGE_TYPE_RADIO,
+  MESSAGE_TYPE_WARNING,
   MESSAGE_TYPE_UNKNOWN,
   MESSAGE_TYPES,
 } from './constants';
-import { canPageAcceptType, createMessage, isSameMessage } from './model';
+import {
+  canPageAcceptType,
+  createMessage,
+  isSameMessage,
+  serializeMessage,
+} from './model';
 import { highlightNode, linkifyNode } from './replaceInTextNode';
 
 const logger = createLogger('chatRenderer');
@@ -32,6 +43,15 @@ const logger = createLogger('chatRenderer');
 // We consider this as the smallest possible scroll offset
 // that is still trackable.
 const SCROLL_TRACKING_TOLERANCE = 24;
+
+const MEMORY_REWRITE_MESSAGE_TYPES = new Set([
+  MESSAGE_TYPE_COMBAT,
+  MESSAGE_TYPE_ENTERTAINMENT,
+  MESSAGE_TYPE_INFO,
+  MESSAGE_TYPE_LOCALCHAT,
+  MESSAGE_TYPE_RADIO,
+  MESSAGE_TYPE_WARNING,
+]);
 
 // List of injectable component names to the actual type
 export const TGUI_CHAT_COMPONENTS = {
@@ -573,6 +593,29 @@ class ChatRenderer {
     this.processBatch(messages, {
       notifyListeners: false,
     });
+  }
+
+  rewriteMemoryChat(batch: Array<Record<string, unknown>>) {
+    if (!this.isReady()) {
+      this.queue = batch;
+      this.messages = [];
+      this.visibleMessages = [];
+      return;
+    }
+
+    const preservedMessages = this.messages
+      .filter((message) => !MEMORY_REWRITE_MESSAGE_TYPES.has(message.type))
+      .map((message) => serializeMessage(message));
+
+    this.rootNode!.textContent = '';
+    this.messages = [];
+    this.visibleMessages = [];
+
+    this.processBatch([...preservedMessages, ...batch], {
+      notifyListeners: false,
+    });
+
+    logger.log(`Rewrote memory-backed chat`);
   }
 
   /**

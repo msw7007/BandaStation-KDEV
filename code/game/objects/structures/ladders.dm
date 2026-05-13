@@ -246,12 +246,13 @@
 	show_initial_fluff_message(user, going_up)
 
 	// Our climbers athletics ability
-	var/fitness_level = user.mind?.get_skill_level(/datum/skill/athletics)
+	var/mob/living/living_user = user
+	var/fitness_level = istype(living_user) ? living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) : CY_SKILL_LEVEL_UNTRAINED
 
 	// Misc bonuses to the climb speed.
 	var/misc_multiplier = 1
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = living_user?.get_organ_slot(ORGAN_SLOT_SPINE)
 	if(istype(potential_spine))
 		misc_multiplier *= potential_spine.athletics_boost_multiplier
 
@@ -278,8 +279,10 @@
 	user.zMove(target = target, z_move_flags = ZMOVE_CHECK_PULLEDBY|ZMOVE_ALLOW_BUCKLED|ZMOVE_INCLUDE_PULLED)
 
 	if(grant_exp)
-		var/fitness_level = user.mind?.get_skill_level(/datum/skill/athletics)
-		user.mind?.adjust_experience(/datum/skill/athletics, round(ATHLETICS_SKILL_MISC_EXP/(fitness_level || 1), 1)) //get a little experience for our trouble
+		var/mob/living/living_user = user
+		if(istype(living_user))
+			var/fitness_level = living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics)
+			living_user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(CY_ATHLETICS_MISC_EXPERIENCE/(fitness_level || 1), 1)) //get a little experience for our trouble
 
 	if(!is_ghost)
 		show_final_fluff_message(user, ladder, going_up)

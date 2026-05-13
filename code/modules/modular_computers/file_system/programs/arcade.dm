@@ -39,7 +39,7 @@
 
 /datum/computer_file/program/arcade/proc/game_check(mob/living/user)
 	sleep(0.5 SECONDS)
-	user?.mind?.adjust_experience(/datum/skill/gaming, 1)
+	user?.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 1)
 	if(boss_hp <= 0)
 		heads_up = "You have crushed [boss_name]! Rejoice!"
 		playsound(computer.loc, 'sound/machines/arcade/win.ogg', 50)
@@ -48,7 +48,7 @@
 		if(istype(computer))
 			computer.update_appearance()
 		ticket_count += 1
-		user?.mind?.adjust_experience(/datum/skill/gaming, 50)
+		user?.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 50)
 		user.won_game()
 		sleep(1 SECONDS)
 	else if(player_hp <= 0 || player_mp <= 0)
@@ -58,7 +58,7 @@
 		program_open_overlay = "arcade_off"
 		if(istype(computer))
 			computer.update_appearance()
-		user?.mind?.adjust_experience(/datum/skill/gaming, 10)
+		user?.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 10)
 		user.lost_game()
 		sleep(1 SECONDS)
 
@@ -116,8 +116,8 @@
 	var/gamerSkillLevel = 0
 	var/gamerSkill = 0
 	if(gamer?.mind)
-		gamerSkillLevel = gamer.mind.get_skill_level(/datum/skill/gaming)
-		gamerSkill = gamer.mind.get_skill_modifier(/datum/skill/gaming, SKILL_RANDS_MODIFIER)
+		gamerSkillLevel = gamer.get_cy_skill_level(/datum/cy_skill/charisma/style)
+		gamerSkill = gamer.get_cy_skill_value_modifier(/datum/cy_skill/charisma/style)
 	switch(action)
 		if("Attack")
 			var/attackamt = 0 //Spam prevention.
@@ -137,7 +137,7 @@
 			if(pause_state == FALSE)
 				healamt = rand(6,8) + rand(0, gamerSkill)
 				var/maxPointCost = 3
-				if(gamerSkillLevel >= SKILL_LEVEL_JOURNEYMAN)
+				if(gamerSkillLevel >= CY_SKILL_LEVEL_TRAINED)
 					maxPointCost = 2
 				healcost = rand(1, maxPointCost)
 			pause_state = TRUE

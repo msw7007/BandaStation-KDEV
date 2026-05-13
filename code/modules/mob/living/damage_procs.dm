@@ -249,7 +249,7 @@
 
 /// return the total damage of all types which update your health
 /mob/living/proc/get_total_damage(precision = DAMAGE_PRECISION)
-	return round(get_brute_loss() + get_fire_loss() + get_tox_loss() + get_oxy_loss() + get_psychic_loss() + max(get_pain_loss() - 200, 0), precision)
+	return round(get_brute_loss() + get_fire_loss() + get_tox_loss() + get_oxy_loss() + max(get_pain_loss() - 200, 0), precision)
 
 /// Applies multiple damages at once via [apply_damage][/mob/living/proc/apply_damage]
 /mob/living/proc/apply_damages(

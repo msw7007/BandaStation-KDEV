@@ -830,7 +830,7 @@
 	if(HAS_TRAIT(src, TRAIT_GODMODE))
 		return
 	var/pain_overflow = max(get_pain_loss() - 200, 0)
-	set_health(maxHealth - get_oxy_loss() - get_tox_loss() - get_fire_loss() - get_brute_loss() - get_psychic_loss() - pain_overflow)
+	set_health(maxHealth - get_oxy_loss() - get_tox_loss() - get_fire_loss() - get_brute_loss() - pain_overflow)
 	if(health <= critical_health_threshold && !clinical_death_started_at)
 		clinical_death_started_at = world.time
 	else if(health > critical_health_threshold)
@@ -2998,7 +2998,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 
 /// Returns an arbitrary number which very roughly correlates with how buff you look
 /mob/living/proc/calculate_fitness()
-	var/athletics_level = mind?.get_skill_level(/datum/skill/athletics) || 1
+	var/athletics_level = get_cy_skill_level(/datum/cy_skill/spirit/athletics)
 	var/damage = (melee_damage_lower + melee_damage_upper) / 2
 
 	return ceil(damage * (ceil(athletics_level / 2)) * maxHealth)

@@ -279,7 +279,7 @@
 
 /datum/orion_event/illness/emag_effect(obj/machinery/computer/arcade/orion_trail/game, mob/living/gamer)
 	var/maxSeverity = 3
-	if(gamer_skill_level >= SKILL_LEVEL_EXPERT)
+	if(gamer_skill_level >= CY_SKILL_LEVEL_EXPERT)
 		maxSeverity = 2 //part of gitting gud is rng mitigation
 	var/severity = rand(1,maxSeverity) //pray to RNGesus. PRAY, PIGS
 	if(severity == 1)
@@ -507,7 +507,9 @@
 		fuel = rand(5 + gamer_skill_rands,15 + gamer_skill_rands)
 		food = rand(5 + gamer_skill_rands,15 + gamer_skill_rands)
 		text = "You successfully raided the spaceport! You gained [fuel] Fuel and [food] Food! (+[fuel] fuel, +[food] food)"
-		usr?.mind?.adjust_experience(/datum/skill/gaming, 10)
+		if(isliving(usr))
+			var/mob/living/living_user = usr
+			living_user.award_cy_raw_skill_experience(/datum/cy_skill/charisma/style, 10)
 	else
 		fuel = rand(-5,-15)
 		food = rand(-5,-15)
