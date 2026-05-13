@@ -3,3 +3,5 @@
 #define ACTIONSPEED_ID_STIMULANTS "stimulant_withdrawal"
 
 #define ACTIONSPEED_ID_MIDAS_BLIGHT "midas_blight_debuff"
+
+#define ACTIONSPEED_ID_CY_MOOD "cy_mood"

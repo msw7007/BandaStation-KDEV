@@ -7,3 +7,6 @@
 	id = ACTIONSPEED_ID_SANITY
 
 /datum/actionspeed_modifier/mood
+	variable = TRUE
+	id = ACTIONSPEED_ID_CY_MOOD
+	multiplicative_slowdown = 0

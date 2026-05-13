@@ -11,25 +11,6 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 
 	return skill
 
-/proc/get_all_cy_skill_types()
-	return GLOB.cy_physical_skill_types + GLOB.cy_weapon_skill_types + GLOB.cy_professional_skill_types
-
-/proc/get_cy_skill_level_name(level)
-	switch(level)
-		if(CY_SKILL_LEVEL_BEGINNER)
-			return "Beginner"
-		if(CY_SKILL_LEVEL_SKILLED)
-			return "Skilled"
-		if(CY_SKILL_LEVEL_TRAINED)
-			return "Trained"
-		if(CY_SKILL_LEVEL_EXPERT)
-			return "Expert"
-		if(CY_SKILL_LEVEL_PROFESSIONAL)
-			return "Professional"
-		if(CY_SKILL_LEVEL_MASTER to INFINITY)
-			return "Master"
-	return "Untrained"
-
 /datum/cy_skill
 	/// Player-facing name.
 	var/name = "Unknown skill"
@@ -66,13 +47,13 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 
 	perks_by_level = list()
 	for(var/current_level in 1 to max_level)
-		perks_by_level[current_level] = list(cy_generic_skill_perk_for_level(current_level))
+		perks_by_level["[current_level]"] = list(cy_generic_skill_perk_for_level(current_level))
 
 /datum/cy_skill/proc/get_perks_for_level(level)
 	if(!length(perks_by_level))
 		return list()
 
-	var/list/perks = perks_by_level[level]
+	var/list/perks = perks_by_level["[level]"]
 	if(!length(perks))
 		return list()
 
@@ -85,3 +66,70 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 			all_perks += perk_type
 
 	return all_perks
+
+
+/proc/get_all_cy_skill_types()
+	var/list/result = list()
+	if(length(GLOB.cy_physical_skill_types))
+		result += GLOB.cy_physical_skill_types
+	if(length(GLOB.cy_weapon_skill_types))
+		result += GLOB.cy_weapon_skill_types
+	if(length(GLOB.cy_professional_skill_types))
+		result += GLOB.cy_professional_skill_types
+
+	if(length(result))
+		return result
+
+	result = subtypesof(/datum/cy_skill)
+	result -= /datum/cy_skill/weapon
+	result -= /datum/cy_skill/professional
+	return result
+
+/proc/get_cy_skill_level_name(level)
+	switch(clamp(round(level), CY_SKILL_MINIMUM_LEVEL, CY_SKILL_MAXIMUM_LEVEL))
+		if(CY_SKILL_LEVEL_UNTRAINED)
+			return "Untrained"
+		if(CY_SKILL_LEVEL_BEGINNER)
+			return "Beginner"
+		if(CY_SKILL_LEVEL_SKILLED)
+			return "Skilled"
+		if(CY_SKILL_LEVEL_TRAINED)
+			return "Trained"
+		if(CY_SKILL_LEVEL_EXPERT)
+			return "Expert"
+		if(CY_SKILL_LEVEL_PROFESSIONAL)
+			return "Professional"
+		if(CY_SKILL_LEVEL_MASTER)
+			return "Master"
+
+	return "Unknown"
+
+/proc/cy_skill_from_legacy_skill(skill_type)
+	if(!skill_type)
+		return null
+
+	var/static/legacy_skill_map
+	if(!legacy_skill_map)
+		legacy_skill_map = list(
+			text2path("/datum/skill/athletics") = /datum/cy_skill/spirit/athletics,
+			text2path("/datum/skill/mining") = /datum/cy_skill/professional/mining,
+			text2path("/datum/skill/fishing") = /datum/cy_skill/spirit/survival,
+			text2path("/datum/skill/gaming") = /datum/cy_skill/professional/analysis,
+			text2path("/datum/skill/cleaning") = /datum/cy_skill/professional/construction,
+		)
+
+	return legacy_skill_map[skill_type]
+
+/proc/cy_legacy_skill_level_to_cy_skill_level(level)
+	return clamp(round(level) - 1, CY_SKILL_MINIMUM_LEVEL, CY_SKILL_MAXIMUM_LEVEL)
+
+/proc/cy_skill_level_to_legacy_skill_level(level)
+	return clamp(round(level) + 1, 1, 7)
+
+/proc/cy_legacy_experience_to_cy_skill_experience(experience)
+	var/legacy_to_cy_scale = (CY_SKILL_MAXIMUM_LEVEL * CY_SKILL_EXPERIENCE_PER_LEVEL) / 2500
+	return max(0, round(experience * legacy_to_cy_scale))
+
+/proc/cy_skill_experience_to_legacy_experience(experience)
+	var/cy_to_legacy_scale = 2500 / (CY_SKILL_MAXIMUM_LEVEL * CY_SKILL_EXPERIENCE_PER_LEVEL)
+	return max(0, round(experience * cy_to_legacy_scale))

@@ -1638,6 +1638,23 @@
 		mind.memory_panel = new(usr, mind)
 	mind.memory_panel.ui_interact(usr)
 
+/mob/verb/add_memory_record()
+	set name = "Add Memory Record"
+	set category = "IC"
+	set desc = "Write a permanent memory note."
+	if(!mind)
+		to_chat(src, span_warning("У вас нет разума!"))
+		return
+	var/title = tgui_input_text(src, "Название записи", "Добавить запись в память", max_length = MAX_NAME_LEN)
+	if(isnull(title))
+		return
+	var/text = tgui_input_text(src, "Текст записи", "Добавить запись в память", max_length = MAX_MESSAGE_LEN)
+	if(!text)
+		return
+	mind.add_manual_memory_note(title, text)
+	to_chat(src, span_notice("Запись добавлена в глубокую память."))
+	mind.memory_panel?.ui_interact(src)
+
 ///Shows a tgui window with memories
 /mob/proc/open_memory_panel()
 	if(!mind)
@@ -1694,6 +1711,28 @@
 	data["memories"] = memories
 	data["fragments"] = fragments
 	return data
+
+/datum/memory_panel/ui_act(action, list/params)
+	. = ..()
+	if(.)
+		return
+
+	if(action != "add_memory_record")
+		return FALSE
+
+	var/mob/user = usr
+	if(!user || !mind_reference || user.mind != mind_reference)
+		return FALSE
+
+	var/title = tgui_input_text(user, "Название записи", "Добавить запись в память", max_length = MAX_NAME_LEN)
+	if(isnull(title))
+		return TRUE
+	var/text = tgui_input_text(user, "Текст записи", "Добавить запись в память", max_length = MAX_MESSAGE_LEN)
+	if(!text)
+		return TRUE
+	mind_reference.add_manual_memory_note(title, text)
+	to_chat(user, span_notice("Запись добавлена в глубокую память."))
+	return TRUE
 
 /mob/verb/view_skills()
 	set category = "IC"

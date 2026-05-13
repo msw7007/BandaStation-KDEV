@@ -352,8 +352,6 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 		message = deaf_message
 
 		var/show_message_success = show_message(message, MSG_VISUAL, deaf_message, deaf_type, avoid_highlight)
-		if(show_message_success && understood)
-			mind?.add_cy_speech_memory(speaker, raw_message, radio_freq_name, message_mods)
 		return understood && show_message_success
 
 	if(speaker != src)
@@ -374,8 +372,6 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	// Recompose message for AI hrefs, language incomprehension.
 	message = compose_message(speaker, message_language, raw_message, radio_freq, radio_freq_name, radio_freq_color, spans, message_mods)
 	var/show_message_success = show_message(message, MSG_AUDIBLE, deaf_message, deaf_type, avoid_highlight)
-	if(show_message_success && understood && !is_custom_emote)
-		mind?.add_cy_speech_memory(speaker, raw_message, radio_freq_name, message_mods)
 
 	// BANDASTATION ADDITION START - TTS
 	if(show_message_success && radio_freq != FREQ_ENTERTAINMENT)

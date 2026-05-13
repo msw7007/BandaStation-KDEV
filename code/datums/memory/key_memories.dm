@@ -260,3 +260,30 @@
 		"Poly the parrot screaming \"[decrypt_key]!\" over and over again.",
 		"[protagonist_name] spilling coffee over the message monitor while typing [decrypt_key].",
 	)
+
+/// A manual deep-memory note written by the character.
+/datum/memory/key/manual_note
+	memory_flags = MEMORY_FLAG_NOMOOD|MEMORY_FLAG_NOLOCATION|MEMORY_FLAG_NOPERSISTENCE|MEMORY_SKIP_UNCONSCIOUS|MEMORY_NO_STORY|MEMORY_FLAG_MULTIPLE
+	var/note_title
+	var/note_text
+	var/created_at
+
+/datum/memory/key/manual_note/New(
+	datum/mind/memorizer_mind,
+	atom/protagonist,
+	atom/deuteragonist,
+	atom/antagonist,
+	note_title,
+	note_text,
+	created_at = world.time,
+)
+	src.note_title = copytext_char(strip_html("[note_title]", MAX_NAME_LEN), 1, MAX_NAME_LEN)
+	src.note_text = copytext_char(strip_html("[note_text]", MAX_MESSAGE_LEN), 1, MAX_MESSAGE_LEN)
+	src.created_at = created_at
+	return ..()
+
+/datum/memory/key/manual_note/get_names()
+	return list("[created_at ? round_timestamp(wtime = created_at) : "Unknown time"] - [note_title || "Personal note"]: [note_text]")
+
+/datum/memory/key/manual_note/get_starts()
+	return list("[protagonist_name] tries to remember: [note_text]")

@@ -71,12 +71,16 @@
 		if(new_memory_flags & MEMORY_CHECK_DEAFNESS && HAS_TRAIT(current, TRAIT_DEAF))
 			return
 
+	memory_args[1] = src
+	var/datum/memory/created_memory = new memory_type(arglist(memory_args))
+
+	if(initial(memory_type.memory_flags) & MEMORY_FLAG_MULTIPLE)
+		memories[created_memory] = created_memory
+		return created_memory
+
 	var/datum/memory/replaced_memory = memories[memory_type]
 	if(replaced_memory)
 		qdel(replaced_memory)
-
-	memory_args[1] = src
-	var/datum/memory/created_memory = new memory_type(arglist(memory_args))
 
 	memories[memory_type] = created_memory
 	return created_memory
@@ -115,8 +119,36 @@
 
 /// Helder to wipe the passed memory type ONLY from our list of memories
 /datum/mind/proc/wipe_memory_type(memory_type)
-	qdel(memories[memory_type])
-	memories -= memory_type
+	var/datum/memory/exact_memory = memories[memory_type]
+	if(exact_memory)
+		qdel(exact_memory)
+		memories -= memory_type
+		return
+
+	for(var/key in memories.Copy())
+		var/datum/memory/memory = memories[key]
+		if(!istype(memory, memory_type))
+			continue
+		qdel(memory)
+		memories -= key
+
+/// Adds a manual deep-memory note. These notes are not part of temporary chat memory and do not degrade on death.
+/datum/mind/proc/add_manual_memory_note(note_title, note_text)
+	if(!note_text)
+		return
+	return add_memory(/datum/memory/key/manual_note, note_title = note_title, note_text = note_text, created_at = world.time)
+
+/// Removes one exact memory datum from this mind.
+/datum/mind/proc/remove_memory(datum/memory/memory)
+	if(!memory)
+		return FALSE
+	for(var/key in memories)
+		if(memories[key] != memory)
+			continue
+		qdel(memory)
+		memories -= key
+		return TRUE
+	return FALSE
 
 /// Helper to create quick copies of all of our memories
 /// Quick copies aren't full copies - just basic copies containing necessities.

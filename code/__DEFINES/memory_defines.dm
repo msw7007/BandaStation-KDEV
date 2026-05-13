@@ -56,6 +56,8 @@
 #define MEMORY_SKIP_UNCONSCIOUS (1<<7)
 /// This memory can't be selected for tattoo-ing or engraving at all.
 #define MEMORY_NO_STORY (1<<8)
+/// Multiple memories of this type can exist on the same mind.
+#define MEMORY_FLAG_MULTIPLE (1<<9)
 
 
 //These defines are for what the story is for, they should be defined as what part of the json file they interact with
@@ -85,8 +87,8 @@
 /// Fragments this close to death are usually lost outright.
 #define CY_MEMORY_DEATH_ERASE_WINDOW (2 MINUTES)
 /// Fragments this close to death are heavily damaged.
-#define CY_MEMORY_DEATH_SHATTER_WINDOW (7 MINUTES)
+#define CY_MEMORY_DEATH_SHATTER_WINDOW (5 MINUTES)
 /// Fragments this close to death are blurred.
-#define CY_MEMORY_DEATH_HAZE_WINDOW (15 MINUTES)
+#define CY_MEMORY_DEATH_HAZE_WINDOW (5 MINUTES)
 /// Every step spent dead before a new body adds another degradation pass.
 #define CY_MEMORY_DEAD_TIME_DEGRADATION_STEP (5 MINUTES)

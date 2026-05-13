@@ -100,6 +100,10 @@
 
 	/// Control memory fragment with limit for memory system
 	var/list/cy_memory_fragments = list()
+	/// Prevents newly emitted death/rejuvenation/system chatter from being recorded as the character's temporary memory.
+	var/cy_memory_suppress_until = 0
+	/// TRUE while damaged memory is being replayed back into the client chat.
+	var/cy_memory_rebuild_in_progress = FALSE
 
 /datum/mind/New(_key)
 	key = _key
@@ -180,7 +184,7 @@
 	var/mob/living/old_current = current
 	var/sync_memory_chat = FALSE
 	if(old_current)
-		if(old_current.stat == DEAD && old_current != new_character && old_current.timeofdeath)
+		if(isliving(old_current) && old_current.stat == DEAD && old_current != new_character && old_current.timeofdeath)
 			sync_memory_chat = degrade_cy_memories_for_dead_time(world.time - old_current.timeofdeath)
 
 		//transfer anyone observing the old character to the new one
@@ -225,10 +229,13 @@
 /datum/mind/proc/set_original_character(new_original_character)
 	original_character = WEAKREF(new_original_character)
 
-/datum/mind/proc/set_death_time()
+/datum/mind/proc/set_death_time(datum/source, gibbed)
 	SIGNAL_HANDLER
 
 	last_death = world.time
+	if(isliving(source))
+		var/mob/living/dead_body = source
+		degrade_cy_memories_on_death(dead_body, gibbed)
 
 /datum/mind/Topic(href, href_list)
 	if(!check_rights(R_ADMIN))

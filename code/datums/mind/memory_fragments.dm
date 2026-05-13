@@ -42,6 +42,41 @@
 	var/speaker = source || current || name || "self"
 	return add_cy_memory_fragment(text, speaker, where, "memory", "event", importance)
 
+/// Records a delivered chat payload into temporary character memory.
+/datum/mind/proc/add_cy_chat_payload_memory(list/message_data)
+	if(!message_data || !current || HAS_TRAIT(current, TRAIT_DONT_WRITE_MEMORY))
+		return
+	if(message_data["skipMemory"] || cy_memory_rebuild_in_progress)
+		return
+	if(world.time <= cy_memory_suppress_until)
+		return
+	if(current.stat == DEAD)
+		return
+
+	var/message_type = message_data["type"]
+	if(message_type in list(
+		MESSAGE_TYPE_SYSTEM,
+		MESSAGE_TYPE_DEADCHAT,
+		MESSAGE_TYPE_OOC,
+		MESSAGE_TYPE_ADMINPM,
+		MESSAGE_TYPE_ADMINCHAT,
+		MESSAGE_TYPE_MENTORCHAT,
+		MESSAGE_TYPE_PRAYER,
+		MESSAGE_TYPE_MODCHAT,
+		MESSAGE_TYPE_EVENTCHAT,
+		MESSAGE_TYPE_ADMINLOG,
+		MESSAGE_TYPE_ATTACKLOG,
+		MESSAGE_TYPE_DEBUG,
+	))
+		return
+
+	var/message_text = message_data["html"] || message_data["text"]
+	if(!message_text)
+		return
+
+	var/where = get_area_name(current)
+	return add_cy_memory_fragment(message_text, "", where, message_type || "chat", "chat", CY_MEMORY_IMPORTANCE_LOW)
+
 /// Death damages recent memories first: the closer a fragment is to death, the less reliable it becomes.
 /datum/mind/proc/degrade_cy_memories_on_death(mob/living/dead_body, gibbed = FALSE)
 	if(!dead_body || HAS_TRAIT(dead_body, TRAIT_DONT_WRITE_MEMORY))
@@ -49,10 +84,7 @@
 
 	var/death_time = world.time
 	var/where = get_area_name(dead_body)
-	add_cy_memory_fragment("I died in [where].", dead_body, where, "body", "death", CY_MEMORY_IMPORTANCE_HIGH, death_time)
-
-	if(!length(cy_memory_fragments))
-		return
+	cy_memory_suppress_until = max(cy_memory_suppress_until, death_time + 10 SECONDS)
 
 	var/list/kept_fragments = list()
 	for(var/datum/cy_memory_fragment/fragment as anything in cy_memory_fragments)
@@ -75,8 +107,12 @@
 
 		kept_fragments += fragment
 
+	var/datum/cy_memory_fragment/death_fragment = new("I died in [where].", dead_body, where, "body", "death", CY_MEMORY_IMPORTANCE_HIGH, death_time)
+	death_fragment.apply_degradation(gibbed ? 3 : 2)
+	kept_fragments += death_fragment
+
 	cy_memory_fragments = kept_fragments
-	sync_cy_memory_fragments_to_chat()
+	replace_cy_memory_chat_from_memory()
 
 /// When the mind is moved from a dead body later, dead time adds another pass of memory loss.
 /datum/mind/proc/degrade_cy_memories_for_dead_time(dead_time)
@@ -113,26 +149,32 @@
 	for(var/datum/cy_memory_fragment/fragment as anything in cy_memory_fragments)
 		new_memorizer.cy_memory_fragments += fragment.copy_fragment(additional_degradation)
 
-/datum/mind/proc/sync_cy_memory_fragments_to_chat(show_notice = TRUE)
+/datum/mind/proc/replace_cy_memory_chat_from_memory(show_notice = TRUE)
 	var/client/target = current?.client
-	if(!target?.tgui_panel?.window)
+	if(!target)
 		return FALSE
-
-	LAZYREMOVE(SSchat.client_to_payloads, target.ckey)
-	LAZYREMOVE(SSchat.client_to_reliability_history, target.ckey)
 
 	var/list/messages = list()
 	if(show_notice)
 		messages += list(list(
 			"type" = MESSAGE_TYPE_WARNING,
-			"html" = span_warning("<b>Memory damaged. Chat was rebuilt from what the character can still recall.</b>"),
+			"text" = "Memory damaged. Recent IC chat was rebuilt from what the character can still recall.",
 			"avoidHighlighting" = TRUE,
+			"skipMemory" = TRUE,
+			"cyMemoryTracked" = TRUE,
 		))
 
 	for(var/datum/cy_memory_fragment/fragment as anything in cy_memory_fragments)
 		messages += list(fragment.chat_replay_message_data())
 
-	target.tgui_panel.window.send_message("chat/memoryRewrite", list(
-		"messages" = messages,
-	))
+	cy_memory_rebuild_in_progress = TRUE
+	target.tgui_panel.window.send_message("chat/memorySet", list("messages" = messages), TRUE)
+	addtimer(CALLBACK(src, PROC_REF(finish_cy_memory_chat_replace)), 1 SECONDS)
+	return TRUE
+
+/datum/mind/proc/sync_cy_memory_fragments_to_chat(show_notice = TRUE)
+	return replace_cy_memory_chat_from_memory(show_notice)
+
+/datum/mind/proc/finish_cy_memory_chat_replace()
+	cy_memory_rebuild_in_progress = FALSE
 	return TRUE

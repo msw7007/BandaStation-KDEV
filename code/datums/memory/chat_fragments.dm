@@ -1,6 +1,21 @@
+/// Sanitizes chat HTML into a dry memory string.
+/proc/sanitize_cy_memory_text(text, limit = MAX_MESSAGE_LEN)
+	if(isnull(text))
+		return ""
+	var/cleaned = "[text]"
+	// Chat payloads may arrive with escaped markup, then real markup inside that.
+	cleaned = html_decode(cleaned)
+	cleaned = strip_html_full(cleaned, limit)
+	cleaned = html_decode(cleaned)
+	cleaned = strip_html_full(cleaned, limit)
+	cleaned = trim(cleaned)
+	return copytext_char(cleaned, 1, limit)
+
 /// A mutable fragment of what a character remembers hearing or experiencing this shift.
 /// Unlike /datum/memory story memories, these are intentionally degradable.
 /datum/cy_memory_fragment
+	/// Stable frontend id for the visible chat message that this fragment backs.
+	var/memory_id
 	var/raw_text = ""
 	var/recalled_text = ""
 	var/speaker_name = ""
@@ -21,12 +36,13 @@
 	new_importance = CY_MEMORY_IMPORTANCE_NORMAL,
 	when = world.time,
 )
-	raw_text = copytext_char(strip_html("[text]", MAX_MESSAGE_LEN), 1, MAX_MESSAGE_LEN)
+	memory_id = GUID()
+	raw_text = sanitize_cy_memory_text(text)
 	recalled_text = raw_text
-	speaker_name = copytext_char(strip_html("[speaker]", MAX_NAME_LEN), 1, MAX_NAME_LEN)
+	speaker_name = copytext_char(sanitize_cy_memory_text(speaker, MAX_NAME_LEN), 1, MAX_NAME_LEN)
 	recalled_speaker_name = speaker_name
-	location_name = copytext_char(strip_html("[where]", MAX_NAME_LEN), 1, MAX_NAME_LEN)
-	channel_name = copytext_char(strip_html("[channel]", MAX_NAME_LEN), 1, MAX_NAME_LEN)
+	location_name = copytext_char(sanitize_cy_memory_text(where, MAX_NAME_LEN), 1, MAX_NAME_LEN)
+	channel_name = copytext_char(sanitize_cy_memory_text(channel, MAX_NAME_LEN), 1, MAX_NAME_LEN)
 	memory_kind = kind
 	importance = clamp(new_importance, CY_MEMORY_IMPORTANCE_LOW, CY_MEMORY_IMPORTANCE_HIGH)
 	created_at = when
@@ -52,6 +68,7 @@
 
 /datum/cy_memory_fragment/proc/copy_fragment(additional_degradation = 0)
 	var/datum/cy_memory_fragment/copy = new(raw_text, speaker_name, location_name, channel_name, memory_kind, importance, created_at)
+	copy.memory_id = memory_id
 	copy.recalled_text = recalled_text
 	copy.recalled_speaker_name = recalled_speaker_name
 	copy.degradation = degradation
@@ -84,6 +101,7 @@
 
 /datum/cy_memory_fragment/proc/fragment_ui_data()
 	return list(
+		"id" = memory_id,
 		"text" = recalled_text,
 		"speaker" = recalled_speaker_name,
 		"where" = location_name,
@@ -96,23 +114,30 @@
 
 /datum/cy_memory_fragment/proc/chat_replay_message_data()
 	var/message_type = MESSAGE_TYPE_INFO
-	var/html
+	var/message_text
 
 	switch(memory_kind)
 		if("speech")
 			message_type = findtext(channel_name, "radio") ? MESSAGE_TYPE_RADIO : MESSAGE_TYPE_LOCALCHAT
-			var/channel_suffix = ""
-			if(channel_name && channel_name != "local")
-				channel_suffix = " <span class='smallnotice'>[channel_name]</span>"
-			html = "<span class='game say'><span class='name'>[recalled_speaker_name]</span>[channel_suffix]: <span class='message'>\"[recalled_text]\"</span></span>"
+			var/speaker = recalled_speaker_name || "someone"
+			message_text = "[speaker]: \"[recalled_text]\""
 		if("death")
 			message_type = MESSAGE_TYPE_WARNING
-			html = span_warning("<i>[recalled_text]</i>")
+			message_text = recalled_text
+		if("chat")
+			if(channel_name in list(MESSAGE_TYPE_LOCALCHAT, MESSAGE_TYPE_RADIO, MESSAGE_TYPE_INFO, MESSAGE_TYPE_WARNING, MESSAGE_TYPE_COMBAT, MESSAGE_TYPE_ENTERTAINMENT))
+				message_type = channel_name
+			else
+				message_type = MESSAGE_TYPE_INFO
+			message_text = recalled_speaker_name ? "[recalled_speaker_name]: [recalled_text]" : recalled_text
 		else
-			html = span_notice("<i>[recalled_text]</i>")
+			message_text = recalled_text
 
 	return list(
 		"type" = message_type,
-		"html" = html,
+		"text" = message_text,
 		"avoidHighlighting" = TRUE,
+		"skipMemory" = TRUE,
+		"cyMemoryId" = memory_id,
+		"cyMemoryTracked" = TRUE,
 	)

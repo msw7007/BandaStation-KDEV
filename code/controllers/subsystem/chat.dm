@@ -19,13 +19,19 @@ SUBSYSTEM_DEF(chat)
 	/// Assosciates a ckey with their next sequence number.
 	var/list/client_to_sequence_number = list()
 
-/datum/controller/subsystem/chat/proc/generate_payload(client/target, message_data)
+/datum/controller/subsystem/chat/proc/generate_payload(client/target, list/message_data)
+	var/list/payload_data = message_data.Copy()
+	var/datum/cy_memory_fragment/memory_fragment = target.mob?.mind?.add_cy_chat_payload_memory(payload_data)
+	if(memory_fragment)
+		payload_data["cyMemoryId"] = memory_fragment.memory_id
+		payload_data["cyMemoryTracked"] = TRUE
+
 	var/sequence = client_to_sequence_number[target.ckey]
 	client_to_sequence_number[target.ckey] += 1
 
 	var/datum/chat_payload/payload = new
 	payload.sequence = sequence
-	payload.content = message_data
+	payload.content = payload_data
 
 	if(!(target.ckey in client_to_reliability_history))
 		client_to_reliability_history[target.ckey] = list()
