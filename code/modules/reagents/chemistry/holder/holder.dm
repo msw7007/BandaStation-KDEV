@@ -89,6 +89,7 @@
 	override_base_ph = FALSE,
 	list/reagent_added = null,
 	datum/callback/creation_callback = null,
+	cy_route = null,
 )
 	if(!ispath(reagent_type))
 		stack_trace("invalid reagent passed to add reagent [reagent_type]")
@@ -138,6 +139,7 @@
 			iter_reagent.creation_purity = iter_reagent.purity
 			iter_reagent.ph = ((iter_reagent.ph * (iter_reagent.volume)) + (added_ph * amount)) / (iter_reagent.volume + amount)
 			iter_reagent.on_merge(data, amount) // Update this before updating volume. FIXME: Move all of the surrounding crap into this proc so implementations decide whether they go first or base code goes first.
+			iter_reagent.set_cy_metabolism_route(cy_route || iter_reagent.get_cy_metabolism_route(), amount)
 			iter_reagent.volume += amount
 			update_total()
 
@@ -165,6 +167,7 @@
 	new_reagent.purity = added_purity
 	new_reagent.creation_purity = added_purity
 	new_reagent.ph = added_ph
+	new_reagent.set_cy_metabolism_route(cy_route, amount)
 	new_reagent.on_new(data)
 	creation_callback?.Invoke(new_reagent)
 
@@ -473,6 +476,10 @@
 	var/trans_data = null
 	var/list/r_to_send = methods ? list() : null // Validated list of reagents to be exposed
 	var/list/transfer_log = list()
+	var/cy_transfer_route = null
+	if(methods)
+		var/datum/reagent/cy_water_helper = GLOB.chemical_reagents_list[/datum/reagent/water]
+		cy_transfer_route = cy_water_helper.get_cy_route_from_methods(methods)
 
 	var/part = isnull(target_id) ? (amount / total_volume) : 1
 	var/transfer_amount
@@ -496,7 +503,7 @@
 			trans_data = copy_data(reagent)
 		if(reagent.intercept_reagents_transfer(target_holder, transfer_amount, copy_only))
 			continue
-		transfered_amount = target_holder.add_reagent(reagent.type, transfer_amount * multiplier, trans_data, chem_temp, reagent.purity, reagent.ph, no_react = TRUE, reagent_added = r_to_send, creation_callback = CALLBACK(src, PROC_REF(_on_transfer_creation), reagent, target_holder)) //we only handle reaction after every reagent has been transferred.
+		transfered_amount = target_holder.add_reagent(reagent.type, transfer_amount * multiplier, trans_data, chem_temp, reagent.purity, reagent.ph, no_react = TRUE, reagent_added = r_to_send, creation_callback = CALLBACK(src, PROC_REF(_on_transfer_creation), reagent, target_holder), cy_route = cy_transfer_route || reagent.get_cy_metabolism_route()) //we only handle reaction after every reagent has been transferred.
 		if(!transfered_amount)
 			continue
 

@@ -77,7 +77,7 @@
 				continue
 
 			//do we have the required ph? in range of min - ph_range & max + ph_range
-			if(ph < reaction.optimal_ph_min - reaction.determin_ph_range && ph > reaction.optimal_ph_max + reaction.determin_ph_range)
+			if(ph < reaction.optimal_ph_min - reaction.determin_ph_range || ph > reaction.optimal_ph_max + reaction.determin_ph_range)
 				continue
 
 			//user defined checks
@@ -259,3 +259,31 @@
 
 	//finish the reaction
 	selected_reaction.on_reaction(src, null, multiplier)
+
+// CYBERPUNK 13 STAGE 3 CORE STIRRING START
+/datum/reagents/proc/cy_stir(mob/living/carbon/user, obj/item/tool)
+	if(!length(reaction_list))
+		return FALSE
+	var/stir_steps = 0
+	for(var/datum/equilibrium/equilibrium as anything in reaction_list)
+		equilibrium.react_timestep(CY_STIR_REACTION_STEP_MULTIPLIER)
+		stir_steps++
+	if(user && !tool && my_atom)
+		for(var/datum/reagent/reagent as anything in reagent_list)
+			reagent.expose_mob(user, TOUCH, min(CY_STIR_HAND_EXPOSURE_VOLUME, reagent.volume), TRUE)
+	SEND_SIGNAL(src, COMSIG_REAGENTS_REACTION_STEP, stir_steps, CY_STIR_REACTION_STEP_MULTIPLIER)
+	return stir_steps
+// CYBERPUNK 13 STAGE 3 CORE STIRRING END
+
+// CYBERPUNK 13 STAGE 3 CORE STIRRING FIX2 START
+/datum/reagents/proc/cy_try_stir(mob/living/user, bare_hand = FALSE)
+	if(!user || !total_volume)
+		return FALSE
+	if(bare_hand)
+		return cy_stir(user)
+	if(LAZYLEN(reaction_list))
+		for(var/datum/equilibrium/reaction as anything in reaction_list)
+			reaction.react_timestep(CY_STIR_REACTION_STEP_MULTIPLIER)
+		return TRUE
+	return FALSE
+// CYBERPUNK 13 STAGE 3 CORE STIRRING FIX2 END

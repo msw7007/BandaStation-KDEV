@@ -85,6 +85,7 @@
 		return FALSE
 
 	beating = TRUE
+	clear_cy_condition(CY_ORGAN_CONDITION_CARDIAC_ARREST)
 	update_appearance()
 	return TRUE
 
@@ -401,3 +402,20 @@
 	if(maxHealth - damage <= damage_per_block)
 		return FALSE
 	return TRUE
+
+// CYBERPUNK 13 STAGE 3 CORE HEART START
+/obj/item/organ/heart/proc/get_cy_pressure_delta()
+	if(!is_beating() || has_cy_condition(CY_ORGAN_CONDITION_CARDIAC_ARREST) || (organ_flags & ORGAN_FAILING))
+		return 0
+	return get_cy_function_efficiency()
+
+/obj/item/organ/heart/proc/apply_cy_cardiac_arrest()
+	set_cy_condition(CY_ORGAN_CONDITION_CARDIAC_ARREST, 1)
+	Stop()
+	return TRUE
+
+/obj/item/organ/heart/proc/clear_cy_cardiac_arrest()
+	clear_cy_condition(CY_ORGAN_CONDITION_CARDIAC_ARREST)
+	Restart()
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE HEART END

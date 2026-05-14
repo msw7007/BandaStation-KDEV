@@ -38,6 +38,7 @@
 
 /datum/surgery_operation/organ/repair/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	organ.set_organ_damage(organ.maxHealth * heal_to_percent)
+	clear_cy_organ_conditions(organ)
 	organ.organ_flags &= ~ORGAN_EMP
 	ADD_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON, TRAIT_GENERIC)
 
@@ -535,3 +536,31 @@
 	success_sound = 'sound/items/taperecorder/taperecorder_close.ogg'
 	required_organ_flag = ORGAN_ROBOTIC
 	operation_flags = parent_type::operation_flags | OPERATION_MECHANIC
+
+// CYBERPUNK 13 STAGE 3 CORE ORGAN SURGERY FIX2 START
+/datum/surgery_operation/organ/repair/proc/clear_cy_organ_conditions(obj/item/organ/organ)
+	if(!organ)
+		return FALSE
+	if(istype(organ, /obj/item/organ/heart))
+		var/obj/item/organ/heart/heart = organ
+		heart.clear_cy_cardiac_arrest()
+	if(istype(organ, /obj/item/organ/lungs))
+		var/obj/item/organ/lungs/lungs = organ
+		lungs.clear_cy_puncture(INFINITY)
+	if(istype(organ, /obj/item/organ/liver))
+		var/obj/item/organ/liver/liver = organ
+		liver.clear_cy_cirrhosis()
+	if(istype(organ, /obj/item/organ/stomach))
+		var/obj/item/organ/stomach/stomach = organ
+		stomach.clear_cy_poisoning(INFINITY)
+	if(istype(organ, /obj/item/organ/brain))
+		var/obj/item/organ/brain/brain = organ
+		brain.clear_cy_condition(CY_ORGAN_CONDITION_BRAIN_TRAUMA)
+	if(istype(organ, /obj/item/organ/eyes))
+		organ.clear_cy_condition(CY_ORGAN_CONDITION_BLINDNESS)
+	if(istype(organ, /obj/item/organ/ears))
+		organ.clear_cy_condition(CY_ORGAN_CONDITION_DEAFNESS)
+	if(istype(organ, /obj/item/organ/tongue))
+		organ.clear_cy_condition(CY_ORGAN_CONDITION_TONGUE_NUMBNESS)
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE ORGAN SURGERY FIX2 END

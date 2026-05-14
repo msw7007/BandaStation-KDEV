@@ -1160,3 +1160,27 @@
 #undef BREATH_RELATIONSHIP_MULTIPLIER
 #undef SMOKER_ORGAN_HEALTH
 #undef SMOKER_LUNG_HEALING
+
+// CYBERPUNK 13 STAGE 3 CORE LUNGS START
+/obj/item/organ/lungs/proc/get_cy_lung_efficiency()
+	var/punctures = max(puncture_count, get_cy_condition_stacks(CY_ORGAN_CONDITION_LUNG_PUNCTURE))
+	return clamp(get_cy_function_efficiency() - (punctures * CY_LUNG_PUNCTURE_EFFICIENCY_LOSS), 0, 1)
+
+/obj/item/organ/lungs/proc/add_cy_puncture(stacks = 1)
+	puncture_count = clamp(puncture_count + stacks, 0, 4)
+	set_cy_condition(CY_ORGAN_CONDITION_LUNG_PUNCTURE, puncture_count)
+	return puncture_count
+
+/obj/item/organ/lungs/proc/clear_cy_puncture(stacks = 1)
+	puncture_count = max(0, puncture_count - stacks)
+	if(puncture_count)
+		set_cy_condition(CY_ORGAN_CONDITION_LUNG_PUNCTURE, puncture_count)
+	else
+		clear_cy_condition(CY_ORGAN_CONDITION_LUNG_PUNCTURE)
+	return puncture_count
+
+/obj/item/organ/lungs/get_cy_diagnostic_lines(advanced = FALSE)
+	. = ..()
+	if(puncture_count || get_cy_condition_stacks(CY_ORGAN_CONDITION_LUNG_PUNCTURE))
+		. += "Lungs: puncture trauma x[max(puncture_count, get_cy_condition_stacks(CY_ORGAN_CONDITION_LUNG_PUNCTURE))]; efficiency [round(get_cy_lung_efficiency() * 100)]%."
+// CYBERPUNK 13 STAGE 3 CORE LUNGS END

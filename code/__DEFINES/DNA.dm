@@ -46,7 +46,7 @@
 #define DNA_BLOCK_SIZE_COLOR DEFAULT_HEX_COLOR_LEN
 
 #define DNA_SEQUENCE_LENGTH 4
-#define DNA_MUTATION_BLOCKS 8
+#define DNA_MUTATION_BLOCKS 10
 #define DNA_UNIQUE_ENZYMES_LEN 32
 
 //Features - No more magic strings

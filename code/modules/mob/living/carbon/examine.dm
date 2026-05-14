@@ -537,6 +537,9 @@
 	for(var/obj/item/organ/cyberimp/cyberimp in organs)
 		if(IS_ROBOTIC_ORGAN(cyberimp) && !(cyberimp.organ_flags & ORGAN_HIDDEN))
 			cybers += cyberimp.examine_title(user)
+	if(ishuman(src))
+		var/mob/living/carbon/human/human_target = src
+		. += "CP: oxy [round(human_target.get_cy_blood_oxygenation() * 100)]%, pressure [round(human_target.get_cy_pressure_delta() * 100)]%, lungs [round(human_target.get_cy_lung_efficiency() * 100)]%"
 	if(length(cybers))
 		. += "<span class='notice ml-1'>Обнаружены кибернетические модификации:</span>"
 		. += "<span class='notice ml-2'>[english_list(cybers, and_text = ", и")]</span>"
@@ -581,6 +584,13 @@
 
 	if((HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE) || HAS_TRAIT(src, TRAIT_INVISIBLE_MAN)) && !isobserver(user))
 		return
+
+	if(ishuman(user) && get_dist(user, src) <= CY_MEDICAL_EXAMINE_CLOSE_RANGE)
+		var/mob/living/carbon/human/human_user = user
+		var/medicine_level = human_user.get_cy_skill_level(/datum/cy_skill/professional/medicine) || CY_SKILL_LEVEL_UNTRAINED
+		if(medicine_level >= CY_SKILL_LEVEL_TRAINED)
+			for(var/cy_line in get_cy_diagnostic_lines(user, medicine_level >= CY_SKILL_LEVEL_EXPERT))
+				. += span_notice(cy_line)
 
 	var/limbs_text = get_mismatched_limb_text()
 	if(LAZYLEN(limbs_text))

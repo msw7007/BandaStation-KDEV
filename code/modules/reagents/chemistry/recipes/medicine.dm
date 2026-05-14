@@ -322,6 +322,11 @@
 	required_reagents = list(/datum/reagent/toxin/mutagen = 1, /datum/reagent/acetone = 1, /datum/reagent/bromine = 1)
 	reaction_tags = REACTION_TAG_EASY | REACTION_TAG_HEALING | REACTION_TAG_OTHER
 
+/datum/chemical_reaction/medicine/cy_gene_stabilizer
+	results = list(/datum/reagent/medicine/cy_gene_stabilizer = 3)
+	required_reagents = list(/datum/reagent/medicine/mutadone = 1, /datum/reagent/medicine/rezadone = 1, /datum/reagent/stabilizing_agent = 1)
+	reaction_tags = REACTION_TAG_MODERATE | REACTION_TAG_HEALING | REACTION_TAG_OTHER
+
 /datum/chemical_reaction/medicine/antihol
 	results = list(/datum/reagent/medicine/antihol = 3)
 	required_reagents = list(/datum/reagent/consumable/ethanol = 1, /datum/reagent/medicine/c2/multiver = 1, /datum/reagent/copper = 1)

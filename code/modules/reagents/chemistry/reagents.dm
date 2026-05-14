@@ -144,7 +144,7 @@
 	if(penetrates_skin & methods) // models things like vapors which penetrate the skin
 		var/amount = round(reac_volume * clamp((1 - touch_protection), 0, 1), 0.1)
 		if(amount >= 0.5)
-			exposed_mob.reagents.add_reagent(type, amount, data, holder.chem_temp, purity)
+			exposed_mob.reagents.add_reagent(type, amount, data, holder.chem_temp, purity, cy_route = get_cy_route_from_methods(methods))
 
 /// Applies this reagent to an [/obj]
 /datum/reagent/proc/expose_obj(obj/exposed_obj, reac_volume, methods=TOUCH, show_message=TRUE)
@@ -377,3 +377,144 @@
 			reagent_strings += "[capitalize_names ? capitalize(reagent.name) : reagent.name][names_only ? null : ", [reagent.volume]"]"
 
 	return reagent_strings.Join(join_text)
+
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTES START
+/datum/reagent
+	/// CP13 effectiveness by route. Missing route means 1. Routes: breath, inject, ingest, touch.
+	var/list/cy_route_effectiveness
+	/// CP13 extra toxicity by route. Missing route means 0.
+	var/list/cy_route_toxicity
+	/// CP13 psychic pressure per metabolized ratio, used by narcotics, psychoactive drugs and combat chems.
+	var/cy_psychic_pressure = 0
+	/// CP13 addiction pressure per metabolized ratio. Existing addiction datums remain authoritative; this adds psyche pressure.
+	var/cy_addiction_pressure = 0
+	/// CP13 substances with this flag damage internal organs after entering blood metabolism. Acids and harsh battle chems should set this.
+	var/cy_attacks_internal_organs = FALSE
+
+/datum/reagent/proc/get_cy_route_effectiveness(route)
+	if(!route || !LAZYLEN(cy_route_effectiveness) || isnull(cy_route_effectiveness[route]))
+		return 1
+	return cy_route_effectiveness[route]
+
+/datum/reagent/proc/get_cy_route_toxicity(route)
+	if(!route || !LAZYLEN(cy_route_toxicity) || isnull(cy_route_toxicity[route]))
+		return 0
+	return cy_route_toxicity[route]
+
+/datum/reagent/proc/apply_cy_route_effects(mob/living/carbon/owner, route, seconds_per_tick, metabolization_ratio)
+	if(!owner)
+		return FALSE
+	var/effectiveness = get_cy_route_effectiveness(route)
+	var/route_toxicity = get_cy_route_toxicity(route)
+	if(effectiveness <= 0)
+		route_toxicity += abs(effectiveness) + 0.5
+	if(route_toxicity > 0)
+		var/toxin_amount = route_toxicity * normalise_creation_purity() * metabolization_ratio * seconds_per_tick
+		owner.adjust_tox_loss(toxin_amount, updating_health = FALSE, forced = TRUE)
+		if(ishuman(owner))
+			var/mob/living/carbon/human/human_owner = owner
+			human_owner.route_cy_toxin_to_organs(toxin_amount, cy_attacks_internal_organs)
+	if(cy_psychic_pressure)
+		owner.adjust_psychic_loss(cy_psychic_pressure * normalise_creation_purity() * metabolization_ratio * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	if(cy_addiction_pressure)
+		owner.adjust_psychic_loss(cy_addiction_pressure * 0.25 * metabolization_ratio * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	return route_toxicity || cy_psychic_pressure || cy_addiction_pressure
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTES END
+
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTES FIX2 START
+/datum/reagent
+	/// Dominant CP13 route by which this concrete reagent instance entered the current metabolizing holder.
+	var/cy_metabolism_route = CY_REAGENT_ROUTE_DEFAULT
+	/// Approximate per-route contribution volume for merged reagent instances.
+	var/list/cy_route_volumes
+
+/datum/reagent/proc/set_cy_metabolism_route(route, amount = 0)
+	cy_metabolism_route = route || CY_REAGENT_ROUTE_DEFAULT
+	if(amount > 0)
+		LAZYINITLIST(cy_route_volumes)
+		cy_route_volumes[cy_metabolism_route] = (cy_route_volumes[cy_metabolism_route] || 0) + amount
+		var/best_route = cy_metabolism_route
+		var/best_amount = -1
+		for(var/check_route in cy_route_volumes)
+			if(cy_route_volumes[check_route] > best_amount)
+				best_amount = cy_route_volumes[check_route]
+				best_route = check_route
+		cy_metabolism_route = best_route
+	return cy_metabolism_route
+
+/datum/reagent/proc/get_cy_metabolism_route()
+	return cy_metabolism_route || CY_REAGENT_ROUTE_DEFAULT
+
+/datum/reagent/proc/get_cy_route_from_methods(methods)
+	if(methods & INGEST)
+		return CY_REAGENT_ROUTE_INGEST
+	if(methods & INJECT)
+		return CY_REAGENT_ROUTE_INJECT
+	if(methods & (VAPOR|INHALE))
+		return CY_REAGENT_ROUTE_BREATH
+	if(methods & TOUCH)
+		return CY_REAGENT_ROUTE_TOUCH
+	return CY_REAGENT_ROUTE_DEFAULT
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTES FIX2 END
+
+/datum/reagent/proc/get_cy_metabolism_effectiveness_multiplier(mob/living/carbon/owner)
+	return 1
+
+/datum/reagent/medicine/get_cy_metabolism_effectiveness_multiplier(mob/living/carbon/owner)
+	if(owner?.is_cy_clinically_dead())
+		return 0
+	return ..()
+
+
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTES FIX3 START
+/datum/reagent/medicine
+	cy_route_effectiveness = list(
+		CY_REAGENT_ROUTE_INJECT = 1,
+		CY_REAGENT_ROUTE_INGEST = 0.75,
+		CY_REAGENT_ROUTE_BREATH = 0.55,
+		CY_REAGENT_ROUTE_TOUCH = 0.1,
+	)
+
+/datum/reagent/toxin
+	cy_route_effectiveness = list(
+		CY_REAGENT_ROUTE_INJECT = 1,
+		CY_REAGENT_ROUTE_INGEST = 0.75,
+		CY_REAGENT_ROUTE_BREATH = 0.8,
+		CY_REAGENT_ROUTE_TOUCH = 0.25,
+	)
+	cy_route_toxicity = list(
+		CY_REAGENT_ROUTE_INJECT = 0.15,
+		CY_REAGENT_ROUTE_INGEST = 0.1,
+		CY_REAGENT_ROUTE_BREATH = 0.12,
+		CY_REAGENT_ROUTE_TOUCH = 0.05,
+	)
+
+/datum/reagent/toxin/acid
+	cy_attacks_internal_organs = TRUE
+	cy_route_toxicity = list(
+		CY_REAGENT_ROUTE_INJECT = 0.9,
+		CY_REAGENT_ROUTE_INGEST = 0.65,
+		CY_REAGENT_ROUTE_BREATH = 0.35,
+		CY_REAGENT_ROUTE_TOUCH = 0.75,
+	)
+
+/datum/reagent/drug
+	cy_psychic_pressure = 0.25
+	cy_addiction_pressure = 0.2
+	cy_route_effectiveness = list(
+		CY_REAGENT_ROUTE_INJECT = 1,
+		CY_REAGENT_ROUTE_INGEST = 0.85,
+		CY_REAGENT_ROUTE_BREATH = 0.95,
+		CY_REAGENT_ROUTE_TOUCH = 0.15,
+	)
+
+/datum/reagent/consumable/ethanol
+	cy_psychic_pressure = 0.08
+	cy_addiction_pressure = 0.06
+	cy_route_effectiveness = list(
+		CY_REAGENT_ROUTE_INJECT = -0.5,
+		CY_REAGENT_ROUTE_INGEST = 1,
+		CY_REAGENT_ROUTE_BREATH = 0.25,
+		CY_REAGENT_ROUTE_TOUCH = 0.05,
+	)
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTES FIX3 END

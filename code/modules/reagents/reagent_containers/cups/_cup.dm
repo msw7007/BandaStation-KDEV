@@ -237,6 +237,11 @@
 	if(!is_open_container())
 		return NONE
 
+	if(reagents?.total_volume && tool.tool_behaviour == TOOL_SCREWDRIVER)
+		if(reagents.cy_try_stir(user, FALSE))
+			user.visible_message(span_notice("[user] помешивает содержимое [src] с помощью [tool]."), span_notice("Вы помешиваете содержимое [src] с помощью [tool]."))
+			return ITEM_INTERACT_SUCCESS
+
 	if(istype(tool, /obj/item/food/egg)) //breaking eggs
 		if(reagents.holder_full())
 			to_chat(user, span_notice("[src] is full."))
@@ -294,6 +299,10 @@
 	return TRUE
 
 /obj/item/reagent_containers/cup/click_alt(mob/user)
+	if(!has_lid && istype(user) && user.can_perform_action(src, NEED_DEXTERITY|NEED_HANDS) && reagents?.total_volume && reagents.cy_try_stir(user, TRUE))
+		user.visible_message(span_notice("[user] carefully stirs the contents of [src] with a finger."), span_notice("You stir the contents of [src] with a finger."))
+		return CLICK_ACTION_SUCCESS
+
 	if (!can_lid)
 		return NONE
 
@@ -753,3 +762,15 @@
 /obj/item/reagent_containers/cup/tube/attach_assembly(obj/item/assembly_holder/assembly, mob/living/user)
 	to_chat(user, span_warning("[src]'s lid is too small to fit [assembly]!"))
 	return FALSE
+
+// CYBERPUNK 13 STAGE 3 CORE STIRRING CUP HOOK START
+/obj/item/reagent_containers/cup/proc/cy_legacy_finger_stir_disabled(mob/user)
+	if(!istype(user) || !user.can_perform_action(src, NEED_DEXTERITY|NEED_HANDS))
+		return NONE
+	if(!reagents?.total_volume)
+		return NONE
+	if(reagents.cy_try_stir(user, TRUE))
+		user.visible_message(span_notice("[user] осторожно помешивает содержимое [src] пальцем."), span_notice("Вы помешиваете содержимое [src] пальцем."))
+		return TRUE
+	return NONE
+// CYBERPUNK 13 STAGE 3 CORE STIRRING CUP HOOK END

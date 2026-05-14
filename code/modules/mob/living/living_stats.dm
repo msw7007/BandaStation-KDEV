@@ -449,12 +449,52 @@
 
 /obj/item/organ/cyberimp
 	var/cy_organization_type
+	var/cy_implant_is_neurointerface = FALSE
 	var/cy_overheat = 0
 	var/cy_active_implant = TRUE
 	var/cy_requires_neurointerface = TRUE
+	var/cy_last_functional_state
+
+/obj/item/organ/cyberimp/proc/has_cy_working_neurointerface()
+	if(!cy_requires_neurointerface)
+		return TRUE
+	if(!ishuman(owner))
+		return FALSE
+	var/mob/living/carbon/human/human_owner = owner
+	return human_owner.has_cy_neurointerface()
 
 /obj/item/organ/cyberimp/proc/is_cy_active_implant()
-	return cy_active_implant
+	return cy_active_implant && has_cy_working_neurointerface()
+
+/obj/item/organ/cyberimp/proc/is_cy_functional_implant()
+	return !(organ_flags & ORGAN_FAILING) && has_cy_working_neurointerface()
+
+/obj/item/organ/cyberimp/proc/can_cy_use_implant(mob/living/user, silent = FALSE)
+	if(!owner)
+		return FALSE
+	if(organ_flags & ORGAN_FAILING)
+		if(!silent)
+			to_chat(user || owner, span_warning("[src] does not respond."))
+		return FALSE
+	if(!has_cy_working_neurointerface())
+		if(!silent)
+			to_chat(user || owner, span_warning("[src] needs a working neural interface."))
+		return FALSE
+	return TRUE
+
+/obj/item/organ/cyberimp/proc/update_cy_functional_state()
+	var/current_state = is_cy_functional_implant()
+	if(isnull(cy_last_functional_state))
+		cy_last_functional_state = current_state
+		return current_state
+	if(cy_last_functional_state == current_state)
+		return current_state
+	cy_last_functional_state = current_state
+	cy_on_functional_state_changed(current_state)
+	return current_state
+
+/obj/item/organ/cyberimp/proc/cy_on_functional_state_changed(functional)
+	return TRUE
 
 /obj/item/organ/cyberimp/proc/get_cy_implant_overheat()
 	return cy_overheat
@@ -465,7 +505,9 @@
 
 /mob/living/carbon/human/proc/has_cy_neurointerface()
 	for(var/obj/item/organ/cyberimp/implant in organs)
-		if(implant.type == /obj/item/organ/cyberimp/brain || findtext("[implant.type]", "neuro"))
+		if(implant.organ_flags & ORGAN_FAILING)
+			continue
+		if(implant.cy_implant_is_neurointerface || implant.type == /obj/item/organ/cyberimp/brain || findtext("[implant.type]", "neuro"))
 			return TRUE
 	return FALSE
 
@@ -474,6 +516,13 @@
 		return 1
 	var/compatibility = get_cy_organization_compatibility(implant.cy_organization_type)
 	return compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL ? CY_IMPLANT_CORP_MISMATCH_OVERHEAT_MULTIPLIER : 1
+
+// CYBERPUNK 13 STAGE 3 CORE IMPLANT HEAT FIX3 START
+/mob/living/carbon/human/proc/get_cy_implant_humanoidity_heat_multiplier()
+	if(!has_dna())
+		return 1
+	return 1 + ((100 - get_cy_humanoidity()) * CY_IMPLANT_HUMANITY_HEAT_MULTIPLIER)
+// CYBERPUNK 13 STAGE 3 CORE IMPLANT HEAT FIX3 END
 
 /mob/living/carbon/human/proc/get_cy_implant_failure_chance_modifier(obj/item/organ/cyberimp/implant)
 	if(!implant?.cy_organization_type)
@@ -493,9 +542,13 @@
 /mob/living/carbon/human/proc/process_cy_implant_overheat(seconds_per_tick)
 	var/has_interface = has_cy_neurointerface()
 	for(var/obj/item/organ/cyberimp/implant in organs)
+		implant.update_cy_functional_state()
 		if(implant.cy_requires_neurointerface && !has_interface)
+			if(SPT_PROB(CY_IMPLANT_NO_INTERFACE_FAILURE_CHANCE, seconds_per_tick))
+				implant.apply_organ_damage(0.25 * seconds_per_tick)
 			continue
-		implant.adjust_cy_implant_overheat(-CY_IMPLANT_OVERHEAT_DECAY_PER_SECOND * seconds_per_tick)
+		var/heat_gain = implant.is_cy_active_implant() ? CY_IMPLANT_BASE_ACTIVE_HEAT_PER_SECOND : CY_IMPLANT_BASE_PASSIVE_HEAT_PER_SECOND
+		implant.adjust_cy_implant_overheat((heat_gain * get_cy_implant_overheat_multiplier(implant) * get_cy_implant_humanoidity_heat_multiplier() - CY_IMPLANT_OVERHEAT_DECAY_PER_SECOND) * seconds_per_tick)
 	var/overflow = get_cy_total_implant_overheat() - get_cy_brain_overheat_capacity()
 	if(overflow <= 0)
 		return FALSE
@@ -1028,6 +1081,8 @@
 	if(cy_has_click_modifier(modifiers, MIDDLE_CLICK))
 		activate_selected_cy_daemon(target)
 		return TRUE
+	if(!combat_mode && ismob(target) && pulling == target && !cy_has_click_modifier(modifiers, CTRL_CLICK) && !cy_has_click_modifier(modifiers, SHIFT_CLICK) && !cy_has_click_modifier(modifiers, ALT_CLICK) && !cy_has_click_modifier(modifiers, RIGHT_CLICK) && !cy_has_click_modifier(modifiers, MIDDLE_CLICK))
+		return perform_cy_grab_palpation(target)
 	prepare_cy_combat_intent(target, modifiers)
 	return FALSE
 
@@ -1057,6 +1112,22 @@
 		return FALSE
 	to_chat(src, span_notice("Вы пробуете вторичное дополнительное действие с [target.declent_ru(INSTRUMENTAL)]."))
 	apply_cy_action_delay(CLICK_CD_MELEE, null)
+	return TRUE
+
+/mob/living/proc/perform_cy_grab_palpation(mob/living/target)
+	if(!target || pulling != target || combat_mode || next_move > world.time)
+		return FALSE
+	if(!ishuman(target))
+		to_chat(src, span_notice("You feel over [target], but learn nothing useful."))
+		apply_cy_action_delay(CLICK_CD_GRABBING, /datum/cy_skill/professional/medicine)
+		return TRUE
+	var/mob/living/carbon/human/human_target = target
+	visible_message(span_notice("[src] carefully checks [human_target] by touch."), span_notice("You palpate [human_target], checking for injuries."))
+	var/medicine_level = get_cy_medicine_skill_level()
+	var/list/diagnostic_lines = human_target.get_cy_diagnostic_lines(src, medicine_level >= CY_SKILL_LEVEL_EXPERT)
+	for(var/line in diagnostic_lines)
+		to_chat(src, span_notice("[line]"))
+	apply_cy_action_delay(CLICK_CD_GRABBING, /datum/cy_skill/professional/medicine)
 	return TRUE
 
 /mob/living/proc/activate_selected_cy_daemon(atom/target)
@@ -1731,3 +1802,102 @@
 		qdel(offhand)
 		cleared = TRUE
 	return cleared
+
+// CYBERPUNK 13 STAGE 3 CORE OXYGENATION / DIAGNOSIS START
+/mob/living/carbon/human/proc/get_cy_blood_percent()
+	if(!blood_volume)
+		return 0
+	return clamp(blood_volume / BLOOD_VOLUME_NORMAL, 0, 1)
+
+/mob/living/carbon/human/proc/get_cy_pressure_delta()
+	var/obj/item/organ/heart/heart = get_organ_slot(ORGAN_SLOT_HEART)
+	if(!heart)
+		return 0
+	var/pressure = heart.get_cy_pressure_delta()
+	if(reagents?.has_reagent(/datum/reagent/medicine/epinephrine))
+		pressure += CY_PRESSURE_EPINEPHRINE_BONUS
+	if(reagents?.has_reagent(/datum/reagent/medicine/atropine))
+		pressure += CY_PRESSURE_ATROPINE_BONUS
+	return clamp(pressure, 0, 1.5)
+
+/mob/living/carbon/human/proc/get_cy_lung_efficiency()
+	var/obj/item/organ/lungs/lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
+	if(!lungs)
+		return 0
+	return lungs.get_cy_lung_efficiency()
+
+/mob/living/carbon/human/proc/get_cy_blood_oxygenation()
+	return clamp(get_cy_blood_percent() * get_cy_pressure_delta() * get_cy_lung_efficiency(), 0, 1)
+
+/mob/living/carbon/human/proc/process_cy_oxygenation(seconds_per_tick)
+	if(HAS_TRAIT(src, TRAIT_NOBREATH) || stat == DEAD)
+		return FALSE
+	var/oxygenation = get_cy_blood_oxygenation()
+	if(oxygenation >= CY_BLOOD_OXYGENATION_BRAIN_REQUIRED)
+		adjust_oxy_loss(-0.35 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+		if(oxygenation > 1)
+			adjust_stamina_loss(-CY_HIGH_OXYGEN_STAMINA_RECOVERY * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+		return TRUE
+	var/deficit = CY_BLOOD_OXYGENATION_BRAIN_REQUIRED - oxygenation
+	adjust_oxy_loss(deficit * 4 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	if(oxygenation <= 0.25)
+		adjust_organ_loss(ORGAN_SLOT_BRAIN, CY_CRITICAL_OXYGEN_BRAIN_DAMAGE_PER_SECOND * seconds_per_tick)
+	else
+		adjust_organ_loss(ORGAN_SLOT_BRAIN, CY_LOW_OXYGEN_BRAIN_DAMAGE_PER_SECOND * deficit * seconds_per_tick)
+	return TRUE
+
+/mob/living/carbon/human/proc/get_cy_diagnostic_lines(mob/living/user, advanced = FALSE)
+	var/list/lines = list()
+	var/medicine_level = user?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
+	if(medicine_level <= CY_SKILL_LEVEL_UNTRAINED && !advanced)
+		lines += "General state: [health < critical_health_threshold ? "critical" : health < maxHealth * 0.5 ? "poor" : "stable"]."
+		return lines
+	lines += "Health [round(health)]/[maxHealth]; pain [round(get_pain_loss())]; psychic [round(get_psychic_loss())]."
+	if(medicine_level >= CY_SKILL_LEVEL_TRAINED || advanced)
+		lines += "Blood [round(get_cy_blood_percent() * 100)]%; pressure [round(get_cy_pressure_delta() * 100)]%; lung efficiency [round(get_cy_lung_efficiency() * 100)]%; oxygenation [round(get_cy_blood_oxygenation() * 100)]%."
+	if(is_cy_clinically_dead())
+		lines += "Clinical death threshold reached. Revive requires working heart and non-dead brain."
+	if(brain_dead)
+		lines += "Brain death: revival blocked."
+	if(advanced)
+		for(var/obj/item/organ/organ as anything in organs)
+			lines += organ.get_cy_diagnostic_lines(TRUE)
+	return lines
+// CYBERPUNK 13 STAGE 3 CORE OXYGENATION / DIAGNOSIS END
+
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTE STATE START
+/mob/living/carbon
+	/// Last CP13 route used by reagents entering blood metabolism. Defaults to injection/blood.
+	var/cy_current_reagent_route = CY_REAGENT_ROUTE_INJECT
+
+/mob/living/carbon/proc/get_cy_current_reagent_route()
+	return cy_current_reagent_route || CY_REAGENT_ROUTE_INJECT
+
+/mob/living/carbon/proc/set_cy_current_reagent_route(route)
+	cy_current_reagent_route = route || CY_REAGENT_ROUTE_INJECT
+	return cy_current_reagent_route
+// CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTE STATE END
+
+
+// CYBERPUNK 13 STAGE 3 CORE MEDICAL ROUTING FIX3 START
+/mob/living/carbon/human/proc/route_cy_toxin_to_organs(amount, acidic = FALSE)
+	if(amount <= 0)
+		return FALSE
+	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
+	if(liver && liver.get_cy_function_efficiency() > 0)
+		adjust_organ_loss(ORGAN_SLOT_LIVER, amount * CY_TOXIN_LIVER_ROUTING_MULTIPLIER, required_organ_flag = ORGAN_ORGANIC)
+		if(acidic)
+			adjust_organ_loss(pick(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_STOMACH), amount * 0.15, required_organ_flag = ORGAN_ORGANIC)
+		return TRUE
+	var/list/fallback_organs = list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_STOMACH, ORGAN_SLOT_EYES, ORGAN_SLOT_EARS, ORGAN_SLOT_BRAIN)
+	for(var/i in 1 to min(3, length(fallback_organs)))
+		adjust_organ_loss(pick_n_take(fallback_organs), amount * CY_TOXIN_ORGAN_SPILLOVER_MULTIPLIER, required_organ_flag = ORGAN_ORGANIC)
+	return TRUE
+
+/mob/living/carbon/human/proc/apply_cy_rapid_bloodloss(amount)
+	if(amount <= 0)
+		return FALSE
+	adjust_organ_loss(ORGAN_SLOT_HEART, amount * CY_FAST_BLOOD_LOSS_HEART_DAMAGE_PER_UNIT, required_organ_flag = ORGAN_ORGANIC)
+	adjust_organ_loss(ORGAN_SLOT_BRAIN, amount * CY_FAST_BLOOD_LOSS_BRAIN_DAMAGE_PER_UNIT, required_organ_flag = ORGAN_ORGANIC)
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE MEDICAL ROUTING FIX3 END

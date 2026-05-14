@@ -91,7 +91,7 @@
 			amount_max = max(amount_max - amount_food, 0)
 
 		// Transfer the amount of reagents based on volume with a min amount of 1u
-		var/amount = min((round(metabolism_efficiency * amount_max, 0.05) + rate_min) * seconds_per_tick, amount_max)
+		var/amount = min((round(metabolism_efficiency * get_cy_function_efficiency() * amount_max, 0.05) + rate_min) * seconds_per_tick, amount_max)
 
 		if(amount <= 0)
 			continue
@@ -99,7 +99,7 @@
 		// transfer the reagents over to the body at the rate of the stomach metabolim
 		// this way the body is where all reagents that are processed and react
 		// the stomach manages how fast they are feed in a drip style
-		reagents.trans_to(body, amount, target_id = bit.type)
+		reagents.trans_to(body, amount, target_id = bit.type, methods = INGEST, ignore_stomach = TRUE)
 
 	//Handle disgust
 	if(body)
@@ -587,3 +587,21 @@
 	metabolism_efficiency = 0.08
 
 #undef STOMACH_METABOLISM_CONSTANT
+
+// CYBERPUNK 13 STAGE 3 CORE STOMACH START
+/obj/item/organ/stomach/proc/apply_cy_poisoning(stacks = 1)
+	add_cy_condition(CY_ORGAN_CONDITION_STOMACH_POISONING, stacks, 5)
+	return TRUE
+
+/obj/item/organ/stomach/proc/clear_cy_poisoning(stacks = INFINITY)
+	if(stacks == INFINITY)
+		return clear_cy_condition(CY_ORGAN_CONDITION_STOMACH_POISONING)
+	var/new_stacks = max(0, get_cy_condition_stacks(CY_ORGAN_CONDITION_STOMACH_POISONING) - stacks)
+	return set_cy_condition(CY_ORGAN_CONDITION_STOMACH_POISONING, new_stacks)
+
+/obj/item/organ/stomach/get_cy_function_efficiency()
+	var/efficiency = ..()
+	if(has_cy_condition(CY_ORGAN_CONDITION_STOMACH_POISONING))
+		efficiency *= max(0.25, 1 - (0.15 * get_cy_condition_stacks(CY_ORGAN_CONDITION_STOMACH_POISONING)))
+	return efficiency
+// CYBERPUNK 13 STAGE 3 CORE STOMACH END

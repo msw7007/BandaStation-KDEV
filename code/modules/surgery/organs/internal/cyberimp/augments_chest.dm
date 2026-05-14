@@ -17,6 +17,8 @@
 /obj/item/organ/cyberimp/chest/nutriment/on_life(seconds_per_tick)
 	. = ..()
 
+	if(!is_cy_functional_implant())
+		return
 	if(synthesizing)
 		return
 
@@ -60,11 +62,15 @@
 /obj/item/organ/cyberimp/chest/reviver/on_death(seconds_per_tick)
 	if(isnull(owner)) // owner can be null, on_death() gets called by /obj/item/organ/process() for decay
 		return
+	if(!is_cy_functional_implant())
+		return
 	try_heal() // Allows implant to work even on dead people
 
 /obj/item/organ/cyberimp/chest/reviver/on_life(seconds_per_tick)
 	. = ..()
 
+	if(!is_cy_functional_implant())
+		return
 	try_heal()
 
 /obj/item/organ/cyberimp/chest/reviver/proc/try_heal()
@@ -194,6 +200,8 @@
 	..()
 
 /obj/item/organ/cyberimp/chest/thrusters/ui_action_click()
+	if(!can_cy_use_implant(owner))
+		return
 	toggle()
 
 /obj/item/organ/cyberimp/chest/thrusters/proc/toggle(silent = FALSE)
@@ -205,7 +213,7 @@
 /obj/item/organ/cyberimp/chest/thrusters/proc/activate(silent = FALSE)
 	if(on)
 		return
-	if(organ_flags & ORGAN_FAILING)
+	if(!can_cy_use_implant(owner, silent))
 		if(!silent)
 			to_chat(owner, span_warning("Your thrusters set seems to be broken!"))
 		return
@@ -235,7 +243,8 @@
 	return ..()
 
 /obj/item/organ/cyberimp/chest/thrusters/proc/allow_thrust(num, use_fuel = TRUE)
-	if(!owner)
+	if(!owner || !is_cy_functional_implant())
+		deactivate(silent = TRUE)
 		return FALSE
 
 	var/turf/owner_turf = get_turf(owner)
@@ -295,6 +304,7 @@
 	var/core_applied = FALSE
 	/// The overlay for our implant to indicate that, yes, this person has an implant inserted.
 	var/mutable_appearance/stone_overlay
+	var/cy_spine_effects_applied = FALSE
 
 /obj/item/organ/cyberimp/chest/spine/emp_act(severity)
 	. = ..()
@@ -306,11 +316,9 @@
 /obj/item/organ/cyberimp/chest/spine/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
 	stone_overlay = mutable_appearance(icon = 'icons/effects/effects.dmi', icon_state = "stone")
-	organ_owner.add_overlay(stone_overlay)
-	add_organ_trait(TRAIT_BOULDER_BREAKER)
-	if(core_applied)
-		organ_owner.AddElement(/datum/element/forced_gravity, 1)
-		add_organ_trait(TRAIT_STURDY_FRAME)
+	update_cy_functional_state()
+	if(is_cy_functional_implant())
+		apply_cy_spine_effects(organ_owner)
 
 /obj/item/organ/cyberimp/chest/spine/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
@@ -342,6 +350,37 @@
 	update_appearance()
 	qdel(tool)
 	return ITEM_INTERACT_SUCCESS
+
+/obj/item/organ/cyberimp/chest/spine/proc/apply_cy_spine_effects(mob/living/carbon/organ_owner = owner)
+	if(!organ_owner || cy_spine_effects_applied)
+		return FALSE
+	if(stone_overlay)
+		organ_owner.add_overlay(stone_overlay)
+	add_organ_trait(TRAIT_BOULDER_BREAKER)
+	if(core_applied)
+		organ_owner.AddElement(/datum/element/forced_gravity, 1)
+		add_organ_trait(TRAIT_STURDY_FRAME)
+	cy_spine_effects_applied = TRUE
+	return TRUE
+
+/obj/item/organ/cyberimp/chest/spine/proc/remove_cy_spine_effects(mob/living/carbon/organ_owner = owner)
+	if(!organ_owner || !cy_spine_effects_applied)
+		return FALSE
+	remove_organ_trait(TRAIT_BOULDER_BREAKER)
+	if(stone_overlay)
+		organ_owner.cut_overlay(stone_overlay)
+	if(core_applied)
+		organ_owner.RemoveElement(/datum/element/forced_gravity, 1)
+		remove_organ_trait(TRAIT_STURDY_FRAME)
+	cy_spine_effects_applied = FALSE
+	return TRUE
+
+/obj/item/organ/cyberimp/chest/spine/cy_on_functional_state_changed(functional)
+	if(functional)
+		apply_cy_spine_effects()
+	else
+		remove_cy_spine_effects()
+	return TRUE
 
 /obj/item/organ/cyberimp/chest/spine/atlas
 	name = "\improper Atlas gravitonic spinal implant"

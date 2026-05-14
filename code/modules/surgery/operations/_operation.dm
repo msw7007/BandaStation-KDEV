@@ -772,6 +772,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		if(realtool.item_flags & CRUEL_IMPLEMENT)
 			basemod *= 0.7
 
+	basemod *= get_cy_medicine_speed_mod(patient, surgeon, tool)
 	var/drunkness = surgeon.get_drunk_amount()
 	// being drunk gives upwards of a 12x speed penalty - unless you land in the ballmer peak
 	if(drunkness >= BALLMER_PEAK_LOW_END && drunkness <= BALLMER_PEAK_HIGH_END)
@@ -896,10 +897,16 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		if(HAS_TRAIT(surgeon, TRAIT_IGNORE_SURGERY_MODIFIERS) && !(operation_flags & OPERATION_ALWAYS_FAILABLE))
 			operation_args[OPERATION_SPEED] = 0
 
-		var/failure_chance = get_modified_failure_chance(time, patient, surgeon, tool, operation_args) // BANDASTATION EDIT
+		if(!cy_can_attempt_self_surgery(patient, surgeon))
+			to_chat(surgeon, span_warning("You cannot keep your hands steady enough to perform this operation on yourself."))
+			return ITEM_INTERACT_BLOCKING
+
+		var/failure_chance = get_modified_failure_chance(time, patient, surgeon, tool, operation_args) * get_cy_medicine_failure_mod(patient, surgeon, tool) // BANDASTATION EDIT + CP13 medicine skill
 		if(operation_args[OPERATION_FORCE_FAIL] || prob(clamp(failure_chance, 0, 99))) // BANDASTATION EDIT
 			failure(operating_on, surgeon, tool, operation_args)
 			result |= ITEM_INTERACT_FAILURE
+
+			cy_after_failed_step(patient, surgeon, tool)
 			if (patient)
 				update_surgery_mood(patient, SURGERY_STATE_FAILURE)
 		else
@@ -1401,3 +1408,65 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 /datum/surgery_operation/organ/has_any_surgery_state(obj/item/organ/organ, state)
 	return LIMB_HAS_ANY_SURGERY_STATE(organ.bodypart_owner, state)
+
+// CYBERPUNK 13 STAGE 3 CORE SURGERY SKILL FIX2 START
+/mob/living/proc/get_cy_medicine_skill_level()
+	if(!ishuman(src))
+		return CY_SKILL_LEVEL_UNTRAINED
+	return get_cy_skill_level(/datum/cy_skill/professional/medicine) || CY_SKILL_LEVEL_UNTRAINED
+
+/datum/surgery_operation/proc/get_cy_medicine_speed_mod(mob/living/patient, mob/living/surgeon, tool)
+	var/level = surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
+	switch(level)
+		if(CY_SKILL_LEVEL_UNTRAINED)
+			return 1.25
+		if(CY_SKILL_LEVEL_BEGINNER)
+			return 1
+		if(CY_SKILL_LEVEL_TRAINED)
+			return 0.85
+		if(CY_SKILL_LEVEL_SKILLED)
+			return 0.8
+		if(CY_SKILL_LEVEL_EXPERT)
+			return 0.75
+		if(CY_SKILL_LEVEL_PROFESSIONAL)
+			return 0.65
+		if(CY_SKILL_LEVEL_MASTER to INFINITY)
+			return 0.55
+	return 1
+
+/datum/surgery_operation/proc/get_cy_medicine_failure_mod(mob/living/patient, mob/living/surgeon, tool)
+	var/level = surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
+	switch(level)
+		if(CY_SKILL_LEVEL_UNTRAINED)
+			return 1.25
+		if(CY_SKILL_LEVEL_BEGINNER)
+			return 1
+		if(CY_SKILL_LEVEL_TRAINED)
+			return 0.8
+		if(CY_SKILL_LEVEL_SKILLED)
+			return 0.7
+		if(CY_SKILL_LEVEL_EXPERT)
+			return 0.55
+		if(CY_SKILL_LEVEL_PROFESSIONAL)
+			return 0.4
+		if(CY_SKILL_LEVEL_MASTER to INFINITY)
+			return 0.25
+	return 1
+// CYBERPUNK 13 STAGE 3 CORE SURGERY SKILL FIX2 END
+
+
+// CYBERPUNK 13 STAGE 3 CORE SURGERY SKILL FIX3 START
+/datum/surgery_operation/proc/cy_can_attempt_self_surgery(mob/living/patient, mob/living/surgeon)
+	if(patient != surgeon)
+		return TRUE
+	return (surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED) >= CY_SURGERY_SELF_MIN_LEVEL
+
+/datum/surgery_operation/proc/cy_after_failed_step(mob/living/patient, mob/living/surgeon, tool)
+	if(!ishuman(patient))
+		return FALSE
+	var/level = surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
+	if(level <= CY_SKILL_LEVEL_UNTRAINED && prob(CY_SURGERY_DIRTY_UNTRAINED_INFECTION_CHANCE))
+		var/mob/living/carbon/human/human_patient = patient
+		human_patient.adjust_tox_loss(1, updating_health = FALSE, forced = TRUE)
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE SURGERY SKILL FIX3 END

@@ -1323,6 +1323,44 @@
 			affected_mob.dna.remove_mutation_group(mutations - affected_mob.dna.get_mutation(/datum/mutation/race), GLOB.standard_mutation_sources)
 		affected_mob.dna.scrambled = FALSE
 
+/datum/reagent/medicine/cy_gene_stabilizer
+	name = "Gene Stabilizer"
+	description = "Temporarily stabilizes humanoid genetic compatibility while it remains in the body."
+	color = "#7FE1B8"
+	taste_description = "cold copper"
+	ph = 7
+	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
+
+/datum/reagent/medicine/cy_gene_stabilizer/on_mob_metabolize(mob/living/affected_mob)
+	. = ..()
+	affected_mob.remove_status_effect(/datum/status_effect/cy_gene_stabilizer_decay)
+
+/datum/reagent/medicine/cy_gene_stabilizer/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
+	. = ..()
+	affected_mob.adjust_cy_humanoidity_stabilized_bonus(CY_GENE_STABILIZER_RESTORE_PER_SECOND * seconds_per_tick * metabolization_ratio * normalise_creation_purity())
+
+/datum/reagent/medicine/cy_gene_stabilizer/on_mob_end_metabolize(mob/living/carbon/affected_mob)
+	. = ..()
+	if(affected_mob.get_cy_humanoidity_stabilized_bonus())
+		affected_mob.apply_status_effect(/datum/status_effect/cy_gene_stabilizer_decay)
+
+/datum/status_effect/cy_gene_stabilizer_decay
+	id = "cy_gene_stabilizer_decay"
+	duration = STATUS_EFFECT_PERMANENT
+	tick_interval = 1 SECONDS
+	alert_type = null
+
+/datum/status_effect/cy_gene_stabilizer_decay/tick(seconds_between_ticks)
+	var/mob/living/carbon/affected_mob = owner
+	if(!istype(affected_mob))
+		qdel(src)
+		return
+	if(!affected_mob.get_cy_humanoidity_stabilized_bonus())
+		qdel(src)
+		return
+	affected_mob.adjust_cy_humanoidity_stabilized_bonus(-CY_GENE_STABILIZER_DECAY_PER_SECOND * seconds_between_ticks)
+	affected_mob.cy_check_humanoidity_collapse()
+
 /datum/reagent/medicine/antihol
 	name = "Antihol"
 	description = "Purges alcoholic substance from the patient's body and eliminates its side effects."

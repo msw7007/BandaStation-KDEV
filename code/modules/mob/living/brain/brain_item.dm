@@ -752,3 +752,32 @@
 	foodtype_flags = PODPERSON_ORGAN_FOODTYPES
 	color = COLOR_LIME
 	shade_color = "lime"
+
+// CYBERPUNK 13 STAGE 3 CORE BRAIN START
+/obj/item/organ/brain/proc/add_cy_brain_trauma(stacks = 1)
+	add_cy_condition(CY_ORGAN_CONDITION_BRAIN_TRAUMA, stacks, 10)
+	return TRUE
+
+/obj/item/organ/brain/get_cy_function_efficiency()
+	var/efficiency = ..()
+	if(has_cy_condition(CY_ORGAN_CONDITION_BRAIN_TRAUMA))
+		efficiency *= max(0.1, 1 - (0.07 * get_cy_condition_stacks(CY_ORGAN_CONDITION_BRAIN_TRAUMA)))
+	return efficiency
+// CYBERPUNK 13 STAGE 3 CORE BRAIN END
+
+// CYBERPUNK 13 STAGE 3 CORE ENGRAM HOOKS START
+/obj/item/organ/brain
+	/// Placeholder for future Network-owned engram identity. Not active until the Network layer exists.
+	var/datum/mind/cy_engram_mind
+	var/cy_engram_server_ref
+
+/obj/item/organ/brain/proc/can_cy_bind_engram()
+	return !cy_engram_mind && !brainmob
+
+/obj/item/organ/brain/proc/bind_cy_engram_stub(datum/mind/source_mind, server_ref)
+	if(!can_cy_bind_engram())
+		return FALSE
+	cy_engram_mind = source_mind
+	cy_engram_server_ref = server_ref
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE ENGRAM HOOKS END

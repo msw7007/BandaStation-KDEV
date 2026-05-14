@@ -60,6 +60,12 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	var/static/list/nonfatal_meltdowns = list()
 	/// Weighted list of lethal meltdowns
 	var/static/list/fatal_meltdowns = list()
+	/// CP13 humanoid compatibility for neurointerfaces and mutation pressure.
+	var/cy_humanoidity = 100
+	/// Temporary CP13 stabilizer bonus. This masks humanoidity loss while the reagent is active, then decays fast.
+	var/cy_humanoidity_stabilized_bonus = 0
+	/// CP13 active genetic sequence slots. Hard-capped by TZ to 10.
+	var/list/cy_gene_segments
 
 /datum/dna/New(mob/living/new_holder)
 	if(istype(new_holder))
@@ -92,6 +98,9 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	new_dna.temporary_mutations = LAZYLISTDUPLICATE(temporary_mutations)
 	new_dna.mutation_index = mutation_index
 	new_dna.default_mutation_genes = default_mutation_genes
+	new_dna.cy_humanoidity = cy_humanoidity
+	new_dna.cy_humanoidity_stabilized_bonus = cy_humanoidity_stabilized_bonus
+	new_dna.cy_gene_segments = LAZYLISTDUPLICATE(cy_gene_segments)
 	//if the new DNA has a holder, transform them immediately, otherwise save it
 	if(new_dna.holder)
 		if (iscarbon(new_dna.holder))
@@ -111,6 +120,9 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 			if(!length(valid_sources))
 				continue
 			new_dna.add_mutation(mutation, valid_sources)
+		new_dna.cy_humanoidity = cy_humanoidity
+		new_dna.cy_humanoidity_stabilized_bonus = cy_humanoidity_stabilized_bonus
+		new_dna.cy_gene_segments = LAZYLISTDUPLICATE(cy_gene_segments)
 
 ///Adds a mutation to the dna if possible. See defines/dna.dm for all sources.
 /datum/dna/proc/add_mutation(mutation_to_add, list/sources)
@@ -145,6 +157,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		set_se(1, actual_mutation)
 
 	update_instability()
+	cy_note_genetic_change(actual_mutation, sources_to_add)
 
 /datum/dna/proc/remove_mutation(mutation_to_remove, list/sources)
 	if(!islist(sources))
@@ -164,11 +177,28 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 	// Check that it exists first before trying to remove it with mutadone
 	if(!length(actual_mutation.sources))
+		cy_note_genetic_change(actual_mutation, sources)
 		SEND_SIGNAL(holder, COMSIG_CARBON_LOSE_MUTATION, actual_mutation.type)
 		actual_mutation.on_losing(holder)
 		qdel(actual_mutation)
 
 	update_instability(FALSE)
+
+/datum/dna/proc/cy_note_genetic_change(datum/mutation/mutation, list/sources)
+	if(!holder || !mutation || !(sources & GLOB.standard_mutation_sources))
+		return FALSE
+	if(mutation.type == /datum/mutation/race)
+		return FALSE
+	if(!iscarbon(holder))
+		return FALSE
+	var/mob/living/carbon/carbon_holder = holder
+	carbon_holder.adjust_cy_humanoidity(-1)
+	return TRUE
+
+/datum/dna/proc/cy_sync_reserved_gene_segments()
+	LAZYINITLIST(cy_gene_segments)
+	cy_gene_segments[CY_GENE_SEGMENT_HUMANITY_APPEARANCE] = round(100 - cy_humanoidity)
+	return cy_gene_segments
 
 /datum/dna/proc/check_mutation(mutation_type)
 	return get_mutation(mutation_type)

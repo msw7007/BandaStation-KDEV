@@ -139,7 +139,10 @@
 				reagent.overdosed_crit = FALSE
 // BANDASTATION EDIT END: NEW CHEMS
 	reagent.current_cycle++
-	need_mob_update += reagent.on_mob_life(owner, seconds_per_tick, metabolization_ratio)
+	var/cy_route = reagent.get_cy_metabolism_route()
+	var/cy_effectiveness = max(0, reagent.get_cy_route_effectiveness(cy_route))
+	need_mob_update += reagent.apply_cy_route_effects(owner, cy_route, seconds_per_tick, metabolization_ratio)
+	need_mob_update += reagent.on_mob_life(owner, seconds_per_tick, metabolization_ratio * cy_effectiveness * reagent.get_cy_metabolism_effectiveness_multiplier(owner))
 
 	if(dead && !QDELETED(owner) && !QDELETED(reagent))
 		need_mob_update += reagent.on_mob_dead(owner, seconds_per_tick, metabolization_ratio)

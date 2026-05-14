@@ -107,6 +107,8 @@
 
 /obj/item/organ/cyberimp/arm/toolkit/proc/on_item_attack_self()
 	SIGNAL_HANDLER
+	if(!is_cy_functional_implant())
+		return
 	INVOKE_ASYNC(src, PROC_REF(ui_action_click))
 
 /obj/item/organ/cyberimp/arm/toolkit/emp_act(severity)
@@ -145,6 +147,8 @@
 	SIGNAL_HANDLER
 	if(!host)
 		return //How did we even get here
+	if(!is_cy_functional_implant())
+		return
 	if(hand != host.hand_bodyparts[host.active_hand_index])
 		return //wrong hand
 	if(Retract())
@@ -172,6 +176,8 @@
 	return TRUE
 
 /obj/item/organ/cyberimp/arm/toolkit/proc/Extend(obj/item/augment)
+	if(!can_cy_use_implant(owner))
+		return
 	if(!(augment in src))
 		return
 
@@ -211,10 +217,14 @@
 
 /obj/item/organ/cyberimp/arm/toolkit/proc/swap_tools(active_item)
 	SIGNAL_HANDLER
+	if(!is_cy_functional_implant())
+		return
 	Retract(active_item)
 	INVOKE_ASYNC(src, PROC_REF(ui_action_click))
 
 /obj/item/organ/cyberimp/arm/toolkit/ui_action_click()
+	if(!can_cy_use_implant(owner))
+		return
 	if((organ_flags & ORGAN_FAILING) || (!active_item && !contents.len))
 		to_chat(owner, span_warning("The implant doesn't respond. It seems to be broken..."))
 		return
@@ -471,6 +481,7 @@
 	var/slam_cooldown_duration = 5 SECONDS
 	/// Tracks how soon we can perform another slam attack
 	COOLDOWN_DECLARE(slam_cooldown)
+	var/cy_strongarm_bonus_applied = FALSE
 
 /obj/item/organ/cyberimp/arm/strongarm/Initialize(mapload)
 	. = ..()
@@ -487,17 +498,41 @@
 
 /obj/item/organ/cyberimp/arm/strongarm/on_bodypart_insert(obj/item/bodypart/arm)
 	. = ..()
+	if(!is_cy_functional_implant())
+		return
+	apply_cy_strongarm_bodypart_bonus(arm)
+
+/obj/item/organ/cyberimp/arm/strongarm/proc/apply_cy_strongarm_bodypart_bonus(obj/item/bodypart/arm)
+	if(!arm || cy_strongarm_bonus_applied)
+		return FALSE
 	arm.unarmed_damage_low += lower_punch_damage
 	arm.unarmed_damage_high += upper_punch_damage
 	arm.unarmed_effectiveness += punch_effectiveness_added
 	arm.unarmed_grab_damage_bonus += bonus_grab_damage
+	cy_strongarm_bonus_applied = TRUE
+	return TRUE
 
 /obj/item/organ/cyberimp/arm/strongarm/on_bodypart_remove(obj/item/bodypart/arm)
 	. = ..()
-	arm.unarmed_damage_low += lower_punch_damage
-	arm.unarmed_damage_high += upper_punch_damage
-	arm.unarmed_effectiveness += punch_effectiveness_added
-	arm.unarmed_grab_damage_bonus += bonus_grab_damage
+	remove_cy_strongarm_bodypart_bonus(arm)
+
+/obj/item/organ/cyberimp/arm/strongarm/proc/remove_cy_strongarm_bodypart_bonus(obj/item/bodypart/arm)
+	if(!arm || !cy_strongarm_bonus_applied)
+		return FALSE
+	arm.unarmed_damage_low -= lower_punch_damage
+	arm.unarmed_damage_high -= upper_punch_damage
+	arm.unarmed_effectiveness -= punch_effectiveness_added
+	arm.unarmed_grab_damage_bonus -= bonus_grab_damage
+	cy_strongarm_bonus_applied = FALSE
+	return TRUE
+
+/obj/item/organ/cyberimp/arm/strongarm/cy_on_functional_state_changed(functional)
+	var/obj/item/bodypart/arm = hand
+	if(functional)
+		apply_cy_strongarm_bodypart_bonus(arm)
+	else
+		remove_cy_strongarm_bodypart_bonus(arm)
+	return TRUE
 
 /obj/item/organ/cyberimp/arm/strongarm/emp_act(severity)
 	. = ..()
@@ -515,6 +550,8 @@
 	SIGNAL_HANDLER
 
 	if(source.get_active_hand() != hand || !proximity)
+		return NONE
+	if(!is_cy_functional_implant())
 		return NONE
 	if(!source.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK))
 		return NONE

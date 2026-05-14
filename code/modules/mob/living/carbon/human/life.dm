@@ -51,6 +51,7 @@
 	update_cy_chameleon()
 	process_cy_character_progression(seconds_per_tick)
 	handle_toxin_organ_damage(seconds_per_tick)
+	process_cy_oxygenation(seconds_per_tick)
 	process_cy_clinical_death(seconds_per_tick)
 	process_cy_implant_overheat(seconds_per_tick)
 	// For special species interactions
@@ -146,7 +147,7 @@
 	var/toxin_pressure = clamp((toxin_load - 10) / 90, 0.05, 1)
 	var/organ_damage = 0.25 * toxin_pressure * seconds_per_tick
 	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
-	if(liver && !(liver.organ_flags & ORGAN_FAILING))
+	if(liver && !(liver.organ_flags & ORGAN_FAILING) && !liver.has_cy_condition(CY_ORGAN_CONDITION_CIRRHOSIS))
 		liver.apply_organ_damage(organ_damage * 1.5)
 		return
 
@@ -167,7 +168,7 @@
 		target_organs = list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_STOMACH)
 
 	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
-	var/liver_working = liver && !(liver.organ_flags & ORGAN_FAILING)
+	var/liver_working = liver && !(liver.organ_flags & ORGAN_FAILING) && !liver.has_cy_condition(CY_ORGAN_CONDITION_CIRRHOSIS)
 	var/metabolism_scale = (0.2 * REAGENTS_METABOLISM) / source_toxin.metabolization_rate
 	var/organ_damage = metabolism_scale * max(source_toxin.toxpwr, 1) * source_toxin.normalise_creation_purity() * metabolization_ratio * seconds_per_tick
 	if(liver_working)

@@ -109,6 +109,8 @@
 	actions_types = list(/datum/action/item_action/organ_action/toggle)
 
 /obj/item/organ/cyberimp/brain/anti_drop/ui_action_click()
+	if(!can_cy_use_implant(owner))
+		return
 	active = !active
 	if(active)
 		var/list/hold_list = owner.get_empty_held_indexes()
@@ -192,16 +194,16 @@
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/on_signal(datum/source, amount)
 	SIGNAL_HANDLER
-	if(!(organ_flags & ORGAN_FAILING) && amount > 0)
+	if(is_cy_functional_implant() && amount > 0)
 		addtimer(CALLBACK(src, PROC_REF(clear_stuns)), stun_cap_amount, TIMER_UNIQUE|TIMER_OVERRIDE)
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/on_stamcrit(datum/source)
 	SIGNAL_HANDLER
-	if(!(organ_flags & ORGAN_FAILING))
+	if(is_cy_functional_implant())
 		addtimer(CALLBACK(src, PROC_REF(clear_stuns)), stun_cap_amount, TIMER_UNIQUE|TIMER_OVERRIDE)
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/clear_stuns()
-	if(isnull(owner) || (organ_flags & ORGAN_FAILING) || !COOLDOWN_FINISHED(src, implant_cooldown))
+	if(isnull(owner) || !is_cy_functional_implant() || !COOLDOWN_FINISHED(src, implant_cooldown))
 		return
 
 	owner.SetStun(0)
@@ -250,6 +252,8 @@
 	actions_types = list(/datum/action/item_action/organ_action/use)
 
 /obj/item/organ/cyberimp/brain/connector/ui_action_click()
+	if(!can_cy_use_implant(owner))
+		return
 
 	to_chat(owner, span_warning("You start fiddling around with [src]..."))
 	playsound(owner, 'sound/items/taperecorder/tape_flip.ogg', 20, vary = TRUE) // asmr
@@ -407,7 +411,7 @@
 /obj/item/organ/cyberimp/brain/surgical_processor/proc/check_surgery(datum/source, atom/movable/operating_on, list/operations)
 	SIGNAL_HANDLER
 
-	if(organ_flags & (ORGAN_FAILING|ORGAN_EMP))
+	if(!is_cy_functional_implant() || (organ_flags & ORGAN_EMP))
 		return
 
 	operations |= loaded_surgeries
@@ -488,3 +492,13 @@
 	if(prob(60/severity))
 		to_chat(owner, span_warning("Your breathing tube suddenly closes!"))
 		owner.losebreath += 2
+
+// CYBERPUNK 13 STAGE 3 CORE NEUROINTERFACE FIX2 START
+/obj/item/organ/cyberimp/brain/neurointerface
+	name = "neural interface"
+	desc = "A low-level neural bridge required for active cybernetic implant control and net-linked functions."
+	zone = BODY_ZONE_HEAD
+	slot = ORGAN_SLOT_BRAIN_CNS
+	cy_implant_is_neurointerface = TRUE
+	cy_requires_neurointerface = FALSE
+// CYBERPUNK 13 STAGE 3 CORE NEUROINTERFACE FIX2 END

@@ -259,6 +259,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	var/damage_delta = damage - prev_damage
 	if(damage_delta > 0)
 		on_damage_received(damage_delta)
+		cy_after_organ_damage(damage_delta)
 	var/message = check_damage_thresholds()
 	prev_damage = damage
 
@@ -538,3 +539,119 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 			all_organ_slots |= initial(an_organ.slot)
 
 	return all_organ_slots
+
+// CYBERPUNK 13 STAGE 3 CORE ORGAN CONDITIONS START
+/obj/item/organ
+	/// CP13 native organ condition storage. This is intentionally on the real organ, not in an external medical datum.
+	var/list/cy_medical_conditions
+
+/obj/item/organ/proc/add_cy_condition(condition, stacks = 1, max_stacks = INFINITY)
+	if(!condition)
+		return FALSE
+	LAZYINITLIST(cy_medical_conditions)
+	cy_medical_conditions[condition] = min(max_stacks, (cy_medical_conditions[condition] || 0) + stacks)
+	return cy_medical_conditions[condition]
+
+/obj/item/organ/proc/set_cy_condition(condition, stacks = 1)
+	if(!condition)
+		return FALSE
+	LAZYINITLIST(cy_medical_conditions)
+	if(stacks <= 0)
+		cy_medical_conditions -= condition
+		return FALSE
+	cy_medical_conditions[condition] = stacks
+	return stacks
+
+/obj/item/organ/proc/clear_cy_condition(condition)
+	if(!LAZYLEN(cy_medical_conditions) || !condition)
+		return FALSE
+	cy_medical_conditions -= condition
+	return TRUE
+
+/obj/item/organ/proc/has_cy_condition(condition)
+	return LAZYLEN(cy_medical_conditions) && !!cy_medical_conditions[condition]
+
+/obj/item/organ/proc/get_cy_condition_stacks(condition)
+	if(!LAZYLEN(cy_medical_conditions))
+		return 0
+	return cy_medical_conditions[condition] || 0
+
+/obj/item/organ/proc/get_cy_health_ratio()
+	return clamp((maxHealth - damage) / max(maxHealth, 1), 0, 1)
+
+/obj/item/organ/proc/get_cy_function_efficiency()
+	if(organ_flags & ORGAN_FAILING)
+		return 0
+	return get_cy_health_ratio()
+
+/obj/item/organ/proc/get_cy_diagnostic_lines(advanced = FALSE)
+	var/list/lines = list()
+	if(damage)
+		lines += "[capitalize(name)]: [round(damage)]/[maxHealth] structural damage."
+	if(advanced && LAZYLEN(cy_medical_conditions))
+		for(var/condition in cy_medical_conditions)
+			lines += "[capitalize(name)]: [condition] x[cy_medical_conditions[condition]]."
+	return lines
+// CYBERPUNK 13 STAGE 3 CORE ORGAN CONDITIONS END
+
+// CYBERPUNK 13 STAGE 3 CORE ORGAN AUTO CONDITIONS FIX2 START
+/obj/item/organ/proc/cy_after_organ_damage(amount)
+	if(amount <= 0)
+		return FALSE
+	if(istype(src, /obj/item/organ/lungs) && prob(min(25, amount * 2)))
+		var/obj/item/organ/lungs/lungs = src
+		lungs.add_cy_puncture(1)
+	if(istype(src, /obj/item/organ/heart) && damage >= maxHealth * 0.85)
+		var/obj/item/organ/heart/heart = src
+		heart.apply_cy_cardiac_arrest()
+	if(istype(src, /obj/item/organ/brain) && damage >= maxHealth * 0.5)
+		var/obj/item/organ/brain/brain = src
+		brain.add_cy_brain_trauma(1)
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE ORGAN AUTO CONDITIONS FIX2 END
+
+
+// CYBERPUNK 13 STAGE 3 CORE ORGAN AUTO CONDITIONS FIX3 START
+/obj/item/organ/proc/cy_condition_label(condition)
+	switch(condition)
+		if(CY_ORGAN_CONDITION_CARDIAC_ARREST)
+			return "cardiac arrest"
+		if(CY_ORGAN_CONDITION_LUNG_PUNCTURE)
+			return "lung puncture"
+		if(CY_ORGAN_CONDITION_CIRRHOSIS)
+			return "liver failure/cirrhosis"
+		if(CY_ORGAN_CONDITION_STOMACH_POISONING)
+			return "stomach poisoning"
+		if(CY_ORGAN_CONDITION_BLINDNESS)
+			return "blindness"
+		if(CY_ORGAN_CONDITION_DEAFNESS)
+			return "deafness"
+		if(CY_ORGAN_CONDITION_TONGUE_NUMBNESS)
+			return "tongue numbness"
+		if(CY_ORGAN_CONDITION_BRAIN_TRAUMA)
+			return "brain trauma"
+	return "[condition]"
+
+/obj/item/organ/proc/get_cy_condition_summary()
+	if(!LAZYLEN(cy_medical_conditions))
+		return null
+	var/list/parts = list()
+	for(var/condition in cy_medical_conditions)
+		parts += "[cy_condition_label(condition)] x[cy_medical_conditions[condition]]"
+	return parts.Join(", ")
+
+/obj/item/organ/eyes/cy_after_organ_damage(amount)
+	. = ..()
+	if(damage >= maxHealth * 0.6)
+		set_cy_condition(CY_ORGAN_CONDITION_BLINDNESS, 1)
+
+/obj/item/organ/ears/cy_after_organ_damage(amount)
+	. = ..()
+	if(damage >= maxHealth * 0.6)
+		set_cy_condition(CY_ORGAN_CONDITION_DEAFNESS, 1)
+
+/obj/item/organ/tongue/cy_after_organ_damage(amount)
+	. = ..()
+	if(damage >= maxHealth * 0.45)
+		set_cy_condition(CY_ORGAN_CONDITION_TONGUE_NUMBNESS, 1)
+// CYBERPUNK 13 STAGE 3 CORE ORGAN AUTO CONDITIONS FIX3 END

@@ -44,6 +44,8 @@
 		. += span_notice("Missing [span_bold("an infusion source")].")
 	else
 		. += span_notice("[span_bold(infusing_from.name)] is in the infusion slot.")
+	if(cy_loaded_sequence)
+		. += span_notice("Loaded CP gene sequence: [span_bold(cy_loaded_sequence.name)]. Alt-click with an empty infusion slot to print serum.")
 	. += span_notice("To operate: Obtain dead creature. Depending on size, drag or drop into the infuser slot.")
 	. += span_notice("Subject enters the chamber, someone activates the machine. Voila! One of your organs has... changed!")
 	. += span_notice("Alt-click to eject the infusion source, if one is inside.")
@@ -170,6 +172,22 @@
 /obj/machinery/dna_infuser/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(user.combat_mode)
 		return NONE
+	if(istype(tool, /obj/item/disk/cy_gene_sequence))
+		var/obj/item/disk/cy_gene_sequence/disk = tool
+		if(infusing_from)
+			if(cy_build_sequence_from_sample(infusing_from, "[infusing_from.name] gene sequence") && cy_write_sequence_disk(disk))
+				balloon_alert(user, "sample sequence written")
+				return ITEM_INTERACT_SUCCESS
+		else if(occupant)
+			var/mob/living/carbon/human/human_occupant = occupant
+			if(cy_build_sequence_from_subject(human_occupant, "[human_occupant.real_name] gene sequence") && cy_write_sequence_disk(disk))
+				balloon_alert(user, "sequence written")
+				return ITEM_INTERACT_SUCCESS
+		if(cy_write_sequence_disk(disk))
+			balloon_alert(user, "sequence copied")
+			return ITEM_INTERACT_SUCCESS
+		balloon_alert(user, "no sequence")
+		return ITEM_INTERACT_BLOCKING
 	// if the machine already has a infusion target, or the target is not valid then no adding.
 	if(!is_valid_infusion(tool, user))
 		return ITEM_INTERACT_BLOCKING
@@ -222,6 +240,10 @@
 		balloon_alert(user, "not while it's on!")
 		return CLICK_ACTION_BLOCKING
 	if(!infusing_from)
+		if(cy_loaded_sequence)
+			if(cy_print_gene_serum())
+				balloon_alert(user, "serum printed")
+				return CLICK_ACTION_SUCCESS
 		balloon_alert(user, "no sample to eject!")
 		return CLICK_ACTION_BLOCKING
 	balloon_alert(user, "ejected sample")
@@ -231,3 +253,250 @@
 
 #undef INFUSING_TIME
 #undef SCREAM_TIME
+
+// CYBERPUNK 13 STAGE 3 CORE GENETICS START
+/mob/living/carbon
+	/// CP13 humanoid compatibility for neurointerfaces and mutation pressure.
+	var/cy_humanoidity = 100
+	var/cy_humanoidity_stabilized_bonus = 0
+	/// CP13 active genetic sequence slots. Hard-capped by TЗ to 10.
+	var/list/cy_gene_segments
+
+/mob/living/carbon/proc/get_cy_humanoidity()
+	if(has_dna())
+		return clamp(dna.cy_humanoidity + dna.cy_humanoidity_stabilized_bonus, 0, 100)
+	return clamp(cy_humanoidity + cy_humanoidity_stabilized_bonus, 0, 100)
+
+/mob/living/carbon/proc/get_cy_humanoidity_stabilized_bonus()
+	if(has_dna())
+		return max(0, dna.cy_humanoidity_stabilized_bonus)
+	return max(0, cy_humanoidity_stabilized_bonus)
+
+/mob/living/carbon/proc/adjust_cy_humanoidity_stabilized_bonus(amount)
+	if(has_dna())
+		dna.cy_humanoidity_stabilized_bonus = clamp(dna.cy_humanoidity_stabilized_bonus + amount, 0, 100)
+		return dna.cy_humanoidity_stabilized_bonus
+	cy_humanoidity_stabilized_bonus = clamp(cy_humanoidity_stabilized_bonus + amount, 0, 100)
+	return cy_humanoidity_stabilized_bonus
+
+/mob/living/carbon/proc/cy_check_humanoidity_collapse()
+	if(get_cy_humanoidity() > CY_HUMANITY_MONSTER_THRESHOLD)
+		return FALSE
+	if(ishuman(src))
+		var/mob/living/carbon/human/human_src = src
+		if(prob(CY_GENETIC_MUTATION_MONSTER_RISK))
+			return human_src.apply_cy_genetic_monster_failure()
+		return FALSE
+	return try_cy_monster_mutation()
+
+/mob/living/carbon/proc/adjust_cy_humanoidity(amount)
+	if(has_dna())
+		dna.cy_humanoidity = clamp(dna.cy_humanoidity + amount, 0, 100)
+		if(dna.cy_humanoidity <= CY_HUMANITY_MONSTER_THRESHOLD)
+			cy_check_humanoidity_collapse()
+		return dna.cy_humanoidity
+	cy_humanoidity = clamp(cy_humanoidity + amount, 0, 100)
+	if(cy_humanoidity <= CY_HUMANITY_MONSTER_THRESHOLD)
+		cy_check_humanoidity_collapse()
+	return cy_humanoidity
+
+/mob/living/carbon/proc/add_cy_gene_segment(segment_id, instability = 0)
+	var/list/segments = has_dna() ? dna.cy_gene_segments : cy_gene_segments
+	LAZYINITLIST(segments)
+	if(length(segments) >= CY_GENETIC_MAX_SEGMENTS && !segments[segment_id])
+		return FALSE
+	segments[segment_id] = instability
+	if(has_dna())
+		dna.cy_gene_segments = segments
+	else
+		cy_gene_segments = segments
+	adjust_cy_humanoidity(-instability)
+	return TRUE
+
+/mob/living/carbon/proc/try_cy_monster_mutation()
+	// Full monster form belongs to antagonist/fauna content. Core hook intentionally only marks the body unstable.
+	adjust_psychic_loss(10, updating_health = FALSE, forced = TRUE)
+	adjust_organ_loss(ORGAN_SLOT_BRAIN, 5)
+	return TRUE
+// CYBERPUNK 13 STAGE 3 CORE GENETICS END
+
+// CYBERPUNK 13 STAGE 3 CORE GENETICS FIX2 START
+/datum/cy_gene_sequence
+	var/id
+	var/name = "unstable gene sequence"
+	var/humanoidity_delta = -5
+	var/list/segments = list()
+	var/list/mutations_to_add = list()
+	var/amino_chain
+
+/datum/cy_gene_sequence/New(sequence_name, list/new_segments, new_humanoidity_delta = -5)
+	. = ..()
+	id = md5("[GLOB.round_id]-[world.time]-[rand(1000,9999)]")
+	if(sequence_name)
+		name = sequence_name
+	if(new_segments)
+		segments = new_segments.Copy()
+	humanoidity_delta = new_humanoidity_delta
+	amino_chain = cy_generate_amino_chain()
+
+/datum/cy_gene_sequence/proc/cy_generate_amino_chain()
+	var/list/chunks = list()
+	var/seed = md5("[GLOB.round_id]-[name]-[json_encode(segments)]")
+	for(var/i in 1 to 10)
+		chunks += uppertext(copytext(seed, i * 2 - 1, i * 2 + 1))
+	return chunks.Join("-")
+
+/obj/item/disk/cy_gene_sequence
+	name = "gene sequence disk"
+	desc = "Stores one CP13 gene sequence for later printing or replication."
+	var/datum/cy_gene_sequence/stored_sequence
+
+/obj/item/disk/cy_gene_sequence/examine(mob/user)
+	. = ..()
+	if(stored_sequence)
+		. += span_notice("Sequence: [stored_sequence.name].")
+		. += span_notice("Amino chain: [stored_sequence.amino_chain].")
+
+/obj/item/reagent_containers/syringe/cy_gene_serum
+	name = "gene serum syringe"
+	desc = "A prepared genetic serum. Its sequence applies immediately on injection."
+	var/datum/cy_gene_sequence/stored_sequence
+
+/obj/item/reagent_containers/syringe/cy_gene_serum/examine(mob/user)
+	. = ..()
+	if(stored_sequence)
+		. += span_notice("Prepared sequence: [stored_sequence.name].")
+		. += span_notice("Amino chain: [stored_sequence.amino_chain].")
+
+/obj/item/reagent_containers/syringe/cy_gene_serum/proc/apply_cy_gene_serum(mob/living/carbon/human/target)
+	if(!istype(target) || !target.has_dna() || !stored_sequence)
+		return FALSE
+	for(var/segment in stored_sequence.segments)
+		var/instability = stored_sequence.segments[segment]
+		if(!isnum(instability))
+			instability = 1
+		target.add_cy_gene_segment(segment, instability)
+	for(var/mutation in stored_sequence.mutations_to_add)
+		target.dna.add_mutation(mutation, MUTATION_SOURCE_MUTATOR)
+	target.adjust_cy_humanoidity(stored_sequence.humanoidity_delta)
+	return TRUE
+
+/mob/living/carbon/human/proc/apply_cy_genetic_monster_failure()
+	if(stat == DEAD && istype(loc, /mob/living/basic/mining/legion/cy_genetic_abomination))
+		return FALSE
+	var/turf/body_turf = get_turf(src)
+	if(!body_turf)
+		return FALSE
+	var/mob/living/basic/mining/legion/cy_genetic_abomination/monster = new(body_turf)
+	monster.consume_cy_original_body(src)
+	visible_message(span_danger("[src] violently mutates as humanoid genetic stability collapses!"), span_userdanger("Your body stops answering as your genes collapse into something inhuman!"))
+	adjust_psychic_loss(40, forced = TRUE)
+	adjust_organ_loss(ORGAN_SLOT_BRAIN, 20)
+	return TRUE
+
+/mob/living/basic/mining/legion/cy_genetic_abomination
+	name = "genetic abomination"
+	desc = "A failed humanoid genome wearing itself inside out."
+	icon = 'icons/mob/nonhuman-player/blob.dmi'
+	icon_state = "blobbernaut_independent"
+	icon_living = "blobbernaut_independent"
+	icon_dead = "blobbernaut_independent_dead"
+	base_icon_state = "blobbernaut_independent"
+	maxHealth = 200
+	health = 200
+	melee_damage_lower = 18
+	melee_damage_upper = 22
+	speed = 2
+	corpse_type = /obj/effect/gibspawner/generic
+	has_emissive = FALSE
+
+/mob/living/basic/mining/legion/cy_genetic_abomination/proc/consume_cy_original_body(mob/living/carbon/human/original_body)
+	if(!istype(original_body))
+		return FALSE
+	stored_mob = original_body
+	gender = original_body.gender
+	name = "mutated [original_body.real_name]"
+	original_body.death()
+	original_body.extinguish_mob()
+	original_body.apply_status_effect(/datum/status_effect/grouped/stasis, STASIS_LEGION_EATEN)
+	RegisterSignal(original_body, COMSIG_LIVING_REVIVE, PROC_REF(on_consumed_revive))
+	original_body.ghostize(FALSE)
+	original_body.forceMove(src)
+	ai_controller?.set_blackboard_key(BB_LEGION_CORPSE, original_body)
+	return TRUE
+
+/mob/living/basic/mining/legion/cy_genetic_abomination/death(gibbed)
+	var/mob/living/stored = stored_mob
+	if(stored)
+		stored.forceMove(loc)
+		if(stored.stat != DEAD)
+			stored.death()
+		stored.remove_status_effect(/datum/status_effect/grouped/stasis, STASIS_LEGION_EATEN)
+		stored_mob = null
+	return ..()
+// CYBERPUNK 13 STAGE 3 CORE GENETICS FIX2 END
+
+
+// CYBERPUNK 13 STAGE 3 CORE GENETICS FIX3 START
+/obj/machinery/dna_infuser
+	var/datum/cy_gene_sequence/cy_loaded_sequence
+
+/obj/machinery/dna_infuser/proc/cy_build_sequence_from_subject(mob/living/carbon/human/subject, sequence_name = "sampled sequence")
+	if(!istype(subject) || !subject.has_dna())
+		return null
+	var/list/segments = list()
+	subject.dna.cy_sync_reserved_gene_segments()
+	for(var/segment in subject.dna.cy_gene_segments)
+		segments[segment] = subject.dna.cy_gene_segments[segment]
+	var/list/mutation_payload = list()
+	for(var/datum/mutation/mutation as anything in subject.dna.mutations)
+		if(mutation.type == /datum/mutation/race)
+			continue
+		mutation_payload |= mutation.type
+		if(length(segments) < CY_GENETIC_MAX_SEGMENTS)
+			segments["mutation:[mutation.type]"] = 1
+	if(subject.dna.species && length(segments) < CY_GENETIC_MAX_SEGMENTS)
+		segments["species:[subject.dna.species.type]"] = 1
+	if(!length(segments))
+		segments["[CY_GENE_SEQUENCE_ROUND_SEED]-[rand(100,999)]"] = 1
+	cy_loaded_sequence = new /datum/cy_gene_sequence(sequence_name, segments, CY_GENE_SERUM_UNSTABLE_HUMANITY_DELTA)
+	cy_loaded_sequence.mutations_to_add = mutation_payload
+	return cy_loaded_sequence
+
+/obj/machinery/dna_infuser/proc/cy_build_sequence_from_sample(atom/movable/sample, sequence_name = "sampled sequence")
+	if(!sample)
+		return null
+	if(ishuman(sample))
+		return cy_build_sequence_from_subject(sample, sequence_name)
+	var/list/segments = list()
+	var/datum/infuser_entry/entry = sample.get_infusion_entry()
+	if(entry)
+		segments["infusion:[entry.type]"] = max(1, entry.tier)
+		segments["sample:[sample.type]"] = 1
+	else
+		segments["sample:[sample.type]"] = 1
+	cy_loaded_sequence = new /datum/cy_gene_sequence(sequence_name, segments, CY_GENE_SERUM_UNSTABLE_HUMANITY_DELTA)
+	return cy_loaded_sequence
+
+/obj/machinery/dna_infuser/proc/cy_write_sequence_disk(obj/item/disk/cy_gene_sequence/disk)
+	if(!istype(disk) || !cy_loaded_sequence)
+		return FALSE
+	disk.stored_sequence = cy_loaded_sequence
+	return TRUE
+
+/obj/machinery/dna_infuser/proc/cy_print_gene_serum()
+	if(!cy_loaded_sequence)
+		return null
+	var/obj/item/reagent_containers/syringe/cy_gene_serum/serum = new(get_turf(src))
+	serum.stored_sequence = cy_loaded_sequence
+	return serum
+
+/obj/item/reagent_containers/syringe/cy_gene_serum/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
+	if(proximity_flag && ishuman(target) && stored_sequence)
+		var/mob/living/carbon/human/human_target = target
+		if(apply_cy_gene_serum(human_target))
+			to_chat(user, span_notice("You inject [human_target] with [stored_sequence.name]."))
+			qdel(src)
+			return TRUE
+	return ..()
+// CYBERPUNK 13 STAGE 3 CORE GENETICS FIX3 END

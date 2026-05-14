@@ -362,6 +362,15 @@
 		else
 			render_list += "<span class='info ml-1'>[core_temperature_message]</span><br>"
 
+	if(ishuman(target))
+		var/mob/living/carbon/human/cy_humantarget = target
+		var/list/cy_lines = cy_humantarget.get_cy_diagnostic_lines(user, advanced)
+		if(length(cy_lines))
+			render_list += "<hr>"
+			render_list += "<span class='info ml-1'><b>CP-диагностика:</b></span><br>"
+			for(var/cy_line in cy_lines)
+				render_list += "<span class='info ml-2'>[cy_line]</span><br>"
+
 	var/body_temperature_message = "Температура тела: [round(target.bodytemperature-T0C, 0.1)] &deg;C ([round(target.bodytemperature*1.8-459.67,0.1)] &deg;F)"
 	if(target.bodytemperature >= target.get_body_temp_heat_damage_limit())
 		render_list += "<span class='alert ml-1'>☼ [body_temperature_message] ☼</span><br>"

@@ -407,3 +407,20 @@
 #undef LIVER_DEFAULT_TOX_TOLERANCE
 #undef LIVER_DEFAULT_TOX_RESISTANCE
 #undef LIVER_FAILURE_STAGE_SECONDS
+
+// CYBERPUNK 13 STAGE 3 CORE LIVER START
+/obj/item/organ/liver/proc/apply_cy_cirrhosis()
+	set_cy_condition(CY_ORGAN_CONDITION_CIRRHOSIS, 1)
+	filterToxins = FALSE
+	return TRUE
+
+/obj/item/organ/liver/proc/clear_cy_cirrhosis()
+	clear_cy_condition(CY_ORGAN_CONDITION_CIRRHOSIS)
+	filterToxins = TRUE
+	return TRUE
+
+/obj/item/organ/liver/get_cy_function_efficiency()
+	if(has_cy_condition(CY_ORGAN_CONDITION_CIRRHOSIS))
+		return 0
+	return ..()
+// CYBERPUNK 13 STAGE 3 CORE LIVER END

@@ -20,7 +20,7 @@
 
 /obj/item/organ/cyberimp/eyes/hud/Initialize(mapload)
 	. = ..()
-	if(toggled_on)
+	if(toggled_on && is_cy_functional_implant())
 		for(var/hud_trait in HUD_traits)
 			add_organ_trait(hud_trait)
 
@@ -33,6 +33,8 @@
 		if(hud_color)
 			eye_owner.remove_eye_color(EYE_COLOR_HUD_PRIORITY)
 		return
+	if(!can_cy_use_implant(eye_owner))
+		return
 	toggled_on = TRUE
 	for(var/hud_trait in HUD_traits)
 		add_organ_trait(hud_trait)
@@ -42,13 +44,30 @@
 
 /obj/item/organ/cyberimp/eyes/hud/on_mob_insert(mob/living/carbon/human/eye_owner, special = FALSE, movement_flags)
 	. = ..()
-	if(toggled_on && hud_color)
+	update_cy_functional_state()
+	if(toggled_on && hud_color && is_cy_functional_implant())
 		eye_owner.add_eye_color_right(hud_color, EYE_COLOR_HUD_PRIORITY, !special)
 
 /obj/item/organ/cyberimp/eyes/hud/on_mob_remove(mob/living/carbon/human/eye_owner, special, movement_flags)
 	. = ..()
 	if(toggled_on && hud_color)
 		eye_owner.remove_eye_color(EYE_COLOR_HUD_PRIORITY, !special)
+
+/obj/item/organ/cyberimp/eyes/hud/cy_on_functional_state_changed(functional)
+	if(!toggled_on)
+		return TRUE
+	for(var/hud_trait in HUD_traits)
+		if(functional)
+			add_organ_trait(hud_trait)
+		else
+			remove_organ_trait(hud_trait)
+	if(hud_color && ishuman(owner))
+		var/mob/living/carbon/human/human_owner = owner
+		if(functional)
+			human_owner.add_eye_color_right(hud_color, EYE_COLOR_HUD_PRIORITY)
+		else
+			human_owner.remove_eye_color(EYE_COLOR_HUD_PRIORITY)
+	return TRUE
 
 /obj/item/organ/cyberimp/eyes/hud/medical
 	name = "medical HUD implant"
