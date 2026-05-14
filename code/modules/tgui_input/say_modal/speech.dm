@@ -40,6 +40,9 @@
 		if(RADIO_CHANNEL)
 			client.mob.say_verb(";" + entry)
 			return TRUE
+		if(WHISPER_CHANNEL)
+			client.mob.say_verb("#" + entry)
+			return TRUE
 		if(ME_CHANNEL)
 			client.mob.me_verb(entry)
 			return TRUE

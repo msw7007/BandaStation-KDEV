@@ -105,3 +105,10 @@
 #define COMSIG_KB_MOVEMENT_EAST_DOWN "keybinding_movement_east_down"
 #define COMSIG_KB_MOVEMENT_ZLEVEL_MOVEUP_DOWN "keybinding_mob_zlevel_moveup_down"
 #define COMSIG_KB_MOVEMENT_ZLEVEL_MOVEDOWN_DOWN "keybinding_mob_zlevel_movedown_down"
+
+
+#define COMSIG_KB_LIVING_DEFENSIVE_HOLD_DOWN "keybinding_living_defensive_hold_down"
+#define COMSIG_KB_LIVING_TOGGLE_STEALTH_DOWN "keybinding_living_toggle_stealth_down"
+#define COMSIG_KB_LIVING_SURRENDER_DOWN "keybinding_living_surrender_down"
+#define COMSIG_KB_LIVING_TOGGLE_SPRINT_DOWN "keybinding_living_toggle_sprint_down"
+#define COMSIG_KB_LIVING_PARKOUR_DOWN "keybinding_living_parkour_down"

@@ -29,14 +29,22 @@
 		hud_used.screen_objects[HUD_MOB_THROW]?.icon_state = "act_throw_on"
 	SEND_SIGNAL(src, COMSIG_LIVING_THROW_MODE_TOGGLE, throw_mode)
 
-/mob/proc/throw_item(atom/target)
+/mob/proc/throw_item(atom/target, list/modifiers = null)
 	if(!HAS_TRAIT(src, TRAIT_CAN_THROW_ITEMS))
 		return FALSE
 	SEND_SIGNAL(src, COMSIG_MOB_THROW, target)
 	return TRUE
 
-/mob/living/throw_item(atom/target)
+/mob/living/throw_item(atom/target, list/modifiers = null)
 	. = ..()
+	if(islist(modifiers) && LAZYACCESS(modifiers, MIDDLE_CLICK))
+		throw_mode_off(THROW_MODE_TOGGLE)
+		if(isliving(target))
+			give(target)
+		else
+			give(null)
+		return TRUE
+	var/cy_roll_throw = islist(modifiers) && LAZYACCESS(modifiers, RIGHT_CLICK)
 	throw_mode_off(THROW_MODE_TOGGLE)
 	if(!HAS_TRAIT(src, TRAIT_CAN_THROW_ITEMS))
 		stack_trace("[src] tried to throw [target], but they shouldn't be able to throw things")
@@ -120,7 +128,28 @@
 		drift_force *= WEIGHT_TO_NEWTONS(thrown_item.w_class)
 
 	newtonian_move(get_angle(target, src), drift_force = drift_force)
-	thrown_thing.safe_throw_at(target, thrown_thing.throw_range + extra_throw_range, max(1,thrown_thing.throw_speed + power_throw), src, null, null, null, move_force)
+	var/final_throw_range = thrown_thing.throw_range + extra_throw_range
+	var/final_throw_speed = max(1, thrown_thing.throw_speed + power_throw)
+	var/final_throw_force = move_force
+	var/final_throw_gentle = FALSE
+	var/old_pass_flags
+	if(cy_roll_throw)
+		// Rolling is not a weak throw. It is a low-profile slide: under tables and through door gaps.
+		final_throw_range = max(1, round(final_throw_range * 0.75))
+		final_throw_speed = max(1, final_throw_speed - 1)
+		final_throw_force = MOVE_FORCE_DEFAULT
+		final_throw_gentle = TRUE
+		old_pass_flags = thrown_thing.pass_flags
+		thrown_thing.pass_flags |= PASSDOORS | PASSTABLE | PASSSTRUCTURE | PASSMACHINE | PASSFLAPS | PASSITEM
+	else
+		final_throw_range += 2
+	thrown_thing.safe_throw_at(target, final_throw_range, final_throw_speed, src, null, null, cy_roll_throw ? CALLBACK(thrown_thing, TYPE_PROC_REF(/atom/movable, restore_cy_roll_pass_flags), old_pass_flags) : null, final_throw_force, final_throw_gentle)
+	if(cy_roll_throw && !thrown_thing.throwing)
+		thrown_thing.restore_cy_roll_pass_flags(old_pass_flags)
+
+/atom/movable/proc/restore_cy_roll_pass_flags(old_pass_flags)
+	if(isnum(old_pass_flags))
+		pass_flags = old_pass_flags
 
 // Giving stuff
 /**

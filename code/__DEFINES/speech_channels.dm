@@ -6,3 +6,5 @@
 #define ADMIN_CHANNEL "Admin"
 #define MENTOR_CHANNEL "Mentor" // BANDASTATION ADDITION - Mentors
 #define PRAY_CHANNEL "Pray"
+
+#define WHISPER_CHANNEL "Whisper"

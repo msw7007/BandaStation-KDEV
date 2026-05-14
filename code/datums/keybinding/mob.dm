@@ -14,6 +14,16 @@
 	if(.)
 		return
 	var/mob/M = user.mob
+	if(isliving(M))
+		var/mob/living/living_mob = M
+		if(living_mob.has_buckled_mobs())
+			living_mob.unbuckle_all_mobs(force = TRUE)
+			living_mob.clear_cy_carry_state()
+			return TRUE
+		if(living_mob.buckled)
+			living_mob.buckled.user_unbuckle_mob(living_mob, living_mob)
+			living_mob.clear_cy_carry_state()
+			return TRUE
 	if(!M.pulling)
 		to_chat(user, span_notice("Вы ничего не тащите."))
 	else
@@ -66,7 +76,7 @@
 	return TRUE
 
 /datum/keybinding/mob/activate_inhand
-	hotkey_keys = list("Z")
+	hotkey_keys = list("Q")
 	name = "activate_inhand"
 	full_name = "Использовать предмет в руке"
 	description = "Использует предмет в вашей активной руке"
@@ -81,7 +91,7 @@
 	return TRUE
 
 /datum/keybinding/mob/drop_item
-	hotkey_keys = list("Q")
+	hotkey_keys = list("Z")
 	name = "drop_item"
 	full_name = "Выложить предмет в руке"
 	description = "Drops the item in your active hand to the ground."

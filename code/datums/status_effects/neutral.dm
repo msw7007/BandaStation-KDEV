@@ -206,7 +206,7 @@
 // this status effect is used to negotiate the high-fiving capabilities of all concerned parties
 /datum/status_effect/offering
 	id = "offering"
-	duration = STATUS_EFFECT_PERMANENT
+	duration = 30 SECONDS
 	tick_interval = STATUS_EFFECT_NO_TICK
 	status_type = STATUS_EFFECT_UNIQUE
 	alert_type = null
@@ -216,35 +216,130 @@
 	var/obj/item/offered_item
 	/// The type of alert given to people when offered, in case you need to override some behavior (like for high-fives)
 	var/give_alert_type = /atom/movable/screen/alert/give
+	/// World-space offer icon used by CP-style item handoff.
+	var/atom/movable/cy_give_offer/offer_marker
+	/// Specific mob this offer was aimed at, if any. Used only to place the world icon between giver and target.
+	var/mob/living/specific_offered
+
+
+/atom/movable/cy_give_offer
+	name = "предложенный предмет"
+	desc = "Нажмите, чтобы взять предложенный предмет."
+	anchored = TRUE
+	density = FALSE
+	mouse_opacity = 2
+	layer = ABOVE_MOB_LAYER
+	vis_flags = VIS_INHERIT_PLANE
+	var/datum/status_effect/offering/offer
+
+/atom/movable/cy_give_offer/Initialize(mapload, datum/status_effect/offering/new_offer)
+	. = ..()
+	offer = new_offer
+	update_appearance_from_offer()
+	update_position()
+
+/atom/movable/cy_give_offer/Destroy()
+	offer = null
+	return ..()
+
+/atom/movable/cy_give_offer/proc/update_appearance_from_offer()
+	cut_overlays()
+	if(!offer || !offer.offered_item)
+		return
+	var/obj/item/offered_item = offer.offered_item
+	name = "[offered_item.name]"
+	desc = "[offer.owner] предлагает [offered_item.declent_ru(ACCUSATIVE)]. Нажмите, чтобы взять."
+	icon = offered_item.icon
+	icon_state = offered_item.icon_state
+	color = offered_item.color
+	alpha = offered_item.alpha
+	transform = offered_item.transform
+	add_overlay(offered_item.overlays)
+
+/atom/movable/cy_give_offer/proc/update_position()
+	if(!offer || !offer.owner)
+		qdel(src)
+		return
+	var/mob/living/offerer = offer.owner
+	forceMove(get_turf(offerer))
+	pixel_x = 0
+	pixel_y = 0
+	var/direction = offerer.dir
+	if(offer.specific_offered)
+		direction = get_dir(offerer, offer.specific_offered) || offerer.dir
+	if(direction & EAST)
+		pixel_x += 16
+	else if(direction & WEST)
+		pixel_x -= 16
+	if(direction & NORTH)
+		pixel_y += 16
+	else if(direction & SOUTH)
+		pixel_y -= 16
+
+/atom/movable/cy_give_offer/Click(location, control, params)
+	. = ..()
+	if(!isliving(usr) || !offer)
+		return
+	var/mob/living/taker = usr
+	if(!offer.is_taker_elligible(taker))
+		to_chat(taker, span_warning("Вы не можете взять это сейчас."))
+		return
+	var/mob/living/offerer = offer.owner
+	var/obj/item/receiving = offer.offered_item
+	taker.take(offerer, receiving)
+	SEND_SIGNAL(offerer, COMSIG_LIVING_ITEM_GIVEN, taker, receiving)
+	if(!receiving || offerer.get_active_held_item() != receiving)
+		qdel(offer)
 
 /datum/status_effect/offering/on_creation(mob/living/new_owner, obj/item/offer, give_alert_override, mob/living/offered)
 	. = ..()
 	if(!.)
 		return
 	offered_item = offer
+	specific_offered = offered
 	if(give_alert_override)
 		give_alert_type = give_alert_override
 
-	if(offered && is_taker_elligible(offered))
-		register_candidate(offered)
+	if(uses_world_offer())
+		if(offered && is_taker_elligible(offered))
+			LAZYADD(possible_takers, offered)
+			RegisterSignal(offered, COMSIG_MOVABLE_MOVED, PROC_REF(check_taker_in_range))
+		else
+			for(var/mob/living/possible_taker in orange(1, owner))
+				if(!is_taker_elligible(possible_taker))
+					continue
+				LAZYADD(possible_takers, possible_taker)
+				RegisterSignal(possible_taker, COMSIG_MOVABLE_MOVED, PROC_REF(check_taker_in_range))
+		if(!possible_takers)
+			qdel(src)
+			return
+		offer_marker = new /atom/movable/cy_give_offer(get_turf(owner), src)
 	else
-		for(var/mob/living/possible_taker in orange(1, owner))
-			if(!is_taker_elligible(possible_taker))
-				continue
+		if(offered && is_taker_elligible(offered))
+			register_candidate(offered)
+		else
+			for(var/mob/living/possible_taker in orange(1, owner))
+				if(!is_taker_elligible(possible_taker))
+					continue
 
-			register_candidate(possible_taker)
+				register_candidate(possible_taker)
 
-	if(!possible_takers) // no one around
-		qdel(src)
-		return
+		if(!possible_takers) // no one around
+			qdel(src)
+			return
 
 	RegisterSignal(owner, COMSIG_MOVABLE_MOVED, PROC_REF(check_owner_in_range))
 	RegisterSignals(offered_item, list(COMSIG_QDELETING, COMSIG_ITEM_DROPPED), PROC_REF(dropped_item))
 
+/datum/status_effect/offering/proc/uses_world_offer()
+	return TRUE
+
 /datum/status_effect/offering/Destroy()
+	QDEL_NULL(offer_marker)
 	for(var/mob/living/removed_taker as anything in possible_takers)
 		remove_candidate(removed_taker)
 	LAZYCLEARLIST(possible_takers)
+	specific_offered = null
 	offered_item = null
 	return ..()
 
@@ -259,7 +354,8 @@
 
 /// Remove the alert and signals for the specified living mob. Automatically removes the status effect when we lost the last taker
 /datum/status_effect/offering/proc/remove_candidate(mob/living/removed_candidate)
-	removed_candidate.clear_alert("[owner]")
+	if(!uses_world_offer())
+		removed_candidate.clear_alert("[owner]")
 	LAZYREMOVE(possible_takers, removed_candidate)
 	UnregisterSignal(removed_candidate, COMSIG_MOVABLE_MOVED)
 	if(!possible_takers && !QDELING(src))
@@ -277,6 +373,7 @@
 /// The offerer moved, see if anyone is out of range now
 /datum/status_effect/offering/proc/check_owner_in_range(mob/living/source)
 	SIGNAL_HANDLER
+	offer_marker?.update_position()
 
 	for(var/mob/living/checking_taker as anything in possible_takers)
 		if(!istype(checking_taker) || (!checking_taker.IsReachableBy(owner) && !((owner.pulling == checking_taker) || (checking_taker.pulling == owner))) || IS_DEAD_OR_INCAP(checking_taker))
@@ -312,6 +409,10 @@
  * when offered, mostly useful for `/obj/item/hand_item` subtypes.
  */
 /datum/status_effect/offering/no_item_received
+
+
+/datum/status_effect/offering/no_item_received/uses_world_offer()
+	return FALSE
 
 /datum/status_effect/offering/no_item_received/additional_taker_check(mob/living/taker)
 	return taker.usable_hands > 0

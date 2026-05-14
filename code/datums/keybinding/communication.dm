@@ -86,3 +86,21 @@
 	winset(user, null, "command=[user.tgui_say_create_open_command(PRAY_CHANNEL)];")
 	winset(user, "tgui_say.browser", "focus=true")
 	return TRUE
+
+
+/datum/keybinding/client/communication/whisper
+	hotkey_keys = list("ShiftT")
+	name = WHISPER_CHANNEL
+	full_name = "Шёпот"
+	keybind_signal = "keybinding_client_whisper_down"
+
+/datum/keybinding/client/communication/whisper/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	if(!user.prefs.read_preference(/datum/preference/toggle/tgui_input))
+		winset(user, null, "command=[VERB_WHISPER]")
+		return TRUE
+	winset(user, null, "command=[user.tgui_say_create_open_command(WHISPER_CHANNEL)]")
+	winset(user, "tgui_say.browser", "focus=true")
+	return TRUE

@@ -182,7 +182,7 @@
 	return TRUE
 
 /datum/keybinding/living/hold_throw_mode
-	hotkey_keys = list("Space")
+	hotkey_keys = list(UNBOUND_KEY)
 	name = "hold_throw_mode"
 	full_name = "Режим броска (зажать)"
 	description = "Удерживайте, чтобы включить режим броска, и отпустите, чтобы выключить его"
@@ -202,8 +202,39 @@
 	var/mob/living/living_user = user.mob
 	living_user.throw_mode_off(THROW_MODE_HOLD)
 
+
+/datum/keybinding/living/toggle_cy_sprint
+	hotkey_keys = list("V")
+	name = "toggle_cy_sprint"
+	full_name = "Спринт"
+	description = "Переключает спринт. Спринт ускоряет движение, но расходует запас сил."
+	keybind_signal = COMSIG_KB_LIVING_TOGGLE_SPRINT_DOWN
+
+/datum/keybinding/living/toggle_cy_sprint/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.toggle_cy_sprint()
+	return TRUE
+
+/datum/keybinding/living/toggle_cy_parkour
+	hotkey_keys = list("G")
+	name = "toggle_cy_parkour"
+	full_name = "Паркур"
+	description = "Включает режим паркура на одно действие: прыжок, зацеп, подъём или спуск."
+	keybind_signal = COMSIG_KB_LIVING_PARKOUR_DOWN
+
+/datum/keybinding/living/toggle_cy_parkour/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.toggle_cy_parkour_mode()
+	return TRUE
+
 /datum/keybinding/living/give
-	hotkey_keys = list("V") // BANDASTATION EDIT
+	hotkey_keys = list(UNBOUND_KEY) // BANDASTATION EDIT - V is CP sprint
 	name = "Give_Item"
 	full_name = "Передать вещь"
 	description = "Передать предмет в активной руке"
@@ -227,3 +258,64 @@
 	if(!HAS_TRAIT(living_user, TRAIT_CAN_HOLD_ITEMS))
 		return
 	living_user.give()
+
+
+/datum/keybinding/living/defensive_hold
+	hotkey_keys = list("Space")
+	name = "defensive_hold"
+	full_name = "Защитное действие (зажать)"
+	description = "Удерживайте для защитных кликов: Space+ЛКМ — парирование, Space+ПКМ — уклонение. Нажатие повторяет последнее защитное действие."
+	keybind_signal = COMSIG_KB_LIVING_DEFENSIVE_HOLD_DOWN
+
+/datum/keybinding/living/defensive_hold/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.cy_defense_hold = TRUE
+	living_user.perform_cy_defense_action(living_user.cy_last_defense_action, target)
+	return TRUE
+
+/datum/keybinding/living/defensive_hold/up(client/user, turf/target)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.cy_defense_hold = FALSE
+	return TRUE
+
+/datum/keybinding/living/toggle_cy_stealth
+	hotkey_keys = list("ShiftC")
+	name = "toggle_cy_stealth"
+	full_name = "Скрытый режим"
+	description = "Переключает скрытый режим."
+	keybind_signal = COMSIG_KB_LIVING_TOGGLE_STEALTH_DOWN
+
+/datum/keybinding/living/toggle_cy_stealth/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	if(!istype(living_user))
+		return FALSE
+	var/enabled = living_user.cy_stealth_mode ? FALSE : TRUE
+	living_user.set_cy_stealth_mode(enabled)
+	var/message = living_user.cy_stealth_mode ? "Вы переходите в скрытый режим." : "Вы выходите из скрытого режима."
+	to_chat(living_user, span_notice(message))
+	return TRUE
+
+/datum/keybinding/living/surrender
+	hotkey_keys = list("ShiftH")
+	name = "surrender"
+	full_name = "Сдаться"
+	description = "Сдаться."
+	keybind_signal = COMSIG_KB_LIVING_SURRENDER_DOWN
+
+/datum/keybinding/living/surrender/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.visible_message(span_notice("[capitalize(living_user.declent_ru(NOMINATIVE))] сдаётся."), span_notice("Вы сдаётесь."))
+	living_user.emote("surrender")
+	return TRUE

@@ -79,6 +79,10 @@
 	return FALSE
 
 /mob/living/carbon/human/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE)
+	if(world.time < cy_open_defense_until)
+		return FAILED_BLOCK
+	if(has_active_cy_defense())
+		return resolve_cy_active_defense(hit_by, attack_type)
 	. = ..()
 	if(. == SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK

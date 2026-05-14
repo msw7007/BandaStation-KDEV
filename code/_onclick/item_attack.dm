@@ -28,6 +28,9 @@
 		return source_atom.melee_attack_chain(user, target, modifiers, attack_modifiers)
 
 	var/is_right_clicking = LAZYACCESS(modifiers, RIGHT_CLICK)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		living_user.apply_cy_attack_intent_modifiers(src, modifiers, attack_modifiers)
 
 	var/item_interact_result = target.base_item_interaction(user, src, modifiers)
 	if(item_interact_result & ITEM_INTERACT_SUCCESS)

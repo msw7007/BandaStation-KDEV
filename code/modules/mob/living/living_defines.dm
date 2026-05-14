@@ -311,10 +311,71 @@
 	var/cy_stealth_mode = FALSE
 	var/cy_chameleon_level = 0
 	var/cy_last_stealth_move_time = 0
+	/// Whether this mob is currently pressed against a wall for stealth.
+	var/cy_wall_pressed = FALSE
+	/// Direction of the current stealth wall press pixel offset.
+	var/cy_wall_press_dir = NONE
+	/// Last time the stealth debug numbers were printed.
+	var/cy_last_stealth_debug_time = 0
+	/// Alpha before entering stealth, restored when stealth ends.
+	var/cy_stealth_original_alpha = 255
 
 	/// Cyberpunk perception modes.
 	var/cy_look_mode = FALSE
 	var/cy_listen_mode = FALSE
+
+	/// Defensive hold state for Space + click controls.
+	var/cy_defense_hold = FALSE
+	/// Last defensive action used for Space repeat.
+	var/cy_last_defense_action = CY_DEFENSE_ACTION_DODGE
+	/// Defensive action currently active in the combat pipeline.
+	var/cy_active_defense_action
+	/// World time until the active defense window is valid.
+	var/cy_active_defense_until = 0
+	/// World time until another defensive action can be started.
+	var/cy_next_defense_time = 0
+	/// World time until this mob is open and cannot use normal protection checks.
+	var/cy_open_defense_until = 0
+	/// Current outgoing cyberpunk attack intent for defensive counter checks.
+	var/cy_current_attack_intent
+
+	/// Currently carrying a mob in both arms via CP carry controls; defensive actions are blocked while TRUE.
+	var/cy_carrying_in_arms = FALSE
+	/// Currently carrying a mob on shoulder via CP carry controls.
+	var/cy_carrying_on_shoulder = FALSE
+
+	/// Whether this mob has CP sprint toggled on.
+	var/cy_sprint_enabled = FALSE
+
+	/// Whether this mob is currently receiving the CP sprint speed modifier.
+	var/cy_sprinting = FALSE
+
+	/// One-shot parkour mode enabled by G.
+	var/cy_parkour_mode = FALSE
+	/// World time after which one-shot parkour mode expires.
+	var/cy_parkour_expires_at = 0
+	/// Whether this mob is currently hanging from a wall/surface.
+	var/cy_wall_hanging = FALSE
+	/// Direction of the surface this mob is hanging from.
+	var/cy_wall_hanging_dir = NONE
+	/// Surface atom/turf this mob is currently hanging from.
+	var/atom/cy_wall_hanging_surface
+
+	/// Wrestling forced-run state.
+	var/cy_wrestling_running = FALSE
+	var/cy_wrestling_run_dir = NONE
+	var/cy_wrestling_run_steps_left = 0
+	var/cy_wrestling_rebounded = FALSE
+	var/cy_wrestling_start_health = 0
+	var/mob/living/cy_wrestling_launcher
+
+	/// Object this mob is currently hiding under while prone in stealth.
+	var/atom/cy_hidden_under
+
+	/// Layer restored after leaving hidden-under state.
+	var/cy_hidden_old_layer
+	/// Current horizontal look holder used by Shift+MMB look mode.
+	var/atom/movable/cy_look_holder/cy_look_holder
 
 	/// Clone/ghost loop hooks.
 	var/mob/living/cy_original_body

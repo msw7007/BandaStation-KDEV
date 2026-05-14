@@ -527,6 +527,7 @@
 		stop_pulling()
 
 /mob/living/stop_pulling()
+	clear_cy_grab_hand_item()
 	if(ismob(pulling))
 		reset_pull_offsets(pulling)
 	..()
@@ -1064,6 +1065,8 @@
 		update_pull_movespeed()
 
 	. = ..()
+	if(!. && cy_sprinting && direct)
+		handle_cy_sprint_collision(direct)
 
 	if(moving_diagonally != FIRST_DIAG_STEP && isliving(pulledby))
 		var/mob/living/puller = pulledby
@@ -2015,6 +2018,8 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 
 /mob/living/mouse_drop_receive(atom/dropping, atom/user, params)
 	var/mob/living/U = user
+	if(istype(U) && U.handle_cy_mouse_drop(dropping, src, params2list(params)))
+		return
 	if(isliving(dropping))
 		var/mob/living/M = dropping
 		if(M.can_be_held && U.pulling == M)

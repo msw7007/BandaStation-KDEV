@@ -106,6 +106,34 @@ DEFINE_BITFIELD(status_flags, list(
 
 //Actual combat defines
 
+
+// CyberPunk core control attack/defense intents.
+#define CY_ATTACK_INTENT "cy_attack_intent"
+#define CY_ATTACK_INTENT_SLASH "slash"
+#define CY_ATTACK_INTENT_CHOP "chop"
+#define CY_ATTACK_INTENT_STAB "stab"
+#define CY_ATTACK_INTENT_PIERCE "pierce"
+#define CY_ATTACK_INTENT_TRICKY "tricky"
+#define CY_ATTACK_INTENT_PREEMPTIVE "preemptive"
+#define CY_DEFENSE_ACTION_PARRY "parry"
+#define CY_DEFENSE_ACTION_DODGE "dodge"
+#define CY_CLICK_HOLD_THRESHOLD (0.35 SECONDS)
+#define CY_BASE_ACTION_DELAY CLICK_CD_MELEE
+#define CY_LOOK_BASE_RANGE 5
+#define CY_LOOK_RANGE_PER_PERCEPTION 0.25
+#define CY_LOOK_CAMERA_RETURN_TIME (0.4 SECONDS)
+#define CY_DEFENSE_BASE_COOLDOWN (0.8 SECONDS)
+#define CY_DEFENSE_WINDOW (0.7 SECONDS)
+#define CY_KICK_STAMINA_DAMAGE 25
+#define CY_KICK_KNOCKDOWN_TIME (1 SECONDS)
+
+#define CY_KICK_SHOVE_DISTANCE 2
+#define CY_KICK_SELF_STAGGER (2 SECONDS)
+#define CY_KICK_PRONE_BRUTE_DAMAGE 25
+#define CY_DEFENSE_TRIGGERED_COOLDOWN (5 SECONDS)
+#define CY_DEFENSE_OPEN_TIME (2 SECONDS)
+#define CY_LOOK_TILE_PIXEL_OFFSET 32
+
 //click cooldowns, in tenths of a second, used for various combat actions
 #define CLICK_CD_MELEE 8
 #define CLICK_CD_RAPID 2

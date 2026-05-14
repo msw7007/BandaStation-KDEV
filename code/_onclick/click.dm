@@ -73,11 +73,19 @@
 
 	var/list/modifiers = params2list(params)
 
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) && client?.cy_suppress_next_right_click_until >= world.time)
+		return
+
 	if(SEND_SIGNAL(src, COMSIG_MOB_CLICKON, A, modifiers) & COMSIG_MOB_CANCEL_CLICKON)
 		return
 
 	if(LAZYACCESS(modifiers, BUTTON4) || LAZYACCESS(modifiers, BUTTON5))
 		return
+
+	if(isliving(src))
+		var/mob/living/living_user = src
+		if(living_user.handle_cy_control_click(A, modifiers, params))
+			return
 
 	if(LAZYACCESS(modifiers, SHIFT_CLICK))
 		if(LAZYACCESS(modifiers, MIDDLE_CLICK))
@@ -124,7 +132,7 @@
 		return
 
 	if(throw_mode)
-		if(throw_item(A))
+		if(throw_item(A, modifiers))
 			changeNext_move(CLICK_CD_THROW)
 		return
 
@@ -376,6 +384,12 @@
 		return
 	swap_hand()
 
+/mob/living/MiddleClickOn(atom/A, params)
+	. = SEND_SIGNAL(src, COMSIG_MOB_MIDDLECLICKON, A, params)
+	if(. & COMSIG_MOB_CANCEL_CLICKON)
+		return
+	activate_selected_cy_daemon(A)
+
 /**
  * Shift click
  * For most mobs, examine.
@@ -478,14 +492,10 @@
 
 /atom/movable/screen/click_catcher/Click(location, control, params)
 	var/list/modifiers = params2list(params)
-	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && iscarbon(usr))
-		var/mob/living/carbon/C = usr
-		C.swap_hand()
-	else
-		var/turf/click_turf = parse_caught_click_modifiers(modifiers, get_turf(usr.client ? usr.client.eye : usr), usr.client)
-		if (click_turf)
-			modifiers["catcher"] = TRUE
-			click_turf.Click(click_turf, control, list2params(modifiers))
+	var/turf/click_turf = parse_caught_click_modifiers(modifiers, get_turf(usr.client ? usr.client.eye : usr), usr.client)
+	if(click_turf)
+		modifiers["catcher"] = TRUE
+		click_turf.Click(click_turf, control, list2params(modifiers))
 	. = 1
 
 /// MouseWheelOn

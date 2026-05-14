@@ -347,6 +347,7 @@
 
 	if(!user.pulling || user.pulling != src)
 		user.start_pulling(src, supress_message = supress_message)
+		user.ensure_cy_grab_hand_item(src)
 		return
 
 	if(!(status_flags & CANPUSH) || HAS_TRAIT(src, TRAIT_PUSHIMMUNE))
@@ -417,6 +418,7 @@
 			if(!buckled && !density)
 				Move(user.loc)
 	user.set_pull_offsets(src, user.grab_state)
+	user.ensure_cy_grab_hand_item(src)
 	return TRUE
 
 /mob/living/attack_animal(mob/living/simple_animal/user, list/modifiers)
@@ -880,6 +882,10 @@
 	to_chat(shover, span_danger("Вы толкаете [declent_ru(ACCUSATIVE)][weapon ? " с помощью [weapon.declent_ru(GENITIVE)]" : ""]!"))
 
 /mob/living/proc/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE)
+	if(world.time < cy_open_defense_until)
+		return FAILED_BLOCK
+	if(has_active_cy_defense())
+		return resolve_cy_active_defense(hit_by, attack_type)
 	if(SEND_SIGNAL(src, COMSIG_LIVING_CHECK_BLOCK, hit_by, damage, attack_text, attack_type, armour_penetration, damage_type) & SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
 

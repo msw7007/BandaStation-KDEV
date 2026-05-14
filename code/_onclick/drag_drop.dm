@@ -29,6 +29,11 @@
 
 	var/mob/user = usr
 
+	if(isliving(user))
+		var/mob/living/living_user = user
+		if(living_user.handle_cy_mouse_drop(src, over, params2list(params)))
+			return
+
 	if(SEND_SIGNAL(src, COMSIG_MOUSEDROP_ONTO, over, user) & COMPONENT_CANCEL_MOUSEDROP_ONTO)
 		return
 
@@ -46,6 +51,11 @@
 			//Bypass adjacency cause we already checked for it above
 			if(!user.can_perform_action(src, interaction_flags_mouse_drop | over.interaction_flags_mouse_drop | BYPASS_ADJACENCY))
 				return // is the mob not able to drag the object with both sides conditions applied
+
+	if(isliving(user))
+		var/mob/living/living_user = user
+		if(living_user.handle_cy_mouse_drop(src, over, params2list(params)))
+			return
 
 	mouse_drop_dragged(over, user, src_location, over_location, params)
 
@@ -67,6 +77,8 @@
 /// Does some other stuff adjacent to trying to figure out what the user actually "wanted" to click
 /// Returns TRUE if it caused a click, FALSE otherwise
 /client/proc/check_drag_proximity(atom/dragging, atom/over, src_location, over_location, src_control, over_control, params)
+	if(dragging == mob || over == mob || ismob(dragging) || ismob(over))
+		return FALSE
 	// We will swap which thing we're trying to check for clickability based off the type
 	// Assertion is if you drag a turf to anything else, you really just wanted to click the anything else
 	// And slightly misseed. I'm not interested in making this game pixel percise, so if it fits our other requirements
@@ -121,9 +133,25 @@
 
 	return TRUE
 
+#define CY_GIVE_HOLD_THRESHOLD (1 SECONDS)
+
+/client/var/cy_mouse_down_time = 0
+/client/var/cy_mouse_down_params
+/client/var/atom/cy_mouse_down_object
+/client/var/cy_hold_give_started = FALSE
+/client/var/cy_suppress_next_right_click_until = 0
+
 /client/MouseDown(datum/object, location, control, params)
 	if(QDELETED(object)) //Yep, you can click on qdeleted things before they have time to nullspace. Fun.
 		return
+	cy_mouse_down_time = world.time
+	cy_mouse_down_params = params
+	cy_mouse_down_object = object
+	cy_hold_give_started = FALSE
+	var/list/cy_down_modifiers = cy_safe_params2list(params)
+	var/cy_right_hold_candidate = cy_has_click_modifier(cy_down_modifiers, RIGHT_CLICK) && !cy_has_click_modifier(cy_down_modifiers, CTRL_CLICK) && !cy_has_click_modifier(cy_down_modifiers, SHIFT_CLICK) && !cy_has_click_modifier(cy_down_modifiers, ALT_CLICK) && !cy_has_click_modifier(cy_down_modifiers, MIDDLE_CLICK)
+	if(cy_right_hold_candidate && isliving(mob) && isliving(object))
+		addtimer(CALLBACK(src, PROC_REF(try_cy_hold_give), object, cy_mouse_down_time), CY_GIVE_HOLD_THRESHOLD, TIMER_CLIENT_TIME)
 	SEND_SIGNAL(src, COMSIG_CLIENT_MOUSEDOWN, object, location, control, params)
 	if(mouse_down_icon)
 		mouse_pointer_icon = mouse_down_icon
@@ -138,9 +166,60 @@
 /client/MouseUp(object, location, control, params)
 	if(SEND_SIGNAL(src, COMSIG_CLIENT_MOUSEUP, object, location, control, params) & COMPONENT_CLIENT_MOUSEUP_INTERCEPT)
 		click_intercept_time = world.time
+	if(cy_mouse_down_time && isnum(cy_mouse_down_time) && isliving(mob))
+		var/list/cy_up_modifiers = cy_safe_params2list(params)
+		var/list/cy_down_modifiers = cy_safe_params2list(cy_mouse_down_params)
+		var/held_time = world.time - cy_mouse_down_time
+		var/cy_shift_middle = (cy_has_click_modifier(cy_up_modifiers, SHIFT_CLICK) && cy_has_click_modifier(cy_up_modifiers, MIDDLE_CLICK)) || (cy_has_click_modifier(cy_down_modifiers, SHIFT_CLICK) && cy_has_click_modifier(cy_down_modifiers, MIDDLE_CLICK))
+		if(cy_shift_middle)
+			var/mob/living/cy_listener = mob
+			if(object == cy_listener || cy_mouse_down_object == cy_listener)
+				if(held_time >= CY_CLICK_HOLD_THRESHOLD)
+					cy_listener.set_cy_listen_mode(TRUE)
+					to_chat(cy_listener, span_notice("Вы прислушиваетесь."))
+				else
+					cy_listener.perform_cy_raise_head()
+		var/cy_right = (cy_has_click_modifier(cy_up_modifiers, RIGHT_CLICK) || cy_has_click_modifier(cy_down_modifiers, RIGHT_CLICK))
+		var/cy_has_blocking_modifier = cy_has_click_modifier(cy_up_modifiers, CTRL_CLICK) || cy_has_click_modifier(cy_down_modifiers, CTRL_CLICK) || cy_has_click_modifier(cy_up_modifiers, SHIFT_CLICK) || cy_has_click_modifier(cy_down_modifiers, SHIFT_CLICK) || cy_has_click_modifier(cy_up_modifiers, ALT_CLICK) || cy_has_click_modifier(cy_down_modifiers, ALT_CLICK) || cy_has_click_modifier(cy_up_modifiers, MIDDLE_CLICK) || cy_has_click_modifier(cy_down_modifiers, MIDDLE_CLICK)
+		if(cy_right && !cy_has_blocking_modifier && held_time >= CY_GIVE_HOLD_THRESHOLD && !cy_hold_give_started)
+			var/mob/living/cy_giver = mob
+			if(!cy_giver.combat_mode && cy_mouse_down_object == object && isliving(object))
+				var/mob/living/cy_offered = object
+				cy_hold_give_started = TRUE
+				cy_suppress_next_right_click_until = world.time + 3
+				cy_giver.give(cy_offered)
+	cy_mouse_down_time = 0
+	cy_mouse_down_params = null
+	cy_mouse_down_object = null
+	cy_hold_give_started = FALSE
 	if(mouse_up_icon)
 		mouse_pointer_icon = mouse_up_icon
 	selected_target[1] = null
+
+/client/proc/try_cy_hold_give(atom/target, started_at)
+	if(cy_hold_give_started)
+		return
+	if(cy_mouse_down_time != started_at)
+		return
+	if(QDELETED(target) || !isliving(target) || !isliving(mob))
+		return
+	var/mob/living/cy_giver = mob
+	if(cy_giver.combat_mode)
+		return
+	if(cy_mouse_down_object != target)
+		return
+	var/list/cy_down_modifiers = cy_safe_params2list(cy_mouse_down_params)
+	if(!cy_has_click_modifier(cy_down_modifiers, RIGHT_CLICK))
+		return
+	if(cy_has_click_modifier(cy_down_modifiers, CTRL_CLICK) || cy_has_click_modifier(cy_down_modifiers, SHIFT_CLICK) || cy_has_click_modifier(cy_down_modifiers, ALT_CLICK) || cy_has_click_modifier(cy_down_modifiers, MIDDLE_CLICK))
+		return
+	var/obj/item/held_item = cy_giver.get_active_held_item()
+	if(!held_item)
+		return
+	cy_hold_give_started = TRUE
+	cy_suppress_next_right_click_until = world.time + 3
+	var/mob/living/cy_offered = target
+	cy_giver.give(cy_offered)
 
 /mob/proc/CanMobAutoclick(object, location, params)
 

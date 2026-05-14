@@ -1,5 +1,11 @@
 /mob/living/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
+	cy_last_stealth_move_time = world.time
+	process_cy_sprint_step()
+	if(cy_look_holder)
+		end_cy_look_mode(TRUE)
+	if(cy_listen_mode)
+		set_cy_listen_mode(FALSE)
 	update_turf_movespeed(loc)
 	if(HAS_TRAIT(src, TRAIT_NEGATES_GRAVITY))
 		if(!isgroundlessturf(loc))
@@ -9,6 +15,10 @@
 
 	var/turf/old_turf = get_turf(old_loc)
 	var/turf/new_turf = get_turf(src)
+	if(cy_wall_pressed)
+		refresh_cy_wall_press_after_move()
+	if(cy_wall_hanging)
+		clear_cy_wall_hang(TRUE)
 	// If we're moving to/from nullspace, refresh
 	// Easier then adding nullchecks to all this shit, and technically right since a null turf means nograv
 	if(isnull(old_turf) || isnull(new_turf))
