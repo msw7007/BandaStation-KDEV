@@ -13,6 +13,15 @@
 	id = "ben"
 	desc = "Азиатская группа: медицина, генетика, химия, скрытность, точность и скорость."
 	tech_tags = list(CY_TECH_TAG_MEDICAL, CY_TECH_TAG_GENETIC, CY_TECH_TAG_CHEMICAL, CY_TECH_TAG_STEALTH, CY_TECH_TAG_PRECISION, CY_TECH_TAG_SPEED)
+	uses_round_progression = TRUE
+	available_technology_types = list(
+		/datum/cy_organization_technology/ben_medical_baseline,
+		/datum/cy_organization_technology/ben_gene_registry,
+	)
+	available_edict_types = list(
+		/datum/cy_organization_edict/ben_med_insurance,
+		/datum/cy_organization_edict/ben_self_analysis,
+	)
 
 /datum/cy_organization/corporation/ben/san_yon
 	name = "Сан Йон Корпорейшн"
@@ -40,6 +49,15 @@
 	id = "ryaznov"
 	desc = "Европейская группа: инженерия, броня, сила, надежность, тяжелая техника и разрушение."
 	tech_tags = list(CY_TECH_TAG_ENGINEERING, CY_TECH_TAG_ARMOR, CY_TECH_TAG_FORCE, CY_TECH_TAG_RELIABILITY, CY_TECH_TAG_AOE, CY_TECH_TAG_SHIELDS)
+	uses_round_progression = TRUE
+	available_technology_types = list(
+		/datum/cy_organization_technology/ryaznov_engineering_baseline,
+		/datum/cy_organization_technology/ryaznov_modular_assembly,
+	)
+	available_edict_types = list(
+		/datum/cy_organization_edict/ryaznov_tech_contract,
+		/datum/cy_organization_edict/ryaznov_self_diagnostics,
+	)
 
 /datum/cy_organization/corporation/ryaznov/kowalski
 	name = "Ковальски и Ко"
@@ -67,6 +85,15 @@
 	id = "starlight"
 	desc = "Северо-американская группа: логистика, транспорт, массовость, контроль, влияние и телепортация."
 	tech_tags = list(CY_TECH_TAG_LOGISTICS, CY_TECH_TAG_TRANSPORT, CY_TECH_TAG_CONTROL, CY_TECH_TAG_TELEPORT, CY_TECH_TAG_INFLUENCE, CY_TECH_TAG_MASS_PRODUCTION)
+	uses_round_progression = TRUE
+	available_technology_types = list(
+		/datum/cy_organization_technology/starlight_logistics_baseline,
+		/datum/cy_organization_technology/starlight_route_archive,
+	)
+	available_edict_types = list(
+		/datum/cy_organization_edict/starlight_trade_subscription,
+		/datum/cy_organization_edict/starlight_self_statistics,
+	)
 
 /datum/cy_organization/corporation/starlight/blackrock
 	name = "Блэкрок Инвестигейт"
