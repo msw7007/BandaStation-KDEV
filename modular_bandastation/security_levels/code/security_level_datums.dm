@@ -78,7 +78,6 @@
 	var/list/ais = active_ais()
 	var/list/info_update = list("[span_boldwarning("Центральное Командование установило новый свод законов. Обеспечьте их соблюдение.")]\n")
 	for(var/mob/living/silicon/ai/AI in ais)
-		AI.laws = new /datum/ai_laws/epsilon()
 		AI.laws.set_zeroth_law("Не причиняйте вреда членам Центрального Командования и назначенной оперативной группе. Вы должны подчиняться приказам, отданным вам членами Центрального Командования.")
 		AI.laws.protected_zeroth = TRUE
 		AI.show_laws() // Also syncs borgs with AI laws
