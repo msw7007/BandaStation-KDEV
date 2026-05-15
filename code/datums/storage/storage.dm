@@ -407,6 +407,9 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if((to_insert == parent) || (to_insert == real_location))
 		return FALSE
 
+	if(!cy_can_hold_size(to_insert, user, messages))
+		return FALSE
+
 	if(to_insert.w_class > max_specific_storage)
 		if(!is_type_in_typecache(to_insert, exception_hold))
 			if(messages && user)
@@ -1213,3 +1216,35 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if(new_locked > STORAGE_NOT_LOCKED)
 		close_all_recursive()
 	parent.update_appearance()
+
+// CyberPunk inventory sizing layer. It maps the new semantic item sizes onto existing storage checks.
+/datum/storage
+	/// Largest CyberPunk item size category this storage accepts. Null means derive from max_specific_storage.
+	var/cy_max_item_size_category = null
+	/// If TRUE, this storage can hold huge drag-sized cargo. Normal backpacks/bags should not set this.
+	var/cy_allow_huge_items = FALSE
+	/// If TRUE, this storage can hold gigantic items. Used only by special containers, never by normal inventory.
+	var/cy_allow_gigantic_items = FALSE
+
+/datum/storage/proc/get_cy_max_item_size_category()
+	if(!isnull(cy_max_item_size_category))
+		return cy_max_item_size_category
+	return max_specific_storage
+
+/datum/storage/proc/cy_can_hold_size(obj/item/to_insert, mob/user, messages = TRUE)
+	if(!istype(to_insert))
+		return FALSE
+	var/item_size = to_insert.get_cy_weight_category()
+	if(item_size >= CY_ITEM_SIZE_GIGANTIC && !cy_allow_gigantic_items)
+		if(messages && user)
+			user.balloon_alert(user, "слишком большое!")
+		return FALSE
+	if(item_size >= CY_ITEM_SIZE_HUGE && !cy_allow_huge_items)
+		if(messages && user)
+			user.balloon_alert(user, "можно только тащить!")
+		return FALSE
+	if(item_size > get_cy_max_item_size_category())
+		if(messages && user)
+			user.balloon_alert(user, "не помещается!")
+		return FALSE
+	return TRUE

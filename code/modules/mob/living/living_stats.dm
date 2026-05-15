@@ -427,6 +427,10 @@
 /mob/living/proc/get_cy_organization_type_for_thing(datum/thing)
 	if(!thing)
 		return null
+	if(thing.vars.Find("manufacturer_organization"))
+		var/datum/cy_organization/manufacturer = resolve_cy_organization_datum(thing.vars["manufacturer_organization"])
+		if(manufacturer)
+			return manufacturer.type
 	if(thing.vars.Find("cy_organization_type"))
 		return thing.vars["cy_organization_type"]
 	if(thing.vars.Find("manufacturer_organization_type"))

@@ -269,6 +269,8 @@
 		if(damtype == BRUTE)
 			hitsound = SFX_SWING_HIT
 
+	cy_initialize_item_core()
+
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_NEW_ITEM, src)
 
 /obj/item/Destroy(force)
@@ -438,7 +440,15 @@
 	if(!(item_flags & WEAPON_DESCRIPTION_INITIALIZED))
 		add_weapon_description()
 		item_flags |= WEAPON_DESCRIPTION_INITIALIZED
-	return ..()
+	. = ..()
+	var/datum/cy_organization/manufacturer = get_manufacturer_organization()
+	if(manufacturer)
+		. += span_notice("Производитель: [manufacturer.name].")
+	if(cy_broken)
+		. += span_warning("Предмет сломан: полезные боевые и защитные показатели обнулены.")
+	if(cy_item_kind == CY_ITEM_KIND_MODULAR)
+		. += span_notice("Модульная сборка: [length(cy_all_installed_modules())] модулей.")
+	return .
 
 /obj/item/examine_more(mob/user)
 	. = ..()
@@ -2245,3 +2255,525 @@
 /// Checks if this container is valid for use with chemistry machinery.
 /obj/item/proc/is_chem_container()
 	return FALSE
+
+// CyberPunk item core. This deliberately extends /obj/item directly instead of creating a parallel item tree.
+/obj/item
+	/// Prefab items are fully described by their type; modular items rebuild their stats from installed modules.
+	var/cy_item_kind = CY_ITEM_KIND_PREFAB
+	/// Mirrors w_class, but gives CyberPunk systems a stable semantic name.
+	var/cy_size_category = null
+	/// Active items are used as tools/weapons; protective items participate in armour resolution.
+	var/cy_item_function = CY_ITEM_FUNCTION_ACTIVE
+	/// If TRUE, the item is only intended to be dragged/pushed, not held.
+	var/cy_drag_only = FALSE
+	/// If TRUE, large item handling should require both hands from inventory helpers.
+	var/cy_requires_two_hands = FALSE
+
+	/// Core active-item stats from the TЗ.
+	var/cy_attack_type = null
+	var/cy_attack_force = null
+	var/cy_attack_accuracy = 0
+	var/cy_attack_speed = null
+	var/cy_guard_value = 0
+	var/cy_armor_penetration = null
+
+	/// Base values used when a modular item is rebuilt or restored from broken state.
+	var/cy_base_force = null
+	var/cy_base_damtype = null
+	var/cy_base_attack_speed = null
+	var/cy_base_block_chance = null
+	var/cy_base_armour_penetration = null
+
+	/// intent => list(force_mult, accuracy_mod, speed_mult, guard_mod, ap_mod, damage_type)
+	var/list/cy_attack_profiles
+
+	/// slot => module object or list of module objects.
+	var/list/cy_installed_modules
+
+	/// Protective-item stats from the TЗ.
+	var/cy_armor_class = 0
+	var/cy_integrity_transfer = 1
+	var/list/cy_damage_absorption
+
+	/// Item breaks first. Further damage destroys it unless this is protected.
+	var/cy_broken = FALSE
+	var/cy_overbreak_damage = 0
+	var/cy_no_overbreak_destroy = FALSE
+
+	/// Optional structure produced when this item is unfolded/deployed/converted.
+	var/cy_structure_type
+
+/obj/item/proc/cy_initialize_item_core()
+	if(isnull(cy_size_category))
+		cy_size_category = w_class
+	else
+		w_class = cy_size_category
+
+	cy_requires_two_hands = cy_size_category >= CY_ITEM_SIZE_LARGE
+	cy_drag_only = cy_size_category >= CY_ITEM_SIZE_HUGE
+
+	if(isnull(cy_base_force))
+		cy_base_force = force
+	if(isnull(cy_base_damtype))
+		cy_base_damtype = damtype
+	if(isnull(cy_base_attack_speed))
+		cy_base_attack_speed = attack_speed
+	if(isnull(cy_base_block_chance))
+		cy_base_block_chance = block_chance
+	if(isnull(cy_base_armour_penetration))
+		cy_base_armour_penetration = armour_penetration
+
+	if(isnull(cy_attack_type))
+		cy_attack_type = damtype
+	if(isnull(cy_attack_force))
+		cy_attack_force = force
+	if(isnull(cy_attack_speed))
+		cy_attack_speed = attack_speed
+	if(isnull(cy_armor_penetration))
+		cy_armor_penetration = armour_penetration
+
+	if(!cy_attack_profiles)
+		cy_attack_profiles = cy_default_attack_profiles()
+	if(!cy_damage_absorption)
+		cy_damage_absorption = list()
+
+/obj/item/proc/cy_default_attack_profiles()
+	return list(
+		CY_ITEM_INTENT_SLASH = list("force_mult" = 1, "accuracy_mod" = 0, "speed_mult" = 1, "guard_mod" = 0, "ap_mod" = 0, "damage_type" = damtype),
+		CY_ITEM_INTENT_CHOP = list("force_mult" = 1.25, "accuracy_mod" = -10, "speed_mult" = 1.30, "guard_mod" = -5, "ap_mod" = 0, "damage_type" = damtype),
+		CY_ITEM_INTENT_STAB = list("force_mult" = 0.95, "accuracy_mod" = 5, "speed_mult" = 0.95, "guard_mod" = 0, "ap_mod" = 5, "damage_type" = damtype),
+		CY_ITEM_INTENT_PIERCE = list("force_mult" = 0.85, "accuracy_mod" = -5, "speed_mult" = 1.20, "guard_mod" = -10, "ap_mod" = 20, "damage_type" = damtype),
+	)
+
+/obj/item/proc/get_cy_weight_category()
+	return cy_size_category || w_class
+
+/obj/item/proc/cy_can_fit_in_pockets()
+	return get_cy_weight_category() <= CY_ITEM_SIZE_SMALL
+
+/obj/item/proc/cy_can_fit_in_bags()
+	return get_cy_weight_category() <= CY_ITEM_SIZE_SMALL
+
+/obj/item/proc/cy_can_fit_in_backpacks()
+	return get_cy_weight_category() <= CY_ITEM_SIZE_MEDIUM
+
+/obj/item/proc/cy_can_fit_in_crates()
+	return get_cy_weight_category() <= CY_ITEM_SIZE_HUGE
+
+/obj/item/proc/cy_can_be_held()
+	return get_cy_weight_category() < CY_ITEM_SIZE_HUGE && !cy_drag_only
+
+/obj/item/proc/cy_get_attack_profile(intent = CY_ITEM_INTENT_SLASH)
+	if(!cy_attack_profiles)
+		cy_attack_profiles = cy_default_attack_profiles()
+	return cy_attack_profiles[intent] || cy_attack_profiles[CY_ITEM_INTENT_SLASH]
+
+/obj/item/proc/cy_get_attack_force(intent = CY_ITEM_INTENT_SLASH)
+	if(cy_broken)
+		return 0
+	var/list/profile = cy_get_attack_profile(intent)
+	return round((cy_attack_force || force) * (profile["force_mult"] || 1), DAMAGE_PRECISION)
+
+/obj/item/proc/cy_get_attack_accuracy(intent = CY_ITEM_INTENT_SLASH)
+	if(cy_broken)
+		return 0
+	var/list/profile = cy_get_attack_profile(intent)
+	return cy_attack_accuracy + (profile["accuracy_mod"] || 0)
+
+/obj/item/proc/cy_get_attack_speed(intent = CY_ITEM_INTENT_SLASH)
+	if(cy_broken)
+		return CLICK_CD_MELEE
+	var/list/profile = cy_get_attack_profile(intent)
+	return max(1, round((cy_attack_speed || attack_speed) * (profile["speed_mult"] || 1)))
+
+/obj/item/proc/cy_get_guard_value(intent = CY_ITEM_INTENT_SLASH)
+	if(cy_broken)
+		return 0
+	var/list/profile = cy_get_attack_profile(intent)
+	return cy_guard_value + (profile["guard_mod"] || 0)
+
+/obj/item/proc/cy_get_armor_penetration(intent = CY_ITEM_INTENT_SLASH)
+	if(cy_broken)
+		return 0
+	var/list/profile = cy_get_attack_profile(intent)
+	return (cy_armor_penetration || armour_penetration) + (profile["ap_mod"] || 0)
+
+/obj/item/proc/cy_copy_profile(list/source_profile)
+	var/list/result = list()
+	if(!source_profile)
+		return result
+	for(var/key in source_profile)
+		result[key] = source_profile[key]
+	return result
+
+/obj/item/proc/cy_profile_multiply(list/profile, key, multiplier)
+	if(isnull(multiplier))
+		return
+	profile[key] = (profile[key] || 1) * multiplier
+
+/obj/item/proc/cy_profile_add(list/profile, key, amount)
+	if(isnull(amount))
+		return
+	profile[key] = (profile[key] || 0) + amount
+
+/obj/item/proc/cy_get_module_slot_limit(slot)
+	switch(slot)
+		if(CY_MODULE_SLOT_EXTRA)
+			return 4
+		if(CY_MODULE_SLOT_EQUIPMENT_PLATE)
+			return 10
+		if(CY_MODULE_SLOT_EQUIPMENT_LINING)
+			return 5
+		if(CY_MODULE_SLOT_EQUIPMENT_ACTIVE)
+			return 2
+	return 1
+
+/obj/item/proc/cy_get_modules_in_slot(slot)
+	if(!cy_installed_modules)
+		return list()
+	var/value = cy_installed_modules[slot]
+	if(islist(value))
+		return value
+	if(value)
+		return list(value)
+	return list()
+
+/obj/item/proc/cy_has_module_slot(slot)
+	return length(cy_get_modules_in_slot(slot)) > 0
+
+/obj/item/proc/cy_can_accept_module(obj/item/cy_module/module, mob/user, messages = TRUE)
+	if(!istype(module))
+		return FALSE
+	if(cy_item_kind != CY_ITEM_KIND_MODULAR)
+		if(messages && user)
+			user.balloon_alert(user, "не модульное!")
+		return FALSE
+
+	var/slot = module.cy_module_slot
+	if(!slot)
+		return FALSE
+	if(length(cy_get_modules_in_slot(slot)) >= cy_get_module_slot_limit(slot))
+		if(messages && user)
+			user.balloon_alert(user, "слот занят!")
+		return FALSE
+
+	if(!module.cy_is_compatible_with(src, user, messages))
+		return FALSE
+	return TRUE
+
+/obj/item/proc/cy_install_module(obj/item/cy_module/module, mob/user, messages = TRUE)
+	if(!cy_can_accept_module(module, user, messages))
+		return FALSE
+	if(!cy_installed_modules)
+		cy_installed_modules = list()
+
+	var/slot = module.cy_module_slot
+	if(cy_get_module_slot_limit(slot) == 1)
+		cy_installed_modules[slot] = module
+	else
+		var/list/modules = cy_get_modules_in_slot(slot)
+		modules += module
+		cy_installed_modules[slot] = modules
+
+	module.forceMove(src)
+	module.cy_installed_in = src
+	cy_rebuild_item_stats()
+	if(messages && user)
+		user.balloon_alert(user, "модуль установлен")
+	return TRUE
+
+/obj/item/proc/cy_uninstall_module(obj/item/cy_module/module, mob/user, atom/drop_to = null, messages = TRUE)
+	if(!module || !cy_installed_modules)
+		return FALSE
+	var/slot = module.cy_module_slot
+	var/value = cy_installed_modules[slot]
+	if(islist(value))
+		var/list/modules = value
+		if(!(module in modules))
+			return FALSE
+		modules -= module
+		if(!length(modules))
+			cy_installed_modules -= slot
+	else if(value == module)
+		cy_installed_modules -= slot
+	else
+		return FALSE
+
+	module.cy_installed_in = null
+	module.forceMove(drop_to || drop_location())
+	cy_rebuild_item_stats()
+	if(messages && user)
+		user.balloon_alert(user, "модуль снят")
+	return TRUE
+
+/obj/item/proc/cy_all_installed_modules()
+	var/list/result = list()
+	if(!cy_installed_modules)
+		return result
+	for(var/slot in cy_installed_modules)
+		var/value = cy_installed_modules[slot]
+		if(islist(value))
+			result += value
+		else if(value)
+			result += value
+	return result
+
+/obj/item/proc/cy_rebuild_item_stats()
+	cy_initialize_item_core()
+	if(cy_broken)
+		force = 0
+		throwforce = 0
+		block_chance = 0
+		armour_penetration = 0
+		cy_attack_force = 0
+		cy_attack_accuracy = 0
+		cy_guard_value = 0
+		cy_armor_penetration = 0
+		return
+
+	force = cy_base_force
+	damtype = cy_base_damtype
+	attack_speed = cy_base_attack_speed
+	block_chance = cy_base_block_chance
+	armour_penetration = cy_base_armour_penetration
+	cy_attack_force = force
+	cy_attack_speed = attack_speed
+	cy_guard_value = block_chance
+	cy_armor_penetration = armour_penetration
+	cy_damage_absorption = list()
+
+	var/list/default_profiles = cy_default_attack_profiles()
+	cy_attack_profiles = list()
+	for(var/intent in default_profiles)
+		cy_attack_profiles[intent] = cy_copy_profile(default_profiles[intent])
+
+	for(var/obj/item/cy_module/module as anything in cy_all_installed_modules())
+		force += module.cy_force_mod
+		cy_attack_force += module.cy_force_mod
+		cy_attack_accuracy += module.cy_accuracy_mod
+		attack_speed = max(1, attack_speed + module.cy_speed_mod)
+		cy_attack_speed = attack_speed
+		block_chance += module.cy_guard_mod
+		cy_guard_value += module.cy_guard_mod
+		armour_penetration += module.cy_armor_penetration_mod
+		cy_armor_penetration += module.cy_armor_penetration_mod
+		cy_armor_class += module.cy_armor_class_mod
+		cy_integrity_transfer = clamp(cy_integrity_transfer + module.cy_integrity_transfer_mod, 0, 1)
+		if(module.cy_damage_type)
+			damtype = module.cy_damage_type
+		if(module.cy_damage_absorption)
+			for(var/damage_key in module.cy_damage_absorption)
+				cy_damage_absorption[damage_key] = (cy_damage_absorption[damage_key] || 0) + module.cy_damage_absorption[damage_key]
+		for(var/intent in CY_ITEM_ATTACK_INTENTS)
+			var/list/profile = cy_attack_profiles[intent]
+			cy_profile_multiply(profile, "force_mult", (module.cy_intent_force_mults ? module.cy_intent_force_mults[intent] : null))
+			cy_profile_add(profile, "accuracy_mod", (module.cy_intent_accuracy_mods ? module.cy_intent_accuracy_mods[intent] : null))
+			cy_profile_multiply(profile, "speed_mult", (module.cy_intent_speed_mults ? module.cy_intent_speed_mults[intent] : null))
+			cy_profile_add(profile, "guard_mod", (module.cy_intent_guard_mods ? module.cy_intent_guard_mods[intent] : null))
+			cy_profile_add(profile, "ap_mod", (module.cy_intent_ap_mods ? module.cy_intent_ap_mods[intent] : null))
+			if(module.cy_intent_damage_types && module.cy_intent_damage_types[intent])
+				profile["damage_type"] = module.cy_intent_damage_types[intent]
+
+/obj/item/proc/cy_break_item(damage_flag)
+	if(cy_broken)
+		return
+	cy_broken = TRUE
+	cy_overbreak_damage = 0
+	force = 0
+	throwforce = 0
+	block_chance = 0
+	armour_penetration = 0
+	cy_attack_force = 0
+	cy_attack_accuracy = 0
+	cy_guard_value = 0
+	cy_armor_penetration = 0
+	update_appearance()
+
+/obj/item/proc/cy_fix_item()
+	if(!cy_broken)
+		return
+	cy_broken = FALSE
+	cy_overbreak_damage = 0
+	cy_rebuild_item_stats()
+	update_appearance()
+
+/obj/item/take_damage(damage_amount, damage_type = BRUTE, damage_flag = "", sound_effect = TRUE, attack_dir, armour_penetration = 0)
+	if(cy_broken)
+		if(cy_no_overbreak_destroy || (resistance_flags & INDESTRUCTIBLE))
+			return 0
+		cy_overbreak_damage += max(damage_amount, 0)
+		if(cy_overbreak_damage >= max_integrity)
+			return ..(1, damage_type, damage_flag, sound_effect, attack_dir, armour_penetration)
+		return damage_amount
+	return ..(damage_amount, damage_type, damage_flag, sound_effect, attack_dir, armour_penetration)
+
+/obj/item/atom_destruction(damage_flag)
+	if(cy_no_overbreak_destroy || !cy_broken)
+		cy_break_item(damage_flag)
+		if(get_integrity() <= 0)
+			update_integrity(1)
+		return
+	return ..()
+
+/obj/item/repair_damage(amount)
+	. = ..(amount)
+	if(. && cy_broken && get_integrity() > 1)
+		cy_fix_item()
+
+/obj/item/proc/cy_convert_to_structure(mob/user, turf/location = null)
+	if(!cy_structure_type || !ispath(cy_structure_type, /obj/structure))
+		return null
+	var/turf/target_turf = location || get_turf(src)
+	if(!target_turf)
+		return null
+	var/obj/structure/structure = new cy_structure_type(target_turf)
+	structure.manufacturer_organization = manufacturer_organization
+	structure.manufacturer_tech_tags = manufacturer_tech_tags
+	qdel(src)
+	return structure
+
+// Generic CyberPunk module item. Subtypes define slot and modifiers; this is not a content catalogue.
+/obj/item/cy_module
+	name = "modular component"
+	cy_item_kind = CY_ITEM_KIND_PREFAB
+	cy_size_category = CY_ITEM_SIZE_SMALL
+	var/cy_module_slot
+	var/list/cy_required_item_kinds
+	var/list/cy_required_present_slots
+	var/list/cy_forbidden_present_slots
+	var/cy_force_mod = 0
+	var/cy_accuracy_mod = 0
+	var/cy_speed_mod = 0
+	var/cy_guard_mod = 0
+	var/cy_armor_penetration_mod = 0
+	var/cy_damage_type
+	var/cy_armor_class_mod = 0
+	var/cy_integrity_transfer_mod = 0
+	var/list/cy_intent_force_mults
+	var/list/cy_intent_accuracy_mods
+	var/list/cy_intent_speed_mults
+	var/list/cy_intent_guard_mods
+	var/list/cy_intent_ap_mods
+	var/list/cy_intent_damage_types
+	var/obj/item/cy_installed_in
+
+/obj/item/cy_module/proc/cy_is_compatible_with(obj/item/target, mob/user, messages = TRUE)
+	if(!target)
+		return FALSE
+	if(cy_required_item_kinds && !(target.cy_item_kind in cy_required_item_kinds))
+		if(messages && user)
+			user.balloon_alert(user, "неподходящий предмет")
+		return FALSE
+	if(cy_required_present_slots)
+		for(var/slot in cy_required_present_slots)
+			if(!target.cy_has_module_slot(slot))
+				if(messages && user)
+					user.balloon_alert(user, "нет основы")
+				return FALSE
+	if(cy_forbidden_present_slots)
+		for(var/slot in cy_forbidden_present_slots)
+			if(target.cy_has_module_slot(slot))
+				if(messages && user)
+					user.balloon_alert(user, "несовместимо")
+				return FALSE
+	return TRUE
+
+/obj/item/cy_module/melee_handle
+	name = "melee handle module"
+	cy_module_slot = CY_MODULE_SLOT_MELEE_HANDLE
+	cy_forbidden_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE)
+
+/obj/item/cy_module/ranged_handle
+	name = "ranged handle module"
+	cy_module_slot = CY_MODULE_SLOT_RANGED_HANDLE
+	cy_forbidden_present_slots = list(CY_MODULE_SLOT_MELEE_HANDLE)
+
+/obj/item/cy_module/classic_core
+	name = "classic core module"
+	cy_module_slot = CY_MODULE_SLOT_CLASSIC_CORE
+	cy_forbidden_present_slots = list(CY_MODULE_SLOT_ENERGY_CONVERTER)
+
+/obj/item/cy_module/energy_converter
+	name = "energy converter module"
+	cy_module_slot = CY_MODULE_SLOT_ENERGY_CONVERTER
+	cy_forbidden_present_slots = list(CY_MODULE_SLOT_CLASSIC_CORE)
+
+/obj/item/cy_module/attacking_element
+	name = "melee attacking element module"
+	cy_module_slot = CY_MODULE_SLOT_ATTACKING_ELEMENT
+	cy_required_present_slots = list(CY_MODULE_SLOT_MELEE_HANDLE)
+
+/obj/item/cy_module/attacking_coating
+	name = "attacking coating module"
+	cy_module_slot = CY_MODULE_SLOT_ATTACKING_COATING
+	cy_required_present_slots = list(CY_MODULE_SLOT_ATTACKING_ELEMENT)
+
+/obj/item/cy_module/balancer
+	name = "balancer module"
+	cy_module_slot = CY_MODULE_SLOT_BALANCER
+	cy_required_present_slots = list(CY_MODULE_SLOT_MELEE_HANDLE)
+
+/obj/item/cy_module/guard
+	name = "guard module"
+	cy_module_slot = CY_MODULE_SLOT_GUARD
+	cy_required_present_slots = list(CY_MODULE_SLOT_MELEE_HANDLE)
+
+/obj/item/cy_module/barrel
+	name = "barrel module"
+	cy_module_slot = CY_MODULE_SLOT_BARREL
+	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE)
+
+/obj/item/cy_module/trigger
+	name = "trigger mechanism module"
+	cy_module_slot = CY_MODULE_SLOT_TRIGGER
+	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE, CY_MODULE_SLOT_CLASSIC_CORE)
+	cy_forbidden_present_slots = list(CY_MODULE_SLOT_ENERGY_CONVERTER)
+
+/obj/item/cy_module/matrix
+	name = "energy matrix module"
+	cy_module_slot = CY_MODULE_SLOT_MATRIX
+	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE, CY_MODULE_SLOT_ENERGY_CONVERTER)
+	cy_forbidden_present_slots = list(CY_MODULE_SLOT_CLASSIC_CORE)
+
+/obj/item/cy_module/magazine
+	name = "magazine or battery module"
+	cy_module_slot = CY_MODULE_SLOT_MAGAZINE
+	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE)
+
+/obj/item/cy_module/receiver
+	name = "receiver module"
+	cy_module_slot = CY_MODULE_SLOT_RECEIVER
+	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE)
+
+/obj/item/cy_module/extra
+	name = "extra module"
+	cy_module_slot = CY_MODULE_SLOT_EXTRA
+
+/obj/item/cy_module/equipment_base
+	name = "equipment base module"
+	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_BASE
+
+/obj/item/cy_module/equipment_material
+	name = "equipment material module"
+	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_MATERIAL
+	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+
+/obj/item/cy_module/equipment_plate
+	name = "equipment plate module"
+	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_PLATE
+	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE, CY_MODULE_SLOT_EQUIPMENT_MATERIAL)
+
+/obj/item/cy_module/equipment_lining
+	name = "equipment lining module"
+	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_LINING
+	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+
+/obj/item/cy_module/equipment_active
+	name = "active equipment module"
+	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_ACTIVE
+	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+
+/obj/item/cy_module/rig_connector
+	name = "rig connector module"
+	cy_module_slot = CY_MODULE_SLOT_RIG_CONNECTOR
+	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)

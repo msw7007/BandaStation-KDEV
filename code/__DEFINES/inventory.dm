@@ -401,3 +401,62 @@ GLOBAL_LIST_INIT(tool_items, list(
 #define LOCATION_NECK "на шее"
 /// Items placed in the id slot
 #define LOCATION_ID "в кармашке ID карты"
+
+// CyberPunk item core categories. These map directly onto existing w_class values.
+#define CY_ITEM_KIND_PREFAB "prefab"
+#define CY_ITEM_KIND_MODULAR "modular"
+
+#define CY_ITEM_FUNCTION_ACTIVE "active"
+#define CY_ITEM_FUNCTION_PROTECTIVE "protective"
+
+#define CY_ITEM_SIZE_TINY WEIGHT_CLASS_TINY
+#define CY_ITEM_SIZE_SMALL WEIGHT_CLASS_SMALL
+#define CY_ITEM_SIZE_MEDIUM WEIGHT_CLASS_NORMAL
+#define CY_ITEM_SIZE_LARGE WEIGHT_CLASS_BULKY
+#define CY_ITEM_SIZE_HUGE WEIGHT_CLASS_HUGE
+#define CY_ITEM_SIZE_GIGANTIC WEIGHT_CLASS_GIGANTIC
+
+#define CY_ITEM_INTENT_SLASH "slash"
+#define CY_ITEM_INTENT_CHOP "chop"
+#define CY_ITEM_INTENT_STAB "stab"
+#define CY_ITEM_INTENT_PIERCE "pierce"
+#define CY_ITEM_ATTACK_INTENTS list(CY_ITEM_INTENT_SLASH, CY_ITEM_INTENT_CHOP, CY_ITEM_INTENT_STAB, CY_ITEM_INTENT_PIERCE)
+
+#define CY_MODULE_SLOT_MELEE_HANDLE "melee_handle"
+#define CY_MODULE_SLOT_RANGED_HANDLE "ranged_handle"
+#define CY_MODULE_SLOT_CLASSIC_CORE "classic_core"
+#define CY_MODULE_SLOT_ENERGY_CONVERTER "energy_converter"
+#define CY_MODULE_SLOT_ATTACKING_ELEMENT "attacking_element"
+#define CY_MODULE_SLOT_ATTACKING_COATING "attacking_coating"
+#define CY_MODULE_SLOT_BALANCER "balancer"
+#define CY_MODULE_SLOT_GUARD "guard"
+#define CY_MODULE_SLOT_BARREL "barrel"
+#define CY_MODULE_SLOT_TRIGGER "trigger"
+#define CY_MODULE_SLOT_MATRIX "matrix"
+#define CY_MODULE_SLOT_MAGAZINE "magazine"
+#define CY_MODULE_SLOT_RECEIVER "receiver"
+#define CY_MODULE_SLOT_EXTRA "extra"
+
+#define CY_MODULE_SLOT_EQUIPMENT_BASE "equipment_base"
+#define CY_MODULE_SLOT_EQUIPMENT_MATERIAL "equipment_material"
+#define CY_MODULE_SLOT_EQUIPMENT_PLATE "equipment_plate"
+#define CY_MODULE_SLOT_EQUIPMENT_LINING "equipment_lining"
+#define CY_MODULE_SLOT_EQUIPMENT_ACTIVE "equipment_active"
+#define CY_MODULE_SLOT_RIG_CONNECTOR "rig_connector"
+
+#define CY_STRUCTURE_MOBILITY_MOBILE "mobile"
+#define CY_STRUCTURE_MOBILITY_FOLDABLE "foldable"
+#define CY_STRUCTURE_MOBILITY_FIXED "fixed"
+
+#define CY_CONSTRUCTION_STAGE_NONE 0
+#define CY_CONSTRUCTION_STAGE_FRAME_WRENCHED 1
+#define CY_CONSTRUCTION_STAGE_FRAME_WELDED 2
+#define CY_CONSTRUCTION_STAGE_COMPONENTS_LOADED 3
+#define CY_CONSTRUCTION_STAGE_COMPLETE 4
+
+#define CY_MACHINE_STATE_WORKING "working"
+#define CY_MACHINE_STATE_DEGRADED "degraded"
+#define CY_MACHINE_STATE_BROKEN "broken"
+#define CY_MACHINE_STATE_HACKED "hacked"
+#define CY_MACHINE_STATE_DISABLED "disabled"
+#define CY_MACHINE_STATE_EMPED "emped"

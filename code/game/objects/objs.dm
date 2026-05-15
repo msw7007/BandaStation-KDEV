@@ -403,3 +403,44 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 
 	do_sparks(5, TRUE, src)
 	return electrocute_mob(shocking, shock_source || get_cell() || get_area(src), src, siemens_coeff, TRUE)
+
+// CyberPunk shared object manufacturing layer.
+/obj
+	/// Organization datum/type/id that manufactured this object.
+	var/manufacturer_organization
+	/// Extra technology tags carried by this object in addition to manufacturer tags.
+	var/list/manufacturer_tech_tags
+
+/obj/proc/get_manufacturer_organization() as /datum/cy_organization
+	return resolve_cy_organization_datum(manufacturer_organization)
+
+/obj/proc/get_manufacturer_root_organization() as /datum/cy_organization
+	var/datum/cy_organization/organization = get_manufacturer_organization()
+	return organization?.get_root()
+
+/obj/proc/get_manufacturer_name()
+	var/datum/cy_organization/organization = get_manufacturer_organization()
+	return organization?.name || "Неизвестный производитель"
+
+/obj/proc/get_manufacturer_tech_tags()
+	var/list/tags = list()
+	var/datum/cy_organization/organization = get_manufacturer_organization()
+	if(organization?.tech_tags)
+		tags |= organization.tech_tags
+	if(manufacturer_tech_tags)
+		tags |= manufacturer_tech_tags
+	return tags
+
+/obj/proc/has_manufacturer_tech_tag(tech_tag)
+	return tech_tag in get_manufacturer_tech_tags()
+
+/obj/proc/is_manufactured_by(organization, include_parent = TRUE)
+	var/datum/cy_organization/manufacturer = get_manufacturer_organization()
+	if(!manufacturer)
+		return FALSE
+	var/datum/cy_organization/other = resolve_cy_organization_datum(organization)
+	if(!other)
+		return FALSE
+	if(manufacturer.type == other.type)
+		return TRUE
+	return include_parent && manufacturer.is_same_or_child_of(other.type)

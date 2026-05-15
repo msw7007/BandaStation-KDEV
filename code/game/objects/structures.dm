@@ -82,3 +82,83 @@
 	// If we consumed in crafting, we should dump contents out before qdeling them.
 	if(!is_type_in_list(src, current_recipe.parts))
 		dump_contents()
+
+// CyberPunk structure core.
+/obj/structure
+	/// Mobile/foldable/fixed as required by the item TЗ.
+	var/cy_structure_mobility = CY_STRUCTURE_MOBILITY_FIXED
+	/// Item returned by a foldable structure.
+	var/cy_folded_item_type
+	/// Generic construction stage for frame-based construction.
+	var/cy_construction_stage = CY_CONSTRUCTION_STAGE_COMPLETE
+	/// Accepted component/item types for staged construction.
+	var/list/cy_required_components
+	var/list/cy_loaded_components
+	var/cy_requires_board = FALSE
+	var/obj/item/circuitboard/cy_loaded_board
+	var/list/cy_required_resources
+	var/list/cy_loaded_resources
+
+/obj/structure/proc/cy_can_move_structure()
+	return cy_structure_mobility == CY_STRUCTURE_MOBILITY_MOBILE && !anchored
+
+/obj/structure/proc/cy_can_fold_structure()
+	return cy_structure_mobility == CY_STRUCTURE_MOBILITY_FOLDABLE && ispath(cy_folded_item_type, /obj/item)
+
+/obj/structure/proc/cy_fold_structure(mob/user)
+	if(!cy_can_fold_structure())
+		return FALSE
+	var/obj/item/folded = new cy_folded_item_type(get_turf(src))
+	folded.manufacturer_organization = manufacturer_organization
+	folded.manufacturer_tech_tags = manufacturer_tech_tags
+	if(user)
+		user.put_in_hands(folded)
+	qdel(src)
+	return TRUE
+
+/obj/structure/proc/cy_handle_structure_tool(obj/item/tool, mob/user)
+	if(!tool)
+		return FALSE
+	switch(tool.tool_behaviour)
+		if(TOOL_WRENCH)
+			if(cy_structure_mobility == CY_STRUCTURE_MOBILITY_MOBILE || cy_structure_mobility == CY_STRUCTURE_MOBILITY_FOLDABLE)
+				anchored = !anchored
+				if(user)
+					user.balloon_alert(user, anchored ? "зафиксировано" : "снято")
+				return TRUE
+			if(cy_construction_stage == CY_CONSTRUCTION_STAGE_NONE)
+				cy_construction_stage = CY_CONSTRUCTION_STAGE_FRAME_WRENCHED
+				if(user)
+					user.balloon_alert(user, "каркас собран")
+				return TRUE
+		if(TOOL_WELDER)
+			if(get_integrity() < max_integrity)
+				repair_damage(max_integrity * 0.25)
+				if(user)
+					user.balloon_alert(user, "корпус заварен")
+				return TRUE
+			if(cy_construction_stage == CY_CONSTRUCTION_STAGE_FRAME_WRENCHED)
+				cy_construction_stage = CY_CONSTRUCTION_STAGE_FRAME_WELDED
+				if(user)
+					user.balloon_alert(user, "каркас сварен")
+				return TRUE
+		if(TOOL_SCREWDRIVER)
+			if(cy_can_fold_structure() && !anchored)
+				return cy_fold_structure(user)
+			if(cy_construction_stage == CY_CONSTRUCTION_STAGE_COMPONENTS_LOADED)
+				cy_construction_stage = CY_CONSTRUCTION_STAGE_COMPLETE
+				if(user)
+					user.balloon_alert(user, "установлено")
+				return TRUE
+		if(TOOL_MULTITOOL)
+			if(broken)
+				broken = FALSE
+				if(user)
+					user.balloon_alert(user, "перезапущено")
+				return TRUE
+	return FALSE
+
+/obj/structure/attackby(obj/item/tool, mob/user, list/modifiers, list/attack_modifiers)
+	if(cy_handle_structure_tool(tool, user))
+		return TRUE
+	return ..()

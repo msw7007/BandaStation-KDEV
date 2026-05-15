@@ -271,3 +271,35 @@ GLOBAL_LIST_EMPTY(cy_organizations_by_id)
 
 	if(length(round_log) > 100)
 		round_log.Cut(1, 2)
+
+/// Resolve an organization from a datum, typepath or stable id string.
+/proc/resolve_cy_organization_datum(organization) as /datum/cy_organization
+	if(istype(organization, /datum/cy_organization))
+		return organization
+
+	if(ispath(organization, /datum/cy_organization))
+		return get_cy_organization_datum(organization)
+
+	if(istext(organization))
+		return get_cy_organization_by_id(organization)
+
+	return null
+
+/datum/cy_organization/proc/get_root() as /datum/cy_organization
+	var/datum/cy_organization/current = src
+	var/datum/cy_organization/parent = current.get_parent()
+	while(parent)
+		current = parent
+		parent = current.get_parent()
+	return current
+
+/datum/cy_organization/proc/matches(organization, include_parent = TRUE)
+	var/datum/cy_organization/other = resolve_cy_organization_datum(organization)
+	if(!other)
+		return FALSE
+	if(type == other.type)
+		return TRUE
+	return include_parent && is_same_or_child_of(other.type)
+
+/datum/controller/subsystem/cy_organizations/proc/get_cy_organization_by_id(organization_id) as /datum/cy_organization
+	return get_cy_organization_by_id(organization_id)

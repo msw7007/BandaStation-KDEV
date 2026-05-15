@@ -787,6 +787,9 @@
 	return _try_interact(user)
 
 /obj/machinery/attackby(obj/item/weapon, mob/user, list/modifiers, list/attack_modifiers)
+	if(cy_handle_machine_tool(weapon, user))
+		update_last_used(user)
+		return TRUE
 	. = ..()
 	if(.)
 		return
@@ -1311,3 +1314,87 @@
 /// Called if this machine is supposed to be a sabotage machine objective.
 /obj/machinery/proc/add_as_sabotage_target()
 	return
+
+// CyberPunk machinery core. Machinery remains /obj/machinery, not a parallel machine tree.
+/obj/machinery
+	var/cy_machine_state = CY_MACHINE_STATE_WORKING
+	var/list/cy_machine_modules
+	var/cy_machine_module_limit = 4
+	var/list/cy_required_materials
+	var/list/cy_required_reagents
+	var/list/cy_required_goods
+	var/cy_manual_repair_injury_chance = 0
+
+/obj/machinery/proc/cy_is_degraded()
+	return cy_machine_state in list(CY_MACHINE_STATE_DEGRADED, CY_MACHINE_STATE_BROKEN, CY_MACHINE_STATE_HACKED, CY_MACHINE_STATE_DISABLED, CY_MACHINE_STATE_EMPED)
+
+/obj/machinery/proc/cy_set_machine_state(new_state)
+	cy_machine_state = new_state
+	if(new_state == CY_MACHINE_STATE_BROKEN)
+		machine_stat |= BROKEN
+	else if(new_state == CY_MACHINE_STATE_DISABLED)
+		machine_stat |= NOPOWER
+	else if(new_state == CY_MACHINE_STATE_EMPED)
+		machine_stat |= EMPED
+	else if(new_state == CY_MACHINE_STATE_WORKING)
+		machine_stat &= ~(BROKEN|NOPOWER|EMPED)
+	update_appearance()
+
+/obj/machinery/proc/cy_can_install_machine_module(obj/item/module, mob/user, messages = TRUE)
+	if(!module)
+		return FALSE
+	if(length(cy_machine_modules) >= cy_machine_module_limit)
+		if(messages && user)
+			user.balloon_alert(user, "нет слотов")
+		return FALSE
+	return TRUE
+
+/obj/machinery/proc/cy_install_machine_module(obj/item/module, mob/user, messages = TRUE)
+	if(!cy_can_install_machine_module(module, user, messages))
+		return FALSE
+	LAZYADD(cy_machine_modules, module)
+	module.forceMove(src)
+	if(messages && user)
+		user.balloon_alert(user, "модуль установлен")
+	return TRUE
+
+/obj/machinery/proc/cy_handle_machine_tool(obj/item/tool, mob/user)
+	if(!tool)
+		return FALSE
+	switch(tool.tool_behaviour)
+		if(TOOL_WRENCH)
+			if(cy_machine_state == CY_MACHINE_STATE_DEGRADED)
+				cy_set_machine_state(CY_MACHINE_STATE_WORKING)
+				if(user)
+					user.balloon_alert(user, "работа восстановлена")
+				return TRUE
+			panel_open = !panel_open
+			if(user)
+				user.balloon_alert(user, panel_open ? "панель открыта" : "панель закрыта")
+			return TRUE
+		if(TOOL_WELDER)
+			if(get_integrity() < max_integrity)
+				repair_damage(max_integrity * 0.25)
+				if(user)
+					user.balloon_alert(user, "корпус заварен")
+				return TRUE
+		if(TOOL_MULTITOOL)
+			if(machine_stat & EMPED || cy_machine_state == CY_MACHINE_STATE_EMPED)
+				machine_stat &= ~EMPED
+				cy_set_machine_state(CY_MACHINE_STATE_WORKING)
+				if(user)
+					user.balloon_alert(user, "схемы перезапущены")
+				return TRUE
+		if(TOOL_SCREWDRIVER)
+			panel_open = !panel_open
+			if(user)
+				user.balloon_alert(user, panel_open ? "панель открыта" : "панель закрыта")
+			return TRUE
+	return FALSE
+
+/obj/machinery/proc/cy_get_repair_injury_chance(obj/item/tool, mob/user)
+	var/chance = cy_manual_repair_injury_chance
+	chance += length(cy_machine_modules) * 2
+	if(cy_is_degraded())
+		chance += 5
+	return max(chance, 0)
