@@ -2,6 +2,7 @@
 	name = "clown car"
 	desc = "How someone could even fit in there is byond me."
 	icon_state = "clowncar"
+	dir = NORTH
 	max_integrity = 150
 	armor_type = /datum/armor/car_clowncar
 	enter_delay = 20
@@ -260,6 +261,7 @@
 	if(cannonmode) //canon active, deactivate
 		flick("clowncar_fromfire", src)
 		icon_state = "clowncar"
+		dir = NORTH
 		addtimer(CALLBACK(src, PROC_REF(deactivate_cannon)), 2 SECONDS)
 		playsound(src, 'sound/vehicles/clown_car/clowncar_cannonmode2.ogg', 75)
 		visible_message(span_danger("[src] starts going back into mobile mode."))
@@ -314,3 +316,39 @@
 		return
 	for(var/mob/busdriver as anything in return_drivers())
 		busdriver.client.give_award(/datum/award/achievement/misc/the_best_driver, busdriver)
+
+// First Cyberpunk vehicle physics testbed. Uses the clown car exterior as a hull test,
+// but drives through the modular pixel-physics car core instead of tile-stepping.
+/obj/vehicle/sealed/car/cy_test_clowncar
+	name = "test clown car"
+	desc = "A stripped-down test vehicle using a clown car shell and the new pixel vehicle controller."
+	icon_state = "clowncar"
+	dir = NORTH
+	max_integrity = 180
+	armor_type = /datum/armor/car_clowncar
+	enter_delay = 1 SECONDS
+	max_occupants = 2
+	max_drivers = 1
+	key_type = null
+	engine_sound = 'sound/vehicles/carrev.ogg'
+	engine_sound_length = 2 SECONDS
+	cy_pixel_physics = TRUE
+	cy_vehicle_body_type = CY_VEHICLE_BODY_INTERNAL
+	cy_vehicle_class = CY_VEHICLE_CLASS_CIVILIAN
+	cy_can_autocharge = TRUE
+	cy_default_drive_part_types = list(
+		/obj/item/cy_vehicle_part/drive/wheel/road,
+		/obj/item/cy_vehicle_part/drive/wheel/road,
+		/obj/item/cy_vehicle_part/drive/wheel/road,
+		/obj/item/cy_vehicle_part/drive/wheel/road,
+	)
+	cy_default_suspension_type = /obj/item/cy_vehicle_part/suspension/sport
+	cy_default_hull_type = /obj/item/cy_vehicle_part/hull/clown
+	cy_default_engine_type = /obj/item/cy_vehicle_part/engine/electric/basic
+
+/obj/vehicle/sealed/car/cy_test_clowncar/Initialize(mapload)
+	dir = NORTH
+	. = ..()
+	cy_set_forward_from_dir(NORTH)
+	animate_movement = NO_STEPS
+	glide_size = 0

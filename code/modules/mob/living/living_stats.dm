@@ -1445,7 +1445,7 @@
 		if(carrier && carrier.pulling == src && carrier.grab_state >= GRAB_AGGRESSIVE)
 			carrier.piggyback(src)
 			return TRUE
-	if(dropped == src && !ismob(over))
+	if(dropped == src && !ismob(over) && !(istype(over, /obj/vehicle/sealed/car)))
 		if(is_cy_furniture_surface(over))
 			if(cy_stealth_mode && body_position == LYING_DOWN)
 				return perform_cy_hide_under(over)

@@ -48,3 +48,38 @@
 #define VIM_SOUND_COOLDOWN (1 SECONDS)
 ///how much vim heals per weld
 #define VIM_HEAL_AMOUNT 20
+
+// Cyberpunk vehicle core.
+#define CY_VEHICLE_BODY_INTERNAL "internal"
+#define CY_VEHICLE_BODY_EXTERNAL "external"
+#define CY_VEHICLE_BODY_PLATFORM "platform"
+
+#define CY_VEHICLE_CLASS_CIVILIAN "civilian"
+#define CY_VEHICLE_CLASS_MODIFIED "modified"
+#define CY_VEHICLE_CLASS_COMBAT "combat"
+
+#define CY_VEHICLE_ENGINE_FUEL "fuel"
+#define CY_VEHICLE_ENGINE_ENERGY "energy"
+#define CY_VEHICLE_ENGINE_BATTERY "battery"
+
+#define CY_VEHICLE_DRIVE_WHEEL "wheel"
+#define CY_VEHICLE_DRIVE_TRACK "track"
+#define CY_VEHICLE_DRIVE_FLIGHT "flight"
+
+#define CY_VEHICLE_PART_DRIVE "drive"
+#define CY_VEHICLE_PART_SUSPENSION "suspension"
+#define CY_VEHICLE_PART_HULL "hull"
+#define CY_VEHICLE_PART_ENGINE "engine"
+
+#define CY_VEHICLE_MAX_DRIVE_PARTS 6
+#define CY_VEHICLE_MIN_DRIVE_PARTS 2
+#define CY_VEHICLE_TILE_PIXELS 32
+#define CY_VEHICLE_HALF_TILE_PIXELS 16
+#define CY_VEHICLE_RECENTER_PIXELS CY_VEHICLE_HALF_TILE_PIXELS
+#define CY_VEHICLE_INPUT_LINGER 3
+
+#define CY_VEHICLE_SPEED_SCALE 16
+#define CY_VEHICLE_ACCEL_SCALE 80
+#define CY_VEHICLE_BRAKE_SCALE 80
+#define CY_VEHICLE_TURN_SCALE 4
+#define CY_VEHICLE_DRAG_SCALE 4
