@@ -1,8 +1,3 @@
-/area/netspace
-	name = "Netspace"
-	static_lighting = FALSE
-	requires_power = FALSE
-
 /area/netspace/veil
 	name = "The Veil"
 

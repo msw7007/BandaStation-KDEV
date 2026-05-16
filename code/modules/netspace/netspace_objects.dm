@@ -7,12 +7,9 @@
 	var/cy_net_max_integrity = 100
 	var/list/cy_net_access_keys = list()
 	var/list/cy_net_available_actions = list()
-	var/cy_net_data = CY_NET_NODE_DATA_DEFAULT
+	var/cy_net_data = 15
 	var/cy_net_key_id
-	var/cy_net_family_key_id
 	var/cy_net_key_name
-	var/cy_net_glitched = FALSE
-	var/cy_net_emi_fault = FALSE
 
 /atom/proc/cy_netspace_register(node_type = CY_NET_NODE_GENERIC, security = null)
 	cy_net_enabled = TRUE
@@ -23,15 +20,18 @@
 	cy_netspace_node.max_integrity = cy_net_max_integrity
 	cy_netspace_node.access_keys = cy_net_access_keys
 	cy_netspace_node.available_actions = cy_netspace_available_actions(null)
+	if(node_type == CY_NET_NODE_DOOR || node_type == CY_NET_NODE_CAMERA)
+		cy_net_data = min(cy_net_data, 1)
+	else if(node_type == CY_NET_NODE_VENDING || node_type == CY_NET_NODE_TERMINAL)
+		cy_net_data = max(cy_net_data, 10)
+	else if(cy_net_data == CY_NET_NODE_DATA_DEFAULT)
+		cy_net_data = rand(2, 9)
 	return cy_netspace_node
 
 /atom/proc/cy_netspace_register_deferred(node_type = CY_NET_NODE_GENERIC, security = null)
 	cy_net_enabled = TRUE
 	if(!isnull(security))
 		cy_net_security = security
-	if(SSnetspace)
-		SSnetspace.queue_network_object(src)
-		return
 	addtimer(CALLBACK(src, PROC_REF(cy_netspace_register), node_type, cy_net_security), 1)
 
 /atom/proc/cy_netspace_unregister()
@@ -44,7 +44,7 @@
 	return cy_net_enabled && !cy_net_isolated
 
 /atom/proc/cy_netspace_status_text(mob/living/net_avatar/avatar)
-	return "Object integrity: [cy_net_integrity]/[cy_net_max_integrity]. Net-data: [cy_net_data]."
+	return "Stored data: [cy_net_data]. Integrity: [cy_net_integrity]/[cy_net_max_integrity]."
 
 /atom/proc/cy_netspace_available_actions(mob/living/net_avatar/avatar)
 	return cy_net_available_actions || list()
@@ -60,11 +60,11 @@
 		return null
 	return cy_netspace_node ? cy_netspace_node.security : cy_net_security
 
-/atom/proc/cy_apply_netspace_damage(amount, damage_type = CY_NET_DAMAGE_ATTACK, source)
+/atom/proc/cy_apply_netspace_damage(amount, source)
 	if(!cy_netspace_is_online())
 		return FALSE
 	if(cy_netspace_node)
-		return cy_netspace_node.apply_net_damage(amount, damage_type, source)
+		return cy_netspace_node.apply_net_damage(amount, source)
 	cy_net_integrity = max(0, cy_net_integrity - amount)
 	return TRUE
 
@@ -89,13 +89,50 @@
 		return cy_netspace_node.execute_action(user, action_id)
 	return cy_netspace_execute_action(user, action_id)
 
-/atom/proc/cy_netspace_on_disabled(mob/living/net_avatar/source)
-	cy_net_enabled = FALSE
+/atom/proc/cy_netspace_key_id(node_type = CY_NET_NODE_GENERIC, area_part = null)
+	if(cy_net_key_id)
+		return cy_net_key_id
+	var/manufacturer = "generic"
+	if(isobj(src))
+		var/obj/object = src
+		manufacturer = sanitize_css_class_name(lowertext(object.get_manufacturer_name() || "generic"))
+	return "[area_part || "area"]_[manufacturer]"
 
-/atom/proc/cy_netspace_on_restored(datum/netspace_node/node)
-	cy_net_enabled = TRUE
-	cy_net_glitched = FALSE
-	cy_net_emi_fault = FALSE
+/atom/proc/cy_netspace_key_name(node_type = CY_NET_NODE_GENERIC)
+	if(cy_net_key_name)
+		return cy_net_key_name
+	var/manufacturer = "Generic"
+	if(isobj(src))
+		var/obj/object = src
+		manufacturer = object.get_manufacturer_name() || "Generic"
+	return "[manufacturer] [node_type] key"
+
+/atom/proc/cy_netspace_download_data(mob/living/net_avatar/avatar, datum/netspace_node/node)
+	if(cy_net_data <= 0)
+		return FALSE
+	var/downloaded = cy_net_data
+	cy_net_data = 0
+	if(avatar)
+		avatar.cy_add_net_data(downloaded)
+		node?.grant_key_to_attacker(avatar)
+		to_chat(avatar, span_notice("You download [downloaded] net-data from [src]."))
+	return TRUE
+
+/atom/proc/cy_netspace_on_emi(mob/living/net_avatar/source)
+	visible_message(span_warning("[src] crackles under remote electromagnetic interference."))
+
+/atom/proc/cy_netspace_on_emagged(mob/living/net_avatar/source)
+	visible_message(span_warning("[src]'s control logic glitches violently."))
+
+/atom/proc/cy_netspace_on_disabled(mob/living/net_avatar/source)
+	cy_net_isolated = TRUE
+	visible_message(span_warning("[src] drops offline."))
+
+/atom/proc/cy_netspace_on_damage_repaired()
+	cy_net_isolated = FALSE
+
+/atom/proc/cy_netspace_alert(mob/living/net_avatar/source, reason = "network intrusion")
+	visible_message(span_warning("[src] screams an electronic alarm: [reason]!"))
 
 /atom/proc/cy_netspace_on_feedback(mob/living/net_avatar/avatar, excess)
 	return
@@ -104,28 +141,109 @@
 	return
 
 /mob/living
-	var/list/cy_net_memory_keys = list()
+	var/list/cy_known_net_keys
+	var/obj/effect/netspace/projection/cy_netspace_projection
+	var/list/cy_projection_implant_integrity
+
 
 /mob/living/proc/cy_collect_net_keys()
-	return cy_net_memory_keys?.Copy() || list()
+	if(!cy_known_net_keys)
+		cy_known_net_keys = list()
+	return cy_known_net_keys.Copy()
 
-/mob/living/proc/cy_remember_net_key(datum/net_access_key/key)
-	if(!key)
+/mob/living/proc/cy_remember_net_key(key_id, key_name = null)
+	if(!key_id)
 		return FALSE
-	if(!cy_net_memory_keys)
-		cy_net_memory_keys = list()
-	for(var/datum/net_access_key/existing as anything in cy_net_memory_keys)
-		if(existing.key_id == key.key_id)
-			return TRUE
-	cy_net_memory_keys += key
+	if(!cy_known_net_keys)
+		cy_known_net_keys = list()
+	cy_known_net_keys[key_id] = key_name || key_id
 	return TRUE
 
+/mob/living/proc/cy_knows_net_key(key_id)
+	if(!key_id || !cy_known_net_keys)
+		return FALSE
+	return !!cy_known_net_keys[key_id]
 
 /mob/living/proc/cy_has_neural_interface()
+	if(istype(src, /mob/living/net_avatar))
+		return TRUE
+	if(vars.Find("cy_neural_interface") && vars["cy_neural_interface"])
+		return TRUE
+	if(vars.Find("implants") && length(vars["implants"]))
+		return TRUE
 	return FALSE
 
 /mob/living/proc/cy_has_required_hackable_implants()
+	if(cy_has_neural_interface())
+		if(vars.Find("implants"))
+			return length(vars["implants"]) >= 2
+		return TRUE
 	return FALSE
+
+/mob/living/proc/cy_has_netspace_projection_prereqs()
+	if(!cy_has_neural_interface())
+		return FALSE
+	if(vars.Find("implants"))
+		return length(vars["implants"]) >= 1
+	return TRUE
+
+/mob/living/proc/cy_ensure_netspace_projection()
+	if(cy_netspace_projection && !QDELETED(cy_netspace_projection))
+		return cy_netspace_projection
+	var/turf/net_turf = SSnetspace.get_net_turf_for_atom(src)
+	if(!net_turf)
+		return null
+	cy_netspace_projection = new /obj/effect/netspace/projection(net_turf)
+	cy_netspace_projection.setup_projection(src)
+	return cy_netspace_projection
+
+/mob/living/proc/cy_remove_netspace_projection()
+	if(cy_netspace_projection && !QDELETED(cy_netspace_projection))
+		qdel(cy_netspace_projection)
+	cy_netspace_projection = null
+	return TRUE
+
+/mob/living/proc/cy_get_projection_implant_ids()
+	var/list/ids = list()
+	if(vars.Find("implants"))
+		var/list/implants_list = vars["implants"]
+		var/index = 1
+		for(var/thing in implants_list)
+			ids += "implant_[index++]"
+	if(!length(ids) && cy_has_neural_interface())
+		ids += "neural_interface"
+	return ids
+
+/mob/living/proc/cy_ensure_projection_implant_integrity()
+	if(!cy_projection_implant_integrity)
+		cy_projection_implant_integrity = list()
+	for(var/id in cy_get_projection_implant_ids())
+		if(isnull(cy_projection_implant_integrity[id]))
+			cy_projection_implant_integrity[id] = CY_NET_PROJECTION_IMPLANT_INTEGRITY
+	return cy_projection_implant_integrity
+
+/mob/living/proc/cy_netspace_projection_status()
+	var/list/status = list("Implants:")
+	var/list/integrity = cy_ensure_projection_implant_integrity()
+	for(var/id in integrity)
+		status += "[id]: [integrity[id]]%"
+	return status.Join("\n")
+
+/mob/living/proc/cy_netspace_projection_implant_damage(amount, mob/living/net_avatar/source)
+	var/list/integrity = cy_ensure_projection_implant_integrity()
+	if(!length(integrity))
+		return FALSE
+	var/target_id = pick(integrity)
+	integrity[target_id] = max(0, integrity[target_id] - amount)
+	to_chat(src, span_userdanger("Implant [target_id] reports hostile netspace attack: [integrity[target_id]]% integrity."))
+	if(integrity[target_id] <= CY_NET_DAMAGE_IMPLANT_EMI_THRESHOLD)
+		cy_netspace_on_implant_emi(target_id, source)
+	return TRUE
+
+/mob/living/proc/cy_netspace_on_implant_emi(implant_id, mob/living/net_avatar/source)
+	to_chat(src, span_userdanger("Implant [implant_id] is forced into an EMI fault state!"))
+	adjust_psychic_loss(5, forced = TRUE)
+	return TRUE
 
 /mob/living/cy_netspace_on_feedback(mob/living/net_avatar/avatar, excess)
 	if(prob(10 * excess))
@@ -135,71 +253,6 @@
 	adjust_psychic_loss(3 * distance)
 	to_chat(src, span_userdanger("Your brain burns from a stretched netspace link!"))
 
-
-/atom/proc/cy_get_net_key_id()
-	if(!cy_net_key_id)
-		cy_net_key_id = "[type]#[cy_get_manufacturer_key_part()]"
-	return cy_net_key_id
-
-/atom/proc/cy_get_net_family_key_id()
-	if(!cy_net_family_key_id)
-		cy_net_family_key_id = "[cy_get_net_node_family_name()]#[cy_get_manufacturer_key_part()]"
-	return cy_net_family_key_id
-
-/atom/proc/cy_get_manufacturer_key_part()
-	if(isobj(src))
-		var/obj/object_source = src
-		var/manufacturer_name = object_source.get_manufacturer_name()
-		if(manufacturer_name)
-			return manufacturer_name
-	return "generic"
-
-/atom/proc/cy_get_net_node_family_name()
-	if(istype(src, /obj/machinery/door/airlock))
-		return CY_NET_NODE_DOOR
-	if(istype(src, /obj/machinery/camera))
-		return CY_NET_NODE_CAMERA
-	if(istype(src, /obj/machinery/vending))
-		return CY_NET_NODE_VENDING
-	if(istype(src, /obj/machinery/power/apc))
-		return CY_NET_NODE_AREA
-	if(istype(src, /obj/machinery/net_terminal))
-		return CY_NET_NODE_TERMINAL
-	return "[type]"
-
-/atom/proc/cy_make_net_key(access_flags = CY_NET_ACCESS_ADMIN)
-	return new /datum/net_access_key(cy_get_net_family_key_id(), cy_net_key_name || "[cy_get_manufacturer_key_part()] [cy_get_net_node_family_name()] key", access_flags, src)
-
-/atom/proc/cy_download_net_data(mob/living/net_avatar/avatar)
-	if(!avatar || cy_net_data <= 0)
-		return FALSE
-	cy_net_data--
-	avatar.net_data++
-	var/datum/net_access_key/key = cy_make_net_key(CY_NET_ACCESS_VIEW|CY_NET_ACCESS_USE)
-	avatar.cy_remember_net_key(key)
-	if(avatar.physical_body)
-		avatar.physical_body.cy_remember_net_key(key)
-	to_chat(avatar, span_notice("You download 1 net-data from [name]. Remaining: [cy_net_data]."))
-	return TRUE
-
-/atom/proc/cy_netspace_raise_alarm(mob/living/net_avatar/avatar, datum/netspace_cluster/cluster)
-	visible_message(span_warning("[src] emits a sharp network alarm!"))
-	cy_add_netspace_trace(15, avatar, "combat connect alarm")
-
-/atom/proc/cy_netspace_on_glitch(mob/living/net_avatar/source)
-	cy_net_glitched = TRUE
-	if(hascall(src, PROC_REF(emag_act)))
-		call(src, PROC_REF(emag_act))(source, null)
-
-/atom/proc/cy_netspace_on_emi(mob/living/net_avatar/source)
-	cy_net_emi_fault = TRUE
-	emp_act(EMP_LIGHT)
-
-/atom/proc/cy_netspace_can_execute(mob/living/net_avatar/avatar, required_flags = CY_NET_ACCESS_USE)
-	if(!cy_netspace_node)
-		return cy_net_security <= CY_NET_SECURITY_OPEN
-	return cy_netspace_node.has_key_access(avatar, required_flags)
-
 /obj/machinery/net_terminal
 	name = "netspace terminal"
 	desc = "A terminal for entering the city network."
@@ -207,6 +260,7 @@
 	icon_state = "computer"
 	cy_net_enabled = TRUE
 	cy_net_security = CY_NET_SECURITY_BASIC
+	cy_net_data = 40
 
 /obj/machinery/net_terminal/Initialize(mapload)
 	. = ..()
@@ -220,21 +274,6 @@
 	cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
 	return TRUE
 
-/obj/item/netdeck
-	name = "netdeck"
-	desc = "A portable cyberdeck for diving into local netspace."
-	icon = 'icons/obj/devices/pda.dmi'
-	icon_state = "pda-library"
-	w_class = WEIGHT_CLASS_SMALL
-	var/list/stored_keys = list()
-
-/obj/item/netdeck/attack_self(mob/living/user, modifiers)
-	. = ..()
-	if(!istype(user))
-		return
-	var/mob/living/net_avatar/avatar = cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
-	if(avatar)
-		avatar.net_keys += stored_keys
 
 /obj/structure/netspace/wall
 	name = "net wall"
@@ -248,9 +287,15 @@
 	var/build_progress = 100
 	var/net_integrity = CY_NET_WALL_MAX_INTEGRITY
 
-/obj/structure/netspace/wall/Initialize(mapload, progress = 100)
+/obj/structure/netspace/wall/New(loc, progress = 100)
 	. = ..()
 	build_progress = clamp(progress, 1, 100)
+	net_integrity = round(CY_NET_WALL_MAX_INTEGRITY * (build_progress / 100))
+	alpha = 60 + round(build_progress * 1.8)
+
+/obj/structure/netspace/wall/Initialize(mapload)
+	. = ..()
+	build_progress = clamp(build_progress, 1, 100)
 	net_integrity = round(CY_NET_WALL_MAX_INTEGRITY * (build_progress / 100))
 	alpha = 60 + round(build_progress * 1.8)
 
@@ -258,22 +303,38 @@
 	. = ..()
 	if(!istype(mover, /mob/living/net_avatar))
 		return FALSE
+	return build_progress < 100
+
+/obj/structure/netspace/wall/Initialize(mapload)
+	. = ..()
+	RegisterSignal(loc, COMSIG_ATOM_ENTERED, PROC_REF(on_turf_entered))
+
+/obj/structure/netspace/wall/Destroy()
+	UnregisterSignal(loc, COMSIG_ATOM_ENTERED)
+	return ..()
+
+/obj/structure/netspace/wall/proc/on_turf_entered(datum/source, atom/movable/entered, atom/old_loc, list/atom/old_locs)
+	SIGNAL_HANDLER
+
 	if(build_progress >= 100)
-		return FALSE
-	return prob(100 - build_progress)
+		return
+
+	if(entered.loc != loc)
+		return
+
+	var/mob/living/net_avatar/avatar = entered
+	if(!istype(avatar))
+		return
+
+	avatar.adjust_stamina_loss(max(1, round(build_progress * 0.1)))
 
 /obj/structure/netspace/wall/attack_hand(mob/living/user, list/modifiers)
 	if(!istype(user, /mob/living/net_avatar))
-		return
-	take_net_damage(CY_NET_WALL_ATTACK_DAMAGE, PSYCHIC)
+		return ..()
+	take_net_damage(CY_NET_WALL_ATTACK_DAMAGE)
+	return TRUE
 
-/obj/structure/netspace/wall/attack_animal(mob/living/user, list/modifiers)
-	if(istype(user, /mob/living/net_avatar))
-		take_net_damage(CY_NET_WALL_ATTACK_DAMAGE, PSYCHIC)
-		return TRUE
-	return ..()
-
-/obj/structure/netspace/wall/proc/take_net_damage(amount, damage_type = PSYCHIC)
+/obj/structure/netspace/wall/proc/take_net_damage(amount)
 	net_integrity -= amount
 	if(net_integrity <= 0)
 		qdel(src)
@@ -290,9 +351,6 @@
 	return list("status", "open", "close", "toggle_bolts")
 
 /obj/machinery/door/airlock/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
-	if(!cy_netspace_can_execute(avatar, CY_NET_ACCESS_USE))
-		cy_netspace_node?.add_trace(10, avatar, "denied door command")
-		return FALSE
 	switch(action_id)
 		if("status")
 			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
@@ -304,18 +362,14 @@
 			close()
 			return TRUE
 		if("toggle_bolts")
-			if(cy_netspace_can_execute(avatar, CY_NET_ACCESS_CONTROL))
-				set_bolt(!locked)
-				return TRUE
+			set_bolt(!locked)
+			return TRUE
 	return FALSE
 
 /obj/machinery/camera/cy_netspace_available_actions(mob/living/net_avatar/avatar)
 	return list("status", "disable", "enable")
 
 /obj/machinery/camera/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
-	if(!cy_netspace_can_execute(avatar, CY_NET_ACCESS_CONTROL))
-		cy_netspace_node?.add_trace(8, avatar, "denied camera command")
-		return FALSE
 	switch(action_id)
 		if("status")
 			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
@@ -334,47 +388,357 @@
 	return list("status", "audit", "disable_network")
 
 /obj/machinery/vending/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
-	if(!cy_netspace_can_execute(avatar, CY_NET_ACCESS_USE))
-		cy_netspace_node?.add_trace(8, avatar, "denied vending command")
-		return FALSE
 	switch(action_id)
 		if("status", "audit")
 			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
 			return TRUE
 		if("disable_network")
-			if(cy_netspace_can_execute(avatar, CY_NET_ACCESS_CONTROL))
-				cy_net_isolated = TRUE
-				return TRUE
+			cy_net_isolated = TRUE
+			return TRUE
+	return FALSE
+
+/obj/machinery/power/apc/cy_netspace_available_actions(mob/living/net_avatar/avatar)
+	return list("status", "view_interface")
+
+/obj/machinery/power/apc/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
+	switch(action_id)
+		if("status", "view_interface")
+			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
+			ui_interact(avatar)
+			return TRUE
 	return FALSE
 
 
-/obj/machinery/door/airlock
-	cy_net_data = 10
+/obj/item/clothing/gloves/cyberdeck
+	name = "cyberdeck gloves"
+	desc = "A wearable cyberdeck. Alt-right-click or use in hand to dive into netspace as an avatar."
+	icon = 'icons/obj/clothing/gloves.dmi'
+	icon_state = "black"
+	slot_flags = ITEM_SLOT_GLOVES
+	w_class = WEIGHT_CLASS_SMALL
+	var/memory_capacity = 8
+	var/compile_cooldown_until = 0
+	var/compile_cooldown_time = 2 MINUTES
+	var/list/stored_demons = list()
+	var/list/granted_demon_actions = list()
 
-/obj/machinery/camera
-	cy_net_data = 12
+/obj/item/clothing/gloves/cyberdeck/Initialize(mapload)
+	. = ..()
+	if(!length(stored_demons))
+		stored_demons += new /datum/cy_demon/ping
+		stored_demons += new /datum/cy_demon/breach
+		stored_demons += new /datum/cy_demon/wall
 
-/obj/machinery/vending
-	cy_net_data = 20
+/obj/item/clothing/gloves/cyberdeck/proc/is_compile_locked()
+	return world.time < compile_cooldown_until
 
-/obj/machinery/power/apc
-	cy_net_data = 25
+/obj/item/clothing/gloves/cyberdeck/proc/begin_compile_cooldown()
+	compile_cooldown_until = max(compile_cooldown_until, world.time + compile_cooldown_time)
+	return TRUE
 
-/obj/machinery/net_terminal
-	cy_net_data = 40
+/obj/item/clothing/gloves/cyberdeck/proc/used_memory()
+	var/used = 0
+	for(var/datum/cy_demon/demon as anything in stored_demons)
+		used += demon.get_memory_cost()
+	return used
 
-/obj/machinery/power/apc/cy_netspace_available_actions(mob/living/net_avatar/avatar)
-	return list("status", "open_interface")
-
-/obj/machinery/power/apc/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
-	if(!cy_netspace_can_execute(avatar, CY_NET_ACCESS_USE))
-		cy_netspace_node?.add_trace(8, avatar, "denied APC command")
+/obj/item/clothing/gloves/cyberdeck/proc/can_store_demon(datum/cy_demon/demon)
+	if(!demon || !demon.can_compile())
 		return FALSE
+	return used_memory() + demon.get_memory_cost() <= memory_capacity
+
+/obj/item/clothing/gloves/cyberdeck/proc/store_demon(datum/cy_demon/demon, mob/user)
+	if(is_compile_locked())
+		if(user)
+			to_chat(user, span_warning("[src] is cooling down."))
+		return FALSE
+	if(!demon.can_compile(user))
+		return FALSE
+	if(!can_store_demon(demon))
+		if(user)
+			to_chat(user, span_warning("[src] lacks memory for [demon.name] ([demon.get_memory_cost()] MU)."))
+		return FALSE
+	stored_demons += demon
+	return TRUE
+
+/obj/item/clothing/gloves/cyberdeck/proc/grant_demon_actions(mob/living/user)
+	if(!user)
+		return FALSE
+	clear_demon_actions(user)
+	for(var/datum/cy_demon/demon as anything in stored_demons)
+		var/datum/action/action = demon.grant_as_spell(user)
+		if(action)
+			granted_demon_actions += action
+	user.cy_active_cyberdeck = src
+	return TRUE
+
+/obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions(mob/living/user)
+	for(var/datum/action/action as anything in granted_demon_actions)
+		if(action)
+			action.Remove(user)
+	granted_demon_actions.Cut()
+	if(user && user.cy_active_cyberdeck == src)
+		user.cy_active_cyberdeck = null
+		user.cy_prepared_demon = null
+
+/obj/item/clothing/gloves/cyberdeck/equipped(mob/living/user, slot, initial)
+	. = ..()
+	if(slot & ITEM_SLOT_GLOVES)
+		grant_demon_actions(user)
+
+/obj/item/clothing/gloves/cyberdeck/dropped(mob/living/user)
+	clear_demon_actions(user)
+	return ..()
+
+/obj/item/clothing/gloves/cyberdeck/attack_self(mob/living/user, modifiers)
+	if(!istype(user))
+		return ..()
+	if(user.get_item_by_slot(ITEM_SLOT_GLOVES) != src)
+		to_chat(user, span_warning("Wear [src] as gloves to use it."))
+		return TRUE
+	cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
+	return TRUE
+
+/obj/item/clothing/gloves/cyberdeck/attack_self_secondary(mob/living/user, modifiers)
+	return attack_self(user, modifiers)
+
+/obj/item/clothing/gloves/cyberdeck/verb/configure_cyberdeck_demons()
+	set name = "Configure Cyberdeck Demons"
+	set category = "Object"
+	set src in usr
+	var/mob/living/user = usr
+	if(!istype(user))
+		return
+	var/list/options = list("memory status", "load basic demon", "unload demon")
+	var/choice = tgui_input_list(user, "[used_memory()]/[memory_capacity] MU used.", "Cyberdeck", options)
+	if(!choice)
+		return
+	if(choice == "memory status")
+		to_chat(user, span_notice("[src] memory: [used_memory()]/[memory_capacity] MU."))
+		return
+	if(choice == "load basic demon")
+		if(is_compile_locked())
+			to_chat(user, span_warning("[src] is cooling down."))
+			return
+		var/list/templates = list("Ping" = /datum/cy_demon/ping, "Breach" = /datum/cy_demon/breach, "Compile Wall" = /datum/cy_demon/wall, "Control Spike" = /datum/cy_demon/control, "Blindspot" = /datum/cy_demon/blind, "Pax Lock" = /datum/cy_demon/pacify, "Short Circuit" = /datum/cy_demon/short_circuit)
+		var/template = tgui_input_list(user, "Compile which basic demon?", "Cyberdeck", templates)
+		if(!template)
+			return
+		var/datum/cy_demon/new_demon = new templates[template]
+		if(store_demon(new_demon, user))
+			begin_compile_cooldown()
+		else
+			qdel(new_demon)
+		if(user.get_item_by_slot(ITEM_SLOT_GLOVES) == src)
+			grant_demon_actions(user)
+		return
+	if(choice == "unload demon")
+		var/list/choices = list()
+		for(var/datum/cy_demon/demon as anything in stored_demons)
+			choices["[demon.name] ([demon.get_memory_cost()] MU)"] = demon
+		var/remove_choice = tgui_input_list(user, "Unload which demon?", "Cyberdeck", choices)
+		if(remove_choice)
+			stored_demons -= choices[remove_choice]
+			if(user.get_item_by_slot(ITEM_SLOT_GLOVES) == src)
+				grant_demon_actions(user)
+
+/obj/item/netdeck
+	parent_type = /obj/item/clothing/gloves/cyberdeck
+	name = "netdeck"
+	desc = "A portable cyberdeck. Wear it as a glove to run demons and enter netspace."
+	icon = 'icons/obj/devices/pda.dmi'
+	icon_state = "pda-library"
+
+/obj/item/cy_demon_disk
+	name = "demon disk"
+	desc = "A 12 MU storage disk for compiled demons."
+	icon = 'icons/obj/devices/floppy_disks.dmi'
+	icon_state = "datadisk8"
+	w_class = WEIGHT_CLASS_SMALL
+	var/memory_capacity = CY_DEMON_DISK_MEMORY
+	var/list/stored_demons = list()
+
+/obj/item/cy_demon_disk/proc/used_memory()
+	var/used = 0
+	for(var/datum/cy_demon/demon as anything in stored_demons)
+		used += demon.get_memory_cost()
+	return used
+
+/obj/item/cy_demon_disk/proc/store_demon(datum/cy_demon/demon, mob/user)
+	if(!demon)
+		return FALSE
+	if(used_memory() + demon.get_memory_cost() > memory_capacity)
+		if(user)
+			to_chat(user, span_warning("The disk lacks free memory."))
+		return FALSE
+	stored_demons += demon
+	return TRUE
+
+/obj/effect/netspace/projection
+	name = "neural projection"
+	desc = "A projected implant silhouette following a physical body."
+	icon = 'icons/mob/simple/mob.dmi'
+	icon_state = "reappear"
+	color = "#7eeeff"
+	alpha = 150
+	anchored = TRUE
+	var/mob/living/physical_body
+	var/datum/net_trace/trace
+
+/obj/effect/netspace/projection/Initialize(mapload)
+	. = ..()
+	trace = new
+	SSnetspace.register_projection(src)
+
+/obj/effect/netspace/projection/Destroy()
+	SSnetspace.unregister_projection(src)
+	if(physical_body?.cy_netspace_projection == src)
+		physical_body.cy_netspace_projection = null
+	physical_body = null
+	QDEL_NULL(trace)
+	return ..()
+
+/obj/effect/netspace/projection/proc/setup_projection(mob/living/body)
+	physical_body = body
+	name = "[body.name]'s projection"
+	return TRUE
+
+/obj/effect/netspace/projection/proc/cy_process_projection(seconds_per_tick)
+	if(!physical_body || QDELETED(physical_body) || !physical_body.cy_has_netspace_projection_prereqs())
+		qdel(src)
+		return
+	var/turf/net_turf = SSnetspace.get_net_turf_for_atom(physical_body)
+	if(net_turf && loc != net_turf)
+		forceMove(net_turf)
+
+/obj/effect/netspace/projection/cy_is_netspace_target()
+	return TRUE
+
+/obj/effect/netspace/projection/cy_add_netspace_trace(amount, source, reason)
+	trace?.add_trace(amount, source, reason)
+	return TRUE
+
+/obj/effect/netspace/projection/cy_get_netspace_status(user)
+	if(!physical_body)
+		return "Dead projection."
+	return physical_body.cy_netspace_projection_status()
+
+/obj/effect/netspace/projection/cy_get_netspace_actions(user)
+	return list("implant_scan")
+
+/obj/effect/netspace/projection/cy_execute_netspace_action(user, action_id)
+	if(action_id != "implant_scan" || !physical_body)
+		return FALSE
+	to_chat(user, span_notice(physical_body.cy_netspace_projection_status()))
+	return TRUE
+
+/obj/effect/netspace/projection/cy_apply_netspace_damage(amount, source)
+	if(physical_body)
+		physical_body.cy_netspace_projection_implant_damage(max(1, round(amount)), source)
+		physical_body.adjust_psychic_loss(max(1, round(amount * 0.2)))
+		trace?.add_trace(max(1, round(amount * 0.35)), source, "projection attack")
+	return TRUE
+
+/obj/effect/netspace/projection/attack_hand(mob/living/user, list/modifiers)
+	if(istype(user, /mob/living/net_avatar))
+		to_chat(user, span_notice(cy_get_netspace_status(user)))
+		return TRUE
+	return ..()
+
+/mob/living/basic/netspace_analog
+	name = "analog"
+	desc = "A red hostile program roaming the net."
+	icon = 'icons/mob/simple/lavaland/lavaland_monsters.dmi'
+	icon_state = "watcher"
+	color = CY_NET_COLOR_ALTERNATIVE
+	faction = list("netspace_analog")
+	maxHealth = 60
+	health = 60
+	melee_damage_lower = 6
+	melee_damage_upper = 10
+	obj_damage = 15
+	environment_smash = ENVIRONMENT_SMASH_NONE
+
+/mob/living/basic/netspace_analog/Life(seconds_per_tick = SSMOBS_DT, times_fired)
+	. = ..()
+	var/area/current_area = get_area(src)
+	if(!istype(current_area, /area/netspace/veil))
+		adjust_psychic_loss(CY_NET_ANALOG_OUTSIDE_VEIL_DAMAGE)
+
+/obj/item/cy_demon_disk/attack_self(mob/living/user, modifiers)
+	if(!istype(user))
+		return ..()
+	var/obj/item/clothing/gloves/cyberdeck/deck = user.cy_get_active_cyberdeck()
+	var/list/options = list("status")
+	if(deck)
+		options += "copy deck demon to disk"
+		options += "copy disk demon to deck"
+	var/choice = tgui_input_list(user, "Disk memory: [used_memory()]/[memory_capacity] MU", "Demon disk", options)
+	if(!choice)
+		return TRUE
+	if(choice == "status")
+		to_chat(user, span_notice("[src] memory: [used_memory()]/[memory_capacity] MU."))
+		return TRUE
+	if(!deck)
+		return TRUE
+	if(choice == "copy deck demon to disk")
+		var/list/choices = list()
+		for(var/datum/cy_demon/demon as anything in deck.stored_demons)
+			choices["[demon.name] ([demon.get_memory_cost()] MU)"] = demon
+		var/picked = tgui_input_list(user, "Copy which demon?", "Demon disk", choices)
+		if(picked)
+			store_demon(choices[picked], user)
+		return TRUE
+	if(choice == "copy disk demon to deck")
+		var/list/choices = list()
+		for(var/datum/cy_demon/demon as anything in stored_demons)
+			choices["[demon.name] ([demon.get_memory_cost()] MU)"] = demon
+		var/picked = tgui_input_list(user, "Load which demon?", "Demon disk", choices)
+		if(picked && deck.store_demon(choices[picked], user))
+			deck.grant_demon_actions(user)
+		return TRUE
+
+/obj/machinery/door/cy_netspace_available_actions(mob/living/net_avatar/avatar)
+	return list("status", "open", "close")
+
+/obj/machinery/door/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
+	switch(action_id)
+		if("status")
+			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
+			return TRUE
+		if("open")
+			open()
+			return TRUE
+		if("close")
+			close()
+			return TRUE
+	return FALSE
+
+/obj/machinery/computer/cy_netspace_available_actions(mob/living/net_avatar/avatar)
+	return list("status", "open_interface", "disable_network")
+
+/obj/machinery/computer/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
 	switch(action_id)
 		if("status")
 			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
 			return TRUE
 		if("open_interface")
 			ui_interact(avatar)
+			return TRUE
+		if("disable_network")
+			cy_net_isolated = TRUE
+			return TRUE
+	return FALSE
+
+/obj/machinery/porta_turret/cy_netspace_available_actions(mob/living/net_avatar/avatar)
+	return list("status", "disable_network")
+
+/obj/machinery/porta_turret/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
+	switch(action_id)
+		if("status")
+			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
+			return TRUE
+		if("disable_network")
+			cy_net_isolated = TRUE
 			return TRUE
 	return FALSE

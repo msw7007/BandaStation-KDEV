@@ -23,8 +23,16 @@
 		power_mult *= 1.15
 		prep_mult *= 0.75
 		trace_mult *= 1.25
+	if(caster)
+		power_mult *= caster.cy_get_demon_power_multiplier()
+		prep_mult *= caster.cy_get_demon_prep_multiplier()
+		trace_mult *= caster.cy_get_demon_trace_multiplier()
 	if(has_digital_target)
 		target_context_type = CY_DEMON_CONTEXT_NETSPACE
+	if(!is_netspace())
+		power_mult *= 0.9
+		prep_mult *= 1.1
+		range_mult *= 0.9
 	return TRUE
 
 /datum/cy_demon_context/proc/on_prepare()
@@ -53,10 +61,10 @@
 		success = TRUE
 	return success
 
-/datum/cy_demon_context/proc/apply_digital_damage(amount, damage_type = CY_DEMON_EFFECT_BREACH)
+/datum/cy_demon_context/proc/apply_digital_damage(amount)
 	if(!target)
 		return FALSE
-	return cy_call_bool(target, "cy_apply_netspace_damage", list(amount, damage_type, caster))
+	return cy_call_bool(target, "cy_apply_netspace_damage", list(amount, caster))
 
 /datum/cy_demon_context/proc/get_digital_status()
 	if(!target)

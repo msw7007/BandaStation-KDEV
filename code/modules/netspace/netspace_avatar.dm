@@ -1,3 +1,4 @@
+
 /mob/living/net_avatar
 	name = "net avatar"
 	desc = "A digital body in the city network."
@@ -6,8 +7,6 @@
 	density = FALSE
 	color = CY_NET_COLOR_ACTIVE
 	/// Net avatars still pass through some generic object-attack code.
-	/// Declare these vars locally instead of relying on basic-mob fields.
-	/// In netspace, default direct attacks are psychic disruption, not brute hits.
 	var/obj_damage = 8
 	melee_damage_lower = 1
 	melee_damage_upper = 3
@@ -31,6 +30,11 @@
 	var/datum/netspace_cluster/connecting_cluster
 	var/connect_action_until = 0
 	var/returning = FALSE
+	var/engram_unbound = FALSE
+	var/engram_veil_started_at = 0
+	var/last_detection_x = 0
+	var/last_detection_y = 0
+	var/last_detection_z = 0
 
 /mob/living/net_avatar/Initialize(mapload)
 	. = ..()
@@ -40,6 +44,7 @@
 
 /mob/living/net_avatar/Destroy()
 	SSnetspace.unregister_avatar(src)
+	cy_clear_connected_cluster_images()
 	if(client && physical_body && !QDELETED(physical_body))
 		client.mob = physical_body
 	physical_body = null
@@ -58,6 +63,9 @@
 		last_synced_physical_x = body.x
 		last_synced_physical_y = body.y
 		last_synced_physical_z = body.z
+	last_detection_x = x
+	last_detection_y = y
+	last_detection_z = z
 	update_net_color()
 
 /mob/living/net_avatar/proc/update_net_color()
@@ -82,6 +90,39 @@
 	net_keys += key
 	return TRUE
 
+/mob/living/net_avatar/proc/cy_grant_net_key(key_id, key_name = null)
+	if(!key_id)
+		return FALSE
+	if(!net_keys)
+		net_keys = list()
+	for(var/datum/net_access_key/existing as anything in net_keys)
+		if(existing?.key_id == key_id)
+			return TRUE
+	if(istext(key_id))
+		net_keys[key_id] = key_name || key_id
+	else
+		net_keys += key_id
+	if(physical_body && hascall(physical_body, "cy_remember_net_key"))
+		call(physical_body, "cy_remember_net_key")(key_id, key_name)
+	to_chat(src, span_notice("Cryptokey cached: [key_name || key_id]."))
+	return TRUE
+
+/mob/living/net_avatar/proc/cy_has_net_key(key_id)
+	if(!key_id)
+		return FALSE
+	if(net_keys)
+		if(net_keys[key_id])
+			return TRUE
+		for(var/datum/net_access_key/key as anything in net_keys)
+			if(key?.key_id == key_id)
+				return TRUE
+	if(physical_body)
+		if(hascall(physical_body, "cy_has_net_key") && call(physical_body, "cy_has_net_key")(key_id))
+			return TRUE
+		if(hascall(physical_body, "cy_knows_net_key") && call(physical_body, "cy_knows_net_key")(key_id))
+			return TRUE
+	return FALSE
+
 /mob/living/net_avatar/proc/cy_clear_connected_cluster_images()
 	if(client && connected_cluster_images)
 		for(var/image/I as anything in connected_cluster_images)
@@ -97,7 +138,7 @@
 		if(!cluster?.proxy)
 			continue
 		var/image/I = image(cluster.proxy.icon, cluster.proxy, cluster.proxy.icon_state)
-		I.color = CY_NET_COLOR_NODE_CONNECTED
+		I.color = CY_NET_CLUSTER_COLOR_CONNECTED
 		I.alpha = 220
 		I.layer = cluster.proxy.layer + 0.1
 		connected_cluster_images += I
@@ -112,7 +153,7 @@
 /mob/living/net_avatar/cy_get_netspace_security()
 	return CY_NET_SECURITY_BASIC
 
-/mob/living/net_avatar/cy_apply_netspace_damage(amount, damage_type = CY_NET_DAMAGE_ATTACK, source)
+/mob/living/net_avatar/cy_apply_netspace_damage(amount, source)
 	adjust_psychic_loss(max(0, round(amount * 0.25)))
 	if(personal_trace)
 		personal_trace.add_trace(max(1, round(amount * 0.25)), source, "avatar hit")
@@ -124,20 +165,37 @@
 	return TRUE
 
 /mob/living/net_avatar/cy_get_netspace_status(user)
-	return "Avatar mode: [avatar_mode]. Data: [net_data]. Trace: [personal_trace ? personal_trace.trace_level : 0]."
+	return "Avatar mode: [avatar_mode]. Data: [cy_local_net_data_total()]. Trace: [personal_trace ? personal_trace.trace_level : 0]."
 
-/mob/living/net_avatar/proc/cy_get_net_data()
+/mob/living/net_avatar/proc/cy_local_net_data_total()
+	if(physical_body && hascall(physical_body, "cy_get_net_data"))
+		return call(physical_body, "cy_get_net_data")() + net_data
 	return net_data
 
-/mob/living/net_avatar/proc/cy_set_net_data(amount)
-	net_data = max(0, amount)
-	return TRUE
-
 /mob/living/net_avatar/proc/netspace_process(seconds_per_tick)
+	cy_prune_connected_clusters()
+	process_detection_movement()
 	if(avatar_mode == CY_NET_AVATAR_MIRROR)
 		process_mirror_sync()
 	else
 		process_distance_feedback()
+
+
+/mob/living/net_avatar/proc/process_detection_movement()
+	if(!last_detection_z)
+		last_detection_x = x
+		last_detection_y = y
+		last_detection_z = z
+		return
+	if(x == last_detection_x && y == last_detection_y && z == last_detection_z)
+		return
+	last_detection_x = x
+	last_detection_y = y
+	last_detection_z = z
+	if(personal_trace?.trace_level > 0)
+		personal_trace.add_trace(CY_NET_DETECTION_MOVE_TRACE, src, "avatar movement")
+		if(personal_trace.trace_level >= CY_NET_DETECTION_REVEAL_TRACE && physical_body)
+			SSnetspace.notify_trace(physical_body, src, CY_NET_DETECTION_NEAR_TRACE, "avatar trace reveal")
 
 /mob/living/net_avatar/proc/process_mirror_sync()
 	if(!physical_body || QDELETED(physical_body))
@@ -200,12 +258,18 @@
 	cy_prune_connected_clusters()
 	return connected_clusters[cluster] && world.time <= connected_clusters[cluster]
 
+/mob/living/net_avatar/proc/cy_is_connected_to_cluster(datum/netspace_cluster/cluster)
+	return cy_has_connected_cluster(cluster)
+
 /mob/living/net_avatar/proc/cy_is_connecting_to_cluster(datum/netspace_cluster/cluster)
 	return connecting_cluster == cluster && world.time <= connect_action_until
 
 /mob/living/net_avatar/proc/cy_connect_to_cluster(datum/netspace_cluster/cluster)
 	if(!cluster)
 		to_chat(src, span_warning("No node is close enough."))
+		return FALSE
+	if(avatar_mode == CY_NET_AVATAR_ENGRAM)
+		to_chat(src, span_warning("Engrams cannot extend their range through Connect."))
 		return FALSE
 	if(cy_has_connected_cluster(cluster))
 		to_chat(src, span_notice("You are already connected to [cluster.name]."))
@@ -214,7 +278,7 @@
 	connecting_cluster = cluster
 	connect_action_until = world.time + connect_time
 	if(combat_mode)
-		cluster.cy_raise_physical_alarm(src)
+		cluster.cy_alert_all(src, "Detected connection")
 	to_chat(src, span_notice("Connecting to [cluster.name]..."))
 	if(!do_after(src, connect_time, target = cluster.proxy))
 		if(connecting_cluster == cluster)
@@ -233,7 +297,21 @@
 	return TRUE
 
 /mob/living/net_avatar/proc/process_engram_distance()
+	var/area/current_area = get_area(src)
+	if(istype(current_area, /area/netspace/veil))
+		if(!engram_veil_started_at)
+			engram_veil_started_at = world.time
+		if(!engram_unbound && world.time - engram_veil_started_at >= CY_NET_ENGRAM_VEIL_UNBIND_TIME)
+			cy_unbind_engram("The Veil finishes cutting your carrier leash.")
+		if(engram_unbound)
+			adjust_psychic_loss(-CY_NET_ENGRAM_VEIL_REGEN, updating_health = FALSE, forced = TRUE)
+	else
+		engram_veil_started_at = 0
+	if(engram_unbound)
+		return
 	if(!anchor_ref || QDELETED(anchor_ref))
+		to_chat(src, span_userdanger("Your carrier is gone. The engram collapses."))
+		death()
 		return
 	var/turf/anchor_net_turf = SSnetspace.get_net_turf_for_atom(anchor_ref)
 	if(!anchor_net_turf || z != anchor_net_turf.z)
@@ -241,7 +319,26 @@
 	var/distance = get_dist(src, anchor_net_turf)
 	if(distance > CY_NET_ENGRAM_SAFE_DISTANCE)
 		adjust_psychic_loss(2)
-		to_chat(src, span_warning("Your engram frays outside its anchor range."))
+		to_chat(src, span_warning("Your engram frays outside its carrier range."))
+
+/mob/living/net_avatar/proc/cy_unbind_engram(message = null)
+	if(avatar_mode != CY_NET_AVATAR_ENGRAM || engram_unbound)
+		return FALSE
+	engram_unbound = TRUE
+	anchor_ref = null
+	if(message)
+		to_chat(src, span_notice(message))
+	return TRUE
+
+/mob/living/net_avatar/proc/cy_bind_engram(atom/new_anchor, message = null)
+	if(avatar_mode != CY_NET_AVATAR_ENGRAM || !new_anchor)
+		return FALSE
+	engram_unbound = FALSE
+	anchor_ref = new_anchor
+	engram_veil_started_at = 0
+	if(message)
+		to_chat(src, span_warning(message))
+	return TRUE
 
 /mob/living/net_avatar/proc/cy_netspace_feedback(excess)
 	to_chat(src, span_warning("Distance noise claws at your deck and implants."))
@@ -259,20 +356,21 @@
 	returning = TRUE
 	if(client && physical_body && !QDELETED(physical_body))
 		client.mob = physical_body
+		if(cy_active_cyberdeck)
+			cy_active_cyberdeck.grant_demon_actions(physical_body)
 	qdel(src)
-
 
 /mob/living/net_avatar/resolve_unarmed_attack(atom/attack_target, list/modifiers)
 	if(istype(attack_target, /obj/effect/netspace/proxy))
 		var/obj/effect/netspace/proxy/proxy = attack_target
-		proxy.cy_handle_proxy_click(src, modifiers)
+		proxy.cy_handle_net_left(src)
 		return TRUE
 	return ..()
 
 /mob/living/net_avatar/resolve_right_click_attack(atom/target, list/modifiers)
 	if(istype(target, /obj/effect/netspace/proxy))
 		var/obj/effect/netspace/proxy/proxy = target
-		proxy.cy_handle_proxy_click(src, modifiers)
+		proxy.cy_handle_net_right(src)
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 
@@ -307,5 +405,20 @@
 	avatar.setup_avatar(user, mode, anchor || user)
 	avatar.name = "[user.name]'s avatar"
 	avatar.net_keys = user.cy_collect_net_keys()
+	avatar.cy_known_demons = user.cy_collect_demons()
+	avatar.cy_selected_demon = user.cy_selected_demon
+	avatar.cy_active_cyberdeck = user.cy_get_active_cyberdeck()
+	if(avatar.cy_active_cyberdeck)
+		avatar.cy_active_cyberdeck.grant_demon_actions(avatar)
 	user.client.mob = avatar
 	return avatar
+
+/mob/living/net_avatar/cy_can_use_demon_on(atom/target, datum/cy_demon/demon)
+	if(istype(target, /obj/effect/netspace/proxy))
+		var/obj/effect/netspace/proxy/proxy = target
+		if(!proxy.cluster)
+			return FALSE
+		if(!cy_is_connected_to_cluster(proxy.cluster))
+			to_chat(src, span_warning("You need a personal Connect to run demons through this node."))
+			return FALSE
+	return TRUE

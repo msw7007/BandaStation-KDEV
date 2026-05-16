@@ -33,3 +33,24 @@
 #define CY_DEMON_CAST_CANCELLED -1
 #define CY_DEMON_CAST_RUNNING 0
 #define CY_DEMON_CAST_FINISHED 1
+
+#define CY_DEMON_SPECIAL_MASS "mass"
+#define CY_DEMON_SPECIAL_SPREAD "spread"
+#define CY_DEMON_SPECIAL_JUMP "jump"
+#define CY_DEMON_SPECIAL_STEALTH "stealth"
+#define CY_DEMON_SPECIAL_EMI "emi"
+#define CY_DEMON_EFFECT_REAPER "reaper"
+#define CY_DEMON_EFFECT_COLLECTOR "collector"
+
+#define CY_DEMON_UPGRADE_MASS "mass"
+#define CY_DEMON_UPGRADE_SPREAD "spread"
+#define CY_DEMON_UPGRADE_JUMP "jump"
+#define CY_DEMON_UPGRADE_EMI "emi"
+#define CY_DEMON_UPGRADE_BLOCK_KEY "block_key"
+#define CY_DEMON_UPGRADE_EFFECT_KEY "effect_key"
+#ifndef CY_DEMON_MASS_RADIUS
+#define CY_DEMON_MASS_RADIUS 2
+#endif
+#ifndef CY_DEMON_JUMP_RANGE
+#define CY_DEMON_JUMP_RANGE 4
+#endif

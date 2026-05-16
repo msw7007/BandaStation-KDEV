@@ -1137,7 +1137,27 @@
 /mob/living/proc/activate_selected_cy_daemon(atom/target)
 	if(next_move > world.time)
 		return FALSE
-	to_chat(src, span_notice("Вы активируете выбранного демона[target ? " на [target.declent_ru(ACCUSATIVE)]" : ""]."))
+	if(!target)
+		return FALSE
+	var/datum/cy_demon/demon = cy_prepared_demon
+	if(!demon)
+		to_chat(src, span_warning("Prepare a demon ability first."))
+		return FALSE
+	var/obj/item/clothing/gloves/cyberdeck/deck = cy_prepared_demon_deck || cy_get_active_cyberdeck()
+	if(!deck || QDELETED(deck) || cy_get_active_cyberdeck() != deck)
+		to_chat(src, span_warning("You need the cyberdeck that prepared [demon.name]."))
+		cy_clear_prepared_demon()
+		return FALSE
+	if(!(demon in deck.stored_demons))
+		to_chat(src, span_warning("[demon.name] is no longer loaded in [deck]."))
+		cy_clear_prepared_demon()
+		return FALSE
+	if(!cy_can_use_demon_on(target, demon))
+		return FALSE
+	if(!demon.start_cast(src, target, src))
+		return FALSE
+	cy_prepared_demon_action?.StartCooldown(demon.cooldown_time)
+	cy_clear_prepared_demon()
 	apply_cy_action_delay(CLICK_CD_CLICK_ABILITY, /datum/cy_skill/intelligence/fast_code)
 	return TRUE
 

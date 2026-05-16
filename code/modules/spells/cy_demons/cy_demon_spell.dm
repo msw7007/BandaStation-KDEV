@@ -43,15 +43,18 @@
 		return
 	if(!loaded_demon)
 		return . | SPELL_CANCEL_CAST
-	if(!loaded_demon.can_cast(owner, cast_on, owner))
-		return . | SPELL_CANCEL_CAST
 
 /datum/action/cooldown/spell/pointed/cy_demon/cast(atom/cast_on)
 	. = ..()
 	if(!loaded_demon)
 		return FALSE
-	loaded_demon.start_cast(owner, cast_on, owner)
-	unset_click_ability(owner, refund_cooldown = FALSE)
+
+	var/mob/living/living_owner = owner
+	if(!istype(living_owner))
+		return FALSE
+
+	living_owner.cy_prepare_demon(loaded_demon, src)
+	unset_click_ability(living_owner, refund_cooldown = FALSE)
 	return TRUE
 
 /mob/living/proc/cy_grant_demon_spell(datum/cy_demon/demon)
