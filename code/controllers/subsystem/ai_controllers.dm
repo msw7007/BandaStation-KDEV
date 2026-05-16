@@ -18,6 +18,7 @@ SUBSYSTEM_DEF(ai_controllers)
 
 /datum/controller/subsystem/ai_controllers/Initialize()
 	setup_subtrees()
+	setup_cy_npc_factions()
 	return SS_INIT_SUCCESS
 
 /datum/controller/subsystem/ai_controllers/stat_entry(msg)
@@ -39,6 +40,7 @@ SUBSYSTEM_DEF(ai_controllers)
 		current_run.len--
 		if(!ai_controller.able_to_plan)
 			continue
+		ai_controller.cy_npc_strategy_tick(wait * 0.1)
 		ai_controller.SelectBehaviors(wait * 0.1)
 
 		if(!length(ai_controller.current_behaviors)) //Still no plan
