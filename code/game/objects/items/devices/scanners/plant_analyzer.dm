@@ -300,6 +300,14 @@
 		"weed_rate" = seed.weed_rate,
 		"weed_chance" = seed.weed_chance,
 		"graft_gene" = seed.graft_gene || /datum/plant_gene/trait/repeated_harvest,
+		"cy_quality" = seed.cy_quality,
+		"cy_quality_text" = cy_quality_name(seed.cy_quality),
+		"cy_water_min" = seed.cy_water_min,
+		"cy_water_max" = seed.cy_water_max,
+		"cy_nutrient_min" = seed.cy_nutrient_min,
+		"cy_nutrient_max" = seed.cy_nutrient_max,
+		"cy_crop_type" = seed.cy_crop_type,
+		"cy_gene_effect_points" = seed.cy_gene_effect_points,
 	)
 	seed_data["removable_traits"] = list()
 	seed_data["core_traits"] = list()

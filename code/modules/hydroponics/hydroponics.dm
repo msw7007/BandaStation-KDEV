@@ -65,6 +65,10 @@
 	var/tray_flags = HYDROPONIC
 	///How many extra px to offset the plant sprite on the y axis, gets passed to the seed and added to the seeds offset
 	var/plant_offset_y = 0
+	/// Soil quality inherited by fruit and affected by overwatering/overfertilizing.
+	var/cy_soil_quality = CY_QUALITY_AVERAGE
+	/// Cached environment score from last growth tick.
+	var/cy_last_growth_score = 0
 
 
 /obj/machinery/hydroponics/Initialize(mapload)
@@ -294,6 +298,7 @@
 		lastcycle = world.time
 		if(myseed && plant_status != HYDROTRAY_PLANT_DEAD)
 			var/is_fungus = myseed.get_gene(/datum/plant_gene/trait/plant_type/fungal_metabolism)
+			cy_apply_growth_environment(is_fungus)
 			// Advance age, if planted in mushroom friendly soil and we are a mushroom we mature 40% faster.
 			age +=  1 * (is_fungus && (tray_flags & FAST_MUSHROOMS)) ? FAST_MUSH_MODIFIER : 1
 			if(age < myseed.maturation)
@@ -643,6 +648,9 @@
 
 	. += span_info("Water: [waterlevel]/[maxwater].")
 	. += span_info("Nutrient: [reagents.total_volume]/[maxnutri].")
+	if(myseed)
+		. += span_info("Оптимум воды: [myseed.cy_water_min]-[myseed.cy_water_max]. Оптимум удобрений: [myseed.cy_nutrient_min]-[myseed.cy_nutrient_max].")
+		. += span_info("Качество почвы: [cy_quality_name(cy_soil_quality)]. Последняя оценка роста: [cy_last_growth_score].")
 	if(self_sustaining)
 		. += span_info("The tray's autogrow is active, protecting it from species mutations, weeds, and pests.")
 
@@ -1333,3 +1341,50 @@
 /obj/item/circuit_component/hydroponics/input_received(datum/port/input/port)
 	if(attached_tray.anchored && attached_tray.powered())
 		attached_tray.set_self_sustaining(!!selfsustaining_setting.value)
+
+
+/obj/machinery/hydroponics/proc/cy_apply_growth_environment(is_fungus = FALSE)
+	if(!myseed)
+		return
+	var/water_score = cy_range_score(waterlevel, myseed.cy_water_min, myseed.cy_water_max)
+	var/nutrient_score = cy_range_score(reagents.total_volume, myseed.cy_nutrient_min, myseed.cy_nutrient_max)
+	cy_last_growth_score = round((water_score + nutrient_score) / 2)
+	if(cy_last_growth_score >= 80)
+		adjust_plant_health(1 / max(rating, 1))
+		if(prob(25))
+			age++
+		if(prob(10))
+			myseed.cy_set_quality(myseed.cy_quality + 1, FALSE)
+	else if(cy_last_growth_score <= 25 && !is_fungus)
+		adjust_plant_health(-1 / max(rating, 1))
+		myseed.cy_set_quality(myseed.cy_quality - 1, FALSE)
+	if(waterlevel > myseed.cy_water_max * 1.5 || reagents.total_volume > myseed.cy_nutrient_max * 1.5)
+		adjust_toxic(1)
+		cy_soil_quality = max(CY_QUALITY_DISGUSTING, cy_soil_quality - 1)
+	else if(cy_last_growth_score >= 80 && prob(5))
+		cy_soil_quality = min(CY_QUALITY_EXCELLENT, cy_soil_quality + 1)
+
+/obj/machinery/hydroponics/proc/cy_apply_environment_to_product(obj/item/product_item)
+	if(!product_item || !myseed)
+		return
+	var/final_quality = round((myseed.cy_quality + cy_soil_quality) / 2)
+	if(cy_last_growth_score >= 80)
+		final_quality++
+	else if(cy_last_growth_score <= 25)
+		final_quality--
+	product_item.cy_set_quality(final_quality, FALSE)
+	var/obj/item/food/grown/grown_food = product_item
+	if(istype(grown_food))
+		grown_food.cy_apply_quality_to_reagents()
+	var/obj/item/food/grown/grown_product = product_item
+	if(istype(grown_product) && grown_product.seed)
+		grown_product.seed.cy_set_quality(final_quality, FALSE)
+
+/proc/cy_range_score(value, minimum, maximum)
+	if(maximum <= minimum)
+		return 100
+	if(value >= minimum && value <= maximum)
+		return 100
+	if(value < minimum)
+		return clamp(round((value / max(minimum, 1)) * 100), 0, 100)
+	return clamp(round(100 - ((value - maximum) / max(maximum, 1)) * 100), 0, 100)

@@ -89,7 +89,7 @@
 	SIGNAL_HANDLER
 
 	if(istype(gathered_ore) && gathered_ore.refined_type)
-		points += gathered_ore.points * point_upgrade * gathered_ore.amount
+		points += gathered_ore.points * point_upgrade * gathered_ore.amount * gathered_ore.cy_get_resource_yield_multiplier()
 
 /// Returns the amount of a specific alloy design, based on the accessible materials
 /obj/machinery/mineral/ore_redemption/proc/can_smelt_alloy(datum/design/design)

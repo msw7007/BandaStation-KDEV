@@ -60,6 +60,16 @@
 	var/crafting_complexity = 0
 	///Buff given when a hand-crafted version of this item is consumed. Randomized according to crafting_complexity if not assigned.
 	var/datum/status_effect/food/crafted_food_buff = null
+	/// CyberPunk taste weights. Used to detect clashing additions in free-form dishes.
+	var/list/cy_flavor_profile
+	/// Quality bonus granted by non-thermal processing such as cutting, grinding or shaping.
+	var/cy_processing_quality_bonus = 1
+	/// Quality bonus granted by successful cooking.
+	var/cy_cooking_quality_bonus = 1
+	/// Last world.time at which quality decay was applied.
+	var/cy_last_quality_decay = 0
+	/// Timer id for gradual quality decay.
+	var/cy_quality_decay_timerid
 
 /obj/item/food/Initialize(mapload)
 	if(food_reagents)
@@ -92,6 +102,7 @@
 	make_bakeable()
 	make_microwaveable()
 	ADD_TRAIT(src, TRAIT_FISHING_BAIT, INNATE_TRAIT)
+	cy_setup_food_quality()
 
 /obj/item/food/apply_material_effects(list/materials)
 	if(!HAS_TRAIT(src, TRAIT_INGREDIENTS_HOLDER)) //ingredients holder handle prefixes and colors differently
@@ -126,6 +137,7 @@
 
 /obj/item/food/on_craft_completion(list/components, datum/crafting_recipe/current_recipe, atom/crafter)
 	. = ..()
+	cy_apply_food_quality_from_components(components, cooking_bonus = max(0, crafting_complexity))
 	for(var/obj/item/item in components) // parent proc assumes machinery or structures in components are used, so we should be fine to assume only items from here
 		if(!istype(item, /obj/item/food))
 			continue
@@ -192,5 +204,125 @@
 	if(!istype(original_atom, /obj/item/food))
 		return
 	var/obj/item/food/original_food = original_atom
+	cy_copy_processed_food_quality(original_food)
 	if(original_food.intrinsic_food_materials)
 		LAZYADD(intrinsic_food_materials, original_food.intrinsic_food_materials)
+
+
+/obj/item/food/proc/cy_setup_food_quality()
+	if(!cy_flavor_profile && tastes)
+		cy_flavor_profile = tastes.Copy()
+	if(!cy_flavor_profile)
+		cy_flavor_profile = list()
+	if(!cy_last_quality_decay)
+		cy_last_quality_decay = world.time
+	cy_apply_quality_to_reagents()
+	cy_start_quality_decay_loop()
+
+/obj/item/food/Destroy(force)
+	if(cy_quality_decay_timerid)
+		deltimer(cy_quality_decay_timerid)
+		cy_quality_decay_timerid = null
+	return ..()
+
+/obj/item/food/proc/cy_apply_food_quality_from_components(list/components, processing_bonus = 0, cooking_bonus = 0)
+	var/conflict_penalty = cy_get_flavor_conflict_penalty(components)
+	cy_apply_quality_from_components(components, processing_bonus + cooking_bonus, conflict_penalty)
+	cy_merge_flavor_profiles(components)
+	cy_apply_quality_to_reagents()
+
+/obj/item/food/proc/cy_copy_processed_food_quality(obj/item/food/original_food)
+	if(!original_food)
+		return
+	cy_copy_quality_from(original_food, cy_processing_quality_bonus)
+	cy_flavor_profile = original_food.cy_flavor_profile?.Copy()
+	cy_apply_quality_to_reagents()
+
+/obj/item/food/proc/cy_copy_cooked_food_quality(obj/item/food/original_food, positive_result = TRUE)
+	if(!original_food)
+		return
+	cy_copy_quality_from(original_food, positive_result ? cy_cooking_quality_bonus : -1)
+	cy_flavor_profile = original_food.cy_flavor_profile?.Copy()
+	cy_apply_quality_to_reagents()
+
+/obj/item/food/proc/cy_apply_quality_to_reagents()
+	if(!reagents)
+		return
+	var/quality_multiplier_value = cy_get_quality_multiplier()
+	if(!isnull(starting_reagent_purity))
+		starting_reagent_purity = clamp(starting_reagent_purity * quality_multiplier_value, 0, 1)
+	for(var/datum/reagent/reagent as anything in reagents.reagent_list)
+		if(!isnull(reagent.purity))
+			reagent.purity = clamp(reagent.purity * quality_multiplier_value, 0, 1)
+
+/obj/item/food/proc/cy_merge_flavor_profiles(list/components)
+	if(!cy_flavor_profile)
+		cy_flavor_profile = list()
+	for(var/obj/item/food/ingredient as anything in components)
+		if(!istype(ingredient) || !ingredient.cy_flavor_profile)
+			continue
+		for(var/flavor in ingredient.cy_flavor_profile)
+			cy_flavor_profile[flavor] = (cy_flavor_profile[flavor] || 0) + ingredient.cy_flavor_profile[flavor]
+
+/obj/item/food/proc/cy_get_flavor_conflict_penalty(list/components)
+	var/list/profile = list()
+	for(var/obj/item/food/ingredient as anything in components)
+		if(!istype(ingredient))
+			continue
+		var/list/source_profile = ingredient.cy_flavor_profile || ingredient.tastes
+		if(!source_profile)
+			continue
+		for(var/flavor in source_profile)
+			profile[flavor] = (profile[flavor] || 0) + source_profile[flavor]
+	return cy_flavor_conflict_penalty(profile)
+
+
+/obj/item/food/proc/cy_start_quality_decay_loop()
+	if(preserved_food || cy_quality_decay_timerid)
+		return
+	cy_quality_decay_timerid = addtimer(CALLBACK(src, PROC_REF(cy_quality_decay_loop)), CY_FOOD_ROOM_QUALITY_DECAY_TIME, TIMER_STOPPABLE)
+
+/obj/item/food/proc/cy_quality_decay_loop()
+	cy_quality_decay_timerid = null
+	cy_process_quality_decay()
+	if(!QDELETED(src) && !preserved_food && cy_quality > CY_QUALITY_DISGUSTING)
+		var/next_time = cy_is_refrigerated() ? CY_FOOD_REFRIGERATED_QUALITY_DECAY_TIME : CY_FOOD_ROOM_QUALITY_DECAY_TIME
+		cy_quality_decay_timerid = addtimer(CALLBACK(src, PROC_REF(cy_quality_decay_loop)), next_time, TIMER_STOPPABLE)
+
+/obj/item/food/proc/cy_process_quality_decay()
+	if(preserved_food || cy_quality <= CY_QUALITY_DISGUSTING)
+		return
+	var/decay_time = cy_is_refrigerated() ? CY_FOOD_REFRIGERATED_QUALITY_DECAY_TIME : CY_FOOD_ROOM_QUALITY_DECAY_TIME
+	if(world.time < cy_last_quality_decay + decay_time)
+		return
+	cy_last_quality_decay = world.time
+	cy_set_quality(cy_quality - 1)
+	cy_apply_quality_to_reagents()
+
+/obj/item/food/proc/cy_is_refrigerated()
+	var/atom/location = loc
+	while(location)
+		if(istype(location, /obj/structure/closet/crate/freezer) || istype(location, /obj/machinery/smartfridge))
+			return TRUE
+		location = location.loc
+	return FALSE
+
+/proc/cy_flavor_conflict_penalty(list/profile)
+	if(!length(profile))
+		return 0
+	var/penalty = 0
+	penalty += cy_pair_conflict(profile, CY_FLAVOR_SWEET, CY_FLAVOR_SALTY)
+	penalty += cy_pair_conflict(profile, CY_FLAVOR_SWEET, CY_FLAVOR_BITTER)
+	penalty += cy_pair_conflict(profile, CY_FLAVOR_FRESH, CY_FLAVOR_FATTY)
+	penalty += cy_pair_conflict(profile, CY_FLAVOR_SOUR, CY_FLAVOR_UMAMI)
+	return min(penalty, 2)
+
+/proc/cy_pair_conflict(list/profile, flavor_a, flavor_b)
+	var/a = profile[flavor_a] || 0
+	var/b = profile[flavor_b] || 0
+	if(!a || !b)
+		return 0
+	var/ratio = min(a, b) / max(a, b)
+	if(ratio >= 0.75)
+		return 1
+	return 0

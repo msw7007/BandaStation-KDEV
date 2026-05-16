@@ -65,6 +65,18 @@
 	var/datum/plant_gene/graft_gene = /datum/plant_gene/trait/repeated_harvest
 	///Determines if the plant should be allowed to mutate early at 30+ instability.
 	var/seed_flags = MUTATE_EARLY
+	/// CyberPunk optimal water bounds for growth.
+	var/cy_water_min = 20
+	var/cy_water_max = 80
+	/// CyberPunk optimal nutrient bounds for growth.
+	var/cy_nutrient_min = 4
+	var/cy_nutrient_max = 16
+	/// Tree / plant / underground crop kind.
+	var/cy_crop_type = CY_CROP_PLANT
+	/// Genetic effect budget already inserted through mixing/analyzers.
+	var/cy_gene_effect_points = 0
+	/// Additional stored gene data used by analyzer/mixer machines.
+	var/list/cy_gene_data
 
 /obj/item/seeds/Initialize(mapload, nogenes = FALSE)
 	. = ..()
@@ -102,6 +114,7 @@
 	)
 
 	AddElement(/datum/element/contextual_screentip_item_typechecks, hovering_item_typechecks)
+	cy_initialize_seed_quality()
 
 /obj/item/seeds/Destroy()
 	// No AS ANYTHING here, because the list/genes could have typepaths in it.
@@ -144,6 +157,14 @@
 		copied_gene.on_new_seed(copy_seed)
 
 	copy_seed.reagents_add = reagents_add.Copy() // Faster than grabbing the list from genes.
+	copy_seed.cy_quality = cy_quality
+	copy_seed.cy_water_min = cy_water_min
+	copy_seed.cy_water_max = cy_water_max
+	copy_seed.cy_nutrient_min = cy_nutrient_min
+	copy_seed.cy_nutrient_max = cy_nutrient_max
+	copy_seed.cy_crop_type = cy_crop_type
+	copy_seed.cy_gene_effect_points = cy_gene_effect_points
+	copy_seed.cy_gene_data = cy_gene_data?.Copy()
 	return copy_seed
 
 /obj/item/seeds/proc/get_gene(typepath)
@@ -250,6 +271,7 @@
 			t_prod.name = LOWER_TEXT(parent.myseed.plantname)
 		if(productdesc)
 			t_prod.desc = productdesc
+		parent.cy_apply_environment_to_product(t_prod)
 		t_prod.seed.name = parent.myseed.name
 		t_prod.seed.desc = parent.myseed.desc
 		t_prod.seed.plantname = parent.myseed.plantname
@@ -648,3 +670,62 @@
 /// Called when the seed is removed from a tray - possibly from being harvested, possibly from being uprooted
 /obj/item/seeds/proc/on_unplanted(obj/machinery/hydroponics/parent)
 	return
+
+
+/obj/item/seeds/proc/cy_initialize_seed_quality()
+	if(cy_quality == CY_QUALITY_AVERAGE)
+		cy_quality = clamp(round((endurance + potency + yield * 10) / 45), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+	if(!cy_gene_data)
+		cy_gene_data = list()
+	cy_gene_data["water_min"] = cy_water_min
+	cy_gene_data["water_max"] = cy_water_max
+	cy_gene_data["nutrient_min"] = cy_nutrient_min
+	cy_gene_data["nutrient_max"] = cy_nutrient_max
+	cy_gene_data["crop_type"] = cy_crop_type
+	cy_gene_data["product"] = product
+	cy_gene_data["quality"] = cy_quality
+
+/obj/item/seeds/proc/cy_apply_mutation_pressure(amount)
+	adjust_instability(amount)
+	if(instability >= CY_SEED_DANGEROUS_MUTATION_THRESHOLD && prob(instability - CY_SEED_DANGEROUS_MUTATION_THRESHOLD))
+		cy_apply_dangerous_mutation()
+
+/obj/item/seeds/proc/cy_apply_dangerous_mutation()
+	if(LAZYLEN(mutatelist))
+		return
+	mutatelist = list(/obj/item/seeds/tomato/killer)
+	adjust_yield(-1)
+	adjust_potency(rand(5, 15))
+	cy_set_quality(cy_quality - 1)
+
+/obj/item/seeds/proc/cy_add_gene_effect(effect_id, points, datum/source)
+	if(!effect_id || points <= 0)
+		return FALSE
+	if(cy_gene_effect_points + points > CY_SEED_MAX_EFFECT_POINTS)
+		return FALSE
+	if(!cy_gene_data)
+		cy_gene_data = list()
+	cy_gene_effect_points += points
+	cy_gene_data[effect_id] = (cy_gene_data[effect_id] || 0) + points
+	cy_apply_mutation_pressure(points * 2)
+	cy_set_quality(cy_quality - max(0, round(points / 4)))
+	return TRUE
+
+/obj/item/seeds/proc/cy_export_gene_data()
+	cy_initialize_seed_quality()
+	return cy_gene_data.Copy()
+
+/obj/item/seeds/proc/cy_import_gene_data(list/data, max_points = CY_SEED_MAX_EFFECT_POINTS)
+	if(!length(data))
+		return FALSE
+	if(!cy_gene_data)
+		cy_gene_data = list()
+	var/points_added = 0
+	for(var/key in data)
+		if(points_added >= max_points)
+			break
+		cy_gene_data[key] = data[key]
+		points_added++
+	cy_gene_effect_points = min(CY_SEED_MAX_EFFECT_POINTS, cy_gene_effect_points + points_added)
+	cy_apply_mutation_pressure(points_added)
+	return TRUE

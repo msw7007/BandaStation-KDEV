@@ -152,6 +152,7 @@
 		if(istype(original_object, /obj/item/food) && istype(grilled_result, /obj/item/food))
 			var/obj/item/food/original_food = original_object
 			var/obj/item/food/grilled_food = grilled_result
+			grilled_food.cy_copy_cooked_food_quality(original_food, positive_result)
 			LAZYADD(grilled_food.intrinsic_food_materials, original_food.intrinsic_food_materials)
 		grilled_result.set_custom_materials(original_object.custom_materials)
 

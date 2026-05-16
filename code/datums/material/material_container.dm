@@ -152,11 +152,12 @@
 	var/material_amount = 0
 
 	var/list/item_materials = source.get_material_composition(mat_container_flags)
+	var/quality_multiplier_value = source.cy_get_material_insert_multiplier()
 	var/list/mats_consumed = list()
 	for(var/MAT in item_materials)
 		if(!can_hold_material(MAT))
 			continue
-		var/mat_amount = OPTIMAL_COST(item_materials[MAT] * multiplier)
+		var/mat_amount = OPTIMAL_COST(item_materials[MAT] * multiplier * quality_multiplier_value)
 		materials[MAT] += mat_amount
 		if(item_materials[MAT] > max_mat_value)
 			max_mat_value = item_materials[MAT]
@@ -574,10 +575,11 @@
 		return 0
 	var/material_amount = 0
 	var/list/item_materials = item.get_material_composition(mat_container_flags)
+	var/quality_multiplier_value = item.cy_get_material_insert_multiplier()
 	for(var/MAT in item_materials)
 		if(!can_hold_material(MAT))
 			continue
-		material_amount += item_materials[MAT]
+		material_amount += item_materials[MAT] * quality_multiplier_value
 	return material_amount
 //================================================================================================
 

@@ -406,6 +406,33 @@ GLOBAL_LIST_INIT(tool_items, list(
 #define CY_ITEM_KIND_PREFAB "prefab"
 #define CY_ITEM_KIND_MODULAR "modular"
 
+// CyberPunk quality core used by food, botany, resources and crafted components.
+#define CY_QUALITY_DISGUSTING 1
+#define CY_QUALITY_BAD 2
+#define CY_QUALITY_AVERAGE 3
+#define CY_QUALITY_GOOD 4
+#define CY_QUALITY_EXCELLENT 5
+
+#define CY_CROP_PLANT "plant"
+#define CY_CROP_TREE "tree"
+#define CY_CROP_UNDERGROUND "underground"
+
+#define CY_FLAVOR_SWEET "sweet"
+#define CY_FLAVOR_SALTY "salty"
+#define CY_FLAVOR_SOUR "sour"
+#define CY_FLAVOR_BITTER "bitter"
+#define CY_FLAVOR_UMAMI "umami"
+#define CY_FLAVOR_SPICY "spicy"
+#define CY_FLAVOR_FATTY "fatty"
+#define CY_FLAVOR_FRESH "fresh"
+
+#define CY_FOOD_ROOM_QUALITY_DECAY_TIME (10 MINUTES)
+#define CY_FOOD_REFRIGERATED_QUALITY_DECAY_TIME (60 MINUTES)
+#define CY_RESOURCE_MIN_UNITS 0.5
+#define CY_RESOURCE_MAX_UNITS 1.5
+#define CY_SEED_MAX_EFFECT_POINTS 10
+#define CY_SEED_DANGEROUS_MUTATION_THRESHOLD 80
+
 #define CY_ITEM_FUNCTION_ACTIVE "active"
 #define CY_ITEM_FUNCTION_PROTECTIVE "protective"
 

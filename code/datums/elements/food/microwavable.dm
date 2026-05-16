@@ -63,6 +63,7 @@
 		if(istype(source, /obj/item/food) && istype(result, /obj/item/food))
 			var/obj/item/food/original_food = source
 			var/obj/item/food/microwaved_food = result
+			microwaved_food.cy_copy_cooked_food_quality(original_food, !bad_recipe)
 			LAZYADD(microwaved_food.intrinsic_food_materials, original_food.intrinsic_food_materials)
 
 		if(microwaver && microwaver.mind)

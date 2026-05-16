@@ -315,3 +315,19 @@
 	name = "bottle of pest spray"
 	desc = "Contains a pesticide."
 	list_reagents = list(/datum/reagent/toxin/pestkiller = 30)
+
+
+/obj/item/cultivator/rake/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(!isopenturf(interacting_with) || isgroundlessturf(interacting_with))
+		return ..()
+	if(locate(/obj/machinery/hydroponics/soil) in interacting_with)
+		return ..()
+	user.balloon_alert(user, "рыхлим землю...")
+	if(!use_tool(interacting_with, user, 3 SECONDS, volume = 50))
+		return ITEM_INTERACT_BLOCKING
+	var/obj/machinery/hydroponics/soil/new_soil = new /obj/machinery/hydroponics/soil/rich(interacting_with)
+	new_soil.cy_soil_quality = CY_QUALITY_AVERAGE
+	new_soil.waterlevel = round(new_soil.maxwater / 2)
+	new_soil.reagents.add_reagent(/datum/reagent/plantnutriment/eznutriment, max(1, round(new_soil.maxnutri / 2)))
+	user.visible_message(span_notice("[user] prepares a planting bed."), span_notice("Вы подготавливаете грядку."))
+	return ITEM_INTERACT_SUCCESS

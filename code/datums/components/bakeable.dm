@@ -89,6 +89,7 @@
 	if(positive_result && istype(original_object, /obj/item/food) && istype(baked_result, /obj/item/food))
 		var/obj/item/food/original_food = original_object
 		var/obj/item/food/baked_food = baked_result
+		baked_food.cy_copy_cooked_food_quality(original_food, positive_result)
 		LAZYADD(baked_food.intrinsic_food_materials, original_food.intrinsic_food_materials)
 	//make space and tranfer reagents if it has any, also let any bad result handle removing or converting the transferred reagents on its own terms
 	if(baked_result.reagents && original_object.reagents)

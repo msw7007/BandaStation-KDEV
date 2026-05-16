@@ -270,6 +270,7 @@
 			hitsound = SFX_SWING_HIT
 
 	cy_initialize_item_core()
+	cy_initialize_quality_core()
 
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_NEW_ITEM, src)
 
@@ -444,6 +445,8 @@
 	var/datum/cy_organization/manufacturer = get_manufacturer_organization()
 	if(manufacturer)
 		. += span_notice("Производитель: [manufacturer.name].")
+	if(cy_should_show_quality())
+		. += span_notice("Качество: [cy_get_quality_text()].")
 	if(cy_broken)
 		. += span_warning("Предмет сломан: полезные боевые и защитные показатели обнулены.")
 	if(cy_item_kind == CY_ITEM_KIND_MODULAR)
@@ -2303,6 +2306,15 @@
 	/// Optional structure produced when this item is unfolded/deployed/converted.
 	var/cy_structure_type
 
+	/// Shared quality tier for CyberPunk crafting chains. 1 awful, 5 excellent.
+	var/cy_quality = CY_QUALITY_AVERAGE
+	/// TRUE when quality should modify generic item stats after creation/crafting.
+	var/cy_quality_affects_stats = FALSE
+	/// Internal guard so quality stat modifiers are applied once per rebuild.
+	var/cy_quality_stats_applied = FALSE
+	/// Optional quality data passed from resources/crafting into later production steps.
+	var/list/cy_quality_tags
+
 /obj/item/proc/cy_initialize_item_core()
 	if(isnull(cy_size_category))
 		cy_size_category = w_class
@@ -2631,6 +2643,115 @@
 	structure.manufacturer_tech_tags = manufacturer_tech_tags
 	qdel(src)
 	return structure
+
+
+/obj/item/proc/cy_initialize_quality_core()
+	cy_quality = clamp(round(cy_quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+	if(cy_quality_affects_stats && !cy_quality_stats_applied)
+		cy_quality_stats_applied = TRUE
+		var/multiplier = cy_get_quality_multiplier()
+		if(!isnull(cy_base_force))
+			cy_base_force = max(0, round(cy_base_force * multiplier, DAMAGE_PRECISION))
+		if(!isnull(cy_attack_force))
+			cy_attack_force = max(0, round(cy_attack_force * multiplier, DAMAGE_PRECISION))
+		if(!isnull(cy_base_attack_speed))
+			cy_base_attack_speed = max(1, round(cy_base_attack_speed / multiplier))
+		if(!isnull(cy_attack_speed))
+			cy_attack_speed = max(1, round(cy_attack_speed / multiplier))
+		max_integrity = max(1, round(max_integrity * multiplier))
+
+/obj/item/proc/cy_should_show_quality()
+	return cy_quality != CY_QUALITY_AVERAGE || istype(src, /obj/item/food) || istype(src, /obj/item/seeds) || istype(src, /obj/item/stack/ore)
+
+/obj/item/proc/cy_get_quality_text()
+	return cy_quality_name(cy_quality)
+
+/obj/item/proc/cy_get_quality_multiplier()
+	return cy_quality_multiplier(cy_quality)
+
+/obj/item/proc/cy_set_quality(new_quality, update = TRUE)
+	cy_quality = clamp(round(new_quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+	if(update)
+		update_appearance()
+	return cy_quality
+
+/obj/item/proc/cy_copy_quality_from(obj/item/source, quality_bonus = 0)
+	if(!source)
+		return cy_quality
+	cy_quality_tags = source.cy_quality_tags?.Copy()
+	return cy_set_quality(source.cy_quality + quality_bonus)
+
+/obj/item/proc/cy_apply_quality_from_components(list/components, quality_bonus = 0, conflict_penalty = 0)
+	var/quality = cy_average_quality_from_atoms(components, cy_quality)
+	quality += quality_bonus
+	quality -= conflict_penalty
+	return cy_set_quality(quality)
+
+/obj/item/proc/cy_get_material_insert_multiplier()
+	return cy_get_quality_multiplier()
+
+/obj/item/proc/cy_apply_quality_to_craft_result(list/components)
+	if(!length(components))
+		return
+	cy_apply_quality_from_components(components)
+	cy_quality_affects_stats = TRUE
+	cy_initialize_quality_core()
+	cy_rebuild_item_stats()
+
+/proc/cy_quality_name(quality)
+	switch(clamp(round(quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT))
+		if(CY_QUALITY_DISGUSTING)
+			return "отвратительное"
+		if(CY_QUALITY_BAD)
+			return "плохое"
+		if(CY_QUALITY_AVERAGE)
+			return "среднее"
+		if(CY_QUALITY_GOOD)
+			return "хорошее"
+		if(CY_QUALITY_EXCELLENT)
+			return "отличное"
+	return "среднее"
+
+/proc/cy_quality_multiplier(quality)
+	switch(clamp(round(quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT))
+		if(CY_QUALITY_DISGUSTING)
+			return 0.60
+		if(CY_QUALITY_BAD)
+			return 0.80
+		if(CY_QUALITY_AVERAGE)
+			return 1.00
+		if(CY_QUALITY_GOOD)
+			return 1.20
+		if(CY_QUALITY_EXCELLENT)
+			return 1.50
+	return 1
+
+/proc/cy_average_quality_from_atoms(list/atoms, fallback = CY_QUALITY_AVERAGE)
+	if(!length(atoms))
+		return fallback
+	var/total = 0
+	var/count = 0
+	for(var/atom/movable/movable as anything in atoms)
+		var/obj/item/item = movable
+		if(!istype(item))
+			continue
+		total += clamp(round(item.cy_quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+		count++
+	if(!count)
+		return fallback
+	return clamp(round(total / count), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+
+/proc/cy_random_natural_quality()
+	var/roll = rand(1, 100)
+	if(roll <= 8)
+		return CY_QUALITY_DISGUSTING
+	if(roll <= 25)
+		return CY_QUALITY_BAD
+	if(roll <= 70)
+		return CY_QUALITY_AVERAGE
+	if(roll <= 92)
+		return CY_QUALITY_GOOD
+	return CY_QUALITY_EXCELLENT
 
 // Generic CyberPunk module item. Subtypes define slot and modifiers; this is not a content catalogue.
 /obj/item/cy_module

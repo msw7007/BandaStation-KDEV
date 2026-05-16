@@ -33,6 +33,8 @@
 	var/min_vein_size = 1
 	/// Minimum distance that a vein can span, radius for cluster/scatter, maximum length for plain/branching
 	var/max_vein_size = 2
+	/// Resource yield multiplier
+	var/cy_resource_units_per_ore = 1
 
 /obj/item/stack/ore/update_overlays()
 	. = ..()
@@ -72,9 +74,9 @@
 	if(!I.use_tool(src, user, 0, volume = 50))
 		return TRUE
 
-	var/sheets_made = values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT
+	var/sheets_made = cy_get_refined_sheet_count()
 	new refined_type(drop_location(), max(1, floor(sheets_made)))
-	use(max(1, ceil(1 / sheets_made)))
+	use(max(1, ceil(1 / max(sheets_made, 0.1))))
 	return TRUE
 
 /obj/item/stack/ore/fire_act(exposed_temperature, exposed_volume)
@@ -84,7 +86,7 @@
 
 	var/probability = rand(0, 100) / 100
 	var/burn_value = probability * amount
-	var/amount_refined = floor(burn_value * values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT)
+	var/amount_refined = floor(burn_value * cy_get_resource_yield_multiplier() * values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT)
 	if(amount_refined > 1)
 		new refined_type(drop_location(), amount_refined)
 	qdel(src)
@@ -461,6 +463,8 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 
 /obj/item/stack/ore/Initialize(mapload, new_amount, merge = TRUE, list/mat_override=null, mat_amt=1)
 	. = ..()
+	if(cy_quality == CY_QUALITY_AVERAGE)
+		cy_quality = cy_random_natural_quality()
 	pixel_x = base_pixel_x + rand(0, 16) - 8
 	pixel_y = base_pixel_y + rand(0, 8) - 8
 
@@ -735,3 +739,10 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 		target_airlock.lock()
 
 #undef ORESTACK_OVERLAYS_MAX
+
+
+/obj/item/stack/ore/proc/cy_get_resource_yield_multiplier()
+	return clamp(cy_get_quality_multiplier() * cy_resource_units_per_ore, CY_RESOURCE_MIN_UNITS, CY_RESOURCE_MAX_UNITS)
+
+/obj/item/stack/ore/proc/cy_get_refined_sheet_count()
+	return values_sum(mats_per_unit) * cy_get_resource_yield_multiplier() / SHEET_MATERIAL_AMOUNT
