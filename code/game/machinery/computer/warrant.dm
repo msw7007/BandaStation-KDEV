@@ -53,6 +53,34 @@
 
 		records += record
 	data["records"] = records
+	var/list/city_records = list()
+	if(SSeconomy?.cy_city_economy_ready)
+		for(var/key in SSeconomy.cy_city_crime_records)
+			var/datum/cy_city_crime_record/city_record = SSeconomy.cy_city_crime_records[key]
+			if(!city_record || city_record.current_status() == CY_WARRANT_NONE)
+				continue
+			var/list/violations = list()
+			for(var/datum/cy_city_violation/violation as anything in city_record.violations)
+				if(!violation.active)
+					continue
+				violations += list(list(
+					id = violation.id,
+					law = violation.law_title,
+					details = violation.details,
+					issuer = violation.issuer,
+					fine = violation.fine_remaining,
+					sentence = violation.sentence_time,
+					status = violation.status,
+					time = violation.issued_time,
+				))
+			city_records += list(list(
+				key = city_record.character_key,
+				name = city_record.character_name,
+				status = city_record.current_status(),
+				total_fines = city_record.total_fines(),
+				violations = violations,
+			))
+	data["city_records"] = city_records
 
 	return data
 
@@ -127,7 +155,12 @@
 		warrant.alert_owner(user, src, target.name, "[pick(titles)] has paid [amount][MONEY_SYMBOL] towards your fine.")
 
 	var/datum/bank_account/sec_account = SSeconomy.get_dep_account(ACCOUNT_SEC)
-	sec_account.adjust_money(amount)
+	if(SSeconomy?.cy_city_economy_ready)
+		var/datum/bank_account/government_account = SSeconomy.cy_get_government_account()
+		government_account.adjust_money(amount, "Оплата штрафа: [target.name]")
+		SSeconomy.cy_record_transaction(account, government_account, amount, "Оплата штрафа: [target.name]", CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_FINE, user.name, src)
+	else
+		sec_account.adjust_money(amount)
 	SSblackbox.ReportCitation(REF(warrant), paid = warrant.paid)
 
 	if(warrant.fine != 0 || target.name == user)

@@ -120,6 +120,10 @@
 				user.pulling = holochange
 		else
 			user.pulling = holochange
+	if(target_acc)
+		target_acc.adjust_money(total_cost, "Наличный платёж: [parent]")
+	if(SSeconomy?.cy_city_economy_ready)
+		SSeconomy.cy_record_transaction(null, target_acc, total_cost, "Наличный платёж: [parent]", CY_ECON_VISIBILITY_CASH, CY_ECON_CHANNEL_CASH, user.name, parent)
 	log_econ("[total_cost][MONEY_NAME] were spent on [parent] by [user].")
 	to_chat(user, span_notice("Purchase completed with held credits."))
 	playsound(user, 'sound/effects/cashregister.ogg', 20, TRUE)

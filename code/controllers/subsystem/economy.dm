@@ -63,7 +63,19 @@ SUBSYSTEM_DEF(economy)
 	/// Determines how many ticks it takes to restock mail
 	var/ticks_per_mail = 2
 
+	/// Cyberpunk city economy: closed-loop systemic accounts, ledger, law and supply pressure.
+	var/cy_city_economy_ready = FALSE
+	var/list/cy_city_accounts = list()
+	var/list/cy_city_ledger = list()
+	var/list/cy_city_loans = list()
+	var/list/cy_city_laws = list()
+	var/list/cy_city_crime_records = list()
+	var/list/cy_city_forensic_traces = list()
+	var/list/cy_supply_pressure = list()
+	var/list/cy_round_access_keys = list()
+
 /datum/controller/subsystem/economy/Initialize()
+	cy_init_city_economy()
 	//removes cargo from the split
 	var/budget_to_hand_out = round(budget_pool / department_accounts.len -1)
 	if(time2text(world.timeofday, "DDD") == SUNDAY)
@@ -79,6 +91,15 @@ SUBSYSTEM_DEF(economy)
 	departmental_accounts = SSeconomy.departmental_accounts
 	bank_accounts_by_id = SSeconomy.bank_accounts_by_id
 	dep_cards = SSeconomy.dep_cards
+	cy_city_economy_ready = SSeconomy.cy_city_economy_ready
+	cy_city_accounts = SSeconomy.cy_city_accounts
+	cy_city_ledger = SSeconomy.cy_city_ledger
+	cy_city_loans = SSeconomy.cy_city_loans
+	cy_city_laws = SSeconomy.cy_city_laws
+	cy_city_crime_records = SSeconomy.cy_city_crime_records
+	cy_city_forensic_traces = SSeconomy.cy_city_forensic_traces
+	cy_supply_pressure = SSeconomy.cy_supply_pressure
+	cy_round_access_keys = SSeconomy.cy_round_access_keys
 
 /// Processing step defines, to track what we've done so far
 #define ECON_DEPARTMENT_STEP "econ_dpt_stp"
@@ -137,7 +158,11 @@ SUBSYSTEM_DEF(economy)
 		var/datum/bank_account/dept_account = get_dep_account(cached_processing[i])
 		if(!dept_account)
 			continue
-		dept_account.adjust_money(MAX_GRANT_DPT)
+		var/datum/bank_account/city_source = cy_account_for_department(cached_processing[i])
+		if(city_source)
+			cy_transfer_money(city_source, dept_account, MAX_GRANT_DPT, "Городской бюджет отдела", CY_TAX_NONE, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK)
+		else
+			dept_account.adjust_money(MAX_GRANT_DPT)
 		if(MC_TICK_CHECK)
 			cached_processing.Cut(1, i + 1)
 			return FALSE
@@ -253,19 +278,20 @@ SUBSYSTEM_DEF(economy)
  */
 /obj/machinery/vending/proc/reset_prices(list/recordlist, list/premiumlist)
 	var/inflation_value = HAS_TRAIT(SSeconomy, TRAIT_MARKET_CRASHING) ? SSeconomy.inflation_value() : 1
-	default_price = round(initial(default_price) * inflation_value)
-	extra_price = round(initial(extra_price) * inflation_value)
+	var/city_price_multiplier = SSeconomy.cy_get_vending_price_multiplier(src)
+	default_price = round(initial(default_price) * inflation_value * city_price_multiplier)
+	extra_price = round(initial(extra_price) * inflation_value * city_price_multiplier)
 
 	for(var/datum/data/vending_product/record as anything in recordlist)
 		var/obj/item/potential_product = record.product_path
-		var/custom_price = round(initial(potential_product.custom_price) * inflation_value)
+		var/custom_price = round(initial(potential_product.custom_price) * inflation_value * city_price_multiplier)
 		record.price = custom_price | default_price
 	for(var/datum/data/vending_product/premium_record as anything in premiumlist)
 		var/obj/item/potential_product = premium_record.product_path
-		var/premium_custom_price = round(initial(potential_product.custom_premium_price) * inflation_value)
+		var/premium_custom_price = round(initial(potential_product.custom_premium_price) * inflation_value * city_price_multiplier)
 		var/custom_price = initial(potential_product.custom_price)
 		if(!premium_custom_price && custom_price) //For some ungodly reason, some premium only items only have a custom_price
-			premium_record.price = extra_price + round(custom_price * inflation_value)
+			premium_record.price = extra_price + round(custom_price * inflation_value * city_price_multiplier)
 		else
 			premium_record.price = premium_custom_price || extra_price
 

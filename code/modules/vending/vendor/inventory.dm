@@ -285,5 +285,7 @@
 	//transfer money to machine
 	SSblackbox.record_feedback("amount", "vending_spent", price_to_use)
 	log_econ("[price_to_use][MONEY_NAME] were inserted into [src] by [account.account_holder] to buy [product_to_vend].")
+	if(SSeconomy?.cy_city_economy_ready)
+		SSeconomy.cy_route_vendor_sale(account, src, price_to_use, product_to_vend.name)
 	credits_contained += round(price_to_use * VENDING_CREDITS_COLLECTION_AMOUNT)
 	return TRUE

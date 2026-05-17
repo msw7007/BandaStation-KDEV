@@ -44,6 +44,13 @@
 	/// How many paychecks to skip when payday is called.
 	var/paydays_to_skip = 0
 
+	/// Cyberpunk city economy account metadata.
+	var/cy_account_kind = "personal"
+	var/cy_corporation_id
+	var/cy_budget_balance = 0
+	var/cy_shadow_bank = FALSE
+	var/cy_character_key
+
 /datum/bank_account/New(newname, job, modifier = 1, player_account = TRUE)
 	account_holder = newname
 	account_job = job
@@ -184,24 +191,28 @@
  * * transfer_reason - override for adjust_money reason. Use if no default reason(Transfer to/from Name Surname).
  */
 /datum/bank_account/proc/transfer_money(datum/bank_account/from, amount, transfer_reason)
-	if(from.has_money(amount))
-		var/reason_to = "Перевод: От [from.account_holder]"
-		var/reason_from = "Перевод: [account_holder]"
+	if(!from?.has_money(amount))
+		return FALSE
+	var/reason_to = "Перевод: От [from.account_holder]"
+	var/reason_from = "Перевод: [account_holder]"
 
-		if(IS_DEPARTMENTAL_ACCOUNT(from))
-			reason_to = "Нанотрейзен: Зарплата"
-			reason_from = ""
+	if(IS_DEPARTMENTAL_ACCOUNT(from))
+		reason_to = "Зарплата / бюджетная выплата"
+		reason_from = ""
 
-		if(transfer_reason)
-			reason_to = IS_DEPARTMENTAL_ACCOUNT(src) ? "" : transfer_reason
-			reason_from = transfer_reason
+	if(transfer_reason)
+		reason_to = IS_DEPARTMENTAL_ACCOUNT(src) ? "" : transfer_reason
+		reason_from = transfer_reason
 
-		adjust_money(amount, reason_to)
-		from.adjust_money(-amount, reason_from)
-		SSblackbox.record_feedback("amount", "credits_transferred", amount)
-		log_econ("[amount][MONEY_NAME] were transferred from [from.account_holder]'s account to [src.account_holder]")
-		return TRUE
-	return FALSE
+	if(SSeconomy?.cy_city_economy_ready)
+		var/tax_profile = IS_DEPARTMENTAL_ACCOUNT(from) || IS_DEPARTMENTAL_ACCOUNT(src) ? CY_TAX_NONE : CY_TAX_TRANSFER
+		return SSeconomy.cy_transfer_money(from, src, amount, reason_to || reason_from, tax_profile, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK)
+
+	adjust_money(amount, reason_to)
+	from.adjust_money(-amount, reason_from)
+	SSblackbox.record_feedback("amount", "credits_transferred", amount)
+	log_econ("[amount][MONEY_NAME] were transferred from [from.account_holder]'s account to [src.account_holder]")
+	return TRUE
 
 /**
  * This proc handles passive income gain for players, using their job's paycheck value.
@@ -369,6 +380,37 @@
 		"adjusted_money" = adjusted_money,
 		"reason" = reason,
 	)))
+
+/datum/bank_account/city_system
+	add_to_accounts = FALSE
+	cy_account_kind = "city_system"
+
+/datum/bank_account/city_system/New(newname, account_id, balance = 0, budget = 0, shadow = FALSE)
+	account_holder = newname
+	src.account_id = account_id
+	account_balance = balance
+	cy_budget_balance = budget
+	cy_shadow_bank = shadow
+	transaction_history = list()
+	bank_cards = list()
+	pay_token = uppertext("[copytext_char(newname, 1, 2)]-CITY-[rand(1111,9999)]")
+
+/datum/bank_account/proc/cy_spend_budget(amount, datum/bank_account/target, reason = "Бюджетная выплата")
+	amount = max(0, round(amount))
+	if(amount <= 0 || cy_budget_balance < amount || !target)
+		return FALSE
+	if(!SSeconomy.cy_transfer_money(src, target, amount, reason, CY_TAX_NONE, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK))
+		return FALSE
+	cy_budget_balance -= amount
+	return TRUE
+
+/datum/bank_account/proc/cy_add_budget(amount, reason = "Пополнение бюджета")
+	amount = max(0, round(amount))
+	if(amount <= 0)
+		return FALSE
+	cy_budget_balance += amount
+	add_log_to_history(amount, reason)
+	return TRUE
 
 #undef DUMPTIME
 #undef NO_MY_MONEY

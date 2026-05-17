@@ -4400,6 +4400,7 @@
 #include "code\modules\discord\toggle_notify.dm"
 #include "code\modules\economy\_economy.dm"
 #include "code\modules\economy\account.dm"
+#include "code\modules\economy\cy_city_economy.dm"
 #include "code\modules\economy\holopay.dm"
 #include "code\modules\economy\poker_chips.dm"
 #include "code\modules\emoji\emoji_parse.dm"

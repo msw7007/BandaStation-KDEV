@@ -31,6 +31,7 @@
 	. = ..()
 	src.fine = fine
 	src.paid = 0
+	cy_warrant_status = fine > 0 ? CY_WARRANT_FINE : CY_WARRANT_INVESTIGATION
 
 /// Pays off a fine and attempts to fix any weird values.
 /datum/crime/citation/proc/pay_fine(amount)
@@ -66,3 +67,11 @@
 		break
 
 	return TRUE
+
+/datum/crime
+	/// Cyberpunk city law identifier, if this crime came from the city law database.
+	var/cy_law_id
+	/// Stable character key used by the persistent city crime database.
+	var/cy_character_key
+	/// City warrant status mirror for legacy security records.
+	var/cy_warrant_status = CY_WARRANT_NONE

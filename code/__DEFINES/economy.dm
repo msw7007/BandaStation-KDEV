@@ -104,3 +104,85 @@
 //Mood event from minor slot events like winning/losing a few bits.
 #define SLOTS_MOOD_CATEGORY "slots"
 
+
+// Cyberpunk city economy core
+#define CY_ACCOUNT_GOVERNMENT "government"
+#define CY_ACCOUNT_BEN "ben_conglomerate"
+#define CY_ACCOUNT_RYAZNOV "ryaznov_union"
+#define CY_ACCOUNT_STARLIGHT "starlight_group"
+#define CY_ACCOUNT_CIV_MARKET "civilian_market"
+#define CY_ACCOUNT_EXPORT_POOL "export_pool"
+#define CY_ACCOUNT_BLACK_MARKET "black_market"
+
+#define CY_CITY_GOVERNMENT_STARTING_BALANCE 50000
+#define CY_CITY_GOVERNMENT_STARTING_BUDGET 25000
+#define CY_CITY_CORP_STARTING_BALANCE 40000
+#define CY_CITY_CORP_STARTING_BUDGET 20000
+#define CY_CITY_MARKET_STARTING_BALANCE 15000
+#define CY_CITY_MARKET_STARTING_BUDGET 5000
+#define CY_CITY_EXPORT_POOL_STARTING_BALANCE 100000
+#define CY_CITY_EXPORT_POOL_STARTING_BUDGET 100000
+#define CY_CITY_BLACK_MARKET_STARTING_BALANCE 10000
+#define CY_CITY_BLACK_MARKET_STARTING_BUDGET 10000
+
+#define CY_ECON_VISIBILITY_BANK "bank"
+#define CY_ECON_VISIBILITY_CASH "cash"
+#define CY_ECON_VISIBILITY_SHADOW "shadow"
+#define CY_ECON_VISIBILITY_RESTRICTED "restricted"
+
+#define CY_ECON_CHANNEL_BANK "bank"
+#define CY_ECON_CHANNEL_CASH "cash"
+#define CY_ECON_CHANNEL_VENDOR "vendor"
+#define CY_ECON_CHANNEL_EXPORT "export"
+#define CY_ECON_CHANNEL_LOAN "loan"
+#define CY_ECON_CHANNEL_FINE "fine"
+#define CY_ECON_CHANNEL_CONTRACT "contract"
+#define CY_ECON_CHANNEL_NETLOG "netlog"
+
+#define CY_TAX_NONE "none"
+#define CY_TAX_VENDOR "vendor"
+#define CY_TAX_SERVICE "service"
+#define CY_TAX_CONTRACT "contract"
+#define CY_TAX_TRANSFER "transfer"
+#define CY_TAX_LOAN "loan"
+
+#define CY_CITY_VENDOR_TAX_RATE 0.08
+#define CY_CITY_SERVICE_TAX_RATE 0.06
+#define CY_CITY_CONTRACT_TAX_RATE 0.1
+#define CY_CITY_TRANSFER_TAX_RATE 0.02
+#define CY_CITY_LOAN_FEE_RATE 0.01
+
+#define CY_CITY_DEFAULT_PRICE_MULTIPLIER 1.6
+#define CY_CITY_MIN_PRICE_MULTIPLIER 0.75
+#define CY_CITY_SUPPLY_PRICE_DIVISOR 50000
+#define CY_CITY_LEDGER_MAX_ENTRIES 2000
+#define CY_CITY_FORENSIC_MAX_TRACES 1000
+
+#define CY_SUPPLY_GENERAL "general"
+
+#define CY_LOAN_ACTIVE "active"
+#define CY_LOAN_PAID "paid"
+#define CY_LOAN_DEFAULTED "defaulted"
+#define CY_LOAN_VOID "void"
+
+#define CY_CRIME_SEVERITY_MINOR 1
+#define CY_CRIME_SEVERITY_MEDIUM 2
+#define CY_CRIME_SEVERITY_MAJOR 3
+
+#define CY_WARRANT_NONE 0
+#define CY_WARRANT_FINE 1
+#define CY_WARRANT_INVESTIGATION 2
+#define CY_WARRANT_ARREST 3
+#define CY_WARRANT_KILL 4
+#define CY_WARRANT_CLEARED 5
+
+#define CY_LAW_ASSAULT "assault"
+#define CY_LAW_THEFT "theft"
+#define CY_LAW_SABOTAGE "sabotage"
+#define CY_LAW_MURDER "murder"
+#define CY_LAW_NETCRIME "netcrime"
+#define CY_LAW_TRESPASS "trespass"
+
+#define CY_POLICE_DB_ACCESS "police_database"
+#define CY_BOUNTY_HUNTER_ACCESS "bounty_hunter_database"
+#define CY_GOVERNMENT_LEDGER_ACCESS "government_ledger"
