@@ -27,7 +27,6 @@ SUBSYSTEM_DEF(netspace)
 	var/list/lobby_full_floor_progress = list()
 
 /datum/controller/subsystem/netspace/Initialize()
-	ensure_city_net_z()
 	return SS_INIT_SUCCESS
 
 /datum/controller/subsystem/netspace/fire(resumed = FALSE)
@@ -159,9 +158,16 @@ SUBSYSTEM_DEF(netspace)
 	var/c = number % base
 	return "[letters[a + 1]]-[letters[b + 1]]-[letters[c + 1]]"
 
+/datum/controller/subsystem/netspace/proc/can_allocate_netspace_z()
+	if(!SSmapping || !SSmapping.z_list || !length(SSmapping.z_list))
+		return FALSE
+	return TRUE
+
 /datum/controller/subsystem/netspace/proc/ensure_city_net_z()
 	if(city_net_z)
 		return city_net_z
+	if(!can_allocate_netspace_z())
+		return null
 	net_reservation = SSmapping.request_turf_block_reservation(CY_NETSPACE_DEFAULT_WIDTH, CY_NETSPACE_DEFAULT_HEIGHT, 1)
 	if(!net_reservation)
 		return null
@@ -292,6 +298,8 @@ SUBSYSTEM_DEF(netspace)
 	return default_objects_registered && lobby_full_floor_finished
 
 /datum/controller/subsystem/netspace/proc/process_lobby_netspace_build()
+	if(!can_allocate_netspace_z())
+		return
 	if(!lobby_full_floor_finished)
 		process_lobby_full_floor_generation(CY_NETSPACE_LOBBY_FLOOR_BUDGET)
 	if(!default_objects_registered)
@@ -302,7 +310,6 @@ SUBSYSTEM_DEF(netspace)
 		return
 	var/net_z = ensure_city_net_z()
 	if(!net_z)
-		lobby_full_floor_finished = TRUE
 		return
 	lobby_full_floor_z_queue += net_z
 	lobby_full_floor_progress["[net_z]"] = 1
