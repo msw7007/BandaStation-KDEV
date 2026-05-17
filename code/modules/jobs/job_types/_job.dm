@@ -123,6 +123,25 @@
 	/// You'll probably break someone's config if you change this, so it's best to not to.
 	var/config_tag = ""
 
+	/// Cyberpunk city role group. Empty means regular legacy station role.
+	var/cy_role_group
+	/// Stable city role id for law, economy, NPC replacement and storyteller snapshots.
+	var/cy_role_id
+	/// City role bitflags. See __DEFINES/cy_roles.dm.
+	var/cy_role_flags = CY_ROLE_FLAG_NONE
+	/// Organization type attached to this role, if any.
+	var/datum/cy_organization/cy_organization_type
+	/// City account id used for salary, budget and department routing.
+	var/cy_city_account_id
+	/// Whether this role can access the police/government crime database by default.
+	var/cy_police_database_access = FALSE
+	/// Whether this role may issue city violations/warrants through legal consoles.
+	var/cy_can_issue_warrants = FALSE
+	/// Whether this role may spend or assign city/corporate budget.
+	var/cy_can_manage_budget = FALSE
+	/// Whether this role is eligible for bounty-hunter style police database access.
+	var/cy_bounty_hunter = FALSE
+
 	/// custom ringtone for this job
 	var/job_tone
 
@@ -178,6 +197,8 @@
 	if(roundstart_experience)
 		for(var/i in roundstart_experience)
 			spawned_human.award_cy_raw_skill_experience(i, roundstart_experience[i], TRUE)
+
+	apply_cy_city_role(spawned, player_client)
 
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_JOB_AFTER_SPAWN, src, spawned, player_client)
 

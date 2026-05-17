@@ -123,6 +123,31 @@ GLOBAL_LIST_INIT(job_titles_ru, list(
 	JOB_CURATOR = JOB_CURATOR_RU,
 	JOB_CHAPLAIN = JOB_CHAPLAIN_RU,
 	JOB_PSYCHOLOGIST = JOB_PSYCHOLOGIST_RU,
+
+	// Cyberpunk city roles
+	JOB_CY_BUSINESS_OWNER = "Владелец",
+	JOB_CY_OFFICIAL = "Чиновник",
+	JOB_CY_OFFICER = "Офицер",
+	JOB_CY_COUNCIL_MEMBER = "Член совета",
+	JOB_CY_CORPORATE_TRAINEE = "Стажёр",
+	JOB_CY_BEN_AGENT = "Агент Бэнь",
+	JOB_CY_RYAZNOV_AGENT = "Агент Рязнова",
+	JOB_CY_STARLIGHT_AGENT = "Агент Старлайт",
+	JOB_CY_BEN_REAPER = "Специалист-Рипер",
+	JOB_CY_RYAZNOV_ENGINEER = "Специалист-Инженер",
+	JOB_CY_STARLIGHT_LOGISTICIAN = "Специалист-Логистик",
+	JOB_CY_BEN_REPRESENTATIVE = "Представитель Бэнь",
+	JOB_CY_RYAZNOV_REPRESENTATIVE = "Представитель Рязнова",
+	JOB_CY_STARLIGHT_REPRESENTATIVE = "Представитель Старлайт",
+	JOB_CY_MERCENARY = "Наёмник",
+	JOB_CY_LABORER = "Разнорабочий",
+	JOB_CY_STREET_THUG = "Шпана",
+	JOB_CY_GANG_MEMBER = "Член банды",
+	JOB_CY_ANARCHIST = "Анархист",
+	JOB_CY_MUTANT = "Мутант",
+	JOB_CY_CONSTRUCT = "Конструкт",
+	JOB_CY_SWARM = "Рой",
+	JOB_CY_SALVATION_ARMY = "Армия Спасения",
 ))
 
 GLOBAL_LIST_EMPTY(job_titles_ru_to_en)
