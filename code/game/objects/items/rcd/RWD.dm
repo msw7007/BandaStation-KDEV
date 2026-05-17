@@ -131,6 +131,8 @@
 			"Layer 1" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-red"),
 			"Layer 2" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-yellow"),
 			"Layer 3" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-blue"),
+			"Layer 4" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-green"),
+			"Layer 5" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-pink"),
 		)
 
 	var/layer_result = show_radial_menu(user, src, radial_menu, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE, tooltips = TRUE)
@@ -143,6 +145,10 @@
 			cable_layer = CABLE_LAYER_2
 		if("Layer 3")
 			cable_layer = CABLE_LAYER_3
+		if("Layer 4")
+			cable_layer = CABLE_LAYER_4
+		if("Layer 5")
+			cable_layer = CABLE_LAYER_5
 	update_appearance(UPDATE_ICON_STATE)
 	return CLICK_ACTION_SUCCESS
 
@@ -181,10 +187,18 @@
 			target_cable.set_cable_color(CABLE_COLOR_YELLOW)
 			target_cable.target_type = /obj/structure/cable
 			target_cable.target_layer = CABLE_LAYER_2
-		else
+		if(CABLE_LAYER_3)
 			target_cable.set_cable_color(CABLE_COLOR_BLUE)
 			target_cable.target_type = /obj/structure/cable/layer3
 			target_cable.target_layer = CABLE_LAYER_3
+		if(CABLE_LAYER_4)
+			target_cable.set_cable_color(CABLE_COLOR_GREEN)
+			target_cable.target_type = /obj/structure/cable/layer4
+			target_cable.target_layer = CABLE_LAYER_4
+		if(CABLE_LAYER_5)
+			target_cable.set_cable_color(CABLE_COLOR_PINK)
+			target_cable.target_type = /obj/structure/cable/layer5
+			target_cable.target_layer = CABLE_LAYER_5
 	return target_cable
 
 /// get cached reference of cable which gets used over time
@@ -205,8 +219,12 @@
 			design_type = /obj/structure/cable/layer1
 		if(CABLE_LAYER_2)
 			design_type = /obj/structure/cable
-		else
+		if(CABLE_LAYER_3)
 			design_type = /obj/structure/cable/layer3
+		if(CABLE_LAYER_4)
+			design_type = /obj/structure/cable/layer4
+		if(CABLE_LAYER_5)
+			design_type = /obj/structure/cable/layer5
 
 	for(var/obj/structure/cable/cable as anything in the_turf)
 		// cable layer on the turf is the same as our intended design layer so nope

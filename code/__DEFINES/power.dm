@@ -5,6 +5,10 @@
 	#define CABLE_LAYER_2_NAME "Yellow Power Line"
 #define CABLE_LAYER_3 (1<<2)
 	#define CABLE_LAYER_3_NAME "Blue Power Line"
+#define CABLE_LAYER_4 (1<<3)
+	#define CABLE_LAYER_4_NAME "Green Power Line"
+#define CABLE_LAYER_5 (1<<4)
+	#define CABLE_LAYER_5_NAME "Violet Power Line"
 
 #define SOLAR_TRACK_OFF 0
 #define SOLAR_TRACK_TIMED 1
@@ -37,13 +41,17 @@
 GLOBAL_LIST_INIT(cable_layer_to_name, list(
 	"[CABLE_LAYER_1]" = CABLE_LAYER_1_NAME,
 	"[CABLE_LAYER_2]" = CABLE_LAYER_2_NAME,
-	"[CABLE_LAYER_3]" = CABLE_LAYER_3_NAME
+	"[CABLE_LAYER_3]" = CABLE_LAYER_3_NAME,
+	"[CABLE_LAYER_4]" = CABLE_LAYER_4_NAME,
+	"[CABLE_LAYER_5]" = CABLE_LAYER_5_NAME
 ))
 
 // Converts cable color name to its layer
 GLOBAL_LIST_INIT(cable_name_to_layer, list(
 	CABLE_LAYER_1_NAME = CABLE_LAYER_1,
 	CABLE_LAYER_2_NAME = CABLE_LAYER_2,
-	CABLE_LAYER_3_NAME = CABLE_LAYER_3
+	CABLE_LAYER_3_NAME = CABLE_LAYER_3,
+	CABLE_LAYER_4_NAME = CABLE_LAYER_4,
+	CABLE_LAYER_5_NAME = CABLE_LAYER_5
 ))
 

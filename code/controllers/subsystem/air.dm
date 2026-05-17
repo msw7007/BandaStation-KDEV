@@ -42,6 +42,12 @@ SUBSYSTEM_DEF(air)
 	/// List of gas string -> canonical gas mixture
 	var/list/strings_to_mix = list()
 
+	/// Cyberpunk-lite atmos: normal breathable air is assumed; only special gas clouds are simulated.
+	var/cy_lite_atmos = TRUE
+	var/list/cy_gas_clouds = list()
+	var/list/cy_gas_clouds_by_turf = list()
+	var/cost_cy_clouds = 0
+
 
 	//Special functions lists
 	var/list/turf/active_super_conductivity = list()
@@ -64,6 +70,7 @@ SUBSYSTEM_DEF(air)
 
 /datum/controller/subsystem/air/stat_entry(msg)
 	msg += "\n  Cost:{"
+	msg += "LC:[round(cost_cy_clouds,1)]|"
 	msg += "AT:[round(cost_turfs,1)]|"
 	msg += "HS:[round(cost_hotspots,1)]|"
 	msg += "EG:[round(cost_groups,1)]|"
@@ -75,7 +82,7 @@ SUBSYSTEM_DEF(air)
 	msg += "RB:[round(cost_rebuilds,1)]|"
 	msg += "AJ:[round(cost_adjacent,1)]|"
 	msg += "} "
-	msg += "\n  Count:{AT:[active_turfs.len]|"
+	msg += "\n  Count:{LC:[cy_gas_clouds.len]|AT:[active_turfs.len]|"
 	msg += "HS:[hotspots.len]|"
 	msg += "EG:[excited_groups.len]|"
 	msg += "HP:[high_pressure_delta.len]|"
@@ -96,6 +103,12 @@ SUBSYSTEM_DEF(air)
 	gas_reactions = init_gas_reactions()
 	hotspot_reactions = init_hotspot_reactions()
 
+	if(cy_lite_atmos)
+		// Keep gas definitions, machinery datums and analyzer data available, but do not build the full LINDA tile/pipenets simulation.
+		setup_atmos_machinery()
+		atmos_handbooks_init()
+		return SS_INIT_SUCCESS
+
 	setup_allturfs()
 	setup_atmos_machinery()
 	setup_pipenets()
@@ -107,6 +120,12 @@ SUBSYSTEM_DEF(air)
 
 /datum/controller/subsystem/air/fire(resumed = FALSE)
 	var/timer = TICK_USAGE_REAL
+
+	if(cy_lite_atmos)
+		timer = TICK_USAGE_REAL
+		process_cy_lite_clouds(resumed)
+		cost_cy_clouds = MC_AVERAGE(cost_cy_clouds, TICK_DELTA_TO_MS(TICK_USAGE_REAL - timer))
+		return
 
 	//Rebuilds can happen at any time, so this needs to be done outside of the normal system
 	cost_rebuilds = 0
@@ -248,6 +267,170 @@ SUBSYSTEM_DEF(air)
 	atom_process = SSair.atom_process
 	currentrun = SSair.currentrun
 	queued_for_activation = SSair.queued_for_activation
+	cy_gas_clouds = SSair.cy_gas_clouds
+	cy_gas_clouds_by_turf = SSair.cy_gas_clouds_by_turf
+
+
+/datum/controller/subsystem/air/proc/register_cy_gas_cloud(datum/cy_gas_cloud/cloud)
+	if(!cloud)
+		return
+	cy_gas_clouds |= cloud
+
+/datum/controller/subsystem/air/proc/unregister_cy_gas_cloud(datum/cy_gas_cloud/cloud)
+	if(!cloud)
+		return
+	cy_gas_clouds -= cloud
+	for(var/turf/T as anything in cloud.turf_contents)
+		unregister_cy_gas_cloud_from_turf(cloud, T)
+
+/datum/controller/subsystem/air/proc/register_cy_gas_cloud_on_turf(datum/cy_gas_cloud/cloud, turf/T)
+	if(!cloud || !T)
+		return
+	var/list/clouds = cy_gas_clouds_by_turf[T]
+	if(!clouds)
+		clouds = list()
+		cy_gas_clouds_by_turf[T] = clouds
+	clouds |= cloud
+
+/datum/controller/subsystem/air/proc/unregister_cy_gas_cloud_from_turf(datum/cy_gas_cloud/cloud, turf/T)
+	if(!cloud || !T)
+		return
+	var/list/clouds = cy_gas_clouds_by_turf[T]
+	if(!clouds)
+		return
+	clouds -= cloud
+	if(!length(clouds))
+		cy_gas_clouds_by_turf.Remove(T)
+
+/datum/controller/subsystem/air/proc/create_cy_gas_cloud(turf/origin, gas_id, amount = 1, density = 0, pressure = 1, temperature = T20C, spread_threshold = 0.25, decay_rate = 0.03)
+	if(!origin || !gas_id || amount <= 0)
+		return null
+	return new /datum/cy_gas_cloud(origin, gas_id, amount, density, pressure, temperature, spread_threshold, decay_rate)
+
+/datum/controller/subsystem/air/proc/get_cy_lite_breath(turf/source_turf, amount)
+	var/datum/gas_mixture/background = source_turf.create_gas_mixture()
+	var/datum/gas_mixture/breath = background.remove(amount)
+	var/list/clouds = cy_gas_clouds_by_turf[source_turf]
+	if(!length(clouds))
+		return breath
+	for(var/datum/cy_gas_cloud/cloud as anything in clouds)
+		cloud.add_to_breath(source_turf, breath)
+	breath.garbage_collect()
+	return breath
+
+/datum/controller/subsystem/air/proc/process_cy_lite_clouds(resumed = FALSE)
+	if(!resumed)
+		currentrun = cy_gas_clouds.Copy()
+	var/list/run = currentrun
+	while(length(run))
+		var/datum/cy_gas_cloud/cloud = run[length(run)]
+		run.len--
+		if(QDELETED(cloud))
+			cy_gas_clouds -= cloud
+			continue
+		cloud.process(wait * 0.1)
+		if(MC_TICK_CHECK)
+			return
+
+/datum/cy_gas_cloud
+	var/gas_id = /datum/gas/plasma
+	var/list/turf_contents = list()
+	var/density = 0
+	var/pressure = 1
+	var/temperature = T20C
+	var/spread_threshold = 0.25
+	var/decay_rate = 0.03
+	var/breath_ratio = 0.08
+
+/datum/cy_gas_cloud/New(turf/origin, new_gas_id, amount = 1, new_density = 0, new_pressure = 1, new_temperature = T20C, new_spread_threshold = 0.25, new_decay_rate = 0.03)
+	. = ..()
+	gas_id = new_gas_id
+	density = new_density
+	pressure = max(new_pressure, 0)
+	temperature = max(new_temperature, TCMB)
+	spread_threshold = max(new_spread_threshold, 0)
+	decay_rate = max(new_decay_rate, 0)
+	set_turf_amount(origin, amount)
+	SSair.register_cy_gas_cloud(src)
+
+/datum/cy_gas_cloud/Destroy()
+	SSair.unregister_cy_gas_cloud(src)
+	turf_contents = null
+	return ..()
+
+/datum/cy_gas_cloud/proc/get_turf_amount(turf/T)
+	if(!turf_contents || !T)
+		return 0
+	return turf_contents[T] || 0
+
+/datum/cy_gas_cloud/proc/set_turf_amount(turf/T, amount)
+	if(!T)
+		return
+	if(amount <= 0)
+		remove_turf(T)
+		return
+	if(!turf_contents[T])
+		SSair.register_cy_gas_cloud_on_turf(src, T)
+	turf_contents[T] = amount
+
+/datum/cy_gas_cloud/proc/remove_turf(turf/T)
+	if(!T || !turf_contents || !turf_contents[T])
+		return
+	turf_contents.Remove(T)
+	SSair.unregister_cy_gas_cloud_from_turf(src, T)
+
+/datum/cy_gas_cloud/proc/can_spread(turf/from_turf, turf/to_turf)
+	if(!from_turf || !to_turf || to_turf.density)
+		return FALSE
+	if(islava(to_turf))
+		return FALSE
+	return TRUE
+
+/datum/cy_gas_cloud/process(seconds_per_tick)
+	if(!length(turf_contents))
+		qdel(src)
+		return
+	var/list/pending_add = list()
+	var/list/pending_remove = list()
+	for(var/turf/T as anything in turf_contents.Copy())
+		var/content = get_turf_amount(T)
+		content = max(0, content - decay_rate * max(seconds_per_tick, 1))
+		if(content <= 0.01)
+			pending_remove += T
+			continue
+		if(content >= spread_threshold && pressure > 0)
+			var/share = min(content * 0.20 * pressure, content * 0.5)
+			var/list/spread_targets = list()
+			for(var/dir in GLOB.cardinals)
+				var/turf/target = get_step(T, dir)
+				if(can_spread(T, target))
+					spread_targets += target
+			if(density)
+				var/turf/vertical = locate(T.x, T.y, T.z + (density > 0 ? -1 : 1))
+				if(can_spread(T, vertical))
+					spread_targets += vertical
+			if(length(spread_targets))
+				var/share_each = share / length(spread_targets)
+				content -= share
+				for(var/turf/spread_turf as anything in spread_targets)
+					pending_add[spread_turf] = (pending_add[spread_turf] || 0) + share_each
+			turf_contents[T] = content
+	for(var/turf/remove_turf as anything in pending_remove)
+		remove_turf(remove_turf)
+	for(var/turf/add_turf as anything in pending_add)
+		set_turf_amount(add_turf, get_turf_amount(add_turf) + pending_add[add_turf])
+	if(!length(turf_contents))
+		qdel(src)
+
+/datum/cy_gas_cloud/proc/add_to_breath(turf/T, datum/gas_mixture/breath)
+	if(!T || !breath)
+		return
+	var/content = get_turf_amount(T)
+	if(content <= 0)
+		return
+	breath.adjust_gas(gas_id, max(0.01, content * breath_ratio))
+	if(abs(breath.temperature - temperature) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
+		breath.temperature = (breath.temperature + temperature) * 0.5
 
 /datum/controller/subsystem/air/proc/process_adjacent_rebuild(init = FALSE)
 	var/list/queue = adjacent_rebuild

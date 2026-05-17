@@ -126,6 +126,35 @@
 
 	return A.powered(chan) // return power status of the area
 
+/obj/machinery/proc/get_direct_wire_powernet()
+	var/turf/T = get_turf(src)
+	if(!T)
+		return null
+	var/obj/structure/cable/C = T.get_cable_node()
+	return C?.powernet
+
+/obj/machinery/proc/available_direct_wire_energy()
+	var/datum/powernet/direct_net = get_direct_wire_powernet()
+	if(!direct_net)
+		return 0
+	return max(direct_net.avail - direct_net.load, 0)
+
+/obj/machinery/proc/use_direct_wire_energy(amount, take_any = FALSE)
+	if(amount <= 0)
+		return FALSE
+	var/datum/powernet/direct_net = get_direct_wire_powernet()
+	if(!direct_net)
+		return FALSE
+	var/surplus = max(direct_net.avail - direct_net.load, 0)
+	if(surplus <= 0)
+		return FALSE
+	if(surplus < amount)
+		if(!take_any)
+			return FALSE
+		amount = surplus
+	direct_net.load += amount
+	return amount
+
 /**
  * Returns the available energy from the apc's cell and grid that can be used.
  * Args:
@@ -142,7 +171,7 @@
 
 	var/obj/machinery/power/apc/local_apc = home.apc
 	if(isnull(local_apc))
-		return FALSE
+		return available_direct_wire_energy()
 
 	return consider_cell ? local_apc.available_energy() : local_apc.surplus()
 
@@ -168,7 +197,7 @@
 
 	var/obj/machinery/power/apc/local_apc = home.apc
 	if(isnull(local_apc) || !local_apc.operating)
-		return FALSE
+		return use_direct_wire_energy(amount, force)
 
 	// Surplus from the grid.
 	var/surplus = local_apc.surplus()
@@ -229,7 +258,7 @@
 
 	var/obj/machinery/power/apc/local_apc = home.apc
 	if(isnull(local_apc) || !local_apc.operating)
-		return FALSE
+		return use_direct_wire_energy(amount, take_any)
 
 	var/surplus = local_apc.surplus()
 	if(surplus <= 0) //I don't know if powernet surplus can ever end up negative, but I'm just gonna failsafe it
@@ -510,6 +539,13 @@
 		shock_damage = cell_damage
 	var/drained_hp = victim.electrocute_act(shock_damage, source, siemens_coeff) //zzzzzzap!
 	log_combat(source, victim, "electrocuted")
+	if(source && shock_damage > 0)
+		var/throw_distance = clamp(round(shock_damage / 20), 0, 6)
+		if(throw_distance > 0)
+			var/throw_target = get_edge_target_turf(victim, get_dir(source, victim))
+			victim.throw_at(throw_target, throw_distance, 1, source)
+		if(shock_damage >= 60)
+			victim.Paralyze(clamp(round(shock_damage / 10), 2 SECONDS, 8 SECONDS))
 
 	var/drained_energy = drained_hp*20
 

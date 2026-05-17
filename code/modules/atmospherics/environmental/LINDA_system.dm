@@ -191,6 +191,8 @@
 /turf/air_update_turf(update = FALSE, remove = FALSE)
 	if(!SSair.initialized) // I'm sorry for polutting user code, I'll do 10 hail giacom's
 		return
+	if(SSair.cy_lite_atmos)
+		return
 	if(update)
 		immediate_calculate_adjacent_turfs()
 	if(remove)
@@ -210,11 +212,19 @@
 	local_turf.atmos_spawn_air(text)
 
 /turf/open/atmos_spawn_air(text)
-	if(!text || !air)
+	if(!text)
 		return
 
 	var/datum/gas_mixture/turf_mixture = SSair.parse_gas_string(text, /datum/gas_mixture/turf)
+	if(SSair.cy_lite_atmos)
+		for(var/gas_id in turf_mixture.gases)
+			var/amount = turf_mixture.gases[gas_id][MOLES]
+			if(amount > 0)
+				SSair.create_cy_gas_cloud(src, gas_id, amount, 0, 1, turf_mixture.temperature)
+		return
 
+	if(!air)
+		return
 	air.merge(turf_mixture)
 	archive()
 	SSair.add_to_active(src)

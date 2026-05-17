@@ -47,6 +47,20 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	layer = WIRE_LAYER + 0.01
 	icon_state = "l4-1-2-4-8-node"
 
+/obj/structure/cable/layer4
+	color = "#2ecc71"
+	cable_color = CABLE_COLOR_GREEN
+	cable_layer = CABLE_LAYER_4
+	layer = WIRE_LAYER + 0.02
+	icon_state = "l2-1-2-4-8-node"
+
+/obj/structure/cable/layer5
+	color = "#9b59b6"
+	cable_color = CABLE_COLOR_PINK
+	cable_layer = CABLE_LAYER_5
+	layer = WIRE_LAYER + 0.03
+	icon_state = "l4-1-2-4-8-node"
+
 /obj/structure/cable/Initialize(mapload)
 	. = ..()
 
@@ -169,9 +183,24 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 		damage_amount *= 0.25
 	return ..()
 
+/obj/structure/cable/proc/get_icon_layer_id()
+	if(cable_layer & CABLE_LAYER_1)
+		return CABLE_LAYER_1
+	if(cable_layer & CABLE_LAYER_2)
+		return CABLE_LAYER_2
+	if(cable_layer & CABLE_LAYER_3)
+		return CABLE_LAYER_3
+	// The icon file only has the three vanilla layer prefixes. Cyberpunk layers 4/5 reuse existing cable shapes with their own color and draw layer.
+	if(cable_layer & CABLE_LAYER_4)
+		return CABLE_LAYER_2
+	if(cable_layer & CABLE_LAYER_5)
+		return CABLE_LAYER_3
+	return CABLE_LAYER_2
+
 /obj/structure/cable/proc/get_dir_string(links, node)
+	var/icon_layer = get_icon_layer_id()
 	if(!links)
-		return "l[cable_layer]-noconnection"
+		return "l[icon_layer]-noconnection"
 
 	var/list/dir_icon_list = list()
 	for(var/check_dir in GLOB.cardinals)
@@ -180,8 +209,8 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 
 	var/dir_string = dir_icon_list.Join("-")
 	if(length(dir_icon_list) == 1 || !node)
-		return "l[cable_layer]-[dir_string]"
-	return "l[cable_layer]-[dir_string]-node"
+		return "l[icon_layer]-[dir_string]"
+	return "l[icon_layer]-[dir_string]-node"
 
 /obj/structure/cable/update_icon_state()
 	var/node = !!banned_links
@@ -581,6 +610,8 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	"Layer 1" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-red"),
 	"Layer 2" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-yellow"),
 	"Layer 3" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-blue"),
+	"Layer 4" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-green"),
+	"Layer 5" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-pink"),
 	"Multilayer cable hub" = image(icon = 'icons/obj/pipes_n_cables/structures.dmi', icon_state = "cable_bridge"),
 	"Multi Z layer cable hub" = image(icon = 'icons/obj/pipes_n_cables/structures.dmi', icon_state = "cablerelay-broken-cable"),
 	"Cable restraints" = restraints_icon
@@ -608,6 +639,18 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 			set_cable_color(CABLE_COLOR_BLUE)
 			target_type = /obj/structure/cable/layer3
 			target_layer = CABLE_LAYER_3
+		if("Layer 4")
+			icon = initial(icon)
+			novariants = FALSE
+			set_cable_color(CABLE_COLOR_GREEN)
+			target_type = /obj/structure/cable/layer4
+			target_layer = CABLE_LAYER_4
+		if("Layer 5")
+			icon = initial(icon)
+			novariants = FALSE
+			set_cable_color(CABLE_COLOR_PINK)
+			target_type = /obj/structure/cable/layer5
+			target_layer = CABLE_LAYER_5
 		if("Multilayer cable hub")
 			name = "multilayer cable hub"
 			desc = "A multilayer cable hub."
@@ -776,6 +819,14 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	cable_node_1.color = CABLE_COLOR_RED
 	cable_node_1?.alpha = cable_layer & CABLE_LAYER_1 ? 255 : 0
 	underlays += cable_node_1
+	var/mutable_appearance/cable_node_4 = mutable_appearance('icons/obj/pipes_n_cables/layer_cable.dmi', "l2-1-2-4-8-node")
+	cable_node_4.color = "#2ecc71"
+	cable_node_4?.alpha = cable_layer & CABLE_LAYER_4 ? 255 : 0
+	underlays += cable_node_4
+	var/mutable_appearance/cable_node_5 = mutable_appearance('icons/obj/pipes_n_cables/layer_cable.dmi', "l4-1-2-4-8-node")
+	cable_node_5.color = "#9b59b6"
+	cable_node_5?.alpha = cable_layer & CABLE_LAYER_5 ? 255 : 0
+	underlays += cable_node_5
 	var/mutable_appearance/machinery_node = mutable_appearance('icons/obj/pipes_n_cables/layer_cable.dmi', "l2-noconnection")
 	machinery_node.color = "black"
 	underlays += machinery_node
@@ -796,6 +847,8 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	. += span_notice("L1:[cable_layer & CABLE_LAYER_1 ? "Connect" : "Disconnect"].")
 	. += span_notice("L2:[cable_layer & CABLE_LAYER_2 ? "Connect" : "Disconnect"].")
 	. += span_notice("L3:[cable_layer & CABLE_LAYER_3 ? "Connect" : "Disconnect"].")
+	. += span_notice("L4:[cable_layer & CABLE_LAYER_4 ? "Connect" : "Disconnect"].")
+	. += span_notice("L5:[cable_layer & CABLE_LAYER_5 ? "Connect" : "Disconnect"].")
 
 GLOBAL_LIST(hub_radial_layer_list)
 
@@ -809,7 +862,9 @@ GLOBAL_LIST(hub_radial_layer_list)
 		GLOB.hub_radial_layer_list = list(
 			"Layer 1" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-red"),
 			"Layer 2" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-yellow"),
-			"Layer 3" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-blue")
+			"Layer 3" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-blue"),
+			"Layer 4" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-green"),
+			"Layer 5" = image(icon = 'icons/hud/radial.dmi', icon_state = "coil-pink")
 			)
 
 	var/layer_result = show_radial_menu(user, src, GLOB.hub_radial_layer_list, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE, tooltips = TRUE)
@@ -826,6 +881,12 @@ GLOBAL_LIST(hub_radial_layer_list)
 		if("Layer 3")
 			CL = CABLE_LAYER_3
 			to_chat(user, span_warning("You toggle L3 connection."))
+		if("Layer 4")
+			CL = CABLE_LAYER_4
+			to_chat(user, span_warning("You toggle L4 connection."))
+		if("Layer 5")
+			CL = CABLE_LAYER_5
+			to_chat(user, span_warning("You toggle L5 connection."))
 
 	cut_cable_from_powernet(FALSE)
 
@@ -862,10 +923,16 @@ GLOBAL_LIST(hub_radial_layer_list)
 
 // This is a mapping aid. In order for this to be placed on a map and function, all three layers need to have their nodes active
 /obj/structure/cable/multilayer/connected
-		cable_layer = CABLE_LAYER_1 | CABLE_LAYER_2 | CABLE_LAYER_3
+		cable_layer = CABLE_LAYER_1 | CABLE_LAYER_2 | CABLE_LAYER_3 | CABLE_LAYER_4 | CABLE_LAYER_5
 
 /obj/structure/cable/multilayer/layer1
 		cable_layer = CABLE_LAYER_1
 
 /obj/structure/cable/multilayer/layer3
 		cable_layer =  CABLE_LAYER_3
+
+/obj/structure/cable/multilayer/layer4
+		cable_layer = CABLE_LAYER_4
+
+/obj/structure/cable/multilayer/layer5
+		cable_layer = CABLE_LAYER_5

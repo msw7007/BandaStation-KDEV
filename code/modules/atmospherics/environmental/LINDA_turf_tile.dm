@@ -91,12 +91,16 @@
 /turf/open/assume_air(datum/gas_mixture/giver) //use this for machines to adjust air
 	if(!giver)
 		return FALSE
+	if(SSair?.cy_lite_atmos)
+		return TRUE
 	air.merge(giver)
 	update_visuals()
 	air_update_turf(FALSE, FALSE)
 	return TRUE
 
 /turf/open/remove_air(amount)
+	if(SSair?.cy_lite_atmos)
+		return SSair.get_cy_lite_breath(src, amount)
 	var/datum/gas_mixture/ours = return_air()
 	var/datum/gas_mixture/removed = ours.remove(amount)
 	update_visuals()
@@ -252,6 +256,9 @@
 	SSair.remove_from_active(src)
 
 /turf/open/process_cell(fire_count)
+	if(SSair?.cy_lite_atmos)
+		SSair.remove_from_active(src)
+		return
 	if(archived_cycle < fire_count) //archive self if not already done
 		LINDA_CYCLE_ARCHIVE(src)
 
