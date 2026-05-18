@@ -44,9 +44,16 @@ SUBSYSTEM_DEF(air)
 
 	/// Cyberpunk-lite atmos: normal breathable air is assumed; only special gas clouds are simulated.
 	var/cy_lite_atmos = TRUE
+	/// Cyberpunk-lite zone atmos: tracks non-baseline gases by area/z instead of by tile.
+	var/cy_lite_zoned_atmos = TRUE
 	var/list/cy_gas_clouds = list()
 	var/list/cy_gas_clouds_by_turf = list()
+	var/list/cy_atmos_zones = list()
+	var/list/cy_atmos_zones_by_key = list()
+	var/list/cy_active_atmos_zones = list()
 	var/cost_cy_clouds = 0
+	var/cost_cy_zones = 0
+	var/cy_zone_cascade_limit = 64
 
 
 	//Special functions lists
@@ -70,6 +77,7 @@ SUBSYSTEM_DEF(air)
 
 /datum/controller/subsystem/air/stat_entry(msg)
 	msg += "\n  Cost:{"
+	msg += "CZ:[round(cost_cy_zones,1)]|"
 	msg += "LC:[round(cost_cy_clouds,1)]|"
 	msg += "AT:[round(cost_turfs,1)]|"
 	msg += "HS:[round(cost_hotspots,1)]|"
@@ -82,7 +90,7 @@ SUBSYSTEM_DEF(air)
 	msg += "RB:[round(cost_rebuilds,1)]|"
 	msg += "AJ:[round(cost_adjacent,1)]|"
 	msg += "} "
-	msg += "\n  Count:{LC:[cy_gas_clouds.len]|AT:[active_turfs.len]|"
+	msg += "\n  Count:{CZ:[cy_atmos_zones.len]/[cy_active_atmos_zones.len]|LC:[cy_gas_clouds.len]|AT:[active_turfs.len]|"
 	msg += "HS:[hotspots.len]|"
 	msg += "EG:[excited_groups.len]|"
 	msg += "HP:[high_pressure_delta.len]|"
@@ -106,6 +114,8 @@ SUBSYSTEM_DEF(air)
 	if(cy_lite_atmos)
 		// Keep gas definitions, machinery datums and analyzer data available, but do not build the full LINDA tile/pipenets simulation.
 		setup_atmos_machinery()
+		if(cy_lite_zoned_atmos)
+			setup_cy_lite_zones()
 		atmos_handbooks_init()
 		return SS_INIT_SUCCESS
 
@@ -122,6 +132,11 @@ SUBSYSTEM_DEF(air)
 	var/timer = TICK_USAGE_REAL
 
 	if(cy_lite_atmos)
+		timer = TICK_USAGE_REAL
+		process_cy_lite_zones(resumed)
+		cost_cy_zones = MC_AVERAGE(cost_cy_zones, TICK_DELTA_TO_MS(TICK_USAGE_REAL - timer))
+		if(state != SS_RUNNING)
+			return
 		timer = TICK_USAGE_REAL
 		process_cy_lite_clouds(resumed)
 		cost_cy_clouds = MC_AVERAGE(cost_cy_clouds, TICK_DELTA_TO_MS(TICK_USAGE_REAL - timer))
@@ -269,6 +284,231 @@ SUBSYSTEM_DEF(air)
 	queued_for_activation = SSair.queued_for_activation
 	cy_gas_clouds = SSair.cy_gas_clouds
 	cy_gas_clouds_by_turf = SSair.cy_gas_clouds_by_turf
+	cy_atmos_zones = SSair.cy_atmos_zones
+	cy_atmos_zones_by_key = SSair.cy_atmos_zones_by_key
+	cy_active_atmos_zones = SSair.cy_active_atmos_zones
+
+
+/datum/controller/subsystem/air/proc/cy_zone_key(area/source_area, z_level)
+	if(!source_area || !z_level)
+		return null
+	return "[REF(source_area)]:[z_level]"
+
+/datum/controller/subsystem/air/proc/get_cy_atmos_zone(turf/source_turf)
+	if(!cy_lite_zoned_atmos || !source_turf)
+		return null
+	var/area/source_area = get_area(source_turf)
+	if(!source_area)
+		return null
+	var/key = cy_zone_key(source_area, source_turf.z)
+	var/datum/cy_atmos_zone/zone = cy_atmos_zones_by_key[key]
+	if(zone)
+		return zone
+	zone = new /datum/cy_atmos_zone(source_area, source_turf.z)
+	cy_atmos_zones += zone
+	cy_atmos_zones_by_key[key] = zone
+	return zone
+
+/datum/controller/subsystem/air/proc/setup_cy_lite_zones()
+	cy_atmos_zones = list()
+	cy_atmos_zones_by_key = list()
+	cy_active_atmos_zones = list()
+	for(var/area/source_area as anything in GLOB.areas)
+		if(!source_area?.has_contained_turfs())
+			continue
+		for(var/z_level in 1 to world.maxz)
+			var/list/z_turfs = source_area.get_turfs_by_zlevel(z_level)
+			if(!length(z_turfs))
+				continue
+			var/open_count = 0
+			for(var/turf/open/open_turf as anything in z_turfs)
+				if(open_turf.blocks_air || open_turf.density)
+					continue
+				open_count++
+			if(!open_count)
+				continue
+			var/datum/cy_atmos_zone/zone = new /datum/cy_atmos_zone(source_area, z_level, open_count)
+			cy_atmos_zones += zone
+			cy_atmos_zones_by_key[cy_zone_key(source_area, z_level)] = zone
+	for(var/datum/cy_atmos_zone/zone as anything in cy_atmos_zones)
+		zone.discover_neighbors()
+
+/datum/controller/subsystem/air/proc/activate_cy_atmos_zone(datum/cy_atmos_zone/zone)
+	if(!zone || zone.active)
+		return
+	zone.active = TRUE
+	cy_active_atmos_zones += zone
+
+/datum/controller/subsystem/air/proc/deactivate_cy_atmos_zone(datum/cy_atmos_zone/zone)
+	if(!zone || !zone.active)
+		return
+	zone.active = FALSE
+	cy_active_atmos_zones -= zone
+
+/datum/controller/subsystem/air/proc/assume_cy_lite_air(turf/source_turf, datum/gas_mixture/giver)
+	if(!source_turf || !giver || !cy_lite_zoned_atmos)
+		return FALSE
+	var/datum/cy_atmos_zone/zone = get_cy_atmos_zone(source_turf)
+	if(!zone)
+		return FALSE
+	return zone.assume_air(giver)
+
+/datum/controller/subsystem/air/proc/process_cy_lite_zones(resumed = FALSE)
+	if(!cy_lite_zoned_atmos)
+		return
+	if(!resumed)
+		currentrun = cy_active_atmos_zones.Copy()
+	var/list/run = currentrun
+	var/processed = 0
+	while(length(run) && processed < cy_zone_cascade_limit)
+		var/datum/cy_atmos_zone/zone = run[length(run)]
+		run.len--
+		if(QDELETED(zone))
+			cy_active_atmos_zones -= zone
+			continue
+		zone.process_zone(wait * 0.1)
+		processed++
+		if(MC_TICK_CHECK)
+			return
+
+/datum/cy_atmos_zone
+	var/area/source_area
+	var/z_level = 1
+	var/turf_count = 1
+	var/datum/gas_mixture/air_delta
+	var/list/neighbors = list()
+	var/active = FALSE
+	var/spread_ratio = 0.08
+	var/decay_ratio = 0.004
+	var/minimum_moles = 0.01
+	var/temperature = T20C
+
+/datum/cy_atmos_zone/New(area/new_area, new_z_level, new_turf_count = 1)
+	. = ..()
+	source_area = new_area
+	z_level = new_z_level
+	turf_count = max(new_turf_count, 1)
+	air_delta = new /datum/gas_mixture(CELL_VOLUME)
+
+/datum/cy_atmos_zone/Destroy()
+	if(SSair)
+		SSair.deactivate_cy_atmos_zone(src)
+	source_area = null
+	neighbors = null
+	QDEL_NULL(air_delta)
+	return ..()
+
+/datum/cy_atmos_zone/proc/discover_neighbors()
+	if(!source_area)
+		return
+	var/list/z_turfs = source_area.get_turfs_by_zlevel(z_level)
+	for(var/turf/open/open_turf as anything in z_turfs)
+		if(open_turf.blocks_air || open_turf.density)
+			continue
+		for(var/dir in GLOB.cardinals)
+			var/turf/open/nearby = get_step(open_turf, dir)
+			if(!istype(nearby) || nearby.blocks_air || nearby.density)
+				continue
+			if(get_area(nearby) == source_area)
+				continue
+			var/datum/cy_atmos_zone/neighbor = SSair.get_cy_atmos_zone(nearby)
+			if(neighbor && neighbor != src)
+				neighbors |= neighbor
+		var/turf/open/above = GET_TURF_ABOVE(open_turf)
+		if(istype(above) && !above.blocks_air && !above.density && open_turf.zAirOut(UP, above) && above.zAirIn(DOWN, open_turf))
+			var/datum/cy_atmos_zone/above_zone = SSair.get_cy_atmos_zone(above)
+			if(above_zone && above_zone != src)
+				neighbors |= above_zone
+		var/turf/open/below = GET_TURF_BELOW(open_turf)
+		if(istype(below) && !below.blocks_air && !below.density && open_turf.zAirOut(DOWN, below) && below.zAirIn(DOWN, open_turf))
+			var/datum/cy_atmos_zone/below_zone = SSair.get_cy_atmos_zone(below)
+			if(below_zone && below_zone != src)
+				neighbors |= below_zone
+
+/datum/cy_atmos_zone/proc/assume_air(datum/gas_mixture/giver)
+	if(!giver || !air_delta)
+		return FALSE
+	var/list/giver_gases = giver.gases
+	for(var/gas_id in giver_gases)
+		if(gas_id == /datum/gas/oxygen || gas_id == /datum/gas/nitrogen)
+			continue
+		var/moles = giver_gases[gas_id][MOLES]
+		if(moles <= 0)
+			continue
+		air_delta.adjust_gas(gas_id, moles / turf_count)
+	if(abs(giver.temperature - temperature) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
+		temperature = (temperature + giver.temperature) * 0.5
+	if(has_effect())
+		SSair.activate_cy_atmos_zone(src)
+	return TRUE
+
+/datum/cy_atmos_zone/proc/apply_to_breath(datum/gas_mixture/breath)
+	if(!breath || !has_effect())
+		return
+	for(var/gas_id in air_delta.gases)
+		var/moles = air_delta.gases[gas_id][MOLES]
+		if(moles > minimum_moles)
+			breath.adjust_gas(gas_id, moles)
+	if(abs(breath.temperature - temperature) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
+		breath.temperature = (breath.temperature + temperature) * 0.5
+
+/datum/cy_atmos_zone/proc/has_effect()
+	if(!air_delta)
+		return FALSE
+	for(var/gas_id in air_delta.gases)
+		if(air_delta.gases[gas_id][MOLES] > minimum_moles)
+			return TRUE
+	return abs(temperature - T20C) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER
+
+/datum/cy_atmos_zone/proc/process_zone(seconds_per_tick)
+	if(!has_effect())
+		SSair.deactivate_cy_atmos_zone(src)
+		return
+	decay(seconds_per_tick)
+	cascade()
+	if(!has_effect())
+		SSair.deactivate_cy_atmos_zone(src)
+
+/datum/cy_atmos_zone/proc/decay(seconds_per_tick)
+	var/multiplier = max(0, 1 - decay_ratio * max(seconds_per_tick, 1))
+	for(var/gas_id in air_delta.gases.Copy())
+		air_delta.gases[gas_id][MOLES] *= multiplier
+	air_delta.garbage_collect()
+	if(abs(temperature - T20C) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
+		temperature += (T20C - temperature) * min(0.05 * max(seconds_per_tick, 1), 1)
+
+/datum/cy_atmos_zone/proc/cascade()
+	if(!length(neighbors))
+		return
+	for(var/datum/cy_atmos_zone/neighbor as anything in neighbors)
+		if(QDELETED(neighbor))
+			neighbors -= neighbor
+			continue
+		share_with(neighbor)
+
+/datum/cy_atmos_zone/proc/share_with(datum/cy_atmos_zone/neighbor)
+	var/moved = FALSE
+	var/list/all_gases = air_delta.gases | neighbor.air_delta.gases
+	for(var/gas_id in all_gases)
+		air_delta.assert_gas(gas_id)
+		neighbor.air_delta.assert_gas(gas_id)
+		var/our_moles = air_delta.gases[gas_id][MOLES]
+		var/their_moles = neighbor.air_delta.gases[gas_id][MOLES]
+		var/delta = (our_moles - their_moles) * spread_ratio
+		if(abs(delta) <= minimum_moles)
+			continue
+		air_delta.gases[gas_id][MOLES] -= delta
+		neighbor.air_delta.gases[gas_id][MOLES] += delta
+		moved = TRUE
+	air_delta.garbage_collect()
+	neighbor.air_delta.garbage_collect()
+	if(abs(temperature - neighbor.temperature) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
+		var/temp_delta = (temperature - neighbor.temperature) * spread_ratio
+		temperature -= temp_delta
+		neighbor.temperature += temp_delta
+		moved = TRUE
+	if(moved && neighbor.has_effect())
+		SSair.activate_cy_atmos_zone(neighbor)
 
 
 /datum/controller/subsystem/air/proc/register_cy_gas_cloud(datum/cy_gas_cloud/cloud)
@@ -307,9 +547,22 @@ SUBSYSTEM_DEF(air)
 		return null
 	return new /datum/cy_gas_cloud(origin, gas_id, amount, density, pressure, temperature, spread_threshold, decay_rate)
 
+/datum/controller/subsystem/air/proc/get_cy_lite_air(turf/source_turf)
+	var/datum/gas_mixture/air_sample = source_turf.create_gas_mixture()
+	var/datum/cy_atmos_zone/zone = get_cy_atmos_zone(source_turf)
+	zone?.apply_to_breath(air_sample)
+	var/list/clouds = cy_gas_clouds_by_turf[source_turf]
+	if(length(clouds))
+		for(var/datum/cy_gas_cloud/cloud as anything in clouds)
+			cloud.add_to_breath(source_turf, air_sample)
+	air_sample.garbage_collect()
+	return air_sample
+
 /datum/controller/subsystem/air/proc/get_cy_lite_breath(turf/source_turf, amount)
 	var/datum/gas_mixture/background = source_turf.create_gas_mixture()
 	var/datum/gas_mixture/breath = background.remove(amount)
+	var/datum/cy_atmos_zone/zone = get_cy_atmos_zone(source_turf)
+	zone?.apply_to_breath(breath)
 	var/list/clouds = cy_gas_clouds_by_turf[source_turf]
 	if(!length(clouds))
 		return breath

@@ -92,6 +92,7 @@
 	if(!giver)
 		return FALSE
 	if(SSair?.cy_lite_atmos)
+		SSair.assume_cy_lite_air(src, giver)
 		return TRUE
 	air.merge(giver)
 	update_visuals()
@@ -122,6 +123,8 @@
 
 /turf/open/return_air()
 	RETURN_TYPE(/datum/gas_mixture)
+	if(SSair?.cy_lite_atmos)
+		return SSair.get_cy_lite_air(src)
 	return air
 
 /turf/open/return_analyzable_air()
