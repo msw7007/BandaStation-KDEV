@@ -128,6 +128,8 @@
 	return air
 
 /turf/open/return_analyzable_air()
+	if(SSair?.cy_lite_atmos)
+		return SSair.get_cy_lite_analyzable_air(src)
 	return return_air()
 
 /turf/should_atmos_process(datum/gas_mixture/air, exposed_temperature)
