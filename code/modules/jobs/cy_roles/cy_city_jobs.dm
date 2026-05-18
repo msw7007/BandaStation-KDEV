@@ -7,7 +7,9 @@
 	paycheck = PAYCHECK_CREW
 	paycheck_department = ACCOUNT_CIV
 	outfit = /datum/outfit/job/cy_city_base
-	job_flags = STATION_JOB_FLAGS
+	job_flags = JOB_HIDE_WHEN_EMPTY
+	total_positions = 0
+	spawn_positions = 0
 	allow_bureaucratic_error = FALSE
 	random_spawns_possible = FALSE
 
@@ -39,6 +41,7 @@
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
 	cy_can_manage_budget = FALSE
 	cy_role_stat_modifiers = list(/datum/cy_stat/charisma = 1)
+	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_business_owner
 	parent_type = /datum/outfit/job/cy_city_base
@@ -67,6 +70,7 @@
 	cy_can_issue_warrants = TRUE
 	cy_can_manage_budget = TRUE
 	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1, /datum/cy_stat/charisma = 1)
+	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_official
 	parent_type = /datum/outfit/job/lawyer
@@ -92,6 +96,7 @@
 	cy_police_database_access = TRUE
 	cy_can_issue_warrants = TRUE
 	cy_role_stat_modifiers = list(/datum/cy_stat/perception = 1)
+	job_flags = STATION_JOB_FLAGS
 
 /datum/job/cy_council_member
 	parent_type = /datum/job/cy_city_base
@@ -134,6 +139,9 @@
 	paycheck_department = ACCOUNT_CAR
 	cy_can_manage_budget = FALSE
 	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1)
+	job_flags = JOB_HIDE_WHEN_EMPTY
+	total_positions = 0
+	spawn_positions = 0
 
 /datum/job/cy_corporate_trainee
 	parent_type = /datum/job/cy_corporate_base
@@ -204,11 +212,12 @@
 
 /datum/job/cy_corp_specialist_base
 	parent_type = /datum/job/cy_corporate_base
-	total_positions = 2
-	spawn_positions = 2
+	total_positions = 0
+	spawn_positions = 0
 	paycheck = PAYCHECK_CREW
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_SPECIALIST
 	outfit = /datum/outfit/job/cy_corp_specialist_base
+	job_flags = JOB_HIDE_WHEN_EMPTY
 	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1)
 
 /datum/outfit/job/cy_corp_specialist_base
@@ -228,6 +237,8 @@
 	outfit = /datum/outfit/job/cy_ben_reaper
 	cy_organization_type = /datum/cy_organization/corporation/ben
 	cy_city_account_id = CY_ACCOUNT_BEN
+	total_positions = 3
+	spawn_positions = 3
 	skills = list(/datum/cy_skill/professional/medicine = 150, /datum/cy_skill/professional/chemistry = 100, /datum/cy_skill/professional/analysis = 80)
 	minimal_skills = list(/datum/cy_skill/professional/medicine = 80, /datum/cy_skill/professional/chemistry = 50)
 	cy_role_stat_modifiers = list(/datum/cy_stat/spirit = 1, /datum/cy_stat/intelligence = 1)
@@ -244,6 +255,8 @@
 	outfit = /datum/outfit/job/cy_ryaznov_engineer
 	cy_organization_type = /datum/cy_organization/corporation/ryaznov
 	cy_city_account_id = CY_ACCOUNT_RYAZNOV
+	total_positions = 3
+	spawn_positions = 3
 	skills = list(/datum/cy_skill/professional/construction = 150, /datum/cy_skill/professional/invention = 100, /datum/cy_skill/professional/mining = 80)
 	minimal_skills = list(/datum/cy_skill/professional/construction = 80, /datum/cy_skill/professional/invention = 50)
 	cy_role_stat_modifiers = list(/datum/cy_stat/strength = 1, /datum/cy_stat/intelligence = 1)
@@ -260,6 +273,8 @@
 	outfit = /datum/outfit/job/cy_starlight_logistician
 	cy_organization_type = /datum/cy_organization/corporation/starlight
 	cy_city_account_id = CY_ACCOUNT_STARLIGHT
+	total_positions = 3
+	spawn_positions = 3
 	skills = list(/datum/cy_skill/professional/driving = 150, /datum/cy_skill/professional/analysis = 100, /datum/cy_skill/professional/invention = 60)
 	minimal_skills = list(/datum/cy_skill/professional/driving = 80, /datum/cy_skill/professional/analysis = 50)
 	cy_role_stat_modifiers = list(/datum/cy_stat/perception = 1, /datum/cy_stat/dexterity = 1)
