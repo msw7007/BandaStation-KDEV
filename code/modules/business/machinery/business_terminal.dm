@@ -28,6 +28,10 @@
 	return null
 
 /obj/machinery/computer/cy_business_terminal/proc/show_business_status(mob/user)
+	var/area/current_area = get_area(src)
+	var/list/zone = current_area?.cy_describe_zone()
+	if(zone)
+		to_chat(user, span_notice("Zone: [zone["name"]], security [zone["security_level"]], controller [zone["controller"] || "none"]."))
 	var/datum/cy_business/business = linked_zone?.active_business
 	if(!business)
 		to_chat(user, span_notice("Business zone is free. Use cy_create_business() in code/admin tooling or map verbs to register it."))

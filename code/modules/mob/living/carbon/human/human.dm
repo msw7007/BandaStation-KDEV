@@ -37,6 +37,9 @@
 	GLOB.human_list += src
 	ADD_TRAIT(src, TRAIT_CAN_MOUNT_HUMANS, INNATE_TRAIT)
 	ADD_TRAIT(src, TRAIT_CAN_MOUNT_CYBORGS, INNATE_TRAIT)
+	RegisterSignal(src, COMSIG_MOB_ITEM_ATTACK, PROC_REF(on_cy_story_item_attack))
+	RegisterSignal(src, COMSIG_LIVING_UNARMED_ATTACK, PROC_REF(on_cy_story_unarmed_attack))
+	RegisterSignal(src, COMSIG_ENTER_AREA, PROC_REF(on_cy_enter_area_audit))
 
 /mob/living/carbon/human/proc/setup_physiology()
 	physiology = new()
@@ -64,6 +67,7 @@
 	randomize_human_normie(src, randomize_mutations = TRUE, update_body = FALSE)
 
 /mob/living/carbon/human/Destroy()
+	UnregisterSignal(src, list(COMSIG_MOB_ITEM_ATTACK, COMSIG_LIVING_UNARMED_ATTACK, COMSIG_ENTER_AREA))
 	QDEL_NULL(physiology)
 	GLOB.human_list -= src
 

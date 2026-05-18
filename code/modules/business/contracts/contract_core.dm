@@ -185,6 +185,9 @@
 	completed_time = world.time
 	pay_performer()
 	log_event(reason)
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_ECONOMY, max(1, round(payment_amount / 100)), src)
+	if(visibility == CY_CONTRACT_GREY || legality == CY_CONTRACT_ILLEGAL)
+		SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_BLACK_MARKET, max(1, round(payment_amount / 100)), src)
 	close_contract()
 	return TRUE
 
@@ -194,6 +197,7 @@
 	status = CY_CONTRACT_STATUS_FAILED
 	log_event(reason)
 	apply_failure_penalty()
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_VIOLENCE, 3, src)
 	close_contract()
 	return TRUE
 

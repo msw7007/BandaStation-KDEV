@@ -381,3 +381,5 @@
 	var/mob/living/cy_original_body
 	var/cy_body_abandoned_at
 	var/cy_abandoned_body_rescue_attempted = FALSE
+	var/cy_next_violence_report_at = 0
+	var/cy_next_controlled_item_audit_at = 0

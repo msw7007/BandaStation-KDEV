@@ -159,6 +159,7 @@ GLOBAL_LIST_EMPTY(cy_organizations_by_id)
 	owner.research_points += amount
 	owner.write_round_log("research", source, amount)
 	owner.update_round_level()
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_CORPORATE, max(1, round(amount / 25)), owner)
 	return owner.research_points
 
 /datum/cy_organization/proc/add_profit(amount, source = null)
@@ -169,6 +170,7 @@ GLOBAL_LIST_EMPTY(cy_organizations_by_id)
 	owner.profit += amount
 	owner.write_round_log("profit", source, amount)
 	owner.update_round_level()
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_CORPORATE, max(1, round(abs(amount) / 250)), owner)
 	return owner.profit
 
 /datum/cy_organization/proc/add_influence(amount, source = null)
@@ -179,6 +181,7 @@ GLOBAL_LIST_EMPTY(cy_organizations_by_id)
 	owner.influence += amount
 	owner.write_round_log("influence", source, amount)
 	owner.update_round_level()
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_CORPORATE, max(1, round(abs(amount) / 10)), owner)
 	return owner.influence
 
 /datum/cy_organization/proc/add_data(data_key, amount = 1, source = null)

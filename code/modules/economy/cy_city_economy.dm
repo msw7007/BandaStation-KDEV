@@ -410,6 +410,9 @@
 	var/datum/cy_city_crime_record/record = cy_get_crime_record(target, TRUE)
 	var/datum/cy_city_violation/violation = new(law.id, law.title, details || law.description, issuer, actual_fine, actual_sentence, actual_status)
 	record.violations += violation
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_LAW, max(1, law.severity * 2), violation)
+	if(law_id in list(CY_LAW_ASSAULT, CY_LAW_MURDER, CY_LAW_SABOTAGE))
+		SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_VIOLENCE, max(2, law.severity * 3), violation)
 	return violation
 
 /datum/controller/subsystem/economy/proc/cy_pay_violation(target, violation_id, datum/bank_account/payer, amount)
@@ -492,6 +495,11 @@
 	else
 		cy_record_transaction(buyer_account, seller_account || market_account, price, "Item transfer: [item.name]", visibility, CY_ECON_CHANNEL_BANK, buyer?.name, item)
 	cy_register_supply_signal(category, price, item.cy_quality)
+	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_ECONOMY, max(1, round(price / 100)), item)
+	if(category == CY_ITEM_MARKET_CONTROLLED)
+		SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_CORPORATE, max(1, round(price / 150)), item)
+	else if(category == CY_ITEM_MARKET_BLACK)
+		SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_BLACK_MARKET, max(2, round(price / 100)), item)
 	if(!legal || category == CY_ITEM_MARKET_BLACK)
 		if(seller)
 			cy_issue_violation(seller, CY_LAW_CONTROLLED_ITEM, "Illegal transfer of [item.name].", "Market audit", null, null, CY_WARRANT_INVESTIGATION)

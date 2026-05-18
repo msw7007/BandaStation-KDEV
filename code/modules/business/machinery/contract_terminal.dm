@@ -13,6 +13,9 @@
 
 /obj/machinery/computer/cy_contract_terminal/proc/show_contract_status(mob/user)
 	to_chat(user, span_notice("Open contracts: [length(SScy_business.open_contracts)]. Grey pool: [grey_unlocked ? "unlocked" : "locked"]."))
+	var/list/story_state = SScy_storyteller?.get_story_state()
+	if(story_state)
+		to_chat(user, span_notice("City pressure: [round(story_state["total_pressure"])] / [story_state["ending"]]."))
 	for(var/contract_id in SScy_business.open_contracts)
 		var/datum/cy_contract/contract = SScy_business.open_contracts[contract_id]
 		if(!contract)

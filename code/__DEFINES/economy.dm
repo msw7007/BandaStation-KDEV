@@ -190,6 +190,19 @@
 #define CY_SECURITY_ZONE_SECURE 3
 #define CY_SECURITY_ZONE_CORPORATE 4
 
+#define CY_STORY_PRESSURE_VIOLENCE "violence"
+#define CY_STORY_PRESSURE_ECONOMY "economy"
+#define CY_STORY_PRESSURE_CORPORATE "corporate"
+#define CY_STORY_PRESSURE_BLACK_MARKET "black_market"
+#define CY_STORY_PRESSURE_RESCUE "rescue"
+#define CY_STORY_PRESSURE_LAW "law"
+
+#define CY_STORY_ENDING_STABILITY "stability"
+#define CY_STORY_ENDING_CORPORATE "corporate_capture"
+#define CY_STORY_ENDING_BLACK_MARKET "black_market"
+#define CY_STORY_ENDING_COLLAPSE "collapse"
+#define CY_STORY_ENDING_SURVIVAL "survival"
+
 #define CY_POLICE_DB_ACCESS "police_database"
 #define CY_BOUNTY_HUNTER_ACCESS "bounty_hunter_database"
 #define CY_GOVERNMENT_LEDGER_ACCESS "government_ledger"
