@@ -165,8 +165,9 @@
 /datum/job/cy_corp_agent_base
 	parent_type = /datum/job/cy_corporate_base
 	description = "Защищайте свою корпорацию, внедряйтесь, саботируйте, охраняйте специалистов и перехватывайте чужие грузы."
-	total_positions = 3
-	spawn_positions = 3
+	job_flags = JOB_HIDE_WHEN_EMPTY
+	total_positions = 0
+	spawn_positions = 0
 	paycheck = PAYCHECK_COMMAND
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_AGENT
 	outfit = /datum/outfit/job/cy_corp_agent_base
@@ -184,6 +185,8 @@
 	display_order = JOB_DISPLAY_ORDER_CY_BEN_AGENT
 	config_tag = "CY_BEN_AGENT"
 	cy_role_id = "ben_agent"
+	total_positions = 3
+	spawn_positions = 3
 	outfit = /datum/outfit/job/cy_ben_agent
 	cy_organization_type = /datum/cy_organization/corporation/ben
 	cy_city_account_id = CY_ACCOUNT_BEN
@@ -195,6 +198,8 @@
 	display_order = JOB_DISPLAY_ORDER_CY_RYAZNOV_AGENT
 	config_tag = "CY_RYAZNOV_AGENT"
 	cy_role_id = "ryaznov_agent"
+	total_positions = 3
+	spawn_positions = 3
 	outfit = /datum/outfit/job/cy_ryaznov_agent
 	cy_organization_type = /datum/cy_organization/corporation/ryaznov
 	cy_city_account_id = CY_ACCOUNT_RYAZNOV
@@ -206,6 +211,8 @@
 	display_order = JOB_DISPLAY_ORDER_CY_STARLIGHT_AGENT
 	config_tag = "CY_STARLIGHT_AGENT"
 	cy_role_id = "starlight_agent"
+	total_positions = 3
+	spawn_positions = 3
 	outfit = /datum/outfit/job/cy_starlight_agent
 	cy_organization_type = /datum/cy_organization/corporation/starlight
 	cy_city_account_id = CY_ACCOUNT_STARLIGHT
@@ -337,8 +344,8 @@
 	title = JOB_CY_MERCENARY
 	description = "Берите легальные и серые контракты, ходите в точки интереса, защищайте нанимателя и воюйте за оплату."
 	supervisors = "условиями контракта и теми, кто платит"
-	total_positions = 10
-	spawn_positions = 10
+	total_positions = 40
+	spawn_positions = 40
 	paycheck_department = ACCOUNT_CIV
 	display_order = JOB_DISPLAY_ORDER_CY_MERCENARY
 	department_for_prefs = /datum/job_department/cy_outsourcers
@@ -353,6 +360,7 @@
 	skills = list(/datum/cy_skill/dexterity/light_weapons = 120, /datum/cy_skill/strength/heavy_weapons = 80, /datum/cy_skill/spirit/athletics = 80)
 	minimal_skills = list(/datum/cy_skill/dexterity/light_weapons = 60, /datum/cy_skill/spirit/athletics = 40)
 	cy_role_stat_modifiers = list(/datum/cy_stat/dexterity = 1, /datum/cy_stat/perception = 1)
+	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_mercenary
 	parent_type = /datum/outfit/job/security
@@ -364,8 +372,8 @@
 	title = JOB_CY_LABORER
 	description = "Свободный работник без фиксированной привязки: нанимайтесь, меняйте работу, снимайте жильё и зарабатывайте как сможете."
 	supervisors = "работодателем, если вы его выбрали"
-	total_positions = 20
-	spawn_positions = 20
+	total_positions = 40
+	spawn_positions = 40
 	paycheck_department = ACCOUNT_CIV
 	display_order = JOB_DISPLAY_ORDER_CY_LABORER
 	department_for_prefs = /datum/job_department/cy_outsourcers
@@ -377,6 +385,7 @@
 	cy_role_flags = CY_ROLE_FLAG_OUTSOURCER
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
 	cy_role_stat_modifiers = list(/datum/cy_stat/strength = 1)
+	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_laborer
 	parent_type = /datum/outfit/job/assistant
