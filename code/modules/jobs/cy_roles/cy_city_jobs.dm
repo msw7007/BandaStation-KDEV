@@ -221,10 +221,10 @@
 	parent_type = /datum/job/cy_corporate_base
 	total_positions = 0
 	spawn_positions = 0
+	job_flags = JOB_HIDE_WHEN_EMPTY
 	paycheck = PAYCHECK_CREW
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_SPECIALIST
 	outfit = /datum/outfit/job/cy_corp_specialist_base
-	job_flags = JOB_HIDE_WHEN_EMPTY
 	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1)
 
 /datum/outfit/job/cy_corp_specialist_base
@@ -289,12 +289,12 @@
 /datum/job/cy_corp_representative_base
 	parent_type = /datum/job/cy_corporate_base
 	description = "Управляйте местным подразделением корпорации, бюджетом, контрактами, исследованиями и развитием услуг."
-	total_positions = 1
-	spawn_positions = 1
+	total_positions = 0
+	spawn_positions = 0
+	job_flags = JOB_HIDE_WHEN_EMPTY
 	paycheck = PAYCHECK_COMMAND
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_REPRESENTATIVE
 	cy_can_manage_budget = TRUE
-	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 	outfit = /datum/outfit/job/cy_corp_representative_base
 	cy_role_stat_modifiers = list(/datum/cy_stat/charisma = 1, /datum/cy_stat/intelligence = 1)
 
@@ -310,6 +310,9 @@
 	display_order = JOB_DISPLAY_ORDER_CY_BEN_REPRESENTATIVE
 	config_tag = "CY_BEN_REPRESENTATIVE"
 	cy_role_id = "ben_representative"
+	total_positions = 1
+	spawn_positions = 1
+	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 	outfit = /datum/outfit/job/cy_ben_representative
 	cy_organization_type = /datum/cy_organization/corporation/ben
 	cy_city_account_id = CY_ACCOUNT_BEN
@@ -321,6 +324,9 @@
 	display_order = JOB_DISPLAY_ORDER_CY_RYAZNOV_REPRESENTATIVE
 	config_tag = "CY_RYAZNOV_REPRESENTATIVE"
 	cy_role_id = "ryaznov_representative"
+	total_positions = 1
+	spawn_positions = 1
+	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 	outfit = /datum/outfit/job/cy_ryaznov_representative
 	cy_organization_type = /datum/cy_organization/corporation/ryaznov
 	cy_city_account_id = CY_ACCOUNT_RYAZNOV
@@ -332,6 +338,9 @@
 	display_order = JOB_DISPLAY_ORDER_CY_STARLIGHT_REPRESENTATIVE
 	config_tag = "CY_STARLIGHT_REPRESENTATIVE"
 	cy_role_id = "starlight_representative"
+	total_positions = 1
+	spawn_positions = 1
+	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 	outfit = /datum/outfit/job/cy_starlight_representative
 	cy_organization_type = /datum/cy_organization/corporation/starlight
 	cy_city_account_id = CY_ACCOUNT_STARLIGHT
