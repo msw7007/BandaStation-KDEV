@@ -2464,9 +2464,9 @@
 		for(var/obj/item/cy_module/module as anything in cy_all_installed_modules())
 			value += module.cy_market_value_mod
 	if(cy_black_market_only)
-		value *= 1.5
+		value *= 2.5
 	else if(is_cy_controlled_combat_item())
-		value *= 1.25
+		value *= 2
 	if(cy_broken)
 		value *= 0.25
 	return max(1, round(value))
@@ -2796,10 +2796,10 @@
 /obj/item/proc/cy_get_material_insert_multiplier()
 	return cy_get_quality_multiplier()
 
-/obj/item/proc/cy_apply_quality_to_craft_result(list/components)
+/obj/item/proc/cy_apply_quality_to_craft_result(list/components, quality_bonus = 0)
 	if(!length(components))
 		return
-	cy_apply_quality_from_components(components)
+	cy_apply_quality_from_components(components, quality_bonus)
 	cy_quality_affects_stats = TRUE
 	cy_initialize_quality_core()
 	cy_rebuild_item_stats()

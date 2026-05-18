@@ -308,6 +308,10 @@
 
 	//checks for available materials
 	var/material_cost_coefficient = ispath(design.build_path, /obj/item/stack) ? 1 : creation_efficiency
+	var/mob/living/operator
+	if(isliving(ui.user))
+		operator = ui.user
+		material_cost_coefficient = max(0.55, material_cost_coefficient - (operator.get_cy_professional_quality_bonus(/datum/cy_skill/professional/invention) * 0.01))
 	if(!materials.has_materials(materials_needed, material_cost_coefficient, build_count))
 		say("Not enough materials to begin production.")
 		return
@@ -319,6 +323,8 @@
 
 	charge_per_item = ROUND_UP((charge_per_item / (MAX_STACK_SIZE * SHEET_MATERIAL_AMOUNT)) * material_cost_coefficient * active_power_usage)
 	var/build_time_per_item = (design.construction_time * design.lathe_time_factor) ** 0.8
+	if(operator)
+		build_time_per_item *= operator.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/invention)
 
 	//do the printing sequentially
 	busy = TRUE
@@ -340,7 +346,7 @@
 			if(!istype(material, /datum/material/glass) && !istype(material, /datum/material/iron))
 				ui.user.client.give_award(/datum/award/achievement/misc/getting_an_upgrade, ui.user)
 				break
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, build_count, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target_location, slots_chosen), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, build_count, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target_location, slots_chosen, operator), build_time_per_item)
 
 	return TRUE
 
@@ -356,7 +362,7 @@
  * * list/materials_needed - the list of materials to print 1 item
  * * turf/target - the location to drop the printed item on
 */
-/obj/machinery/autolathe/proc/do_make_item(datum/design/design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, list/materials_needed, turf/target, list/slots_chosen)
+/obj/machinery/autolathe/proc/do_make_item(datum/design/design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, list/materials_needed, turf/target, list/slots_chosen, mob/living/operator)
 	PROTECTED_PROC(TRUE)
 
 	if(items_remaining <= 0) // how
@@ -410,6 +416,7 @@
 	if(isitem(created))
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
 		created.pixel_y = created.base_pixel_y + rand(-6, 6)
+	operator?.award_cy_professional_activity(/datum/cy_skill/professional/invention, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 	SSblackbox.record_feedback("nested tally", "lathe_printed_items", 1, list("[type]", "[created.type]"))
 
 	if(is_stack)
@@ -420,7 +427,7 @@
 	if(items_remaining <= 0)
 		finalize_build()
 		return
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target, slots_chosen), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target, slots_chosen, operator), build_time_per_item)
 
 /**
  * Resets the icon state and busy flag

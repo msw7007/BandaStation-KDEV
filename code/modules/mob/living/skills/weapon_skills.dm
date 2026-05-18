@@ -16,7 +16,7 @@ GLOBAL_LIST_INIT(cy_weapon_skill_types, list(
 /datum/cy_skill/weapon
 	category = "weapon"
 	limited_by_stat = FALSE
-	max_level = 5
+	max_level = CY_SKILL_MAXIMUM_LEVEL
 
 /datum/cy_skill/weapon/knives
 	name = "Ножи"

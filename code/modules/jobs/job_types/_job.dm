@@ -141,6 +141,8 @@
 	var/cy_can_manage_budget = FALSE
 	/// Whether this role is eligible for bounty-hunter style police database access.
 	var/cy_bounty_hunter = FALSE
+	/// Small role stat modifiers applied after character preferences.
+	var/list/cy_role_stat_modifiers
 
 	/// custom ringtone for this job
 	var/job_tone

@@ -19,6 +19,8 @@
 	var/rating_amount = 1
 	///Lazylist of items to be blended
 	var/list/processor_contents
+	///Last living user who started the processing cycle.
+	var/datum/weakref/cy_processing_user
 	/*
 	 * Static, nested list. The first layer contains all food processor types.
 	 * The second layer contains input typepaths (key) and the associated food_processor_process datums (assoc) the processor can access.
@@ -65,6 +67,7 @@
 *	If the input was a mob, gibs them, otherwise, deletes the item
 */
 /obj/machinery/processor/proc/process_food(datum/food_processor_process/recipe, atom/movable/what)
+	var/mob/living/cook = cy_processing_user?.resolve()
 	if(recipe.output && loc && !QDELETED(src))
 		var/list/cached_mats = recipe.preserve_materials && what.custom_materials
 		var/cached_multiplier = (recipe.food_multiplier * rating_amount)
@@ -75,6 +78,12 @@
 				what.reagents.trans_to(processed_food, what.reagents.total_volume, multiplier = 1 / cached_multiplier, copy_only = TRUE)
 			if(cached_mats)
 				processed_food.set_custom_materials(cached_mats, 1 / cached_multiplier)
+			var/obj/item/processed_item = processed_food
+			if(istype(cook) && istype(processed_item))
+				processed_item.cy_set_quality(processed_item.cy_quality + cook.get_cy_professional_quality_bonus(/datum/cy_skill/professional/cooking))
+				processed_item.cy_quality_affects_stats = TRUE
+				processed_item.cy_initialize_quality_core()
+				processed_item.cy_rebuild_item_stats()
 
 	if(isliving(what))
 		var/mob/living/themob = what
@@ -164,11 +173,13 @@
 	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] включает [declent_ru(ACCUSATIVE)]."), \
 		span_notice("Вы включаете [declent_ru(ACCUSATIVE)]."), \
 		span_hear("Вы слышите кухонный комбайн."))
-	processing()
+	processing(user)
 
 
-/obj/machinery/processor/proc/processing()
+/obj/machinery/processor/proc/processing(mob/living/user = null)
 	processing = TRUE
+	if(istype(user))
+		cy_processing_user = WEAKREF(user)
 	playsound(src.loc, 'sound/machines/blender.ogg', 50, TRUE)
 	use_energy(active_power_usage)
 	var/total_time = 0
@@ -180,16 +191,25 @@
 		total_time += recipe.time
 
 	var/duration = (total_time / rating_speed)
+	var/mob/living/cook = cy_processing_user?.resolve()
+	if(istype(cook))
+		duration *= cook.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/cooking)
 	INVOKE_ASYNC(src, TYPE_PROC_REF(/atom, Shake), 1, 0, duration)
 	addtimer(CALLBACK(src, PROC_REF(complete_processing)), duration)
 
 /obj/machinery/processor/proc/complete_processing()
+	var/processed_count = 0
 	for(var/atom/movable/content_item in processor_contents)
 		var/datum/food_processor_process/recipe = PROCESSOR_SELECT_RECIPE(content_item)
 		if (!recipe)
 			log_admin("DEBUG: [content_item] in processor doesn't have a suitable recipe. How do you put it in?")
 			continue
 		process_food(recipe, content_item)
+		processed_count++
+	var/mob/living/cook = cy_processing_user?.resolve()
+	if(istype(cook) && processed_count)
+		cook.award_cy_professional_activity(/datum/cy_skill/professional/cooking, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE * processed_count)
+	cy_processing_user = null
 	processing = FALSE
 	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] заканчивает обработку."))
 

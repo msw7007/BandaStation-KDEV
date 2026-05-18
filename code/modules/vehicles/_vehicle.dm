@@ -110,6 +110,25 @@
 /obj/vehicle/proc/return_drivers()
 	return return_controllers_with_flag(VEHICLE_CONTROL_DRIVE)
 
+/obj/vehicle/proc/get_cy_primary_driver()
+	var/list/drivers = return_drivers()
+	for(var/mob/living/driver as anything in drivers)
+		return driver
+	return null
+
+/obj/vehicle/proc/get_cy_driver_skill_multiplier()
+	var/mob/living/driver = get_cy_primary_driver()
+	if(!driver)
+		return 1
+	var/driving_skill = /datum/cy_skill/professional/driving
+	return max(0.65, 1 - driver.get_cy_skill_level(driving_skill) * CY_DRIVING_SKILL_SPEED_PER_LEVEL - driver.get_cy_skill_perk_work_speed_bonus(driving_skill) * 0.005)
+
+/obj/vehicle/proc/award_cy_driver_experience(amount = CY_DRIVING_SKILL_EXPERIENCE_PER_MOVE)
+	var/mob/living/driver = get_cy_primary_driver()
+	if(!driver)
+		return FALSE
+	return driver.award_cy_professional_activity(/datum/cy_skill/professional/driving, amount)
+
 /obj/vehicle/proc/driver_amount()
 	return return_amount_of_controllers_with_flag(VEHICLE_CONTROL_DRIVE)
 

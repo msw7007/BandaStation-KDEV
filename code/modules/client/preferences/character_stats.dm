@@ -282,7 +282,7 @@
 
 /datum/preference/numeric/character_setup_stat/weapon
 	abstract_type = /datum/preference/numeric/character_setup_stat/weapon
-	maximum = 5
+	maximum = CY_SKILL_MAXIMUM_LEVEL
 	point_budget = WEAPON_SKILL_POINT_BUDGET
 	stat_group = "weapon_skills"
 	stat_peer_root = /datum/preference/numeric/character_setup_stat/weapon

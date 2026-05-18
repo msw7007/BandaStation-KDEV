@@ -305,7 +305,11 @@
 						say("Not enough energy to complete operation!")
 						return
 					beaker.add_hiddenprint(ui.user)
+					holder.cy_set_reaction_user(ui.user)
 					holder.add_reagent(reagent, to_dispense, reagtemp = dispensed_temperature, added_purity = base_reagent_purity)
+					var/mob/living/chemist = ui.user
+					if(istype(chemist))
+						chemist.award_cy_professional_activity(/datum/cy_skill/professional/chemistry, max(1, round(to_dispense * 0.1, 1)))
 
 					work_animation()
 			else
@@ -355,7 +359,11 @@
 						say("Not enough energy to complete operation!")
 						return
 					beaker.add_hiddenprint(ui.user)
+					holder.cy_set_reaction_user(ui.user)
 					holder.add_reagent(reagent, to_dispense, reagtemp = dispensed_temperature, added_purity = base_reagent_purity)
+					var/mob/living/chemist = ui.user
+					if(istype(chemist))
+						chemist.award_cy_professional_activity(/datum/cy_skill/professional/chemistry, max(1, round(to_dispense * 0.1, 1)))
 					work_animation()
 				else
 					recording_recipe[key] += dispense_amount

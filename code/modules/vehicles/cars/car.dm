@@ -108,7 +108,7 @@
 
 	if(!COOLDOWN_FINISHED(src, cooldown_vehicle_move))
 		return FALSE
-	COOLDOWN_START(src, cooldown_vehicle_move, modified_move_delay(vehicle_move_delay)) // BANDASTATION EDIT - Vehicle speed
+	COOLDOWN_START(src, cooldown_vehicle_move, modified_move_delay(vehicle_move_delay * get_cy_driver_skill_multiplier())) // BANDASTATION EDIT - Vehicle speed
 
 	if(COOLDOWN_FINISHED(src, enginesound_cooldown))
 		COOLDOWN_START(src, enginesound_cooldown, engine_sound_length)
@@ -119,9 +119,13 @@
 		var/did_move = try_step_multiz(direction)
 		if(did_move)
 			step(trailer, dir_to_move)
+			award_cy_driver_experience()
 		return did_move
 	after_move(direction)
-	return try_step_multiz(direction)
+	var/main_did_move = try_step_multiz(direction)
+	if(main_did_move)
+		award_cy_driver_experience()
+	return main_did_move
 
 // -----------------------------------------------------------------------------
 // Cyberpunk vehicle core: modular parts + lightweight pixel physics.
@@ -433,6 +437,7 @@
 		cy_desired_y = 0
 
 	cy_last_input_time = world.time
+	award_cy_driver_experience()
 	return TRUE
 
 /obj/vehicle/sealed/car/proc/cy_process_pixel_physics(seconds_per_tick)
@@ -447,7 +452,7 @@
 		cy_desired_y = 0
 
 	var/terrain_grip = cy_get_terrain_grip()
-	var/effective_max_speed = cy_get_effective_max_speed()
+	var/effective_max_speed = cy_get_effective_max_speed() / get_cy_driver_skill_multiplier()
 	var/has_desired = !!(cy_desired_x || cy_desired_y)
 	var/has_accel = !!(cy_accel_x || cy_accel_y)
 

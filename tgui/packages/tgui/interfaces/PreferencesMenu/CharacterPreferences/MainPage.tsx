@@ -1256,7 +1256,7 @@ function CharacterStatsPanel() {
                     weaponSkillIds,
                     weaponUsed,
                     WEAPON_POINT_BUDGET,
-                    5,
+                    6,
                   )}
                 </Stack.Item>
                 <Stack.Item basis="50%">

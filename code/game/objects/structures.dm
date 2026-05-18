@@ -160,5 +160,9 @@
 
 /obj/structure/attackby(obj/item/tool, mob/user, list/modifiers, list/attack_modifiers)
 	if(cy_handle_structure_tool(tool, user))
+		var/mob/living/living_user = user
+		if(istype(living_user))
+			var/skill_type = tool?.tool_behaviour == TOOL_MULTITOOL ? /datum/cy_skill/professional/electricity : /datum/cy_skill/professional/construction
+			living_user.award_cy_professional_activity(skill_type)
 		return TRUE
 	return ..()

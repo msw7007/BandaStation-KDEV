@@ -272,6 +272,12 @@
 		if(productdesc)
 			t_prod.desc = productdesc
 		parent.cy_apply_environment_to_product(t_prod)
+		var/mob/living/gardener = user
+		if(istype(gardener))
+			t_prod.cy_set_quality(t_prod.cy_quality + gardener.get_cy_professional_quality_bonus(/datum/cy_skill/professional/gardening))
+			t_prod.cy_quality_affects_stats = TRUE
+			t_prod.cy_initialize_quality_core()
+			t_prod.cy_rebuild_item_stats()
 		t_prod.seed.name = parent.myseed.name
 		t_prod.seed.desc = parent.myseed.desc
 		t_prod.seed.plantname = parent.myseed.plantname

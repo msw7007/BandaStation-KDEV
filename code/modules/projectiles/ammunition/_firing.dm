@@ -1,5 +1,12 @@
 /obj/item/ammo_casing/proc/fire_casing(atom/target, mob/living/user, params, distro, quiet, zone_override, spread, atom/fired_from)
 	distro += variance
+	var/obj/item/firing_item
+	if(isitem(fired_from))
+		firing_item = fired_from
+	if(firing_item)
+		var/spread_multiplier = user.get_cy_weapon_spread_multiplier(firing_item)
+		distro *= spread_multiplier
+		spread *= spread_multiplier
 	var/targloc = get_turf(target)
 	ready_proj(target, user, quiet, zone_override, fired_from)
 	var/obj/projectile/thrown_proj
@@ -18,12 +25,13 @@
 		AddComponent(/datum/component/pellet_cloud, projectile_type, pellets)
 
 	var/next_delay = click_cooldown_override || CLICK_CD_RANGE
-	if(isitem(fired_from))
-		var/obj/item/firing_item = fired_from
+	if(firing_item)
 		next_delay = round(next_delay * user.get_cy_weapon_cooldown_multiplier(firing_item))
 	if(HAS_TRAIT(user, TRAIT_DOUBLE_TAP))
 		next_delay = round(next_delay * 0.5)
 	user.changeNext_move(next_delay)
+	if(firing_item)
+		user.award_cy_weapon_activity(firing_item, CY_WEAPON_SKILL_FIRE_EXPERIENCE)
 
 	if(!tk_firing(user, fired_from))
 		user.newtonian_move(get_angle(target, user), drift_force = newtonian_force)

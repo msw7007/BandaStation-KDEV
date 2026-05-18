@@ -249,6 +249,10 @@
 			for(var/behavior in recipe.tool_behaviors)
 				recipe_time += dynamic_recipe_time * found_behaviors[behavior]
 
+		var/mob/living/living_crafter = crafter
+		if(istype(living_crafter))
+			recipe_time *= living_crafter.get_cy_professional_crafting_speed_multiplier(recipe)
+
 		if(!do_after(crafter, round(recipe_time, 0.1 SECONDS), target = crafter))
 			return "."
 		contents = get_surroundings(crafter, recipe.blacklist)

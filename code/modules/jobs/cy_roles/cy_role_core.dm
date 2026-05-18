@@ -43,6 +43,9 @@
 	spawned.cy_can_issue_warrants = cy_can_issue_warrants
 	spawned.cy_can_manage_budget = cy_can_manage_budget
 	spawned.cy_bounty_hunter = cy_bounty_hunter
+	if(length(cy_role_stat_modifiers))
+		for(var/stat_type in cy_role_stat_modifiers)
+			spawned.set_cy_stat_modifier(stat_type, "cy_city_role", cy_role_stat_modifiers[stat_type])
 
 	if(SSeconomy && cy_city_account_id)
 		SSeconomy.cy_init_city_economy()
@@ -74,4 +77,3 @@
 	if(cy_bounty_hunter)
 		parts += "Вы можете работать с розыском как охотник за головами при наличии ключей доступа."
 	return jointext(parts, " ")
-

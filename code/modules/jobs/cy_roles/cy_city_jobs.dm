@@ -38,6 +38,7 @@
 	cy_role_flags = CY_ROLE_FLAG_BUSINESS_OWNER
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
 	cy_can_manage_budget = FALSE
+	cy_role_stat_modifiers = list(/datum/cy_stat/charisma = 1)
 
 /datum/outfit/job/cy_business_owner
 	parent_type = /datum/outfit/job/cy_city_base
@@ -65,6 +66,7 @@
 	cy_police_database_access = TRUE
 	cy_can_issue_warrants = TRUE
 	cy_can_manage_budget = TRUE
+	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1, /datum/cy_stat/charisma = 1)
 
 /datum/outfit/job/cy_official
 	parent_type = /datum/outfit/job/lawyer
@@ -89,6 +91,7 @@
 	cy_city_account_id = CY_ACCOUNT_GOVERNMENT
 	cy_police_database_access = TRUE
 	cy_can_issue_warrants = TRUE
+	cy_role_stat_modifiers = list(/datum/cy_stat/perception = 1)
 
 /datum/job/cy_council_member
 	parent_type = /datum/job/cy_city_base
@@ -111,6 +114,7 @@
 	cy_police_database_access = TRUE
 	cy_can_issue_warrants = TRUE
 	cy_can_manage_budget = TRUE
+	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1, /datum/cy_stat/charisma = 1)
 	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 
 /datum/outfit/job/cy_council_member
@@ -129,6 +133,7 @@
 	paycheck = PAYCHECK_CREW
 	paycheck_department = ACCOUNT_CAR
 	cy_can_manage_budget = FALSE
+	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1)
 
 /datum/job/cy_corporate_trainee
 	parent_type = /datum/job/cy_corporate_base
@@ -157,6 +162,7 @@
 	paycheck = PAYCHECK_COMMAND
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_AGENT
 	outfit = /datum/outfit/job/cy_corp_agent_base
+	cy_role_stat_modifiers = list(/datum/cy_stat/dexterity = 1, /datum/cy_stat/perception = 1)
 
 /datum/outfit/job/cy_corp_agent_base
 	parent_type = /datum/outfit/job/security
@@ -203,6 +209,7 @@
 	paycheck = PAYCHECK_CREW
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_SPECIALIST
 	outfit = /datum/outfit/job/cy_corp_specialist_base
+	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1)
 
 /datum/outfit/job/cy_corp_specialist_base
 	parent_type = /datum/outfit/job/cy_city_base
@@ -223,6 +230,7 @@
 	cy_city_account_id = CY_ACCOUNT_BEN
 	skills = list(/datum/cy_skill/professional/medicine = 150, /datum/cy_skill/professional/chemistry = 100, /datum/cy_skill/professional/analysis = 80)
 	minimal_skills = list(/datum/cy_skill/professional/medicine = 80, /datum/cy_skill/professional/chemistry = 50)
+	cy_role_stat_modifiers = list(/datum/cy_stat/spirit = 1, /datum/cy_stat/intelligence = 1)
 
 /datum/job/cy_ryaznov_engineer
 	parent_type = /datum/job/cy_corp_specialist_base
@@ -238,6 +246,7 @@
 	cy_city_account_id = CY_ACCOUNT_RYAZNOV
 	skills = list(/datum/cy_skill/professional/construction = 150, /datum/cy_skill/professional/invention = 100, /datum/cy_skill/professional/mining = 80)
 	minimal_skills = list(/datum/cy_skill/professional/construction = 80, /datum/cy_skill/professional/invention = 50)
+	cy_role_stat_modifiers = list(/datum/cy_stat/strength = 1, /datum/cy_stat/intelligence = 1)
 
 /datum/job/cy_starlight_logistician
 	parent_type = /datum/job/cy_corp_specialist_base
@@ -253,6 +262,7 @@
 	cy_city_account_id = CY_ACCOUNT_STARLIGHT
 	skills = list(/datum/cy_skill/professional/driving = 150, /datum/cy_skill/professional/analysis = 100, /datum/cy_skill/professional/invention = 60)
 	minimal_skills = list(/datum/cy_skill/professional/driving = 80, /datum/cy_skill/professional/analysis = 50)
+	cy_role_stat_modifiers = list(/datum/cy_stat/perception = 1, /datum/cy_stat/dexterity = 1)
 
 /datum/job/cy_corp_representative_base
 	parent_type = /datum/job/cy_corporate_base
@@ -264,6 +274,7 @@
 	cy_can_manage_budget = TRUE
 	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 	outfit = /datum/outfit/job/cy_corp_representative_base
+	cy_role_stat_modifiers = list(/datum/cy_stat/charisma = 1, /datum/cy_stat/intelligence = 1)
 
 /datum/outfit/job/cy_corp_representative_base
 	parent_type = /datum/outfit/job/lawyer
@@ -326,6 +337,7 @@
 	cy_bounty_hunter = TRUE
 	skills = list(/datum/cy_skill/dexterity/light_weapons = 120, /datum/cy_skill/strength/heavy_weapons = 80, /datum/cy_skill/spirit/athletics = 80)
 	minimal_skills = list(/datum/cy_skill/dexterity/light_weapons = 60, /datum/cy_skill/spirit/athletics = 40)
+	cy_role_stat_modifiers = list(/datum/cy_stat/dexterity = 1, /datum/cy_stat/perception = 1)
 
 /datum/outfit/job/cy_mercenary
 	parent_type = /datum/outfit/job/security
@@ -349,6 +361,7 @@
 	cy_role_id = "laborer"
 	cy_role_flags = CY_ROLE_FLAG_OUTSOURCER
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
+	cy_role_stat_modifiers = list(/datum/cy_stat/strength = 1)
 
 /datum/outfit/job/cy_laborer
 	parent_type = /datum/outfit/job/assistant
@@ -370,6 +383,7 @@
 	total_positions = 0
 	spawn_positions = 0
 	outfit = /datum/outfit/job/cy_antagonist_base
+	cy_role_stat_modifiers = list(/datum/cy_stat/spirit = 1)
 
 /datum/outfit/job/cy_antagonist_base
 	parent_type = /datum/outfit/job/assistant

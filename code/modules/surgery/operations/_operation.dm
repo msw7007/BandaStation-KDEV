@@ -907,11 +907,13 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 			result |= ITEM_INTERACT_FAILURE
 
 			cy_after_failed_step(patient, surgeon, tool)
+			surgeon?.award_cy_professional_activity(/datum/cy_skill/professional/medicine, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE * 0.5)
 			if (patient)
 				update_surgery_mood(patient, SURGERY_STATE_FAILURE)
 		else
 			success(operating_on, surgeon, tool, operation_args)
 			result |= ITEM_INTERACT_SUCCESS
+			surgeon?.award_cy_professional_activity(/datum/cy_skill/professional/medicine, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE * 2)
 			if (patient)
 				update_surgery_mood(patient, SURGERY_STATE_SUCCESS)
 

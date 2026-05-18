@@ -927,8 +927,10 @@
 			if(IS_EDIBLE(reagent_source) || istype(reagent_source, /obj/item/reagent_containers/applicator/pill))
 				qdel(reagent_source)
 				H.update_appearance()
+				H.cy_award_gardening_experience(user, max(1, round(transfer_amount * 0.2, 1)))
 				return 1
 			H.update_appearance()
+			H.cy_award_gardening_experience(user, max(1, round(transfer_amount * 0.2, 1)))
 		if(reagent_source) // If the source wasn't composted and destroyed
 			reagent_source.update_appearance()
 		return 1
@@ -940,6 +942,7 @@
 		if(weedlevel > 0)
 			user.visible_message(span_notice("[user] uproots the weeds."), span_notice("You remove the weeds from [src]."))
 			set_weedlevel(0)
+			cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 			return
 		else
 			to_chat(user, span_warning("This plot is completely devoid of weeds! It doesn't need uprooting."))
@@ -964,6 +967,7 @@
 			snip.forceMove(drop_location())
 			myseed.grafts_taken++
 			adjust_plant_health(-5)
+			cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE * 2)
 			return
 
 	else if(istype(O, /obj/item/geneshears))
@@ -999,6 +1003,7 @@
 		myseed.reagents_from_genes()
 		adjust_plant_health(-15)
 		to_chat(user, span_notice("You carefully shear the genes off of the [myseed.plantname], leaving the plant looking weaker."))
+		cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE * 2)
 		update_appearance()
 		return
 
@@ -1016,6 +1021,7 @@
 			to_chat(user, span_notice("You carefully integrate the grafted plant limb onto [myseed.plantname], granting it [grafted_trait.get_name()]."))
 		else
 			to_chat(user, span_notice("You try to integrate the grafted plant limb onto [myseed.plantname], but it rejects the trait from the [snip]."))
+		cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE * 2)
 		qdel(snip)
 		return
 
@@ -1038,6 +1044,7 @@
 		if(O.use_tool(src, user, 50, volume=50) || (!myseed && !weedlevel))
 			user.visible_message(span_notice("[user] digs out the plants in [src]!"), span_notice("You dig out all of [src]'s plants!"))
 			remove_plant()
+			cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 			return
 	else if(istype(O, /obj/item/gun/energy/floragun))
 		var/obj/item/gun/energy/floragun/flowergun = O
@@ -1070,6 +1077,7 @@
 			flowergun.cell.use(flowergun.cell.charge)
 			flowergun.update_appearance()
 			to_chat(user, span_notice("[myseed.plantname]'s mutation was set to [locked_mutation], depleting [flowergun]'s cell!"))
+			cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE * 3)
 			return
 	else
 		return ..()
@@ -1159,6 +1167,13 @@
 		set_plant_status(HYDROTRAY_PLANT_GROWING)
 	update_appearance()
 	SEND_SIGNAL(src, COMSIG_HYDROTRAY_ON_HARVEST, user, product_count)
+	cy_award_gardening_experience(user, max(CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE, product_count * 2))
+
+/obj/machinery/hydroponics/proc/cy_award_gardening_experience(mob/user, amount = CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
+	var/mob/living/gardener = user
+	if(!istype(gardener))
+		return FALSE
+	return gardener.award_cy_professional_activity(/datum/cy_skill/professional/gardening, amount)
 
 /**
  * Spawn Plant.
@@ -1189,6 +1204,7 @@
 	set_seed(young_plant)
 	set_plant_health(myseed.endurance)
 	lastcycle = world.time
+	cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 
 /// Clears the plant from the tray, killing it in the process, optionally clearing weeds as well.
 /obj/machinery/hydroponics/proc/remove_plant(clear_weeds = TRUE)

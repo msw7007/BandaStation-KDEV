@@ -354,8 +354,14 @@
 	SHOULD_CALL_PARENT(TRUE)
 	SEND_SIGNAL(src, COMSIG_ATOM_ON_CRAFT, components, current_recipe)
 	var/obj/item/crafted_item = src
+	var/mob/living/living_crafter = crafter
+	var/skill_type = get_cy_crafting_skill_type(current_recipe)
+	var/quality_bonus = 0
+	if(istype(living_crafter) && skill_type)
+		quality_bonus = living_crafter.get_cy_professional_quality_bonus(skill_type)
+		living_crafter.award_cy_professional_activity(skill_type, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE)
 	if(istype(crafted_item))
-		crafted_item.cy_apply_quality_to_craft_result(components)
+		crafted_item.cy_apply_quality_to_craft_result(components, quality_bonus)
 	var/list/remaining_parts = LAZYLISTDUPLICATE(current_recipe?.parts)
 	var/list/parts_by_type = LAZYLISTDUPLICATE(remaining_parts)
 	for(var/parttype in parts_by_type) //necessary for our is_type_in_list() call with the zebra arg set to true

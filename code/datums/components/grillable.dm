@@ -135,7 +135,12 @@
 
 	. = COMPONENT_HANDLED_GRILLING
 
-	current_cook_time += seconds_per_tick * 10 //turn it into ds
+	var/cooking_speed_modifier = 1
+	var/datum/mind/griller_mind = locate(who_placed_us)
+	var/mob/living/griller = griller_mind?.current
+	if(istype(griller))
+		cooking_speed_modifier = griller.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/cooking)
+	current_cook_time += (seconds_per_tick * 10) / max(cooking_speed_modifier, 0.1) //turn it into ds
 	if(current_cook_time >= required_cook_time)
 		finish_grilling(used_grill)
 
@@ -169,6 +174,16 @@
 	SEND_SIGNAL(grilled_result, COMSIG_ITEM_GRILLED_RESULT, parent)
 	if(who_placed_us)
 		ADD_TRAIT(grilled_result, TRAIT_FOOD_CHEF_MADE, who_placed_us)
+		var/datum/mind/griller_mind = locate(who_placed_us)
+		var/mob/living/griller = griller_mind?.current
+		if(istype(griller) && positive_result)
+			griller.award_cy_professional_activity(/datum/cy_skill/professional/cooking, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE)
+			var/obj/item/grilled_item = grilled_result
+			if(istype(grilled_item))
+				grilled_item.cy_set_quality(grilled_item.cy_quality + griller.get_cy_professional_quality_bonus(/datum/cy_skill/professional/cooking))
+				grilled_item.cy_quality_affects_stats = TRUE
+				grilled_item.cy_initialize_quality_core()
+				grilled_item.cy_rebuild_item_stats()
 
 	grill_source.visible_message("<span class='[positive_result ? "notice" : "warning"]'>[parent] turns into \a [grilled_result]!</span>")
 	grilled_result.pixel_x = original_object.pixel_x

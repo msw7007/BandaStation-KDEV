@@ -31,6 +31,8 @@
 	var/ui_reaction_index = 1
 	///If we're syncing with the beaker - so return reactions that are actively happening
 	var/ui_beaker_sync = FALSE
+	/// Last living user to intentionally handle this holder for chemistry skill rewards.
+	var/datum/weakref/cy_last_reaction_user
 
 /datum/reagents/New(maximum = 100, new_flags = 0)
 	maximum_volume = maximum
@@ -47,7 +49,18 @@
 	if(my_atom && my_atom.reagents == src)
 		my_atom.reagents = null
 	my_atom = null
+	cy_last_reaction_user = null
 	return ..()
+
+/datum/reagents/proc/cy_set_reaction_user(mob/user)
+	if(isliving(user))
+		cy_last_reaction_user = WEAKREF(user)
+
+/datum/reagents/proc/cy_award_chemistry_experience(amount = CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
+	var/mob/living/user = cy_last_reaction_user?.resolve()
+	if(!user)
+		return FALSE
+	return user.award_cy_professional_activity(/datum/cy_skill/professional/chemistry, amount)
 
 
 /**
@@ -516,6 +529,8 @@
 			break
 	if(!copy_only)
 		update_total()
+	if(transferred_by)
+		target_holder.cy_set_reaction_user(transferred_by)
 
 	//expose target to reagent changes
 	if(methods)

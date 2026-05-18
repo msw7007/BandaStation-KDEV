@@ -326,6 +326,7 @@
 		var/zone_hit_chance = 80
 		if(body_position == LYING_DOWN)
 			zone_hit_chance += 10
+		zone_hit_chance += user.get_cy_weapon_accuracy_bonus(attacking_item)
 		targeting = get_random_valid_zone(targeting, zone_hit_chance)
 	var/targeting_human_readable = parse_zone_with_bodypart(targeting, declent = ACCUSATIVE)
 
@@ -382,6 +383,8 @@
 	)
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
+	if(damage_done > 0)
+		user.award_cy_weapon_activity(attacking_item, max(1, round(damage_done * CY_WEAPON_SKILL_MELEE_EXPERIENCE_PER_DAMAGE, 1)))
 	user.reveal_cy_stealth("attack")
 	user.changeNext_move(round(CLICK_CD_MELEE * user.get_cy_weapon_cooldown_multiplier(attacking_item)))
 

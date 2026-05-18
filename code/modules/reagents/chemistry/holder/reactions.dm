@@ -157,6 +157,7 @@
 /datum/reagents/proc/end_reaction(datum/equilibrium/equilibrium)
 	PRIVATE_PROC(TRUE)
 
+	var/reacted_volume = equilibrium.reacted_vol
 	equilibrium.reaction.reaction_finish(src, equilibrium, equilibrium.reacted_vol)
 	if(!equilibrium.holder || !equilibrium.reaction) //Somehow I'm getting empty equilibrium. This is here to handle them
 		LAZYREMOVE(reaction_list, equilibrium)
@@ -175,6 +176,7 @@
 			playsound(get_turf(my_atom), equilibrium.reaction.mix_sound, 80, TRUE)
 	qdel(equilibrium)
 	update_total()
+	cy_award_chemistry_experience(max(CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE, round(reacted_volume * 0.5, 1)))
 
 	return reaction_message
 
@@ -259,11 +261,13 @@
 
 	//finish the reaction
 	selected_reaction.on_reaction(src, null, multiplier)
+	cy_award_chemistry_experience(max(CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE, round(multiplier * 2, 1)))
 
 // CYBERPUNK 13 STAGE 3 CORE STIRRING START
 /datum/reagents/proc/cy_stir(mob/living/carbon/user, obj/item/tool)
 	if(!length(reaction_list))
 		return FALSE
+	cy_set_reaction_user(user)
 	var/stir_steps = 0
 	for(var/datum/equilibrium/equilibrium as anything in reaction_list)
 		equilibrium.react_timestep(CY_STIR_REACTION_STEP_MULTIPLIER)
@@ -272,6 +276,7 @@
 		for(var/datum/reagent/reagent as anything in reagent_list)
 			reagent.expose_mob(user, TOUCH, min(CY_STIR_HAND_EXPOSURE_VOLUME, reagent.volume), TRUE)
 	SEND_SIGNAL(src, COMSIG_REAGENTS_REACTION_STEP, stir_steps, CY_STIR_REACTION_STEP_MULTIPLIER)
+	user.award_cy_professional_activity(/datum/cy_skill/professional/chemistry, max(1, stir_steps))
 	return stir_steps
 // CYBERPUNK 13 STAGE 3 CORE STIRRING END
 
@@ -282,8 +287,10 @@
 	if(bare_hand)
 		return cy_stir(user)
 	if(LAZYLEN(reaction_list))
+		cy_set_reaction_user(user)
 		for(var/datum/equilibrium/reaction as anything in reaction_list)
 			reaction.react_timestep(CY_STIR_REACTION_STEP_MULTIPLIER)
+		user.award_cy_professional_activity(/datum/cy_skill/professional/chemistry, max(1, length(reaction_list)))
 		return TRUE
 	return FALSE
 // CYBERPUNK 13 STAGE 3 CORE STIRRING FIX2 END

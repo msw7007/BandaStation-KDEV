@@ -121,6 +121,23 @@
 /mob/living/proc/get_cy_skill_value_modifier(skill_type)
 	return get_cy_skill_level(skill_type) + get_cy_skill_perk_quality_bonus(skill_type)
 
+/mob/living/proc/get_cy_skill_speed_multiplier_no_perks(skill_type)
+	return max(0.4, 1 - get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_SPEED_PER_LEVEL)
+
+/mob/living/proc/get_cy_skill_probability_bonus_no_perks(skill_type)
+	return get_cy_skill_level(skill_type) * CY_SKILL_VALUE_PER_LEVEL
+
+/mob/living/proc/get_cy_skill_quality_bonus_no_perks(skill_type)
+	return get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL
+
+/mob/living/proc/get_cy_professional_quality_bonus(skill_type)
+	return get_cy_skill_quality_bonus_no_perks(skill_type) + (get_cy_skill_perk_quality_bonus(skill_type) * 0.05)
+
+/mob/living/proc/award_cy_professional_activity(skill_type, amount = CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
+	if(!ispath(skill_type, /datum/cy_skill/professional) || amount <= 0)
+		return FALSE
+	return award_cy_raw_skill_experience(skill_type, amount, TRUE)
+
 /mob/living/proc/get_cy_check_chance(stat_type, skill_type = null, difficulty = 0)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
 	return skills.get_check_chance(stat_type, skill_type, difficulty)
@@ -215,6 +232,68 @@
 
 /mob/living/proc/get_cy_weapon_defense_bypass_bonus(obj/item/weapon)
 	return get_cy_weapon_skill_level(weapon) * CY_WEAPON_SKILL_DEFENSE_BYPASS_PER_LEVEL
+
+/mob/living/proc/get_cy_weapon_accuracy_bonus(obj/item/weapon)
+	return get_cy_weapon_skill_level(weapon) * CY_WEAPON_SKILL_ACCURACY_PER_LEVEL
+
+/mob/living/proc/get_cy_weapon_spread_multiplier(obj/item/weapon)
+	return max(0.35, 1 - get_cy_weapon_skill_level(weapon) * CY_WEAPON_SKILL_SPREAD_REDUCTION_PER_LEVEL)
+
+/mob/living/proc/award_cy_weapon_activity(obj/item/weapon, amount)
+	if(!weapon || amount <= 0)
+		return FALSE
+	var/skill_type = weapon.get_cy_weapon_skill_type()
+	if(!ispath(skill_type, /datum/cy_skill/weapon))
+		return FALSE
+	return award_cy_raw_skill_experience(skill_type, amount, TRUE)
+
+/datum/crafting_recipe/proc/get_cy_professional_skill_type()
+	if(ispath(result, /obj/item/food))
+		return /datum/cy_skill/professional/cooking
+	if(ispath(result, /obj/item/seeds))
+		return /datum/cy_skill/professional/gardening
+	if(ispath(result, /obj/item/reagent_containers) || ispath(result, /datum/reagent))
+		return /datum/cy_skill/professional/chemistry
+	if(ispath(result, /obj/item/circuitboard) || ispath(result, /obj/machinery))
+		return /datum/cy_skill/professional/electricity
+	if(ispath(result, /obj/structure) || ispath(result, /turf))
+		return /datum/cy_skill/professional/construction
+	if(ispath(result, /obj/item))
+		return /datum/cy_skill/professional/invention
+	return null
+
+/atom/proc/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return current_recipe?.get_cy_professional_skill_type()
+
+/obj/item/food/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return /datum/cy_skill/professional/cooking
+
+/obj/item/seeds/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return /datum/cy_skill/professional/gardening
+
+/obj/item/reagent_containers/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return /datum/cy_skill/professional/chemistry
+
+/obj/item/circuitboard/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return /datum/cy_skill/professional/electricity
+
+/obj/machinery/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return /datum/cy_skill/professional/electricity
+
+/obj/structure/get_cy_crafting_skill_type(datum/crafting_recipe/current_recipe)
+	return /datum/cy_skill/professional/construction
+
+/mob/living/proc/get_cy_professional_crafting_speed_multiplier(datum/crafting_recipe/recipe)
+	var/skill_type = recipe?.get_cy_professional_skill_type()
+	if(!skill_type)
+		return 1
+	return get_cy_skill_speed_multiplier(skill_type)
+
+/mob/living/proc/get_cy_professional_crafting_quality_bonus(datum/crafting_recipe/recipe)
+	var/skill_type = recipe?.get_cy_professional_skill_type()
+	if(!skill_type)
+		return 0
+	return get_cy_professional_quality_bonus(skill_type)
 
 /mob/living/proc/get_cy_hunger_level()
 	if(HAS_TRAIT(src, TRAIT_NOHUNGER))

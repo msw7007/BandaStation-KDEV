@@ -75,7 +75,12 @@
 	// Let our signal know if we're baking something good or ... burning something
 	var/baking_result = positive_result ? COMPONENT_BAKING_GOOD_RESULT : COMPONENT_BAKING_BAD_RESULT
 
-	current_bake_time += seconds_per_tick * 10 //turn it into ds
+	var/cooking_speed_modifier = 1
+	var/datum/mind/baker_mind = locate(who_baked_us)
+	var/mob/living/baker = baker_mind?.current
+	if(istype(baker))
+		cooking_speed_modifier = baker.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/cooking)
+	current_bake_time += (seconds_per_tick * 10) / max(cooking_speed_modifier, 0.1) //turn it into ds
 	if(current_bake_time >= required_bake_time)
 		finish_baking(used_oven)
 
@@ -100,6 +105,16 @@
 
 	if(who_baked_us)
 		ADD_TRAIT(baked_result, TRAIT_FOOD_CHEF_MADE, who_baked_us)
+		var/datum/mind/baker_mind = locate(who_baked_us)
+		var/mob/living/baker = baker_mind?.current
+		if(istype(baker) && positive_result)
+			baker.award_cy_professional_activity(/datum/cy_skill/professional/cooking, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE)
+			var/obj/item/baked_item = baked_result
+			if(istype(baked_item))
+				baked_item.cy_set_quality(baked_item.cy_quality + baker.get_cy_professional_quality_bonus(/datum/cy_skill/professional/cooking))
+				baked_item.cy_quality_affects_stats = TRUE
+				baked_item.cy_initialize_quality_core()
+				baked_item.cy_rebuild_item_stats()
 
 	if(original_object.custom_materials)
 		baked_result.set_custom_materials(original_object.custom_materials, 1)

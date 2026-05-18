@@ -34,6 +34,9 @@
 	return TRUE
 
 /obj/structure/musician/ui_interact(mob/user)
+	var/mob/living/living_user = user
+	if(istype(living_user) && can_play(user))
+		living_user.award_cy_professional_activity(/datum/cy_skill/professional/music, CY_MUSIC_SKILL_EXPERIENCE_PER_USE)
 	return song.ui_interact(user)
 
 /obj/structure/musician/wrench_act(mob/living/user, obj/item/tool)
