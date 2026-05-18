@@ -48,11 +48,13 @@
 	handle_stomach(seconds_per_tick)
 	handle_needs(seconds_per_tick)
 	update_cy_need_stat_modifiers()
+	update_cy_style_stat_modifiers()
 	update_cy_chameleon()
 	process_cy_character_progression(seconds_per_tick)
 	handle_toxin_organ_damage(seconds_per_tick)
 	process_cy_oxygenation(seconds_per_tick)
 	process_cy_clinical_death(seconds_per_tick)
+	on_cy_body_abandoned()
 	process_cy_implant_overheat(seconds_per_tick)
 	// For special species interactions
 	dna.species.spec_life(src, seconds_per_tick)

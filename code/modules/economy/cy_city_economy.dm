@@ -367,6 +367,8 @@
 	cy_city_laws[CY_LAW_NETCRIME] = new /datum/cy_city_law(CY_LAW_NETCRIME, "Сетевое преступление", "Незаконный демон, взлом, кража данных или цифровой саботаж.", 1200, 5 MINUTES, CY_CRIME_SEVERITY_MAJOR)
 	cy_city_laws[CY_LAW_TRESPASS] = new /datum/cy_city_law(CY_LAW_TRESPASS, "Нарушение доступа", "Проникновение в зону без прав или криптографического ключа.", 300, 0, CY_CRIME_SEVERITY_MINOR)
 
+	cy_city_laws[CY_LAW_CONTROLLED_ITEM] = new /datum/cy_city_law(CY_LAW_CONTROLLED_ITEM, "Controlled item", "Illegal carrying, sale or transfer of controlled combat, armor or black-market equipment.", 700, 0, CY_CRIME_SEVERITY_MEDIUM)
+
 /datum/controller/subsystem/economy/proc/cy_generate_round_access_keys()
 	cy_round_access_keys = list()
 	cy_round_access_keys[CY_POLICE_DB_ACCESS] = "POL-[rand(100000,999999)]"
@@ -452,6 +454,50 @@
 	var/datum/cy_city_crime_record/record = cy_get_crime_record(user, TRUE)
 	record.forensic_traces += trace
 	return trace
+
+/datum/controller/subsystem/economy/proc/cy_account_for_item(obj/item/item)
+	if(!item)
+		return cy_get_city_account(CY_ACCOUNT_CIV_MARKET)
+	switch(item.get_cy_market_category())
+		if(CY_ITEM_MARKET_BLACK)
+			return cy_get_city_account(CY_ACCOUNT_BLACK_MARKET)
+		if(CY_ITEM_MARKET_CONTROLLED)
+			return cy_get_city_account(CY_ACCOUNT_RYAZNOV)
+	return cy_get_city_account(CY_ACCOUNT_CIV_MARKET)
+
+/datum/controller/subsystem/economy/proc/cy_get_item_market_price(obj/item/item, market_category = null)
+	if(!item)
+		return 0
+	var/category = market_category || item.get_cy_market_category()
+	var/multiplier = cy_get_price_pressure(category)
+	switch(category)
+		if(CY_ITEM_MARKET_CONTROLLED)
+			multiplier *= 1.25
+		if(CY_ITEM_MARKET_BLACK)
+			multiplier *= 1.75
+	return max(1, round(item.get_cy_market_value() * multiplier))
+
+/datum/controller/subsystem/economy/proc/cy_record_item_transfer(mob/seller, mob/buyer, obj/item/item, datum/bank_account/buyer_account = null, datum/bank_account/seller_account = null, legal = TRUE)
+	if(!item)
+		return FALSE
+	if(!cy_city_economy_ready)
+		cy_init_city_economy()
+	var/category = item.get_cy_market_category()
+	var/price = cy_get_item_market_price(item, category)
+	var/datum/bank_account/market_account = cy_account_for_item(item)
+	var/visibility = legal && category != CY_ITEM_MARKET_BLACK ? CY_ECON_VISIBILITY_BANK : CY_ECON_VISIBILITY_SHADOW
+	if(buyer_account && seller_account)
+		if(!cy_transfer_money(buyer_account, seller_account, price, "Item transfer: [item.name]", CY_TAX_TRANSFER, visibility, CY_ECON_CHANNEL_BANK, buyer, item))
+			return FALSE
+	else
+		cy_record_transaction(buyer_account, seller_account || market_account, price, "Item transfer: [item.name]", visibility, CY_ECON_CHANNEL_BANK, buyer?.name, item)
+	cy_register_supply_signal(category, price, item.cy_quality)
+	if(!legal || category == CY_ITEM_MARKET_BLACK)
+		if(seller)
+			cy_issue_violation(seller, CY_LAW_CONTROLLED_ITEM, "Illegal transfer of [item.name].", "Market audit", null, null, CY_WARRANT_INVESTIGATION)
+		if(buyer)
+			cy_issue_violation(buyer, CY_LAW_CONTROLLED_ITEM, "Illegal acquisition of [item.name].", "Market audit", null, null, CY_WARRANT_INVESTIGATION)
+	return TRUE
 
 /datum/controller/subsystem/economy/proc/cy_log_demon_use(mob/user, datum/cy_demon/demon, atom/target, origin = null, civic = FALSE, corporation_id = null)
 	var/details = "Демон [demon || "unknown"] used on [target || "unknown target"]."

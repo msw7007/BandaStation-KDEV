@@ -116,6 +116,12 @@
 
 	/// Wire assignment for airlocks in this area
 	var/airlock_wires = /datum/wires/airlock
+	/// Cyberpunk city security layer: controls law severity, patrol logic and item checks.
+	var/cy_security_level = CY_SECURITY_ZONE_PUBLIC
+	/// Organization type/id that has jurisdiction here.
+	var/cy_controlling_organization = /datum/cy_organization/government
+	/// If TRUE, open violence is expected here and automatic assault reports should be reduced.
+	var/cy_violence_tolerated = FALSE
 
 	/// Should we actually be running our mapgen if one is set?
 	/// FALSE here with a set map_generator allows the area to probe from shared generators without actually generating its' turfs
@@ -674,6 +680,33 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 	if(name == initial(name))
 		return name
 	return "[name] ([initial(name)])"
+
+/area/proc/get_cy_security_level()
+	return cy_security_level
+
+/area/proc/get_cy_controlling_organization()
+	return resolve_cy_organization_datum(cy_controlling_organization)
+
+/area/proc/cy_allows_open_violence()
+	return cy_violence_tolerated || cy_security_level <= CY_SECURITY_ZONE_LOW
+
+/area/proc/cy_requires_controlled_item_permit(obj/item/item)
+	if(!item)
+		return FALSE
+	if(item.get_cy_market_category() == CY_ITEM_MARKET_BLACK)
+		return TRUE
+	if(item.get_cy_market_category() == CY_ITEM_MARKET_CONTROLLED && cy_security_level >= CY_SECURITY_ZONE_PUBLIC)
+		return TRUE
+	return FALSE
+
+/area/proc/cy_describe_zone()
+	var/datum/cy_organization/organization = get_cy_controlling_organization()
+	return list(
+		"name" = name,
+		"security_level" = cy_security_level,
+		"controller" = organization?.name,
+		"violence_tolerated" = cy_allows_open_violence(),
+	)
 
 /**
  * A blank area subtype solely used by the golem area editor for the purpose of

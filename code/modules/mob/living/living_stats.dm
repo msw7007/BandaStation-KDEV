@@ -256,6 +256,60 @@
 	set_cy_stat_modifier(/datum/cy_stat/charisma, "cy_needs_sleep", -sleep_deprivation)
 	return TRUE
 
+/mob/living/proc/get_cy_equipment_style_score()
+	var/score = 0
+	for(var/obj/item/equipped as anything in get_equipped_items(INCLUDE_ABSTRACT))
+		score += equipped.get_cy_style_value()
+	return score
+
+/mob/living/proc/get_cy_equipment_style_tags()
+	var/list/tags = list()
+	for(var/obj/item/equipped as anything in get_equipped_items(INCLUDE_ABSTRACT))
+		for(var/style_tag in equipped.get_cy_style_tags())
+			tags[style_tag] = (tags[style_tag] || 0) + 1
+	return tags
+
+/mob/living/proc/get_cy_psyche_state()
+	return list(
+		"pain" = get_pain_loss(),
+		"psychic_pressure" = get_psychic_loss(),
+		"mood" = mob_mood?.mood,
+		"mood_level" = mob_mood?.mood_level,
+		"sanity" = mob_mood?.sanity,
+		"sanity_level" = mob_mood?.sanity_level,
+		"equipment_style" = get_cy_equipment_style_score(),
+		"equipment_style_tags" = get_cy_equipment_style_tags(),
+	)
+
+/mob/living/proc/update_cy_style_stat_modifiers()
+	var/style_score = get_cy_equipment_style_score()
+	var/charisma_modifier = clamp(round(style_score / 10), 0, 3)
+	var/spirit_modifier = clamp(round(style_score / 15), 0, 2)
+	var/pain_penalty = clamp(round(get_pain_loss() / 40), 0, 3)
+	set_cy_stat_modifier(/datum/cy_stat/charisma, "cy_equipment_style", charisma_modifier)
+	set_cy_stat_modifier(/datum/cy_stat/spirit, "cy_equipment_style", spirit_modifier - pain_penalty)
+	return charisma_modifier + spirit_modifier - pain_penalty
+
+/mob/living/proc/get_cy_controlled_items_in_zone()
+	var/list/result = list()
+	var/area/current_area = get_area(src)
+	if(!current_area)
+		return result
+	for(var/obj/item/equipped as anything in get_equipped_items(INCLUDE_ABSTRACT))
+		if(current_area.cy_requires_controlled_item_permit(equipped))
+			result += equipped
+	return result
+
+/mob/living/proc/report_cy_controlled_items_in_zone(issuer = "Zone audit")
+	if(!SSeconomy)
+		return 0
+	var/count = 0
+	for(var/obj/item/item as anything in get_cy_controlled_items_in_zone())
+		SSeconomy.cy_issue_violation(src, CY_LAW_CONTROLLED_ITEM, "Controlled item in restricted zone: [item.name].", issuer, null, null, CY_WARRANT_INVESTIGATION)
+		item.cy_leave_forensic_trace(src, "controlled item possession", 80)
+		count++
+	return count
+
 /mob/living/carbon/human/proc/is_cy_comfortably_sleeping()
 	if(!IsSleeping())
 		return FALSE
@@ -626,6 +680,15 @@
 /mob/living/carbon/human/proc/on_cy_body_abandoned()
 	if(!is_cy_body_abandoned())
 		return FALSE
+	if(cy_abandoned_body_rescue_attempted)
+		return FALSE
+	cy_abandoned_body_rescue_attempted = TRUE
+	visible_message(span_warning("An emergency rescue contract pings for [src]."))
+	cy_leave_forensic_trace(src, "abandoned body rescue", 60)
+	if(can_cy_revive())
+		heal_and_revive(max(25, round(maxHealth * 0.35)), "Emergency rescue contractors stabilize you.")
+		clinical_death_started_at = null
+		return TRUE
 	return TRUE
 
 /mob/dead/observer
@@ -1887,6 +1950,131 @@
 		for(var/obj/item/organ/organ as anything in organs)
 			lines += organ.get_cy_diagnostic_lines(TRUE)
 	return lines
+
+/mob/living/proc/get_cy_secondary_indicators()
+	var/list/indicators = list()
+	indicators["health"] = list(
+		"current" = health,
+		"maximum" = maxHealth,
+		"critical" = is_cy_critical(),
+		"clinical_death" = is_cy_clinically_dead(),
+		"brain_dead" = is_cy_brain_dead(),
+	)
+	indicators["breath"] = list(
+		"reserved_breath" = losebreath,
+		"oxygen_damage" = get_oxy_loss(),
+	)
+	indicators["stamina"] = list(
+		"loss" = staminaloss,
+		"maximum" = max_stamina,
+	)
+	indicators["needs"] = list(
+		"nutrition" = nutrition,
+		"nutrition_stage" = get_cy_hunger_level(),
+		"hydration" = hydration,
+		"hydration_stage" = get_cy_thirst_level(),
+		"rest" = rest,
+		"rest_stage" = get_cy_sleep_deprivation_level(),
+	)
+	indicators["mental"] = list(
+		"pain" = get_pain_loss(),
+		"psychic_pressure" = get_psychic_loss(),
+		"mood_level" = mob_mood?.mood_level,
+		"sanity_level" = mob_mood?.sanity_level,
+	)
+	indicators["psyche"] = get_cy_psyche_state()
+	indicators["style"] = list(
+		"equipment_score" = get_cy_equipment_style_score(),
+		"tags" = get_cy_equipment_style_tags(),
+	)
+	var/area/current_area = get_area(src)
+	indicators["zone"] = current_area?.cy_describe_zone()
+	indicators["legal_risk"] = list(
+		"controlled_items_here" = length(get_cy_controlled_items_in_zone()),
+	)
+	indicators["equipment"] = get_cy_equipment_indicator()
+	return indicators
+
+/mob/living/proc/get_cy_equipment_indicator()
+	var/list/equipment = list()
+	for(var/obj/item/equipped as anything in get_equipped_items(INCLUDE_ABSTRACT))
+		equipment += list(list(
+			"name" = equipped.name,
+			"type" = equipped.type,
+			"weight_class" = equipped.w_class,
+			"style" = equipped.get_cy_style_value(),
+			"style_tags" = equipped.get_cy_style_tags(),
+			"market_category" = equipped.get_cy_market_category(),
+			"market_value" = equipped.get_cy_market_value(),
+		))
+	return equipment
+
+/mob/living/proc/get_cy_secondary_indicator_summary()
+	var/list/indicators = get_cy_secondary_indicators()
+	var/list/health_data = indicators["health"]
+	var/list/breath_data = indicators["breath"]
+	var/list/stamina_data = indicators["stamina"]
+	var/list/needs_data = indicators["needs"]
+	var/list/mental_data = indicators["mental"]
+	var/list/style_data = indicators["style"]
+	return list(
+		"Health [round(health_data["current"])]/[health_data["maximum"]]",
+		"Breath reserve [round(breath_data["reserved_breath"])]; oxygen damage [round(breath_data["oxygen_damage"])]",
+		"Stamina loss [round(stamina_data["loss"])]/[stamina_data["maximum"]]",
+		"Nutrition [round(needs_data["nutrition"])]; hydration [round(needs_data["hydration"])]; rest [round(needs_data["rest"])]",
+		"Pain [round(mental_data["pain"])]; psychic [round(mental_data["psychic_pressure"])]",
+		"Style [round(style_data["equipment_score"])]",
+	)
+
+/mob/living/carbon/human/get_cy_secondary_indicators()
+	. = ..()
+	.["blood"] = list(
+		"percent" = get_cy_blood_percent(),
+		"pressure" = get_cy_pressure_delta(),
+		"oxygenation" = get_cy_blood_oxygenation(),
+	)
+	.["implants"] = list(
+		"overheat" = get_cy_total_implant_overheat(),
+		"overheat_capacity" = get_cy_brain_overheat_capacity(),
+		"has_neurointerface" = has_cy_neurointerface(),
+	)
+	.["organs"] = get_cy_organ_indicator()
+	.["limbs"] = get_cy_limb_indicator()
+
+/mob/living/carbon/human/proc/get_cy_organ_indicator()
+	var/list/organ_data = list()
+	for(var/obj/item/organ/organ as anything in organs)
+		organ_data[organ.slot || "[organ.type]"] = list(
+			"name" = organ.name,
+			"type" = organ.type,
+			"health_ratio" = organ.get_cy_health_ratio(),
+			"function_efficiency" = organ.get_cy_function_efficiency(),
+			"damage" = organ.damage,
+			"maximum" = organ.maxHealth,
+			"conditions" = organ.get_cy_condition_summary(),
+		)
+	return organ_data
+
+/mob/living/carbon/human/proc/get_cy_limb_indicator()
+	var/list/limb_data = list()
+	for(var/obj/item/bodypart/limb as anything in get_bodyparts(include_stumps = TRUE))
+		limb_data[limb.body_zone || "[limb.type]"] = list(
+			"name" = limb.name,
+			"type" = limb.type,
+			"brute" = limb.get_brute_damage(),
+			"burn" = limb.get_burn_damage(),
+			"maximum" = limb.max_damage,
+			"disabled" = limb.bodypart_disabled,
+			"missing" = IS_STUMP(limb),
+			"bleed_rate" = limb.cached_bleed_rate,
+			"wounds" = length(limb.wounds),
+		)
+	return limb_data
+
+/mob/living/carbon/human/get_cy_secondary_indicator_summary()
+	. = ..()
+	. += "Blood [round(get_cy_blood_percent() * 100)]%; oxygenation [round(get_cy_blood_oxygenation() * 100)]%"
+	. += "Implants heat [round(get_cy_total_implant_overheat())]/[round(get_cy_brain_overheat_capacity())]"
 // CYBERPUNK 13 STAGE 3 CORE OXYGENATION / DIAGNOSIS END
 
 // CYBERPUNK 13 STAGE 3 CORE REAGENT ROUTE STATE START

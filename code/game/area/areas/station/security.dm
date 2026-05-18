@@ -6,6 +6,8 @@
 	ambience_index = AMBIENCE_DANGER
 	airlock_wires = /datum/wires/airlock/security
 	sound_environment = SOUND_AREA_STANDARD_STATION
+	cy_security_level = CY_SECURITY_ZONE_SECURE
+	cy_controlling_organization = /datum/cy_organization/government
 
 /area/station/security/office
 	name = "\improper Security Office"

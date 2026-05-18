@@ -436,6 +436,16 @@ GLOBAL_LIST_INIT(tool_items, list(
 #define CY_ITEM_FUNCTION_ACTIVE "active"
 #define CY_ITEM_FUNCTION_PROTECTIVE "protective"
 
+#define CY_ITEM_MARKET_CIVILIAN "civilian"
+#define CY_ITEM_MARKET_CONTROLLED "controlled"
+#define CY_ITEM_MARKET_BLACK "black_market"
+
+#define CY_ITEM_STYLE_TAG_NEUTRAL "neutral"
+#define CY_ITEM_STYLE_TAG_CORPORATE "corporate"
+#define CY_ITEM_STYLE_TAG_STREET "street"
+#define CY_ITEM_STYLE_TAG_COMBAT "combat"
+#define CY_ITEM_STYLE_TAG_LUXURY "luxury"
+
 #define CY_ITEM_SIZE_TINY WEIGHT_CLASS_TINY
 #define CY_ITEM_SIZE_SMALL WEIGHT_CLASS_SMALL
 #define CY_ITEM_SIZE_MEDIUM WEIGHT_CLASS_NORMAL

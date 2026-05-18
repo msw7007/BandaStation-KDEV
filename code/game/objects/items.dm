@@ -447,6 +447,10 @@
 		. += span_notice("Производитель: [manufacturer.name].")
 	if(cy_should_show_quality())
 		. += span_notice("Качество: [cy_get_quality_text()].")
+	if(get_cy_style_value())
+		. += span_notice("Стиль: [get_cy_style_value()] ([english_list(get_cy_style_tags())]).")
+	if(get_cy_market_value())
+		. += span_notice("Рынок: [get_cy_market_category()], цена: [get_cy_market_value()] credits.")
 	if(cy_broken)
 		. += span_warning("Предмет сломан: полезные боевые и защитные показатели обнулены.")
 	if(cy_item_kind == CY_ITEM_KIND_MODULAR)
@@ -2272,6 +2276,21 @@
 	/// If TRUE, large item handling should require both hands from inventory helpers.
 	var/cy_requires_two_hands = FALSE
 
+	/// Item-side style signal used by outfit, psyche and market systems.
+	var/cy_style_value = null
+	/// Base style value restored when modular stats are rebuilt.
+	var/cy_base_style_value = null
+	/// Style tags describing item fantasy: corporate, street, combat, luxury, etc.
+	var/list/cy_style_tags
+	/// Style tags restored when modular stats are rebuilt.
+	var/list/cy_base_style_tags
+	/// Base credit value used by economy and contract systems.
+	var/cy_market_value = null
+	/// TRUE when law/shops should treat this as restricted combat or security gear.
+	var/cy_controlled_item = FALSE
+	/// TRUE when normal markets should refuse it even if it has a public value.
+	var/cy_black_market_only = FALSE
+
 	/// Core active-item stats from the TЗ.
 	var/cy_attack_type = null
 	var/cy_attack_force = null
@@ -2348,6 +2367,40 @@
 		cy_attack_profiles = cy_default_attack_profiles()
 	if(!cy_damage_absorption)
 		cy_damage_absorption = list()
+	if(isnull(cy_base_style_value))
+		cy_base_style_value = cy_default_style_value()
+	if(isnull(cy_style_value))
+		cy_style_value = cy_base_style_value
+	if(isnull(cy_base_style_tags) && cy_style_tags)
+		cy_base_style_tags = cy_style_tags.Copy()
+	if(isnull(cy_market_value))
+		cy_market_value = cy_default_market_value()
+
+/obj/item/proc/cy_default_style_value()
+	var/style = 0
+	if(istype(src, /obj/item/clothing))
+		style += max(1, w_class)
+	if(cy_item_function == CY_ITEM_FUNCTION_PROTECTIVE)
+		style += 1
+	if(manufacturer_organization)
+		style += 1
+	if(cy_quality > CY_QUALITY_AVERAGE)
+		style += cy_quality - CY_QUALITY_AVERAGE
+	else if(cy_quality < CY_QUALITY_AVERAGE)
+		style -= CY_QUALITY_AVERAGE - cy_quality
+	return max(0, style)
+
+/obj/item/proc/cy_default_market_value()
+	var/value = max(1, w_class) * 25
+	if(force > 0)
+		value += round(force * 4)
+	if(armour_penetration > 0)
+		value += round(armour_penetration * 2)
+	if(max_integrity > 0)
+		value += round(max_integrity / 10)
+	if(manufacturer_organization)
+		value += 25
+	return max(1, value)
 
 /obj/item/proc/cy_default_attack_profiles()
 	return list(
@@ -2374,6 +2427,49 @@
 
 /obj/item/proc/cy_can_be_held()
 	return get_cy_weight_category() < CY_ITEM_SIZE_HUGE && !cy_drag_only
+
+/obj/item/proc/get_cy_style_value()
+	cy_initialize_item_core()
+	var/value = cy_style_value || 0
+	if(cy_quality > CY_QUALITY_AVERAGE)
+		value += cy_quality - CY_QUALITY_AVERAGE
+	if(cy_broken)
+		value = round(value * 0.25)
+	return max(0, value)
+
+/obj/item/proc/get_cy_style_tags()
+	if(!cy_style_tags)
+		return list(CY_ITEM_STYLE_TAG_NEUTRAL)
+	return cy_style_tags.Copy()
+
+/obj/item/proc/is_cy_controlled_combat_item()
+	if(cy_controlled_item)
+		return TRUE
+	if(cy_attack_force > 10 || force > 10 || armour_penetration > 0 || cy_armor_class > 0)
+		return TRUE
+	return FALSE
+
+/obj/item/proc/get_cy_market_category()
+	if(cy_black_market_only)
+		return CY_ITEM_MARKET_BLACK
+	if(is_cy_controlled_combat_item())
+		return CY_ITEM_MARKET_CONTROLLED
+	return CY_ITEM_MARKET_CIVILIAN
+
+/obj/item/proc/get_cy_market_value()
+	cy_initialize_item_core()
+	var/value = cy_market_value || cy_default_market_value()
+	value *= cy_get_quality_multiplier()
+	if(cy_item_kind == CY_ITEM_KIND_MODULAR)
+		for(var/obj/item/cy_module/module as anything in cy_all_installed_modules())
+			value += module.cy_market_value_mod
+	if(cy_black_market_only)
+		value *= 1.5
+	else if(is_cy_controlled_combat_item())
+		value *= 1.25
+	if(cy_broken)
+		value *= 0.25
+	return max(1, round(value))
 
 /obj/item/proc/cy_get_attack_profile(intent = CY_ITEM_INTENT_SLASH)
 	if(!cy_attack_profiles)
@@ -2552,6 +2648,10 @@
 	cy_attack_speed = attack_speed
 	cy_guard_value = block_chance
 	cy_armor_penetration = armour_penetration
+	cy_armor_class = 0
+	cy_integrity_transfer = 1
+	cy_style_value = cy_base_style_value || 0
+	var/list/rebuilt_style_tags = cy_base_style_tags?.Copy() || list()
 	cy_damage_absorption = list()
 
 	var/list/default_profiles = cy_default_attack_profiles()
@@ -2571,6 +2671,11 @@
 		cy_armor_penetration += module.cy_armor_penetration_mod
 		cy_armor_class += module.cy_armor_class_mod
 		cy_integrity_transfer = clamp(cy_integrity_transfer + module.cy_integrity_transfer_mod, 0, 1)
+		cy_style_value += module.cy_style_mod
+		if(module.cy_style_tags)
+			for(var/style_tag in module.cy_style_tags)
+				if(!(style_tag in rebuilt_style_tags))
+					rebuilt_style_tags += style_tag
 		if(module.cy_damage_type)
 			damtype = module.cy_damage_type
 		if(module.cy_damage_absorption)
@@ -2585,6 +2690,7 @@
 			cy_profile_add(profile, "ap_mod", (module.cy_intent_ap_mods ? module.cy_intent_ap_mods[intent] : null))
 			if(module.cy_intent_damage_types && module.cy_intent_damage_types[intent])
 				profile["damage_type"] = module.cy_intent_damage_types[intent]
+	cy_style_tags = rebuilt_style_tags
 
 /obj/item/proc/cy_break_item(damage_flag)
 	if(cy_broken)
@@ -2770,6 +2876,8 @@
 	var/cy_damage_type
 	var/cy_armor_class_mod = 0
 	var/cy_integrity_transfer_mod = 0
+	var/cy_style_mod = 0
+	var/cy_market_value_mod = 0
 	var/list/cy_intent_force_mults
 	var/list/cy_intent_accuracy_mods
 	var/list/cy_intent_speed_mults
@@ -2803,11 +2911,17 @@
 	name = "melee handle module"
 	cy_module_slot = CY_MODULE_SLOT_MELEE_HANDLE
 	cy_forbidden_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE)
+	cy_style_mod = 1
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_COMBAT)
+	cy_market_value_mod = 20
 
 /obj/item/cy_module/ranged_handle
 	name = "ranged handle module"
 	cy_module_slot = CY_MODULE_SLOT_RANGED_HANDLE
 	cy_forbidden_present_slots = list(CY_MODULE_SLOT_MELEE_HANDLE)
+	cy_style_mod = 1
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_COMBAT)
+	cy_market_value_mod = 30
 
 /obj/item/cy_module/classic_core
 	name = "classic core module"
@@ -2818,16 +2932,24 @@
 	name = "energy converter module"
 	cy_module_slot = CY_MODULE_SLOT_ENERGY_CONVERTER
 	cy_forbidden_present_slots = list(CY_MODULE_SLOT_CLASSIC_CORE)
+	cy_style_mod = 2
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_CORPORATE)
+	cy_market_value_mod = 80
 
 /obj/item/cy_module/attacking_element
 	name = "melee attacking element module"
 	cy_module_slot = CY_MODULE_SLOT_ATTACKING_ELEMENT
 	cy_required_present_slots = list(CY_MODULE_SLOT_MELEE_HANDLE)
+	cy_style_mod = 1
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_COMBAT)
+	cy_market_value_mod = 40
 
 /obj/item/cy_module/attacking_coating
 	name = "attacking coating module"
 	cy_module_slot = CY_MODULE_SLOT_ATTACKING_COATING
 	cy_required_present_slots = list(CY_MODULE_SLOT_ATTACKING_ELEMENT)
+	cy_style_mod = 1
+	cy_market_value_mod = 25
 
 /obj/item/cy_module/balancer
 	name = "balancer module"
@@ -2843,6 +2965,9 @@
 	name = "barrel module"
 	cy_module_slot = CY_MODULE_SLOT_BARREL
 	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE)
+	cy_style_mod = 1
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_COMBAT)
+	cy_market_value_mod = 45
 
 /obj/item/cy_module/trigger
 	name = "trigger mechanism module"
@@ -2855,6 +2980,9 @@
 	cy_module_slot = CY_MODULE_SLOT_MATRIX
 	cy_required_present_slots = list(CY_MODULE_SLOT_RANGED_HANDLE, CY_MODULE_SLOT_ENERGY_CONVERTER)
 	cy_forbidden_present_slots = list(CY_MODULE_SLOT_CLASSIC_CORE)
+	cy_style_mod = 2
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_CORPORATE)
+	cy_market_value_mod = 90
 
 /obj/item/cy_module/magazine
 	name = "magazine or battery module"
@@ -2873,28 +3001,41 @@
 /obj/item/cy_module/equipment_base
 	name = "equipment base module"
 	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_BASE
+	cy_style_mod = 1
+	cy_market_value_mod = 25
 
 /obj/item/cy_module/equipment_material
 	name = "equipment material module"
 	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_MATERIAL
 	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+	cy_style_mod = 1
+	cy_market_value_mod = 25
 
 /obj/item/cy_module/equipment_plate
 	name = "equipment plate module"
 	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_PLATE
 	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE, CY_MODULE_SLOT_EQUIPMENT_MATERIAL)
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_COMBAT)
+	cy_market_value_mod = 35
 
 /obj/item/cy_module/equipment_lining
 	name = "equipment lining module"
 	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_LINING
 	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+	cy_style_mod = 1
+	cy_market_value_mod = 20
 
 /obj/item/cy_module/equipment_active
 	name = "active equipment module"
 	cy_module_slot = CY_MODULE_SLOT_EQUIPMENT_ACTIVE
 	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+	cy_style_mod = 2
+	cy_market_value_mod = 60
 
 /obj/item/cy_module/rig_connector
 	name = "rig connector module"
 	cy_module_slot = CY_MODULE_SLOT_RIG_CONNECTOR
 	cy_required_present_slots = list(CY_MODULE_SLOT_EQUIPMENT_BASE)
+	cy_style_mod = 1
+	cy_style_tags = list(CY_ITEM_STYLE_TAG_CORPORATE)
+	cy_market_value_mod = 50

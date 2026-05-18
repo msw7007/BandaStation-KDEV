@@ -12,6 +12,8 @@
 	name = "Station Areas"
 	icon = 'icons/area/areas_station.dmi'
 	icon_state = "station"
+	cy_security_level = CY_SECURITY_ZONE_PUBLIC
+	cy_controlling_organization = /datum/cy_organization/government
 
 /*
 * Tramstation unique areas

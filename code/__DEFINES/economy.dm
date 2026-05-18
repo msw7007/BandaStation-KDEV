@@ -182,6 +182,13 @@
 #define CY_LAW_MURDER "murder"
 #define CY_LAW_NETCRIME "netcrime"
 #define CY_LAW_TRESPASS "trespass"
+#define CY_LAW_CONTROLLED_ITEM "controlled_item"
+
+#define CY_SECURITY_ZONE_WILDS 0
+#define CY_SECURITY_ZONE_LOW 1
+#define CY_SECURITY_ZONE_PUBLIC 2
+#define CY_SECURITY_ZONE_SECURE 3
+#define CY_SECURITY_ZONE_CORPORATE 4
 
 #define CY_POLICE_DB_ACCESS "police_database"
 #define CY_BOUNTY_HUNTER_ACCESS "bounty_hunter_database"

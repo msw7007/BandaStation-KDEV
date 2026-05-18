@@ -380,3 +380,4 @@
 	/// Clone/ghost loop hooks.
 	var/mob/living/cy_original_body
 	var/cy_body_abandoned_at
+	var/cy_abandoned_body_rescue_attempted = FALSE

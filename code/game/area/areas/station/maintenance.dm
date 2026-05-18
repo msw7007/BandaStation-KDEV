@@ -7,6 +7,8 @@
 	forced_ambience = TRUE
 	ambient_buzz = 'sound/ambience/maintenance/source_corridor2.ogg'
 	ambient_buzz_vol = 20
+	cy_security_level = CY_SECURITY_ZONE_LOW
+	cy_violence_tolerated = TRUE
 
 /*
 * Departmental Maintenance
