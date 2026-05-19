@@ -133,7 +133,10 @@
 	if(HAS_TRAIT(affected_human, TRAIT_NIGHT_VISION) && !lighting_cutoff)
 		lighting_cutoff = LIGHTING_CUTOFF_REAL_LOW
 	if(CONFIG_GET(flag/native_fov) && native_fov)
-		affected_human.add_fov_trait(type, native_fov)
+		var/applied_fov = native_fov
+		if((organ_flags & ORGAN_FAILING) || damage >= low_threshold || scarring)
+			applied_fov = FOV_270_DEGREES
+		affected_human.add_fov_trait(type, applied_fov)
 
 	if(call_update)
 		affected_human.update_eyes()
