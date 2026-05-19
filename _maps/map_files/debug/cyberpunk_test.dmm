@@ -1,13 +1,10 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "ay" = (
-/obj/structure/rack,
-/obj/effect/spawner/random/armory/bulletproof_armor,
-/obj/effect/spawner/random/armory/bulletproof_helmet,
-/obj/machinery/button/door/directional/south{
-	id = "armouryaccess";
-	name = "Armoury Access";
-	req_access = list("armory")
-	},
+/obj/machinery/camera/directional/north,
+/obj/structure/table,
+/obj/item/construction/rld,
+/obj/item/construction/rcd/arcd,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "bO" = (
@@ -31,9 +28,19 @@
 /obj/effect/spawner/structure/window/reinforced/indestructible,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"bU" = (
+/obj/item/disk/tech_disk/debug,
+/turf/open/floor/stone,
+/area/station/commons/dorms)
+"cI" = (
+/obj/effect/spawner/random/trash,
+/turf/open/floor/iron/dark/textured,
+=======
 "ca" = (
 /mob/living/carbon/human/cy_npc/bandit,
 /turf/open/floor/iron/white,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /area/station/commons/dorms)
 "cL" = (
 /obj/machinery/light/dim/directional/east,
@@ -69,7 +76,8 @@
 /obj/item/clothing/suit/hooded/ablative,
 /obj/item/clothing/suit/hooded/ablative,
 /obj/item/clothing/suit/hooded/ablative,
-/turf/open/floor/iron/dark/textured_large,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "dn" = (
 /obj/item/cy_modular_weapon/heavy_chopper,
@@ -90,6 +98,12 @@
 "dJ" = (
 /obj/structure/cable,
 /turf/open/floor/stone,
+/area/station/commons/dorms)
+"dK" = (
+/obj/structure/closet/secure_closet/hos{
+	locked = 0
+	},
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "dS" = (
 /turf/open/floor/mineral/abductor,
@@ -155,8 +169,41 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
+"gs" = (
+/obj/machinery/light/directional/north,
+/obj/machinery/rnd/production/circuit_imprinter/department,
+/obj/machinery/power/apc/auto_name/directional/north,
+/obj/structure/cable,
+/obj/structure/cable,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"gv" = (
+/obj/structure/cable,
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
+"gE" = (
+/obj/structure/table,
+/obj/item/uplink/debug{
+	pixel_x = -4;
+	pixel_y = 4
+	},
+/obj/item/uplink/nuclear/debug,
+/obj/structure/cable,
+/obj/effect/mapping_helpers/airalarm/unlocked,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "gX" = (
 /turf/open/floor/asphalt,
+/area/station/commons/dorms)
+"hn" = (
+/obj/machinery/atmospherics/components/unary/vent_pump/on/layer4{
+	dir = 4
+	},
+/obj/item/storage/part_replacer/bluespace/tier4,
+/turf/open/floor/iron,
 /area/station/commons/dorms)
 "ht" = (
 /obj/structure/table/bronze,
@@ -181,6 +228,12 @@
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
+"hS" = (
+/obj/structure/fence{
+	dir = 4
+	},
+/turf/open/floor/plating,
+/area/station/commons/dorms)
 "hZ" = (
 /obj/effect/turf_decal/siding/dark_blue{
 	dir = 5
@@ -201,6 +254,17 @@
 	},
 /turf/open/floor/bluespace,
 /area/station/commons/dorms)
+"iL" = (
+/obj/structure/table,
+/obj/item/ammo_box/c9mm,
+/obj/item/gun/ballistic/automatic/pistol,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"iS" = (
+/obj/machinery/netpod,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
 "jO" = (
 /obj/structure/chair/sofa/corp/right{
 	dir = 1
@@ -217,7 +281,17 @@
 	pixel_y = -2
 	},
 /obj/item/gun/grenadelauncher,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
+/area/station/commons/dorms)
+"kG" = (
+/obj/machinery/byteforge,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
+"mI" = (
+/obj/structure/cable,
+/obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
+/turf/open/floor/iron,
 /area/station/commons/dorms)
 "mS" = (
 /obj/structure/chair/sofa/corp/left{
@@ -229,6 +303,16 @@
 /obj/machinery/vending/cola/starkist,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"nq" = (
+/obj/structure/tank_dispenser{
+	pixel_x = -1
+	},
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"ny" = (
+/obj/structure/fence/post,
+/turf/open/floor/plating,
 /area/station/commons/dorms)
 "nF" = (
 /obj/structure/cable,
@@ -267,6 +351,12 @@
 "oo" = (
 /turf/open/floor/wood,
 /area/station/commons/dorms)
+"pu" = (
+/obj/structure/closet/secure_closet/hop{
+	locked = 0
+	},
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "pw" = (
 /obj/structure/table/bronze,
 /obj/machinery/chem_dispenser/drinks/beer/fullupgrade{
@@ -290,6 +380,11 @@
 /obj/structure/table/bronze,
 /obj/effect/spawner/random/food_or_drink/booze,
 /turf/open/floor/carpet,
+/area/station/commons/dorms)
+"pO" = (
+/obj/machinery/computer/rdconsole/unlocked,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "pR" = (
 /obj/machinery/vending/wardrobe/sec_wardrobe,
@@ -329,8 +424,18 @@
 /obj/effect/spawner/random/food_or_drink/salad,
 /turf/open/floor/carpet/blue,
 /area/station/commons/dorms)
+"qT" = (
+/mob/living/carbon/human,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "qY" = (
 /obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"ra" = (
+/obj/structure/closet/secure_closet/captains{
+	locked = 0
+	},
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "rp" = (
@@ -385,6 +490,15 @@
 "sc" = (
 /obj/structure/cable,
 /turf/open/floor/light/colour_cycle/dancefloor_a,
+/area/station/commons/dorms)
+"sp" = (
+/obj/structure/cable,
+/obj/machinery/light/directional/east,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
+"su" = (
+/obj/item/storage/bag/sheetsnatcher/debug,
+/turf/open/floor/stone,
 /area/station/commons/dorms)
 "sT" = (
 /obj/item/banner/command,
@@ -514,6 +628,7 @@
 /obj/item/gun/energy/e_gun/dragnet,
 /obj/item/gun/energy/e_gun/dragnet,
 /obj/item/gun/energy/e_gun/dragnet,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
 /area/station/commons/dorms)
 "wf" = (
@@ -538,10 +653,13 @@
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "xI" = (
-/obj/structure/rack,
-/obj/effect/spawner/random/armory/bulletproof_armor,
-/obj/effect/spawner/random/armory/bulletproof_helmet,
-/obj/machinery/light_switch/directional/south,
+/obj/structure/table,
+/obj/item/rcd_ammo/large,
+/obj/item/rcd_ammo/large,
+/obj/item/rcd_ammo/large,
+/obj/item/construction/rcd/combat,
+/obj/item/construction/plumbing,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "yz" = (
@@ -558,6 +676,23 @@
 /obj/structure/table/wood,
 /turf/open/floor/plating,
 /area/station/commons/dorms)
+"zr" = (
+/obj/structure/table,
+/obj/item/storage/backpack/holding,
+/obj/item/storage/part_replacer/bluespace/tier4,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"zt" = (
+/obj/machinery/suit_storage_unit/ce,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"zv" = (
+/obj/machinery/rnd/destructive_analyzer,
+/obj/structure/cable,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "zA" = (
 /turf/closed/wall/mineral/plastitanium,
 /area/station/commons/dorms)
@@ -567,6 +702,17 @@
 /area/station/commons/dorms)
 "zV" = (
 /obj/effect/spawner/structure/window/reinforced/indestructible,
+/turf/open/floor/plating,
+/area/station/commons/dorms)
+"Ab" = (
+/obj/structure/table,
+/obj/item/card/emag,
+/obj/item/flashlight/emp/debug,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"AG" = (
+/obj/structure/fence/end,
 /turf/open/floor/plating,
 /area/station/commons/dorms)
 "AH" = (
@@ -622,6 +768,13 @@
 /obj/structure/cable,
 /turf/open/floor/wood,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"Dr" = (
+/obj/machinery/power/rtg/debug,
+/obj/machinery/power/rtg/debug,
+/obj/structure/cable,
+/turf/open/floor/iron,
+=======
 "Cr" = (
 /obj/item/cy_modular_weapon/light_blade,
 /turf/open/floor/iron/dark/textured,
@@ -629,10 +782,16 @@
 "CA" = (
 /obj/machinery/power/port_gen/cy_corporate,
 /turf/open/floor/iron/dark/textured,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /area/station/commons/dorms)
 "Dw" = (
 /obj/structure/chair/sofa/corp/left,
 /turf/open/floor/carpet/blue,
+/area/station/commons/dorms)
+"DS" = (
+/obj/structure/table/reinforced,
+/obj/item/bitrunning_debug,
+/turf/open/floor/iron,
 /area/station/commons/dorms)
 "DX" = (
 /obj/structure/rack,
@@ -666,6 +825,7 @@
 	},
 /obj/structure/cable,
 /obj/machinery/power/apc/auto_name/directional/east,
+/obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Et" = (
@@ -683,7 +843,8 @@
 /obj/effect/spawner/random/armory/disablers,
 /obj/effect/spawner/random/armory/disablers,
 /obj/effect/spawner/random/armory/disablers,
-/turf/open/floor/iron/dark/textured_large,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "ED" = (
 /obj/item/cy_gene_data_disk,
@@ -709,6 +870,15 @@
 	},
 /turf/open/floor/carpet,
 /area/station/commons/dorms)
+"Fr" = (
+/turf/open/indestructible/white/smooth_large,
+/area/station/commons/dorms)
+"Fw" = (
+/obj/machinery/computer/monitor,
+/obj/structure/cable,
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
 "Fz" = (
 /obj/machinery/light/dim/directional/west,
 /turf/open/floor/carpet/blue,
@@ -717,9 +887,15 @@
 /obj/structure/cable,
 /turf/open/floor/mineral/abductor,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"GB" = (
+/obj/machinery/quantum_server,
+/turf/open/floor/iron,
+=======
 "Gy" = (
 /obj/machinery/cy_modular_automat/network_vendor,
 /turf/open/floor/iron/dark/textured,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /area/station/commons/dorms)
 "GF" = (
 /turf/open/floor/light/colour_cycle/dancefloor_b,
@@ -730,6 +906,10 @@
 /obj/effect/spawner/random/food_or_drink/dinner,
 /turf/open/floor/light/colour_cycle/dancefloor_b,
 /area/station/commons/dorms)
+"HA" = (
+/obj/effect/landmark/start,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "HO" = (
 /obj/structure/rack,
 /obj/effect/spawner/random/armory/riot_armor,
@@ -737,8 +917,15 @@
 /obj/effect/spawner/random/armory/riot_shield,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"HS" = (
+/obj/structure/closet/secure_closet/engineering_chief{
+	locked = 0
+	},
+=======
 "HP" = (
 /obj/item/cy_contract_marker,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Ic" = (
@@ -752,9 +939,19 @@
 /obj/structure/cable,
 /turf/open/floor/wood,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"Jr" = (
+/obj/machinery/power/apc/auto_name/directional/north,
+/obj/structure/cable,
+/obj/machinery/airalarm/directional/east,
+/obj/machinery/computer/quantum_console,
+/obj/structure/cable,
+/turf/open/floor/iron,
+=======
 "Jp" = (
 /obj/effect/landmark/awaystart,
 /turf/open/floor/grass,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /area/station/commons/dorms)
 "JB" = (
 /turf/open/floor/wood/parquet,
@@ -782,8 +979,15 @@
 /obj/effect/spawner/random/food_or_drink/salad,
 /turf/open/floor/carpet/blue,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"KX" = (
+/obj/machinery/rnd/production/techfab/department,
+/obj/structure/cable,
+/obj/structure/cable,
+=======
 "KE" = (
 /obj/item/cy_modular_equipment/underlayer,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Lc" = (
@@ -852,21 +1056,53 @@
 /obj/structure/chair/sofa/corp/right,
 /turf/open/floor/carpet/blue,
 /area/station/commons/dorms)
+"Nv" = (
+/obj/docking_port/stationary{
+	dir = 8;
+	dwidth = 3;
+	height = 15;
+	name = "arrivals";
+	roundstart_template = /datum/map_template/shuttle/arrival/box;
+	shuttle_id = "arrival_stationary";
+	width = 7
+	},
+/turf/open/floor/iron/white,
+/area/station/commons/dorms)
 "NE" = (
 /obj/machinery/jukebox/disco/indestructible,
 /obj/structure/cable,
+/obj/effect/landmark/observer_start,
 /turf/open/floor/mineral/abductor,
+/area/station/commons/dorms)
+"NV" = (
+/obj/structure/fence/door,
+/turf/open/floor/plating,
 /area/station/commons/dorms)
 "Ob" = (
 /obj/item/kirbyplants/random,
 /turf/open/floor/wood/tile,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"Ov" = (
+/obj/structure/table,
+/obj/item/card/id/advanced/centcom/ert/commander{
+	pixel_x = 6;
+	pixel_y = -6
+	},
+/obj/item/card/id/advanced/chameleon/elite,
+/obj/item/card/id/advanced/gold/captains_spare{
+	pixel_x = -6;
+	pixel_y = 6
+	},
+/obj/structure/cable,
+=======
 "OH" = (
 /obj/structure/cy_business_warehouse,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "OX" = (
 /obj/item/cy_modular_weapon/impact_baton,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "OZ" = (
@@ -878,6 +1114,33 @@
 /area/station/commons/dorms)
 "Pa" = (
 /turf/open/floor/carpet/blue,
+/area/station/commons/dorms)
+"Pg" = (
+/obj/structure/closet/secure_closet/research_director{
+	locked = 0
+	},
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"Pj" = (
+/obj/machinery/power/rtg/debug,
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
+"Pu" = (
+/obj/machinery/autolathe/hacked,
+/obj/structure/cable,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"PH" = (
+/obj/structure/fence,
+/turf/open/floor/plating,
+/area/station/commons/dorms)
+"QC" = (
+/obj/machinery/mecha_part_fabricator,
+/obj/structure/cable,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "QH" = (
 /turf/open/floor/bluespace,
@@ -897,6 +1160,32 @@
 /obj/structure/sign/poster/official/random/directional/north,
 /turf/open/floor/carpet/neon/simple/blue,
 /area/station/commons/dorms)
+"QU" = (
+/obj/effect/spawner/structure/window/reinforced/indestructible,
+/turf/open/floor/grass,
+/area/station/commons/dorms)
+"QV" = (
+/obj/structure/cable,
+/turf/open/floor/iron,
+/area/station/commons/dorms)
+"QZ" = (
+/obj/structure/rack,
+/obj/effect/spawner/random/armory/bulletproof_armor,
+/obj/effect/spawner/random/armory/bulletproof_helmet,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"Rm" = (
+/obj/structure/table,
+/obj/item/gun/magic/wand/resurrection/debug,
+/obj/item/gun/magic/wand/death/debug{
+	pixel_y = 10
+	},
+/obj/item/debug/human_spawner{
+	pixel_x = 6;
+	pixel_y = -4
+	},
+/turf/open/floor/stone,
+/area/station/commons/dorms)
 "Rx" = (
 /obj/effect/spawner/random/trash,
 /turf/open/floor/grass,
@@ -910,8 +1199,15 @@
 /obj/effect/spawner/random/trash,
 /turf/open/floor/grass,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"Sz" = (
+/obj/machinery/power/smes/magical,
+/obj/structure/cable,
+/obj/structure/cable,
+=======
 "SE" = (
 /obj/machinery/cy_modular_automat/vendor,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Ty" = (
@@ -968,6 +1264,12 @@
 	},
 /turf/open/floor/carpet/neon/simple/blue,
 /area/station/commons/dorms)
+"UP" = (
+/obj/structure/closet/secure_closet/chief_medical{
+	locked = 0
+	},
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "UY" = (
 /turf/open/floor/carpet,
 /area/station/commons/dorms)
@@ -976,6 +1278,13 @@
 /obj/effect/mapping_helpers/airlock/autoname,
 /turf/open/floor/wood/large,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"VK" = (
+/obj/machinery/rnd/production/protolathe/department,
+/obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+=======
 "VC" = (
 /obj/item/cy_gene_analyzer,
 /turf/open/floor/iron/dark/textured,
@@ -984,6 +1293,7 @@
 /obj/effect/landmark/start,
 /turf/open/floor/grass,
 /area/station/commons/dorms)
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 "Wa" = (
 /obj/machinery/airalarm/directional/north,
 /obj/effect/spawner/random/structure/closet_private,
@@ -993,6 +1303,10 @@
 "Wb" = (
 /obj/structure/cable,
 /turf/closed/wall,
+/area/station/commons/dorms)
+"Wm" = (
+/obj/structure/table/reinforced/plastitaniumglass,
+/turf/open/floor/grass,
 /area/station/commons/dorms)
 "Xv" = (
 /obj/structure/cable,
@@ -1006,6 +1320,16 @@
 	},
 /turf/open/floor/wood,
 /area/station/commons/dorms)
+"XJ" = (
+/obj/machinery/gravity_generator/main,
+/turf/open/floor/plating,
+/area/station/commons/dorms)
+"XW" = (
+/obj/structure/closet/secure_closet/atmospherics{
+	locked = 0
+	},
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "YE" = (
 /turf/open/openspace,
 /area/station/commons/dorms)
@@ -1018,9 +1342,16 @@
 "YX" = (
 /turf/open/floor/plating,
 /area/station/commons/dorms)
+<<<<<<< HEAD
+"Zf" = (
+/obj/structure/cable,
+/obj/machinery/door/airlock/external/glass/ruin,
+/turf/open/floor/plating,
+=======
 "ZG" = (
 /obj/machinery/power/port_gen/cy_corporate/ryaznov_ore_plant,
 /turf/open/floor/iron/dark/textured,
+>>>>>>> d929ac2fa64923df72514cbb35fbbcf44e281bbc
 /area/station/commons/dorms)
 "ZN" = (
 /obj/effect/spawner/random/trash,
@@ -2584,12 +2915,12 @@ rD
 mS
 tC
 uc
-rD
-rD
-rD
-rD
-rD
-rD
+HA
+HA
+HA
+HA
+HA
+HA
 rD
 rD
 rD
@@ -4271,7 +4602,7 @@ rD
 rD
 rD
 rD
-rD
+zt
 rG
 rC
 rD
@@ -4360,20 +4691,20 @@ Lc
 bS
 rD
 rD
+HS
+ra
+UP
+Pg
+pu
+dK
+XW
+XW
 rD
 rD
 rD
 rD
 rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
+nq
 rG
 rC
 rD
@@ -4974,9 +5305,9 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Lc
-Lc
+QU
+rG
+rG
 Lc
 Lc
 Lc
@@ -5075,11 +5406,11 @@ Lc
 Rx
 Lc
 Lc
-Lc
-Rx
-Rx
-Lc
-Lc
+rG
+cI
+cI
+rD
+rG
 Lc
 Lc
 Lc
@@ -5177,11 +5508,11 @@ Rx
 Lc
 Lc
 Lc
-Lc
-Lc
-Lc
-Lc
-Lc
+Wm
+rD
+rD
+rD
+rG
 Lc
 Lc
 Lc
@@ -5279,11 +5610,11 @@ Rx
 Lc
 Lc
 Lc
-Lc
-Lc
-Lc
-Lc
-Lc
+Wm
+rD
+rD
+rD
+rG
 Lc
 Lc
 Lc
@@ -5381,11 +5712,11 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Lc
-Lc
-Lc
-Lc
+rG
+rD
+rD
+rD
+rG
 Lc
 Lc
 Lc
@@ -5484,9 +5815,9 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Lc
-Lc
+QU
+rG
+rG
 Lc
 Lc
 Lc
@@ -6096,9 +6427,9 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Rx
-Rx
+QU
+rG
+rG
 Lc
 Lc
 Lc
@@ -6197,11 +6528,11 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Lc
-Rx
-Lc
-Lc
+rG
+cI
+cI
+rD
+rG
 Lc
 Lc
 Rx
@@ -6299,11 +6630,11 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Rx
-Lc
-Lc
-Lc
+Wm
+rD
+rD
+rD
+rG
 Lc
 Lc
 Lc
@@ -6401,11 +6732,11 @@ Lc
 Lc
 Lc
 Rx
-ZN
-Lc
-Lc
-Lc
-Lc
+Wm
+rD
+rD
+rD
+rG
 Lc
 Lc
 Lc
@@ -6503,11 +6834,11 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Rx
-Lc
-Lc
-Lc
+rG
+rD
+rD
+rD
+rG
 Lc
 Lc
 Lc
@@ -6606,9 +6937,9 @@ Lc
 Lc
 Lc
 Lc
-Rx
-Lc
-Lc
+QU
+rG
+rG
 Lc
 Lc
 Lc
@@ -7472,25 +7803,25 @@ Lc
 Lc
 Lc
 rG
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
-rD
+Xv
+qY
+zv
+QC
+Pu
+KX
+qY
+qY
+qY
+qY
+qY
+qY
+qY
+qY
+qY
+qY
+qY
+qY
+Xv
 bS
 Lc
 Lc
@@ -7574,7 +7905,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -7592,7 +7923,7 @@ TE
 TE
 TE
 TE
-rD
+gE
 bS
 Lc
 Lc
@@ -7676,7 +8007,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -7694,7 +8025,7 @@ TE
 TE
 TE
 TE
-rD
+Ab
 rG
 Lc
 Lc
@@ -7778,7 +8109,7 @@ Lc
 Lc
 Lc
 rG
-rD
+gs
 TE
 TE
 TE
@@ -7796,7 +8127,7 @@ TE
 TE
 TE
 TE
-rD
+iL
 rG
 Lc
 Lc
@@ -7880,7 +8211,8 @@ Lc
 Lc
 Lc
 rG
-rD
+pO
+bU
 TE
 TE
 TE
@@ -7897,8 +8229,7 @@ TE
 TE
 TE
 TE
-TE
-rD
+Ov
 rG
 Lc
 Lc
@@ -7982,7 +8313,8 @@ Lc
 Lc
 Lc
 rG
-rD
+VK
+su
 TE
 TE
 TE
@@ -7999,8 +8331,7 @@ TE
 TE
 TE
 TE
-TE
-rD
+zr
 rG
 Lc
 Lc
@@ -8288,7 +8619,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -8390,7 +8721,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -8408,7 +8739,7 @@ TE
 TE
 TE
 TE
-rD
+QZ
 rG
 Lc
 Lc
@@ -8492,7 +8823,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -8510,7 +8841,7 @@ TE
 TE
 TE
 TE
-rD
+QZ
 rG
 Lc
 Lc
@@ -8798,7 +9129,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -8810,7 +9141,7 @@ rq
 TE
 TE
 TE
-TE
+Rm
 TE
 TE
 TE
@@ -8900,7 +9231,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -9002,7 +9333,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -9104,7 +9435,7 @@ Lc
 Lc
 Lc
 rG
-rD
+qY
 TE
 TE
 TE
@@ -9163,7 +9494,7 @@ Sm
 Sm
 Sm
 Sm
-Sm
+Nv
 Sm
 Sm
 Sm
@@ -9206,7 +9537,7 @@ Lc
 Lc
 Lc
 rG
-Ic
+Sz
 Eq
 qY
 pR
@@ -9219,9 +9550,9 @@ DX
 tp
 AH
 rN
-rD
-rD
-rD
+qT
+qT
+qT
 rG
 rC
 rD
@@ -12777,26 +13108,26 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+kG
+ec
+iS
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+rG
 YE
 YE
 YE
@@ -12879,26 +13210,26 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+GB
+ec
+hn
+iS
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+rG
 YE
 YE
 YE
@@ -12981,25 +13312,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+Jr
+sp
+mI
+DS
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -13083,25 +13414,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+QV
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -13185,25 +13516,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+QV
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -13287,25 +13618,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+QV
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -13389,25 +13720,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+QV
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 rG
 rG
@@ -13491,29 +13822,29 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+QV
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
-rG
-rG
-rG
+Pj
+Pj
+Dr
 rG
 YE
 YE
@@ -13593,29 +13924,29 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+gv
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+QV
+Fw
 rG
-rG
-rG
-rG
+ec
+ec
+Pj
 rG
 YE
 YE
@@ -13695,29 +14026,29 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-rG
-rG
-rG
-rG
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+QV
+Zf
+QV
+Pj
+Pj
 rG
 YE
 YE
@@ -13797,29 +14128,29 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
-rG
-rG
-rG
+ec
+ec
+Pj
 rG
 YE
 YE
@@ -13899,29 +14230,29 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
-rG
-rG
-rG
+Pj
+Pj
+Pj
 rG
 YE
 YE
@@ -14001,25 +14332,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 rG
 rG
@@ -14103,25 +14434,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -14205,25 +14536,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -14307,25 +14638,25 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rG
 YE
 YE
@@ -14409,22 +14740,22 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rC
 YE
 YE
@@ -14511,22 +14842,22 @@ YE
 YE
 YE
 rG
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
+ec
 rC
 YE
 YE
@@ -14613,8 +14944,8 @@ YE
 YE
 YE
 rG
-YX
-YX
+rG
+rG
 rG
 rG
 rG
@@ -17879,21 +18210,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ny
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+AG
 YX
 YX
 rG
@@ -17981,21 +18312,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18083,21 +18414,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18185,21 +18516,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18287,21 +18618,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18389,21 +18720,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18491,21 +18822,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+NV
 YX
 YX
 rG
@@ -18593,21 +18924,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+NV
 YX
 YX
 rG
@@ -18695,21 +19026,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18797,21 +19128,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -18899,21 +19230,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -19001,21 +19332,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -19103,21 +19434,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+hS
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+Fr
+hS
 YX
 YX
 rG
@@ -19205,21 +19536,21 @@ YE
 rG
 YX
 YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
-YX
+ny
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+PH
+AG
 YX
 YX
 rG
@@ -28698,7 +29029,7 @@ YX
 YX
 YX
 YX
-YX
+XJ
 YX
 YX
 YX
