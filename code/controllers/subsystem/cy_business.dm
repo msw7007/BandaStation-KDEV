@@ -33,6 +33,11 @@ SUBSYSTEM_DEF(cy_business)
 		if(!contract)
 			continue
 		contract.process_contract()
+	for(var/contract_id in open_contracts.Copy())
+		var/datum/cy_contract/open_contract = open_contracts[contract_id]
+		if(!open_contract?.metadata?["allow_ai"])
+			continue
+		cy_offer_contract_to_ai(open_contract, open_contract.metadata?["ai_faction"])
 
 /datum/controller/subsystem/cy_business/stat_entry(msg)
 	msg = "Businesses:[length(businesses_by_id)] Contracts:[length(contracts_by_id)] Open:[length(open_contracts)]"
@@ -136,6 +141,73 @@ SUBSYSTEM_DEF(cy_business)
 	register_contract(contract)
 	contract.open_contract()
 	return contract
+
+/datum/controller/subsystem/cy_business/proc/cy_contract_order_type(contract_type)
+	switch(contract_type)
+		if(CY_CONTRACT_DELIVERY, CY_CONTRACT_PROCUREMENT, CY_CONTRACT_MINING)
+			return CY_NPC_ORDER_DELIVER
+		if(CY_CONTRACT_REPAIR)
+			return CY_NPC_ORDER_REPAIR
+		if(CY_CONTRACT_CONSTRUCTION)
+			return CY_NPC_ORDER_WORK
+		if(CY_CONTRACT_GUARD, CY_CONTRACT_ESCORT)
+			return CY_NPC_ORDER_GUARD
+		if(CY_CONTRACT_EVACUATION)
+			return CY_NPC_ORDER_CARRY
+		if(CY_CONTRACT_SABOTAGE)
+			return CY_NPC_ORDER_USE_OBJECT
+		if(CY_CONTRACT_ELIMINATION)
+			return CY_NPC_ORDER_ATTACK
+		if(CY_CONTRACT_RECON)
+			return CY_NPC_ORDER_SEARCH
+	return CY_NPC_ORDER_WORK
+
+/datum/controller/subsystem/cy_business/proc/cy_offer_contract_to_ai(datum/cy_contract/contract, faction_id = null)
+	if(!contract || contract.status != CY_CONTRACT_STATUS_OPEN)
+		return FALSE
+	var/order_type = cy_contract_order_type(contract.contract_type)
+	var/atom/target = contract.get_target_atom()
+	var/turf/destination = contract.get_destination_turf()
+	var/needed_caps = CY_NPC_CAP_HANDS | CY_NPC_CAP_ITEM_USE
+	switch(contract.contract_type)
+		if(CY_CONTRACT_DELIVERY, CY_CONTRACT_PROCUREMENT, CY_CONTRACT_MINING)
+			needed_caps = CY_NPC_CAP_DELIVERY
+		if(CY_CONTRACT_REPAIR, CY_CONTRACT_CONSTRUCTION)
+			needed_caps = CY_NPC_CAP_REPAIR
+		if(CY_CONTRACT_GUARD, CY_CONTRACT_ESCORT)
+			needed_caps = CY_NPC_CAP_MELEE | CY_NPC_CAP_RANGED | CY_NPC_CAP_SIGNAL
+		if(CY_CONTRACT_EVACUATION)
+			needed_caps = CY_NPC_CAP_CARRY | CY_NPC_CAP_MEDICAL
+		if(CY_CONTRACT_SABOTAGE)
+			needed_caps = CY_NPC_CAP_ITEM_USE | CY_NPC_CAP_MELEE | CY_NPC_CAP_RANGED
+		if(CY_CONTRACT_ELIMINATION)
+			needed_caps = CY_NPC_CAP_MELEE | CY_NPC_CAP_RANGED
+		if(CY_CONTRACT_RECON)
+			needed_caps = CY_NPC_CAP_SIGNAL | CY_NPC_CAP_DELIVERY
+	var/list/data = list(
+		"priority" = 20,
+		"timeout" = contract.due_time ? max(1, contract.due_time - world.time) : 10 MINUTES,
+		"destination" = destination,
+		"contract_id" = contract.contract_id,
+	)
+	for(var/status in GLOB.ai_controllers_by_status)
+		for(var/datum/ai_controller/controller as anything in GLOB.ai_controllers_by_status[status])
+			if(!controller.cy_npc_profile || !controller.cy_npc_active)
+				continue
+			if(faction_id && controller.cy_npc_faction_id != faction_id)
+				continue
+			if(!(controller.cy_npc_capabilities & needed_caps))
+				continue
+			controller.blackboard[BB_CY_NPC_CONTRACT] = contract
+			controller.cy_npc_make_order(order_type, target || destination, data)
+			contract.performer_ckey = "AI:[REF(controller.pawn)]"
+			contract.accepted_time = world.time
+			contract.start_time = world.time
+			contract.status = CY_CONTRACT_STATUS_ACTIVE
+			open_contracts -= contract.contract_id
+			contract.log_event("Accepted by AI [controller.pawn]")
+			return TRUE
+	return FALSE
 
 /datum/controller/subsystem/cy_business/proc/move_contract_to_ledger(datum/cy_contract/contract)
 	if(!contract)

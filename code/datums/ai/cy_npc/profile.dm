@@ -67,6 +67,8 @@
 	controller.cy_npc_capabilities = capabilities
 	controller.cy_npc_state = CY_NPC_STATE_CALM
 	controller.interesting_dist = interesting_distance
+	controller.movement_delay = max(0.05 SECONDS, reaction_delay * 0.35)
+	controller.max_target_distance = max(controller.max_target_distance, threat_scan_range * 2)
 	controller.blackboard[BB_CY_NPC_PROFILE] = src
 	controller.blackboard[BB_CY_NPC_ROLE] = role
 	controller.blackboard[BB_CY_NPC_LEVEL] = level

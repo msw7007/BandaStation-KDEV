@@ -146,7 +146,7 @@ SUBSYSTEM_DEF(cy_storyteller)
 		"legality" = CY_CONTRACT_LEGAL,
 		"payment_amount" = 300 + round(get_total_pressure() * 2),
 		"due_time" = world.time + 20 MINUTES,
-		"metadata" = list("story_ending" = ending, "recon_scanned" = FALSE),
+		"metadata" = list("story_ending" = ending, "recon_scanned" = FALSE, "allow_ai" = TRUE),
 	)
 	switch(ending)
 		if(CY_STORY_ENDING_COLLAPSE)

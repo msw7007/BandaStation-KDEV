@@ -89,6 +89,55 @@
 		cy_automat_illegal ||= module.cy_machine_illegal || module.cy_black_market_only
 	update_mode_power_usage(IDLE_POWER_USE, initial(idle_power_usage) * cy_automat_power_mult)
 	update_mode_power_usage(ACTIVE_POWER_USE, initial(active_power_usage) * cy_automat_power_mult)
+	if(cy_automat_can_network)
+		cy_net_enabled = TRUE
+		cy_net_data = max(cy_net_data, 10)
+		cy_netspace_register_deferred(CY_NET_NODE_VENDING, CY_NET_SECURITY_BASIC)
+	else if(cy_netspace_node)
+		cy_netspace_unregister()
+
+/obj/machinery/cy_modular_automat/attack_hand(mob/living/user, list/modifiers)
+	if(!istype(user))
+		return ..()
+	var/list/options = list("inspect modules")
+	if(cy_automat_can_network)
+		options += "connect to netspace"
+		options += "network audit"
+	if(cy_automat_can_sell)
+		options += "sales mode"
+	var/choice = tgui_input_list(user, "Automat", name, options)
+	switch(choice)
+		if("connect to netspace")
+			if(!cy_netspace_node)
+				cy_netspace_register(CY_NET_NODE_VENDING, CY_NET_SECURITY_BASIC)
+			cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
+		if("network audit")
+			to_chat(user, span_notice(cy_get_netspace_status(user)))
+		if("sales mode")
+			to_chat(user, span_notice("Sales UI is provided by installed sale/storage/payment modules."))
+		else
+			examine(user)
+	return TRUE
+
+/obj/machinery/cy_modular_automat/cy_netspace_available_actions(mob/living/net_avatar/avatar)
+	var/list/actions = list("status")
+	if(cy_automat_can_network)
+		actions += "disable_network"
+	if(cy_automat_can_sell)
+		actions += "sales_audit"
+	if(cy_automat_can_store)
+		actions += "storage_audit"
+	return actions
+
+/obj/machinery/cy_modular_automat/cy_netspace_execute_action(mob/living/net_avatar/avatar, action_id)
+	switch(action_id)
+		if("status", "sales_audit", "storage_audit")
+			to_chat(avatar, span_notice(cy_netspace_status_text(avatar)))
+			return TRUE
+		if("disable_network")
+			cy_net_isolated = TRUE
+			return TRUE
+	return FALSE
 
 /obj/machinery/cy_modular_automat/update_overlays()
 	. = ..()

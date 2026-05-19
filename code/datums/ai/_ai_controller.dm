@@ -580,6 +580,8 @@ multiple modular subtrees with behaviors
 /datum/ai_controller/proc/on_sentience_gained()
 	SIGNAL_HANDLER
 	UnregisterSignal(pawn, COMSIG_MOB_LOGIN)
+	if(cy_npc_profile)
+		cy_npc_release_for_player(pawn)
 	if(!continue_processing_when_client)
 		set_ai_status(AI_STATUS_OFF) //Can't do anything while player is connected
 	RegisterSignal(pawn, COMSIG_MOB_LOGOUT, PROC_REF(on_sentience_lost))

@@ -35,6 +35,8 @@
 	var/last_detection_x = 0
 	var/last_detection_y = 0
 	var/last_detection_z = 0
+	var/body_sleep_applied = FALSE
+	var/last_carrier_health
 
 /mob/living/net_avatar/Initialize(mapload)
 	. = ..()
@@ -47,6 +49,8 @@
 	cy_clear_connected_cluster_images()
 	if(client && physical_body && !QDELETED(physical_body))
 		client.mob = physical_body
+	if(body_sleep_applied && physical_body && !QDELETED(physical_body))
+		physical_body.SetUnconscious(0)
 	physical_body = null
 	anchor_ref = null
 	net_keys = null
@@ -63,6 +67,7 @@
 		last_synced_physical_x = body.x
 		last_synced_physical_y = body.y
 		last_synced_physical_z = body.z
+		last_carrier_health = body.health
 	last_detection_x = x
 	last_detection_y = y
 	last_detection_z = z
@@ -226,6 +231,40 @@
 	if(distance > CY_NET_DISTANCE_BRAIN_BURN)
 		cy_netspace_brain_burn(distance)
 
+/mob/living/net_avatar/Move(atom/newloc, direct, glide_size_override)
+	if(!cy_can_move_to_net_turf(newloc))
+		to_chat(src, span_warning("The link range blocks your avatar. Connect to a nearby node first."))
+		return FALSE
+	return ..()
+
+/mob/living/net_avatar/proc/cy_can_move_to_net_turf(atom/newloc)
+	if(!newloc)
+		return FALSE
+	if(avatar_mode == CY_NET_AVATAR_MIRROR || avatar_mode == CY_NET_AVATAR_ALTERNATIVE)
+		return TRUE
+	var/turf/target_turf = get_turf(newloc)
+	if(!target_turf)
+		return FALSE
+	if(avatar_mode == CY_NET_AVATAR_ENGRAM)
+		if(engram_unbound)
+			return TRUE
+		if(!anchor_ref || QDELETED(anchor_ref))
+			return FALSE
+		var/turf/anchor_net_turf = SSnetspace.get_net_turf_for_atom(anchor_ref)
+		return anchor_net_turf && anchor_net_turf.z == target_turf.z && get_dist(target_turf, anchor_net_turf) <= CY_NET_ENGRAM_SAFE_DISTANCE
+	if(!physical_body || QDELETED(physical_body))
+		return FALSE
+	var/turf/body_net_turf = SSnetspace.get_net_turf_for_atom(physical_body)
+	if(body_net_turf && body_net_turf.z == target_turf.z && get_dist(target_turf, body_net_turf) <= CY_NET_DISTANCE_SAFE)
+		return TRUE
+	cy_prune_connected_clusters(FALSE)
+	for(var/datum/netspace_cluster/cluster as anything in connected_clusters)
+		if(!cluster?.proxy || cluster.proxy.z != target_turf.z)
+			continue
+		if(get_dist(target_turf, cluster.proxy) <= CY_NET_DISTANCE_SAFE)
+			return TRUE
+	return FALSE
+
 /mob/living/net_avatar/proc/cy_get_best_link_distance()
 	var/best_distance
 	var/turf/body_net_turf = SSnetspace.get_net_turf_for_atom(physical_body)
@@ -297,6 +336,15 @@
 	return TRUE
 
 /mob/living/net_avatar/proc/process_engram_distance()
+	if(physical_body && !QDELETED(physical_body))
+		if(physical_body.stat == DEAD)
+			to_chat(src, span_userdanger("Your carrier is destroyed. The engram collapses."))
+			death()
+			return
+		if(!isnull(last_carrier_health) && physical_body.health < last_carrier_health)
+			adjust_psychic_loss(max(1, round((last_carrier_health - physical_body.health) * 0.5)))
+			to_chat(src, span_warning("Pain bleeds through your carrier link."))
+		last_carrier_health = physical_body.health
 	var/area/current_area = get_area(src)
 	if(istype(current_area, /area/netspace/veil))
 		if(!engram_veil_started_at)
@@ -356,6 +404,8 @@
 	returning = TRUE
 	if(client && physical_body && !QDELETED(physical_body))
 		client.mob = physical_body
+		if(body_sleep_applied)
+			physical_body.SetUnconscious(0)
 		if(cy_active_cyberdeck)
 			cy_active_cyberdeck.grant_demon_actions(physical_body)
 	qdel(src)
@@ -410,6 +460,9 @@
 	avatar.cy_active_cyberdeck = user.cy_get_active_cyberdeck()
 	if(avatar.cy_active_cyberdeck)
 		avatar.cy_active_cyberdeck.grant_demon_actions(avatar)
+	if(mode == CY_NET_AVATAR_ACTIVE)
+		user.Unconscious(CY_NET_AVATAR_BODY_SLEEP_TIME, ignore_canstun = TRUE)
+		avatar.body_sleep_applied = TRUE
 	user.client.mob = avatar
 	return avatar
 

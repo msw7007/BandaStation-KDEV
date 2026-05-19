@@ -46,6 +46,12 @@
 		controller.blackboard -= BB_CY_NPC_ORDER
 	return status
 
+/datum/cy_npc_order/proc/get_contract()
+	var/contract_id = data?["contract_id"]
+	if(!contract_id)
+		return null
+	return SScy_business?.get_contract(contract_id)
+
 /datum/cy_npc_order/process(datum/ai_controller/controller, seconds_per_tick)
 	if(!controller || QDELETED(controller.pawn))
 		status = CY_NPC_ORDER_FAILED
@@ -176,6 +182,9 @@
 		return CY_NPC_ORDER_RUNNING
 	controller.set_movement_target(src, null)
 	controller.cy_npc_try_interact(work_target)
+	var/datum/cy_contract/contract = get_contract()
+	if(contract && contract.contract_type == CY_CONTRACT_CONSTRUCTION)
+		contract.metadata["ai_worked"] = TRUE
 	return CY_NPC_ORDER_RUNNING
 
 /datum/cy_npc_order/proc/process_guard(datum/ai_controller/controller)
@@ -191,18 +200,36 @@
 		return finish(controller, FALSE)
 	controller.cy_npc_set_state(CY_NPC_STATE_COMBAT)
 	controller.blackboard[BB_BASIC_MOB_CURRENT_TARGET] = living_target
-	controller.set_movement_target(src, living_target)
+	if(get_dist(controller.pawn, living_target) > 1)
+		controller.set_movement_target(src, living_target)
+	else
+		controller.set_movement_target(src, null)
+		controller.cy_npc_try_interact(living_target, TRUE, list())
+		var/datum/cy_contract/contract = get_contract()
+		if(contract && contract.contract_type == CY_CONTRACT_ELIMINATION)
+			contract.metadata["last_ai_attacker"] = REF(controller.pawn)
+	if(controller.cy_npc_level >= CY_NPC_LEVEL_TRAINED && prob(20 + controller.cy_npc_level * 10))
+		controller.cy_npc_make_order(CY_NPC_ORDER_TAKE_COVER, living_target, list("priority" = priority - 1, "timeout" = 3 SECONDS))
 	return CY_NPC_ORDER_RUNNING
 
 /datum/cy_npc_order/proc/process_aim(datum/ai_controller/controller)
 	if(!(controller.cy_npc_capabilities & CY_NPC_CAP_AIM))
 		return finish(controller, FALSE)
+	controller.blackboard[BB_CY_NPC_AIM_TARGET] = target
 	return process_attack(controller)
 
 /datum/cy_npc_order/proc/process_take_cover(datum/ai_controller/controller)
 	if(!(controller.cy_npc_capabilities & CY_NPC_CAP_COVER))
 		return finish(controller, FALSE)
 	controller.cy_npc_set_state(CY_NPC_STATE_COMBAT)
+	var/turf/best_cover
+	for(var/obj/structure/cover in view(5, controller.pawn))
+		if(cover.density)
+			best_cover = get_turf(cover)
+			break
+	if(best_cover)
+		controller.blackboard[BB_CY_NPC_COVER_TARGET] = best_cover
+		controller.set_movement_target(src, best_cover)
 	return CY_NPC_ORDER_RUNNING
 
 /datum/cy_npc_order/proc/process_flee(datum/ai_controller/controller)
@@ -221,7 +248,14 @@
 	if(get_dist(controller.pawn, living_target) > 1)
 		controller.set_movement_target(src, living_target)
 		return CY_NPC_ORDER_RUNNING
-	controller.cy_npc_try_interact(living_target, TRUE, list(CTRL_CLICK = TRUE))
+	if(living_target.stat != CONSCIOUS || living_target.IsParalyzed() || living_target.IsUnconscious())
+		controller.cy_npc_try_restrain(living_target, data)
+		controller.cy_npc_try_interact(living_target, FALSE, data)
+		var/atom/destination = data?["destination"]
+		if(destination)
+			controller.cy_npc_make_order(CY_NPC_ORDER_DELIVER, living_target, list("priority" = priority - 1, "destination" = destination, "timeout" = timeout || 1 MINUTES))
+	else
+		controller.cy_npc_try_interact(living_target, TRUE, list(CTRL_CLICK = TRUE))
 	return CY_NPC_ORDER_RUNNING
 
 /datum/cy_npc_order/proc/process_restrain(datum/ai_controller/controller)
@@ -245,6 +279,9 @@
 		controller.set_movement_target(src, living_target)
 		return CY_NPC_ORDER_RUNNING
 	controller.cy_npc_try_interact(living_target, FALSE, data)
+	if(ismovable(living_target) && ismob(controller.pawn))
+		var/mob/living/living_pawn = controller.pawn
+		living_pawn.start_pulling(living_target, supress_message = TRUE)
 	return finish(controller, TRUE)
 
 /datum/cy_npc_order/proc/process_deliver(datum/ai_controller/controller)
@@ -252,8 +289,14 @@
 	if(!destination)
 		return process_move(controller)
 	controller.cy_npc_set_state(CY_NPC_STATE_DELIVERING)
+	if(target && get_dist(controller.pawn, target) <= 1)
+		controller.blackboard[BB_CY_NPC_CARRY_TARGET] = target
 	target_turf = get_turf(destination)
-	return process_move(controller)
+	var/result = process_move(controller)
+	if(status == CY_NPC_ORDER_DONE || get_dist(controller.pawn, destination) <= 1)
+		controller.cy_npc_try_drop(destination, list("item" = controller.blackboard[BB_CY_NPC_CARRY_TARGET], "destination" = destination))
+		return finish(controller, TRUE)
+	return result
 
 /datum/cy_npc_order/proc/process_use(datum/ai_controller/controller)
 	if(!target || QDELETED(target))
@@ -281,7 +324,11 @@
 	if(get_dist(controller.pawn, target) > 1)
 		controller.set_movement_target(src, target)
 		return CY_NPC_ORDER_RUNNING
-	return finish(controller, controller.cy_npc_try_repair(target, data))
+	var/success = controller.cy_npc_try_repair(target, data)
+	var/datum/cy_contract/contract = get_contract()
+	if(contract && success)
+		contract.metadata["last_ai_repair"] = world.time
+	return finish(controller, success)
 
 /datum/cy_npc_order/proc/process_pickup(datum/ai_controller/controller)
 	var/atom/movable/movable_target = target
@@ -311,6 +358,10 @@
 		return CY_NPC_ORDER_RUNNING
 	var/radius = data?["radius"] || controller.cy_npc_profile?.threat_scan_range || 7
 	var/turf/center_turf = get_turf(center)
+	var/datum/cy_contract/contract = get_contract()
+	if(contract && get_dist(controller.pawn, center_turf || controller.pawn) <= radius)
+		contract.metadata["recon_scanned"] = TRUE
+		return finish(controller, TRUE)
 	if(!center_turf)
 		return CY_NPC_ORDER_RUNNING
 	if(get_dist(controller.pawn, center_turf) > radius)
@@ -328,6 +379,7 @@
 
 /datum/cy_npc_order/proc/process_signal(datum/ai_controller/controller)
 	controller.blackboard[BB_CY_NPC_LAST_SIGNAL] = list("message" = message, "time" = world.time, "target" = target)
+	controller.cy_npc_remember_event(CY_NPC_EVENT_ALARM, target, message)
 	controller.cy_npc_alert_allies(target, message)
 	return finish(controller, TRUE)
 

@@ -119,9 +119,13 @@
 	return TRUE
 
 /atom/proc/cy_netspace_on_emi(mob/living/net_avatar/source)
+	if(hascall(src, "emp_act"))
+		call(src, "emp_act")(EMP_HEAVY)
 	visible_message(span_warning("[src] crackles under remote electromagnetic interference."))
 
 /atom/proc/cy_netspace_on_emagged(mob/living/net_avatar/source)
+	if(hascall(src, "emag_act"))
+		call(src, "emag_act")(source, null)
 	visible_message(span_warning("[src]'s control logic glitches violently."))
 
 /atom/proc/cy_netspace_on_disabled(mob/living/net_avatar/source)
@@ -261,6 +265,7 @@
 	cy_net_enabled = TRUE
 	cy_net_security = CY_NET_SECURITY_BASIC
 	cy_net_data = 40
+	var/cooldown_until = 0
 
 /obj/machinery/net_terminal/Initialize(mapload)
 	. = ..()
@@ -271,7 +276,123 @@
 		return ..()
 	if(!cy_netspace_node)
 		cy_netspace_register(CY_NET_NODE_TERMINAL, cy_net_security)
-	cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
+	var/list/options = list("enter netspace", "compile demon", "upgrade loaded demon")
+	var/choice = tgui_input_list(user, "Netspace terminal", name, options)
+	switch(choice)
+		if("enter netspace")
+			cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
+		if("compile demon")
+			cy_compile_demon_for_user(user)
+		if("upgrade loaded demon")
+			cy_upgrade_user_demon(user)
+	return TRUE
+
+/obj/machinery/net_terminal/proc/cy_compile_demon_for_user(mob/living/user)
+	if(world.time < cooldown_until)
+		to_chat(user, span_warning("[src] is cooling down."))
+		return FALSE
+	var/list/templates = list(
+		"Ping" = /datum/cy_demon/ping,
+		"Breach" = /datum/cy_demon/breach,
+		"Compile Wall" = /datum/cy_demon/wall,
+		"Control Spike" = /datum/cy_demon/control,
+		"Blindspot" = /datum/cy_demon/blind,
+		"Pax Lock" = /datum/cy_demon/pacify,
+		"Short Circuit" = /datum/cy_demon/short_circuit,
+		"Reaper" = /datum/cy_demon/reaper,
+		"Collector" = /datum/cy_demon/collector,
+	)
+	var/list/costs = list(
+		"Ping" = 10,
+		"Breach" = 25,
+		"Compile Wall" = 20,
+		"Control Spike" = 35,
+		"Blindspot" = 20,
+		"Pax Lock" = 25,
+		"Short Circuit" = 25,
+		"Reaper" = 60,
+		"Collector" = 60,
+	)
+	var/template = tgui_input_list(user, "Compile which demon?", name, templates)
+	if(!template)
+		return FALSE
+	var/cost = costs[template] || 10
+	if(user.cy_get_net_data() < cost)
+		to_chat(user, span_warning("You need [cost] net-data."))
+		return FALSE
+	var/datum/cy_demon/new_demon = new templates[template]
+	if(!new_demon.can_compile(user))
+		qdel(new_demon)
+		return FALSE
+	var/obj/item/clothing/gloves/cyberdeck/deck = user.cy_get_active_cyberdeck()
+	if(deck)
+		if(deck.is_compile_locked())
+			to_chat(user, span_warning("[deck] is cooling down."))
+			qdel(new_demon)
+			return FALSE
+		if(!deck.store_demon(new_demon, user))
+			qdel(new_demon)
+			return FALSE
+		deck.grant_demon_actions(user)
+	else
+		user.cy_store_demon(new_demon)
+	user.cy_add_net_data(-cost)
+	cooldown_until = world.time + CY_NET_TERMINAL_COMPILE_COOLDOWN
+	to_chat(user, span_notice("[src] compiles [new_demon.name]."))
+	return TRUE
+
+/obj/machinery/net_terminal/proc/cy_upgrade_user_demon(mob/living/user)
+	if(world.time < cooldown_until)
+		to_chat(user, span_warning("[src] is cooling down."))
+		return FALSE
+	var/list/demons = user.cy_collect_demons()
+	if(!length(demons))
+		to_chat(user, span_warning("No demons are loaded."))
+		return FALSE
+	var/list/choices = list()
+	for(var/datum/cy_demon/demon as anything in demons)
+		choices["[demon.name] ([demon.get_memory_cost()] MU)"] = demon
+	var/picked = tgui_input_list(user, "Upgrade which demon?", name, choices)
+	if(!picked)
+		return FALSE
+	var/list/options = list(CY_DEMON_UPGRADE_POWER, CY_DEMON_UPGRADE_RANGE, CY_DEMON_UPGRADE_SPEED, CY_DEMON_UPGRADE_STEALTH, CY_DEMON_UPGRADE_MASS, CY_DEMON_UPGRADE_SPREAD, CY_DEMON_UPGRADE_JUMP, CY_DEMON_UPGRADE_EMI)
+	var/field = tgui_input_list(user, "Upgrade what?", name, options)
+	if(!field)
+		return FALSE
+	var/cost = 15
+	if(user.cy_get_net_data() < cost)
+		to_chat(user, span_warning("You need [cost] net-data."))
+		return FALSE
+	var/datum/cy_demon_module/modifier/module
+	switch(field)
+		if(CY_DEMON_UPGRADE_POWER)
+			module = new /datum/cy_demon_module/modifier/power_boost
+		if(CY_DEMON_UPGRADE_RANGE)
+			module = new /datum/cy_demon_module/modifier/range_boost
+		if(CY_DEMON_UPGRADE_SPEED)
+			module = new /datum/cy_demon_module/modifier/speed_boost
+		if(CY_DEMON_UPGRADE_STEALTH)
+			module = new /datum/cy_demon_module/modifier/stealth_shell
+		if(CY_DEMON_UPGRADE_MASS)
+			module = new /datum/cy_demon_module/modifier/mass_payload
+		if(CY_DEMON_UPGRADE_SPREAD)
+			module = new /datum/cy_demon_module/modifier/spread_payload
+		if(CY_DEMON_UPGRADE_JUMP)
+			module = new /datum/cy_demon_module/modifier/jump_payload
+		if(CY_DEMON_UPGRADE_EMI)
+			module = new /datum/cy_demon_module/modifier/emi_payload
+	if(!module)
+		return FALSE
+	var/datum/cy_demon/demon = choices[picked]
+	demon.add_module(module)
+	if(!demon.can_compile(user))
+		demon.remove_module(module)
+		qdel(module)
+		return FALSE
+	user.cy_add_net_data(-cost)
+	cooldown_until = world.time + CY_NET_TERMINAL_COMPILE_COOLDOWN
+	user.cy_get_active_cyberdeck()?.grant_demon_actions(user)
+	to_chat(user, span_notice("[src] rewrites [demon.name]."))
 	return TRUE
 
 // CYBERPUNK 13 ENGRAMMING CORE START
@@ -719,6 +840,12 @@
 
 /obj/item/clothing/gloves/cyberdeck/attack_self_secondary(mob/living/user, modifiers)
 	return attack_self(user, modifiers)
+
+/obj/item/clothing/gloves/cyberdeck/click_alt_secondary(mob/living/user)
+	if(!istype(user))
+		return CLICK_ACTION_BLOCKING
+	attack_self(user, list(RIGHT_CLICK = TRUE, ALT_CLICK = TRUE))
+	return CLICK_ACTION_SUCCESS
 
 /obj/item/clothing/gloves/cyberdeck/verb/configure_cyberdeck_demons()
 	set name = "Configure Cyberdeck Demons"
