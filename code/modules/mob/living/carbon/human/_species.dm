@@ -828,7 +828,6 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
-	damage *= target.get_cy_incoming_damage_multiplier()
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
 	var/precise_melee_level = user.get_cy_skill_level(/datum/cy_skill/perception/precise_melee)

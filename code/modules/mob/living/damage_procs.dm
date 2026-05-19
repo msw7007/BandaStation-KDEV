@@ -168,7 +168,6 @@
 	attacking_item,
 )
 	SHOULD_CALL_PARENT(TRUE)
-	SHOULD_BE_PURE(TRUE)
 
 	var/list/damage_mods = list()
 	SEND_SIGNAL(src, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS, damage_mods, damage, damagetype, def_zone, sharpness, attack_direction, attacking_item)
@@ -176,6 +175,7 @@
 	var/final_mod = 1
 	for(var/new_mod in damage_mods)
 		final_mod *= new_mod
+	final_mod *= get_cy_incoming_damage_multiplier()
 	return final_mod
 
 /**

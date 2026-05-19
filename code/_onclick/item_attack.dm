@@ -348,7 +348,6 @@
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	final_force *= user.get_cy_weapon_damage_multiplier(attacking_item)
 	final_force *= user.get_cy_stat_weapon_damage_multiplier(attacking_item)
-	final_force *= get_cy_incoming_damage_multiplier()
 	if(user.is_cy_stealthing())
 		final_force *= 1 + CY_STEALTH_ATTACK_DAMAGE_BONUS
 	if(!cy_is_in_fov(user))

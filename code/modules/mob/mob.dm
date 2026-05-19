@@ -1741,6 +1741,106 @@
 
 	to_chat(src, span_notice("Your skills: [english_list(skill_lines)]."))
 
+/mob/living/verb/open_cy_cohort()
+	set category = "IC"
+	set name = "Cohort"
+	set desc = "Manage people affected by your cohort-based effects."
+
+	var/datum/cy_cohort_panel/panel = new(src)
+	panel.ui_interact(src)
+
+/mob/living/verb/toggle_cy_compliance()
+	set category = "IC"
+	set name = "Поддаться"
+	set desc = "Toggle consent to being stripped without theft restrictions."
+
+	cy_compliant_stripping = !cy_compliant_stripping
+	to_chat(src, cy_compliant_stripping ? span_notice("You relax and allow others to strip your equipment freely.") : span_notice("You stop allowing unrestricted stripping."))
+
+/mob/living/verb/cy_surrender()
+	set category = "IC"
+	set name = "Сдаться"
+	set desc = "Drop down, surrender, and briefly reduce incoming damage."
+
+	if(stat == DEAD)
+		return
+	cy_surrender_until = max(cy_surrender_until, world.time + 30 SECONDS)
+	set_resting(TRUE, TRUE, TRUE)
+	say("СДАЮСЬ!", forced = "surrender")
+	Knockdown(30 SECONDS, ignore_canstun = TRUE)
+	Stun(30 SECONDS, ignore_canstun = TRUE)
+	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] surrenders and drops to the floor."))
+
+/datum/cy_cohort_panel
+	var/mob/living/owner
+
+/datum/cy_cohort_panel/New(mob/living/new_owner)
+	. = ..()
+	owner = new_owner
+
+/datum/cy_cohort_panel/Destroy(force)
+	owner = null
+	return ..()
+
+/datum/cy_cohort_panel/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cy_cohort_panel/ui_close(mob/user)
+	qdel(src)
+
+/datum/cy_cohort_panel/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyCohort")
+		ui.open()
+
+/datum/cy_cohort_panel/ui_data(mob/user)
+	var/list/data = list()
+	if(!owner)
+		return data
+	owner.cleanup_cy_cohort()
+	data["limit"] = owner.get_cy_cohort_limit()
+	data["count"] = length(owner.cy_cohort_members)
+	var/list/members = list()
+	for(var/mob/living/member as anything in owner.cy_cohort_members)
+		members += list(list(
+			"ref" = REF(member),
+			"name" = member.name,
+			"status" = member.stat == DEAD ? "dead" : (member.stat >= UNCONSCIOUS ? "down" : "active"),
+		))
+	data["members"] = members
+	var/list/candidates = list()
+	for(var/mob/living/candidate in view(7, owner))
+		if(candidate == owner || (candidate in owner.cy_cohort_members) || candidate.stat == DEAD)
+			continue
+		candidates += list(list(
+			"ref" = REF(candidate),
+			"name" = candidate.name,
+		))
+	data["candidates"] = candidates
+	return data
+
+/datum/cy_cohort_panel/ui_act(action, list/params)
+	. = ..()
+	if(.)
+		return
+	if(!owner || usr != owner)
+		return TRUE
+	var/atom/target_atom = locate(params["ref"])
+	var/mob/living/target = target_atom
+	switch(action)
+		if("add")
+			if(!istype(target) || get_dist(owner, target) > 7)
+				return TRUE
+			if(!owner.add_cy_cohort_member(target))
+				to_chat(owner, span_warning("Cohort limit reached."))
+			else
+				to_chat(owner, span_notice("[target] joins your cohort."))
+		if("remove")
+			if(owner.remove_cy_cohort_member(target))
+				to_chat(owner, span_notice("[target] leaves your cohort."))
+	return TRUE
+
 /mob/key_down(key, client/client, full_key)
 	..()
 	SEND_SIGNAL(src, COMSIG_MOB_KEYDOWN, key, client, full_key)

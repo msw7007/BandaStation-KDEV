@@ -323,6 +323,12 @@
 	/// Cyberpunk perception modes.
 	var/cy_look_mode = FALSE
 	var/cy_listen_mode = FALSE
+	/// IC cohort members affected by inspiration/music/style support mechanics.
+	var/list/cy_cohort_members
+	/// Player consent flag: while enabled, other players may strip all slots without theft restrictions.
+	var/cy_compliant_stripping = FALSE
+	/// World time until surrender protection/compliance expires.
+	var/cy_surrender_until = 0
 
 	/// Defensive hold state for Space + click controls.
 	var/cy_defense_hold = FALSE

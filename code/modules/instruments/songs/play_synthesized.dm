@@ -64,6 +64,7 @@
 		if(player && HAS_TRAIT(player, TRAIT_MUSICIAN) && isliving(M))
 			var/mob/living/L = M
 			L.apply_status_effect(/datum/status_effect/good_music)
+		apply_cy_music_effects(M)
 		var/pref_volume = M?.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_instruments)
 		if(!pref_volume)
 			continue

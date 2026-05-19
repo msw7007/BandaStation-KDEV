@@ -137,16 +137,19 @@
 	return clamp(get_cy_skill_level(skill_type) / CY_SKILL_MAXIMUM_LEVEL, 0, 1)
 
 /mob/living/proc/get_cy_incoming_damage_multiplier()
+	var/toughness_multiplier = 1
 	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 6))
-		return 0.8
-	if(!get_cy_skill_level(/datum/cy_skill/strength/toughness))
-		return 1.1
-	return 1
+		toughness_multiplier = body_position == LYING_DOWN ? 0.9 : 0.8
+	else if(!get_cy_skill_level(/datum/cy_skill/strength/toughness))
+		toughness_multiplier = 1.1
+	if(world.time < cy_surrender_until)
+		toughness_multiplier *= 0.7
+	return toughness_multiplier
 
 /mob/living/proc/get_cy_stagger_duration_multiplier()
 	var/multiplier = 1
 	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 3))
-		multiplier *= 0.5
+		multiplier *= body_position == LYING_DOWN ? 0.75 : 0.5
 	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 4))
 		multiplier *= 0.5
 	return multiplier
@@ -205,6 +208,107 @@
 	if(get_cy_skill_level(skill_type) < required_level)
 		return FALSE
 	return roll_cy_skill_check(skill_type, difficulty, grant_experience, ignore_stat_limit)
+
+/mob/living/proc/get_cy_cohort_limit()
+	var/inspiration_level = get_cy_skill_level(/datum/cy_skill/charisma/inspiration)
+	switch(inspiration_level)
+		if(CY_SKILL_LEVEL_SKILLED)
+			return 2
+		if(CY_SKILL_LEVEL_TRAINED)
+			return 3
+		if(CY_SKILL_LEVEL_EXPERT)
+			return 4
+		if(CY_SKILL_LEVEL_PROFESSIONAL)
+			return 6
+		if(CY_SKILL_LEVEL_MASTER to INFINITY)
+			return 8
+	return CY_COHORT_BASE_LIMIT
+
+/mob/living/proc/is_cy_cohort_member(mob/living/target)
+	return target && (target in cy_cohort_members)
+
+/mob/living/proc/cleanup_cy_cohort()
+	if(!islist(cy_cohort_members))
+		cy_cohort_members = list()
+	for(var/mob/living/member as anything in cy_cohort_members.Copy())
+		if(QDELETED(member) || member.stat == DEAD || get_dist(src, member) > 30)
+			cy_cohort_members -= member
+	while(length(cy_cohort_members) > get_cy_cohort_limit())
+		cy_cohort_members.Cut(length(cy_cohort_members), length(cy_cohort_members) + 1)
+	return cy_cohort_members
+
+/mob/living/proc/add_cy_cohort_member(mob/living/target)
+	if(!target || target == src)
+		return FALSE
+	cleanup_cy_cohort()
+	if(target in cy_cohort_members)
+		return TRUE
+	if(length(cy_cohort_members) >= get_cy_cohort_limit())
+		return FALSE
+	cy_cohort_members += target
+	return TRUE
+
+/mob/living/proc/remove_cy_cohort_member(mob/living/target)
+	if(!target || !(target in cy_cohort_members))
+		return FALSE
+	cy_cohort_members -= target
+	return TRUE
+
+/mob/living/proc/get_cy_cohort_effect_multiplier(mob/living/target)
+	if(!is_cy_cohort_member(target))
+		return 0
+	var/multiplier = 1
+	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_TRAINED))
+		multiplier *= 1.25
+	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_EXPERT))
+		multiplier *= 1.2
+	return multiplier
+
+/mob/living/proc/get_cy_theft_notice_chance(mob/living/victim)
+	var/theft_level = get_cy_skill_level(/datum/cy_skill/charisma/theft)
+	if(theft_level >= CY_SKILL_LEVEL_EXPERT)
+		var/victim_perception = victim?.get_cy_stat(/datum/cy_stat/perception) || CY_STAT_DEFAULT
+		if(victim_perception < theft_level * 3)
+			return 0
+	if(theft_level >= CY_SKILL_LEVEL_SKILLED)
+		return is_cy_stealthing() ? 50 : 75
+	if(theft_level >= CY_SKILL_LEVEL_BEGINNER)
+		return 100
+	return 100
+
+/mob/living/proc/get_cy_theft_delay_multiplier()
+	var/theft_level = get_cy_skill_level(/datum/cy_skill/charisma/theft)
+	if(theft_level >= CY_SKILL_LEVEL_EXPERT)
+		return 0
+	return max(0.35, 1 - theft_level * 0.08)
+
+/mob/living/proc/can_cy_steal_strippable_key(key)
+	if(get_cy_skill_level(/datum/cy_skill/charisma/theft) >= CY_SKILL_LEVEL_MASTER)
+		return TRUE
+	return !(key in list(
+		STRIPPABLE_ITEM_LHAND,
+		STRIPPABLE_ITEM_RHAND,
+		STRIPPABLE_ITEM_BACK,
+		STRIPPABLE_ITEM_BELT,
+		STRIPPABLE_ITEM_JUMPSUIT,
+		STRIPPABLE_ITEM_SUIT,
+		STRIPPABLE_ITEM_HEAD,
+	))
+
+/mob/living/proc/cy_can_be_stripped_freely()
+	return cy_compliant_stripping || world.time < cy_surrender_until || stat >= UNCONSCIOUS || IsStun() || IsParalyzed() || IsImmobilized()
+
+/mob/living/proc/cy_warn_theft_attempt(mob/living/victim, obj/item/item)
+	if(!victim || !item)
+		return FALSE
+	var/notice_chance = get_cy_theft_notice_chance(victim)
+	if(notice_chance && prob(notice_chance))
+		to_chat(victim, span_userdanger("[capitalize(declent_ru(NOMINATIVE))] пытается украсть [item.ru_p_yours(ACCUSATIVE)] [item.declent_ru(ACCUSATIVE)]!"))
+		for(var/mob/living/witness in viewers(1, victim))
+			if(witness == victim || witness == src)
+				continue
+			to_chat(witness, span_warning("[capitalize(declent_ru(NOMINATIVE))] замечает попытку кражи у [victim.declent_ru(GENITIVE)]."))
+	return TRUE
 // CyberPunk character completion layer.
 // Covers character-TZ behaviour not provided by the base Banda/TG systems.
 
@@ -1609,6 +1713,9 @@
 /mob/living/proc/resolve_cy_active_defense(atom/hit_by, attack_type = MELEE_ATTACK)
 	if(!has_active_cy_defense())
 		return FAILED_BLOCK
+	if(body_position == LYING_DOWN && prob(50))
+		clear_cy_active_defense(TRUE)
+		return FAILED_BLOCK
 	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
 	var/attacker_intent = attacker?.get_cy_current_attack_intent()
 	var/bypass_chance = 0
@@ -1650,7 +1757,10 @@
 	cy_last_defense_action = defense_action
 	cy_active_defense_action = defense_action
 	var/defense_skill = defense_action == CY_DEFENSE_ACTION_DODGE ? /datum/cy_skill/dexterity/evasion : /datum/cy_skill/perception/concentration
-	cy_active_defense_until = world.time + CY_DEFENSE_WINDOW + get_cy_skill_level(defense_skill) * 0.05 SECONDS
+	var/skill_window_bonus = get_cy_skill_level(defense_skill) * 0.05 SECONDS
+	if(body_position == LYING_DOWN)
+		skill_window_bonus *= 0.5
+	cy_active_defense_until = world.time + CY_DEFENSE_WINDOW + skill_window_bonus
 	cy_next_defense_time = world.time + get_cy_action_delay(CY_DEFENSE_BASE_COOLDOWN, defense_skill)
 	if(target)
 		face_atom(target)

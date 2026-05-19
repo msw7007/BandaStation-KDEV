@@ -132,6 +132,12 @@
 		var/mob/mob_source = source
 		if (!item.canStrip(user, mob_source))
 			return FALSE
+		if(isliving(source) && isliving(user))
+			var/mob/living/living_source = source
+			var/mob/living/living_user = user
+			if(!living_source.cy_can_be_stripped_freely() && !living_user.can_cy_steal_strippable_key(key))
+				to_chat(user, span_warning("You need master theft training to steal from that slot while the target can resist."))
+				return FALSE
 
 	return TRUE
 
@@ -144,6 +150,17 @@
 
 	if (HAS_TRAIT(item, TRAIT_NO_STRIP))
 		return FALSE
+
+	if(isliving(source) && isliving(user))
+		var/mob/living/living_source = source
+		var/mob/living/living_user = user
+		if(!living_source.cy_can_be_stripped_freely())
+			to_chat(user, span_danger("You try to steal [item] from [source]..."))
+			living_user.cy_warn_theft_attempt(living_source, item)
+			user.log_message("is stealing [key_name(source)]'s [item].", LOG_ATTACK, color="red")
+			source.log_message("is being stolen from by [key_name(user)]: [item].", LOG_VICTIM, color="orange", log_globally=FALSE)
+			item.add_fingerprint(user)
+			return TRUE
 
 	source.visible_message(
 		span_warning("[capitalize(user.declent_ru(NOMINATIVE))] пытается снять [item.declent_ru(ACCUSATIVE)] у [source.declent_ru(GENITIVE)]."),
@@ -280,7 +297,16 @@
 	if (!.)
 		return
 
-	return start_unequip_mob(get_item(source), source, user)
+	var/strip_delay
+	var/hidden = FALSE
+	if(isliving(source) && isliving(user))
+		var/mob/living/living_source = source
+		var/mob/living/living_user = user
+		if(!living_source.cy_can_be_stripped_freely())
+			var/obj/item/target_item = get_item(source)
+			strip_delay = (target_item?.strip_delay || 1 SECONDS) * living_user.get_cy_theft_delay_multiplier()
+			hidden = living_user.get_cy_theft_notice_chance(living_source) <= 0
+	return start_unequip_mob(get_item(source), source, user, strip_delay = strip_delay, hidden = hidden)
 
 /datum/strippable_item/mob_item_slot/finish_unequip(atom/source, mob/user)
 	var/obj/item/item = get_item(source)

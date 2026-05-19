@@ -255,7 +255,17 @@ GLOBAL_LIST_INIT(strippable_human_items, create_strippable_list(list(
 	source.log_message("is being pickpocketed of [item] by [key_name(user)] ([pocket_side])", LOG_VICTIM, color="orange", log_globally=FALSE)
 	item.add_fingerprint(src)
 
-	var/result = start_unequip_mob(item, source, user, strip_delay = POCKET_STRIP_DELAY, hidden = TRUE)
+	var/strip_delay = POCKET_STRIP_DELAY
+	var/hidden = TRUE
+	if(isliving(source) && isliving(user))
+		var/mob/living/living_source = source
+		var/mob/living/living_user = user
+		if(!living_source.cy_can_be_stripped_freely())
+			strip_delay *= living_user.get_cy_theft_delay_multiplier()
+			hidden = living_user.get_cy_theft_notice_chance(living_source) <= 0
+			living_user.cy_warn_theft_attempt(living_source, item)
+
+	var/result = start_unequip_mob(item, source, user, strip_delay = strip_delay, hidden = hidden)
 
 	if (!result)
 		warn_owner(source)

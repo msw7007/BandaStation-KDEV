@@ -118,7 +118,16 @@
 	if (!.)
 		return
 
-	return start_unequip_mob(get_item(source), source, user)
+	var/strip_delay
+	var/hidden = FALSE
+	if(isliving(source) && isliving(user))
+		var/mob/living/living_source = source
+		var/mob/living/living_user = user
+		if(!living_source.cy_can_be_stripped_freely())
+			var/obj/item/target_item = get_item(source)
+			strip_delay = (target_item?.strip_delay || 1 SECONDS) * living_user.get_cy_theft_delay_multiplier()
+			hidden = living_user.get_cy_theft_notice_chance(living_source) <= 0
+	return start_unequip_mob(get_item(source), source, user, strip_delay = strip_delay, hidden = hidden)
 
 /datum/strippable_item/hand/finish_unequip(atom/source, mob/user)
 	var/obj/item/item = get_item(source)
