@@ -13,6 +13,9 @@
 
 	update_icon(ALL, preferred_form)
 	updateghostimages()
+	if(!locate(/datum/action/cooldown/mob_cooldown/cy_weak_disturbance) in actions)
+		var/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/weak_disturbance = new(src)
+		weak_disturbance.Grant(src)
 	client.set_right_click_menu_mode(FALSE)
 	lighting_cutoff = default_lighting_cutoff()
 	update_sight()

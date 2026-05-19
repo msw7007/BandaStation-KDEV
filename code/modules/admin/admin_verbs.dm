@@ -29,7 +29,7 @@ ADMIN_VERB(admin_ghost, R_ADMIN, "AGhost", "Become a ghost without DNR.", ADMIN_
 			log_admin("[key_name(user)] re-entered corpse")
 			message_admins("[key_name_admin(user)] re-entered corpse")
 		ghost.can_reenter_corpse = 1 //force re-entering even when otherwise not possible
-		ghost.reenter_corpse()
+		ghost.try_reenter_corpse()
 		BLACKBOX_LOG_ADMIN_VERB("Admin Reenter")
 	else if(isnewplayer(user.mob))
 		to_chat(user, span_warning("Error: Aghost: Can't admin-ghost whilst in the lobby. Join or Observe first."), confidential = TRUE)

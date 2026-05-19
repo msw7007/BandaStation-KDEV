@@ -606,7 +606,7 @@
 
 	for(var/mob/dead/observer/ghost in GLOB.dead_mob_list) // uhh let's find the guy to shove him back in
 		if((ghost.mind?.current == source) && ghost.client) // is it the same guy and do they have the same client
-			ghost.reenter_corpse() // shove them in! it doesnt do it automatically
+			ghost.try_reenter_corpse() // shove them in! it doesnt do it automatically
 
 	// Drop all items and splatter them around messily.
 	var/list/dustee_items = source.unequip_everything()

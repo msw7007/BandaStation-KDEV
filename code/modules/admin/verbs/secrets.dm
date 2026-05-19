@@ -665,7 +665,7 @@ ADMIN_VERB(secrets, R_DEBUG|R_FUN, "Secrets", "Abuse harder than you ever have b
 			for(var/mob/dead/observer/ghost in GLOB.player_list) //Return all ghosts if possible
 				if(!ghost.mind || !ghost.mind.current) //won't do anything if there is no body
 					continue
-				ghost.reenter_corpse()
+				ghost.try_reenter_corpse()
 
 			for(var/mob/living/player in GLOB.player_list)
 				player.revive(ADMIN_HEAL_ALL, force_grab_ghost = TRUE)

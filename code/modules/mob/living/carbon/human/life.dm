@@ -47,6 +47,7 @@
 	handle_liver(seconds_per_tick)
 	handle_stomach(seconds_per_tick)
 	handle_needs(seconds_per_tick)
+	process_cy_force_reserve(seconds_per_tick)
 	update_cy_need_stat_modifiers()
 	update_cy_style_stat_modifiers()
 	update_cy_chameleon()
@@ -122,6 +123,7 @@
 	. += "Nutrition: [round(nutrition)]/[NUTRITION_LEVEL_FULL]"
 	. += "Hydration: [get_need_status(hydration)] ([round(hydration)]/[NEED_LEVEL_FULL])"
 	. += "Rest: [get_need_status(rest)] ([round(rest)]/[NEED_LEVEL_FULL])"
+	. += "Force reserve: [round(cy_force_reserve)]/[cy_force_reserve_max]"
 	if(psychicloss)
 		. += "Psychic pressure: [round(psychicloss)]"
 

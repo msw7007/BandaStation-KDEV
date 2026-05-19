@@ -91,7 +91,7 @@
 			stack_trace("Temporary body returning mind to old body, but the mind's current body doesn't match the old body!")
 			old_mind.set_current(old_body)
 		if(old_body.stat != DEAD)
-			ghost.reenter_corpse()
+			ghost.try_reenter_corpse()
 
 	qdel(src) // we're done here
 

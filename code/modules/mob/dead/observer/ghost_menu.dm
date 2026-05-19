@@ -22,7 +22,7 @@ GLOBAL_DATUM_INIT(ghost_menu, /datum/ghost_menu, new)
 			dead_user.stay_dead()
 			return TRUE
 		if("return_to_body")
-			dead_user.reenter_corpse()
+			dead_user.try_reenter_corpse()
 			return TRUE
 		if("restore_appearance")
 			restore_ghost_appearance(dead_user)

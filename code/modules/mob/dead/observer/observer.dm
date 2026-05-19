@@ -112,7 +112,6 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 		cy_body_trace_name = body.real_name || body.name
 		cy_copied_body_appearance = new(body.appearance)
 		photo_description = "You can also see a faded trace of [cy_body_trace_name]."
-
 		mind = body.mind //we don't transfer the mind but we keep a reference to it.
 
 		if(HAS_TRAIT_FROM_ONLY(body, TRAIT_SUICIDED, REF(body))) // transfer if the body was killed due to suicide
@@ -388,9 +387,7 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	if(new_area != ambience_tracked_area)
 		update_ambience_area(new_area)
 
-/mob/dead/observer/verb/reenter_corpse()
-	set name = "Re-enter Corpse"
-
+/mob/dead/observer/proc/try_reenter_corpse()
 	if(!client)
 		return
 	if(!mind || QDELETED(mind.current))
@@ -409,6 +406,11 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	mind.current.PossessByPlayer(key)
 	mind.current.client.init_verbs()
 	return TRUE
+
+/mob/dead/observer/verb/reenter_corpse()
+	set name = "Re-enter Corpse"
+
+	return try_reenter_corpse()
 
 /mob/dead/observer/verb/do_not_resuscitate()
 	set name = "Do Not Resuscitate"
@@ -841,7 +843,7 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 				return
 
 		if(href_list["reenter"])
-			reenter_corpse()
+			try_reenter_corpse()
 			return
 
 		if(href_list["view"])
@@ -1055,3 +1057,92 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	SIGNAL_HANDLER
 
 	orbiting_ref = null
+
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance
+	name = "Weak Disturbance"
+	desc = "Focus for a moment, then click a nearby person or machine to create a weak ghostly disturbance."
+	button_icon_state = "ghost"
+	check_flags = NONE
+	cooldown_time = 30 SECONDS
+	click_to_activate = FALSE
+	shared_cooldown = NONE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/IsAvailable(feedback = FALSE)
+	return ..() && isobserver(owner)
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/Activate(atom/target)
+	if(!owner || !owner.client)
+		return FALSE
+	if(owner.click_intercept == src)
+		owner.click_intercept = null
+		to_chat(owner, span_notice("You let the disturbance fade."))
+		return TRUE
+	if(owner.click_intercept)
+		to_chat(owner, span_warning("You are already focusing on something else."))
+		return FALSE
+	owner.click_intercept = src
+	to_chat(owner, span_notice("You gather a faint disturbance. Click a nearby person or machine."))
+	return TRUE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/clear_focus()
+	if(owner?.click_intercept == src)
+		owner.click_intercept = null
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/Remove(mob/removed_from)
+	if(removed_from?.click_intercept == src)
+		removed_from.click_intercept = null
+	return ..()
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/can_disturb(mob/dead/observer/ghost, atom/target)
+	if(!ghost || !target)
+		return FALSE
+	if(get_dist(ghost, target) > 7)
+		to_chat(ghost, span_warning("The target is too far away."))
+		return FALSE
+	return TRUE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/disturb_living(mob/dead/observer/ghost, mob/living/target)
+	to_chat(target, span_warning("Вы чувствуете странное присутствие."))
+	ghost.cy_weak_interact(target)
+	return TRUE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/disturb_door(mob/dead/observer/ghost, obj/machinery/door/door)
+	door.emp_act(EMP_LIGHT)
+	ghost.cy_weak_interact(door)
+	return TRUE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/disturb_light(mob/dead/observer/ghost, obj/machinery/light/light)
+	light.emp_act(EMP_LIGHT)
+	light.flicker(rand(1, 3))
+	ghost.cy_weak_interact(light)
+	return TRUE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/disturb_machine(mob/dead/observer/ghost, obj/machinery/machine)
+	machine.emp_act(EMP_LIGHT)
+	ghost.cy_weak_interact(machine)
+	return TRUE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/proc/try_disturb(mob/dead/observer/ghost, atom/target)
+	if(isliving(target))
+		return disturb_living(ghost, target)
+	if(istype(target, /obj/machinery/door))
+		return disturb_door(ghost, target)
+	if(istype(target, /obj/machinery/light))
+		return disturb_light(ghost, target)
+	if(istype(target, /obj/machinery))
+		return disturb_machine(ghost, target)
+	return FALSE
+
+/datum/action/cooldown/mob_cooldown/cy_weak_disturbance/InterceptClickOn(mob/dead/observer/clicker, params, atom/target)
+	if(clicker != owner)
+		return FALSE
+	if(!can_disturb(clicker, target))
+		return TRUE
+	clear_focus()
+	if(try_disturb(clicker, target))
+		StartCooldown()
+		addtimer(CALLBACK(src, PROC_REF(build_all_button_icons)), cooldown_time + 1)
+	else
+		to_chat(clicker, span_notice("The disturbance fails to take hold."))
+	return TRUE

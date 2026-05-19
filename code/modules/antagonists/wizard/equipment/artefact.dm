@@ -244,7 +244,7 @@
 
 	for(var/mob/dead/observer/ghost in GLOB.dead_mob_list) //excludes new players
 		if(ghost.mind && ghost.mind.current == target && ghost.client)  //the dead mobs list can contain clientless mobs
-			ghost.reenter_corpse()
+			ghost.try_reenter_corpse()
 			break
 
 	if(!target.mind || !target.client)

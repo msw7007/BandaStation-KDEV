@@ -30,7 +30,7 @@
 
 /atom/movable/screen/ghost/reenter_corpse/Click()
 	var/mob/dead/observer/G = usr
-	G.reenter_corpse()
+	G.try_reenter_corpse()
 
 /atom/movable/screen/ghost/dnr
 	name = "Do Not Resuscitate"

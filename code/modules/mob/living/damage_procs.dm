@@ -885,7 +885,10 @@
 /// For example, if you are taking 50 stamina damage but are at 90, you would actually only receive 30 stamina damage (due to the cap)
 /// - amount: The amount of stamina damage received, raw
 /mob/living/proc/received_stamina_damage(current_level, amount_actual, amount)
-	addtimer(CALLBACK(src, PROC_REF(set_stamina_loss), 0, TRUE, TRUE), stamina_regen_time, TIMER_UNIQUE|TIMER_OVERRIDE)
+	if(amount_actual <= 0 || current_level <= 0)
+		return
+	cy_last_stamina_spent_time = world.time
+	queue_cy_stamina_recovery()
 
 /**
  * heal ONE external organ, organ gets randomly selected from damaged ones.

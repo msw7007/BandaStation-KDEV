@@ -910,7 +910,7 @@
 	if(!.)
 		return
 	var/mob/dead/observer/dead_owner = owner
-	dead_owner.reenter_corpse()
+	dead_owner.try_reenter_corpse()
 
 /atom/movable/screen/alert/notify_action
 	name = "Происходит что-то интересное!"

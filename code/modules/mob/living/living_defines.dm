@@ -25,6 +25,14 @@
 	var/max_stamina = 120
 	///Stamina damage, or exhaustion. You recover it slowly naturally, and are knocked down if it gets too high. Holodeck and hallucinations deal this.
 	var/staminaloss = 0
+	/// Cyberpunk force reserve. This is a long-form body reserve spent for active stamina recovery.
+	var/cy_force_reserve = CY_FORCE_RESERVE_MAX
+	/// Maximum Cyberpunk force reserve. Treated as a percent-like pool by default.
+	var/cy_force_reserve_max = CY_FORCE_RESERVE_MAX
+	/// Last world.time when stamina was actually spent/gained as damage. Used to delay active recovery until spending stops.
+	var/cy_last_stamina_spent_time = 0
+	/// TRUE while a Cyberpunk active stamina recovery timer is queued/running.
+	var/cy_stamina_recovery_queued = FALSE
 
 	//Damage related vars, NOTE: THESE SHOULD ONLY BE MODIFIED BY PROCS
 	/// Blunt physical trauma.

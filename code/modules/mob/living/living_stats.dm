@@ -1133,7 +1133,7 @@
 	return heart && !(heart.organ_flags & ORGAN_FAILING)
 
 /mob/living/carbon/human/proc/create_cy_ghost_shell()
-	var/mob/dead/observer/ghost = ghostize(FALSE)
+	var/mob/dead/observer/ghost = ghostize(TRUE)
 	if(!ghost)
 		return null
 	ghost.name = name
@@ -1181,7 +1181,7 @@
 	return TRUE
 
 /mob/dead/observer
-	var/mob/living/cy_original_body
+	var/mob/cy_original_body
 
 // Core control layer for CyberPunk-style input. Kept here so generated builds compile it with living stat helpers.
 /datum/movespeed_modifier/cy_stealth
