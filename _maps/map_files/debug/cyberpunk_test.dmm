@@ -31,6 +31,10 @@
 /obj/effect/spawner/structure/window/reinforced/indestructible,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
+"ca" = (
+/mob/living/carbon/human/cy_npc/bandit,
+/turf/open/floor/iron/white,
+/area/station/commons/dorms)
 "cL" = (
 /obj/machinery/light/dim/directional/east,
 /turf/open/floor/carpet/blue,
@@ -66,6 +70,10 @@
 /obj/item/clothing/suit/hooded/ablative,
 /obj/item/clothing/suit/hooded/ablative,
 /turf/open/floor/iron/dark/textured_large,
+/area/station/commons/dorms)
+"dn" = (
+/obj/item/cy_modular_weapon/heavy_chopper,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "do" = (
 /obj/machinery/vending/security,
@@ -179,6 +187,14 @@
 	},
 /turf/open/floor/bluespace,
 /area/station/commons/dorms)
+"ig" = (
+/obj/docking_port/stationary/transit,
+/turf/open/floor/grass,
+/area/station/commons/dorms)
+"iv" = (
+/obj/item/cy_modular_equipment/gloves,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "iF" = (
 /obj/effect/turf_decal/siding/dark_blue{
 	dir = 1
@@ -230,6 +246,10 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/carpet,
+/area/station/commons/dorms)
+"nI" = (
+/obj/item/cy_modular_equipment/helmet,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "nZ" = (
 /obj/structure/table/bronze,
@@ -460,6 +480,10 @@
 	},
 /turf/open/floor/carpet/neon/simple/blue,
 /area/station/commons/dorms)
+"ud" = (
+/obj/item/cy_modular_equipment,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "uK" = (
 /obj/structure/chair/comfy/brown{
 	dir = 1
@@ -500,6 +524,10 @@
 /obj/structure/chair/sofa/corp,
 /turf/open/floor/carpet/blue,
 /area/station/commons/dorms)
+"xe" = (
+/obj/machinery/cy_modular_automat/industrial,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "xi" = (
 /obj/effect/turf_decal/siding/dark_blue,
 /turf/open/floor/bluespace,
@@ -520,6 +548,10 @@
 /obj/machinery/power/terminal,
 /obj/machinery/power/apc/auto_name/directional/east,
 /obj/structure/cable,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"yN" = (
+/obj/item/cy_modular_equipment/oversuit,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "zk" = (
@@ -579,12 +611,24 @@
 	dir = 1
 	},
 /area/station/commons/dorms)
+"BF" = (
+/obj/machinery/cy_seed_mixer,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "Cd" = (
 /obj/structure/table/wood,
 /obj/machinery/newscaster/directional/north,
 /obj/effect/spawner/random/entertainment/lighter,
 /obj/structure/cable,
 /turf/open/floor/wood,
+/area/station/commons/dorms)
+"Cr" = (
+/obj/item/cy_modular_weapon/light_blade,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"CA" = (
+/obj/machinery/power/port_gen/cy_corporate,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Dw" = (
 /obj/structure/chair/sofa/corp/left,
@@ -641,6 +685,10 @@
 /obj/effect/spawner/random/armory/disablers,
 /turf/open/floor/iron/dark/textured_large,
 /area/station/commons/dorms)
+"ED" = (
+/obj/item/cy_gene_data_disk,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "ER" = (
 /turf/open/floor/light/colour_cycle/dancefloor_a,
 /area/station/commons/dorms)
@@ -669,6 +717,10 @@
 /obj/structure/cable,
 /turf/open/floor/mineral/abductor,
 /area/station/commons/dorms)
+"Gy" = (
+/obj/machinery/cy_modular_automat/network_vendor,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "GF" = (
 /turf/open/floor/light/colour_cycle/dancefloor_b,
 /area/station/commons/dorms)
@@ -685,6 +737,10 @@
 /obj/effect/spawner/random/armory/riot_shield,
 /turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
+"HP" = (
+/obj/item/cy_contract_marker,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "Ic" = (
 /obj/machinery/power/smes/magical,
 /turf/open/floor/iron/dark/textured,
@@ -695,6 +751,10 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/wood,
+/area/station/commons/dorms)
+"Jp" = (
+/obj/effect/landmark/awaystart,
+/turf/open/floor/grass,
 /area/station/commons/dorms)
 "JB" = (
 /turf/open/floor/wood/parquet,
@@ -722,8 +782,16 @@
 /obj/effect/spawner/random/food_or_drink/salad,
 /turf/open/floor/carpet/blue,
 /area/station/commons/dorms)
+"KE" = (
+/obj/item/cy_modular_equipment/underlayer,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "Lc" = (
 /turf/open/floor/grass,
+/area/station/commons/dorms)
+"Le" = (
+/obj/machinery/power/port_gen/cy_corporate/starlight_portal,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Li" = (
 /obj/structure/fence,
@@ -732,6 +800,14 @@
 "Lt" = (
 /obj/structure/fence/door/opened,
 /turf/open/floor/grass,
+/area/station/commons/dorms)
+"LF" = (
+/obj/item/disk/cy_gene_sequence,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"LI" = (
+/mob/living/carbon/human/cy_npc,
+/turf/open/floor/iron/white,
 /area/station/commons/dorms)
 "LM" = (
 /obj/structure/fence{
@@ -785,6 +861,14 @@
 /obj/item/kirbyplants/random,
 /turf/open/floor/wood/tile,
 /area/station/commons/dorms)
+"OH" = (
+/obj/structure/cy_business_warehouse,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"OX" = (
+/obj/item/cy_modular_weapon/impact_baton,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "OZ" = (
 /obj/effect/spawner/random/trash,
 /obj/effect/spawner/random/trash,
@@ -797,6 +881,10 @@
 /area/station/commons/dorms)
 "QH" = (
 /turf/open/floor/bluespace,
+/area/station/commons/dorms)
+"QJ" = (
+/obj/machinery/power/port_gen/cy_corporate/ben_bioreactor,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "QO" = (
 /obj/effect/turf_decal/siding/dark_blue{
@@ -821,6 +909,10 @@
 /obj/effect/spawner/random/trash,
 /obj/effect/spawner/random/trash,
 /turf/open/floor/grass,
+/area/station/commons/dorms)
+"SE" = (
+/obj/machinery/cy_modular_automat/vendor,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "Ty" = (
 /obj/effect/spawner/random/structure/closet_empty/crate/with_loot,
@@ -866,6 +958,10 @@
 /obj/effect/spawner/random/special_lighter,
 /turf/open/floor/carpet/blue,
 /area/station/commons/dorms)
+"UA" = (
+/obj/item/cy_modular_equipment/boots,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
 "UH" = (
 /obj/structure/chair/sofa/corp/right{
 	dir = 4
@@ -879,6 +975,14 @@
 /obj/machinery/door/airlock/wood/glass,
 /obj/effect/mapping_helpers/airlock/autoname,
 /turf/open/floor/wood/large,
+/area/station/commons/dorms)
+"VC" = (
+/obj/item/cy_gene_analyzer,
+/turf/open/floor/iron/dark/textured,
+/area/station/commons/dorms)
+"VW" = (
+/obj/effect/landmark/start,
+/turf/open/floor/grass,
 /area/station/commons/dorms)
 "Wa" = (
 /obj/machinery/airalarm/directional/north,
@@ -913,6 +1017,10 @@
 /area/station/commons/dorms)
 "YX" = (
 /turf/open/floor/plating,
+/area/station/commons/dorms)
+"ZG" = (
+/obj/machinery/power/port_gen/cy_corporate/ryaznov_ore_plant,
+/turf/open/floor/iron/dark/textured,
 /area/station/commons/dorms)
 "ZN" = (
 /obj/effect/spawner/random/trash,
@@ -2721,9 +2829,9 @@ Lc
 Lc
 rG
 AS
-rD
-rD
-rD
+HP
+ud
+OX
 rG
 fe
 oo
@@ -2823,9 +2931,9 @@ Lc
 Lc
 rG
 AS
-rD
-rD
-rD
+VC
+UA
+dn
 rG
 rG
 LN
@@ -2925,9 +3033,9 @@ Lc
 Lc
 rG
 AS
-rD
-rD
-rD
+ED
+iv
+Cr
 rD
 rD
 rD
@@ -3028,7 +3136,7 @@ Lc
 rG
 Ty
 rD
-rD
+nI
 rD
 rD
 rD
@@ -3130,10 +3238,10 @@ Lc
 rG
 Ty
 rD
+yN
 rD
 rD
-rD
-rD
+LF
 rD
 rD
 rD
@@ -3232,7 +3340,7 @@ Lc
 rG
 Ty
 rD
-rD
+KE
 rD
 rD
 rD
@@ -3437,13 +3545,13 @@ rG
 Ty
 rD
 rD
+xe
 rD
 rD
+BF
 rD
 rD
-rD
-rD
-rD
+OH
 rD
 rD
 rD
@@ -3539,7 +3647,7 @@ rG
 Ty
 rD
 rD
-rD
+Gy
 rD
 rD
 rD
@@ -3641,10 +3749,10 @@ rG
 Ty
 rD
 rD
+SE
 rD
 rD
-rD
-rD
+CA
 rD
 rD
 rD
@@ -3849,9 +3957,9 @@ rD
 rD
 rD
 rD
-rD
-rD
-rD
+QJ
+ZG
+Le
 rD
 rD
 rD
@@ -4852,8 +4960,8 @@ Lc
 Lc
 Lc
 Lc
-Lc
-Lc
+Jp
+VW
 Lc
 Lc
 Lc
@@ -5454,7 +5562,7 @@ Lc
 Lc
 Lc
 Lc
-Lc
+ig
 Lc
 Lc
 Lc
@@ -8034,7 +8142,7 @@ Sm
 Sm
 Sm
 Sm
-Sm
+LI
 Sm
 Sm
 Sm
@@ -8646,7 +8754,7 @@ Sm
 Sm
 Sm
 Sm
-Sm
+ca
 Sm
 Sm
 Sm
@@ -8748,7 +8856,7 @@ Sm
 Sm
 Sm
 Sm
-Sm
+ca
 Sm
 Sm
 Sm
