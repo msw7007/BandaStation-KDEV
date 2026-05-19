@@ -41,6 +41,8 @@
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
 	cy_can_manage_budget = FALSE
 	cy_role_stat_modifiers = list(/datum/cy_stat/charisma = 1)
+	cy_role_expectations = list("Create, load and maintain a city business.", "Hire workers, manage stock and taxes, and protect your property.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_BEGINNER, /datum/cy_skill/charisma/style = CY_SKILL_LEVEL_BEGINNER)
 	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_business_owner
@@ -70,6 +72,8 @@
 	cy_can_issue_warrants = TRUE
 	cy_can_manage_budget = TRUE
 	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1, /datum/cy_stat/charisma = 1)
+	cy_role_expectations = list("Maintain paperwork, taxes, budgets and city dispute records.", "Use the legal database to issue fines or warrants when city law requires it.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/charisma/inspiration = CY_SKILL_LEVEL_BEGINNER)
 	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_official
@@ -96,6 +100,8 @@
 	cy_police_database_access = TRUE
 	cy_can_issue_warrants = TRUE
 	cy_role_stat_modifiers = list(/datum/cy_stat/perception = 1)
+	cy_role_expectations = list("Patrol the city, respond to incidents and protect officials.", "Use arrests, fines and force as legal tools, not as random violence.")
+	cy_role_skill_levels = list(/datum/cy_skill/weapon/light_firearms = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/dexterity/light_weapons = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/perception/concentration = CY_SKILL_LEVEL_BEGINNER)
 	job_flags = STATION_JOB_FLAGS
 
 /datum/job/cy_council_member
@@ -120,6 +126,8 @@
 	cy_can_issue_warrants = TRUE
 	cy_can_manage_budget = TRUE
 	cy_role_stat_modifiers = list(/datum/cy_stat/intelligence = 1, /datum/cy_stat/charisma = 1)
+	cy_role_expectations = list("Represent the city council, manage emergency policy and negotiate with corporations.", "Your decisions create city-level consequences for residents and police.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/charisma/inspiration = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/charisma/style = CY_SKILL_LEVEL_BEGINNER)
 	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
 
 /datum/outfit/job/cy_council_member
@@ -156,6 +164,8 @@
 	cy_role_id = "corporate_trainee"
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_TRAINEE
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
+	cy_role_expectations = list("Learn the corporation's work and request access from senior employees.", "You start with minimal authority and should be used for onboarding.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_BEGINNER)
 
 /datum/outfit/job/cy_corporate_trainee
 	parent_type = /datum/outfit/job/cy_city_base
@@ -172,6 +182,8 @@
 	cy_role_flags = CY_ROLE_FLAG_CORPORATE_AGENT
 	outfit = /datum/outfit/job/cy_corp_agent_base
 	cy_role_stat_modifiers = list(/datum/cy_stat/dexterity = 1, /datum/cy_stat/perception = 1)
+	cy_role_expectations = list("Protect your corporation, raid hostile assets, escort specialists and intercept hostile cargo.", "You are the corporation's combat and stealth arm.")
+	cy_role_skill_levels = list(/datum/cy_skill/charisma/stealth = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/dexterity/light_weapons = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/light_firearms = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/knives = CY_SKILL_LEVEL_BEGINNER)
 
 /datum/outfit/job/cy_corp_agent_base
 	parent_type = /datum/outfit/job/security
@@ -249,6 +261,8 @@
 	skills = list(/datum/cy_skill/professional/medicine = 150, /datum/cy_skill/professional/chemistry = 100, /datum/cy_skill/professional/analysis = 80)
 	minimal_skills = list(/datum/cy_skill/professional/medicine = 80, /datum/cy_skill/professional/chemistry = 50)
 	cy_role_stat_modifiers = list(/datum/cy_stat/spirit = 1, /datum/cy_stat/intelligence = 1)
+	cy_role_expectations = list("Provide Ben medical, chemical and implant services.", "Collect biological and fauna data for corporate research.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/medicine = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/professional/chemistry = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_SKILLED)
 
 /datum/job/cy_ryaznov_engineer
 	parent_type = /datum/job/cy_corp_specialist_base
@@ -267,6 +281,8 @@
 	skills = list(/datum/cy_skill/professional/construction = 150, /datum/cy_skill/professional/invention = 100, /datum/cy_skill/professional/mining = 80)
 	minimal_skills = list(/datum/cy_skill/professional/construction = 80, /datum/cy_skill/professional/invention = 50)
 	cy_role_stat_modifiers = list(/datum/cy_stat/strength = 1, /datum/cy_stat/intelligence = 1)
+	cy_role_expectations = list("Build, repair and produce Ryaznov armor, machinery and energy assets.", "Process ore and field data for corporate research.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/construction = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/professional/invention = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/professional/mining = CY_SKILL_LEVEL_SKILLED)
 
 /datum/job/cy_starlight_logistician
 	parent_type = /datum/job/cy_corp_specialist_base
@@ -285,6 +301,8 @@
 	skills = list(/datum/cy_skill/professional/driving = 150, /datum/cy_skill/professional/analysis = 100, /datum/cy_skill/professional/invention = 60)
 	minimal_skills = list(/datum/cy_skill/professional/driving = 80, /datum/cy_skill/professional/analysis = 50)
 	cy_role_stat_modifiers = list(/datum/cy_stat/perception = 1, /datum/cy_stat/dexterity = 1)
+	cy_role_expectations = list("Run Starlight cargo, trade, delivery and vehicle logistics.", "Use wreckage and route data to accelerate corporate research.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/driving = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/professional/invention = CY_SKILL_LEVEL_BEGINNER)
 
 /datum/job/cy_corp_representative_base
 	parent_type = /datum/job/cy_corporate_base
@@ -297,6 +315,8 @@
 	cy_can_manage_budget = TRUE
 	outfit = /datum/outfit/job/cy_corp_representative_base
 	cy_role_stat_modifiers = list(/datum/cy_stat/charisma = 1, /datum/cy_stat/intelligence = 1)
+	cy_role_expectations = list("Lead the local corporate branch, budgets, contracts and research direction.", "Turn corporate services into profit and political leverage.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/analysis = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/charisma/inspiration = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/charisma/style = CY_SKILL_LEVEL_SKILLED)
 
 /datum/outfit/job/cy_corp_representative_base
 	parent_type = /datum/outfit/job/lawyer
@@ -369,6 +389,8 @@
 	skills = list(/datum/cy_skill/dexterity/light_weapons = 120, /datum/cy_skill/strength/heavy_weapons = 80, /datum/cy_skill/spirit/athletics = 80)
 	minimal_skills = list(/datum/cy_skill/dexterity/light_weapons = 60, /datum/cy_skill/spirit/athletics = 40)
 	cy_role_stat_modifiers = list(/datum/cy_stat/dexterity = 1, /datum/cy_stat/perception = 1)
+	cy_role_expectations = list("Take legal or grey contracts, explore points of interest and sell field loot.", "You are a weapon-skilled contractor, not a netrunner specialist.")
+	cy_role_skill_levels = list(/datum/cy_skill/dexterity/light_weapons = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/strength/heavy_weapons = CY_SKILL_LEVEL_BEGINNER, /datum/cy_skill/spirit/athletics = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/light_firearms = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/medium_firearms = CY_SKILL_LEVEL_BEGINNER)
 	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_mercenary
@@ -394,6 +416,7 @@
 	cy_role_flags = CY_ROLE_FLAG_OUTSOURCER
 	cy_city_account_id = CY_ACCOUNT_CIV_MARKET
 	cy_role_stat_modifiers = list(/datum/cy_stat/strength = 1)
+	cy_role_expectations = list("Work for whoever pays, change employers freely and learn city mechanics.", "This role has no special role bonus beyond broad access to city life.")
 	job_flags = STATION_JOB_FLAGS
 
 /datum/outfit/job/cy_laborer
@@ -431,6 +454,9 @@
 	config_tag = "CY_STREET_THUG"
 	cy_role_id = "street_thug"
 	cy_role_flags = CY_ROLE_FLAG_MINOR_CRIMINAL
+	cy_role_expectations = list("Extort, sell contraband, run illegal services and survive police pressure.", "You are a small-scale antagonist for local city conflict.")
+	cy_role_skill_levels = list(/datum/cy_skill/charisma/theft = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/dexterity/fast_melee = CY_SKILL_LEVEL_BEGINNER, /datum/cy_skill/weapon/knives = CY_SKILL_LEVEL_BEGINNER)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_THEFT, "details" = "Known petty extortion and black-market activity.", "issuer" = "City security database", "fine" = 250, "status" = CY_WARRANT_INVESTIGATION))
 
 /datum/job/cy_gang_member
 	parent_type = /datum/job/cy_antagonist_base
@@ -440,6 +466,9 @@
 	config_tag = "CY_GANG_MEMBER"
 	cy_role_id = "gang_member"
 	cy_role_flags = CY_ROLE_FLAG_MAJOR_CRIMINAL
+	cy_role_expectations = list("Grow gang power through crime, territory pressure and violence.", "Police already know you have fines and unresolved criminal history.")
+	cy_role_skill_levels = list(/datum/cy_skill/charisma/theft = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/strength/grappling = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/dexterity/light_weapons = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/light_firearms = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/knives = CY_SKILL_LEVEL_SKILLED)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_ASSAULT, "details" = "Known gang assault record and open street violence.", "issuer" = "Police gang desk", "fine" = 900, "sentence" = 5 MINUTES, "status" = CY_WARRANT_ARREST), list("law" = CY_LAW_CONTROLLED_ITEM, "details" = "Suspected illegal weapon and contraband possession.", "issuer" = "Police gang desk", "fine" = 700, "status" = CY_WARRANT_INVESTIGATION))
 
 /datum/job/cy_anarchist
 	parent_type = /datum/job/cy_antagonist_base
@@ -449,6 +478,9 @@
 	config_tag = "CY_ANARCHIST"
 	cy_role_id = "anarchist"
 	cy_role_flags = CY_ROLE_FLAG_MAJOR_CRIMINAL
+	cy_role_expectations = list("Strike corporate and state assets outside and inside the city.", "Your main targets are corporations, government control and their infrastructure.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/electricity = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/professional/construction = CY_SKILL_LEVEL_BEGINNER, /datum/cy_skill/dexterity/light_weapons = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/weapon/medium_firearms = CY_SKILL_LEVEL_SKILLED)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_SABOTAGE, "details" = "Known anti-corporate sabotage cell affiliation.", "issuer" = "Government intelligence", "fine" = 1200, "sentence" = 5 MINUTES, "status" = CY_WARRANT_ARREST))
 
 /datum/job/cy_mutant
 	parent_type = /datum/job/cy_antagonist_base
@@ -458,6 +490,9 @@
 	config_tag = "CY_MUTANT"
 	cy_role_id = "mutant"
 	cy_role_flags = CY_ROLE_FLAG_MONSTER
+	cy_role_expectations = list("Spread, consume biomass and use disguise or biomass forms to survive.", "Fire and acid are your primary vulnerabilities.")
+	cy_role_skill_levels = list(/datum/cy_skill/spirit/survival = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/strength/toughness = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/strength/power_melee = CY_SKILL_LEVEL_SKILLED)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_MURDER, "details" = "Biological city-level threat. Kill authorization recommended if confirmed.", "issuer" = "Emergency response registry", "fine" = 0, "sentence" = 0, "status" = CY_WARRANT_KILL))
 
 /datum/job/cy_construct
 	parent_type = /datum/job/cy_antagonist_base
@@ -467,6 +502,9 @@
 	config_tag = "CY_CONSTRUCT"
 	cy_role_id = "construct"
 	cy_role_flags = CY_ROLE_FLAG_MONSTER
+	cy_role_expectations = list("Destroy biological life, consume scrap and grow shields, weapons and repairs.", "Your arc is mechanical escalation from scavenged equipment.")
+	cy_role_skill_levels = list(/datum/cy_skill/professional/invention = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/strength/toughness = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/strength/heavy_weapons = CY_SKILL_LEVEL_SKILLED)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_MURDER, "details" = "Autonomous machine threat to biological life. Kill authorization recommended if confirmed.", "issuer" = "Emergency response registry", "fine" = 0, "sentence" = 0, "status" = CY_WARRANT_KILL))
 
 /datum/job/cy_swarm
 	parent_type = /datum/job/cy_antagonist_base
@@ -476,6 +514,9 @@
 	config_tag = "CY_SWARM"
 	cy_role_id = "swarm"
 	cy_role_flags = CY_ROLE_FLAG_MONSTER
+	cy_role_expectations = list("Place pylons, stabilize plasma production and convert biomass into combat units.", "You are an energy anomaly tied to Starlight failures.")
+	cy_role_skill_levels = list(/datum/cy_skill/intelligence/improved_code = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/intelligence/fast_code = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/spirit/compatibility = CY_SKILL_LEVEL_SKILLED)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_SABOTAGE, "details" = "Energetic anomaly threat to city infrastructure. Termination authorization recommended if confirmed.", "issuer" = "Emergency response registry", "fine" = 0, "sentence" = 0, "status" = CY_WARRANT_KILL))
 
 /datum/job/cy_salvation_army
 	parent_type = /datum/job/cy_antagonist_base
@@ -485,6 +526,9 @@
 	config_tag = "CY_SALVATION_ARMY"
 	cy_role_id = "salvation_army"
 	cy_role_flags = CY_ROLE_FLAG_MAJOR_CRIMINAL
+	cy_role_expectations = list("Use heavy gear and vehicles to wipe out the city and deploy the nuclear threat.", "You are a high-intensity combat antagonist, not a petty criminal.")
+	cy_role_skill_levels = list(/datum/cy_skill/strength/heavy_weapons = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/weapon/heavy_firearms = CY_SKILL_LEVEL_TRAINED, /datum/cy_skill/weapon/medium_firearms = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/professional/driving = CY_SKILL_LEVEL_SKILLED, /datum/cy_skill/spirit/athletics = CY_SKILL_LEVEL_SKILLED)
+	cy_role_roundstart_violations = list(list("law" = CY_LAW_MURDER, "details" = "External extermination force with city-destruction intent.", "issuer" = "Government intelligence", "fine" = 0, "sentence" = 0, "status" = CY_WARRANT_KILL), list("law" = CY_LAW_SABOTAGE, "details" = "Suspected nuclear or mass-destruction operation.", "issuer" = "Government intelligence", "fine" = 0, "sentence" = 0, "status" = CY_WARRANT_KILL))
 
 // Concrete corporate outfits keep ID/jobtype previews tied to the selected role.
 /datum/outfit/job/cy_ben_agent

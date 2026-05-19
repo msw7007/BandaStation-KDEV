@@ -60,6 +60,8 @@
 	if(value)
 		if(synced_bank_account)
 			synced_bank_account.adjust_money(value)
+			if(SSeconomy?.cy_city_economy_ready)
+				SSeconomy.cy_record_transaction(null, synced_bank_account, value, "Vault cash deposit: [src]", CY_ECON_VISIBILITY_CASH, CY_ECON_CHANNEL_CASH, user?.name, src)
 			say("[MONEY_NAME_CAPITALIZED] deposited! The [synced_bank_account.account_holder] is now [synced_bank_account.account_balance][MONEY_SYMBOL].")
 		qdel(weapon)
 		return
@@ -82,6 +84,8 @@
 	playsound(src, 'sound/items/poster/poster_being_created.ogg', 100, TRUE)
 	syphoning_credits += siphon_am
 	synced_bank_account.adjust_money(-siphon_am)
+	if(SSeconomy?.cy_city_economy_ready)
+		SSeconomy.cy_record_transaction(synced_bank_account, null, siphon_am, unauthorized ? "Unauthorized vault cash withdrawal" : "Vault cash withdrawal", CY_ECON_VISIBILITY_CASH, CY_ECON_CHANNEL_CASH, null, src)
 	if(next_warning < world.time && prob(15))
 		var/area/A = get_area(loc)
 		var/message = "[unauthorized ? "Unauthorized c" : "C"]redit withdrawal underway in [initial(A.name)][unauthorized ? "!!" : "..."]"

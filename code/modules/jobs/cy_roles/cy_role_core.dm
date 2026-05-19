@@ -9,6 +9,7 @@
 	var/cy_can_issue_warrants = FALSE
 	var/cy_can_manage_budget = FALSE
 	var/cy_bounty_hunter = FALSE
+	var/list/cy_role_expectations = list()
 
 /mob/living/proc/cy_has_role_flag(flag)
 	return !!(cy_role_flags & flag)
@@ -46,6 +47,12 @@
 	if(length(cy_role_stat_modifiers))
 		for(var/stat_type in cy_role_stat_modifiers)
 			spawned.set_cy_stat_modifier(stat_type, "cy_city_role", cy_role_stat_modifiers[stat_type])
+	if(length(cy_role_expectations))
+		spawned.cy_role_expectations = cy_role_expectations.Copy()
+	else
+		spawned.cy_role_expectations = list()
+	apply_cy_role_skill_levels(spawned)
+	apply_cy_role_roundstart_violations(spawned)
 
 	if(SSeconomy && cy_city_account_id)
 		SSeconomy.cy_init_city_economy()
@@ -56,6 +63,33 @@
 			SSeconomy.cy_record_transaction(source_account, target_account, 0, "Назначение роли: [title]", CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK, spawned.name, spawned)
 
 	to_chat(spawned, span_notice("Городская роль: [job_title_ru(title)]. [get_cy_city_role_summary()]"))
+
+	if(length(spawned.cy_role_expectations))
+		to_chat(spawned, span_notice("Role expectations: [jointext(spawned.cy_role_expectations, " ")]"))
+
+/datum/job/proc/apply_cy_role_skill_levels(mob/living/spawned)
+	if(!spawned || !length(cy_role_skill_levels))
+		return
+	for(var/skill_type in cy_role_skill_levels)
+		var/granted_level = clamp(round(cy_role_skill_levels[skill_type]), CY_SKILL_MINIMUM_LEVEL, CY_SKILL_MAXIMUM_LEVEL)
+		if(spawned.get_cy_skill_level(skill_type) >= granted_level)
+			continue
+		spawned.set_cy_skill_level(skill_type, granted_level, TRUE)
+
+/datum/job/proc/apply_cy_role_roundstart_violations(mob/living/spawned)
+	if(!spawned || !SSeconomy || !length(cy_role_roundstart_violations))
+		return
+	SSeconomy.cy_init_city_economy()
+	for(var/list/entry as anything in cy_role_roundstart_violations)
+		if(!islist(entry))
+			continue
+		var/law_id = entry["law"] || CY_LAW_TRESPASS
+		var/details = entry["details"] || "Roundstart city role flag."
+		var/issuer = entry["issuer"] || "City security database"
+		var/fine = entry["fine"]
+		var/sentence_time = entry["sentence"]
+		var/status = entry["status"]
+		SSeconomy.cy_issue_violation(spawned, law_id, details, issuer, fine, sentence_time, status)
 
 /datum/job/proc/get_cy_city_role_summary()
 	if(!cy_role_id)

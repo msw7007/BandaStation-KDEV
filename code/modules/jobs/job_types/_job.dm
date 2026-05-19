@@ -143,6 +143,12 @@
 	var/cy_bounty_hunter = FALSE
 	/// Small role stat modifiers applied after character preferences.
 	var/list/cy_role_stat_modifiers
+	/// Short IC expectations shown to the player when the city role is applied.
+	var/list/cy_role_expectations
+	/// Minimum cyberpunk skill levels granted by this role. Role grants never lower preference-selected skills.
+	var/list/cy_role_skill_levels
+	/// Roundstart city violations known to the legal system for this role.
+	var/list/cy_role_roundstart_violations
 
 	/// custom ringtone for this job
 	var/job_tone

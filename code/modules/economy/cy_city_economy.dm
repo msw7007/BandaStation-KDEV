@@ -76,11 +76,29 @@
 	if(!SSeconomy.cy_transfer_money(borrower, lender, amount, "Погашение ссуды [id]", CY_TAX_NONE, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK))
 		return FALSE
 	outstanding -= amount
+	if(borrower)
+		borrower.account_debt = max(0, borrower.account_debt - amount)
 	last_payment_time = world.time
 	log += "[round_timestamp("hh:mm")]: paid [amount][MONEY_SYMBOL], remains [outstanding][MONEY_SYMBOL]."
 	if(outstanding <= 0)
 		status = CY_LOAN_PAID
 		log += "[round_timestamp("hh:mm")]: loan closed."
+	return TRUE
+
+/datum/cy_city_loan/proc/process_due()
+	if(status != CY_LOAN_ACTIVE)
+		return FALSE
+	if(!due_time || world.time < due_time)
+		return FALSE
+	if(late_fee > 0)
+		outstanding += late_fee
+		if(borrower)
+			borrower.account_debt += late_fee
+		late_fee = 0
+	status = CY_LOAN_DEFAULTED
+	log += "[round_timestamp("hh:mm")]: loan defaulted."
+	if(borrower)
+		SSeconomy.cy_issue_violation(borrower.account_holder, CY_LAW_TRESPASS, "Defaulted loan [id], outstanding [outstanding][MONEY_SYMBOL].", "Banking system", outstanding, 0, CY_WARRANT_FINE)
 	return TRUE
 
 /datum/cy_city_law
@@ -171,6 +189,14 @@
 		active = FALSE
 		status = CY_WARRANT_CLEARED
 		log += "[round_timestamp("hh:mm")]: fine cleared."
+	return TRUE
+
+/datum/cy_city_violation/proc/clear(reason = "Cleared")
+	active = FALSE
+	status = CY_WARRANT_CLEARED
+	fine_remaining = 0
+	served = TRUE
+	log += "[round_timestamp("hh:mm")]: [reason]."
 	return TRUE
 
 /datum/cy_city_forensic_trace
@@ -303,6 +329,29 @@
 	cy_city_ledger += transaction
 	return transaction
 
+/datum/controller/subsystem/economy/proc/cy_get_ledger(list/visibility_filter = null, include_erased = FALSE)
+	if(!cy_city_economy_ready)
+		cy_init_city_economy()
+	var/list/result = list()
+	for(var/datum/cy_city_transaction/transaction as anything in cy_city_ledger)
+		if(!include_erased && transaction.erased)
+			continue
+		if(visibility_filter && !(transaction.visibility in visibility_filter))
+			continue
+		result += transaction
+	return result
+
+/datum/controller/subsystem/economy/proc/cy_erase_transaction(transaction_id, eraser = "shadow bank")
+	if(!transaction_id)
+		return FALSE
+	for(var/datum/cy_city_transaction/transaction as anything in cy_city_ledger)
+		if(transaction.id != transaction_id)
+			continue
+		transaction.erased = TRUE
+		transaction.shadow_bank_id = eraser
+		return TRUE
+	return FALSE
+
 /datum/controller/subsystem/economy/proc/cy_route_vendor_sale(datum/bank_account/customer, obj/machinery/vending/vendor, amount, product_name)
 	var/datum/bank_account/corp_account = cy_account_for_vendor(vendor)
 	if(!corp_account)
@@ -356,6 +405,41 @@
 	cy_city_loans[loan.id] = loan
 	borrower.account_debt += loan.outstanding
 	return loan
+
+/datum/controller/subsystem/economy/proc/cy_process_loans()
+	if(!cy_city_economy_ready || !length(cy_city_loans))
+		return TRUE
+	for(var/loan_id in cy_city_loans)
+		var/datum/cy_city_loan/loan = cy_city_loans[loan_id]
+		loan?.process_due()
+	return TRUE
+
+/datum/controller/subsystem/economy/proc/cy_set_law(law_id, title, description, fine = 0, sentence_time = 0, severity = CY_CRIME_SEVERITY_MINOR, issuer = "City council")
+	if(!law_id)
+		return null
+	var/datum/cy_city_law/law = cy_city_laws[law_id]
+	if(!law)
+		law = new /datum/cy_city_law(law_id, title, description, fine, sentence_time, severity, issuer)
+		cy_city_laws[law_id] = law
+	else
+		law.title = title || law.title
+		law.description = description || law.description
+		law.default_fine = max(0, round(fine))
+		law.default_sentence = max(0, sentence_time)
+		law.severity = severity
+		law.issuer = issuer
+		law.active = TRUE
+	return law
+
+/datum/controller/subsystem/economy/proc/cy_get_round_access_key(access_type)
+	if(!cy_city_economy_ready)
+		cy_init_city_economy()
+	return cy_round_access_keys[access_type]
+
+/datum/controller/subsystem/economy/proc/cy_validate_round_access_key(access_type, provided_key)
+	if(!provided_key)
+		return FALSE
+	return cy_get_round_access_key(access_type) == provided_key
 
 /datum/controller/subsystem/economy/proc/cy_seed_default_laws()
 	if(length(cy_city_laws))
@@ -417,6 +501,13 @@
 
 /datum/controller/subsystem/economy/proc/cy_pay_violation(target, violation_id, datum/bank_account/payer, amount)
 	var/datum/cy_city_crime_record/record = cy_get_crime_record(target, FALSE)
+	return cy_pay_violation_record(record, violation_id, payer, amount)
+
+/datum/controller/subsystem/economy/proc/cy_pay_violation_by_key(character_key, violation_id, datum/bank_account/payer, amount)
+	var/datum/cy_city_crime_record/record = cy_city_crime_records[character_key]
+	return cy_pay_violation_record(record, violation_id, payer, amount)
+
+/datum/controller/subsystem/economy/proc/cy_pay_violation_record(datum/cy_city_crime_record/record, violation_id, datum/bank_account/payer, amount)
 	if(!record || !payer)
 		return FALSE
 	for(var/datum/cy_city_violation/violation as anything in record.violations)
@@ -426,6 +517,16 @@
 		if(!cy_transfer_money(payer, cy_get_government_account(), amount, "Оплата штрафа: [violation.law_title]", CY_TAX_NONE, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_FINE))
 			return FALSE
 		return violation.pay(amount)
+	return FALSE
+
+/datum/controller/subsystem/economy/proc/cy_clear_violation_by_key(character_key, violation_id, reason = "Cleared by authorized console")
+	var/datum/cy_city_crime_record/record = cy_city_crime_records[character_key]
+	if(!record)
+		return FALSE
+	for(var/datum/cy_city_violation/violation as anything in record.violations)
+		if(violation.id != violation_id)
+			continue
+		return violation.clear(reason)
 	return FALSE
 
 /datum/controller/subsystem/economy/proc/cy_mark_sentence_served(target, violation_id = null, roundend = FALSE)

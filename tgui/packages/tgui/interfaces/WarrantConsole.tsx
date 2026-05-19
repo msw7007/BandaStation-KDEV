@@ -16,6 +16,7 @@ import { useBackend, useLocalState } from '../backend';
 import { Window } from '../layouts';
 
 type Data = {
+  city_records: CityWarrantRecord[];
   records: WarrantRecord[];
 };
 
@@ -33,6 +34,25 @@ type Citation = {
   fine: number;
   paid: number;
   time: number;
+};
+
+type CityWarrantRecord = {
+  key: string;
+  name: string;
+  status: number;
+  total_fines: number;
+  violations: CityViolation[];
+};
+
+type CityViolation = {
+  details: string;
+  fine: number;
+  id: string;
+  issuer: string;
+  law: string;
+  sentence: number;
+  status: number;
+  time: string;
 };
 
 export const WarrantConsole = (props) => {
@@ -62,8 +82,9 @@ export const WarrantConsole = (props) => {
 /** Displays all valid records with warrants. */
 const RecordList = (props) => {
   const { act, data } = useBackend<Data>();
-  const { records = [] } = data;
+  const { city_records = [], records = [] } = data;
   const sorted = sortBy(records, [(record) => record.crew_name]);
+  const citySorted = sortBy(city_records, [(record) => record.name]);
 
   const [selectedRecord, setSelectedRecord] = useLocalState<
     WarrantRecord | undefined
@@ -92,9 +113,9 @@ const RecordList = (props) => {
       title="Citations"
     >
       <Stack fill vertical>
-        {!records?.length ? (
+        {!records?.length && !city_records?.length ? (
           <NoticeBox>No citations issued.</NoticeBox>
-        ) : (
+        ) : records?.length ? (
           <Tabs vertical>
             {sorted.map((record, index) => (
               <Tabs.Tab
@@ -107,9 +128,95 @@ const RecordList = (props) => {
               </Tabs.Tab>
             ))}
           </Tabs>
+        ) : null}
+        {!!city_records?.length && (
+          <Section title="City warrants">
+            {citySorted.map((record) => (
+              <Collapsible
+                key={record.key}
+                color={record.status >= 3 ? 'bad' : 'average'}
+                title={`${record.name}: ${record.violations.length}`}
+              >
+                <LabeledList>
+                  <LabeledList.Item label="Total fines">
+                    {record.total_fines}
+                  </LabeledList.Item>
+                </LabeledList>
+                {record.violations.map((violation) => (
+                  <CityViolationManager
+                    key={violation.id}
+                    record={record}
+                    violation={violation}
+                  />
+                ))}
+              </Collapsible>
+            ))}
+          </Section>
         )}
       </Stack>
     </Section>
+  );
+};
+
+const CityViolationManager = (props: {
+  record: CityWarrantRecord;
+  violation: CityViolation;
+}) => {
+  const { act } = useBackend<Data>();
+  const { record, violation } = props;
+  const [paying, setPaying] = useState(5);
+  const [payingIsValid, setPayingIsValid] = useState(true);
+
+  return (
+    <Collapsible color={getFineColor(violation.fine)} title={violation.law}>
+      <LabeledList>
+        <LabeledList.Item label="Details">
+          <BlockQuote>{violation.details}</BlockQuote>
+        </LabeledList.Item>
+        <LabeledList.Item label="Issuer">{violation.issuer}</LabeledList.Item>
+        <LabeledList.Item label="Time">{violation.time}</LabeledList.Item>
+        <LabeledList.Item label="Fine">{violation.fine}</LabeledList.Item>
+        <LabeledList.Item label="Sentence">
+          {violation.sentence || 0}
+        </LabeledList.Item>
+        {violation.fine > 0 && (
+          <LabeledList.Item label="Pay">
+            <RestrictedInput
+              maxValue={violation.fine}
+              minValue={1}
+              onChange={setPaying}
+              value={paying}
+              onValidationChange={setPayingIsValid}
+            />
+            <Button.Confirm
+              disabled={!payingIsValid}
+              onClick={() =>
+                act('city_pay', {
+                  amount: paying,
+                  record_key: record.key,
+                  violation_id: violation.id,
+                })
+              }
+            >
+              Pay
+            </Button.Confirm>
+          </LabeledList.Item>
+        )}
+        <LabeledList.Item label="Admin">
+          <Button.Confirm
+            icon="check"
+            onClick={() =>
+              act('city_clear', {
+                record_key: record.key,
+                violation_id: violation.id,
+              })
+            }
+          >
+            Clear
+          </Button.Confirm>
+        </LabeledList.Item>
+      </LabeledList>
+    </Collapsible>
   );
 };
 

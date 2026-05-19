@@ -747,6 +747,8 @@
 		to_chat(user, span_warning("[money.declent_ru(ACCUSATIVE)] кажется, ничего не стоит!"))
 		return FALSE
 	registered_account.adjust_money(cash_money, "Система: Пополнение")
+	if(SSeconomy?.cy_city_economy_ready)
+		SSeconomy.cy_record_transaction(null, registered_account, cash_money, "Cash deposit: [src]", CY_ECON_VISIBILITY_CASH, CY_ECON_CHANNEL_CASH, user?.name, src)
 	SSblackbox.record_feedback("amount", "credits_inserted", cash_money)
 	log_econ("[cash_money][MONEY_NAME] were inserted into [src] owned by [src.registered_name]")
 	if(physical_currency)
@@ -780,6 +782,8 @@
 		CHECK_TICK
 
 	registered_account.adjust_money(total, "Система: Пополнение")
+	if(SSeconomy?.cy_city_economy_ready)
+		SSeconomy.cy_record_transaction(null, registered_account, total, "Cash deposit: [src]", CY_ECON_VISIBILITY_CASH, CY_ECON_CHANNEL_CASH, user?.name, src)
 	SSblackbox.record_feedback("amount", "credits_inserted", total)
 	log_econ("[total][MONEY_NAME] were inserted into [src] owned by [src.registered_name]")
 	QDEL_LIST(money)
@@ -847,6 +851,8 @@
 		var/difference = amount_to_remove - registered_account.account_balance
 		registered_account.bank_card_talk(span_warning("ОШИБКА: Для вывода средств с привязанного аккаунта требуется на [difference] кр. больше."), TRUE)
 		return CLICK_ACTION_BLOCKING
+	if(SSeconomy?.cy_city_economy_ready)
+		SSeconomy.cy_record_transaction(registered_account, null, amount_to_remove, "Cash withdrawal: [src]", CY_ECON_VISIBILITY_CASH, CY_ECON_CHANNEL_CASH, user?.name, src)
 	var/obj/item/holochip/holochip = new (user.drop_location(), amount_to_remove)
 	user.put_in_hands(holochip)
 	to_chat(user, span_notice("Вы выводите [amount_to_remove][MONEY_NAME] в голочип."))

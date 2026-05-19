@@ -94,6 +94,14 @@
 			pay_fine(usr, params)
 			return TRUE
 
+		if("city_pay")
+			pay_city_fine(usr, params)
+			return TRUE
+
+		if("city_clear")
+			clear_city_violation(usr, params)
+			return TRUE
+
 		if("print")
 			ui.close()
 			print_bounty(usr, params)
@@ -103,6 +111,38 @@
 			return TRUE
 
 	return FALSE
+
+/obj/machinery/computer/warrant/proc/get_user_account(mob/user)
+	if(!isliving(user) || issilicon(user))
+		return null
+	var/mob/living/player = user
+	var/obj/item/card/id/auth = player.get_idcard(TRUE)
+	return auth?.registered_account
+
+/obj/machinery/computer/warrant/proc/pay_city_fine(mob/user, list/params)
+	var/datum/bank_account/account = get_user_account(user)
+	if(!account)
+		to_chat(user, span_warning("ACCESS DENIED: No account linked to ID."))
+		playsound(src, 'sound/machines/terminal/terminal_error.ogg', 100, TRUE)
+		return FALSE
+	var/amount = params["amount"]
+	if(!amount || !isnum(amount) || amount <= 0)
+		return FALSE
+	if(!SSeconomy?.cy_pay_violation_by_key(params["record_key"], params["violation_id"], account, amount))
+		to_chat(user, span_warning("Payment rejected."))
+		playsound(src, 'sound/machines/terminal/terminal_error.ogg', 100, TRUE)
+		return FALSE
+	account.bank_card_talk("City fine payment accepted: [amount][MONEY_SYMBOL].")
+	return TRUE
+
+/obj/machinery/computer/warrant/proc/clear_city_violation(mob/user, list/params)
+	var/mob/living/player = isliving(user) ? user : null
+	var/obj/item/card/id/auth = player?.get_idcard(TRUE)
+	if(!auth || !check_access(auth))
+		to_chat(user, span_warning("ACCESS DENIED"))
+		playsound(src, 'sound/machines/terminal/terminal_error.ogg', 100, TRUE)
+		return FALSE
+	return SSeconomy?.cy_clear_violation_by_key(params["record_key"], params["violation_id"], "Cleared by [user]")
 
 /// Pays towards a listed fine.
 /obj/machinery/computer/warrant/proc/pay_fine(mob/user, list/params)

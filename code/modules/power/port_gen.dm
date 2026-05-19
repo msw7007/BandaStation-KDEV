@@ -10,6 +10,7 @@
 	use_power = NO_POWER_USE
 
 	var/active = FALSE
+	var/starts_on = FALSE
 	var/power_gen = 5 KILO JOULES
 	var/power_output = 1
 	var/consumption = 0
@@ -20,6 +21,11 @@
 /obj/machinery/power/port_gen/Initialize(mapload)
 	. = ..()
 	soundloop = new(src, active)
+	if(starts_on && anchored)
+		connect_to_network()
+		active = TRUE
+		START_PROCESSING(SSmachines, src)
+		soundloop.start()
 
 /obj/machinery/power/port_gen/Destroy()
 	QDEL_NULL(soundloop)
@@ -74,6 +80,31 @@
 /obj/machinery/power/port_gen/examine(mob/user)
 	. = ..()
 	. += "It is[!active?"n't":""] running."
+
+/obj/machinery/power/port_gen/cy_corporate
+	name = "corporate power source"
+	desc = "A corporate city-grade power source. It feeds an attached cable network when anchored."
+	anchored = TRUE
+	starts_on = TRUE
+	power_gen = 25 KILO JOULES
+
+/obj/machinery/power/port_gen/cy_corporate/ben_bioreactor
+	name = "Ben bioreactor"
+	desc = "A Ben Group bioreactor that converts organic stock into stable city power."
+	manufacturer_organization = /datum/cy_organization/corporation/ben
+	power_gen = 22 KILO JOULES
+
+/obj/machinery/power/port_gen/cy_corporate/starlight_portal
+	name = "Starlight energy portal"
+	desc = "A Starlight grid portal that imports power through a controlled spatial aperture."
+	manufacturer_organization = /datum/cy_organization/corporation/starlight
+	power_gen = 30 KILO JOULES
+
+/obj/machinery/power/port_gen/cy_corporate/ryaznov_ore_plant
+	name = "Ryaznov ore power plant"
+	desc = "A Ryaznov industrial plant that burns processed ore slurry into heavy grid output."
+	manufacturer_organization = /datum/cy_organization/corporation/ryaznov
+	power_gen = 35 KILO JOULES
 
 /////////////////
 // P.A.C.M.A.N //

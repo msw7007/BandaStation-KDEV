@@ -277,7 +277,12 @@
 	/// Exit checks in case the user cancelled or entered an invalid amount
 	if(!amount || QDELETED(user) || QDELETED(src) || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
 		return FALSE
-	if(!payee.adjust_money(-amount, "Holopay: [capitalize(name)]"))
+	if(SSeconomy?.cy_city_economy_ready)
+		if(!SSeconomy.cy_transfer_money(payee, linked_card.registered_account, amount, "Holopay: [capitalize(name)]", CY_TAX_TRANSFER, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK, user, src))
+			balloon_alert(user, "insufficient credits")
+			to_chat(user, span_warning("You don't have the money to pay for this."))
+			return FALSE
+	else if(!payee.adjust_money(-amount, "Holopay: [capitalize(name)]"))
 		balloon_alert(user, "insufficient credits")
 		to_chat(user, span_warning("You don't have the money to pay for this."))
 		return FALSE
@@ -296,7 +301,8 @@
  */
 /obj/structure/holopay/proc/alert_buyer(payee, amount)
 	/// Pay the owner
-	linked_card.registered_account.adjust_money(amount, "Holopay: [name]")
+	if(!SSeconomy?.cy_city_economy_ready)
+		linked_card.registered_account.adjust_money(amount, "Holopay: [name]")
 	/// Make alerts
 	linked_card.registered_account.bank_card_talk("[payee] has deposited [amount][MONEY_SYMBOL] at your holographic pay stand.")
 	say("Thank you for your patronage, [payee]!")

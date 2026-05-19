@@ -660,10 +660,30 @@ SUBSYSTEM_DEF(air)
 	if(!length(clouds))
 		cy_gas_clouds_by_turf.Remove(T)
 
-/datum/controller/subsystem/air/proc/create_cy_gas_cloud(turf/origin, gas_id, amount = 1, density = 0, pressure = 1, temperature = T20C, spread_threshold = 0.25, decay_rate = 0.03)
+/datum/controller/subsystem/air/proc/create_cy_gas_cloud(turf/origin, gas_id, amount = 1, density = 0, pressure = 1, temperature = T20C, spread_threshold = 0.25, decay_rate = 0.03, aquatic = FALSE)
 	if(!origin || !gas_id || amount <= 0)
 		return null
-	return new /datum/cy_gas_cloud(origin, gas_id, amount, density, pressure, temperature, spread_threshold, decay_rate)
+	return new /datum/cy_gas_cloud(origin, gas_id, amount, density, pressure, temperature, spread_threshold, decay_rate, aquatic)
+
+/datum/controller/subsystem/air/proc/clear_cy_gas_clouds(turf/target_turf, filter_gas_id = null, amount = INFINITY)
+	if(!target_turf || amount <= 0)
+		return 0
+	var/cleared = 0
+	var/list/clouds = cy_gas_clouds_by_turf[target_turf]
+	if(!length(clouds))
+		return 0
+	for(var/datum/cy_gas_cloud/cloud as anything in clouds.Copy())
+		if(filter_gas_id && cloud.gas_id != filter_gas_id)
+			continue
+		var/current = cloud.get_turf_amount(target_turf)
+		var/taken = min(current, amount - cleared)
+		if(taken <= 0)
+			break
+		cloud.set_turf_amount(target_turf, current - taken)
+		cleared += taken
+		if(cleared >= amount)
+			break
+	return cleared
 
 /datum/controller/subsystem/air/proc/get_cy_lite_air(turf/source_turf)
 	var/datum/cy_atmos_zone/zone = get_cy_atmos_zone(source_turf)
@@ -682,6 +702,13 @@ SUBSYSTEM_DEF(air)
 	return air_sample
 
 /datum/controller/subsystem/air/proc/get_cy_lite_breath(turf/source_turf, amount)
+	if(istype(source_turf, /turf/open/water))
+		var/datum/gas_mixture/water_breath = new /datum/gas_mixture(BREATH_VOLUME)
+		var/list/water_clouds = cy_gas_clouds_by_turf[source_turf]
+		for(var/datum/cy_gas_cloud/cloud as anything in water_clouds)
+			cloud.add_to_breath(source_turf, water_breath)
+		water_breath.garbage_collect()
+		return water_breath
 	var/datum/cy_atmos_zone/zone = get_cy_atmos_zone(source_turf)
 	var/datum/gas_mixture/breath = zone?.remove_air(amount)
 	if(!breath)
@@ -718,8 +745,10 @@ SUBSYSTEM_DEF(air)
 	var/spread_threshold = 0.25
 	var/decay_rate = 0.03
 	var/breath_ratio = 0.08
+	var/aquatic = FALSE
+	var/max_tiles_per_process = 350
 
-/datum/cy_gas_cloud/New(turf/origin, new_gas_id, amount = 1, new_density = 0, new_pressure = 1, new_temperature = T20C, new_spread_threshold = 0.25, new_decay_rate = 0.03)
+/datum/cy_gas_cloud/New(turf/origin, new_gas_id, amount = 1, new_density = 0, new_pressure = 1, new_temperature = T20C, new_spread_threshold = 0.25, new_decay_rate = 0.03, new_aquatic = FALSE)
 	. = ..()
 	gas_id = new_gas_id
 	density = new_density
@@ -727,6 +756,7 @@ SUBSYSTEM_DEF(air)
 	temperature = max(new_temperature, TCMB)
 	spread_threshold = max(new_spread_threshold, 0)
 	decay_rate = max(new_decay_rate, 0)
+	aquatic = new_aquatic
 	set_turf_amount(origin, amount)
 	SSair.register_cy_gas_cloud(src)
 
@@ -759,6 +789,10 @@ SUBSYSTEM_DEF(air)
 /datum/cy_gas_cloud/proc/can_spread(turf/from_turf, turf/to_turf)
 	if(!from_turf || !to_turf || to_turf.density)
 		return FALSE
+	if(istype(from_turf, /turf/open/water) != istype(to_turf, /turf/open/water))
+		return FALSE
+	if(istype(to_turf, /turf/open/water) && !aquatic)
+		return FALSE
 	if(islava(to_turf))
 		return FALSE
 	return TRUE
@@ -769,7 +803,11 @@ SUBSYSTEM_DEF(air)
 		return
 	var/list/pending_add = list()
 	var/list/pending_remove = list()
-	for(var/turf/T as anything in turf_contents.Copy())
+	var/processed = 0
+	for(var/turf/T as anything in turf_contents)
+		if(processed >= max_tiles_per_process)
+			break
+		processed++
 		var/content = get_turf_amount(T)
 		content = max(0, content - decay_rate * max(seconds_per_tick, 1))
 		if(content <= 0.01)
@@ -801,6 +839,8 @@ SUBSYSTEM_DEF(air)
 
 /datum/cy_gas_cloud/proc/add_to_breath(turf/T, datum/gas_mixture/breath)
 	if(!T || !breath)
+		return
+	if(istype(T, /turf/open/water) && !aquatic)
 		return
 	var/content = get_turf_amount(T)
 	if(content <= 0)

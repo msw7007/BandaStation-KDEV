@@ -124,6 +124,9 @@
 	if(!A)
 		return FALSE // if not, then not powered
 
+	if(A.requires_power && !A.apc && available_direct_wire_energy() > 0)
+		return TRUE
+
 	return A.powered(chan) // return power status of the area
 
 /obj/machinery/proc/get_direct_wire_powernet()

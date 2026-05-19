@@ -17,6 +17,16 @@
 	if (isnull(forensics))
 		forensics = new(src)
 	forensics.add_fingerprint(suspect, ignoregloves)
+	if(SSeconomy?.cy_city_economy_ready && isliving(suspect))
+		var/should_record = ignoregloves
+		if(!should_record && ishuman(suspect))
+			var/mob/living/carbon/human/human_suspect = suspect
+			var/obj/item/gloves = human_suspect.gloves
+			should_record = !gloves || !(gloves.body_parts_covered & HANDS) || HAS_TRAIT(gloves, TRAIT_FINGERPRINT_PASSTHROUGH) || HAS_TRAIT(human_suspect, TRAIT_FINGERPRINT_PASSTHROUGH)
+		else if(!ishuman(suspect))
+			should_record = TRUE
+		if(should_record)
+			SSeconomy.cy_add_forensic_trace(suspect, src, "touch", ignoregloves ? 100 : 80)
 	return TRUE
 
 /// Add a list of fibers to the atom

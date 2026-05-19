@@ -132,6 +132,7 @@ SUBSYSTEM_DEF(economy)
 	if(processing_part == ECON_PRICE_UPDATE_STEP)
 		if(!HAS_TRAIT(SSeconomy, TRAIT_MARKET_CRASHING) && !price_update())
 			return
+		cy_process_loans()
 
 	if(times_fired % ticks_per_mail == 0)
 		var/effective_mailcount = round(living_player_count() / (inflation_value - 0.5)) //More mail at low inflation, and vis versa.
@@ -160,7 +161,8 @@ SUBSYSTEM_DEF(economy)
 			continue
 		var/datum/bank_account/city_source = cy_account_for_department(cached_processing[i])
 		if(city_source)
-			cy_transfer_money(city_source, dept_account, MAX_GRANT_DPT, "Городской бюджет отдела", CY_TAX_NONE, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK)
+			if(!city_source.cy_spend_budget(MAX_GRANT_DPT, dept_account, "Городской бюджет отдела"))
+				cy_transfer_money(city_source, dept_account, MAX_GRANT_DPT, "Городской бюджет отдела", CY_TAX_NONE, CY_ECON_VISIBILITY_BANK, CY_ECON_CHANNEL_BANK)
 		else
 			dept_account.adjust_money(MAX_GRANT_DPT)
 		if(MC_TICK_CHECK)
