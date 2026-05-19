@@ -342,6 +342,8 @@
 	var/cy_next_defense_time = 0
 	/// World time until this mob is open and cannot use normal protection checks.
 	var/cy_open_defense_until = 0
+	/// World time until successful parry incoming damage resistance expires.
+	var/cy_parry_resist_until = 0
 	/// Current outgoing cyberpunk attack intent for defensive counter checks.
 	var/cy_current_attack_intent
 

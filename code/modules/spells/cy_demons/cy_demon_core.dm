@@ -343,8 +343,8 @@
 
 
 /mob/living/proc/cy_get_demon_skill_level(skill_type)
-	if(hascall(src, "get_cy_skill_level"))
-		return get_cy_skill_level(skill_type)
+	if(hascall(src, "get_cy_skill_perk_level"))
+		return get_cy_skill_perk_level(skill_type)
 	return 0
 
 /mob/living/proc/cy_get_demon_power_multiplier()

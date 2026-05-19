@@ -247,7 +247,7 @@
 
 	// Our climbers athletics ability
 	var/mob/living/living_user = user
-	var/fitness_level = istype(living_user) ? living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) : CY_SKILL_LEVEL_UNTRAINED
+	var/fitness_level = istype(living_user) ? living_user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics) : CY_SKILL_LEVEL_UNTRAINED
 
 	// Misc bonuses to the climb speed.
 	var/misc_multiplier = 1
@@ -281,7 +281,7 @@
 	if(grant_exp)
 		var/mob/living/living_user = user
 		if(istype(living_user))
-			var/fitness_level = living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics)
+			var/fitness_level = living_user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics)
 			living_user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(CY_ATHLETICS_MISC_EXPERIENCE/(fitness_level || 1), 1)) //get a little experience for our trouble
 
 	if(!is_ghost)

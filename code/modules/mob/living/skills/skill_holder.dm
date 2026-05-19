@@ -37,18 +37,12 @@
 	stat_holder = new_stat_holder
 
 /datum/cy_skill_holder/Destroy()
+	clear_skill_perks()
 	owner = null
 	stat_holder = null
 	skill_levels = null
 	skill_experience = null
 	experience_multiplier_reasons = null
-	if(granted_skill_perks)
-		for(var/skill_type in granted_skill_perks)
-			var/list/skill_perks = granted_skill_perks[skill_type]
-			if(!islist(skill_perks))
-				continue
-			QDEL_LIST_ASSOC_VAL(skill_perks)
-		granted_skill_perks.Cut()
 	granted_skill_perks = null
 	return ..()
 
@@ -276,13 +270,7 @@
 	if(!source)
 		return FALSE
 
-	if(granted_skill_perks)
-		for(var/skill_type in granted_skill_perks)
-			var/list/skill_perks = granted_skill_perks[skill_type]
-			if(!islist(skill_perks))
-				continue
-			QDEL_LIST_ASSOC_VAL(skill_perks)
-		granted_skill_perks.Cut()
+	clear_skill_perks()
 
 	skill_levels = source.skill_levels?.Copy() || list()
 	skill_experience = source.skill_experience?.Copy() || list()
@@ -291,6 +279,24 @@
 	for(var/skill_type in skill_levels)
 		refresh_skill_perks(skill_type, CY_SKILL_MINIMUM_LEVEL, skill_levels[skill_type])
 	return TRUE
+
+/datum/cy_skill_holder/proc/clear_skill_perks()
+	if(!granted_skill_perks)
+		return
+
+	for(var/skill_type in granted_skill_perks)
+		var/list/skill_perks = granted_skill_perks[skill_type]
+		if(!islist(skill_perks))
+			continue
+		for(var/perk_type in skill_perks)
+			var/datum/cy_skill_perk/perk = skill_perks[perk_type]
+			if(!perk)
+				continue
+			if(isliving(owner))
+				perk.on_loss(owner)
+			qdel(perk)
+		skill_perks.Cut()
+	granted_skill_perks.Cut()
 
 /datum/cy_skill_holder/proc/process_awake_training_experience(seconds_per_tick, mood_modifier = 1)
 	if(seconds_per_tick <= 0)

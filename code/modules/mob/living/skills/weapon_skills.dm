@@ -17,6 +17,14 @@ GLOBAL_LIST_INIT(cy_weapon_skill_types, list(
 	category = "weapon"
 	limited_by_stat = FALSE
 	max_level = CY_SKILL_MAXIMUM_LEVEL
+	perks_by_level = list(
+		"1" = list(),
+		"2" = list(),
+		"3" = list(),
+		"4" = list(),
+		"5" = list(),
+		"6" = list(),
+	)
 
 /datum/cy_skill/weapon/knives
 	name = "Ножи"

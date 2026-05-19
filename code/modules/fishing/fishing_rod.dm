@@ -259,7 +259,7 @@
 			material_chance += 4
 	var/mob/living/living_user = user
 	if(istype(living_user))
-		material_chance += living_user.get_cy_skill_level(/datum/cy_skill/spirit/survival) * 1.5
+		material_chance += living_user.get_cy_skill_perk_level(/datum/cy_skill/spirit/survival) * 1.5
 	return material_chance
 
 ///Fishing rodss should only bane fish DNA-infused spessman
@@ -285,7 +285,7 @@
 
 	playsound(src, SFX_REEL, 50, vary = FALSE)
 	var/mob/living/living_user = user
-	var/survival_level = istype(living_user) ? living_user.get_cy_skill_level(/datum/cy_skill/spirit/survival) : CY_SKILL_LEVEL_UNTRAINED
+	var/survival_level = istype(living_user) ? living_user.get_cy_skill_perk_level(/datum/cy_skill/spirit/survival) : CY_SKILL_LEVEL_UNTRAINED
 	var/time = (0.8 - round(survival_level * 0.04, 0.1)) SECONDS * bait_speed_mult
 	if(!do_after(user, time, currently_hooked, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_TARGET_LOC_CHANGE, extra_checks = CALLBACK(src, PROC_REF(fishing_line_check))))
 		return
@@ -355,7 +355,7 @@
 	user = user || loc
 	if (!isliving(user) || !user.mind || !user.is_holding(src))
 		return
-	. += round(user.get_cy_skill_level(/datum/cy_skill/spirit/survival) * 0.3)
+	. += round(user.get_cy_skill_perk_level(/datum/cy_skill/spirit/survival) * 0.3)
 	return max(., 1)
 
 /obj/item/fishing_rod/dropped(mob/user, silent)

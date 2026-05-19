@@ -144,7 +144,7 @@
 
 	if(do_after(user, 8 SECONDS, src) && user.has_gravity())
 		// with enough dedication, even clowns can overcome their handicaps
-		var/clumsy_chance = 30 - (user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) * 5)
+		var/clumsy_chance = 30 - (user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics) * 5)
 		if(HAS_TRAIT(user, TRAIT_CLUMSY) && prob(clumsy_chance))
 			playsound(src, 'sound/effects/bang.ogg', 50, TRUE)
 			to_chat(user, span_warning("Your hand slips, causing \the [src] to smash you!"))
@@ -204,7 +204,7 @@
 		return TRUE // No weight? I could do this all day
 	var/gravity_modifier = affected_gravity > STANDARD_GRAVITY ? 0.75 : 1
 	// the amount of workouts you can do before you hit stamcrit
-	var/workout_reps = total_workout_reps[user.get_cy_skill_level(/datum/cy_skill/spirit/athletics)] * gravity_modifier
+	var/workout_reps = total_workout_reps[user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics)] * gravity_modifier
 	// total stamina drain of 1 workout calculated based on the workout length
 	var/stamina_exhaustion = FLOOR(user.maxHealth / workout_reps / WORKOUT_LENGTH, 0.1)
 

@@ -177,6 +177,7 @@
 #define STICKY_NODROP "sticky-nodrop"
 #define SKILLCHIP_TRAIT "skillchip"
 #define SKILL_TRAIT "skill"
+#define CY_SKILL_PERK_TRAIT "cy_skill_perk"
 #define PULLED_WHILE_CRITICAL_TRAIT "pulled-while-critical"
 #define LOCKED_BORG_TRAIT "locked-borg"
 /// trait associated to not having locomotion appendages nor the ability to fly or float

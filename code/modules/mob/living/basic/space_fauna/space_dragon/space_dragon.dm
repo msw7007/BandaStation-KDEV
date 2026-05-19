@@ -109,7 +109,7 @@
 
 /mob/living/basic/space_dragon/mind_initialize()
 	. = ..()
-	if(shark_form && get_cy_skill_level(/datum/cy_skill/spirit/survival) < CY_SKILL_LEVEL_SKILLED)
+	if(shark_form && !HAS_TRAIT(src, TRAIT_CY_SURVIVAL_2))
 		set_cy_skill_level(/datum/cy_skill/spirit/survival, CY_SKILL_LEVEL_SKILLED, TRUE)
 
 /mob/living/basic/space_dragon/proc/sharkify()
@@ -123,7 +123,7 @@
 	icon_state = icon_state == icon_living ? "sharkdragon" : "sharkdragon_dead"
 	icon_living = "sharkdragon"
 	icon_dead = "sharkdragon_dead"
-	if(mind && get_cy_skill_level(/datum/cy_skill/spirit/survival) < CY_SKILL_LEVEL_SKILLED)
+	if(mind && !HAS_TRAIT(src, TRAIT_CY_SURVIVAL_2))
 		set_cy_skill_level(/datum/cy_skill/spirit/survival, CY_SKILL_LEVEL_SKILLED, TRUE)
 	client?.give_award(/datum/award/achievement/misc/sharkdragon, src)
 	update_appearance()

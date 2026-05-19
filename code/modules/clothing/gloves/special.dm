@@ -253,7 +253,7 @@
 
 /obj/item/fishing_rod/mob_fisher/athletic/hook_hit(atom/atom_hit_by_hook_projectile, mob/user)
 	var/mob/living/living_user = user
-	difficulty_modifier = istype(living_user) ? -3 * (living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) - 1) : 0
+	difficulty_modifier = istype(living_user) ? -3 * (living_user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics) - 1) : 0
 	return ..()
 
 /obj/item/fishing_rod/mob_fisher/athletic/proc/noodling_is_dangerous(datum/source, atom/movable/reward, mob/living/user)

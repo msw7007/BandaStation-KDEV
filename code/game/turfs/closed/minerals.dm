@@ -1242,7 +1242,7 @@
 		to_chat(usr, span_warning("Only a more advanced species could break a rock such as this one!"))
 		return FALSE
 	var/mob/living/living_user = user
-	if(istype(living_user) && living_user.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_PROFESSIONAL)
+	if(istype(living_user) && HAS_TRAIT(living_user, TRAIT_CY_MINING_5))
 		. = ..()
 	else
 		to_chat(usr, span_warning("The rock seems to be too strong to destroy. Maybe I can break it once I become a master miner."))
@@ -1255,7 +1255,7 @@
 	if(!ishuman(user))
 		return // see attackby
 	var/mob/living/carbon/human/H = user
-	if(!(H.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_PROFESSIONAL))
+	if(!HAS_TRAIT(H, TRAIT_CY_MINING_5))
 		return
 	drop_ores()
 	H.client.give_award(/datum/award/achievement/skill/legendary_miner, H)

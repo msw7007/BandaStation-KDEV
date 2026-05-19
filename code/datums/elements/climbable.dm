@@ -73,7 +73,7 @@
 	// Time in deciseonds that the mob is stunned after climbing successfully.
 	var/adjusted_climb_stun = climb_stun
 	// Our climbers fitness level, which removes some climb time and speeds up our climbing do_after, assuming they worked out
-	var/fitness_level = user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) - 1
+	var/fitness_level = user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics) - 1
 	adjusted_climb_time = clamp(adjusted_climb_time - fitness_level, 1, climb_time) //Here we adjust the number of deciseconds we shave off per level of fitness, with a minimum of 1 decisecond and a maximum of climb_time (just in case)
 
 	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)

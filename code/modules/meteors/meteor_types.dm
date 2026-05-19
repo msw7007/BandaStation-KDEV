@@ -124,7 +124,7 @@
 	. = ..()
 
 	var/mob/living/living_user = user
-	if(istype(living_user) && (living_user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) >= CY_SKILL_LEVEL_MASTER))
+	if(istype(living_user) && HAS_TRAIT(living_user, TRAIT_CY_ATHLETICS_6))
 		. += span_notice("On second thought, it doesn't look too tough.")
 	check_examine_award(user)
 

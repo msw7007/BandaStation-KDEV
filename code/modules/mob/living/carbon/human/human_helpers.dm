@@ -366,7 +366,7 @@
 	if (HAS_TRAIT(src, TRAIT_GRABWEAKNESS))
 		fitness_modifier /= 1.5
 
-	var/athletics_level = get_cy_skill_level(/datum/cy_skill/spirit/athletics)
+	var/athletics_level = get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics)
 
 	var/min_damage = 0
 	var/max_damage = 0

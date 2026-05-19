@@ -72,7 +72,7 @@
 		return
 	for(var/skill_type in cy_role_skill_levels)
 		var/granted_level = clamp(round(cy_role_skill_levels[skill_type]), CY_SKILL_MINIMUM_LEVEL, CY_SKILL_MAXIMUM_LEVEL)
-		if(spawned.get_cy_skill_level(skill_type) >= granted_level)
+		if(granted_level <= CY_SKILL_MINIMUM_LEVEL || HAS_TRAIT(spawned, cy_skill_perk_trait(skill_type, granted_level)))
 			continue
 		spawned.set_cy_skill_level(skill_type, granted_level, TRUE)
 

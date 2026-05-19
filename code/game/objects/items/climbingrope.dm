@@ -52,7 +52,7 @@
 	var/list/effects = list(new /obj/effect/temp_visual/climbing_hook(interacting_with, away_dir), new /obj/effect/temp_visual/climbing_hook(user_turf, away_dir))
 
 	// Our climbers athletics ability
-	var/fitness_level = user.get_cy_skill_level(/datum/cy_skill/spirit/athletics)
+	var/fitness_level = user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics)
 
 	// Misc bonuses to the climb speed.
 	var/misc_multiplier = 1

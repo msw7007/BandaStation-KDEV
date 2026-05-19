@@ -44,7 +44,7 @@
 	fall_chance = 70
 
 /obj/item/key/janitor/suicide_act(mob/living/carbon/user)
-	switch(user.get_cy_skill_level(/datum/cy_skill/professional/analysis))
+	switch(user.get_cy_skill_perk_level(/datum/cy_skill/professional/analysis))
 		if(CY_SKILL_LEVEL_UNTRAINED to CY_SKILL_LEVEL_BEGINNER) //Their mind is too weak to ascend as a janny
 			user.visible_message(span_suicide("[user] is putting \the [src] in [user.p_their()] mouth and is trying to become one with the janicart, but has no idea where to start! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
 			user.gib(DROP_ALL_REMAINS)
@@ -75,7 +75,7 @@
 	if(user)
 		user.remove_atom_colour(ADMIN_COLOUR_PRIORITY)
 		user.visible_message(span_suicide("[user] forgot [user.p_they()] isn't actually a janicart! That's a paddlin'!"))
-		if(user.get_cy_skill_level(/datum/cy_skill/professional/analysis) >= CY_SKILL_LEVEL_MASTER) //Janny janny janny janny janny
+		if(HAS_TRAIT(user, TRAIT_CY_ANALYSIS_6)) //Janny janny janny janny janny
 			playsound(src, 'sound/effects/adminhelp.ogg', 50, TRUE, -1)
 		user.adjust_oxy_loss(200)
 		user.death(FALSE)

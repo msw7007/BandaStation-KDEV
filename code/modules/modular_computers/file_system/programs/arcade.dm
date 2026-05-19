@@ -113,10 +113,8 @@
 	if (!istype(gamer))
 		return
 	gamer.played_game()
-	var/gamerSkillLevel = 0
 	var/gamerSkill = 0
 	if(gamer?.mind)
-		gamerSkillLevel = gamer.get_cy_skill_level(/datum/cy_skill/charisma/style)
 		gamerSkill = gamer.get_cy_skill_value_modifier(/datum/cy_skill/charisma/style)
 	switch(action)
 		if("Attack")
@@ -137,7 +135,7 @@
 			if(pause_state == FALSE)
 				healamt = rand(6,8) + rand(0, gamerSkill)
 				var/maxPointCost = 3
-				if(gamerSkillLevel >= CY_SKILL_LEVEL_TRAINED)
+				if(HAS_TRAIT(gamer, TRAIT_CY_STYLE_3))
 					maxPointCost = 2
 				healcost = rand(1, maxPointCost)
 			pause_state = TRUE

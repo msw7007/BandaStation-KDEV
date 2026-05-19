@@ -358,12 +358,12 @@ GLOBAL_LIST_EMPTY(fishing_challenges_by_user)
 
 	if(!QDELETED(user) && user.mind && start_time && !(special_effects & FISHING_MINIGAME_RULE_NO_EXP))
 		var/seconds_spent = (world.time - start_time) * 0.1
-		var/extra_exp_malus = user.get_cy_skill_level(/datum/cy_skill/spirit/survival) - difficulty * 0.1
+		var/extra_exp_malus = user.get_cy_skill_perk_level(/datum/cy_skill/spirit/survival) - difficulty * 0.1
 		if(extra_exp_malus > 0)
 			experience_multiplier /= (1 + extra_exp_malus * EXPERIENCE_MALUS_MULT)
 		experience_multiplier *= used_rod.experience_multiplier
 		user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, round(seconds_spent * CY_FISHING_EXPERIENCE_PER_SECOND * experience_multiplier))
-		if(user.get_cy_skill_level(/datum/cy_skill/spirit/survival) >= CY_SKILL_LEVEL_MASTER)
+		if(HAS_TRAIT(user, TRAIT_CY_SURVIVAL_6))
 			user.client?.give_award(/datum/award/achievement/skill/legendary_fisher, user)
 
 	if(!win)

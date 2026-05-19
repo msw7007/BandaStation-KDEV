@@ -233,16 +233,14 @@
 		return FALSE
 	var/mob/living/performer = music_player
 	var/mob/living/living_listener = listener
-	var/music_level = performer.get_cy_skill_level(/datum/cy_skill/professional/music)
-	if(music_level <= CY_SKILL_LEVEL_UNTRAINED)
+	if(!HAS_TRAIT(performer, TRAIT_CY_MUSIC_1))
 		return FALSE
-	if(music_level >= CY_SKILL_LEVEL_BEGINNER)
-		living_listener.apply_status_effect(/datum/status_effect/good_music)
-	if(music_level >= CY_SKILL_LEVEL_TRAINED && performer.is_cy_cohort_member(living_listener))
+	living_listener.apply_status_effect(/datum/status_effect/good_music)
+	if(HAS_TRAIT(performer, TRAIT_CY_MUSIC_3) && performer.is_cy_cohort_member(living_listener))
 		living_listener.adjust_stamina_loss(-1 * performer.get_cy_cohort_effect_multiplier(living_listener), updating_stamina = FALSE, forced = TRUE)
-	if(music_level >= CY_SKILL_LEVEL_PROFESSIONAL && living_listener != performer && !performer.is_cy_cohort_member(living_listener) && prob(3))
+	if(HAS_TRAIT(performer, TRAIT_CY_MUSIC_5) && living_listener != performer && !performer.is_cy_cohort_member(living_listener) && prob(3))
 		living_listener.adjust_confusion_up_to(1 SECONDS, 3 SECONDS)
-	if(music_level >= CY_SKILL_LEVEL_MASTER)
+	if(HAS_TRAIT(performer, TRAIT_CY_MUSIC_6))
 		if(performer.is_cy_cohort_member(living_listener))
 			living_listener.adjust_pain_loss(-1, forced = TRUE)
 		else if(living_listener != performer && prob(2))

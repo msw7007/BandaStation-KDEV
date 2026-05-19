@@ -307,7 +307,7 @@
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	if(final_force <= 0)
 		return 0
-	if(user.has_cy_skill_perk_level(/datum/cy_skill/professional/construction, 4))
+	if(HAS_TRAIT(user, TRAIT_CY_CONSTRUCTION_4))
 		final_force *= 2
 
 	var/damage = take_damage(final_force, attacking_item.damtype, MELEE, 1, get_dir(src, user))

@@ -120,21 +120,19 @@
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return 1.25
-	var/driving_skill = /datum/cy_skill/professional/driving
-	switch(driver.get_cy_skill_level(driving_skill))
-		if(6 to INFINITY)
-			return 1 / 1.5
-		if(4 to 5)
-			return 1 / 1.25
-		if(1 to 3)
-			return 1
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_6))
+		return 1 / 1.5
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_4))
+		return 1 / 1.25
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_1))
+		return 1
 	return 1.25
 
 /obj/vehicle/proc/get_cy_driver_transport_stat_multiplier()
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return 1
-	if(driver.get_cy_skill_level(/datum/cy_skill/professional/driving) >= 6)
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_6))
 		return 1.2
 	return 1
 
@@ -142,12 +140,11 @@
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return 1.2
-	var/skill_level = driver.get_cy_skill_level(/datum/cy_skill/professional/driving)
-	if(skill_level >= 6)
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_6))
 		return 0.9
-	if(skill_level >= 4)
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_4))
 		return 1
-	if(skill_level >= 2)
+	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_2))
 		return 1.1
 	return 1.2
 

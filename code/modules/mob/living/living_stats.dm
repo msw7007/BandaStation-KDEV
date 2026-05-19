@@ -111,15 +111,55 @@
 	return skills.get_skill_perk_quality_bonus(skill_type)
 
 /mob/living/proc/get_cy_skill_speed_multiplier(skill_type)
-	var/level_modifier = get_cy_skill_level(skill_type) * 0.08
+	switch(skill_type)
+		if(/datum/cy_skill/professional/cooking)
+			if(HAS_TRAIT(src, TRAIT_CY_COOKING_6))
+				return 0.2
+			if(HAS_TRAIT(src, TRAIT_CY_COOKING_2))
+				return 0.75
+			if(!HAS_TRAIT(src, TRAIT_CY_COOKING_1))
+				return 1.3
+			return 1
+		if(/datum/cy_skill/professional/mining)
+			if(HAS_TRAIT(src, TRAIT_CY_MINING_6))
+				return 0.25
+			if(HAS_TRAIT(src, TRAIT_CY_MINING_2))
+				return 0.75
+			if(!HAS_TRAIT(src, TRAIT_CY_MINING_1))
+				return 1.5
+			return 1
+		if(/datum/cy_skill/professional/analysis)
+			var/analysis_multiplier = 1
+			if(!HAS_TRAIT(src, TRAIT_CY_ANALYSIS_1))
+				analysis_multiplier *= 1.5
+			if(HAS_TRAIT(src, TRAIT_CY_ANALYSIS_2))
+				analysis_multiplier *= 0.75
+			if(HAS_TRAIT(src, TRAIT_CY_ANALYSIS_4))
+				analysis_multiplier *= 0.75
+			return analysis_multiplier
+		if(/datum/cy_skill/professional/construction)
+			if(!HAS_TRAIT(src, TRAIT_CY_CONSTRUCTION_1))
+				return 1.3
+			if(HAS_TRAIT(src, TRAIT_CY_CONSTRUCTION_2))
+				return 0.8
+			return 1
+		if(/datum/cy_skill/professional/invention)
+			if(!HAS_TRAIT(src, TRAIT_CY_INVENTION_1))
+				return 1.3
+			if(HAS_TRAIT(src, TRAIT_CY_INVENTION_5))
+				return 0.7
+			if(HAS_TRAIT(src, TRAIT_CY_INVENTION_3))
+				return 0.9
+			return 1
+	var/level_modifier = get_cy_skill_perk_level(skill_type) * 0.08
 	var/perk_modifier = get_cy_skill_perk_work_speed_bonus(skill_type) * 0.01
 	return max(0.35, 1 - level_modifier - perk_modifier)
 
 /mob/living/proc/get_cy_skill_probability_bonus(skill_type)
-	return (get_cy_skill_level(skill_type) * CY_SKILL_VALUE_PER_LEVEL) + get_cy_skill_perk_check_bonus(skill_type)
+	return (get_cy_skill_perk_level(skill_type) * CY_SKILL_VALUE_PER_LEVEL) + get_cy_skill_perk_check_bonus(skill_type)
 
 /mob/living/proc/get_cy_skill_value_modifier(skill_type)
-	return get_cy_skill_level(skill_type) + get_cy_skill_perk_quality_bonus(skill_type)
+	return get_cy_skill_perk_level(skill_type) + get_cy_skill_perk_quality_bonus(skill_type)
 
 /mob/living/proc/get_cy_skill_speed_multiplier_no_perks(skill_type)
 	return max(0.4, 1 - get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_SPEED_PER_LEVEL)
@@ -131,38 +171,51 @@
 	return get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL
 
 /mob/living/proc/has_cy_skill_perk_level(skill_type, required_level)
-	return get_cy_skill_level(skill_type) >= required_level
+	return HAS_TRAIT(src, cy_skill_perk_trait(skill_type, required_level))
+
+/mob/living/proc/get_cy_skill_perk_level(skill_type)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(!skill)
+		return CY_SKILL_MINIMUM_LEVEL
+
+	for(var/level in skill.max_level to CY_SKILL_LEVEL_BEGINNER step -1)
+		if(HAS_TRAIT(src, cy_skill_perk_trait(skill_type, level)))
+			return level
+
+	return CY_SKILL_MINIMUM_LEVEL
 
 /mob/living/proc/get_cy_skill_level_ratio(skill_type)
 	return clamp(get_cy_skill_level(skill_type) / CY_SKILL_MAXIMUM_LEVEL, 0, 1)
 
 /mob/living/proc/get_cy_incoming_damage_multiplier()
 	var/toughness_multiplier = 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 6))
+	if(HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_6))
 		toughness_multiplier = body_position == LYING_DOWN ? 0.9 : 0.8
-	else if(!get_cy_skill_level(/datum/cy_skill/strength/toughness))
+	else if(!HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_1))
 		toughness_multiplier = 1.1
 	if(world.time < cy_surrender_until)
 		toughness_multiplier *= 0.7
+	if(world.time < cy_parry_resist_until)
+		toughness_multiplier *= CY_PARRY_SUCCESS_DAMAGE_MULTIPLIER
 	return toughness_multiplier
 
 /mob/living/proc/get_cy_stagger_duration_multiplier()
 	var/multiplier = 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 3))
+	if(HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_3))
 		multiplier *= body_position == LYING_DOWN ? 0.75 : 0.5
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 4))
+	if(HAS_TRAIT(src, TRAIT_CY_SPIRIT_ENDURANCE_4))
 		multiplier *= 0.5
 	return multiplier
 
 /mob/living/proc/get_cy_negative_effect_duration_multiplier()
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/composure, 5))
+	if(HAS_TRAIT(src, TRAIT_CY_INTELLIGENCE_COMPOSURE_5))
 		return 0.75
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/composure, 2))
+	if(HAS_TRAIT(src, TRAIT_CY_INTELLIGENCE_COMPOSURE_2))
 		return 0.8
 	return 1
 
 /mob/living/proc/get_cy_professional_quality_bonus(skill_type)
-	return get_cy_skill_quality_bonus_no_perks(skill_type) + (get_cy_skill_perk_quality_bonus(skill_type) * 0.05)
+	return (get_cy_skill_perk_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL) + (get_cy_skill_perk_quality_bonus(skill_type) * 0.05)
 
 /mob/living/proc/award_cy_professional_activity(skill_type, amount = CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 	if(!ispath(skill_type, /datum/cy_skill/professional) || amount <= 0)
@@ -205,23 +258,21 @@
 	return skills.roll_skill_check(skill_type, difficulty, grant_experience, ignore_stat_limit)
 
 /mob/living/proc/roll_cy_passive_skill_check(skill_type, required_level = CY_SKILL_MINIMUM_LEVEL, difficulty = 35, grant_experience = TRUE, ignore_stat_limit = FALSE)
-	if(get_cy_skill_level(skill_type) < required_level)
+	if(required_level > CY_SKILL_MINIMUM_LEVEL && !HAS_TRAIT(src, cy_skill_perk_trait(skill_type, required_level)))
 		return FALSE
 	return roll_cy_skill_check(skill_type, difficulty, grant_experience, ignore_stat_limit)
 
 /mob/living/proc/get_cy_cohort_limit()
-	var/inspiration_level = get_cy_skill_level(/datum/cy_skill/charisma/inspiration)
-	switch(inspiration_level)
-		if(CY_SKILL_LEVEL_SKILLED)
-			return 2
-		if(CY_SKILL_LEVEL_TRAINED)
-			return 3
-		if(CY_SKILL_LEVEL_EXPERT)
-			return 4
-		if(CY_SKILL_LEVEL_PROFESSIONAL)
-			return 6
-		if(CY_SKILL_LEVEL_MASTER to INFINITY)
-			return 8
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_6))
+		return 8
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_5))
+		return 6
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_4))
+		return 4
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_3))
+		return 3
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_2))
+		return 2
 	return CY_COHORT_BASE_LIMIT
 
 /mob/living/proc/is_cy_cohort_member(mob/living/target)
@@ -258,32 +309,32 @@
 	if(!is_cy_cohort_member(target))
 		return 0
 	var/multiplier = 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_TRAINED))
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_3))
 		multiplier *= 1.25
-	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_EXPERT))
+	if(HAS_TRAIT(src, TRAIT_CY_INSPIRATION_4))
 		multiplier *= 1.2
 	return multiplier
 
 /mob/living/proc/get_cy_theft_notice_chance(mob/living/victim)
-	var/theft_level = get_cy_skill_level(/datum/cy_skill/charisma/theft)
-	if(theft_level >= CY_SKILL_LEVEL_EXPERT)
+	var/theft_level = get_cy_skill_perk_level(/datum/cy_skill/charisma/theft)
+	if(HAS_TRAIT(src, TRAIT_CY_THEFT_4))
 		var/victim_perception = victim?.get_cy_stat(/datum/cy_stat/perception) || CY_STAT_DEFAULT
 		if(victim_perception < theft_level * 3)
 			return 0
-	if(theft_level >= CY_SKILL_LEVEL_SKILLED)
+	if(HAS_TRAIT(src, TRAIT_CY_THEFT_2))
 		return is_cy_stealthing() ? 50 : 75
-	if(theft_level >= CY_SKILL_LEVEL_BEGINNER)
+	if(HAS_TRAIT(src, TRAIT_CY_THEFT_1))
 		return 100
 	return 100
 
 /mob/living/proc/get_cy_theft_delay_multiplier()
-	var/theft_level = get_cy_skill_level(/datum/cy_skill/charisma/theft)
-	if(theft_level >= CY_SKILL_LEVEL_EXPERT)
+	var/theft_level = get_cy_skill_perk_level(/datum/cy_skill/charisma/theft)
+	if(HAS_TRAIT(src, TRAIT_CY_THEFT_4))
 		return 0
 	return max(0.35, 1 - theft_level * 0.08)
 
 /mob/living/proc/can_cy_steal_strippable_key(key)
-	if(get_cy_skill_level(/datum/cy_skill/charisma/theft) >= CY_SKILL_LEVEL_MASTER)
+	if(HAS_TRAIT(src, TRAIT_CY_THEFT_6))
 		return TRUE
 	return !(key in list(
 		STRIPPABLE_ITEM_LHAND,
@@ -373,45 +424,44 @@
 		return 1
 	var/multiplier = 1
 	if(weapon.w_class >= WEIGHT_CLASS_BULKY)
-		if(!get_cy_skill_level(/datum/cy_skill/strength/heavy_weapons))
+		if(!HAS_TRAIT(src, TRAIT_CY_HEAVY_WEAPONS_1))
 			multiplier *= 0.9
-		multiplier += get_cy_skill_level(/datum/cy_skill/strength/heavy_weapons) * 0.03
-		if(has_cy_skill_perk_level(/datum/cy_skill/strength/heavy_weapons, 2))
+		multiplier += get_cy_skill_perk_level(/datum/cy_skill/strength/heavy_weapons) * 0.03
+		if(HAS_TRAIT(src, TRAIT_CY_HEAVY_WEAPONS_2))
 			multiplier += get_cy_stat(/datum/cy_stat/strength) * 0.005
 	else if(weapon.w_class <= WEIGHT_CLASS_SMALL)
-		multiplier += get_cy_skill_level(/datum/cy_skill/dexterity/light_weapons) * 0.02
+		multiplier += get_cy_skill_perk_level(/datum/cy_skill/dexterity/light_weapons) * 0.02
 	if(weapon.get_sharpness())
-		multiplier += get_cy_skill_level(/datum/cy_skill/perception/precise_melee) * 0.015
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 3))
+		multiplier += get_cy_skill_perk_level(/datum/cy_skill/perception/precise_melee) * 0.015
+	if(HAS_TRAIT(src, TRAIT_CY_WEAKSPOT_ANALYSIS_3))
 		multiplier += 0.05
 	return multiplier
 
 /mob/living/proc/get_cy_weapon_spread_multiplier(obj/item/weapon)
 	var/multiplier = 1 - get_cy_weapon_skill_level(weapon) * CY_WEAPON_SKILL_SPREAD_REDUCTION_PER_LEVEL
 	if(weapon?.w_class >= WEIGHT_CLASS_BULKY)
-		var/heavy_level = get_cy_skill_level(/datum/cy_skill/strength/heavy_weapons)
-		if(heavy_level >= 6)
+		if(HAS_TRAIT(src, TRAIT_CY_HEAVY_WEAPONS_6))
 			multiplier = min(multiplier, 0.1)
-		else if(heavy_level >= 4)
+		else if(HAS_TRAIT(src, TRAIT_CY_HEAVY_WEAPONS_4))
 			multiplier *= 0.7
 	return max(0.1, multiplier)
 
 /mob/living/proc/apply_cy_stat_weapon_onhit_effects(mob/living/target, obj/item/weapon, target_zone, damage_done)
 	if(!target || !weapon || target == src || damage_done <= 0)
 		return FALSE
-	if(has_cy_skill_perk_level(/datum/cy_skill/strength/heavy_weapons, 6) && weapon.w_class >= WEIGHT_CLASS_BULKY && prob(10))
+	if(HAS_TRAIT(src, TRAIT_CY_HEAVY_WEAPONS_6) && weapon.w_class >= WEIGHT_CLASS_BULKY && prob(10))
 		target.Knockdown(1.5 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/dexterity/light_weapons, 3) && weapon.w_class <= WEIGHT_CLASS_NORMAL && prob(25))
+	if(HAS_TRAIT(src, TRAIT_CY_LIGHT_WEAPONS_3) && weapon.w_class <= WEIGHT_CLASS_NORMAL && prob(25))
 		target.adjust_stamina_loss(6)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 2) && prob(10))
+	if(HAS_TRAIT(src, TRAIT_CY_WEAKSPOT_ANALYSIS_2) && prob(10))
 		target.apply_damage(max(1, round(damage_done * 0.2)), weapon.damtype, target_zone)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 4) && prob(15))
+	if(HAS_TRAIT(src, TRAIT_CY_WEAKSPOT_ANALYSIS_4) && prob(15))
 		target.Immobilize(2 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 6) && target_zone == BODY_ZONE_HEAD && prob(25))
+	if(HAS_TRAIT(src, TRAIT_CY_WEAKSPOT_ANALYSIS_6) && target_zone == BODY_ZONE_HEAD && prob(25))
 		target.Paralyze(2 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/precise_melee, 5) && target_zone == BODY_ZONE_HEAD && prob(30))
+	if(HAS_TRAIT(src, TRAIT_CY_PRECISE_MELEE_5) && target_zone == BODY_ZONE_HEAD && prob(30))
 		target.adjust_confusion_up_to(4 SECONDS, 8 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/style, 6) && prob(20))
+	if(HAS_TRAIT(src, TRAIT_CY_STYLE_6) && prob(20))
 		target.adjust_temp_blindness_up_to(2 SECONDS, 4 SECONDS)
 	return TRUE
 
@@ -605,7 +655,7 @@
 		if(skill_level > best_skill_level)
 			best_skill_level = skill_level
 			best_skill_type = skill_type
-	if(best_skill_type && best_skill_level > CY_SKILL_LEVEL_UNTRAINED)
+	if(best_skill_type && HAS_TRAIT(src, cy_skill_perk_trait(best_skill_type, CY_SKILL_LEVEL_BEGINNER)))
 		var/datum/cy_skill/skill = get_cy_skill_datum(best_skill_type)
 		var/skill_id = skill?.id || "unknown"
 		result += "Most visible training: [skill_id] [best_skill_level]."
@@ -731,7 +781,7 @@
 		cy_chameleon_level = 0
 		animate(src, alpha = cy_stealth_original_alpha || 255, time = 0.2 SECONDS)
 		return 0
-	var/stealth_level = get_cy_skill_level(/datum/cy_skill/charisma/stealth)
+	var/stealth_level = get_cy_skill_perk_level(/datum/cy_skill/charisma/stealth)
 	var/light_factor = get_cy_stealth_light_factor()
 	var/light_hide = round((1 - light_factor) * CY_STEALTH_CHAMELEON_MAX)
 	var/skill_bonus = stealth_level * 10
@@ -859,14 +909,13 @@
 		var/compatibility = get_cy_organization_compatibility(org_type)
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			multiplier *= CY_DAEMON_CORP_MISMATCH_CAST_MULTIPLIER
-	var/fast_code_level = get_cy_skill_level(/datum/cy_skill/intelligence/fast_code)
-	if(!fast_code_level)
+	if(!HAS_TRAIT(src, TRAIT_CY_FAST_CODE_1))
 		multiplier *= 1.1
-	else if(fast_code_level >= 2)
+	else if(HAS_TRAIT(src, TRAIT_CY_FAST_CODE_2))
 		multiplier *= 0.8
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/fast_code, 4) && prob(25))
+	if(HAS_TRAIT(src, TRAIT_CY_FAST_CODE_4) && prob(25))
 		multiplier *= 0.5
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/fast_code, 6) && prob(25))
+	if(HAS_TRAIT(src, TRAIT_CY_FAST_CODE_6) && prob(25))
 		multiplier = 0
 	return multiplier
 
@@ -877,14 +926,13 @@
 		var/compatibility = get_cy_organization_compatibility(org_type)
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			multiplier *= CY_DAEMON_CORP_MISMATCH_EFFECTIVENESS_MULTIPLIER
-	var/improved_code_level = get_cy_skill_level(/datum/cy_skill/intelligence/improved_code)
-	if(!improved_code_level)
+	if(!HAS_TRAIT(src, TRAIT_CY_IMPROVED_CODE_1))
 		multiplier *= 0.8
-	else if(improved_code_level >= 2)
+	else if(HAS_TRAIT(src, TRAIT_CY_IMPROVED_CODE_2))
 		multiplier *= 1.3
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/improved_code, 3))
+	if(HAS_TRAIT(src, TRAIT_CY_IMPROVED_CODE_3))
 		multiplier *= 1.25
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/improved_code, 6))
+	if(HAS_TRAIT(src, TRAIT_CY_IMPROVED_CODE_6))
 		multiplier *= 1.5
 	return multiplier
 
@@ -991,11 +1039,11 @@
 		var/compatibility = get_cy_organization_compatibility(org_type)
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			multiplier *= CY_IMPLANT_CORP_MISMATCH_OVERHEAT_MULTIPLIER
-	if(!get_cy_skill_level(/datum/cy_skill/spirit/compatibility))
+	if(!HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_1))
 		multiplier *= 1.2
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 3))
+	if(HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_3))
 		multiplier *= 0.5
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 4))
+	if(HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_4))
 		multiplier *= 0.7
 	return multiplier
 
@@ -1013,9 +1061,9 @@
 		var/compatibility = get_cy_organization_compatibility(org_type)
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			modifier += CY_IMPLANT_CORP_MISMATCH_FAILURE_MODIFIER
-	if(!get_cy_skill_level(/datum/cy_skill/spirit/compatibility))
+	if(!HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_1))
 		modifier += 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 6))
+	if(HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_6))
 		modifier -= 100
 	return modifier
 
@@ -1027,7 +1075,7 @@
 
 /mob/living/carbon/human/proc/get_cy_brain_overheat_capacity()
 	var/capacity = max(10, get_cy_stat(/datum/cy_stat/spirit) * 10 + get_cy_stat(/datum/cy_stat/intelligence) * 5)
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 2))
+	if(HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_2))
 		capacity *= 1.3
 	return capacity
 
@@ -1044,11 +1092,11 @@
 	var/overflow = get_cy_total_implant_overheat() - get_cy_brain_overheat_capacity()
 	if(overflow <= 0)
 		return FALSE
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 5))
+	if(HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_5))
 		add_movespeed_modifier(/datum/movespeed_modifier/cy_implant_overload)
 		addtimer(CALLBACK(src, TYPE_PROC_REF(/mob, remove_movespeed_modifier), /datum/movespeed_modifier/cy_implant_overload), 2 SECONDS)
 		return TRUE
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 6))
+	if(HAS_TRAIT(src, TRAIT_CY_COMPATIBILITY_6))
 		return TRUE
 	adjust_psychic_loss(overflow * CY_IMPLANT_OVERHEAT_PSYCHIC_PER_SECOND * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 	adjust_pain_loss(overflow * CY_IMPLANT_OVERHEAT_PAIN_PER_SECOND * seconds_per_tick, updating_health = FALSE, forced = TRUE)
@@ -1380,16 +1428,16 @@
 	if(stat != CONSCIOUS || body_position != STANDING_UP)
 		return FALSE
 	var/jump_distance = cy_sprinting ? 2 : 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/dexterity/acrobatics, 4))
+	if(HAS_TRAIT(src, TRAIT_CY_ACROBATICS_4))
 		jump_distance++
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/athletics, 6))
+	if(HAS_TRAIT(src, TRAIT_CY_ATHLETICS_6))
 		jump_distance++
 	var/turf/landing = get_cy_parkour_landing_turf(target, jump_distance)
 	if(!landing)
 		to_chat(src, span_warning("Вы не видите подходящего места для прыжка."))
 		return TRUE
 	var/stamina_cost = CY_PARKOUR_JUMP_STAMINA_COST * jump_distance
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 2))
+	if(HAS_TRAIT(src, TRAIT_CY_SPIRIT_ENDURANCE_2))
 		stamina_cost *= 0.8
 	adjust_stamina_loss(stamina_cost, updating_stamina = FALSE, forced = TRUE)
 	visible_message(span_notice("[src] прыгает вперёд."), span_notice("Вы прыгаете вперёд."))
@@ -1644,8 +1692,7 @@
 		return TRUE
 	var/mob/living/carbon/human/human_target = target
 	visible_message(span_notice("[src] carefully checks [human_target] by touch."), span_notice("You palpate [human_target], checking for injuries."))
-	var/medicine_level = get_cy_medicine_skill_level()
-	var/list/diagnostic_lines = human_target.get_cy_diagnostic_lines(src, medicine_level >= CY_SKILL_LEVEL_EXPERT)
+	var/list/diagnostic_lines = human_target.get_cy_diagnostic_lines(src, HAS_TRAIT(src, TRAIT_CY_MEDICINE_4))
 	for(var/line in diagnostic_lines)
 		to_chat(src, span_notice("[line]"))
 	apply_cy_action_delay(CLICK_CD_GRABBING, /datum/cy_skill/professional/medicine)
@@ -1717,8 +1764,8 @@
 		if(!Adjacent(living_target))
 			return FALSE
 		disarm(living_target, null)
-		if(has_cy_skill_perk_level(/datum/cy_skill/strength/grappling, 4))
-			living_target.Knockdown(1 SECONDS + get_cy_skill_level(/datum/cy_skill/strength/grappling) * 0.25 SECONDS, daze_amount = 0.5 SECONDS)
+		if(HAS_TRAIT(src, TRAIT_CY_GRAPPLING_4))
+			living_target.Knockdown(1 SECONDS + get_cy_skill_perk_level(/datum/cy_skill/strength/grappling) * 0.25 SECONDS, daze_amount = 0.5 SECONDS)
 		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/strength/grappling)
 		return TRUE
 	if(ismovable(target))
@@ -1742,9 +1789,7 @@
 			living_target.apply_damage(CY_KICK_PRONE_BRUTE_DAMAGE, BRUTE)
 		else
 			living_target.throw_at(get_cy_shove_target_turf(living_target, CY_KICK_SHOVE_DISTANCE), CY_KICK_SHOVE_DISTANCE, 1, src, force = MOVE_FORCE_OVERPOWERING)
-		var/kick_knockdown_chance = 25 + get_cy_skill_level(/datum/cy_skill/dexterity/fast_melee) * 5
-		if(has_cy_skill_perk_level(/datum/cy_skill/strength/power_melee, 3))
-			kick_knockdown_chance += 10
+		var/kick_knockdown_chance = 25 + get_cy_skill_perk_level(/datum/cy_skill/dexterity/fast_melee) * 5
 		if(prob(kick_knockdown_chance))
 			living_target.Knockdown(CY_KICK_KNOCKDOWN_TIME)
 		adjust_staggered_up_to(CY_KICK_SELF_STAGGER, 10 SECONDS)
@@ -1764,13 +1809,13 @@
 	if(next_move > world.time || !isliving(target) || get_active_held_item())
 		return FALSE
 	var/mob/living/living_target = target
-	if(!Adjacent(living_target) || !has_cy_skill_perk_level(/datum/cy_skill/strength/power_melee, 6))
+	if(!Adjacent(living_target) || !HAS_TRAIT(src, TRAIT_CY_POWER_MELEE_6))
 		return FALSE
 	face_atom(living_target)
 	do_attack_animation(living_target, ATTACK_EFFECT_PUNCH)
-	var/damage = 8 + get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 2
+	var/damage = 8 + get_cy_skill_perk_level(/datum/cy_skill/strength/power_melee) * 2
 	living_target.apply_damage(damage, BRUTE, BODY_ZONE_HEAD)
-	living_target.adjust_stamina_loss(20 + get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 5)
+	living_target.adjust_stamina_loss(20 + get_cy_skill_perk_level(/datum/cy_skill/strength/power_melee) * 5)
 	living_target.Knockdown(3 SECONDS, daze_amount = 1.5 SECONDS)
 	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] бьёт [living_target.declent_ru(ACCUSATIVE)] апперкотом!"), span_notice("Вы проводите апперкот по [living_target.declent_ru(DATIVE)]."))
 	log_combat(src, living_target, "cyberpunk uppercut")
@@ -1780,6 +1825,24 @@
 /mob/living/proc/apply_cy_open_defense(duration = CY_DEFENSE_OPEN_TIME)
 	cy_open_defense_until = max(cy_open_defense_until, world.time + duration)
 	return TRUE
+
+/mob/living/proc/apply_cy_parry_resist(duration = CY_PARRY_SUCCESS_RESIST_TIME)
+	cy_parry_resist_until = max(cy_parry_resist_until, world.time + duration)
+	return TRUE
+
+/mob/living/proc/get_cy_defense_success_chance(defense_action = null)
+	var/chance = CY_DEFENSE_BASE_SUCCESS_CHANCE
+	if(defense_action == CY_DEFENSE_ACTION_DODGE)
+		chance += get_cy_skill_perk_level(/datum/cy_skill/dexterity/evasion) * CY_DODGE_PERK_SUCCESS_BONUS
+		if(HAS_TRAIT(src, TRAIT_CY_EVASION_3))
+			chance += 15
+	else if(defense_action == CY_DEFENSE_ACTION_PARRY)
+		chance += get_cy_skill_perk_level(/datum/cy_skill/perception/concentration) * CY_PARRY_PERK_SUCCESS_BONUS
+		if(HAS_TRAIT(src, TRAIT_CY_CONCENTRATION_2))
+			chance += 15
+		if(!HAS_TRAIT(src, TRAIT_CY_CONCENTRATION_1))
+			chance -= 10
+	return clamp(chance, 1, 95)
 
 /mob/living/proc/clear_cy_active_defense(trigger_cooldown = TRUE)
 	cy_active_defense_action = null
@@ -1828,21 +1891,41 @@
 		if(attacker_intent == CY_ATTACK_INTENT_TRICKY)
 			clear_cy_active_defense(TRUE)
 			return FAILED_BLOCK
+		if(!prob(get_cy_defense_success_chance(CY_DEFENSE_ACTION_DODGE)))
+			clear_cy_active_defense(TRUE)
+			return FAILED_BLOCK
 		var/atom/dodge_source = attacker ? attacker : hit_by
 		var/turf/dodge_turf = get_cy_dodge_turf(dodge_source)
-		if(dodge_turf)
+		if(dodge_turf && !HAS_TRAIT(src, TRAIT_CY_EVASION_5))
 			Move(dodge_turf, get_dir(src, dodge_turf))
 		attacker?.apply_cy_open_defense()
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] уходит от атаки."), span_notice("Вы уходите от атаки."))
 		clear_cy_active_defense(TRUE)
+		if(attacker && HAS_TRAIT(src, TRAIT_CY_FAST_MELEE_4) && prob(25))
+			perform_cy_kick(attacker)
+		if(!HAS_TRAIT(src, TRAIT_CY_EVASION_1) && prob(10))
+			Knockdown(1 SECONDS)
 		return SUCCESSFUL_BLOCK
 	if(cy_active_defense_action == CY_DEFENSE_ACTION_PARRY)
 		if(attacker_intent == CY_ATTACK_INTENT_PREEMPTIVE)
 			clear_cy_active_defense(TRUE)
 			return FAILED_BLOCK
-		attacker?.apply_cy_open_defense()
+		if(attacker && HAS_TRAIT(attacker, TRAIT_CY_HEAVY_WEAPONS_3) && attacker.get_active_held_item() && prob(20))
+			clear_cy_active_defense(TRUE)
+			return FAILED_BLOCK
+		if(!HAS_TRAIT(src, TRAIT_CY_CONCENTRATION_1) && prob(10))
+			clear_cy_active_defense(TRUE)
+			return FAILED_BLOCK
+		if(!prob(get_cy_defense_success_chance(CY_DEFENSE_ACTION_PARRY)))
+			clear_cy_active_defense(TRUE)
+			return FAILED_BLOCK
+		if(attacker && HAS_TRAIT(src, TRAIT_CY_CONCENTRATION_5) && prob(40))
+			attacker.apply_cy_open_defense()
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] парирует атаку."), span_notice("Вы парируете атаку."))
+		apply_cy_parry_resist()
 		clear_cy_active_defense(TRUE)
+		if(attacker && HAS_TRAIT(src, TRAIT_CY_FAST_MELEE_4) && prob(25))
+			perform_cy_kick(attacker)
 		return SUCCESSFUL_BLOCK
 	return FAILED_BLOCK
 
@@ -1857,7 +1940,7 @@
 	cy_last_defense_action = defense_action
 	cy_active_defense_action = defense_action
 	var/defense_skill = defense_action == CY_DEFENSE_ACTION_DODGE ? /datum/cy_skill/dexterity/evasion : /datum/cy_skill/perception/concentration
-	var/skill_window_bonus = get_cy_skill_level(defense_skill) * 0.05 SECONDS
+	var/skill_window_bonus = get_cy_skill_perk_level(defense_skill) * 0.05 SECONDS
 	if(body_position == LYING_DOWN)
 		skill_window_bonus *= 0.5
 	cy_active_defense_until = world.time + CY_DEFENSE_WINDOW + skill_window_bonus
@@ -2418,12 +2501,11 @@
 
 /mob/living/carbon/human/proc/get_cy_diagnostic_lines(mob/living/user, advanced = FALSE)
 	var/list/lines = list()
-	var/medicine_level = user?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
-	if(medicine_level <= CY_SKILL_LEVEL_UNTRAINED && !advanced)
+	if((!user || !HAS_TRAIT(user, TRAIT_CY_MEDICINE_1)) && !advanced)
 		lines += "General state: [health < critical_health_threshold ? "critical" : health < maxHealth * 0.5 ? "poor" : "stable"]."
 		return lines
 	lines += "Health [round(health)]/[maxHealth]; pain [round(get_pain_loss())]; psychic [round(get_psychic_loss())]."
-	if(medicine_level >= CY_SKILL_LEVEL_TRAINED || advanced)
+	if(HAS_TRAIT(user, TRAIT_CY_MEDICINE_3) || advanced)
 		lines += "Blood [round(get_cy_blood_percent() * 100)]%; pressure [round(get_cy_pressure_delta() * 100)]%; lung efficiency [round(get_cy_lung_efficiency() * 100)]%; oxygenation [round(get_cy_blood_oxygenation() * 100)]%."
 	if(is_cy_clinically_dead())
 		lines += "Clinical death threshold reached. Revive requires working heart and non-dead brain."

@@ -164,9 +164,9 @@
 /mob/living/proc/get_cy_wound_bonus_modifier(damagetype)
 	var/modifier = 0
 	if(damagetype in list(BRUTE, BLUNT, PIERCE, SLASH, BURN, FIRE, COLD, ACID_DAMAGE))
-		if(!get_cy_skill_level(/datum/cy_skill/strength/toughness))
+		if(!HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_1))
 			modifier += 10
-		if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 5))
+		if(HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_5))
 			modifier -= body_position == LYING_DOWN ? 10 : 20
 	return modifier
 

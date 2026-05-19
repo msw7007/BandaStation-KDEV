@@ -103,7 +103,8 @@
 
 /mob/living/basic/mining/lobstrosity/mind_initialize()
 	. = ..()
-	if(get_cy_skill_level(/datum/cy_skill/spirit/survival) < base_fishing_level)
+	var/has_base_fishing_perk = base_fishing_level <= CY_SKILL_LEVEL_BEGINNER ? HAS_TRAIT(src, TRAIT_CY_SURVIVAL_1) : HAS_TRAIT(src, TRAIT_CY_SURVIVAL_2)
+	if(!has_base_fishing_perk)
 		set_cy_skill_level(/datum/cy_skill/spirit/survival, base_fishing_level, TRUE)
 
 /// Lavaland lobster variant, it basically just looks different

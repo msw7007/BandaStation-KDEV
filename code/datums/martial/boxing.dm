@@ -119,7 +119,7 @@
 	var/attack_sound = active_arm.unarmed_attack_sound
 
 	// Out athletics skill is added as a damage bonus
-	var/athletics_skill =  attacker.get_cy_skill_level(/datum/cy_skill/spirit/athletics)
+	var/athletics_skill =  attacker.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics)
 
 	// If true, grants experience for punching; we only gain experience if we punch another boxer.
 	var/grant_experience = FALSE

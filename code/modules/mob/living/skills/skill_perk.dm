@@ -26,10 +26,23 @@
 	/// Percent bonus this perk contributes to result quality/reliability.
 	var/quality_bonus = 0
 
+/proc/cy_skill_perk_trait(skill_type, level)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(!skill)
+		return null
+
+	return "cy_skill_perk_[skill.id]_[clamp(round(level), CY_SKILL_MINIMUM_LEVEL, skill.max_level)]"
+
 /datum/cy_skill_perk/proc/on_gain(mob/living/owner)
+	var/perk_trait = cy_skill_perk_trait(skill_type, level)
+	if(perk_trait)
+		ADD_TRAIT(owner, perk_trait, CY_SKILL_PERK_TRAIT)
 	return
 
 /datum/cy_skill_perk/proc/on_loss(mob/living/owner)
+	var/perk_trait = cy_skill_perk_trait(skill_type, level)
+	if(perk_trait)
+		REMOVE_TRAIT(owner, perk_trait, CY_SKILL_PERK_TRAIT)
 	return
 
 /datum/cy_skill_perk/proc/modify_check_chance(chance)
@@ -127,16 +140,13 @@
 	name = "Professional perk"
 	id = "professional_perk"
 	desc = "A profession-focused skill perk."
-	var/effect_summary
 
 /datum/cy_skill_perk/professional/New()
 	. = ..()
-	desc = effect_summary || get_effect_summary()
+	desc = get_effect_summary()
 
 /datum/cy_skill_perk/professional/apply_skill_context()
 	. = ..()
-	if(effect_summary)
-		return
 	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
 	if(skill)
 		name = "[skill.name] [level]"
@@ -186,191 +196,7 @@
 	work_speed_bonus = 8
 	quality_bonus = 15
 
-/datum/cy_skill_perk/professional/medicine/reliable
-	name = "Steady diagnosis"
-	id = "medicine_reliable"
-	level = 3
-	check_bonus = 6
-	quality_bonus = 5
-
-/datum/cy_skill_perk/professional/medicine/expert
-	name = "Trauma discipline"
-	id = "medicine_expert"
-	level = 5
-	check_bonus = 8
-	work_speed_bonus = 4
-	quality_bonus = 10
-
-/datum/cy_skill_perk/professional/chemistry/reliable
-	name = "Clean batch"
-	id = "chemistry_reliable"
-	level = 3
-	check_bonus = 5
-	quality_bonus = 8
-
-/datum/cy_skill_perk/professional/chemistry/master
-	name = "Controlled reaction"
-	id = "chemistry_master"
-	level = 6
-	check_bonus = 8
-	work_speed_bonus = 6
-	quality_bonus = 18
-
-/datum/cy_skill_perk/professional/electricity/specialist
-	name = "Live circuit habit"
-	id = "electricity_specialist"
-	level = 4
-	check_bonus = 5
-	work_speed_bonus = 8
-
-/datum/cy_skill_perk/professional/electricity/master
-	name = "Grid authority"
-	id = "electricity_master"
-	level = 6
-	check_bonus = 8
-	work_speed_bonus = 10
-	quality_bonus = 10
-
-/datum/cy_skill_perk/professional/construction/specialist
-	name = "Frame discipline"
-	id = "construction_specialist"
-	level = 4
-	work_speed_bonus = 8
-	quality_bonus = 8
-
-/datum/cy_skill_perk/professional/construction/master
-	name = "Load-bearing instinct"
-	id = "construction_master"
-	level = 6
-	check_bonus = 6
-	work_speed_bonus = 8
-	quality_bonus = 18
-
-/datum/cy_skill_perk/professional/invention/reliable
-	name = "Prototype loop"
-	id = "invention_reliable"
-	level = 3
-	experience_bonus = 8
-	quality_bonus = 6
-
-/datum/cy_skill_perk/professional/invention/master
-	name = "Breakthrough pattern"
-	id = "invention_master"
-	level = 6
-	check_bonus = 8
-	experience_bonus = 12
-	quality_bonus = 15
-
-/datum/cy_skill_perk/professional/analysis/reliable
-	name = "Pattern read"
-	id = "analysis_reliable"
-	level = 3
-	check_bonus = 8
-	work_speed_bonus = 4
-
-/datum/cy_skill_perk/professional/analysis/master
-	name = "Forensic sweep"
-	id = "analysis_master"
-	level = 6
-	check_bonus = 12
-	work_speed_bonus = 8
-
-/datum/cy_skill_perk/professional/mining/specialist
-	name = "Ore sense"
-	id = "mining_specialist"
-	level = 4
-	work_speed_bonus = 8
-	quality_bonus = 5
-
-/datum/cy_skill_perk/professional/mining/master
-	name = "Deep vein instinct"
-	id = "mining_master"
-	level = 6
-	check_bonus = 8
-	work_speed_bonus = 10
-	experience_bonus = 8
-
-/datum/cy_skill_perk/professional/driving/level_1
-	name = "No movement speed penalty"
-	id = "driving_no_movement_penalty"
-	level = 1
-	effect_summary = "Removes the vehicle movement speed penalty."
-
-/datum/cy_skill_perk/professional/driving/level_2
-	name = "Basic control"
-	id = "driving_basic_control"
-	level = 2
-	effect_summary = "Vehicle reaction speed penalty is reduced to 25%. Consumption penalty is reduced by 10%."
-
-/datum/cy_skill_perk/professional/driving/level_3
-	name = "Auxiliary equipment"
-	id = "driving_auxiliary_equipment"
-	level = 3
-	effect_summary = "Vehicles may mount additional equipment, up to 1 unit in each component or mechanism slot."
-
-/datum/cy_skill_perk/professional/driving/level_4
-	name = "Efficient overdrive"
-	id = "driving_efficient_overdrive"
-	level = 4
-	effect_summary = "Removes the consumption penalty and increases maximum movement speed by 25%."
-
-/datum/cy_skill_perk/professional/driving/level_5
-	name = "Full reaction"
-	id = "driving_full_reaction"
-	level = 5
-	effect_summary = "Removes the reaction penalty. Component and mechanism slot upgrades may stack up to 2 units."
-
-/datum/cy_skill_perk/professional/driving/level_6
-	name = "Transport mastery"
-	id = "driving_transport_mastery"
-	level = 6
-	effect_summary = "Vehicle speed, maneuverability and brakes are increased by 20%. Consumption is reduced by 10%."
-
-/datum/cy_skill_perk/professional/cooking/reliable
-	name = "Balanced prep"
-	id = "cooking_reliable"
-	level = 3
-	work_speed_bonus = 4
-	quality_bonus = 10
-
-/datum/cy_skill_perk/professional/cooking/master
-	name = "Signature dish"
-	id = "cooking_master"
-	level = 6
-	work_speed_bonus = 8
-	quality_bonus = 20
-
-/datum/cy_skill_perk/professional/gardening/reliable
-	name = "Green thumb"
-	id = "gardening_reliable"
-	level = 3
-	experience_bonus = 6
-	quality_bonus = 8
-
-/datum/cy_skill_perk/professional/gardening/master
-	name = "Cultivar keeper"
-	id = "gardening_master"
-	level = 6
-	experience_bonus = 10
-	work_speed_bonus = 6
-	quality_bonus = 18
-
-/datum/cy_skill_perk/professional/music/reliable
-	name = "Clean phrasing"
-	id = "music_reliable"
-	level = 3
-	experience_bonus = 8
-	quality_bonus = 6
-
-/datum/cy_skill_perk/professional/music/master
-	name = "Stage control"
-	id = "music_master"
-	level = 6
-	check_bonus = 8
-	experience_bonus = 12
-	quality_bonus = 12
-
-// Prepared stat-linked perk shells. These are intentionally not assigned to physical skill trees yet.
+// Stat-linked perk shells. Runtime effects are keyed by the trait granted for skill_type + level.
 /datum/cy_skill_perk/stat_linked
 	name = "Prepared stat perk"
 	id = "stat_linked_prepared"

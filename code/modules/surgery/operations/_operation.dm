@@ -97,12 +97,12 @@
 /mob/living/proc/get_available_operations(atom/movable/operating_on, potential_tool = IMPLEMENT_HAND, operating_zone = zone_selected)
 	// List of typepaths of operations we *can* do
 	var/list/possible_operations = GLOB.operations.unlocked.Copy()
-	if(get_cy_medicine_skill_level() >= CY_SKILL_LEVEL_TRAINED)
+	if(HAS_TRAIT(src, TRAIT_CY_MEDICINE_3))
 		for(var/operation_type in GLOB.operations.locked)
 			var/datum/surgery_operation/locked_operation = GLOB.operations.operations_by_typepath[operation_type]
 			if(!locked_operation)
 				continue
-			if(get_cy_medicine_skill_level() >= CY_SKILL_LEVEL_PROFESSIONAL || !(locked_operation.operation_flags & OPERATION_MORBID))
+			if(HAS_TRAIT(src, TRAIT_CY_MEDICINE_5) || !(locked_operation.operation_flags & OPERATION_MORBID))
 				possible_operations |= operation_type
 	// Signals can add operation types to the list to unlock special ones
 	SEND_SIGNAL(src, COMSIG_LIVING_OPERATING_ON, operating_on, possible_operations)
@@ -753,7 +753,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	PROTECTED_PROC(TRUE)
 	var/total_mod = 1.0
 	var/tool_quality = get_tool_quality(tool) || 1.0
-	if(surgeon?.get_cy_medicine_skill_level() >= CY_SKILL_LEVEL_MASTER)
+	if(surgeon && HAS_TRAIT(surgeon, TRAIT_CY_MEDICINE_6))
 		tool_quality = max(0.1, tool_quality * 0.7)
 	total_mod *= tool_quality
 	// Ignore alllll the penalties (but also all the bonuses)
@@ -761,7 +761,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		var/mob/living/patient = get_patient(operating_on)
 		total_mod *= get_surgeon_surgery_speed_mod(patient, surgeon, tool)
 		if(!isnull(patient)) // Some surgeries can lack patients
-			if(surgeon?.get_cy_medicine_skill_level() < CY_SKILL_LEVEL_MASTER)
+			if(!surgeon || !HAS_TRAIT(surgeon, TRAIT_CY_MEDICINE_6))
 				total_mod *= get_location_modifier(get_turf(patient), patient, surgeon, tool)
 			total_mod *= get_mob_surgery_speed_mod(patient, surgeon, tool)
 		// Using TRAIT_SELF_SURGERY on a surgery which doesn't normally allow self surgery imparts a penalty
@@ -856,11 +856,19 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	if(!check_availability(patient, operating_on, surgeon, tool, operation_args[OPERATION_TARGET_ZONE]))
 		return ITEM_INTERACT_BLOCKING
 
-	var/medicine_level = surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
 	var/required_medicine = get_cy_required_medicine_level()
-	if(medicine_level < required_medicine)
-		to_chat(surgeon, span_warning("This operation requires higher medicine training."))
-		return ITEM_INTERACT_BLOCKING
+	if(required_medicine > CY_SKILL_LEVEL_UNTRAINED)
+		var/required_medicine_trait
+		switch(required_medicine)
+			if(CY_SKILL_LEVEL_TRAINED)
+				required_medicine_trait = TRAIT_CY_MEDICINE_3
+			if(CY_SKILL_LEVEL_PROFESSIONAL)
+				required_medicine_trait = TRAIT_CY_MEDICINE_5
+			else
+				required_medicine_trait = null
+		if(!surgeon || !HAS_TRAIT(surgeon, required_medicine_trait))
+			to_chat(surgeon, span_warning("This operation requires higher medicine training."))
+			return ITEM_INTERACT_BLOCKING
 
 	if(isitem(tool))
 		var/obj/item/realtool = tool
@@ -926,7 +934,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 			return ITEM_INTERACT_BLOCKING
 
 		var/failure_chance = get_modified_failure_chance(time, patient, surgeon, tool, operation_args) * get_cy_medicine_failure_mod(patient, surgeon, tool) // BANDASTATION EDIT + CP13 medicine skill
-		if((operation_flags & OPERATION_LOCKED) && medicine_level < CY_SKILL_LEVEL_PROFESSIONAL)
+		if((operation_flags & OPERATION_LOCKED) && !HAS_TRAIT(surgeon, TRAIT_CY_MEDICINE_5))
 			failure_chance = max(failure_chance, 50)
 		if(operation_args[OPERATION_FORCE_FAIL] || prob(clamp(failure_chance, 0, 99))) // BANDASTATION EDIT
 			failure(operating_on, surgeon, tool, operation_args)
@@ -1441,7 +1449,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 /mob/living/proc/get_cy_medicine_skill_level()
 	if(!ishuman(src))
 		return CY_SKILL_LEVEL_UNTRAINED
-	return get_cy_skill_level(/datum/cy_skill/professional/medicine) || CY_SKILL_LEVEL_UNTRAINED
+	return get_cy_skill_perk_level(/datum/cy_skill/professional/medicine) || CY_SKILL_LEVEL_UNTRAINED
 
 /datum/surgery_operation/proc/get_cy_medicine_speed_mod(mob/living/patient, mob/living/surgeon, tool)
 	var/level = surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
@@ -1487,15 +1495,14 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 /datum/surgery_operation/proc/cy_can_attempt_self_surgery(mob/living/patient, mob/living/surgeon)
 	if(patient != surgeon)
 		return TRUE
-	return (surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED) >= CY_SURGERY_SELF_MIN_LEVEL
+	return surgeon && HAS_TRAIT(surgeon, TRAIT_CY_MEDICINE_4)
 
 /datum/surgery_operation/proc/cy_after_failed_step(mob/living/patient, mob/living/surgeon, tool)
 	if(!ishuman(patient))
 		return FALSE
-	var/level = surgeon?.get_cy_medicine_skill_level() || CY_SKILL_LEVEL_UNTRAINED
-	if(level >= CY_SKILL_LEVEL_PROFESSIONAL)
+	if(surgeon && HAS_TRAIT(surgeon, TRAIT_CY_MEDICINE_5))
 		return TRUE
-	if(level <= CY_SKILL_LEVEL_UNTRAINED && prob(CY_SURGERY_DIRTY_UNTRAINED_INFECTION_CHANCE))
+	if((!surgeon || !HAS_TRAIT(surgeon, TRAIT_CY_MEDICINE_1)) && prob(CY_SURGERY_DIRTY_UNTRAINED_INFECTION_CHANCE))
 		var/mob/living/carbon/human/human_patient = patient
 		human_patient.adjust_tox_loss(1, updating_health = FALSE, forced = TRUE)
 	return TRUE

@@ -195,7 +195,7 @@
 	var/gamer_skill_rands = 0
 
 	if(gamer?.mind)
-		gamer_skill_level = gamer.get_cy_skill_level(/datum/cy_skill/charisma/style)
+		gamer_skill_level = gamer.get_cy_skill_perk_level(/datum/cy_skill/charisma/style)
 		gamer_skill = gamer.get_cy_skill_probability_bonus(/datum/cy_skill/charisma/style)
 		gamer_skill_rands = gamer.get_cy_skill_value_modifier(/datum/cy_skill/charisma/style)
 
