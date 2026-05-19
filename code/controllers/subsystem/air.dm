@@ -349,10 +349,7 @@ SUBSYSTEM_DEF(air)
 			cy_atmos_zones += zone
 			cy_atmos_zones_by_key[cy_zone_key(source_area, z_level)] = zone
 	for(var/datum/cy_atmos_zone/zone as anything in cy_atmos_zones)
-		zone.discover_neighbors()
-	for(var/datum/cy_atmos_zone/zone as anything in cy_atmos_zones)
-		if(zone.needs_cascade())
-			activate_cy_atmos_zone(zone)
+		zone.discover_neighbors(FALSE, FALSE)
 
 /datum/controller/subsystem/air/proc/activate_cy_atmos_zone(datum/cy_atmos_zone/zone)
 	if(!zone || zone.active)
@@ -424,7 +421,7 @@ SUBSYSTEM_DEF(air)
 		cy_zone_link_rebuild_queue -= zone
 		if(QDELETED(zone))
 			continue
-		zone.discover_neighbors()
+		zone.discover_neighbors(FALSE, FALSE)
 		if(zone.needs_cascade())
 			activate_cy_atmos_zone(zone)
 		if(MC_TICK_CHECK)
@@ -480,19 +477,21 @@ SUBSYSTEM_DEF(air)
 	result.garbage_collect()
 	return result
 
-/datum/cy_atmos_zone/proc/discover_neighbors()
+/datum/cy_atmos_zone/proc/discover_neighbors(recalculate_adjacency = FALSE, refresh_baseline = FALSE)
 	if(!source_area)
 		return
-	var/had_effect = has_effect()
-	var/datum/gas_mixture/new_baseline = build_baseline_air()
-	if(baseline_air)
-		baseline_air.copy_from(new_baseline)
-	else
-		baseline_air = new_baseline
-	if(!air)
-		air = baseline_air.copy()
-	else if(!had_effect)
-		air.copy_from(baseline_air)
+	if(refresh_baseline)
+		var/had_effect = has_effect()
+		var/datum/gas_mixture/new_baseline = build_baseline_air()
+		if(baseline_air)
+			baseline_air.copy_from(new_baseline)
+			qdel(new_baseline)
+		else
+			baseline_air = new_baseline
+		if(!air)
+			air = baseline_air.copy()
+		else if(!had_effect)
+			air.copy_from(baseline_air)
 	neighbors = list()
 	var/list/z_turfs = source_area.get_turfs_by_zlevel(z_level)
 	var/open_count = 0
@@ -500,7 +499,8 @@ SUBSYSTEM_DEF(air)
 		if(open_turf.blocks_air || open_turf.density)
 			continue
 		open_count++
-		open_turf.immediate_calculate_adjacent_turfs()
+		if(recalculate_adjacency)
+			open_turf.immediate_calculate_adjacent_turfs()
 		for(var/turf/open/nearby as anything in open_turf.atmos_adjacent_turfs)
 			var/datum/cy_atmos_zone/neighbor = SSair.get_cy_atmos_zone(nearby)
 			if(neighbor && neighbor != src)
@@ -553,8 +553,12 @@ SUBSYSTEM_DEF(air)
 /datum/cy_atmos_zone/proc/needs_cascade()
 	if(!length(neighbors) || !air)
 		return FALSE
+	if(!has_effect())
+		return FALSE
 	for(var/datum/cy_atmos_zone/neighbor as anything in neighbors)
 		if(QDELETED(neighbor) || !neighbor.air)
+			continue
+		if(!neighbor.has_effect())
 			continue
 		if(abs(air.temperature - neighbor.air.temperature) > MINIMUM_TEMPERATURE_DELTA_TO_CONSIDER)
 			return TRUE

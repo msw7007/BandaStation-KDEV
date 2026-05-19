@@ -350,7 +350,28 @@
 	if(part.cy_blocks_autocharge)
 		cy_can_autocharge = FALSE
 	cy_rebuild_vehicle_stats()
+	update_appearance(UPDATE_OVERLAYS)
 	return TRUE
+
+/obj/vehicle/sealed/car/update_overlays()
+	. = ..()
+	if(length(cy_drive_parts))
+		for(var/obj/item/cy_vehicle_part/part as anything in cy_drive_parts)
+			var/mutable_appearance/part_overlay = part.cy_get_overlay_appearance(layer)
+			if(part_overlay)
+				. += part_overlay
+	if(cy_suspension)
+		var/mutable_appearance/suspension_overlay = cy_suspension.cy_get_overlay_appearance(layer)
+		if(suspension_overlay)
+			. += suspension_overlay
+	if(cy_hull)
+		var/mutable_appearance/hull_overlay = cy_hull.cy_get_overlay_appearance(layer)
+		if(hull_overlay)
+			. += hull_overlay
+	if(cy_engine)
+		var/mutable_appearance/engine_overlay = cy_engine.cy_get_overlay_appearance(layer)
+		if(engine_overlay)
+			. += engine_overlay
 
 /obj/vehicle/sealed/car/proc/cy_rebuild_vehicle_stats()
 	var/total_mass = 0
@@ -453,6 +474,7 @@
 
 	var/terrain_grip = cy_get_terrain_grip()
 	var/effective_max_speed = cy_get_effective_max_speed() / get_cy_driver_skill_multiplier()
+	var/driver_transport_stat_multiplier = get_cy_driver_transport_stat_multiplier()
 	var/has_desired = !!(cy_desired_x || cy_desired_y)
 	var/has_accel = !!(cy_accel_x || cy_accel_y)
 
@@ -523,7 +545,7 @@
 		if(has_accel)
 			var/accel_dot = clamp(vel_x * cy_accel_x + vel_y * cy_accel_y, -1, 1)
 			var/accel_slip = 1 - accel_dot
-			var/follow = cy_maneuverability * terrain_grip * seconds_per_tick
+			var/follow = cy_maneuverability * driver_transport_stat_multiplier * terrain_grip * seconds_per_tick
 			if(cy_is_drifting)
 				follow *= cy_drift_control_mult
 			cy_approach_velocity_direction(cy_accel_x, cy_accel_y, follow)
@@ -923,6 +945,22 @@
 	var/cy_marks_civilian_modified = FALSE
 	var/cy_blocks_autocharge = FALSE
 	var/obj/vehicle/sealed/car/cy_installed_vehicle
+	var/icon/cy_overlay_icon = 'icons/mob/rideables/vehicles.dmi'
+	var/cy_overlay_state = "clowncar"
+	var/cy_overlay_layer_offset = 0.01
+	var/cy_overlay_pixel_x = 0
+	var/cy_overlay_pixel_y = 0
+	var/cy_overlay_color
+
+/obj/item/cy_vehicle_part/proc/cy_get_overlay_appearance(base_layer = ABOVE_MOB_LAYER)
+	if(!cy_overlay_icon || !cy_overlay_state)
+		return null
+	var/mutable_appearance/overlay = mutable_appearance(cy_overlay_icon, cy_overlay_state, base_layer + cy_overlay_layer_offset)
+	overlay.pixel_x = cy_overlay_pixel_x
+	overlay.pixel_y = cy_overlay_pixel_y
+	if(cy_overlay_color)
+		overlay.color = cy_overlay_color
+	return overlay
 
 /obj/item/cy_vehicle_part/proc/cy_get_efficiency()
 	if(cy_broken || cy_part_max_integrity <= 0)

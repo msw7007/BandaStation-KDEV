@@ -203,7 +203,7 @@
 /mob/living/attackby(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(..())
 		return TRUE
-	user.changeNext_move(attacking_item.attack_speed)
+	user.changeNext_move(round(attacking_item.attack_speed * user.get_cy_weapon_cooldown_multiplier(attacking_item)))
 	return attacking_item.attack(src, user, modifiers, attack_modifiers)
 
 /mob/living/attackby_secondary(obj/item/weapon, mob/living/user, list/modifiers, list/attack_modifiers)
@@ -307,6 +307,8 @@
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	if(final_force <= 0)
 		return 0
+	if(user.has_cy_skill_perk_level(/datum/cy_skill/professional/construction, 4))
+		final_force *= 2
 
 	var/damage = take_damage(final_force, attacking_item.damtype, MELEE, 1, get_dir(src, user))
 	//only witnesses close by and the victim see a hit message.
@@ -345,6 +347,8 @@
 
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	final_force *= user.get_cy_weapon_damage_multiplier(attacking_item)
+	final_force *= user.get_cy_stat_weapon_damage_multiplier(attacking_item)
+	final_force *= get_cy_incoming_damage_multiplier()
 	if(user.is_cy_stealthing())
 		final_force *= 1 + CY_STEALTH_ATTACK_DAMAGE_BONUS
 	if(!cy_is_in_fov(user))
@@ -383,6 +387,7 @@
 	)
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
+	user.apply_cy_stat_weapon_onhit_effects(src, attacking_item, targeting, damage_done)
 	if(damage_done > 0)
 		user.award_cy_weapon_activity(attacking_item, max(1, round(damage_done * CY_WEAPON_SKILL_MELEE_EXPERIENCE_PER_DAMAGE, 1)))
 	user.reveal_cy_stealth("attack")

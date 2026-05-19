@@ -804,6 +804,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	//has our target been shoved recently? If so, they're staggered and we get an easy hit.
 	var/staggered = target.has_status_effect(/datum/status_effect/staggered)
+	var/power_melee_level = user.get_cy_skill_level(/datum/cy_skill/strength/power_melee)
+	var/target_was_stunned = target.IsStun()
 
 	//Someone in a grapple is much more vulnerable to being harmed by punches.
 	var/grappled = (target.pulledby && target.pulledby.grab_state >= GRAB_AGGRESSIVE)
@@ -818,11 +820,22 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	// Out athletics skill is used to set our potential base damage roll. It won't increase our potential damage roll, but will make our unarmed attack more consistent.
 	// For a normal human arm, this would cap at 10, and for a normal human leg, this would go up to 14.
 	lower_unarmed_damage =  min(lower_unarmed_damage + (user.get_cy_skill_level(/datum/cy_skill/spirit/athletics) || 0), upper_unarmed_damage)
+	if(!power_melee_level)
+		lower_unarmed_damage *= 0.9
+		upper_unarmed_damage *= 0.9
+	else if(power_melee_level >= 2)
+		upper_unarmed_damage += user.get_cy_stat(/datum/cy_stat/strength) * 0.5
 
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
+	damage *= target.get_cy_incoming_damage_multiplier()
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
+	var/precise_melee_level = user.get_cy_skill_level(/datum/cy_skill/perception/precise_melee)
+	if(!precise_melee_level)
+		limb_accuracy *= 0.9
+	else if(precise_melee_level >= 2)
+		limb_accuracy += user.get_cy_stat(/datum/cy_stat/perception) * 0.5
 	// Limb sharpness determines the type of wounds this unarmed strike could possibly roll. By default, most limbs are blunt and have no sharpness.
 	var/limb_sharpness = attacking_bodypart.unarmed_sharpness
 
@@ -934,6 +947,39 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	SEND_SIGNAL(target, COMSIG_HUMAN_GOT_PUNCHED, user, damage, attack_type, affecting, final_armor_block, kicking, limb_sharpness)
 	SEND_SIGNAL(user, COMSIG_HUMAN_PUNCHED, target, damage, attack_type, affecting, final_armor_block, kicking, limb_sharpness)
 
+	if(user != target && power_melee_level >= 4 && prob(25))
+		target.adjust_staggered_up_to(2 SECONDS * target.get_cy_stagger_duration_multiplier(), 10 SECONDS)
+
+	if(user != target && power_melee_level >= 5 && staggered && prob(50))
+		target.Stun(1.5 SECONDS)
+		target.visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [atk_verb] lands a stunning power hit on [target.declent_ru(ACCUSATIVE)]!"), \
+			span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] [atk_verb] you with a stunning power hit!"), span_hear("You hear a heavy stunning blow!"), COMBAT_MESSAGE_RANGE, user)
+		to_chat(user, span_danger("You hit the staggered target hard enough to stun [target.declent_ru(ACCUSATIVE)]!"))
+
+	if(user != target && power_melee_level >= 6 && target_was_stunned && prob(50))
+		target.Knockdown(3 SECONDS, daze_amount = 1 SECONDS)
+
+	var/fast_melee_level = user.get_cy_skill_level(/datum/cy_skill/dexterity/fast_melee)
+	if(user != target && fast_melee_level >= 3 && !kicking && prob(25))
+		target.adjust_stamina_loss(10 + fast_melee_level * 2)
+		target.apply_damage(3 + fast_melee_level, BRUTE, BODY_ZONE_CHEST)
+
+	if(user != target && fast_melee_level >= 6 && prob(kicking ? 10 : 25))
+		target.Stun(0.7 SECONDS)
+
+	if(user != target && precise_melee_level >= 3 && prob(30))
+		target.adjust_pain_loss(8 + precise_melee_level * 2, forced = TRUE)
+
+	if(user != target && precise_melee_level >= 4)
+		if(hit_zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG) && prob(50))
+			target.adjust_staggered_up_to(1.5 SECONDS * target.get_cy_stagger_duration_multiplier(), 6 SECONDS)
+		else if(hit_zone in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM) && prob(20))
+			target.adjust_stamina_loss(15)
+
+	if(user != target && precise_melee_level >= 5 && hit_zone == BODY_ZONE_HEAD && prob(30))
+		target.adjust_dizzy_up_to(4 SECONDS, 8 SECONDS)
+		target.adjust_confusion_up_to(4 SECONDS, 8 SECONDS)
+
 	// If our target is staggered and has sustained enough damage, we can apply a randomly determined status effect to inflict when we punch them.
 	// The effects are based on the punching effectiveness of our attacker. Some effects are not reachable by the average human, and require augmentation to reach or being a species with a heavy punch effectiveness.
 	// Or they're just drunk enough.
@@ -948,7 +994,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 /// Handles the stagger combo effect of our punch. Follows the same logic as the above proc, target is our owner, user is our attacker.
 /datum/species/proc/stagger_combo(mob/living/carbon/human/user, mob/living/carbon/human/target, atk_verb = "ударяет", limb_accuracy = 0, armor_block = 0)
 	// Randomly determines the effects of our punch. Limb accuracy is a bonus, armor block is a defense, attacker athletics provides a minor to significant bonus.
-	var/roll_them_bones = rand(-20, 20) + limb_accuracy - armor_block + ((user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics) / 2) || 0)
+	var/roll_them_bones = rand(-20, 20) + limb_accuracy - armor_block + ((user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics) / 2) || 0) + ((user.get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 2) || 0)
 
 	switch(roll_them_bones)
 		if (-INFINITY to 0) //Mostly a gimmie, this one just keeps them staggered briefly

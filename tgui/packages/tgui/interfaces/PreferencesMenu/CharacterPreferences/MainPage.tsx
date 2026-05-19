@@ -481,10 +481,11 @@ const CHARACTERISTIC_TOTAL_BUDGET =
   CHARACTERISTIC_BASE_VALUE * 7 + CHARACTERISTIC_POINT_BUDGET;
 const WEAPON_POINT_BUDGET = 8;
 const PROFESSIONAL_POINT_BUDGET = 8;
-const PERK_CHECK_BONUS_PER_LEVEL = 2;
-const PERK_EXPERIENCE_BONUS_PER_LEVEL = 5;
-const PERK_WORK_SPEED_BONUS_PER_LEVEL = 1;
-const PERK_QUALITY_BONUS_PER_LEVEL = 1;
+const WEAPON_DAMAGE_PER_LEVEL = 10;
+const WEAPON_COOLDOWN_PER_LEVEL = 5;
+const WEAPON_DEFENSE_BYPASS_PER_LEVEL = 5;
+const WEAPON_ACCURACY_PER_LEVEL = 3;
+const WEAPON_SPREAD_REDUCTION_PER_LEVEL = 8;
 
 const characteristicDefinitions = [
   {
@@ -622,18 +623,18 @@ const skillDefinitions = [
 ] as const;
 
 const weaponSkillDefinitions = [
-  { id: 'weapon_knives', label: 'Knives' },
-  { id: 'weapon_one_handed_chopping', label: 'One-handed chopping' },
-  { id: 'weapon_two_handed_chopping', label: 'Two-handed chopping' },
-  { id: 'weapon_one_handed_piercing', label: 'One-handed piercing' },
-  { id: 'weapon_two_handed_piercing', label: 'Two-handed piercing' },
-  { id: 'weapon_one_handed_slashing', label: 'One-handed slashing' },
-  { id: 'weapon_two_handed_slashing', label: 'Two-handed slashing' },
-  { id: 'weapon_one_handed_blunt', label: 'One-handed blunt' },
-  { id: 'weapon_two_handed_blunt', label: 'Two-handed blunt' },
-  { id: 'weapon_light_firearms', label: 'Light firearms' },
-  { id: 'weapon_medium_firearms', label: 'Medium firearms' },
-  { id: 'weapon_heavy_firearms', label: 'Heavy firearms' },
+  { id: 'weapon_knives', label: 'Knives', description: 'Knife and compact blade handling.' },
+  { id: 'weapon_one_handed_chopping', label: 'One-handed chopping', description: 'Axes, machetes and one-hand chopping weapons.' },
+  { id: 'weapon_two_handed_chopping', label: 'Two-handed chopping', description: 'Large axes and heavy two-hand chopping weapons.' },
+  { id: 'weapon_one_handed_piercing', label: 'One-handed piercing', description: 'One-hand spears, spikes and thrusting weapons.' },
+  { id: 'weapon_two_handed_piercing', label: 'Two-handed piercing', description: 'Polearms and heavy thrusting weapons.' },
+  { id: 'weapon_one_handed_slashing', label: 'One-handed slashing', description: 'Swords and one-hand cutting weapons.' },
+  { id: 'weapon_two_handed_slashing', label: 'Two-handed slashing', description: 'Large blades and two-hand cutting weapons.' },
+  { id: 'weapon_one_handed_blunt', label: 'One-handed blunt', description: 'Batons, clubs and one-hand impact weapons.' },
+  { id: 'weapon_two_handed_blunt', label: 'Two-handed blunt', description: 'Mauls, hammers and heavy impact weapons.' },
+  { id: 'weapon_light_firearms', label: 'Light firearms', description: 'Pistols, compact guns and light ranged frames.' },
+  { id: 'weapon_medium_firearms', label: 'Medium firearms', description: 'Carbines, rifles and medium ranged frames.' },
+  { id: 'weapon_heavy_firearms', label: 'Heavy firearms', description: 'Heavy guns and oversized ranged frames.' },
 ] as const;
 
 const professionalSkillDefinitions = [
@@ -751,22 +752,86 @@ function getUsedPoints(
   return keys.reduce((sum, key) => sum + getPreferenceNumber(preferences, key), 0);
 }
 
-function getPerkEffectText(level: number) {
+const statLinkedPerkEffects: Record<string, string[]> = {
+  power_melee: ['No -10% untrained punch-force penalty.', '+50% strength value for hand/implant punch force.', 'On hit or parry, adds equipment pressure equal to 25% strength.', 'On hit: 25% chance to stagger.', 'Hit staggered target: 50% chance to stun.', 'Hit stunned target: 50% chance to uppercut and knock down.'],
+  heavy_weapons: ['No -30% movement speed penalty with weapon in hands.', 'Melee/butt hits add +50% strength to force.', 'Weapon hit: 20% chance to break parry and deal direct damage.', 'Firearm deviation -30%; melee stamina cost -20%.', 'Weapon hits/throws gain +20% chance for tier-2 critical wound.', 'Heavy firearm move deviation down to 10%; melee weapons have 10% knockdown chance.'],
+  grappling: ['No +25% fall chance on failed grab.', 'Two-handed grabs unlock power moves.', 'Two-handed grabs add +50% strength to grappling level.', 'Grab use/strengthen costs less stamina.', 'One-hand pain lock; two-hand knockdown and longer body throws.', 'One-hand grabs stronger; body throws farther; two-hand grabbed target is staggered.'],
+  toughness: ['No +10% incoming damage penalty.', 'Internal organ health +20%.', 'Stagger duration -50%.', 'Limb critical-wound thresholds +20%.', 'Incoming grabs automatically lose 20% strength.', 'Incoming damage -20%.'],
+  fast_melee: ['No -10% untrained attack-speed penalty.', '+50% dexterity for hand/implant attack cooldown.', '25% chance for free kick after normal punch.', '25% counter-kick after successful dodge/parry.', 'After successful kick, hand cooldown -50%.', 'Normal hits 25% and kicks 10% chance to briefly stun.'],
+  light_weapons: ['No -30% reload speed and +20% energy-use penalty.', 'Melee/butt cooldown adds +50% dexterity.', '25% chance for free repeat shot or strike.', 'Hip-fire while running has no accuracy/spread penalty.', 'Reload/swap does not start cooldown for non-two-handed weapons.', 'Can attack and shoot during other long actions.'],
+  acrobatics: ['Sprint-jump unlocked.', 'Climb/vault long actions -25%.', 'Jump weakens grabs; jump/climb stamina cost -20%.', 'After acrobatics: +15% move speed for 30 seconds.', '+20% move speed; sprint-jump no longer overshoots.', 'Instant acrobatics; Z-level jump without fall damage.'],
+  evasion: ['No +10% balance-loss chance after successful dodge.', 'Successful dodge stamina -20%; failed dodge -10%.', 'Dodge success +15%.', '50% chance dodged grab makes attacker grab self.', 'Can dodge unseen attackers; successful dodge does not move you.', 'Successful dodge 20% hides you from attacker for 1s; can dodge throws/shots.'],
+  precise_melee: ['No -10% untrained hit accuracy penalty.', '+50% perception for hand/implant accuracy.', 'Hand hit: 30% chance for extra pain.', 'Leg hit 50% slow; arm hit 20% brief disable.', 'Head hit: 30% disorientation.', 'Limb proc chances +10%; torso hits can immobilize.'],
+  throwing: ['No -50% untrained throw accuracy penalty.', 'Throw accuracy +20%.', 'Aimed throw bonus works +5 tiles farther.', 'Aimed throw/charge time -25%.', '25% chance ammo/weapon is not spent or damaged.', 'Aimed throw can activate while moving.'],
+  weakspot_analysis: ['No +20% untrained critical-hit failure chance.', '10% chance hit becomes empowered for +20% final damage.', 'Unprotected-zone hit: 50% crushing and tier-1 crit apply/upgrade.', 'Any critical wound immobilizes target for 2s.', 'Empowered/crushing hits 30% ignore covering armor.', 'Crushing head hit 25% paralyzes for 2s.'],
+  concentration: ['No +10% weapon-loss/parry-failure chance.', 'Parry success +15%.', '20% chance parrying weapon is not damaged.', 'Dual-weapon parry loses -15% penalty.', 'Parry opens enemy defense; next hit guaranteed.', 'Clinch uses strength and perception for weapon throw distance.'],
+  improved_code: ['No -20% demon power penalty.', 'Demon power +30%.', 'Extra preparation adds up to +25% demon effectiveness.', '+20% chance for accompanying negative effect.', 'Demon critical success chance +25%.', 'Negative-effect chances and demon damage +50%.'],
+  fast_code: ['No -10% demon preparation speed penalty.', 'Demon preparation speed +20%.', 'Activated demon recovery -30%.', 'Successful demon: 25% chance next preparation -50%.', 'Failed demon: 30% chance cooldown resets.', 'Demon use: 25% chance next demon is instant.'],
+  hacking: ['No +10% hacking-chain break penalty.', 'Hacking-chain break chance -25%.', 'Hacking timer +30%.', 'Remote hacking unlocked.', 'Failure: 50% chance alarm does not trigger.', 'Successful hack: 10% instant-hack charge.'],
+  composure: ['No +10% repeated negative-status chance.', 'Negative status duration -20%.', 'Negative status: 10% chance +10% move for 5s.', 'Negative effects lose 20% effect and become 5% slowdown.', 'Negative effect efficiency -25%.', 'Full negative-effect block on cooldown.'],
+  survival: ['No +20% hunger/thirst/sleep rate penalty.', 'Food, water and sleep effectiveness +20%.', 'Sleepiness no longer slows.', 'Hunger and thirst advance 25% slower.', 'Hunger/thirst stat penalties only 50% effective.', 'Health and organs regenerate by themselves.'],
+  endurance: ['No -20% pain-collapse threshold penalty.', 'Pain-collapse threshold +30%.', '20% chance to ignore pain from damage.', 'Stagger/disorientation duration -50%.', 'Pain collapse becomes 2s immobilize.', 'Pain does not affect the character.'],
+  athletics: ['No +10% stamina cost for running/combat.', 'Stamina reserve +20%.', 'Heavy carry no longer slows movement.', '+20% sprint speed while stamina reserve >80%.', 'Reserve point restores 2-3 stamina if stamina <60%.', 'Stamina regeneration delay -70%.'],
+  compatibility: ['No +20% implant pain and 1% overload-per-minute penalty.', 'Implant reserve before pain +30%.', 'Implant overload effects -50%.', 'Implant effectiveness and power +30%.', 'Overflow causes slowdown instead of pain.', 'Implants do not cause pain.'],
+  stealth: ['No shadow-chameleon untrained penalty.', 'Move in shadow without losing 20% chameleon.', 'Chameleon strengthens to 60%.', 'Chameleon light threshold -50%; stealth movement faster.', 'Stealth attacks gain x1.5 multiplier.', 'Chameleon 90% shadow/70% light; can run in stealth.'],
+  theft: ['No automatic theft message to everyone in 1 tile.', 'Victim misses theft message: 50% shadow, 25% light.', 'Victim misses theft if perception < theft level x3.', 'Theft is instant.', 'Theft is possible while moving.', 'Can steal all equipment slots.'],
+  inspiration: ['Training/music effects no longer reduced to 50%.', 'Choose cohort affected by effects; max 2.', 'Effectiveness +25%; cohort size 3.', 'Cohort protection timer +20%; cohort size 4.', 'Cohort mood +20% max from effects; cohort size 6.', 'Affected characters do not lose consciousness; cohort size 8.'],
+  style: ['No 10% mood-loss chance from being watched/mirrored.', 'Observers gain +30% mood when looking at you.', 'Can see general mood.', 'Copied non-combat interaction gives +20% mood for 2m and need growth -50%.', 'Critical hits give observers mood and +25% damage if not harmed by you for 10m.', 'On damage, can blind target for 2s; can see mood reasons.'],
+};
+
+function getStatLinkedPerkTooltip(
+  skill: { id: string; label: string; description: string },
+  level: number,
+) {
+  const normalizedId = skill.id
+    .replace(/^combat_/, '')
+    .replace('intelligence_composure', 'composure');
+  const effect = statLinkedPerkEffects[normalizedId]?.[level - 1];
+  return {
+    title: `${skill.label}: ${skill.label} ${level}`,
+    body: `${skill.description} Perk level ${level}: ${effect || 'Branch perk is active for this level.'}`,
+  };
+}
+
+function getWeaponLevelEffectText(level: number) {
+  if (level <= 0) {
+    return 'No trained weapon bonus.';
+  }
   return [
-    `+${level * PERK_CHECK_BONUS_PER_LEVEL}% skill checks`,
-    `+${level * PERK_EXPERIENCE_BONUS_PER_LEVEL}% skill experience`,
-    `+${level * PERK_WORK_SPEED_BONUS_PER_LEVEL}% work speed`,
-    `+${level * PERK_QUALITY_BONUS_PER_LEVEL}% result quality`,
+    `+${level * WEAPON_DAMAGE_PER_LEVEL}% damage/stamina impact`,
+    `-${level * WEAPON_COOLDOWN_PER_LEVEL}% attack/fire delay`,
+    `+${level * WEAPON_DEFENSE_BYPASS_PER_LEVEL} armor penetration/bypass`,
+    `+${level * WEAPON_ACCURACY_PER_LEVEL} melee accuracy`,
+    `-${level * WEAPON_SPREAD_REDUCTION_PER_LEVEL}% firearm spread`,
   ].join(', ');
 }
 
-function getPerkTooltip(
-  skill: { label: string; description: string },
+const professionalPerkEffects: Record<string, Record<number, { name: string; effect: string }>> = {
+  professional_medicine: { 1: { name: 'Penalty removal', effect: 'Removes hidden examine-info penalty and +25% surgery failure penalty.' }, 2: { name: 'Surgery basics', effect: '+20% base surgery success, +15% surgery step speed.' }, 3: { name: 'Advanced operations', effect: 'Advanced surgeries unlocked at 50% failure risk; +20% surgery step speed.' }, 4: { name: 'Self surgeon', effect: '+30% total surgery success, self-surgery allowed, infection chance -25%.' }, 5: { name: 'Specialized operations', effect: 'Specialized surgeries unlocked; +20% base surgery success; environment no longer affects infection chance.' }, 6: { name: 'Clinical master', effect: 'Environment no longer affects surgery speed or failure chance; all tool compatibility +30%.' } },
+  professional_chemistry: { 1: { name: 'Penalty reduction', effect: 'Reduces untrained reaction drift from 4% to 2% per tick.' }, 2: { name: 'Identify basics', effect: 'Can identify simple chemicals and fully removes the untrained chemistry penalty.' }, 3: { name: 'Stable reaction', effect: 'Reaction temperature drift -5%, reaction speed +5%.' }, 4: { name: 'Smell compounds', effect: 'Can identify compound chemicals by smell; reaction speed +5%.' }, 5: { name: 'Purity read', effect: 'Can examine chemical purity; starting temperature drift -5%.' }, 6: { name: 'Master synthesis', effect: 'Critical mass explosion delayed by 10%; all chemicals gain +25% purity and effectiveness.' } },
+  professional_electricity: { 1: { name: 'Penalty removal', effect: 'Removes the rubber-glove shock penalty during electrical operations.' }, 2: { name: 'Shorter paralysis', effect: 'Electric shock paralysis is 2 seconds shorter.' }, 3: { name: 'Live wiring', effect: 'Live wire shock chance is reduced to 50%.' }, 4: { name: 'Grab safety', effect: '50% chance to avoid shock when grabbing or holding an electrocuted person.' }, 5: { name: 'Signal sight', effect: 'Signal types are highlighted when dismantling protected panels.' }, 6: { name: 'Insulation instinct', effect: 'Shock chance is reduced by 50% even without insulation.' } },
+  professional_construction: { 1: { name: 'Penalty removal', effect: 'Removes +30% construction/repair time penalty and -20% built-structure health penalty.' }, 2: { name: 'Fast repair', effect: 'Repair time -20%, construction speed +20%.' }, 3: { name: 'Sturdy build', effect: 'Built structure health +20%.' }, 4: { name: 'Demolition', effect: 'Attacks against structures deal +100% structure damage.' }, 5: { name: 'Reinforce', effect: 'Can reinforce structures for extra resources; 30% chance not to consume construction resource.' }, 6: { name: 'Salvage master', effect: 'Deconstructing structures has 30% chance to drop extra material.' } },
+  professional_invention: { 1: { name: 'Penalty removal', effect: 'Removes +30% creation/repair time penalty and -20% created-item health penalty.' }, 2: { name: 'No explosion', effect: 'Creation explosion chance reduced from 20% to 0%.' }, 3: { name: 'Fast teardown', effect: 'Disassembly speed +30%, assembly speed +10%.' }, 4: { name: 'Reconfigure', effect: 'Can reconfigure an item without dismantling it.' }, 5: { name: 'Strong assembly', effect: 'Assembly speed +30%, created item health +30%.' }, 6: { name: 'Free copy', effect: '4% chance to create a copy without spending resources; disassembly speed +40%.' } },
+  professional_analysis: { 1: { name: 'Penalty removal', effect: 'Removes +50% analysis time penalty and 25% result-skip chance.' }, 2: { name: 'Fast analysis', effect: 'Analysis speed +25%.' }, 3: { name: 'Material find', effect: 'Destroying an analyzed object has 20% chance to produce its material.' }, 4: { name: 'Deep material find', effect: 'Material chance rises to 50%; analysis speed +25%.' }, 5: { name: 'Recipe substitute', effect: 'Analyzed items can satisfy crafting ingredient requirements when their composition matches.' }, 6: { name: 'Blueprint extraction', effect: '20% chance to extract technology/blueprint from analyzed structures or items.' } },
+  professional_mining: { 1: { name: 'Penalty removal', effect: 'Removes +50% mining time penalty and +50% empty-yield penalty.' }, 2: { name: 'Faster mining', effect: 'Mining time -25%; pick pulls you to tile; drill starts faster.' }, 3: { name: 'Extra yield', effect: '2% empty-to-resource chance; 10% resource duplication chance.' }, 4: { name: 'Ore sense', effect: 'Can see ore richness; rich ore improves empty-yield conversion.' }, 5: { name: 'Richer yield', effect: '+1% base empty-to-resource chance; duplication rises to 25%.' }, 6: { name: 'Master extraction', effect: 'Mining time 25% of base; tools do not break; drill instant and uses 25% less energy.' } },
+  professional_driving: { 1: { name: 'Penalty removal', effect: 'Removes -25% vehicle movement speed penalty.' }, 2: { name: 'Basic control', effect: 'Reaction penalty to 25%; consumption penalty reduced by 10%.' }, 3: { name: 'Aux equipment', effect: 'Vehicles may mount additional equipment, up to 1 unit per component/mechanism slot.' }, 4: { name: 'Efficient overdrive', effect: 'No consumption penalty; maximum movement speed +25%.' }, 5: { name: 'Full reaction', effect: 'No reaction penalty; component/mechanism slot upgrades stack to 2.' }, 6: { name: 'Transport mastery', effect: 'Speed, maneuverability and brakes +20%; consumption -10%.' } },
+  professional_cooking: { 1: { name: 'Penalty removal', effect: 'Removes +30% cooking time penalty and +50% burn penalty; spoil penalty remains.' }, 2: { name: 'Quick prep', effect: 'Cooking time 75%; 15% chance for level-1 positive food effect.' }, 3: { name: 'Compatible ingredients', effect: 'Compatible ingredients can raise positive effect up to level 3 or spoil food.' }, 4: { name: 'Food reading', effect: 'Examine composition/spoil/effect; compatible ingredients reduce spoil chance by 30%.' }, 5: { name: 'Resource saver', effect: '10% chance not to consume resource; positive effect gains at least +1 level.' }, 6: { name: 'Effect gas', effect: 'Cooking time 20%; successful prep has 30% chance to release level-1 effect gas.' } },
+  professional_gardening: { 1: { name: 'Penalty removal', effect: 'Removes +30% seed-ruin penalty.' }, 2: { name: 'Fast germination', effect: 'Plant germination speed +15%.' }, 3: { name: 'Mutation paths', effect: 'Can see possible mutation paths for examined plant.' }, 4: { name: 'Better care', effect: 'Watering and feeding effectiveness +25%.' }, 5: { name: 'Extra harvest', effect: 'Harvesting leaf, fruit or stem has 20% chance for extra copy.' }, 6: { name: 'Mutation forecast', effect: 'Expected mutations show fruit/leaf/stem reagent contents in advance.' } },
+  professional_music: { 1: { name: 'Penalty removal', effect: 'Removes the untrained penalty: instrument play now creates weak mood around performer.' }, 2: { name: 'Strong mood', effect: 'Instrument play creates strong mood effect around performer.' }, 3: { name: 'Cohort buffs', effect: 'Can apply buffs to cohort members.' }, 4: { name: 'Weapon instrument', effect: 'Instrument can be used as a melee weapon.' }, 5: { name: 'Audience debuffs', effect: 'Can apply debuffs to non-cohort listeners.' }, 6: { name: 'Harmonic damage', effect: 'Can deal and heal damage with music.' } },
+};
+
+function getProfessionalPerkTooltip(
+  skill: { id: string; label: string; description: string },
   level: number,
 ) {
+  const specific = professionalPerkEffects[skill.id]?.[level];
+  const perk = specific;
   return {
-    title: `${skill.label} ${level}`,
-    body: `${skill.description} ${getPerkEffectText(level)}.`,
+    title: `${skill.label}: ${perk?.name || `Level ${level}`}`,
+    body: [
+      skill.description,
+      `Perk level ${level}: ${perk?.effect || 'Unlocks a concrete professional perk for this skill.'}`,
+    ].filter(Boolean).join(' '),
   };
 }
 
@@ -881,12 +946,16 @@ type SkillAdjustRowProps = {
   value: number;
   onMinus: () => void;
   onPlus: () => void;
+  onHover?: () => void;
+  onUnhover?: () => void;
 };
 
 function SkillAdjustRow(props: SkillAdjustRowProps) {
   return (
     <Stack align="center" g={1}>
-      <Stack.Item grow>{props.label}</Stack.Item>
+      <Stack.Item grow onMouseEnter={props.onHover} onMouseLeave={props.onUnhover}>
+        {props.label}
+      </Stack.Item>
       <Stack.Item bold color="label" width="1.4rem" textAlign="center">
         {props.value}
       </Stack.Item>
@@ -1065,9 +1134,26 @@ function CharacterStatsPanel() {
     setPreference(key, nextValue);
   };
 
+  const setBudgetSkillLevel = (
+    key: string,
+    nextValue: number,
+    keys: readonly string[],
+    budget: number,
+    maximum: number,
+  ) => {
+    const currentValue = getPreferenceNumber(preferences, key);
+    nextValue = Math.min(maximum, Math.max(0, nextValue));
+    const usedWithoutCurrent = getUsedPoints(preferences, keys) - currentValue;
+    if (nextValue === currentValue || usedWithoutCurrent + nextValue > budget) {
+      return;
+    }
+
+    setPreference(key, nextValue);
+  };
+
   const renderSkillList = (
     title: string,
-    definitions: readonly { id: string; label: string }[],
+    definitions: readonly { id: string; label: string; description?: string }[],
     keys: readonly string[],
     used: number,
     budget: number,
@@ -1084,16 +1170,27 @@ function CharacterStatsPanel() {
         }
       >
         <Stack vertical g={0.5}>
-          {definitions.map(({ id, label }) => (
-            <SkillAdjustRow
-              key={id}
-              label={label}
-              value={getPreferenceNumber(preferences, id)}
-              onMinus={() => adjustBudgetSkill(id, -1, keys, budget, maximum)}
-              onPlus={() => adjustBudgetSkill(id, 1, keys, budget, maximum)}
-            />
-          ))}
+          {definitions.map(({ id, label, description }) => {
+            const value = getPreferenceNumber(preferences, id);
+            return (
+              <SkillAdjustRow
+                key={id}
+                label={label}
+                value={value}
+                onMinus={() => adjustBudgetSkill(id, -1, keys, budget, maximum)}
+                onPlus={() => adjustBudgetSkill(id, 1, keys, budget, maximum)}
+                onHover={() =>
+                  setTooltipInfo({
+                    title: `${label} ${value}`,
+                    body: `${description || label} ${getWeaponLevelEffectText(value)}`,
+                  })
+                }
+                onUnhover={() => setTooltipInfo(null)}
+              />
+            );
+          })}
         </Stack>
+        <StatsTooltip info={tooltipInfo} />
       </Section>
     );
   };
@@ -1112,6 +1209,7 @@ function CharacterStatsPanel() {
     value: number,
     disabledForLevel: (level: number) => boolean,
     setLevel: (level: number) => void,
+    getTooltip: (skill: { id: string; label: string; description: string }, level: number) => TooltipInfo,
   ) => (
     <div key={skill.id} style={{ minWidth: 0, textAlign: 'center' }}>
       <Box
@@ -1153,7 +1251,7 @@ function CharacterStatsPanel() {
                 selected={selected}
                 disabled={!selected && disabledForLevel(level)}
                 onClick={() => setLevel(nextValue)}
-                onHover={() => setTooltipInfo(getPerkTooltip(skill, level))}
+                onHover={() => setTooltipInfo(getTooltip(skill, level))}
                 onUnhover={() => setTooltipInfo(null)}
               />
             </div>
@@ -1161,6 +1259,48 @@ function CharacterStatsPanel() {
         })}
       </div>
     </div>
+  );
+
+  const renderProfessionalHoneycombs = () => (
+    <Section
+      fill
+      title="Professional perks"
+      buttons={
+        <Box color={professionalUsed < PROFESSIONAL_POINT_BUDGET ? 'good' : 'average'}>
+          {PROFESSIONAL_POINT_BUDGET - professionalUsed}/{PROFESSIONAL_POINT_BUDGET}
+        </Box>
+      }
+    >
+      <div style={{ minHeight: '22rem', position: 'relative' }}>
+        <div
+          style={{
+            display: 'grid',
+            gap: '1.4rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(6.4rem, 1fr))',
+          }}
+        >
+          {professionalSkillDefinitions.map((skill) => {
+            const value = getPreferenceNumber(preferences, skill.id);
+            const usedWithoutCurrent = professionalUsed - value;
+            return renderPerkHoneycomb(
+              skill,
+              value,
+              (level) => usedWithoutCurrent + level > PROFESSIONAL_POINT_BUDGET,
+              (level) =>
+                setBudgetSkillLevel(
+                  skill.id,
+                  level,
+                  professionalSkillIds,
+                  PROFESSIONAL_POINT_BUDGET,
+                  6,
+                ),
+              getProfessionalPerkTooltip,
+            );
+          })}
+        </div>
+        <StatsTooltip info={tooltipInfo} />
+      </div>
+    </Section>
   );
 
   const selectedTitle = selectedCharacteristic?.label || 'Characteristics';
@@ -1248,8 +1388,8 @@ function CharacterStatsPanel() {
               </div>
             </Stack.Item>
             <Stack.Item>
-              <Stack align="stretch" g={1.25}>
-                <Stack.Item basis="50%">
+              <Stack vertical g={1.25}>
+                <Stack.Item>
                   {renderSkillList(
                     'Weapon mastery',
                     weaponSkillDefinitions,
@@ -1259,16 +1399,7 @@ function CharacterStatsPanel() {
                     6,
                   )}
                 </Stack.Item>
-                <Stack.Item basis="50%">
-                  {renderSkillList(
-                    'Professional',
-                    professionalSkillDefinitions,
-                    professionalSkillIds,
-                    professionalUsed,
-                    PROFESSIONAL_POINT_BUDGET,
-                    6,
-                  )}
-                </Stack.Item>
+                <Stack.Item>{renderProfessionalHoneycombs()}</Stack.Item>
               </Stack>
             </Stack.Item>
           </Stack>
@@ -1309,6 +1440,7 @@ function CharacterStatsPanel() {
                       (level) => usedWithoutCurrent + level > branchLimit,
                       (level) =>
                         setBranchSkillLevel(selectedCharacteristic, id, level),
+                      getStatLinkedPerkTooltip,
                     );
                   })}
                 </div>

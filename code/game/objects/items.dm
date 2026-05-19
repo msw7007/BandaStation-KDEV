@@ -2691,6 +2691,16 @@
 			if(module.cy_intent_damage_types && module.cy_intent_damage_types[intent])
 				profile["damage_type"] = module.cy_intent_damage_types[intent]
 	cy_style_tags = rebuilt_style_tags
+	update_appearance(UPDATE_OVERLAYS)
+
+/obj/item/update_overlays(updates = ALL)
+	. = ..()
+	if(cy_item_kind != CY_ITEM_KIND_MODULAR)
+		return
+	for(var/obj/item/cy_module/module as anything in cy_all_installed_modules())
+		var/mutable_appearance/module_overlay = module.cy_get_overlay_appearance(layer)
+		if(module_overlay)
+			. += module_overlay
 
 /obj/item/proc/cy_break_item(damage_flag)
 	if(cy_broken)
@@ -2885,6 +2895,22 @@
 	var/list/cy_intent_ap_mods
 	var/list/cy_intent_damage_types
 	var/obj/item/cy_installed_in
+	var/icon/cy_overlay_icon = 'icons/mob/rideables/vehicles.dmi'
+	var/cy_overlay_state = "clowncar"
+	var/cy_overlay_layer_offset = 0.01
+	var/cy_overlay_pixel_x = 0
+	var/cy_overlay_pixel_y = 0
+	var/cy_overlay_color
+
+/obj/item/cy_module/proc/cy_get_overlay_appearance(base_layer = OBJ_LAYER)
+	if(!cy_overlay_icon || !cy_overlay_state)
+		return null
+	var/mutable_appearance/overlay = mutable_appearance(cy_overlay_icon, cy_overlay_state, base_layer + cy_overlay_layer_offset)
+	overlay.pixel_x = cy_overlay_pixel_x
+	overlay.pixel_y = cy_overlay_pixel_y
+	if(cy_overlay_color)
+		overlay.color = cy_overlay_color
+	return overlay
 
 /obj/item/cy_module/proc/cy_is_compatible_with(obj/item/target, mob/user, messages = TRUE)
 	if(!target)

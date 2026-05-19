@@ -119,9 +119,37 @@
 /obj/vehicle/proc/get_cy_driver_skill_multiplier()
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
-		return 1
+		return 1.25
 	var/driving_skill = /datum/cy_skill/professional/driving
-	return max(0.65, 1 - driver.get_cy_skill_level(driving_skill) * CY_DRIVING_SKILL_SPEED_PER_LEVEL - driver.get_cy_skill_perk_work_speed_bonus(driving_skill) * 0.005)
+	switch(driver.get_cy_skill_level(driving_skill))
+		if(6 to INFINITY)
+			return 1 / 1.5
+		if(4 to 5)
+			return 1 / 1.25
+		if(1 to 3)
+			return 1
+	return 1.25
+
+/obj/vehicle/proc/get_cy_driver_transport_stat_multiplier()
+	var/mob/living/driver = get_cy_primary_driver()
+	if(!driver)
+		return 1
+	if(driver.get_cy_skill_level(/datum/cy_skill/professional/driving) >= 6)
+		return 1.2
+	return 1
+
+/obj/vehicle/proc/get_cy_driver_consumption_multiplier()
+	var/mob/living/driver = get_cy_primary_driver()
+	if(!driver)
+		return 1.2
+	var/skill_level = driver.get_cy_skill_level(/datum/cy_skill/professional/driving)
+	if(skill_level >= 6)
+		return 0.9
+	if(skill_level >= 4)
+		return 1
+	if(skill_level >= 2)
+		return 1.1
+	return 1.2
 
 /obj/vehicle/proc/award_cy_driver_experience(amount = CY_DRIVING_SKILL_EXPERIENCE_PER_MOVE)
 	var/mob/living/driver = get_cy_primary_driver()

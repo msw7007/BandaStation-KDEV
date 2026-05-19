@@ -152,12 +152,12 @@ GLOBAL_LIST_INIT(cy_professional_skill_types, list(
 
 /datum/cy_skill/professional/driving
 	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/professional/apprentice),
-		"2" = list(/datum/cy_skill_perk/professional/journeyman),
-		"3" = list(/datum/cy_skill_perk/professional/driving/reliable),
-		"4" = list(/datum/cy_skill_perk/professional/specialist),
-		"5" = list(/datum/cy_skill_perk/professional/expert),
-		"6" = list(/datum/cy_skill_perk/professional/driving/master),
+		"1" = list(/datum/cy_skill_perk/professional/driving/level_1),
+		"2" = list(/datum/cy_skill_perk/professional/driving/level_2),
+		"3" = list(/datum/cy_skill_perk/professional/driving/level_3),
+		"4" = list(/datum/cy_skill_perk/professional/driving/level_4),
+		"5" = list(/datum/cy_skill_perk/professional/driving/level_5),
+		"6" = list(/datum/cy_skill_perk/professional/driving/level_6),
 	)
 
 /datum/cy_skill/professional/cooking
