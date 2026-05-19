@@ -63,8 +63,7 @@
 /mob/living/carbon/human/proc/process_cy_character_progression(seconds_per_tick)
 	if(!client || stat != CONSCIOUS || IsSleeping())
 		return
-	var/mood_multiplier = mob_mood?.get_cy_training_experience_multiplier() || 1
-	process_cy_awake_training_experience(seconds_per_tick, mood_multiplier)
+	process_cy_awake_training_experience(seconds_per_tick, get_cy_experience_context_multiplier())
 
 /mob/living/carbon/human/proc/handle_needs(seconds_per_tick)
 	if(!HAS_TRAIT(src, TRAIT_NOHUNGER))

@@ -31,6 +31,8 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 
 	///The time between being able to use boo(), if fun_verbs is TRUE.
 	COOLDOWN_DECLARE(bootime)
+	///The time between weak IC traces left by this ghost.
+	COOLDOWN_DECLARE(cy_trace_time)
 	///Boolean on whether this ghost has access to 'fun' verbs in the ghost menu.
 	var/fun_verbs = FALSE
 
@@ -51,6 +53,10 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 	var/facial_hairstyle
 	var/facial_hair_color
 	var/mutable_appearance/facial_hair_overlay
+	///A faded copy of the living body's appearance used by CP ghosts.
+	var/mutable_appearance/cy_copied_body_appearance
+	///Name carried by weak ghost traces.
+	var/cy_body_trace_name
 
 	var/updatedir = 1 //Do we have to update our dir as the ghost moves around?
 	var/lastsetting = null //Stores the last setting that ghost_others was set to, for a little more efficiency when we update ghost images. Null means no update is necessary
@@ -103,6 +109,9 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 		else
 			name = body.real_name || generate_random_mob_name(gender)
 
+		cy_body_trace_name = body.real_name || body.name
+		cy_copied_body_appearance = new(body.appearance)
+		photo_description = "You can also see a faded trace of [cy_body_trace_name]."
 
 		mind = body.mind //we don't transfer the mind but we keep a reference to it.
 
@@ -175,6 +184,8 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 
 	GLOB.ghost_images_simple -= ghostimage_simple
 	ghostimage_simple = null
+	cy_copied_body_appearance = null
+	cy_body_trace_name = null
 
 	updateallghostimages()
 
@@ -234,6 +245,19 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 				hair_overlay.alpha = 200
 				hair_overlay.pixel_z = S.y_offset
 				add_overlay(hair_overlay)
+
+	apply_cy_body_ghost_appearance()
+
+/mob/dead/observer/proc/apply_cy_body_ghost_appearance()
+	if(!cy_copied_body_appearance)
+		return FALSE
+	appearance = cy_copied_body_appearance
+	alpha = 135
+	plane = GHOST_PLANE
+	layer = initial(layer)
+	invisibility = GLOB.observer_default_invisibility
+	density = FALSE
+	return TRUE
 
 /*
  * Increase the brightness of a color and desaturates it slightly to make it suitable for ghosts
@@ -703,6 +727,22 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	if(L?.flicker())
 		COOLDOWN_START(src, bootime, 60 SECONDS)
 	//Maybe in the future we can add more <i>spooky</i> code here!
+
+/mob/dead/observer/verb/cy_leave_faint_trace()
+	set category = "IC"
+	set name = "Leave Faint Trace"
+
+	if(!COOLDOWN_FINISHED(src, cy_trace_time))
+		to_chat(src, span_notice("You cannot disturb the living world again yet."))
+		return
+
+	var/trace_text = "A faint chill runs through the air."
+	if(cy_body_trace_name)
+		trace_text = "A faint chill carries a trace of [cy_body_trace_name]."
+	for(var/mob/living/listener in viewers(3, src))
+		to_chat(listener, span_notice(trace_text))
+	COOLDOWN_START(src, cy_trace_time, 90 SECONDS)
+	to_chat(src, span_notice("You leave a weak trace in the living world."))
 
 /mob/dead/observer/update_sight()
 	if(client)

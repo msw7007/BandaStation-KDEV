@@ -585,6 +585,10 @@
 	if((HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE) || HAS_TRAIT(src, TRAIT_INVISIBLE_MAN)) && !isobserver(user))
 		return
 
+	if(isliving(user))
+		for(var/cy_style_line in get_cy_style_examine_lines(user))
+			. += span_notice(cy_style_line)
+
 	if(ishuman(user) && get_dist(user, src) <= CY_MEDICAL_EXAMINE_CLOSE_RANGE)
 		var/mob/living/carbon/human/human_user = user
 		var/medicine_level = human_user.get_cy_skill_level(/datum/cy_skill/professional/medicine) || CY_SKILL_LEVEL_UNTRAINED

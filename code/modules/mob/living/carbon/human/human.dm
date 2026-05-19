@@ -40,6 +40,7 @@
 	RegisterSignal(src, COMSIG_MOB_ITEM_ATTACK, PROC_REF(on_cy_story_item_attack))
 	RegisterSignal(src, COMSIG_LIVING_UNARMED_ATTACK, PROC_REF(on_cy_story_unarmed_attack))
 	RegisterSignal(src, COMSIG_ENTER_AREA, PROC_REF(on_cy_enter_area_audit))
+	add_fov_trait("cy_default_fov", FOV_270_DEGREES)
 
 /mob/living/carbon/human/proc/setup_physiology()
 	physiology = new()

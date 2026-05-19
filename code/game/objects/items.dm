@@ -2435,7 +2435,7 @@
 		value += cy_quality - CY_QUALITY_AVERAGE
 	if(cy_broken)
 		value = round(value * 0.25)
-	return max(0, value)
+	return clamp(value, -10, 10)
 
 /obj/item/proc/get_cy_style_tags()
 	if(!cy_style_tags)

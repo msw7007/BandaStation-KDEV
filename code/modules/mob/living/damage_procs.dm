@@ -59,6 +59,8 @@
 		damage_amount *= get_incoming_damage_modifier(damage_amount, damagetype, def_zone, sharpness, attack_direction, attacking_item)
 	if(damage_amount <= 0)
 		return 0
+	if(!forced)
+		wound_bonus += get_cy_wound_bonus_modifier(damagetype)
 
 	SEND_SIGNAL(src, COMSIG_MOB_APPLY_DAMAGE, damage_amount, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
 
@@ -154,7 +156,93 @@
 			damage_dealt = -1 * adjust_organ_loss(ORGAN_SLOT_BRAIN, damage_amount)
 
 	SEND_SIGNAL(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, damage_dealt, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
+	if(damage_dealt > 0)
+		apply_cy_damage_pain(damage_dealt, damagetype, def_zone, forced)
+		apply_cy_damage_organ_effects(damage_dealt, damagetype, def_zone, forced)
 	return damage_dealt
+
+/mob/living/proc/get_cy_wound_bonus_modifier(damagetype)
+	var/modifier = 0
+	if(damagetype in list(BRUTE, BLUNT, PIERCE, SLASH, BURN, FIRE, COLD, ACID_DAMAGE))
+		if(!get_cy_skill_level(/datum/cy_skill/strength/toughness))
+			modifier += 10
+		if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 5))
+			modifier -= body_position == LYING_DOWN ? 10 : 20
+	return modifier
+
+/mob/living/proc/get_cy_damage_pain_multiplier(damagetype)
+	switch(damagetype)
+		if(BLUNT)
+			return 1.25
+		if(PIERCE)
+			return 1
+		if(SLASH)
+			return 0.8
+		if(BURN)
+			return 1.2
+		if(FIRE)
+			return 1.2
+		if(COLD)
+			return 0.7
+		if(ACID_DAMAGE)
+			return 1.4
+	return 0
+
+/mob/living/proc/apply_cy_damage_pain(damage_dealt, damagetype, def_zone = null, forced = FALSE)
+	if(damage_dealt <= 0 || damagetype == PAIN || stat == DEAD)
+		return 0
+	var/pain_multiplier = get_cy_damage_pain_multiplier(damagetype)
+	if(!pain_multiplier)
+		return 0
+	var/pain_amount = round(damage_dealt * pain_multiplier, DAMAGE_PRECISION)
+	if(pain_amount <= 0)
+		return 0
+	if(isbodypart(def_zone))
+		var/obj/item/bodypart/actual_hit = def_zone
+		actual_hit.adjust_pain_damage(pain_amount)
+		adjust_pain_loss(pain_amount * 0.1, updating_health = FALSE, forced = forced)
+		return pain_amount
+	adjust_pain_loss(pain_amount, updating_health = FALSE, forced = forced)
+	return pain_amount
+
+/mob/living/proc/apply_cy_damage_organ_effects(damage_dealt, damagetype, def_zone = null, forced = FALSE)
+	if(damage_dealt <= 0 || forced || stat == DEAD || !iscarbon(src))
+		return 0
+	var/hit_zone = def_zone
+	if(isbodypart(def_zone))
+		var/obj/item/bodypart/actual_hit = def_zone
+		hit_zone = actual_hit.body_zone
+
+	var/organ_damage = 0
+	switch(damagetype)
+		if(BLUNT)
+			organ_damage = damage_dealt * 0.1
+			if(hit_zone == BODY_ZONE_HEAD)
+				adjust_organ_loss(ORGAN_SLOT_BRAIN, organ_damage * 0.6, required_organ_flag = ORGAN_ORGANIC)
+				return organ_damage
+			if(hit_zone == BODY_ZONE_CHEST)
+				adjust_organ_loss(pick(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_LIVER, ORGAN_SLOT_STOMACH), organ_damage, required_organ_flag = ORGAN_ORGANIC)
+				return organ_damage
+		if(PIERCE)
+			if(hit_zone == BODY_ZONE_HEAD)
+				organ_damage = damage_dealt * 0.12
+				adjust_organ_loss(ORGAN_SLOT_BRAIN, organ_damage, required_organ_flag = ORGAN_ORGANIC)
+				return organ_damage
+			if(hit_zone == BODY_ZONE_CHEST && prob(min(60, damage_dealt * 2)))
+				organ_damage = damage_dealt * 0.15
+				adjust_organ_loss(pick(ORGAN_SLOT_LUNGS, ORGAN_SLOT_HEART, ORGAN_SLOT_LIVER), organ_damage, required_organ_flag = ORGAN_ORGANIC)
+				return organ_damage
+		if(SLASH)
+			if(hit_zone == BODY_ZONE_CHEST && prob(min(35, damage_dealt)))
+				organ_damage = damage_dealt * 0.08
+				adjust_organ_loss(pick(ORGAN_SLOT_LUNGS, ORGAN_SLOT_LIVER, ORGAN_SLOT_STOMACH), organ_damage, required_organ_flag = ORGAN_ORGANIC)
+				return organ_damage
+		if(ACID_DAMAGE)
+			if(hit_zone == BODY_ZONE_HEAD)
+				organ_damage = damage_dealt * 0.05
+				adjust_organ_loss(ORGAN_SLOT_EYES, organ_damage, required_organ_flag = ORGAN_ORGANIC)
+				return organ_damage
+	return 0
 
 /**
  * Used in tandem with [/mob/living/proc/apply_damage] to calculate modifier applied into incoming damage

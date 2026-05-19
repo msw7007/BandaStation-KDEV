@@ -225,6 +225,9 @@
 	if(!is_valid_skill(skill_type) || !amount)
 		return 0
 
+	if(isliving(owner))
+		var/mob/living/living_owner = owner
+		amount *= living_owner.get_cy_experience_context_multiplier()
 	amount = round(amount * get_experience_multiplier())
 	if(!amount)
 		return 0
@@ -333,6 +336,9 @@
 
 	var/base_experience = CY_SKILL_CHECK_EXPERIENCE_BASE + max(0, round(difficulty / CY_SKILL_CHECK_EXPERIENCE_DIFFICULTY_DIVISOR))
 	base_experience *= success ? CY_SKILL_CHECK_EXPERIENCE_SUCCESS_MULTIPLIER : CY_SKILL_CHECK_EXPERIENCE_FAILURE_MULTIPLIER
+	if(isliving(owner))
+		var/mob/living/living_owner = owner
+		base_experience *= living_owner.get_cy_experience_context_multiplier()
 	base_experience = modify_experience_gain_by_perks(skill_type, base_experience)
 
 	return max(1, round(base_experience))

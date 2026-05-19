@@ -277,6 +277,8 @@
 	//deduct money from person
 	if(!discountless && account.account_job?.paycheck_department == payment_department)
 		price_to_use = max(round(price_to_use * DEPARTMENT_DISCOUNT), 1) //No longer free, but signifigantly cheaper.
+	if(!discountless && istype(mob_paying))
+		price_to_use = max(round(price_to_use * mob_paying.get_cy_market_style_discount_multiplier()), 1)
 	if(attempt_charge(src, mob_paying, price_to_use) & COMPONENT_OBJ_CANCEL_CHARGE)
 		speak("You do not possess the funds to purchase [product_to_vend.name].")
 		flick(icon_deny,src)
