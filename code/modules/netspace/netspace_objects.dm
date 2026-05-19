@@ -391,7 +391,9 @@
 		return FALSE
 	user.cy_add_net_data(-cost)
 	cooldown_until = world.time + CY_NET_TERMINAL_COMPILE_COOLDOWN
-	user.cy_get_active_cyberdeck()?.grant_demon_actions(user)
+	var/obj/item/clothing/gloves/cyberdeck/cyberdecka = user.cy_get_active_cyberdeck()
+	if(cyberdecka)
+		cyberdecka?.grant_demon_actions(user)
 	to_chat(user, span_notice("[src] rewrites [demon.name]."))
 	return TRUE
 
