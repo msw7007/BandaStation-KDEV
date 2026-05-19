@@ -151,9 +151,9 @@
 
 #ifdef LOWMEMORYMODE
 #ifndef ABSOLUTE_MINIMUM
-#define FORCE_MAP "cyberpunk_test"
+#define FORCE_MAP "runtimestation"//"cyberpunk_test"
 #else
-#define FORCE_MAP "cyberpunk_test"
+#define FORCE_MAP "runtimestation"//"cyberpunk_test"
 #endif
 #define FORCE_MAP_DIRECTORY "_maps"
 #endif
