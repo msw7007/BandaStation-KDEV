@@ -255,6 +255,9 @@ handles linking back and forth.
 
 	return amount_consumed
 
+/datum/remote_materials/proc/cy_peek_quality_for_materials(list/mats, coefficient = 1, multiplier = 1)
+	return mat_container?.cy_peek_quality_for_materials(mats, coefficient, multiplier) || CY_QUALITY_AVERAGE
+
 /**
  * Ejects the given material ref and logs it
  *

@@ -791,3 +791,73 @@
 	desc = "A jagged sawblade built for grisly work."
 	w_class = WEIGHT_CLASS_SMALL
 	toolspeed = 0.5
+
+// CYBERPUNK 13 FREE MEDICAL CORE START
+/obj/item/proc/cy_try_free_medical_treatment(atom/interacting_with, mob/living/user)
+	if(!ishuman(interacting_with) || !isliving(user) || user.combat_mode)
+		return FALSE
+	var/mob/living/carbon/human/patient = interacting_with
+	var/medicine_level = user.get_cy_medicine_skill_level()
+	var/action_time = max(0.5 SECONDS, (3 SECONDS - (medicine_level * 0.25 SECONDS)) * toolspeed)
+	var/obj/item/bodypart/selected_limb = patient.get_bodypart(user.zone_selected)
+	switch(tool_behaviour)
+		if(TOOL_HEMOSTAT)
+			if(patient.get_bleed_rate() <= 0)
+				return FALSE
+			user.visible_message(span_notice("[user] clamps bleeding vessels on [patient]."), span_notice("You clamp bleeding vessels on [patient]."))
+			if(!do_after(user, action_time, target = patient))
+				return TRUE
+			for(var/obj/item/bodypart/limb as anything in patient.get_bodyparts())
+				for(var/datum/wound/wound as anything in limb.wounds)
+					if(hascall(wound, "adjust_blood_flow"))
+						call(wound, "adjust_blood_flow")(-0.75)
+				limb.refresh_bleed_rate()
+			return TRUE
+		if(TOOL_CAUTERY)
+			if(!selected_limb || (selected_limb.get_burn_damage() <= 0 && selected_limb.get_brute_damage() <= 0))
+				return FALSE
+			user.visible_message(span_notice("[user] seals damaged tissue on [patient]."), span_notice("You seal damaged tissue on [patient]."))
+			if(!do_after(user, action_time, target = patient))
+				return TRUE
+			selected_limb.heal_damage(2, 6, forced = TRUE)
+			selected_limb.refresh_bleed_rate()
+			return TRUE
+		if(TOOL_BONESET)
+			if(!selected_limb || selected_limb.get_brute_damage() <= 0)
+				return FALSE
+			user.visible_message(span_notice("[user] sets damaged bones on [patient]."), span_notice("You set damaged bones on [patient]."))
+			if(!do_after(user, action_time, target = patient))
+				return TRUE
+			selected_limb.heal_damage(8, 0, forced = TRUE, blunt = 8)
+			return TRUE
+		if(TOOL_BLOODFILTER)
+			if(patient.get_tox_loss() <= 0 && !patient.get_organ_loss(ORGAN_SLOT_LIVER))
+				return FALSE
+			user.visible_message(span_notice("[user] filters toxins from [patient]'s blood."), span_notice("You filter toxins from [patient]'s blood."))
+			if(!do_after(user, action_time, target = patient))
+				return TRUE
+			patient.adjust_tox_loss(-8, forced = TRUE)
+			patient.adjust_organ_loss(ORGAN_SLOT_LIVER, -4, required_organ_flag = ORGAN_ORGANIC)
+			return TRUE
+	return FALSE
+
+/obj/item/hemostat/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(cy_try_free_medical_treatment(interacting_with, user))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/cautery/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(cy_try_free_medical_treatment(interacting_with, user))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/bonesetter/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(cy_try_free_medical_treatment(interacting_with, user))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/blood_filter/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(cy_try_free_medical_treatment(interacting_with, user))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+// CYBERPUNK 13 FREE MEDICAL CORE END

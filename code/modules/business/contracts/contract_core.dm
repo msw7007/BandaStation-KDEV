@@ -128,6 +128,12 @@
 	if(customer_business)
 		if(!customer_business.reserve_payment(total, "Contract [name] reserve"))
 			return FALSE
+	var/datum/bank_account/government = SSeconomy?.cy_get_government_account()
+	if(government && reserved_tax > 0)
+		government.adjust_money(reserved_tax, "Contract [name] tax reserve")
+	var/datum/bank_account/market = SSeconomy?.cy_get_city_account(CY_ACCOUNT_CIV_MARKET)
+	if(market && service_fee > 0)
+		market.adjust_money(service_fee, "Contract [name] service fee")
 	reserved_payment = payment_amount
 	return TRUE
 

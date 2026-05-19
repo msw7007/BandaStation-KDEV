@@ -184,6 +184,29 @@
 		var/datum/wound/loss/dismembering = new
 		return dismembering.apply_dismember(src, wounding_type)
 
+/mob/living/carbon/proc/cy_mark_lost_limb_equipment(body_zone, atom/drop_loc)
+	var/list/slots_to_check = list()
+	switch(body_zone)
+		if(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM)
+			slots_to_check = list(ITEM_SLOT_GLOVES, ITEM_SLOT_ICLOTHING, ITEM_SLOT_OCLOTHING)
+		if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
+			slots_to_check = list(ITEM_SLOT_FEET, ITEM_SLOT_ICLOTHING, ITEM_SLOT_OCLOTHING)
+		if(BODY_ZONE_HEAD)
+			slots_to_check = list(ITEM_SLOT_HEAD, ITEM_SLOT_MASK, ITEM_SLOT_EYES, ITEM_SLOT_EARS)
+	if(!length(slots_to_check))
+		return
+	for(var/slot in slots_to_check)
+		var/obj/item/worn = get_item_by_slot(slot)
+		if(!worn)
+			continue
+		var/coverage = worn.cy_body_zone_coverage_flags(body_zone)
+		if(!(worn.body_parts_covered & coverage))
+			continue
+		worn.cy_expose_body_zone(body_zone)
+		if(slot in list(ITEM_SLOT_GLOVES, ITEM_SLOT_FEET))
+			worn.cy_spawn_lost_equipment_piece(body_zone, drop_loc)
+	refresh_obscured()
+
 /obj/item/bodypart/chest/drop_limb(special, dismembered, move_to_floor = TRUE)
 	if(special)
 		return ..()
@@ -192,6 +215,7 @@
 
 /obj/item/bodypart/arm/drop_limb(special, dismembered, move_to_floor = TRUE)
 	var/mob/living/carbon/arm_owner = owner
+	var/lost_zone = body_zone
 	if(special || !arm_owner)
 		return ..()
 	if(arm_owner.hand_bodyparts[held_index] == src)
@@ -206,17 +230,21 @@
 	if(arm_owner.hud_used)
 		var/atom/movable/screen/inventory/hand/associated_hand = arm_owner.hud_used.hand_slots[held_index]
 		associated_hand?.update_appearance()
+	arm_owner.cy_mark_lost_limb_equipment(lost_zone, arm_owner.drop_location())
 	if(arm_owner.num_hands == 0)
 		arm_owner.dropItemToGround(arm_owner.gloves, force = TRUE)
 	arm_owner.update_worn_gloves() //to remove the bloody hands overlay
 
 /obj/item/bodypart/leg/drop_limb(special, dismembered, move_to_floor = TRUE)
 	var/mob/living/carbon/leg_owner = owner
+	var/lost_zone = body_zone
 	. = ..()
 	if(special || !leg_owner)
 		return
 	leg_owner.dropItemToGround(leg_owner.legcuffed, force = TRUE)
-	leg_owner.dropItemToGround(leg_owner.shoes, force = TRUE)
+	leg_owner.cy_mark_lost_limb_equipment(lost_zone, leg_owner.drop_location())
+	if(!leg_owner.get_bodypart(BODY_ZONE_L_LEG) && !leg_owner.get_bodypart(BODY_ZONE_R_LEG))
+		leg_owner.dropItemToGround(leg_owner.shoes, force = TRUE)
 
 /obj/item/bodypart/head/drop_limb(special, dismembered, move_to_floor = TRUE)
 	if(!special)

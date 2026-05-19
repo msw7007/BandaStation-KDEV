@@ -12,6 +12,7 @@ SUBSYSTEM_DEF(cy_business)
 	var/list/open_contracts = list()
 	var/list/business_zones = list()
 	var/list/contract_ledger = list()
+	var/list/warehouses = list()
 
 /datum/controller/subsystem/cy_business/Initialize()
 	return SS_INIT_SUCCESS
@@ -22,6 +23,7 @@ SUBSYSTEM_DEF(cy_business)
 	open_contracts = SScy_business.open_contracts
 	business_zones = SScy_business.business_zones
 	contract_ledger = SScy_business.contract_ledger
+	warehouses = SScy_business.warehouses
 	next_business_id = SScy_business.next_business_id
 	next_contract_id = SScy_business.next_contract_id
 
@@ -48,6 +50,18 @@ SUBSYSTEM_DEF(cy_business)
 	business_zones -= zone
 	return TRUE
 
+/datum/controller/subsystem/cy_business/proc/register_warehouse(obj/structure/cy_business_warehouse/warehouse)
+	if(!warehouse)
+		return FALSE
+	warehouses |= warehouse
+	return TRUE
+
+/datum/controller/subsystem/cy_business/proc/unregister_warehouse(obj/structure/cy_business_warehouse/warehouse)
+	if(!warehouse)
+		return FALSE
+	warehouses -= warehouse
+	return TRUE
+
 /datum/controller/subsystem/cy_business/proc/register_business(datum/cy_business/business)
 	if(!business)
 		return FALSE
@@ -66,6 +80,16 @@ SUBSYSTEM_DEF(cy_business)
 	if(istype(business_id, /datum/cy_business))
 		return business_id
 	return businesses_by_id["[business_id]"]
+
+/datum/controller/subsystem/cy_business/proc/get_user_businesses(mob/user)
+	var/list/result = list()
+	if(!user?.ckey)
+		return result
+	for(var/business_id in businesses_by_id)
+		var/datum/cy_business/business = businesses_by_id[business_id]
+		if(business?.can_manage(user) || business?.has_employee(user))
+			result += business
+	return result
 
 /datum/controller/subsystem/cy_business/proc/create_business(name, owner_ckey, obj/structure/cy_business_zone/zone, legal_status = CY_BUSINESS_LEGAL, business_type = "general")
 	if(!zone || zone.active_business)
@@ -119,3 +143,32 @@ SUBSYSTEM_DEF(cy_business)
 	open_contracts -= contract.contract_id
 	contract_ledger += list(contract.to_list())
 	return TRUE
+
+/datum/controller/subsystem/cy_business/proc/route_warehouse_item(business_id, corporation_id, obj/item/item)
+	if(!item)
+		return FALSE
+	var/datum/cy_business/business = get_business(business_id)
+	if(!business)
+		return FALSE
+	for(var/obj/structure/cy_business_warehouse/warehouse as anything in warehouses)
+		if(!warehouse || warehouse.business_id != business.business_id || !warehouse.corporation_id)
+			continue
+		if(warehouse.can_accept_item(item, corporation_id))
+			return warehouse.store_item(item)
+	if(!business.cy_can_accept_corporate_storage(corporation_id, item))
+		return FALSE
+	for(var/obj/structure/cy_business_warehouse/warehouse as anything in warehouses)
+		if(!warehouse || warehouse.business_id != business.business_id || warehouse.corporation_id || !warehouse.allow_business_fallback)
+			continue
+		if(warehouse.can_accept_item(item, corporation_id))
+			return warehouse.store_item(item)
+	return FALSE
+
+/datum/controller/subsystem/cy_business/proc/get_warehouse_ui_data(datum/cy_business/business)
+	var/list/result = list()
+	if(!business)
+		return result
+	for(var/obj/structure/cy_business_warehouse/warehouse as anything in warehouses)
+		if(warehouse?.business_id == business.business_id)
+			result += list(warehouse.to_ui_data())
+	return result

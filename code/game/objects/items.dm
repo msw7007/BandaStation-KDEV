@@ -2305,6 +2305,10 @@
 	var/cy_base_attack_speed = null
 	var/cy_base_block_chance = null
 	var/cy_base_armour_penetration = null
+	var/cy_base_slot_flags = null
+	var/cy_base_body_parts_covered = null
+	var/cy_base_heat_protection = null
+	var/cy_base_cold_protection = null
 
 	/// intent => list(force_mult, accuracy_mod, speed_mult, guard_mod, ap_mod, damage_type)
 	var/list/cy_attack_profiles
@@ -2316,6 +2320,7 @@
 	var/cy_armor_class = 0
 	var/cy_integrity_transfer = 1
 	var/list/cy_damage_absorption
+	var/list/cy_exposed_body_zones
 
 	/// Item breaks first. Further damage destroys it unless this is protected.
 	var/cy_broken = FALSE
@@ -2324,6 +2329,7 @@
 
 	/// Optional structure produced when this item is unfolded/deployed/converted.
 	var/cy_structure_type
+	var/cy_equipment_slot_flags = NONE
 
 	/// Shared quality tier for CyberPunk crafting chains. 1 awful, 5 excellent.
 	var/cy_quality = CY_QUALITY_AVERAGE
@@ -2353,6 +2359,14 @@
 		cy_base_block_chance = block_chance
 	if(isnull(cy_base_armour_penetration))
 		cy_base_armour_penetration = armour_penetration
+	if(isnull(cy_base_slot_flags))
+		cy_base_slot_flags = slot_flags
+	if(isnull(cy_base_body_parts_covered))
+		cy_base_body_parts_covered = body_parts_covered
+	if(isnull(cy_base_heat_protection))
+		cy_base_heat_protection = heat_protection
+	if(isnull(cy_base_cold_protection))
+		cy_base_cold_protection = cold_protection
 
 	if(isnull(cy_attack_type))
 		cy_attack_type = damtype
@@ -2549,6 +2563,22 @@
 /obj/item/proc/cy_has_module_slot(slot)
 	return length(cy_get_modules_in_slot(slot)) > 0
 
+/obj/item/proc/cy_is_equipment_module_slot(slot)
+	return slot in list(
+		CY_MODULE_SLOT_EQUIPMENT_BASE,
+		CY_MODULE_SLOT_EQUIPMENT_MATERIAL,
+		CY_MODULE_SLOT_EQUIPMENT_PLATE,
+		CY_MODULE_SLOT_EQUIPMENT_LINING,
+		CY_MODULE_SLOT_EQUIPMENT_ACTIVE,
+		CY_MODULE_SLOT_RIG_CONNECTOR,
+	)
+
+/obj/item/proc/cy_has_weapon_module_slot()
+	return cy_has_module_slot(CY_MODULE_SLOT_MELEE_HANDLE) || cy_has_module_slot(CY_MODULE_SLOT_RANGED_HANDLE)
+
+/obj/item/proc/cy_has_equipment_module_slot()
+	return cy_has_module_slot(CY_MODULE_SLOT_EQUIPMENT_BASE)
+
 /obj/item/proc/cy_can_accept_module(obj/item/cy_module/module, mob/user, messages = TRUE)
 	if(!istype(module))
 		return FALSE
@@ -2566,6 +2596,22 @@
 		return FALSE
 
 	if(!module.cy_is_compatible_with(src, user, messages))
+		return FALSE
+	if(cy_is_equipment_module_slot(slot) && cy_item_function == CY_ITEM_FUNCTION_ACTIVE)
+		if(messages && user)
+			user.balloon_alert(user, "не для оружия")
+		return FALSE
+	if(!cy_is_equipment_module_slot(slot) && cy_item_function == CY_ITEM_FUNCTION_PROTECTIVE)
+		if(messages && user)
+			user.balloon_alert(user, "не для экипировки")
+		return FALSE
+	if(cy_is_equipment_module_slot(slot) && cy_has_weapon_module_slot())
+		if(messages && user)
+			user.balloon_alert(user, "не для оружия")
+		return FALSE
+	if(!cy_is_equipment_module_slot(slot) && cy_has_equipment_module_slot())
+		if(messages && user)
+			user.balloon_alert(user, "не для экипировки")
 		return FALSE
 	return TRUE
 
@@ -2644,6 +2690,10 @@
 	attack_speed = cy_base_attack_speed
 	block_chance = cy_base_block_chance
 	armour_penetration = cy_base_armour_penetration
+	slot_flags = cy_base_slot_flags
+	body_parts_covered = cy_base_body_parts_covered
+	heat_protection = cy_base_heat_protection
+	cold_protection = cy_base_cold_protection
 	cy_attack_force = force
 	cy_attack_speed = attack_speed
 	cy_guard_value = block_chance
@@ -2651,6 +2701,7 @@
 	cy_armor_class = 0
 	cy_integrity_transfer = 1
 	cy_style_value = cy_base_style_value || 0
+	cy_equipment_slot_flags = NONE
 	var/list/rebuilt_style_tags = cy_base_style_tags?.Copy() || list()
 	cy_damage_absorption = list()
 
@@ -2678,6 +2729,13 @@
 					rebuilt_style_tags += style_tag
 		if(module.cy_damage_type)
 			damtype = module.cy_damage_type
+		if(module.cy_module_equipment_slot_flags)
+			cy_equipment_slot_flags |= module.cy_module_equipment_slot_flags
+			slot_flags |= module.cy_module_equipment_slot_flags
+		if(module.cy_module_body_parts_covered)
+			body_parts_covered |= module.cy_module_body_parts_covered
+			heat_protection |= module.cy_module_body_parts_covered
+			cold_protection |= module.cy_module_body_parts_covered
 		if(module.cy_damage_absorption)
 			for(var/damage_key in module.cy_damage_absorption)
 				cy_damage_absorption[damage_key] = (cy_damage_absorption[damage_key] || 0) + module.cy_damage_absorption[damage_key]
@@ -2692,6 +2750,54 @@
 				profile["damage_type"] = module.cy_intent_damage_types[intent]
 	cy_style_tags = rebuilt_style_tags
 	update_appearance(UPDATE_OVERLAYS)
+
+/obj/item/proc/cy_body_zone_coverage_flags(body_zone)
+	switch(body_zone)
+		if(BODY_ZONE_L_ARM)
+			return ARM_LEFT|HAND_LEFT
+		if(BODY_ZONE_R_ARM)
+			return ARM_RIGHT|HAND_RIGHT
+		if(BODY_ZONE_L_LEG)
+			return LEG_LEFT|FOOT_LEFT
+		if(BODY_ZONE_R_LEG)
+			return LEG_RIGHT|FOOT_RIGHT
+		if(BODY_ZONE_HEAD)
+			return HEAD|NECK
+		if(BODY_ZONE_CHEST)
+			return CHEST|GROIN
+	return NONE
+
+/obj/item/proc/cy_expose_body_zone(body_zone)
+	var/coverage = cy_body_zone_coverage_flags(body_zone)
+	if(!coverage)
+		return FALSE
+	LAZYADD(cy_exposed_body_zones, body_zone)
+	body_parts_covered &= ~coverage
+	heat_protection &= ~coverage
+	cold_protection &= ~coverage
+	update_appearance()
+	return TRUE
+
+/obj/item/proc/cy_spawn_lost_equipment_piece(body_zone, atom/location)
+	if(!location)
+		return null
+	var/obj/item/cy_lost_equipment_piece/piece = new(location)
+	piece.name = "[name] torn [body_zone] piece"
+	piece.desc = "A separated piece of [src]. It no longer provides protection."
+	piece.icon = icon
+	piece.icon_state = icon_state
+	piece.inhand_icon_state = inhand_icon_state
+	piece.w_class = min(w_class, WEIGHT_CLASS_SMALL)
+	piece.cy_size_category = CY_ITEM_SIZE_SMALL
+	piece.manufacturer_organization = manufacturer_organization
+	piece.manufacturer_tech_tags = manufacturer_tech_tags
+	return piece
+
+/obj/item/cy_lost_equipment_piece
+	name = "lost equipment piece"
+	desc = "A separated piece of wearable equipment."
+	cy_size_category = CY_ITEM_SIZE_SMALL
+	cy_item_function = CY_ITEM_FUNCTION_PROTECTIVE
 
 /obj/item/update_overlays(updates = ALL)
 	. = ..()
@@ -2784,6 +2890,9 @@
 
 /obj/item/proc/cy_get_quality_multiplier()
 	return cy_quality_multiplier(cy_quality)
+
+/obj/item/proc/cy_get_quality_value()
+	return clamp(round(cy_quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
 
 /obj/item/proc/cy_set_quality(new_quality, update = TRUE)
 	cy_quality = clamp(round(new_quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
@@ -2888,6 +2997,8 @@
 	var/cy_integrity_transfer_mod = 0
 	var/cy_style_mod = 0
 	var/cy_market_value_mod = 0
+	var/cy_module_equipment_slot_flags = NONE
+	var/cy_module_body_parts_covered = NONE
 	var/list/cy_intent_force_mults
 	var/list/cy_intent_accuracy_mods
 	var/list/cy_intent_speed_mults

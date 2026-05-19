@@ -19,6 +19,8 @@
 	var/max_amount
 	/// Map of material ref -> amount
 	var/list/materials //Map of key = material ref | Value = amount
+	/// Map of material ref -> weighted quality amount. Stored as material amount * CyberPunk quality level.
+	var/list/cy_material_quality_amounts
 	/// The list of materials that this material container can accept
 	var/list/allowed_materials
 	/// The typecache of things that this material container can accept
@@ -44,6 +46,7 @@
 	parent = target
 
 	materials = list()
+	cy_material_quality_amounts = list()
 	max_amount = max(0, max_amt)
 	mat_container_flags = _mat_container_flags
 
@@ -87,6 +90,7 @@
 	RegisterSignal(parent, COMSIG_OBJ_DECONSTRUCT, PROC_REF(drop_sheets))
 
 /datum/material_container/Destroy(force)
+	cy_material_quality_amounts = null
 	materials = null
 	allowed_materials = null
 	return ..()
@@ -153,12 +157,14 @@
 
 	var/list/item_materials = source.get_material_composition(mat_container_flags)
 	var/quality_multiplier_value = source.cy_get_material_insert_multiplier()
+	var/source_quality = source.cy_get_quality_value()
 	var/list/mats_consumed = list()
 	for(var/MAT in item_materials)
 		if(!can_hold_material(MAT))
 			continue
 		var/mat_amount = OPTIMAL_COST(item_materials[MAT] * multiplier * quality_multiplier_value)
 		materials[MAT] += mat_amount
+		cy_add_material_quality(MAT, mat_amount, source_quality)
 		if(item_materials[MAT] > max_mat_value)
 			max_mat_value = item_materials[MAT]
 			primary_mat = MAT
@@ -191,6 +197,7 @@
 		if(!istype(mat))
 			mat = SSmaterials.get_material(mat)
 		materials[mat] += amt
+		cy_add_material_quality(mat, amt, CY_QUALITY_AVERAGE)
 	else
 		var/num_materials = length(materials)
 		if(!num_materials)
@@ -199,6 +206,7 @@
 		amt /= num_materials
 		for(var/i in materials)
 			materials[i] += amt
+			cy_add_material_quality(i, amt, CY_QUALITY_AVERAGE)
 	return (total_amount() - total_amount_saved)
 
 /**
@@ -624,6 +632,54 @@
 	return TRUE
 //==========================================================================================================
 
+//======================================CyberPunk material quality==========================================
+/datum/material_container/proc/cy_add_material_quality(datum/material/mat, amount, quality)
+	if(amount <= 0 || !mat)
+		return
+	if(!istype(mat))
+		mat = SSmaterials.get_material(mat)
+	if(!mat)
+		return
+	cy_material_quality_amounts[mat] += OPTIMAL_COST(amount) * clamp(round(quality), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+
+/datum/material_container/proc/cy_get_material_quality(datum/material/mat)
+	if(!istype(mat))
+		mat = SSmaterials.get_material(mat)
+	if(!mat)
+		return CY_QUALITY_AVERAGE
+	var/stored_amount = materials[mat]
+	if(!stored_amount)
+		return CY_QUALITY_AVERAGE
+	return clamp(round((cy_material_quality_amounts[mat] || (stored_amount * CY_QUALITY_AVERAGE)) / stored_amount), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+
+/datum/material_container/proc/cy_consume_material_quality(datum/material/mat, amount)
+	if(amount <= 0)
+		return
+	if(!istype(mat))
+		mat = SSmaterials.get_material(mat)
+	if(!mat)
+		return
+	var/stored_amount = max(materials[mat], amount)
+	var/quality_amount = cy_material_quality_amounts[mat] || (stored_amount * CY_QUALITY_AVERAGE)
+	var/removed_quality_amount = quality_amount * min(amount / stored_amount, 1)
+	cy_material_quality_amounts[mat] = max(0, quality_amount - removed_quality_amount)
+
+/datum/material_container/proc/cy_peek_quality_for_materials(list/mats, coefficient = 1, multiplier = 1)
+	if(!length(mats))
+		return CY_QUALITY_AVERAGE
+	var/quality_total = 0
+	var/amount_total = 0
+	for(var/mat in mats)
+		var/amount = OPTIMAL_COST(mats[mat] * coefficient) * multiplier
+		if(amount <= 0)
+			continue
+		quality_total += cy_get_material_quality(mat) * amount
+		amount_total += amount
+	if(!amount_total)
+		return CY_QUALITY_AVERAGE
+	return clamp(round(quality_total / amount_total), CY_QUALITY_DISGUSTING, CY_QUALITY_EXCELLENT)
+//==========================================================================================================
+
 
 //================================================Material Usage============================================
 
@@ -648,6 +704,7 @@
 		return 0
 
 	//consume & return amount consumed
+	cy_consume_material_quality(mat, amt)
 	materials[mat] -= amt
 	return amt
 //==============================================================================================
@@ -709,6 +766,8 @@
 		var/type_to_retrieve = material.sheet_type || material.ore_type
 		//don't merge yet. we need to do stuff with it first
 		var/obj/item/stack/new_stack = new type_to_retrieve(target, min(stack_amt, MAX_STACK_SIZE), FALSE)
+		new_stack.cy_set_quality(cy_get_material_quality(material), FALSE)
+		new_stack.cy_initialize_quality_core()
 		if(istype(new_stack, /obj/item/stack/sheet))
 			var/obj/item/stack/sheet/new_sheets = new_stack
 			new_sheets.manufactured = TRUE
@@ -727,8 +786,10 @@
 				continue
 			//speed merge
 			var/merge_amount = min(item_stack.amount, new_stack.max_amount - new_stack.get_amount())
+			var/merged_quality = round(((new_stack.cy_get_quality_value() * new_stack.amount) + (item_stack.cy_get_quality_value() * merge_amount)) / max(new_stack.amount + merge_amount, 1))
 			item_stack.use(merge_amount)
 			new_stack.add(merge_amount)
+			new_stack.cy_set_quality(merged_quality, FALSE)
 			break
 	return count
 

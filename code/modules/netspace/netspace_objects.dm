@@ -274,6 +274,224 @@
 	cy_enter_netspace(user, src, CY_NET_AVATAR_ACTIVE)
 	return TRUE
 
+// CYBERPUNK 13 ENGRAMMING CORE START
+/obj/item/cy_engram_chip
+	name = "engram chip"
+	desc = "A neural carrier chip for holding a digitized mind."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "datadisk0"
+	w_class = WEIGHT_CLASS_TINY
+	var/datum/mind/stored_mind
+	var/datum/weakref/engram_avatar_ref
+	var/datum/weakref/bound_carrier_ref
+	var/control_chance = 100
+	var/used_first_control = FALSE
+
+/obj/item/cy_engram_chip/examine(mob/user)
+	. = ..()
+	if(stored_mind)
+		. += span_notice("Engram: [stored_mind.name]. Carrier chance: [control_chance]%.")
+	var/atom/carrier = bound_carrier_ref?.resolve()
+	if(carrier)
+		. += span_notice("Carrier link: [carrier].")
+
+/obj/item/cy_engram_chip/proc/store_engram(mob/living/net_avatar/avatar)
+	if(!istype(avatar) || !avatar.mind)
+		return FALSE
+	stored_mind = avatar.mind
+	engram_avatar_ref = WEAKREF(avatar)
+	var/atom/carrier = avatar.anchor_ref || avatar.physical_body
+	bound_carrier_ref = carrier ? WEAKREF(carrier) : null
+	name = "[stored_mind.name] engram chip"
+	return TRUE
+
+/obj/item/cy_engram_chip/proc/clear_engram()
+	stored_mind = null
+	engram_avatar_ref = null
+	bound_carrier_ref = null
+	control_chance = 100
+	used_first_control = FALSE
+	name = initial(name)
+	return TRUE
+
+/obj/item/cy_engram_chip/proc/bind_carrier(atom/new_carrier)
+	if(!stored_mind || !new_carrier)
+		return FALSE
+	bound_carrier_ref = WEAKREF(new_carrier)
+	var/mob/living/net_avatar/avatar = engram_avatar_ref?.resolve()
+	if(istype(avatar))
+		avatar.cy_bind_engram(new_carrier, "Your carrier link is rebound.")
+	return TRUE
+
+/obj/item/cy_engram_chip/proc/deengram_into(mob/living/carbon/human/body, mob/living/user)
+	if(!stored_mind || !istype(body))
+		return FALSE
+	if(body.mind && body.mind != stored_mind)
+		var/obj/item/organ/brain/brain = body.get_organ_slot(ORGAN_SLOT_BRAIN)
+		if(brain?.can_cy_bind_engram())
+			brain.bind_cy_engram_stub(stored_mind, REF(src))
+			bind_carrier(body)
+			to_chat(user, span_notice("[stored_mind.name] is bound into [body] as a secondary engram."))
+			to_chat(body, span_warning("A second neural pattern flickers at the edge of your thoughts."))
+			return TRUE
+		to_chat(user, span_warning("[body] already has an active mind and cannot host another engram."))
+		return FALSE
+	var/mob/old_current = stored_mind.current
+	stored_mind.transfer_to(body, force_key_move = TRUE)
+	if(istype(old_current, /mob/living/net_avatar) && old_current != body)
+		qdel(old_current)
+	body.SetUnconscious(0)
+	to_chat(body, span_notice("Your engram resolves into physical nerves again."))
+	clear_engram()
+	return TRUE
+
+/obj/item/cy_engram_chip/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(!ishuman(interacting_with) || !stored_mind)
+		return NONE
+	var/mob/living/carbon/human/body = interacting_with
+	if(!used_first_control || prob(control_chance))
+		used_first_control = TRUE
+		control_chance = max(50, control_chance - 10)
+		return deengram_into(body, user) ? ITEM_INTERACT_SUCCESS : ITEM_INTERACT_BLOCKING
+	to_chat(user, span_warning("The engram fails to seize the carrier."))
+	control_chance = min(50, control_chance + 5)
+	return ITEM_INTERACT_BLOCKING
+
+/obj/machinery/cy_engram_transfer
+	name = "neural transfer apparatus"
+	desc = "A networked apparatus for engraving minds into engram chips and restoring them into prepared bodies."
+	icon = 'icons/obj/machines/cloning.dmi'
+	icon_state = "scanner_0"
+	density = TRUE
+	cy_net_enabled = TRUE
+	cy_net_security = CY_NET_SECURITY_HARDENED
+	cy_net_data = 80
+	var/obj/item/cy_engram_chip/loaded_chip
+
+/obj/machinery/cy_engram_transfer/Initialize(mapload)
+	. = ..()
+	cy_netspace_register_deferred(CY_NET_NODE_TERMINAL, cy_net_security)
+
+/obj/machinery/cy_engram_transfer/examine(mob/user)
+	. = ..()
+	. += span_notice("Loaded chip: [loaded_chip ? loaded_chip : "none"].")
+
+/obj/machinery/cy_engram_transfer/attackby(obj/item/attacking_item, mob/user, list/modifiers, list/attack_modifiers)
+	if(istype(attacking_item, /obj/item/cy_engram_chip))
+		if(loaded_chip)
+			to_chat(user, span_warning("[src] already has an engram chip loaded."))
+			return TRUE
+		if(!user.transferItemToLoc(attacking_item, src))
+			return TRUE
+		loaded_chip = attacking_item
+		to_chat(user, span_notice("You load [attacking_item] into [src]."))
+		return TRUE
+	return ..()
+
+/obj/machinery/cy_engram_transfer/attack_hand(mob/living/user, list/modifiers)
+	if(!istype(user))
+		return ..()
+	var/list/actions = list()
+	if(loaded_chip)
+		actions += "Eject chip"
+		if(!loaded_chip.stored_mind)
+			actions += "Engram nearby body"
+		else
+			actions += "Bind chip to nearby carrier"
+			actions += "De-engram into nearby body"
+			actions += "Enter netspace as stored engram"
+	else
+		actions += "Load an engram chip first"
+	var/choice = tgui_input_list(user, "Choose neural transfer action.", "Engramming", actions)
+	switch(choice)
+		if("Eject chip")
+			loaded_chip.forceMove(drop_location())
+			loaded_chip = null
+			return TRUE
+		if("Engram nearby body")
+			return cy_engram_nearby_body(user)
+		if("Bind chip to nearby carrier")
+			return cy_bind_chip_to_nearby(user)
+		if("De-engram into nearby body")
+			return cy_deengram_nearby_body(user)
+		if("Enter netspace as stored engram")
+			return cy_enter_stored_engram(user)
+	return TRUE
+
+/obj/machinery/cy_engram_transfer/proc/cy_choose_nearby_human(mob/living/user, prompt)
+	var/list/choices = list()
+	for(var/mob/living/carbon/human/human in view(1, src))
+		choices += human
+	if(!length(choices))
+		to_chat(user, span_warning("No compatible body is close enough."))
+		return null
+	return tgui_input_list(user, prompt, "Engramming", choices)
+
+/obj/machinery/cy_engram_transfer/proc/cy_engram_nearby_body(mob/living/user)
+	if(!loaded_chip || loaded_chip.stored_mind)
+		return FALSE
+	var/mob/living/carbon/human/body = cy_choose_nearby_human(user, "Engram which body?")
+	if(!body || !body.mind)
+		return FALSE
+	if(!body.has_cy_neurointerface())
+		to_chat(user, span_warning("[body] needs a working neural interface."))
+		return FALSE
+	if(!cy_netspace_node)
+		cy_netspace_register(CY_NET_NODE_TERMINAL, cy_net_security)
+	var/mob/living/net_avatar/avatar = cy_enter_netspace(body, src, CY_NET_AVATAR_ENGRAM)
+	if(!avatar)
+		return FALSE
+	body.mind.transfer_to(avatar, force_key_move = TRUE)
+	avatar.name = "[body.real_name]'s engram"
+	avatar.setup_avatar(body, CY_NET_AVATAR_ENGRAM, loaded_chip)
+	loaded_chip.store_engram(avatar)
+	body.Unconscious(30 SECONDS)
+	to_chat(user, span_notice("[body]'s engram is cut into [loaded_chip]."))
+	return TRUE
+
+/obj/machinery/cy_engram_transfer/proc/cy_bind_chip_to_nearby(mob/living/user)
+	if(!loaded_chip?.stored_mind)
+		return FALSE
+	var/mob/living/carbon/human/body = cy_choose_nearby_human(user, "Bind to which carrier?")
+	if(!body)
+		return FALSE
+	loaded_chip.bind_carrier(body)
+	to_chat(user, span_notice("[loaded_chip] is bound to [body]."))
+	return TRUE
+
+/obj/machinery/cy_engram_transfer/proc/cy_deengram_nearby_body(mob/living/user)
+	if(!loaded_chip?.stored_mind)
+		return FALSE
+	var/mob/living/carbon/human/body = cy_choose_nearby_human(user, "Restore into which body?")
+	if(!body)
+		return FALSE
+	return loaded_chip.deengram_into(body, user)
+
+/obj/machinery/cy_engram_transfer/proc/cy_enter_stored_engram(mob/living/user)
+	if(!loaded_chip?.stored_mind)
+		return FALSE
+	var/mob/current = loaded_chip.stored_mind.current
+	if(istype(current, /mob/living/net_avatar))
+		if(loaded_chip.stored_mind.current?.client)
+			loaded_chip.stored_mind.transfer_to(current, force_key_move = TRUE)
+		return TRUE
+	var/mob/living/carbon/human/body
+	if(ishuman(current))
+		body = current
+	else
+		body = cy_choose_nearby_human(user, "Use which physical anchor?")
+	if(!body)
+		return FALSE
+	var/mob/living/net_avatar/avatar = cy_enter_netspace(body, loaded_chip.bound_carrier_ref?.resolve() || loaded_chip, CY_NET_AVATAR_ENGRAM)
+	if(!avatar)
+		return FALSE
+	loaded_chip.stored_mind.transfer_to(avatar, force_key_move = TRUE)
+	avatar.name = "[loaded_chip.stored_mind.name]'s engram"
+	avatar.setup_avatar(body, CY_NET_AVATAR_ENGRAM, loaded_chip.bound_carrier_ref?.resolve() || loaded_chip)
+	loaded_chip.engram_avatar_ref = WEAKREF(avatar)
+	return TRUE
+// CYBERPUNK 13 ENGRAMMING CORE END
+
 
 /obj/structure/netspace/wall
 	name = "net wall"

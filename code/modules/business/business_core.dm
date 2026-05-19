@@ -8,6 +8,7 @@
 	var/list/employees = list()
 	var/list/employee_wages = list()
 	var/list/permissions = list()
+	var/list/corporate_storage_permissions = list()
 	var/datum/bank_account/account
 	var/account_id
 	var/tax_debt = 0
@@ -29,6 +30,8 @@
 		employee_wages = list()
 	if(!permissions)
 		permissions = list()
+	if(!corporate_storage_permissions)
+		corporate_storage_permissions = list()
 	if(!saved_snapshot)
 		saved_snapshot = list()
 
@@ -72,6 +75,31 @@
 	employee_wages -= ckey
 	permissions -= ckey
 	return TRUE
+
+/datum/cy_business/proc/cy_set_corporate_storage_permission(corporation_id, item_type_text, allowed)
+	if(!corporation_id || !item_type_text)
+		return FALSE
+	var/list/allowed_items = corporate_storage_permissions[corporation_id]
+	if(!allowed_items)
+		allowed_items = list()
+		corporate_storage_permissions[corporation_id] = allowed_items
+	if(allowed)
+		allowed_items |= item_type_text
+	else
+		allowed_items -= item_type_text
+	return TRUE
+
+/datum/cy_business/proc/cy_can_accept_corporate_storage(corporation_id, obj/item/item)
+	if(!corporation_id || !item)
+		return FALSE
+	var/list/allowed_items = corporate_storage_permissions[corporation_id]
+	if(!length(allowed_items))
+		return FALSE
+	for(var/type_text in allowed_items)
+		var/path = text2path(type_text)
+		if(path && istype(item, path))
+			return TRUE
+	return FALSE
 
 /datum/cy_business/proc/adjust_balance(amount, reason = "Business transaction")
 	setup_account()
@@ -173,6 +201,7 @@
 	data["employees"] = employees.Copy()
 	data["employee_wages"] = employee_wages.Copy()
 	data["permissions"] = permissions.Copy()
+	data["corporate_storage_permissions"] = corporate_storage_permissions.Copy()
 	data["tax_debt"] = tax_debt
 	data["tax_missed_cycles"] = tax_missed_cycles
 	data["risk_score"] = risk_score
@@ -197,6 +226,7 @@
 	employees = data["employees"] || list()
 	employee_wages = data["employee_wages"] || list()
 	permissions = data["permissions"] || list()
+	corporate_storage_permissions = data["corporate_storage_permissions"] || list()
 	tax_debt = data["tax_debt"] || 0
 	tax_missed_cycles = data["tax_missed_cycles"] || 0
 	risk_score = data["risk_score"] || risk_score
@@ -213,6 +243,8 @@
 	return FALSE
 
 /obj/cy_business_should_persist(datum/cy_business/business)
+	if(istype(src, /obj/machinery/computer/cy_business_terminal) || istype(src, /obj/machinery/computer/cy_contract_terminal) || istype(src, /obj/structure/cy_business_zone))
+		return FALSE
 	if(anchored || density)
 		return TRUE
 	return FALSE
@@ -231,7 +263,18 @@
 		"desc" = desc,
 		"pixel_x" = pixel_x,
 		"pixel_y" = pixel_y,
+		"contents" = cy_business_serialize_contents(business),
 	)
+
+/obj/proc/cy_business_serialize_contents(datum/cy_business/business)
+	var/list/saved_contents = list()
+	for(var/obj/contained_object in contents)
+		if(!contained_object.cy_business_should_persist(business))
+			continue
+		var/list/entry = contained_object.cy_business_serialize(business)
+		if(entry)
+			saved_contents += list(entry)
+	return saved_contents
 
 /proc/cy_business_restore_object(list/entry)
 	if(!entry)
@@ -249,4 +292,9 @@
 	new_object.desc = entry["desc"] || initial(new_object.desc)
 	new_object.pixel_x = entry["pixel_x"] || 0
 	new_object.pixel_y = entry["pixel_y"] || 0
+	cy_business_apply_restored_object_data(new_object, entry)
+	for(var/list/contained_entry as anything in entry["contents"])
+		var/obj/contained_object = cy_business_restore_object(contained_entry)
+		if(contained_object)
+			contained_object.forceMove(new_object)
 	return new_object

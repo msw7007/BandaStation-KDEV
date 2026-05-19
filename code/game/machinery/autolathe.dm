@@ -393,6 +393,7 @@
 		say("Unable to continue production, missing materials.")
 		finalize_build()
 		return
+	var/output_quality = materials.cy_peek_quality_for_materials(materials_needed, material_cost_coefficient, is_stack ? items_remaining : 1)
 	materials.use_materials(materials_needed, material_cost_coefficient, is_stack ? items_remaining : 1)
 
 	var/atom/movable/created
@@ -403,6 +404,9 @@
 		while(number_to_make > max_stack_amount)
 			created = design.create_result(target, materials_needed, amount = max_stack_amount)
 			if(isitem(created))
+				var/obj/item/created_item = created
+				created_item.cy_set_quality(output_quality, FALSE)
+				created_item.cy_initialize_quality_core()
 				created.pixel_x = created.base_pixel_x + rand(-6, 6)
 				created.pixel_y = created.base_pixel_y + rand(-6, 6)
 			number_to_make -= max_stack_amount
@@ -414,6 +418,9 @@
 		split_materials_uniformly(materials_needed, material_cost_coefficient, created)
 
 	if(isitem(created))
+		var/obj/item/created_item = created
+		created_item.cy_set_quality(output_quality, FALSE)
+		created_item.cy_initialize_quality_core()
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
 		created.pixel_y = created.base_pixel_y + rand(-6, 6)
 	operator?.award_cy_professional_activity(/datum/cy_skill/professional/invention, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)

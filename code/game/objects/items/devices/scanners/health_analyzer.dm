@@ -102,6 +102,15 @@
 	switch (scanmode)
 		if (SCANMODE_HEALTH)
 			last_scan_text = healthscan(user, M, mode, advanced, tochat = readability_check)
+			if(readability_check && ishuman(M))
+				var/mob/living/carbon/human/human_target = M
+				var/list/cy_lines = human_target.get_cy_diagnostic_lines(user, advanced)
+				if(length(cy_lines))
+					var/cy_scan_text = "<span class='info ml-1'><b>CP13 diagnostics:</b></span><br>"
+					for(var/line in cy_lines)
+						cy_scan_text += "<span class='info ml-2'>[line]</span><br>"
+					to_chat(user, custom_boxed_message("blue_box", cy_scan_text))
+					last_scan_text += cy_scan_text
 			if((M.health / M.maxHealth) > CLEAN_BILL_OF_HEALTH_RATIO)
 				last_healthy_scanned = WEAKREF(M)
 			else

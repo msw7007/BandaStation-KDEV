@@ -19,7 +19,7 @@ export const MedicalKiosk = (props) => {
   const { active_status_1, active_status_2, active_status_3, active_status_4 } =
     data;
   return (
-    <Window width={575} height={420}>
+    <Window width={575} height={500}>
       <Window.Content scrollable>
         <Flex mb={1}>
           <Flex.Item mr={1}>
@@ -221,7 +221,17 @@ const MedicalKioskScanResults2 = (props) => {
 
 const MedicalKioskScanResults3 = (props) => {
   const { data } = useBackend();
-  const { brain_damage, brain_health, trauma_status } = data;
+  const {
+    brain_damage,
+    brain_health,
+    trauma_status,
+    cy_humanoidity,
+    cy_gene_slots,
+    cy_max_gene_slots,
+    cy_implant_heat,
+    cy_implant_capacity,
+    cy_implants = [],
+  } = data;
   return (
     <Section title="Patient Neurological Health">
       <LabeledList>
@@ -236,6 +246,37 @@ const MedicalKioskScanResults3 = (props) => {
         <LabeledList.Item label="Brain Trauma Status">
           {trauma_status}
         </LabeledList.Item>
+        <LabeledList.Divider />
+        <LabeledList.Item label="Humanoidity">
+          {cy_humanoidity === null ? (
+            <Box color="average">No compatible DNA.</Box>
+          ) : (
+            <ProgressBar value={cy_humanoidity / 100}>
+              <AnimatedNumber value={cy_humanoidity} />%
+            </ProgressBar>
+          )}
+        </LabeledList.Item>
+        <LabeledList.Item label="Gene Slots">
+          {cy_gene_slots}/{cy_max_gene_slots}
+        </LabeledList.Item>
+        <LabeledList.Item label="Implant Heat">
+          <ProgressBar
+            value={cy_implant_heat / Math.max(cy_implant_capacity, 1)}
+          >
+            {cy_implant_heat}/{cy_implant_capacity}
+          </ProgressBar>
+        </LabeledList.Item>
+        <LabeledList.Item label="Implants">
+          {cy_implants.length === 0 && (
+            <Box color="average">No cyberimplants detected.</Box>
+          )}
+          {cy_implants.map((implant) => (
+            <Box key={implant.name}>
+              {implant.name}: {implant.manufacturer}, heat {implant.heat},{' '}
+              {implant.functional ? 'online' : 'offline'}
+            </Box>
+          ))}
+        </LabeledList.Item>
       </LabeledList>
     </Section>
   );
@@ -249,6 +290,7 @@ const MedicalKioskScanResults4 = (props) => {
     addict_list = [],
     hallucinating_status,
     blood_alcohol,
+    cy_diagnostic_lines = [],
   } = data;
   return (
     <Section title="Chemical and Psychoactive Analysis">
@@ -294,6 +336,11 @@ const MedicalKioskScanResults4 = (props) => {
           >
             <AnimatedNumber value={blood_alcohol} />
           </ProgressBar>
+        </LabeledList.Item>
+        <LabeledList.Item label="CP13 Diagnostic Lines">
+          {cy_diagnostic_lines.map((line) => (
+            <Box key={line}>{line}</Box>
+          ))}
         </LabeledList.Item>
       </LabeledList>
     </Section>

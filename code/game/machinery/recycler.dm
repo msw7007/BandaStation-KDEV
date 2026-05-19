@@ -17,6 +17,12 @@
 	var/eat_victim_items = TRUE
 	var/item_recycle_sound = 'sound/items/tools/welder.ogg'
 	var/datum/material_container/materials
+	/// Chance to convert a bulk of simple recycled material into an advanced material.
+	var/cy_advanced_recycle_chance = 0
+	/// How much source material is consumed for one advanced material unit.
+	var/cy_advanced_recycle_cost = SHEET_MATERIAL_AMOUNT * 10
+	/// Advanced output rules. Key is source material, value is advanced material.
+	var/list/cy_advanced_recycle_products = list(/datum/material/glass = /datum/material/diamond)
 
 /obj/machinery/recycler/Initialize(mapload)
 	materials = new (
@@ -51,9 +57,12 @@
 /obj/machinery/recycler/RefreshParts()
 	. = ..()
 	var/amt_made = 0
+	var/highest_servo_tier = 0
 	for(var/datum/stock_part/servo/servo in component_parts)
 		amt_made = 12.5 * servo.tier //% of materials salvaged
+		highest_servo_tier = max(highest_servo_tier, servo.tier)
 	amount_produced = min(50, amt_made) + 50
+	cy_advanced_recycle_chance = max(0, highest_servo_tier - 1) * 2
 	var/datum/component/butchering/butchering = GetComponent(/datum/component/butchering/recycler)
 	butchering.effectiveness = amount_produced
 	butchering.bonus_modifier = amount_produced/5
@@ -256,12 +265,33 @@
 
 	var/retrieved = materials.insert_item(target, multiplier = (amount_produced / 100))
 	if(retrieved > 0) //item was salvaged i.e. deleted
+		cy_try_advanced_recycle(target)
 		materials.retrieve_all()
 		qdel(target)
 		return TRUE
 
 	qdel(target)
 	return FALSE
+
+/obj/machinery/recycler/proc/cy_try_advanced_recycle(obj/item/source)
+	if(!cy_advanced_recycle_chance || !length(cy_advanced_recycle_products))
+		return
+	var/quality_bonus = max(0, source.cy_get_quality_value() - CY_QUALITY_AVERAGE)
+	var/final_chance = cy_advanced_recycle_chance + (quality_bonus * 2)
+	if(!prob(final_chance))
+		return
+	for(var/source_material_type in cy_advanced_recycle_products)
+		var/datum/material/source_material = SSmaterials.get_material(source_material_type)
+		if(!source_material || materials.get_material_amount(source_material) < cy_advanced_recycle_cost)
+			continue
+		var/datum/material/output_material = SSmaterials.get_material(cy_advanced_recycle_products[source_material_type])
+		if(!output_material || !materials.can_hold_material(output_material))
+			continue
+		var/output_quality = max(CY_QUALITY_AVERAGE, source.cy_get_quality_value())
+		materials.use_amount_mat(cy_advanced_recycle_cost, source_material)
+		materials.insert_amount_mat(SHEET_MATERIAL_AMOUNT, output_material)
+		materials.cy_material_quality_amounts[output_material] += SHEET_MATERIAL_AMOUNT * (output_quality - CY_QUALITY_AVERAGE)
+		return
 
 /obj/machinery/recycler/proc/emergency_stop()
 	playsound(src, 'sound/machines/buzz/buzz-sigh.ogg', 50, FALSE)

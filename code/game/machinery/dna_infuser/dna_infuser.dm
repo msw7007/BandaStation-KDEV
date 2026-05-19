@@ -357,6 +357,13 @@
 		. += span_notice("Sequence: [stored_sequence.name].")
 		. += span_notice("Amino chain: [stored_sequence.amino_chain].")
 
+/obj/item/disk/cy_gene_sequence/attack_self(mob/user, modifiers)
+	if(!stored_sequence)
+		to_chat(user, span_warning("[src] is blank."))
+		return
+	to_chat(user, span_notice("Sequence: [stored_sequence.name]."))
+	to_chat(user, span_notice("Amino chain: [stored_sequence.amino_chain]. Humanoidity delta: [stored_sequence.humanoidity_delta]. Segments: [length(stored_sequence.segments)]/[CY_GENETIC_MAX_SEGMENTS]."))
+
 /obj/item/reagent_containers/syringe/cy_gene_serum
 	name = "gene serum syringe"
 	desc = "A prepared genetic serum. Its sequence applies immediately on injection."
@@ -499,4 +506,39 @@
 			qdel(src)
 			return TRUE
 	return ..()
+
+/obj/item/cy_gene_analyzer
+	name = "gene analyzer"
+	desc = "A compact scanner for reading CP13 humanoidity, gene slots and sequence carriers."
+	icon = 'icons/obj/devices/scanner.dmi'
+	icon_state = "health"
+	w_class = WEIGHT_CLASS_TINY
+
+/obj/item/cy_gene_analyzer/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(ishuman(interacting_with))
+		var/mob/living/carbon/human/target = interacting_with
+		if(!target.has_dna())
+			to_chat(user, span_warning("[target] has no readable humanoid DNA."))
+			return ITEM_INTERACT_BLOCKING
+		target.dna.cy_sync_reserved_gene_segments()
+		to_chat(user, span_notice("[target]: humanoidity [round(target.get_cy_humanoidity())]%, stabilized [round(target.get_cy_humanoidity_stabilized_bonus())]%, slots [length(target.dna.cy_gene_segments)]/[CY_GENETIC_MAX_SEGMENTS]."))
+		if(length(target.dna.cy_gene_segments))
+			for(var/segment in target.dna.cy_gene_segments)
+				to_chat(user, span_notice("Segment [segment]: instability [target.dna.cy_gene_segments[segment]]."))
+		return ITEM_INTERACT_SUCCESS
+	if(istype(interacting_with, /obj/item/disk/cy_gene_sequence))
+		var/obj/item/disk/cy_gene_sequence/disk = interacting_with
+		if(!disk.stored_sequence)
+			to_chat(user, span_warning("[disk] is blank."))
+			return ITEM_INTERACT_BLOCKING
+		to_chat(user, span_notice("[disk.stored_sequence.name]: [disk.stored_sequence.amino_chain], humanoidity delta [disk.stored_sequence.humanoidity_delta]."))
+		return ITEM_INTERACT_SUCCESS
+	if(istype(interacting_with, /obj/item/reagent_containers/syringe/cy_gene_serum))
+		var/obj/item/reagent_containers/syringe/cy_gene_serum/serum = interacting_with
+		if(!serum.stored_sequence)
+			to_chat(user, span_warning("[serum] has no readable sequence."))
+			return ITEM_INTERACT_BLOCKING
+		to_chat(user, span_notice("[serum.stored_sequence.name]: [serum.stored_sequence.amino_chain], humanoidity delta [serum.stored_sequence.humanoidity_delta]."))
+		return ITEM_INTERACT_SUCCESS
+	return NONE
 // CYBERPUNK 13 STAGE 3 CORE GENETICS FIX3 END

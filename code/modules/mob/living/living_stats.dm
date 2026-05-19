@@ -889,12 +889,44 @@
 	return multiplier
 
 /obj/item/organ/cyberimp
+	manufacturer_organization = /datum/cy_organization/corporation/ryaznov/kowalski
 	var/cy_organization_type
 	var/cy_implant_is_neurointerface = FALSE
 	var/cy_overheat = 0
 	var/cy_active_implant = TRUE
 	var/cy_requires_neurointerface = TRUE
 	var/cy_last_functional_state
+
+/obj/item/organ/cyberimp/brain
+	manufacturer_organization = /datum/cy_organization/corporation/starlight/samanthas_care
+
+/obj/item/organ/cyberimp/brain/connector
+	manufacturer_organization = /datum/cy_organization/corporation/starlight/trans_travel
+	cy_implant_is_neurointerface = TRUE
+	cy_requires_neurointerface = FALSE
+
+/obj/item/organ/cyberimp/bci
+	manufacturer_organization = /datum/cy_organization/corporation/starlight/trans_travel
+	cy_implant_is_neurointerface = TRUE
+	cy_requires_neurointerface = FALSE
+
+/obj/item/organ/cyberimp/eyes
+	manufacturer_organization = /datum/cy_organization/corporation/ben/san_yon
+
+/obj/item/organ/cyberimp/mouth
+	manufacturer_organization = /datum/cy_organization/corporation/ben/ishikawa
+
+/obj/item/organ/cyberimp/arm
+	manufacturer_organization = /datum/cy_organization/corporation/ryaznov/tesla
+
+/obj/item/organ/cyberimp/chest
+	manufacturer_organization = /datum/cy_organization/corporation/ryaznov/kowalski
+
+/obj/item/organ/cyberimp/chest/thrusters
+	manufacturer_organization = /datum/cy_organization/corporation/ben/ho_shi
+
+/obj/item/organ/cyberimp/chest/spine
+	manufacturer_organization = /datum/cy_organization/corporation/ryaznov/tesla
 
 /obj/item/organ/cyberimp/proc/has_cy_working_neurointerface()
 	if(!cy_requires_neurointerface)
@@ -954,8 +986,9 @@
 
 /mob/living/carbon/human/proc/get_cy_implant_overheat_multiplier(obj/item/organ/cyberimp/implant)
 	var/multiplier = 1
-	if(implant?.cy_organization_type)
-		var/compatibility = get_cy_organization_compatibility(implant.cy_organization_type)
+	var/org_type = get_cy_organization_type_for_thing(implant)
+	if(org_type)
+		var/compatibility = get_cy_organization_compatibility(org_type)
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			multiplier *= CY_IMPLANT_CORP_MISMATCH_OVERHEAT_MULTIPLIER
 	if(!get_cy_skill_level(/datum/cy_skill/spirit/compatibility))
@@ -975,8 +1008,9 @@
 
 /mob/living/carbon/human/proc/get_cy_implant_failure_chance_modifier(obj/item/organ/cyberimp/implant)
 	var/modifier = 0
-	if(implant?.cy_organization_type)
-		var/compatibility = get_cy_organization_compatibility(implant.cy_organization_type)
+	var/org_type = get_cy_organization_type_for_thing(implant)
+	if(org_type)
+		var/compatibility = get_cy_organization_compatibility(org_type)
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			modifier += CY_IMPLANT_CORP_MISMATCH_FAILURE_MODIFIER
 	if(!get_cy_skill_level(/datum/cy_skill/spirit/compatibility))
@@ -2395,9 +2429,17 @@
 		lines += "Clinical death threshold reached. Revive requires working heart and non-dead brain."
 	if(brain_dead)
 		lines += "Brain death: revival blocked."
+	if(has_dna())
+		lines += "Humanoidity [round(get_cy_humanoidity())]%; stabilized buffer [round(get_cy_humanoidity_stabilized_bonus())]%; gene slots [length(dna.cy_gene_segments)]/[CY_GENETIC_MAX_SEGMENTS]."
+	var/implant_heat = get_cy_total_implant_overheat()
+	if(implant_heat || advanced)
+		lines += "Implants: neural interface [has_cy_neurointerface() ? "online" : "missing"]; heat [round(implant_heat)]/[round(get_cy_brain_overheat_capacity())]."
 	if(advanced)
 		for(var/obj/item/organ/organ as anything in organs)
 			lines += organ.get_cy_diagnostic_lines(TRUE)
+		for(var/obj/item/organ/cyberimp/implant as anything in organs)
+			var/datum/cy_organization/manufacturer = implant.get_manufacturer_organization()
+			lines += "[capitalize(implant.name)]: manufacturer [manufacturer ? manufacturer.name : "unknown"], heat [round(implant.get_cy_implant_overheat())], state [implant.is_cy_functional_implant() ? "functional" : "offline"]."
 	return lines
 
 /mob/living/proc/get_cy_secondary_indicators()

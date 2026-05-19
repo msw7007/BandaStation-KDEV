@@ -263,9 +263,10 @@
 		on = FALSE
 		return
 
+	var/output_quality = materials.cy_peek_quality_for_materials(alloy.materials, multiplier = amount)
 	materials.use_materials(alloy.materials, multiplier = amount)
 
-	generate_mineral(alloy.build_path)
+	generate_mineral(alloy.build_path, output_quality)
 
 /obj/machinery/mineral/processing_unit/proc/can_smelt(datum/design/design, seconds_per_tick = 2)
 	if(design.make_reagent)
@@ -279,8 +280,12 @@
 
 	return build_amount
 
-/obj/machinery/mineral/processing_unit/proc/generate_mineral(P)
+/obj/machinery/mineral/processing_unit/proc/generate_mineral(P, output_quality = CY_QUALITY_AVERAGE)
 	var/O = new P(src)
+	if(isitem(O))
+		var/obj/item/output_item = O
+		output_item.cy_set_quality(output_quality, FALSE)
+		output_item.cy_initialize_quality_core()
 	unload_mineral(O)
 
 /// Only accepts ore, for the work camp

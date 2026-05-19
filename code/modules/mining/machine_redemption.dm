@@ -368,12 +368,17 @@
 				var/amount = round(min(text2num(params["sheets"]), 50, can_smelt_alloy(alloy)))
 				if(amount < 1) //no negative mats
 					return
+				var/output_quality = materials.cy_peek_quality_for_materials(alloy.materials, multiplier = amount)
 				materials.use_materials(alloy.materials, multiplier = amount, action = "withdrawn", name = "sheets", user_data = ID_DATA(usr))
 				var/atom/movable/output
 				if(ispath(alloy.build_path, /obj/item/stack/sheet))
 					output = alloy.create_result(src, amount = amount)
 				else
 					output = alloy.create_result(src)
+				if(isitem(output))
+					var/obj/item/output_item = output
+					output_item.cy_set_quality(output_quality, FALSE)
+					output_item.cy_initialize_quality_core()
 				unload_mineral(output)
 			else
 				to_chat(usr, span_warning("Required access not found."))

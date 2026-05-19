@@ -220,6 +220,8 @@
 	name = "San Yon precision underlayer"
 	desc = "A light equipment base for agile armor assemblies."
 	manufacturer_organization = /datum/cy_organization/corporation/ben/san_yon
+	cy_module_equipment_slot_flags = ITEM_SLOT_ICLOTHING
+	cy_module_body_parts_covered = CHEST|GROIN|ARM_LEFT|ARM_RIGHT|LEG_LEFT|LEG_RIGHT
 	cy_armor_class_mod = 1
 	cy_integrity_transfer_mod = -0.05
 	cy_style_mod = 2
@@ -230,6 +232,8 @@
 	name = "Kowalski load carrier"
 	desc = "A heavy carrier base for armor and field equipment."
 	manufacturer_organization = /datum/cy_organization/corporation/ryaznov/kowalski
+	cy_module_equipment_slot_flags = ITEM_SLOT_OCLOTHING
+	cy_module_body_parts_covered = CHEST|GROIN|ARM_LEFT|ARM_RIGHT|LEG_LEFT|LEG_RIGHT
 	cy_armor_class_mod = 2
 	cy_integrity_transfer_mod = -0.1
 	cy_style_mod = 1

@@ -292,6 +292,20 @@
 	var/overdose_list = list()
 	var/addict_list = list()
 	var/hallucination_status = "Patient is not hallucinating."
+	var/list/cy_diagnostic_lines = patient.get_cy_diagnostic_lines(user, TRUE)
+	var/cy_humanoidity = patient.has_dna() ? round(patient.get_cy_humanoidity()) : null
+	var/cy_gene_slots = patient.has_dna() ? length(patient.dna.cy_gene_segments) : 0
+	var/cy_implant_heat = round(patient.get_cy_total_implant_overheat())
+	var/cy_implant_capacity = round(patient.get_cy_brain_overheat_capacity())
+	var/list/cy_implants = list()
+	for(var/obj/item/organ/cyberimp/implant as anything in patient.organs)
+		var/datum/cy_organization/manufacturer = implant.get_manufacturer_organization()
+		cy_implants += list(list(
+			"name" = implant.name,
+			"manufacturer" = manufacturer ? manufacturer.name : "Unknown",
+			"heat" = round(implant.get_cy_implant_overheat()),
+			"functional" = implant.is_cy_functional_implant(),
+		))
 
 	if(patient.reagents.reagent_list.len) //Chemical Analysis details.
 		for(var/r in patient.reagents.reagent_list)
@@ -374,6 +388,13 @@
 	data["overdose_list"] = overdose_list
 	data["addict_list"] = addict_list
 	data["hallucinating_status"] = hallucination_status
+	data["cy_diagnostic_lines"] = cy_diagnostic_lines
+	data["cy_humanoidity"] = cy_humanoidity
+	data["cy_gene_slots"] = cy_gene_slots
+	data["cy_max_gene_slots"] = CY_GENETIC_MAX_SEGMENTS
+	data["cy_implant_heat"] = cy_implant_heat
+	data["cy_implant_capacity"] = cy_implant_capacity
+	data["cy_implants"] = cy_implants
 
 	data["active_status_1"] = scan_active & KIOSK_SCANNING_GENERAL // General Scan Check
 	data["active_status_2"] = scan_active & KIOSK_SCANNING_SYMPTOMS // Symptom Scan Check
