@@ -70,13 +70,13 @@
 				target.set_cy_base_stat(stat_type, value)
 		if("combat_skills")
 			if(skill_type)
-				target.set_cy_skill_level(skill_type, value, TRUE)
+				target.set_cy_skill_level(skill_type, value, FALSE)
 		if("weapon_skills")
 			if(skill_type)
-				target.set_cy_skill_level(skill_type, value, TRUE)
+				target.set_cy_skill_level(skill_type, value, FALSE)
 		if("professional_skills")
 			if(skill_type)
-				target.set_cy_skill_level(skill_type, value, TRUE)
+				target.set_cy_skill_level(skill_type, value, FALSE)
 
 	var/list/dna_stats = target.dna.features[stat_group]
 	if(!islist(dna_stats))

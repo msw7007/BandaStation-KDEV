@@ -204,7 +204,7 @@
 
 	if(roundstart_experience)
 		for(var/i in roundstart_experience)
-			spawned_human.award_cy_raw_skill_experience(i, roundstart_experience[i], TRUE)
+			spawned_human.award_cy_raw_skill_experience(i, roundstart_experience[i])
 
 	apply_cy_city_role(spawned, player_client)
 

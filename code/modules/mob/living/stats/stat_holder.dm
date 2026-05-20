@@ -112,12 +112,9 @@
 	return 100 + (50 * current_value)
 
 /datum/cy_stat_holder/proc/adjust_stat_experience(stat_type, amount, apply_level = TRUE)
-	if(!is_valid_stat(stat_type) || amount <= 0)
+	if(!is_valid_stat(stat_type) || !amount)
 		return 0
-	var/new_experience = get_stat_experience(stat_type) + round(amount)
-	if(apply_level)
-		while(new_experience >= get_stat_experience_required_for_next_level(stat_type) && get_stat_experience_required_for_next_level(stat_type) > 0)
-			new_experience -= get_stat_experience_required_for_next_level(stat_type)
-			adjust_base_stat(stat_type, 1)
-	stat_experience[stat_type] = max(0, new_experience)
+
+	var/new_experience = max(0, get_stat_experience(stat_type) + round(amount))
+	stat_experience[stat_type] = new_experience
 	return amount

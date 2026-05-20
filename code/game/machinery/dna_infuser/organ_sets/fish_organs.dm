@@ -51,7 +51,7 @@
 		owner.add_mood_event("fish_organs_bonus", /datum/mood_event/fish_water)
 	if(HAS_TRAIT(owner, TRAIT_IS_WET) && istype(owner.get_organ_slot(ORGAN_SLOT_EXTERNAL_TAIL), /obj/item/organ/tail/fish))
 		add_speed_buff()
-	owner.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, 500, TRUE)
+	owner.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, 500)
 	owner.grant_language(/datum/language/carptongue, ALL, type)
 
 /datum/status_effect/organ_set_bonus/fish/disable_bonus(obj/item/organ/removed_organ)
@@ -76,7 +76,7 @@
 		human.physiology.damage_resistance -= 8
 	if(HAS_TRAIT(owner, TRAIT_IS_WET) && istype(owner.get_organ_slot(ORGAN_SLOT_EXTERNAL_TAIL), /obj/item/organ/tail/fish))
 		remove_speed_buff()
-	owner.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, -500, TRUE)
+	owner.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, -500)
 	owner.remove_language(/datum/language/carptongue, ALL, type)
 
 /datum/status_effect/organ_set_bonus/fish/set_organs(new_value, obj/item/organ/organ)

@@ -66,13 +66,13 @@
 			var/number = input("Please insert the amount of experience you'd like to add/subtract:") as num|null
 			var/mob/living/target = targetmind?.current
 			if (number && istype(target))
-				target.adjust_cy_skill_experience(skill, number, TRUE, TRUE, null)
+				target.adjust_cy_skill_experience(skill, number)
 		if ("set_exp")
 			var/skill = text2path(params["skill"])
 			var/number = input("Please insert the number you want to set the player's exp to:") as num|null
 			var/mob/living/target = targetmind?.current
 			if (!isnull(number) && istype(target))
-				target.set_cy_skill_experience(skill, number, TRUE, TRUE, null)
+				target.set_cy_skill_experience(skill, number)
 		if ("set_lvl")
 			var/skill = text2path(params["skill"])
 			var/mob/living/target = targetmind?.current

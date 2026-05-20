@@ -190,48 +190,7 @@
 /datum/status_effect/incapacitating/sleeping/tick(seconds_between_ticks)
 	if(owner.maxHealth)
 		var/health_ratio = owner.health / owner.maxHealth
-		var/sleep_quality = HEALING_SLEEP_DEFAULT
-
-		// having high spirits helps us recover
-		if(owner.mob_mood)
-			switch(owner.mob_mood.sanity_level)
-				if(SANITY_LEVEL_GREAT)
-					sleep_quality = 0.2
-				if(SANITY_LEVEL_NEUTRAL)
-					sleep_quality = 0.1
-				if(SANITY_LEVEL_DISTURBED)
-					sleep_quality = 0
-				if(SANITY_LEVEL_UNSTABLE)
-					sleep_quality = 0
-				if(SANITY_LEVEL_CRAZY)
-					sleep_quality = -0.1
-				if(SANITY_LEVEL_INSANE)
-					sleep_quality = -0.2
-
-		var/turf/rest_turf = get_turf(owner)
-		var/is_sleeping_in_darkness = rest_turf.get_lumcount() <= LIGHTING_TILE_IS_DARK
-
-		// sleeping with a blindfold or in the dark helps us rest
-		if(owner.is_blind_from(EYES_COVERED) || is_sleeping_in_darkness)
-			sleep_quality += 0.1
-
-		// sleeping in silence is always better
-		if(HAS_TRAIT(owner, TRAIT_DEAF))
-			sleep_quality += 0.1
-
-		// check for beds
-		if((locate(/obj/structure/bed) in owner.loc))
-			sleep_quality += 0.2
-		else if((locate(/obj/structure/table) in owner.loc))
-			sleep_quality += 0.1
-
-		// don't forget the bedsheet
-		if(locate(/obj/item/bedsheet) in owner.loc)
-			sleep_quality += 0.1
-
-		// you forgot the pillow
-		if(locate(/obj/item/pillow) in owner.loc)
-			sleep_quality += 0.1
+		var/sleep_quality = owner.get_cy_sleep_quality()
 
 		var/need_mob_update = FALSE
 		if(sleep_quality > 0)

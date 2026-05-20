@@ -62,7 +62,11 @@
 	return stat != DEAD
 
 /mob/living/carbon/human/proc/process_cy_character_progression(seconds_per_tick)
-	if(!client || stat != CONSCIOUS || IsSleeping())
+	if(!client || stat != CONSCIOUS)
+		return
+	if(IsSleeping())
+		if(is_cy_comfortably_sleeping())
+			digest_cy_experience()
 		return
 	process_cy_awake_training_experience(seconds_per_tick, get_cy_experience_context_multiplier())
 

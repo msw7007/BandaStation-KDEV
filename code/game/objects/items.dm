@@ -1248,7 +1248,7 @@
 		if(user.mind)
 			skill_modifier = user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining)
 
-			if(user.roll_cy_passive_skill_check(/datum/cy_skill/professional/mining, CY_SKILL_LEVEL_TRAINED))
+			if(user.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_TRAINED)
 				mineral_scan_pulse(get_turf(user), CY_SKILL_LEVEL_TRAINED - 2, scanner = src) //CY_SKILL_LEVEL_TRAINED = 3 So to get range of 1+ we have to subtract 2 from it,.
 
 	delay *= toolspeed * skill_modifier

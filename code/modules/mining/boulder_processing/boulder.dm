@@ -180,12 +180,12 @@
 		if(!user.Adjacent(src))
 			return
 		durability--
+		user.perform_cy_skill_check(/datum/cy_skill/professional/mining, CY_MINING_BOULDER_SIZE_EXPERIENCE * 0.2)
 		user.apply_damage(4 * skill_modifier, STAMINA)
 	if(durability <= 0)
 		convert_to_ore()
 		to_chat(user, span_notice("You finish working on \the [src], and it crumbles into ore."))
 		playsound(src, 'sound/effects/rock/rock_break.ogg', 50)
-		user.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, CY_MINING_BOULDER_SIZE_EXPERIENCE * 0.2)
 		user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, CY_MINING_BOULDER_SIZE_EXPERIENCE * 0.2)
 		qdel(src)
 		return
