@@ -120,6 +120,9 @@
 	if(!LAZYLEN(cont.reagents.reagent_list))
 		return NONE
 	SEND_SIGNAL(interacting_with, COMSIG_ON_REAGENT_SCAN, user)
+	user.perform_cy_skill_check(/datum/cy_skill/professional/chemistry, max(1, round(cont.reagents.total_volume)))
+	var/can_identify_reagents = user.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 2)
+	var/can_read_purity = user.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 5)
 	var/list/out_message = list()
 	to_chat(user, "<i>The chemistry meter beeps and displays:</i>")
 	out_message += "<b>Total volume: [round(cont.volume, 0.01)] Current temperature: [round(cont.reagents.chem_temp, 0.1)]K Total pH: [round(cont.reagents.ph, 0.01)]\n"
@@ -138,10 +141,14 @@
 				blood_info = "[reagent.name] (type: [blood])"
 		if(reagent.purity < reagent.inverse_chem_val && reagent.inverse_chem) //If the reagent is impure
 			var/datum/reagent/inverse_reagent = GLOB.chemical_reagents_list[reagent.inverse_chem]
-			out_message += "[span_warning("Inverted reagent detected: ")]<span class='notice'><b>[round(reagent.volume, 0.01)]u of [inverse_reagent.name]</b>, <b>Purity:</b> [round(1 - reagent.purity, 0.000001)*100]%, [(scanmode?"[(inverse_reagent.overdose_threshold?"<b>Overdose:</b> [inverse_reagent.overdose_threshold]u, ":"")]<b>Base pH:</b> [initial(inverse_reagent.ph)], <b>Current pH:</b> [reagent.ph].":"<b>Current pH:</b> [reagent.ph].")]\n"
+			if(can_read_purity)
+				out_message += "[span_warning("Inverted reagent detected: ")]<span class='notice'><b>[round(reagent.volume, 0.01)]u of [can_identify_reagents ? inverse_reagent.name : "unknown reagent"]</b>, <b>Purity:</b> [round(1 - reagent.purity, 0.000001)*100]%, [(scanmode && can_identify_reagents ?"[(inverse_reagent.overdose_threshold?"<b>Overdose:</b> [inverse_reagent.overdose_threshold]u, ":"")]<b>Base pH:</b> [initial(inverse_reagent.ph)], <b>Current pH:</b> [reagent.ph].":"<b>Current pH:</b> [reagent.ph].")]\n"
+			else
+				out_message += "<b>[round(reagent.volume, CHEMICAL_VOLUME_ROUNDING)]u of [can_identify_reagents ? reagent.name : "unknown reagent"]</b>[scanmode && can_identify_reagents ? ", <b>Current pH:</b> [reagent.ph]." : "."]\n"
 		else
-			out_message += "<b>[round(reagent.volume, CHEMICAL_VOLUME_ROUNDING)]u of [blood_info || reagent.name]</b>, <b>Purity:</b> [round(reagent.purity, 0.000001)*100]%, [(scanmode?"[(reagent.overdose_threshold?"<b>Overdose:</b> [reagent.overdose_threshold]u, ":"")]<b>Base pH:</b> [initial(reagent.ph)], <b>Current pH:</b> [reagent.ph].":"<b>Current pH:</b> [reagent.ph].")]\n"
-		if(scanmode)
+			var/reagent_label = can_identify_reagents ? (blood_info || reagent.name) : "unknown reagent"
+			out_message += "<b>[round(reagent.volume, CHEMICAL_VOLUME_ROUNDING)]u of [reagent_label]</b>[can_read_purity ? ", <b>Purity:</b> [round(reagent.purity, 0.000001)*100]%" : ""][scanmode && can_identify_reagents ? ", [(reagent.overdose_threshold?"<b>Overdose:</b> [reagent.overdose_threshold]u, ":"")]<b>Base pH:</b> [initial(reagent.ph)], <b>Current pH:</b> [reagent.ph]." : "."]\n"
+		if(scanmode && can_identify_reagents)
 			out_message += "<b>Analysis:</b> [reagent.description]\n"
 	to_chat(user, boxed_message(span_notice("[out_message.Join()]")))
 	desc = "An electrode attached to a small circuit box that will display details of a solution. Can be toggled to provide a description of each of the reagents. The screen currently displays detected vol: [round(cont.volume, 0.01)] detected pH:[round(cont.reagents.ph, 0.1)]."

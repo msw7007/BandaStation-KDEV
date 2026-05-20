@@ -27,6 +27,8 @@
 
 	///Reagents holder
 	var/datum/reagents/reagents = null
+	///Chance for analysis perks to recover extra material when this atom is later destroyed or deconstructed.
+	var/cy_analysis_material_reward_chance = 0
 
 	///all of this atom's HUD (med/sec, etc) images. Associative list of the form: list(hud category = hud image or images for that category).
 	///most of the time hud category is associated with a single image, sometimes its associated with a list of images.
@@ -362,13 +364,40 @@
 		living_crafter.award_cy_professional_activity(skill_type, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE)
 	if(istype(crafted_item))
 		crafted_item.cy_apply_quality_to_craft_result(components, quality_bonus)
+		if(istype(living_crafter) && skill_type == /datum/cy_skill/professional/cooking)
+			var/obj/item/food/crafted_food = crafted_item
+			if(istype(crafted_food))
+				living_crafter.cy_apply_cooking_perks_to_food(crafted_food)
+	if(istype(living_crafter) && skill_type == /datum/cy_skill/professional/invention && !living_crafter.has_cy_skill_perk(/datum/cy_skill/professional/invention, 2) && prob(20))
+		visible_message(span_warning("[src] sparks and bursts from unstable assembly!"))
+		explosion(src, light_impact_range = 1, flame_range = 0, flash_range = 0, adminlog = FALSE, explosion_cause = src)
+	if(istype(living_crafter) && uses_integrity && max_integrity)
+		if(skill_type == /datum/cy_skill/professional/construction && living_crafter.has_cy_skill_perk(/datum/cy_skill/professional/construction, 3))
+			var/integrity_bonus = living_crafter.get_cy_skill_perk_value(/datum/cy_skill/professional/construction, 3, "value_1", 20) * 0.01
+			modify_max_integrity(round(max_integrity * (1 + integrity_bonus)), FALSE)
+			repair_damage(max_integrity)
+		else if(skill_type == /datum/cy_skill/professional/invention && living_crafter.has_cy_skill_perk(/datum/cy_skill/professional/invention, 5))
+			var/invention_integrity_bonus = living_crafter.get_cy_skill_perk_value(/datum/cy_skill/professional/invention, 5, "value_2", 30) * 0.01
+			modify_max_integrity(round(max_integrity * (1 + invention_integrity_bonus)), FALSE)
+			repair_damage(max_integrity)
+	if(istype(living_crafter) && skill_type == /datum/cy_skill/professional/invention && living_crafter.has_cy_skill_perk(/datum/cy_skill/professional/invention, 6) && prob(living_crafter.get_cy_skill_perk_value(/datum/cy_skill/professional/invention, 6, "value_1", 4)))
+		var/atom/movable/duplicate = new src.type(drop_location())
+		var/obj/item/duplicate_item = duplicate
+		if(istype(duplicate_item) && istype(crafted_item))
+			duplicate_item.cy_copy_quality_from(crafted_item)
+			duplicate_item.cy_quality_affects_stats = crafted_item.cy_quality_affects_stats
+			duplicate_item.cy_initialize_quality_core()
+			duplicate_item.cy_rebuild_item_stats()
 	var/list/remaining_parts = LAZYLISTDUPLICATE(current_recipe?.parts)
 	var/list/parts_by_type = LAZYLISTDUPLICATE(remaining_parts)
 	for(var/parttype in parts_by_type) //necessary for our is_type_in_list() call with the zebra arg set to true
 		parts_by_type[parttype] = parttype
 	for(var/atom/movable/movable as anything in components) // machinery or structure objects in the list are guaranteed to be used up. We only check items.
-		movable.used_in_craft(src, current_recipe)
 		var/matched_type = is_type_in_list(movable, parts_by_type, zebra = TRUE)
+		if(istype(living_crafter) && skill_type == /datum/cy_skill/professional/construction && !matched_type && isitem(movable) && living_crafter.has_cy_skill_perk(/datum/cy_skill/professional/construction, 5))
+			if(prob(living_crafter.get_cy_skill_perk_value(/datum/cy_skill/professional/construction, 5, "value_1", 30)))
+				continue
+		movable.used_in_craft(src, current_recipe)
 		if(!matched_type)
 			continue
 
@@ -675,12 +704,17 @@
 /atom/proc/StartProcessingAtom(mob/living/user, obj/item/process_item, list/chosen_option)
 	var/processing_time = chosen_option[TOOL_PROCESSING_TIME]
 	var/sound_to_play = chosen_option[TOOL_PROCESSING_SOUND]
+	var/atom/atom_to_create = chosen_option[TOOL_PROCESSING_RESULT]
+	var/skill_type
+	if(ispath(atom_to_create, /obj/item/food))
+		skill_type = /datum/cy_skill/professional/cooking
+	if(skill_type)
+		processing_time *= user.get_cy_skill_speed_multiplier(skill_type)
 	to_chat(user, span_notice("You start working on [src]."))
 	if(sound_to_play)
 		playsound(src, sound_to_play, 50, TRUE)
 	if(!process_item.use_tool(src, user, processing_time, volume=50))
 		return
-	var/atom/atom_to_create = chosen_option[TOOL_PROCESSING_RESULT]
 	var/list/atom/created_atoms = list()
 	var/amount_to_create = chosen_option[TOOL_PROCESSING_AMOUNT]
 	for(var/i = 1 to amount_to_create)
@@ -693,7 +727,16 @@
 		if(i > 1)
 			created_atom.pixel_x += rand(-8,8)
 			created_atom.pixel_y += rand(-8,8)
+		if(skill_type == /datum/cy_skill/professional/cooking)
+			var/obj/item/food/created_food = created_atom
+			if(istype(created_food))
+				created_food.cy_set_quality(created_food.cy_quality + user.get_cy_professional_quality_bonus(skill_type))
+				created_food.cy_quality_affects_stats = TRUE
+				created_food.cy_initialize_quality_core()
+				user.cy_apply_cooking_perks_to_food(created_food)
 		created_atoms.Add(created_atom)
+	if(skill_type)
+		user.award_cy_professional_activity(skill_type, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE * max(1, amount_to_create))
 	to_chat(user, span_notice("You manage to create [amount_to_create] [initial(atom_to_create.gender) == PLURAL ? "[initial(atom_to_create.name)]" : "[initial(atom_to_create.name)][plural_s(initial(atom_to_create.name))]"] from [src]."))
 	SEND_SIGNAL(src, COMSIG_ATOM_PROCESSED, user, process_item, created_atoms)
 	UsedforProcessing(user, process_item, chosen_option, created_atoms)

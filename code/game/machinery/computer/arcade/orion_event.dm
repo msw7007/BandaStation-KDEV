@@ -279,7 +279,7 @@
 
 /datum/orion_event/illness/emag_effect(obj/machinery/computer/arcade/orion_trail/game, mob/living/gamer)
 	var/maxSeverity = 3
-	if(HAS_TRAIT(gamer, TRAIT_CY_STYLE_4))
+	if(gamer.has_cy_skill_perk(/datum/cy_skill/charisma/style, 4))
 		maxSeverity = 2 //part of gitting gud is rng mitigation
 	var/severity = rand(1,maxSeverity) //pray to RNGesus. PRAY, PIGS
 	if(severity == 1)

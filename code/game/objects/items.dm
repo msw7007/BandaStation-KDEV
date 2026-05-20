@@ -1242,13 +1242,14 @@
 	if(!delay && !tool_start_check(user, amount))
 		return
 
+	var/base_delay = delay
 	var/skill_modifier = 1
 
 	if(tool_behaviour == TOOL_MINING)
 		if(user.mind)
 			skill_modifier = user.get_cy_skill_speed_multiplier(/datum/cy_skill/professional/mining)
 
-			if(user.get_cy_skill_level(/datum/cy_skill/professional/mining) >= CY_SKILL_LEVEL_TRAINED)
+			if(user.has_cy_skill_perk(/datum/cy_skill/professional/mining, CY_SKILL_LEVEL_TRAINED))
 				mineral_scan_pulse(get_turf(user), CY_SKILL_LEVEL_TRAINED - 2, scanner = src) //CY_SKILL_LEVEL_TRAINED = 3 So to get range of 1+ we have to subtract 2 from it,.
 
 	delay *= toolspeed * skill_modifier
@@ -1274,6 +1275,9 @@
 	// Use tool's fuel, stack sheets or charges if amount is set.
 	if(amount && !use(amount))
 		return
+
+	if(tool_behaviour == TOOL_MINING && user.mind)
+		user.perform_cy_skill_check(/datum/cy_skill/professional/mining, max(1, round(base_delay || delay || 1)))
 
 	// Play tool sound at the end of tool usage,
 	// but only if the delay between the beginning and the end is not too small
@@ -2590,7 +2594,9 @@
 	var/slot = module.cy_module_slot
 	if(!slot)
 		return FALSE
-	if(length(cy_get_modules_in_slot(slot)) >= cy_get_module_slot_limit(slot))
+	var/slot_is_full = length(cy_get_modules_in_slot(slot)) >= cy_get_module_slot_limit(slot)
+	var/mob/living/living_user = user
+	if(slot_is_full && (!istype(living_user) || !living_user.has_cy_skill_perk(/datum/cy_skill/professional/invention, 4)))
 		if(messages && user)
 			user.balloon_alert(user, "слот занят!")
 		return FALSE
@@ -2622,6 +2628,10 @@
 		cy_installed_modules = list()
 
 	var/slot = module.cy_module_slot
+	var/list/slot_modules = cy_get_modules_in_slot(slot)
+	if(length(slot_modules) >= cy_get_module_slot_limit(slot))
+		var/obj/item/cy_module/replaced_module = slot_modules[1]
+		cy_uninstall_module(replaced_module, user, drop_location(), FALSE)
 	if(cy_get_module_slot_limit(slot) == 1)
 		cy_installed_modules[slot] = module
 	else

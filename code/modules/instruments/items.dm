@@ -38,6 +38,13 @@
 	user.visible_message(span_suicide("[user] begins to play 'Gloomy Sunday'! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
 	return BRUTELOSS
 
+/obj/item/instrument/attack(mob/living/target_mob, mob/living/user, list/modifiers, list/attack_modifiers)
+	var/original_force = force
+	if(istype(user) && user.has_cy_skill_perk(/datum/cy_skill/professional/music, 4))
+		force = max(force, user.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 4, "value_1", 15))
+	. = ..()
+	force = original_force
+
 /obj/item/instrument/ui_interact(mob/user, datum/tgui/ui)
 	var/mob/living/living_user = user
 	if(istype(living_user) && can_play(user))

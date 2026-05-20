@@ -84,10 +84,15 @@
 				processed_item.cy_quality_affects_stats = TRUE
 				processed_item.cy_initialize_quality_core()
 				processed_item.cy_rebuild_item_stats()
+				var/obj/item/food/processed_food_item = processed_item
+				if(istype(processed_food_item))
+					cook.cy_apply_cooking_perks_to_food(processed_food_item)
 
 	if(isliving(what))
 		var/mob/living/themob = what
 		themob.gib()
+	else if(istype(cook) && cook.has_cy_skill_perk(/datum/cy_skill/professional/cooking, 5) && prob(cook.get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 5, "value_1", 10)))
+		what.forceMove(drop_location())
 	else
 		qdel(what)
 	LAZYREMOVE(processor_contents, what)

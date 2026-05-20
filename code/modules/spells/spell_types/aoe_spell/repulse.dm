@@ -116,7 +116,7 @@
 /datum/action/cooldown/spell/aoe/repulse/xeno/proc/is_strongman(mob/living/owner)
 	if (HAS_TRAIT(owner, TRAIT_STRENGTH))
 		return TRUE
-	return HAS_TRAIT(owner, TRAIT_CY_ATHLETICS_5)
+	return owner.has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 5)
 
 /// You're not strong enough :(
 /datum/action/cooldown/spell/aoe/repulse/xeno/proc/after_spin()

@@ -21,19 +21,19 @@
 /mob/living/proc/get_cy_stat_weapon_damage_multiplier(obj/item/weapon)
 	if(!weapon)
 		return 1
-	var/multiplier = 1
+	var/multiplier = get_cy_strength_melee_damage_multiplier()
 	if(weapon.w_class >= WEIGHT_CLASS_BULKY)
 		if(!get_cy_skill_level(/datum/cy_skill/strength/heavy_weapons))
 			multiplier *= 0.9
 		multiplier += get_cy_skill_level(/datum/cy_skill/strength/heavy_weapons) * 0.03
 		if(has_cy_skill_perk_level(/datum/cy_skill/strength/heavy_weapons, 2))
-			multiplier += get_cy_stat(/datum/cy_stat/strength) * 0.005
+			multiplier += get_cy_stat(/datum/cy_stat/strength) * (get_cy_skill_perk_value(/datum/cy_skill/strength/heavy_weapons, 2, "value_1", 50) * 0.0001)
 	else if(weapon.w_class <= WEIGHT_CLASS_SMALL)
 		multiplier += get_cy_skill_level(/datum/cy_skill/dexterity/light_weapons) * 0.02
 	if(weapon.get_sharpness())
 		multiplier += get_cy_skill_level(/datum/cy_skill/perception/precise_melee) * 0.015
 	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 3))
-		multiplier += 0.05
+		multiplier += get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 3, "value_1", 50) * 0.001
 	return multiplier
 
 /mob/living/proc/get_cy_weapon_spread_multiplier(obj/item/weapon)
@@ -41,28 +41,29 @@
 	if(weapon?.w_class >= WEIGHT_CLASS_BULKY)
 		var/heavy_level = get_cy_skill_level(/datum/cy_skill/strength/heavy_weapons)
 		if(heavy_level >= 6)
-			multiplier = min(multiplier, 0.1)
+			multiplier = min(multiplier, get_cy_skill_perk_value(/datum/cy_skill/strength/heavy_weapons, 6, "value_1", 10) * 0.01)
 		else if(heavy_level >= 4)
-			multiplier *= 0.7
+			multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/strength/heavy_weapons, 4, "value_1", 30) * 0.01)
 	return max(0.1, multiplier)
 
 /mob/living/proc/apply_cy_stat_weapon_onhit_effects(mob/living/target, obj/item/weapon, target_zone, damage_done)
 	if(!target || !weapon || target == src || damage_done <= 0)
 		return FALSE
-	if(has_cy_skill_perk_level(/datum/cy_skill/strength/heavy_weapons, 6) && weapon.w_class >= WEIGHT_CLASS_BULKY && prob(10))
+	if(has_cy_skill_perk_level(/datum/cy_skill/strength/heavy_weapons, 6) && weapon.w_class >= WEIGHT_CLASS_BULKY && prob(get_cy_skill_perk_value(/datum/cy_skill/strength/heavy_weapons, 6, "value_2", 10)))
 		target.Knockdown(1.5 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/dexterity/light_weapons, 3) && weapon.w_class <= WEIGHT_CLASS_NORMAL && prob(25))
+	if(has_cy_skill_perk_level(/datum/cy_skill/dexterity/light_weapons, 3) && weapon.w_class <= WEIGHT_CLASS_NORMAL && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/light_weapons, 3, "value_1", 25)))
 		target.adjust_stamina_loss(6)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 2) && prob(10))
+	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 2) && prob(get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 2, "value_1", 10)))
 		target.apply_damage(max(1, round(damage_done * 0.2)), weapon.damtype, target_zone)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 4) && prob(15))
+	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 4) && prob(get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 4, "value_1", 15)))
 		target.Immobilize(2 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 6) && target_zone == BODY_ZONE_HEAD && prob(25))
+	if(has_cy_skill_perk_level(/datum/cy_skill/perception/weakspot_analysis, 6) && target_zone == BODY_ZONE_HEAD && prob(get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 6, "value_1", 25)))
 		target.Paralyze(2 SECONDS)
-	if(has_cy_skill_perk_level(/datum/cy_skill/perception/precise_melee, 5) && target_zone == BODY_ZONE_HEAD && prob(30))
+	if(has_cy_skill_perk_level(/datum/cy_skill/perception/precise_melee, 5) && target_zone == BODY_ZONE_HEAD && prob(get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 5, "value_1", 30)))
 		target.adjust_confusion_up_to(4 SECONDS, 8 SECONDS)
 	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/style, 6) && prob(20))
-		target.adjust_temp_blindness_up_to(2 SECONDS, 4 SECONDS)
+		var/blind_seconds = get_cy_skill_perk_value(/datum/cy_skill/charisma/style, 6, "value_1", 2)
+		target.adjust_temp_blindness_up_to(blind_seconds SECONDS, 4 SECONDS)
 	return TRUE
 
 /mob/living/proc/award_cy_weapon_activity(obj/item/weapon, amount)

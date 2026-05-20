@@ -307,8 +307,8 @@
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	if(final_force <= 0)
 		return 0
-	if(HAS_TRAIT(user, TRAIT_CY_CONSTRUCTION_4))
-		final_force *= 2
+	if(user.has_cy_skill_perk(/datum/cy_skill/professional/construction, 4))
+		final_force *= 1 + (user.get_cy_skill_perk_value(/datum/cy_skill/professional/construction, 4, "value_1", 100) * 0.01)
 
 	var/damage = take_damage(final_force, attacking_item.damtype, MELEE, 1, get_dir(src, user))
 	//only witnesses close by and the victim see a hit message.
@@ -325,11 +325,7 @@
 
 	var/targeting = check_zone(user.zone_selected)
 	if(user != src)
-		var/zone_hit_chance = 80
-		if(body_position == LYING_DOWN)
-			zone_hit_chance += 10
-		zone_hit_chance += user.get_cy_weapon_accuracy_bonus(attacking_item)
-		targeting = get_random_valid_zone(targeting, zone_hit_chance)
+		targeting = user.get_cy_aimed_hit_zone(src, targeting, null)
 	var/targeting_human_readable = parse_zone_with_bodypart(targeting, declent = ACCUSATIVE)
 
 	if(!LAZYACCESS(attack_modifiers, SILENCE_DEFAULT_MESSAGES))
@@ -390,7 +386,7 @@
 	if(damage_done > 0)
 		user.award_cy_weapon_activity(attacking_item, max(1, round(damage_done * CY_WEAPON_SKILL_MELEE_EXPERIENCE_PER_DAMAGE, 1)))
 	user.reveal_cy_stealth("attack")
-	user.changeNext_move(round(CLICK_CD_MELEE * user.get_cy_weapon_cooldown_multiplier(attacking_item)))
+	user.changeNext_move(round(CLICK_CD_MELEE * user.get_cy_weapon_cooldown_multiplier(attacking_item) * user.get_cy_dexterity_action_delay_multiplier()))
 
 	return damage_done
 

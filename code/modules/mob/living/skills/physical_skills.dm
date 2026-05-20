@@ -25,66 +25,6 @@ GLOBAL_LIST_INIT(cy_physical_skill_types, list(
 	/datum/cy_skill/charisma/style,
 ))
 
-/datum/cy_skill/strength
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/stat_linked/level_1),
-		"2" = list(/datum/cy_skill_perk/stat_linked/level_2),
-		"3" = list(/datum/cy_skill_perk/stat_linked/level_3),
-		"4" = list(/datum/cy_skill_perk/stat_linked/level_4),
-		"5" = list(/datum/cy_skill_perk/stat_linked/level_5),
-		"6" = list(/datum/cy_skill_perk/stat_linked/level_6),
-	)
-
-/datum/cy_skill/dexterity
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/stat_linked/level_1),
-		"2" = list(/datum/cy_skill_perk/stat_linked/level_2),
-		"3" = list(/datum/cy_skill_perk/stat_linked/level_3),
-		"4" = list(/datum/cy_skill_perk/stat_linked/level_4),
-		"5" = list(/datum/cy_skill_perk/stat_linked/level_5),
-		"6" = list(/datum/cy_skill_perk/stat_linked/level_6),
-	)
-
-/datum/cy_skill/perception
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/stat_linked/level_1),
-		"2" = list(/datum/cy_skill_perk/stat_linked/level_2),
-		"3" = list(/datum/cy_skill_perk/stat_linked/level_3),
-		"4" = list(/datum/cy_skill_perk/stat_linked/level_4),
-		"5" = list(/datum/cy_skill_perk/stat_linked/level_5),
-		"6" = list(/datum/cy_skill_perk/stat_linked/level_6),
-	)
-
-/datum/cy_skill/intelligence
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/stat_linked/level_1),
-		"2" = list(/datum/cy_skill_perk/stat_linked/level_2),
-		"3" = list(/datum/cy_skill_perk/stat_linked/level_3),
-		"4" = list(/datum/cy_skill_perk/stat_linked/level_4),
-		"5" = list(/datum/cy_skill_perk/stat_linked/level_5),
-		"6" = list(/datum/cy_skill_perk/stat_linked/level_6),
-	)
-
-/datum/cy_skill/spirit
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/stat_linked/level_1),
-		"2" = list(/datum/cy_skill_perk/stat_linked/level_2),
-		"3" = list(/datum/cy_skill_perk/stat_linked/level_3),
-		"4" = list(/datum/cy_skill_perk/stat_linked/level_4),
-		"5" = list(/datum/cy_skill_perk/stat_linked/level_5),
-		"6" = list(/datum/cy_skill_perk/stat_linked/level_6),
-	)
-
-/datum/cy_skill/charisma
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/stat_linked/level_1),
-		"2" = list(/datum/cy_skill_perk/stat_linked/level_2),
-		"3" = list(/datum/cy_skill_perk/stat_linked/level_3),
-		"4" = list(/datum/cy_skill_perk/stat_linked/level_4),
-		"5" = list(/datum/cy_skill_perk/stat_linked/level_5),
-		"6" = list(/datum/cy_skill_perk/stat_linked/level_6),
-	)
-
 /datum/cy_skill/strength/power_melee
 	name = "Силовой рукопашный бой"
 	id = "power_melee"

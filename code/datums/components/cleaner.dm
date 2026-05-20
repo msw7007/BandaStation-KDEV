@@ -130,10 +130,10 @@
 		clean_succeeded = TRUE
 		for(var/obj/effect/decal/cleanable/cleanable_decal in target) //it's important to do this before you wash all of the cleanables off
 			if(call_wash && grant_xp)
-				user.award_cy_raw_skill_experience(/datum/cy_skill/professional/analysis, round(cleanable_decal.beauty / CY_CLEANING_BEAUTY_EXPERIENCE_ADJUSTMENT))
+				user.perform_cy_skill_check(/datum/cy_skill/professional/analysis, max(1, round(cleanable_decal.beauty / CY_CLEANING_BEAUTY_EXPERIENCE_ADJUSTMENT)))
 			all_cleaned[cleanable_decal] = GET_ATOM_BLOOD_DNA(cleanable_decal)
 		if(call_wash && target.wash(cleaning_strength) && grant_xp)
-			user.award_cy_raw_skill_experience(/datum/cy_skill/professional/analysis, round(CY_CLEANING_GENERIC_WASH_EXPERIENCE))
+			user.perform_cy_skill_check(/datum/cy_skill/professional/analysis, max(1, round(CY_CLEANING_GENERIC_WASH_EXPERIENCE)))
 
 	on_cleaned_callback?.Invoke(source, target, user, clean_succeeded, all_cleaned)
 	//remove the cleaning overlay

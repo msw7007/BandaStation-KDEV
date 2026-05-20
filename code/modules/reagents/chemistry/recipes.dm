@@ -270,6 +270,10 @@
 	if (QDELETED(holder))
 		return
 
+	var/mob/living/cy_chemist = holder.cy_last_reaction_user?.resolve()
+	if(cy_chemist?.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 6))
+		volume *= 1 - (cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 6, "value_1", 10) * 0.01)
+
 	var/power = modifier + round(volume / strengthdiv, 1)
 	if (power > 0)
 		var/turf/our_turf = get_turf(holder.my_atom)

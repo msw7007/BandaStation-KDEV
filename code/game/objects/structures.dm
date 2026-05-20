@@ -98,6 +98,7 @@
 	var/obj/item/circuitboard/cy_loaded_board
 	var/list/cy_required_resources
 	var/list/cy_loaded_resources
+	var/cy_construction_reinforced = FALSE
 
 /obj/structure/proc/cy_can_move_structure()
 	return cy_structure_mobility == CY_STRUCTURE_MOBILITY_MOBILE && !anchored
@@ -159,8 +160,18 @@
 	return FALSE
 
 /obj/structure/attackby(obj/item/tool, mob/user, list/modifiers, list/attack_modifiers)
+	var/mob/living/living_user = user
+	var/obj/item/stack/reinforcement_stack = tool
+	if(istype(living_user) && istype(reinforcement_stack) && !cy_construction_reinforced && max_integrity && !(resistance_flags & INDESTRUCTIBLE) && living_user.has_cy_skill_perk(/datum/cy_skill/professional/construction, 5))
+		if(reinforcement_stack.use(1))
+			var/reinforce_bonus = living_user.get_cy_skill_perk_value(/datum/cy_skill/professional/construction, 5, "value_2", 20) * 0.01
+			modify_max_integrity(round(max_integrity * (1 + reinforce_bonus)), FALSE)
+			repair_damage(max_integrity * reinforce_bonus)
+			cy_construction_reinforced = TRUE
+			living_user.award_cy_professional_activity(/datum/cy_skill/professional/construction)
+			living_user.balloon_alert(living_user, "РєРѕРЅСЃС‚СЂСѓРєС†РёСЏ СѓСЃРёР»РµРЅР°")
+			return TRUE
 	if(cy_handle_structure_tool(tool, user))
-		var/mob/living/living_user = user
 		if(istype(living_user))
 			var/skill_type = tool?.tool_behaviour == TOOL_MULTITOOL ? /datum/cy_skill/professional/electricity : /datum/cy_skill/professional/construction
 			living_user.award_cy_professional_activity(skill_type)

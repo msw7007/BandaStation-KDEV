@@ -108,7 +108,6 @@
 	if(!amount)
 		return 0
 
-	amount = modify_experience_gain_by_perks(skill_type, amount)
 	if(skill.limited_by_stat)
 		var/level_experience_amount = round(amount * 0.5)
 		if(amount > 0)

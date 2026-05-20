@@ -375,6 +375,17 @@
 		owner.adjust_confusion(-1 SECONDS)
 		owner.add_mood_event("goodmusic", /datum/mood_event/goodmusic)
 
+/datum/status_effect/good_music/strong
+	id = "Strong Good Music"
+	duration = 8 SECONDS
+
+/datum/status_effect/good_music/strong/tick(seconds_between_ticks)
+	if(!HAS_TRAIT(owner, TRAIT_DEAF))
+		owner.adjust_dizzy(-6 SECONDS)
+		owner.adjust_jitter(-6 SECONDS)
+		owner.adjust_confusion(-2 SECONDS)
+		owner.add_mood_event("goodmusic", /datum/mood_event/goodmusic)
+
 /atom/movable/screen/alert/status_effect/regenerative_core
 	name = "Regenerative Core Tendrils"
 	desc = "You can move faster than your broken body could normally handle!"

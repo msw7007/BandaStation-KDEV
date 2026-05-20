@@ -135,7 +135,7 @@
 			if(pause_state == FALSE)
 				healamt = rand(6,8) + rand(0, gamerSkill)
 				var/maxPointCost = 3
-				if(HAS_TRAIT(gamer, TRAIT_CY_STYLE_3))
+				if(gamer.has_cy_skill_perk(/datum/cy_skill/charisma/style, 3))
 					maxPointCost = 2
 				healcost = rand(1, maxPointCost)
 			pause_state = TRUE

@@ -120,11 +120,11 @@
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return 1.25
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_6))
-		return 1 / 1.5
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_4))
-		return 1 / 1.25
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_1))
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 6))
+		return 1 / (1 + driver.get_cy_skill_perk_value(/datum/cy_skill/professional/driving, 6, "vehicle_stat_bonus_percent", 20) * 0.025)
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 4))
+		return 1 / (1 + driver.get_cy_skill_perk_value(/datum/cy_skill/professional/driving, 4, "max_speed_bonus_percent", 25) * 0.01)
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 1))
 		return 1
 	return 1.25
 
@@ -132,19 +132,19 @@
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return 1
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_6))
-		return 1.2
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 6))
+		return 1 + driver.get_cy_skill_perk_value(/datum/cy_skill/professional/driving, 6, "vehicle_stat_bonus_percent", 20) * 0.01
 	return 1
 
 /obj/vehicle/proc/get_cy_driver_consumption_multiplier()
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return 1.2
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_6))
-		return 0.9
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_4))
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 6))
+		return 1 - driver.get_cy_skill_perk_value(/datum/cy_skill/professional/driving, 6, "fuel_use_reduction_percent", 10) * 0.01
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 4))
 		return 1
-	if(HAS_TRAIT(driver, TRAIT_CY_DRIVING_2))
+	if(driver.has_cy_skill_perk(/datum/cy_skill/professional/driving, 2))
 		return 1.1
 	return 1.2
 
@@ -152,7 +152,7 @@
 	var/mob/living/driver = get_cy_primary_driver()
 	if(!driver)
 		return FALSE
-	return driver.award_cy_professional_activity(/datum/cy_skill/professional/driving, amount)
+	return driver.perform_cy_skill_check(/datum/cy_skill/professional/driving, amount)
 
 /obj/vehicle/proc/driver_amount()
 	return return_amount_of_controllers_with_flag(VEHICLE_CONTROL_DRIVE)

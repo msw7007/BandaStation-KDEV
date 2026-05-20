@@ -819,21 +819,26 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	// Out athletics skill is used to set our potential base damage roll. It won't increase our potential damage roll, but will make our unarmed attack more consistent.
 	// For a normal human arm, this would cap at 10, and for a normal human leg, this would go up to 14.
 	lower_unarmed_damage =  min(lower_unarmed_damage + (user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics) || 0), upper_unarmed_damage)
-	if(!HAS_TRAIT(user, TRAIT_CY_POWER_MELEE_1))
-		lower_unarmed_damage *= 0.9
-		upper_unarmed_damage *= 0.9
-	else if(HAS_TRAIT(user, TRAIT_CY_POWER_MELEE_2))
-		upper_unarmed_damage += user.get_cy_stat(/datum/cy_stat/strength) * 0.5
+	if(!user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 1))
+		var/untrained_force_penalty = user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 1, "value_1", 10) * 0.01
+		lower_unarmed_damage *= 1 - untrained_force_penalty
+		upper_unarmed_damage *= 1 - untrained_force_penalty
+	else if(user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 2))
+		upper_unarmed_damage += user.get_cy_stat(/datum/cy_stat/strength) * (user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 2, "value_1", 50) * 0.01)
+
+	var/strength_damage_multiplier = user.get_cy_strength_melee_damage_multiplier()
+	lower_unarmed_damage *= strength_damage_multiplier
+	upper_unarmed_damage *= strength_damage_multiplier
 
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
 	var/precise_melee_level = user.get_cy_skill_perk_level(/datum/cy_skill/perception/precise_melee)
-	if(!HAS_TRAIT(user, TRAIT_CY_PRECISE_MELEE_1))
-		limb_accuracy *= 0.9
-	else if(HAS_TRAIT(user, TRAIT_CY_PRECISE_MELEE_2))
-		limb_accuracy += user.get_cy_stat(/datum/cy_stat/perception) * 0.5
+	if(!user.has_cy_skill_perk(/datum/cy_skill/perception/precise_melee, 1))
+		limb_accuracy *= 1 - (user.get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 1, "value_1", 10) * 0.01)
+	else if(user.has_cy_skill_perk(/datum/cy_skill/perception/precise_melee, 2))
+		limb_accuracy += user.get_cy_stat(/datum/cy_stat/perception) * (user.get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 2, "value_1", 50) * 0.01)
 	// Limb sharpness determines the type of wounds this unarmed strike could possibly roll. By default, most limbs are blunt and have no sharpness.
 	var/limb_sharpness = attacking_bodypart.unarmed_sharpness
 
@@ -869,7 +874,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			user.adjust_disgust(2)
 
 	// Select a zone to hit, blacklisting the part we're attacking with if we're attacking ourselves.
-	var/hit_zone = target.get_random_valid_zone(user.zone_selected, blacklisted_parts = (user == target ? list(attacking_bodypart.body_zone) : null))
+	var/hit_zone = user.get_cy_aimed_hit_zone(target, user.zone_selected, user == target ? list(attacking_bodypart.body_zone) : null)
 	var/obj/item/bodypart/affecting = target.get_bodypart(hit_zone)
 
 	var/miss_chance = 100//calculate the odds that a punch misses entirely. considers stamina and brute damage of the puncher. punches miss by default to prevent weird cases
@@ -879,7 +884,13 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		else
 			miss_chance = clamp(UNARMED_MISS_CHANCE_BASE - limb_accuracy + (puncher_brute_and_burn / 2), 0, UNARMED_MISS_CHANCE_MAX) //Limb miss chance + various damage. capped at 80 so there is at least a chance to land a hit.
 
-	if(!damage || !affecting || prob(miss_chance))//future-proofing for species that have 0 damage/weird cases where no zone is targeted
+	var/cy_unarmed_check_success = !miss_chance || user.perform_cy_random_skill_check(list(
+		/datum/cy_skill/strength/power_melee,
+		/datum/cy_skill/dexterity/fast_melee,
+		/datum/cy_skill/perception/precise_melee,
+	), max(1, miss_chance))
+
+	if(!damage || !affecting || !cy_unarmed_check_success)//future-proofing for species that have 0 damage/weird cases where no zone is targeted
 		playsound(target.loc, attacking_bodypart.unarmed_miss_sound, 25, TRUE, -1)
 		target.visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(atk_verb, GLOB.ru_attack_verbs_unarmed)] и промахивается по [target.declent_ru(DATIVE)]!"), \
 						span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(atk_verb, GLOB.ru_attack_verbs_unarmed)] и промахивается по вам!"), span_hear("Вы слышите свист!"), COMBAT_MESSAGE_RANGE, user)
@@ -945,34 +956,34 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	SEND_SIGNAL(target, COMSIG_HUMAN_GOT_PUNCHED, user, damage, attack_type, affecting, final_armor_block, kicking, limb_sharpness)
 	SEND_SIGNAL(user, COMSIG_HUMAN_PUNCHED, target, damage, attack_type, affecting, final_armor_block, kicking, limb_sharpness)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_POWER_MELEE_4) && prob(25))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 4) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 4, "value_1", 25)))
 		target.adjust_staggered_up_to(2 SECONDS * target.get_cy_stagger_duration_multiplier(), 10 SECONDS)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_POWER_MELEE_5) && staggered && prob(50))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 5) && staggered && prob(user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 5, "value_1", 50)))
 		target.Stun(1.5 SECONDS)
 		target.visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [atk_verb] lands a stunning power hit on [target.declent_ru(ACCUSATIVE)]!"), \
 			span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] [atk_verb] you with a stunning power hit!"), span_hear("You hear a heavy stunning blow!"), COMBAT_MESSAGE_RANGE, user)
 		to_chat(user, span_danger("You hit the staggered target hard enough to stun [target.declent_ru(ACCUSATIVE)]!"))
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_POWER_MELEE_6) && target_was_stunned && prob(50))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 6) && target_was_stunned && prob(user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 6, "value_1", 50)))
 		user.perform_cy_uppercut(target)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_FAST_MELEE_3) && !kicking && prob(25))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 3) && !kicking && prob(user.get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 3, "value_1", 25)))
 		user.perform_cy_kick(target)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_FAST_MELEE_6) && prob(kicking ? 10 : 25))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 6) && prob(kicking ? user.get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 6, "value_2", 10) : user.get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 6, "value_1", 25)))
 		target.Stun(0.7 SECONDS)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_PRECISE_MELEE_3) && prob(30))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/perception/precise_melee, 3) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 3, "value_1", 30)))
 		target.adjust_pain_loss(8 + precise_melee_level * 2, forced = TRUE)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_PRECISE_MELEE_4))
-		if(hit_zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG) && prob(50))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/perception/precise_melee, 4))
+		if(hit_zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 4, "value_1", 50)))
 			target.adjust_staggered_up_to(1.5 SECONDS * target.get_cy_stagger_duration_multiplier(), 6 SECONDS)
-		else if(hit_zone in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM) && prob(20))
+		else if(hit_zone in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 4, "value_2", 20)))
 			target.adjust_stamina_loss(15)
 
-	if(user != target && HAS_TRAIT(user, TRAIT_CY_PRECISE_MELEE_5) && hit_zone == BODY_ZONE_HEAD && prob(30))
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/perception/precise_melee, 5) && hit_zone == BODY_ZONE_HEAD && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/precise_melee, 5, "value_1", 30)))
 		target.adjust_dizzy_up_to(4 SECONDS, 8 SECONDS)
 		target.adjust_confusion_up_to(4 SECONDS, 8 SECONDS)
 
@@ -1029,7 +1040,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 		if (46 to INFINITY)
 			target.apply_effect(4 SECONDS, EFFECT_KNOCKDOWN, armor_block)
-			var/obj/item/bodypart/affecting = target.get_bodypart(target.get_random_valid_zone(user.zone_selected))
+			var/obj/item/bodypart/affecting = target.get_bodypart(user.get_cy_aimed_hit_zone(target, user.zone_selected, null))
 			target.apply_damage(5, BRUTE, affecting, armor_block, wound_bonus = limb_accuracy * 2) //Mostly for the crunchy wounding effect than actually doing damage
 			target.visible_message(span_warning("[capitalize(user.declent_ru(NOMINATIVE))] [atk_verb] [target] так сильно, что отправляет [target.ru_p_them()] в полёт с громким хрустом! Чёрт побери!"), \
 				span_warning("[capitalize(user.declent_ru(NOMINATIVE))] [atk_verb] вас, и вы резко начинаете чувствовать невероятную боль, пока вас отправляют в полёт!"), span_hear("Вы слышите противный хруст и последующий стук!"), COMBAT_MESSAGE_RANGE, user)

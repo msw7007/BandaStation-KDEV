@@ -637,7 +637,7 @@
 	if(ishuman(target))
 		COOLDOWN_START(src, slam_cooldown, slam_cooldown_duration)
 
-	var/target_zone = living_target.get_random_valid_zone(source.zone_selected)
+	var/target_zone = source.get_cy_aimed_hit_zone(living_target, source.zone_selected, null)
 	var/armor_block = living_target.run_armor_check(target_zone, MELEE, armour_penetration = potential_effectiveness)
 	living_target.apply_damage(potential_damage * 2, attacking_bodypart.attack_type, target_zone, armor_block)
 

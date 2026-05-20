@@ -75,7 +75,7 @@
 	if(user)
 		user.remove_atom_colour(ADMIN_COLOUR_PRIORITY)
 		user.visible_message(span_suicide("[user] forgot [user.p_they()] isn't actually a janicart! That's a paddlin'!"))
-		if(HAS_TRAIT(user, TRAIT_CY_ANALYSIS_6)) //Janny janny janny janny janny
+		if(user.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 6)) //Janny janny janny janny janny
 			playsound(src, 'sound/effects/adminhelp.ogg', 50, TRUE, -1)
 		user.adjust_oxy_loss(200)
 		user.death(FALSE)

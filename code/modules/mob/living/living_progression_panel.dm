@@ -59,11 +59,29 @@
 		var/unlocked_level = skills.get_unlocked_skill_level(skill_type)
 		var/cost = skills.get_distributable_experience_cost_for_skill_level(next_level)
 		var/can_raise = next_level <= skill.max_level && next_level <= unlocked_level && skills.distributable_experience >= cost && skills.can_set_skill_level(skill_type, next_level)
+		var/list/perk_data = list()
+		for(var/perk_level in 1 to skill.max_level)
+			for(var/perk_type in skill.get_perks_for_level(perk_level))
+				var/datum/cy_skill_perk/perk = new perk_type
+				perk.skill_type = skill_type
+				perk.apply_skill_context()
+				perk_data += list(list(
+					"id" = perk.id,
+					"name" = perk.name,
+					"level" = perk.level,
+					"trait" = perk.get_trait(),
+					"desc" = perk.desc,
+					"effects" = perk.effects,
+					"unlocked" = current_level >= perk.level,
+					"available" = unlocked_level >= perk.level,
+				))
+				qdel(perk)
 		skill_data += list(list(
 			"path" = "[skill_type]",
 			"name" = skill.name,
 			"desc" = skill.desc,
 			"category" = skill.category,
+			"perks" = perk_data,
 			"level" = current_level,
 			"level_name" = get_cy_skill_level_name(current_level),
 			"next_level" = next_level,

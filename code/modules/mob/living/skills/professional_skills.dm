@@ -16,14 +16,6 @@ GLOBAL_LIST_INIT(cy_professional_skill_types, list(
 	category = "professional"
 	limited_by_stat = FALSE
 	max_level = CY_SKILL_MAXIMUM_LEVEL
-	perks_by_level = list(
-		"1" = list(/datum/cy_skill_perk/professional/apprentice),
-		"2" = list(/datum/cy_skill_perk/professional/journeyman),
-		"3" = list(/datum/cy_skill_perk/professional/reliable),
-		"4" = list(/datum/cy_skill_perk/professional/specialist),
-		"5" = list(/datum/cy_skill_perk/professional/expert),
-		"6" = list(/datum/cy_skill_perk/professional/master),
-	)
 
 /datum/cy_skill/professional/medicine
 	name = "Медицина"

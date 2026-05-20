@@ -42,12 +42,30 @@ GLOBAL_LIST_EMPTY(cy_skill_datums)
 
 /datum/cy_skill/New()
 	. = ..()
+	var/list/specific_perks = list()
+	for(var/current_level in 1 to max_level)
+		var/perk_type = get_specific_perk_for_level(current_level)
+		if(perk_type)
+			specific_perks["[current_level]"] = list(perk_type)
+
+	if(length(specific_perks))
+		perks_by_level = specific_perks
+		return
+
 	if(length(perks_by_level))
 		return
 
 	perks_by_level = list()
 	for(var/current_level in 1 to max_level)
 		perks_by_level["[current_level]"] = list(cy_generic_skill_perk_for_level(current_level))
+
+/datum/cy_skill/proc/get_specific_perk_for_level(level)
+	if(category != "physical" && category != "professional")
+		return null
+	if(!id || id == "unknown")
+		return null
+
+	return text2path("/datum/cy_skill_perk/[category]/[id]/level_[level]")
 
 /datum/cy_skill/proc/get_perks_for_level(level)
 	if(!length(perks_by_level))

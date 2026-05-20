@@ -273,19 +273,36 @@
 /turf/closed/mineral/proc/gets_drilled(mob/user, exp_multiplier = 0)
 	if(istype(user))
 		SEND_SIGNAL(user, COMSIG_MOB_MINED, src, exp_multiplier)
+	var/mob/living/carbon/human/miner
+	if(ishuman(user))
+		miner = user
 	if(mineral_type && (mineral_amt > 0))
 		new mineral_type(src, mineral_amt)
 		SSblackbox.record_feedback("tally", "ore_mined", mineral_amt, mineral_type)
+		if(miner?.has_cy_skill_perk(/datum/cy_skill/professional/mining, 3))
+			var/duplicate_chance = miner.has_cy_skill_perk(/datum/cy_skill/professional/mining, 5) ? miner.get_cy_skill_perk_value(/datum/cy_skill/professional/mining, 5, "value_2", 25) : miner.get_cy_skill_perk_value(/datum/cy_skill/professional/mining, 3, "value_2", 10)
+			if(prob(duplicate_chance))
+				new mineral_type(src, mineral_amt)
+				SSblackbox.record_feedback("tally", "ore_mined", mineral_amt, mineral_type)
+	else if(miner?.has_cy_skill_perk(/datum/cy_skill/professional/mining, 3))
+		var/resource_chance = miner.get_cy_skill_perk_value(/datum/cy_skill/professional/mining, 3, "value_1", 2)
+		if(miner.has_cy_skill_perk(/datum/cy_skill/professional/mining, 5))
+			resource_chance += miner.get_cy_skill_perk_value(/datum/cy_skill/professional/mining, 5, "value_1", 1)
+		if(miner.has_cy_skill_perk(/datum/cy_skill/professional/mining, 4))
+			resource_chance += cy_get_ore_richness() * 2
+		if(prob(resource_chance))
+			new /obj/item/stack/ore/iron(src, max(1, cy_get_ore_richness()))
+			SSblackbox.record_feedback("tally", "ore_mined", max(1, cy_get_ore_richness()), /obj/item/stack/ore/iron)
 	if(spawned_boulder)
 		var/obj/item/boulder/wall_boulder = new spawned_boulder(src)
 		wall_boulder.platform_lifespan = PLATFORM_LIFE_GULAG
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
+	if(miner)
+		var/mob/living/carbon/human/H = miner
 		if(exp_multiplier)
 			if (mineral_type && (mineral_amt > 0))
-				H.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, initial(mineral_type.mine_experience) * mineral_amt * exp_multiplier)
+				H.perform_cy_skill_check(/datum/cy_skill/professional/mining, initial(mineral_type.mine_experience) * mineral_amt * exp_multiplier)
 			else
-				H.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, 4 * exp_multiplier)
+				H.perform_cy_skill_check(/datum/cy_skill/professional/mining, 4 * exp_multiplier)
 
 	for(var/obj/effect/temp_visual/mining_overlay/M in src)
 		qdel(M)
@@ -298,6 +315,24 @@
 	addtimer(CALLBACK(src, PROC_REF(AfterChange), flags, old_type), 1, TIMER_UNIQUE)
 	playsound(src, 'sound/effects/break_stone.ogg', 50, TRUE) //beautiful destruction
 	mined.update_visuals()
+
+/turf/closed/mineral/examine(mob/user)
+	. = ..()
+	var/mob/living/miner = user
+	if(!istype(miner) || !miner.has_cy_skill_perk(/datum/cy_skill/professional/mining, 4))
+		return
+	var/richness = cy_get_ore_richness()
+	if(mineral_type && mineral_amt > 0)
+		. += span_info("This rock looks ore-rich: [richness]/5.")
+	else
+		. += span_info("This rock looks poor, but careful mining may still reveal trace ore: [richness]/5.")
+
+/turf/closed/mineral/proc/cy_get_ore_richness()
+	if(mineral_type && mineral_amt > 0)
+		return clamp(mineral_amt, 1, 5)
+	if(spawned_boulder)
+		return 2
+	return 1
 
 /// When the turf gets drilled from an AOE explosion
 /// Has a chance of not being drilled based on own hardness
@@ -1242,7 +1277,7 @@
 		to_chat(usr, span_warning("Only a more advanced species could break a rock such as this one!"))
 		return FALSE
 	var/mob/living/living_user = user
-	if(istype(living_user) && HAS_TRAIT(living_user, TRAIT_CY_MINING_5))
+	if(istype(living_user) && living_user.has_cy_skill_perk(/datum/cy_skill/professional/mining, 5))
 		. = ..()
 	else
 		to_chat(usr, span_warning("The rock seems to be too strong to destroy. Maybe I can break it once I become a master miner."))
@@ -1255,7 +1290,9 @@
 	if(!ishuman(user))
 		return // see attackby
 	var/mob/living/carbon/human/H = user
-	if(!HAS_TRAIT(H, TRAIT_CY_MINING_5))
+	if(!H.has_cy_skill_perk(/datum/cy_skill/professional/mining, 5))
+		return
+	if(!H.perform_cy_skill_check(/datum/cy_skill/professional/mining, 100))
 		return
 	drop_ores()
 	H.client.give_award(/datum/award/achievement/skill/legendary_miner, H)
@@ -1267,7 +1304,6 @@
 	addtimer(CALLBACK(src, PROC_REF(AfterChange), flags, old_type), 1, TIMER_UNIQUE)
 	playsound(src, 'sound/effects/break_stone.ogg', 50, TRUE) //beautiful destruction
 	mined.update_visuals()
-	H.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, 100) //yay!
 
 /turf/closed/mineral/strong/proc/drop_ores()
 	if(prob(10))

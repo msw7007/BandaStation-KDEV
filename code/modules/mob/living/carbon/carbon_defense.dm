@@ -276,11 +276,15 @@
 		//Found our victims, now lets shock them all
 		for(var/victim in shocking_queue)
 			var/mob/living/carbon/C = victim
+			if(C.has_cy_skill_perk(/datum/cy_skill/professional/electricity, 4) && prob(C.get_cy_skill_perk_value(/datum/cy_skill/professional/electricity, 4, "value_1", 50)))
+				continue
 			C.electrocute_act(shock_damage*0.75, src, 1, flags, jitter_time, stutter_time, stun_duration)
 	//Stun
 	var/should_stun = (!(flags & SHOCK_TESLA) || siemens_coeff > 0.5) && !(flags & SHOCK_NOSTUN)
 	var/stun = !(flags & SHOCK_KNOCKDOWN)
 	var/immediately_stun = should_stun && !(flags & SHOCK_DELAY_STUN)
+	if(has_cy_skill_perk(/datum/cy_skill/professional/electricity, 2))
+		stun_duration = max(0, stun_duration - get_cy_skill_perk_value(/datum/cy_skill/professional/electricity, 2, "value_1", 2) SECONDS)
 	if (immediately_stun)
 		if (stun)
 			// intended effect here is to floor you immediately if you are shocked twice in quick succession

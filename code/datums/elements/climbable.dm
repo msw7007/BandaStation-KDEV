@@ -75,6 +75,7 @@
 	// Our climbers fitness level, which removes some climb time and speeds up our climbing do_after, assuming they worked out
 	var/fitness_level = user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics) - 1
 	adjusted_climb_time = clamp(adjusted_climb_time - fitness_level, 1, climb_time) //Here we adjust the number of deciseconds we shave off per level of fitness, with a minimum of 1 decisecond and a maximum of climb_time (just in case)
+	adjusted_climb_time *= user.get_cy_dexterity_action_delay_multiplier()
 
 	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)
 	if(istype(potential_spine))
@@ -105,7 +106,7 @@
 			if(istype(buckle_target))
 				if(buckle_target.is_buckle_possible(user))
 					buckle_target.buckle_mob(user)
-			user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(CY_ATHLETICS_MISC_EXPERIENCE/(fitness_level || 1), 1)) //Get a bit fitter with every climb. But it has diminishing returns at a certain point.
+			user.perform_cy_skill_check(/datum/cy_skill/spirit/athletics, round(CY_ATHLETICS_MISC_EXPERIENCE/(fitness_level || 1), 1)) //Get a bit fitter with every climb. But it has diminishing returns at a certain point.
 		else
 			to_chat(user, span_warning("Вам не удается взобраться на [climbed_thing.declent_ru(ACCUSATIVE)]."))
 	LAZYREMOVEASSOC(current_climbers, climbed_thing, user)

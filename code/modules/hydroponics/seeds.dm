@@ -239,6 +239,7 @@
 	var/product_name
 	///The Number of products produced by the plant, typically the yield. Modified by certain traits.
 	var/product_count = getYield()
+	var/extra_product_count = 0
 
 	while(t_amount < product_count)
 		var/obj/item/food/grown/t_prod
@@ -282,13 +283,24 @@
 		t_prod.seed.desc = parent.myseed.desc
 		t_prod.seed.plantname = parent.myseed.plantname
 		result.Add(t_prod) // User gets a consumable
+		if(istype(gardener) && gardener.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 5) && prob(gardener.get_cy_skill_perk_value(/datum/cy_skill/professional/gardening, 5, "value_1", 20)))
+			var/obj/item/food/grown/extra_prod = new t_prod.type(output_loc, new_seed = t_prod.seed.Copy())
+			extra_prod.name = t_prod.name
+			extra_prod.desc = t_prod.desc
+			extra_prod.cy_copy_quality_from(t_prod)
+			extra_prod.cy_quality_affects_stats = TRUE
+			extra_prod.cy_initialize_quality_core()
+			extra_prod.cy_rebuild_item_stats()
+			result.Add(extra_prod)
+			extra_product_count++
 		if(!t_prod)
 			return
 		t_amount++
 		product_name = parent.myseed.plantname
-	if(product_count >= 1)
-		SSblackbox.record_feedback("tally", "food_harvested", product_count, product_name)
-	parent.update_tray(user, product_count)
+	var/final_product_count = product_count + extra_product_count
+	if(final_product_count >= 1)
+		SSblackbox.record_feedback("tally", "food_harvested", final_product_count, product_name)
+	parent.update_tray(user, final_product_count)
 
 	return result
 

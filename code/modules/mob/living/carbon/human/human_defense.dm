@@ -370,7 +370,12 @@
 		if(wear_suit)
 			siemens_coeff *= wear_suit.siemens_coefficient
 	else if(gloves)
-		siemens_coeff *= gloves.siemens_coefficient
+		if(gloves.siemens_coefficient <= 0 && !has_cy_skill_perk(/datum/cy_skill/professional/electricity, 1) && prob(50))
+			siemens_coeff *= 0.5
+		else
+			siemens_coeff *= gloves.siemens_coefficient
+	else if(has_cy_skill_perk(/datum/cy_skill/professional/electricity, 6))
+		siemens_coeff *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/electricity, 6, "value_1", 50) * 0.01)
 
 	siemens_coeff *= physiology.siemens_coeff
 	siemens_coeff *= dna.species.siemens_coeff

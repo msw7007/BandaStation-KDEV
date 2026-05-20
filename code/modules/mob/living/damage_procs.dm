@@ -164,10 +164,10 @@
 /mob/living/proc/get_cy_wound_bonus_modifier(damagetype)
 	var/modifier = 0
 	if(damagetype in list(BRUTE, BLUNT, PIERCE, SLASH, BURN, FIRE, COLD, ACID_DAMAGE))
-		if(!HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_1))
-			modifier += 10
-		if(HAS_TRAIT(src, TRAIT_CY_TOUGHNESS_5))
-			modifier -= body_position == LYING_DOWN ? 10 : 20
+		if(!src.has_cy_skill_perk(/datum/cy_skill/strength/toughness, 1))
+			modifier += get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 1, "value_1", 10)
+		if(src.has_cy_skill_perk(/datum/cy_skill/strength/toughness, 5))
+			modifier -= body_position == LYING_DOWN ? 10 : get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 5, "value_1", 20)
 	return modifier
 
 /mob/living/proc/get_cy_damage_pain_multiplier(damagetype)

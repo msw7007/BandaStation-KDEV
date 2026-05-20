@@ -184,6 +184,9 @@
 				grilled_item.cy_quality_affects_stats = TRUE
 				grilled_item.cy_initialize_quality_core()
 				grilled_item.cy_rebuild_item_stats()
+				var/obj/item/food/grilled_food = grilled_item
+				if(istype(grilled_food))
+					griller.cy_apply_cooking_perks_to_food(grilled_food)
 
 	grill_source.visible_message("<span class='[positive_result ? "notice" : "warning"]'>[parent] turns into \a [grilled_result]!</span>")
 	grilled_result.pixel_x = original_object.pixel_x

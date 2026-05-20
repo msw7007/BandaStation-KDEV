@@ -282,6 +282,10 @@
 	if(user.is_holding_item_of_type(/obj/item/multitool/abductor))
 		return TRUE
 
+	var/mob/living/electrician = user
+	if(istype(electrician) && electrician.has_cy_skill_perk(/datum/cy_skill/professional/electricity, 5))
+		return TRUE
+
 	// Station blueprints do that too, but only if the wires are not randomized.
 	if(!randomize)
 		if(user.is_holding_item_of_type(/obj/item/blueprints))

@@ -113,6 +113,14 @@ export const CyCharacterProgression = (props) => {
                       {!!skill.desc && (
                         <Stack.Item color="label">{skill.desc}</Stack.Item>
                       )}
+                      {!!skill.perks?.length && (
+                        <Stack.Item color="label">
+                          {skill.perks
+                            .filter((perk) => perk.level === skill.next_level)
+                            .map((perk) => `${perk.id}: ${perk.desc}`)
+                            .join(' ')}
+                        </Stack.Item>
+                      )}
                     </Stack>
                   </Table.Cell>
                   <Table.Cell textAlign="center">

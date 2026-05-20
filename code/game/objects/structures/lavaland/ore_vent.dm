@@ -355,7 +355,7 @@
 	for(var/mob/living/miner in range(7, src)) //Give the miners who are near the vent points and xp.
 		var/obj/item/card/id/user_id_card = miner.get_idcard(TRUE)
 		if(miner.stat <= UNCONSCIOUS)
-			miner.award_cy_raw_skill_experience(/datum/cy_skill/professional/mining, CY_MINING_BOULDER_SIZE_EXPERIENCE * boulder_size)
+			miner.perform_cy_skill_check(/datum/cy_skill/professional/mining, CY_MINING_BOULDER_SIZE_EXPERIENCE * boulder_size)
 		if(!user_id_card)
 			continue
 		var/point_reward_val = (MINER_POINT_MULTIPLIER * (boulder_size + 2)) - MINER_POINT_MULTIPLIER // We remove the base value of discovering the vent

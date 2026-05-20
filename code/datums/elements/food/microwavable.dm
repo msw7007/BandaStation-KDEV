@@ -68,6 +68,16 @@
 
 		if(microwaver && microwaver.mind)
 			ADD_TRAIT(result, TRAIT_FOOD_CHEF_MADE, REF(microwaver.mind))
+			var/mob/living/living_microwaver = microwaver
+			if(istype(living_microwaver))
+				living_microwaver.award_cy_professional_activity(/datum/cy_skill/professional/cooking, CY_PROFESSIONAL_SKILL_CRAFT_EXPERIENCE)
+				var/obj/item/food/microwaved_result_food = result
+				if(istype(microwaved_result_food))
+					microwaved_result_food.cy_set_quality(microwaved_result_food.cy_quality + living_microwaver.get_cy_professional_quality_bonus(/datum/cy_skill/professional/cooking))
+					microwaved_result_food.cy_quality_affects_stats = TRUE
+					microwaved_result_food.cy_initialize_quality_core()
+					microwaved_result_food.cy_rebuild_item_stats()
+					living_microwaver.cy_apply_cooking_perks_to_food(microwaved_result_food)
 
 	//make space and tranfer reagents if it has any, also let any bad result handle removing or converting the transferred reagents on its own terms
 	if(result.reagents && source.reagents)

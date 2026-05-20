@@ -20,12 +20,12 @@
 			multiplier *= CY_DAEMON_CORP_MISMATCH_CAST_MULTIPLIER
 	var/fast_code_level = get_cy_skill_level(/datum/cy_skill/intelligence/fast_code)
 	if(!fast_code_level)
-		multiplier *= 1.1
+		multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/intelligence/fast_code, 1, "value_1", 10) * 0.01)
 	else if(fast_code_level >= 2)
-		multiplier *= 0.8
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/fast_code, 4) && prob(25))
-		multiplier *= 0.5
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/fast_code, 6) && prob(25))
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/fast_code, 2, "value_1", 20) * 0.01)
+	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/fast_code, 4) && prob(get_cy_skill_perk_value(/datum/cy_skill/intelligence/fast_code, 4, "value_1", 25)))
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/fast_code, 4, "value_2", 50) * 0.01)
+	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/fast_code, 6) && prob(get_cy_skill_perk_value(/datum/cy_skill/intelligence/fast_code, 6, "value_1", 25)))
 		multiplier = 0
 	return multiplier
 
@@ -38,13 +38,13 @@
 			multiplier *= CY_DAEMON_CORP_MISMATCH_EFFECTIVENESS_MULTIPLIER
 	var/improved_code_level = get_cy_skill_level(/datum/cy_skill/intelligence/improved_code)
 	if(!improved_code_level)
-		multiplier *= 0.8
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/improved_code, 1, "value_1", 20) * 0.01)
 	else if(improved_code_level >= 2)
-		multiplier *= 1.3
+		multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/intelligence/improved_code, 2, "value_1", 30) * 0.01)
 	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/improved_code, 3))
-		multiplier *= 1.25
+		multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/intelligence/improved_code, 3, "value_1", 25) * 0.01)
 	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/improved_code, 6))
-		multiplier *= 1.5
+		multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/intelligence/improved_code, 6, "value_1", 50) * 0.01)
 	return multiplier
 
 /obj/item/organ/cyberimp
@@ -151,11 +151,11 @@
 		if(compatibility <= CY_ORGANIZATION_COMPATIBILITY_NEUTRAL)
 			multiplier *= CY_IMPLANT_CORP_MISMATCH_OVERHEAT_MULTIPLIER
 	if(!get_cy_skill_level(/datum/cy_skill/spirit/compatibility))
-		multiplier *= 1.2
+		multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/spirit/compatibility, 1, "value_1", 20) * 0.01)
 	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 3))
-		multiplier *= 0.5
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/compatibility, 3, "value_1", 50) * 0.01)
 	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 4))
-		multiplier *= 0.7
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/compatibility, 4, "value_1", 30) * 0.01)
 	return multiplier
 
 // CYBERPUNK 13 STAGE 3 CORE IMPLANT HEAT FIX3 START
@@ -187,7 +187,7 @@
 /mob/living/carbon/human/proc/get_cy_brain_overheat_capacity()
 	var/capacity = max(10, get_cy_stat(/datum/cy_stat/spirit) * 10 + get_cy_stat(/datum/cy_stat/intelligence) * 5)
 	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/compatibility, 2))
-		capacity *= 1.3
+		capacity *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/spirit/compatibility, 2, "value_1", 30) * 0.01)
 	return capacity
 
 /mob/living/carbon/human/proc/process_cy_implant_overheat(seconds_per_tick)

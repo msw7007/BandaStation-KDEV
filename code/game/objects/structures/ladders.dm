@@ -257,6 +257,8 @@
 		misc_multiplier *= potential_spine.athletics_boost_multiplier
 
 	var/final_travel_time = (travel_time - fitness_level) * misc_multiplier
+	if(istype(living_user))
+		final_travel_time *= living_user.get_cy_dexterity_action_delay_multiplier()
 
 	if(do_after(user, final_travel_time, target = src, interaction_key = DOAFTER_SOURCE_CLIMBING_LADDER))
 		travel(user, going_up, grant_exp = TRUE)
@@ -282,7 +284,7 @@
 		var/mob/living/living_user = user
 		if(istype(living_user))
 			var/fitness_level = living_user.get_cy_skill_perk_level(/datum/cy_skill/spirit/athletics)
-			living_user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/athletics, round(CY_ATHLETICS_MISC_EXPERIENCE/(fitness_level || 1), 1)) //get a little experience for our trouble
+			living_user.perform_cy_skill_check(/datum/cy_skill/spirit/athletics, round(CY_ATHLETICS_MISC_EXPERIENCE/(fitness_level || 1), 1)) //get a little experience for our trouble
 
 	if(!is_ghost)
 		show_final_fluff_message(user, ladder, going_up)

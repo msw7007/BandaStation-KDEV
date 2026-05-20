@@ -31,7 +31,7 @@
 
 	if(istype(attacking_item, /obj/item/melee/baseball_bat))
 		var/mob/living/living_user = user
-		if(!istype(living_user) || !HAS_TRAIT(living_user, TRAIT_CY_ATHLETICS_4))
+		if(!istype(living_user) || !living_user.has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 4))
 			to_chat(user, span_warning("\The [parent] is too heavy for you!"))
 			return FALSE
 		playsound(parent, 'sound/items/baseballhit.ogg', 100, TRUE)
@@ -59,7 +59,7 @@
 		return FALSE
 	var/mob/living/livinguser = user
 
-	if(livinguser.combat_mode && HAS_TRAIT(livinguser, TRAIT_CY_ATHLETICS_6))
+	if(livinguser.combat_mode && livinguser.has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 6))
 		check_punch_award(livinguser)
 		playsound(parent, SFX_PUNCH, 50, TRUE)
 		redirection_proc.Invoke(livinguser)

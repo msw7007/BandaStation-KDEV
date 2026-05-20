@@ -115,6 +115,9 @@
 				baked_item.cy_quality_affects_stats = TRUE
 				baked_item.cy_initialize_quality_core()
 				baked_item.cy_rebuild_item_stats()
+				var/obj/item/food/baked_food_item = baked_item
+				if(istype(baked_food_item))
+					baker.cy_apply_cooking_perks_to_food(baked_food_item)
 
 	if(original_object.custom_materials)
 		baked_result.set_custom_materials(original_object.custom_materials, 1)

@@ -104,6 +104,19 @@
 	ADD_TRAIT(src, TRAIT_FISHING_BAIT, INNATE_TRAIT)
 	cy_setup_food_quality()
 
+/obj/item/food/examine(mob/user)
+	. = ..()
+	var/mob/living/cook = user
+	if(!istype(cook) || !cook.has_cy_skill_perk(/datum/cy_skill/professional/cooking, 4))
+		return
+	if(length(cy_flavor_profile))
+		var/list/flavors = list()
+		for(var/flavor in cy_flavor_profile)
+			flavors += "[flavor] [cy_flavor_profile[flavor]]"
+		. += span_info("Composition: [english_list(flavors)].")
+	. += span_info("Food effect strength: [crafting_complexity].")
+	. += span_info("Spoilage: [preserved_food ? "preserved" : "perishable"].")
+
 /obj/item/food/apply_material_effects(list/materials)
 	if(!HAS_TRAIT(src, TRAIT_INGREDIENTS_HOLDER)) //ingredients holder handle prefixes and colors differently
 		var/datum/material/main_material = materials[1] //The list is sorted by amount so the first of the list is the main mat

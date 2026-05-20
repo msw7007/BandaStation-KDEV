@@ -169,6 +169,8 @@
 /obj/proc/atom_deconstruct(disassembled = TRUE)
 	PROTECTED_PROC(TRUE)
 
+	if(cy_analysis_material_reward_chance && length(custom_materials) && prob(cy_analysis_material_reward_chance))
+		drop_custom_materials(0.5)
 	return
 
 /**

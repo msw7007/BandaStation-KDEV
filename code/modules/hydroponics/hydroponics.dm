@@ -300,7 +300,11 @@
 			var/is_fungus = myseed.get_gene(/datum/plant_gene/trait/plant_type/fungal_metabolism)
 			cy_apply_growth_environment(is_fungus)
 			// Advance age, if planted in mushroom friendly soil and we are a mushroom we mature 40% faster.
-			age +=  1 * (is_fungus && (tray_flags & FAST_MUSHROOMS)) ? FAST_MUSH_MODIFIER : 1
+			var/growth_amount = (is_fungus && (tray_flags & FAST_MUSHROOMS)) ? FAST_MUSH_MODIFIER : 1
+			var/mob/living/gardener = lastuser?.resolve()
+			if(istype(gardener) && gardener.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 2))
+				growth_amount *= 1 + gardener.get_cy_skill_perk_value(/datum/cy_skill/professional/gardening, 2, "value_1", 15) * 0.01
+			age += growth_amount
 			if(age < myseed.maturation)
 				lastproduce = age
 			needs_update = TRUE
@@ -635,6 +639,7 @@
 
 /obj/machinery/hydroponics/examine(user)
 	. = ..()
+	var/mob/living/gardener = user
 	if(myseed)
 		. += span_info("It has [span_name("[myseed.plantname]")] planted.")
 		if (plant_status == HYDROTRAY_PLANT_DEAD)
@@ -648,9 +653,19 @@
 
 	. += span_info("Water: [waterlevel]/[maxwater].")
 	. += span_info("Nutrient: [reagents.total_volume]/[maxnutri].")
-	if(myseed)
+	if(myseed && istype(gardener) && gardener.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 4))
 		. += span_info("Оптимум воды: [myseed.cy_water_min]-[myseed.cy_water_max]. Оптимум удобрений: [myseed.cy_nutrient_min]-[myseed.cy_nutrient_max].")
 		. += span_info("Качество почвы: [cy_quality_name(cy_soil_quality)]. Последняя оценка роста: [cy_last_growth_score].")
+	if(myseed && istype(gardener) && gardener.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 3) && LAZYLEN(myseed.mutatelist))
+		var/list/mutation_names = list()
+		for(var/obj/item/seeds/mutation_path as anything in myseed.mutatelist)
+			mutation_names += initial(mutation_path.plantname)
+		. += span_info("Possible mutations: [english_list(mutation_names)].")
+	if(myseed && istype(gardener) && gardener.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 6) && LAZYLEN(myseed.reagents_add))
+		var/list/reagent_names = list()
+		for(var/datum/reagent/reagent_path as anything in myseed.reagents_add)
+			reagent_names += "[initial(reagent_path.name)] ([round(myseed.reagents_add[reagent_path] * 100)]%)"
+		. += span_info("Expected product reagents: [english_list(reagent_names)].")
 	if(self_sustaining)
 		. += span_info("The tray's autogrow is active, protecting it from species mutations, weeds, and pests.")
 
@@ -912,17 +927,21 @@
 		for(var/obj/machinery/hydroponics/H in trays)
 		//cause I don't want to feel like im juggling 15 tamagotchis and I can get to my real work of ripping flooring apart in hopes of validating my life choices of becoming a space-gardener
 			//This was originally in apply_chemicals, but due to apply_chemicals only holding nutrients, we handle it here now.
+			var/gardening_effectiveness = 1
+			var/mob/living/gardener = user
+			if(istype(gardener) && gardener.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 4))
+				gardening_effectiveness += gardener.get_cy_skill_perk_value(/datum/cy_skill/professional/gardening, 4, "value_1", 25) * 0.01
 			if(reagent_source.reagents.has_reagent(/datum/reagent/water))
 				var/water_amt = reagent_source.reagents.get_reagent_amount(/datum/reagent/water) * transfer_amount / reagent_source.reagents.total_volume
-				var/water_amt_adjusted = H.adjust_waterlevel(round(water_amt))
-				reagent_source.reagents.remove_reagent(/datum/reagent/water, water_amt_adjusted)
+				var/water_amt_adjusted = H.adjust_waterlevel(round(water_amt * gardening_effectiveness))
+				reagent_source.reagents.remove_reagent(/datum/reagent/water, min(water_amt, water_amt_adjusted / gardening_effectiveness))
 				for(var/datum/reagent/not_water_reagent as anything in reagent_source.reagents.reagent_list)
 					if(istype(not_water_reagent,/datum/reagent/water))
 						continue
 					var/transfer_me_to_tray = reagent_source.reagents.get_reagent_amount(not_water_reagent.type) * transfer_amount / reagent_source.reagents.total_volume
-					reagent_source.reagents.trans_to(H.reagents, transfer_me_to_tray, target_id = not_water_reagent.type)
+					reagent_source.reagents.trans_to(H.reagents, transfer_me_to_tray, multiplier = gardening_effectiveness, target_id = not_water_reagent.type)
 			else
-				reagent_source.reagents.trans_to(H.reagents, transfer_amount, transferred_by = user)
+				reagent_source.reagents.trans_to(H.reagents, transfer_amount, multiplier = gardening_effectiveness, transferred_by = user)
 			lastuser = WEAKREF(user)
 			if(IS_EDIBLE(reagent_source) || istype(reagent_source, /obj/item/reagent_containers/applicator/pill))
 				qdel(reagent_source)
@@ -1194,6 +1213,11 @@
 		return
 	if(young_plant.seed_flags & NO_PLANTING)
 		to_chat(user, span_warning("[young_plant] cannot be planted in [src]!"))
+		return
+	if(istype(user) && !user.has_cy_skill_perk(/datum/cy_skill/professional/gardening, 1) && prob(30))
+		user.visible_message(span_warning("[user] ruins [young_plant] while trying to plant it."), span_warning("You ruin [young_plant] while trying to plant it."))
+		qdel(young_plant)
+		cy_award_gardening_experience(user, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 		return
 	if(istype(young_plant, /obj/item/seeds/kudzu))
 		investigate_log("had Kudzu planted in it by [key_name(user)] at [AREACOORD(src)].", INVESTIGATE_BOTANY)

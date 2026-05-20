@@ -163,8 +163,16 @@
 	SEND_SIGNAL(src, COMSIG_ATOM_EXAMINE_MORE, user, .)
 	SEND_SIGNAL(user, COMSIG_MOB_EXAMINING_MORE, src, .)
 
-	if (!length(custom_materials) || (material_flags & MATERIAL_NO_DESCRIPTORS) || !HAS_TRAIT(user, TRAIT_RESEARCH_SCANNER))
+	var/mob/living/analyzer = user
+	var/has_analysis_scan = istype(analyzer) && analyzer.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 2)
+	if (!length(custom_materials) || (material_flags & MATERIAL_NO_DESCRIPTORS) || (!HAS_TRAIT(user, TRAIT_RESEARCH_SCANNER) && !has_analysis_scan))
 		return
+	if(has_analysis_scan)
+		analyzer.perform_cy_skill_check(/datum/cy_skill/professional/analysis, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
+		if(analyzer.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 4))
+			cy_analysis_material_reward_chance = max(cy_analysis_material_reward_chance, analyzer.get_cy_skill_perk_value(/datum/cy_skill/professional/analysis, 4, "value_1", 50))
+		else if(analyzer.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 3))
+			cy_analysis_material_reward_chance = max(cy_analysis_material_reward_chance, analyzer.get_cy_skill_perk_value(/datum/cy_skill/professional/analysis, 3, "value_1", 20))
 
 	for (var/datum/material/material as anything in custom_materials)
 		var/list/material_string = list()

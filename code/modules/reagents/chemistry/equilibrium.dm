@@ -252,6 +252,25 @@
 		to_delete = TRUE
 		return
 	seconds_per_tick = deal_with_time(seconds_per_tick)
+	var/mob/living/cy_chemist = holder.cy_last_reaction_user?.resolve()
+	var/cy_speed_multiplier = 1
+	var/cy_purity_multiplier = 1
+	var/cy_thermic_multiplier = 1
+	var/cy_instability_chance = 4
+	if(cy_chemist)
+		if(cy_chemist.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 2))
+			cy_instability_chance = 0
+		else if(cy_chemist.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 1))
+			cy_instability_chance = cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 1, "value_1", 2)
+		if(cy_chemist.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 3))
+			cy_speed_multiplier += cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 3, "value_2", 5) * 0.01
+			cy_thermic_multiplier *= 1 - (cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 3, "value_1", 5) * 0.01)
+		if(cy_chemist.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 4))
+			cy_speed_multiplier += cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 4, "value_1", 5) * 0.01
+		if(cy_chemist.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 5))
+			cy_thermic_multiplier *= 1 - (cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 5, "value_1", 5) * 0.01)
+		if(cy_chemist.has_cy_skill_perk(/datum/cy_skill/professional/chemistry, 6))
+			cy_purity_multiplier += cy_chemist.get_cy_skill_perk_value(/datum/cy_skill/professional/chemistry, 6, "value_2", 25) * 0.01
 
 	delta_t = 0 //how far off optimal temp we care
 	delta_ph = 0 //How far off the pH we are
@@ -306,7 +325,7 @@
 		return
 
 	//Catalyst modifier
-	delta_t *= speed_mod
+	delta_t *= speed_mod * cy_speed_multiplier
 
 	//set purity equal to pH offset
 	purity = delta_ph
@@ -315,7 +334,7 @@
 	purity *= holder.get_average_purity()
 
 	//Then adjust it from the input modifier
-	purity *= purity_modifier
+	purity = clamp(purity * purity_modifier * cy_purity_multiplier, 0, 1)
 
 	//Now we calculate how much to add - this is normalised to the rate up limiter
 	var/delta_chem_factor = reaction.rate_up_lim * delta_t * seconds_per_tick
@@ -373,11 +392,18 @@
 	#endif
 
 	//Apply thermal output of reaction to beaker
-	var/heat_energy = reaction.thermic_constant * total_step_added * thermic_mod
+	var/heat_energy = reaction.thermic_constant * total_step_added * thermic_mod * cy_thermic_multiplier
 	if(reaction.reaction_flags & REACTION_HEAT_ARBITARY) //old method - for every bit added, the whole temperature is adjusted
 		holder.set_temperature(clamp(holder.chem_temp + heat_energy, 0, CHEMICAL_MAXIMUM_TEMPERATURE))
 	else //Standard mechanics - heat is relative to the beaker conditions
 		holder.adjust_thermal_energy(heat_energy * SPECIFIC_HEAT_DEFAULT, 0, CHEMICAL_MAXIMUM_TEMPERATURE)
+
+	if(cy_instability_chance && prob(cy_instability_chance))
+		if(prob(50) || !length(holder.reagent_list))
+			holder.set_temperature(clamp(holder.chem_temp + pick(-1, 1) * rand(1, 5), 0, CHEMICAL_MAXIMUM_TEMPERATURE))
+		else
+			var/datum/reagent/unstable_reagent = pick(holder.reagent_list)
+			holder.adjust_specific_reagent_ph(unstable_reagent.type, pick(-1, 1) * 0.2)
 
 	//Give a chance of sounds
 	if(prob(5) && !HAS_TRAIT(holder.my_atom, TRAIT_SILENT_REACTIONS))

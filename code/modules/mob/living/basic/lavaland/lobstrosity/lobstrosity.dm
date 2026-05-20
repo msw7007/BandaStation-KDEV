@@ -103,7 +103,7 @@
 
 /mob/living/basic/mining/lobstrosity/mind_initialize()
 	. = ..()
-	var/has_base_fishing_perk = base_fishing_level <= CY_SKILL_LEVEL_BEGINNER ? HAS_TRAIT(src, TRAIT_CY_SURVIVAL_1) : HAS_TRAIT(src, TRAIT_CY_SURVIVAL_2)
+	var/has_base_fishing_perk = base_fishing_level <= CY_SKILL_LEVEL_BEGINNER ? src.has_cy_skill_perk(/datum/cy_skill/spirit/survival, 1) : src.has_cy_skill_perk(/datum/cy_skill/spirit/survival, 2)
 	if(!has_base_fishing_perk)
 		set_cy_skill_level(/datum/cy_skill/spirit/survival, base_fishing_level, TRUE)
 

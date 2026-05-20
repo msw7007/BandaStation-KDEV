@@ -363,7 +363,7 @@ GLOBAL_LIST_EMPTY(fishing_challenges_by_user)
 			experience_multiplier /= (1 + extra_exp_malus * EXPERIENCE_MALUS_MULT)
 		experience_multiplier *= used_rod.experience_multiplier
 		user.award_cy_raw_skill_experience(/datum/cy_skill/spirit/survival, round(seconds_spent * CY_FISHING_EXPERIENCE_PER_SECOND * experience_multiplier))
-		if(HAS_TRAIT(user, TRAIT_CY_SURVIVAL_6))
+		if(user.has_cy_skill_perk(/datum/cy_skill/spirit/survival, 6))
 			user.client?.give_award(/datum/award/achievement/skill/legendary_fisher, user)
 
 	if(!win)

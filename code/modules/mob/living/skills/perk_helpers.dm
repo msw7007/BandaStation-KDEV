@@ -1,72 +1,69 @@
-/mob/living/proc/get_cy_skill_perk_check_bonus(skill_type)
+/mob/living/proc/get_cy_skill_perk(skill_type, level)
 	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
-	return skills.get_skill_perk_check_bonus(skill_type)
+	return skills.get_skill_perk(skill_type, level)
 
-/mob/living/proc/get_cy_skill_perk_experience_bonus(skill_type)
-	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
-	return skills.get_skill_perk_experience_bonus(skill_type)
+/mob/living/proc/has_cy_skill_perk(skill_type, level)
+	return !!get_cy_skill_perk(skill_type, level)
 
-/mob/living/proc/get_cy_skill_perk_work_speed_bonus(skill_type)
-	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
-	return skills.get_skill_perk_work_speed_bonus(skill_type)
-
-/mob/living/proc/get_cy_skill_perk_quality_bonus(skill_type)
-	var/datum/cy_skill_holder/skills = ensure_cy_skill_holder()
-	return skills.get_skill_perk_quality_bonus(skill_type)
+/mob/living/proc/get_cy_skill_perk_value(skill_type, level, effect_key, default = 0)
+	var/datum/cy_skill_perk/perk = get_cy_skill_perk(skill_type, level)
+	return perk ? perk.get_value(effect_key, default) : default
 
 /mob/living/proc/get_cy_skill_speed_multiplier(skill_type)
 	switch(skill_type)
 		if(/datum/cy_skill/professional/cooking)
-			if(!HAS_TRAIT(src, TRAIT_CY_COOKING_1))
+			if(!src.has_cy_skill_perk(/datum/cy_skill/professional/cooking, 1))
 				return 1.3
-			if(HAS_TRAIT(src, TRAIT_CY_COOKING_6))
-				return 0.2
-			if(HAS_TRAIT(src, TRAIT_CY_COOKING_2))
-				return 0.75
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/cooking, 6))
+				return get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 6, "value_1", 20) * 0.01
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/cooking, 2))
+				return get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 2, "value_1", 75) * 0.01
 			return 1
 		if(/datum/cy_skill/professional/mining)
-			if(!HAS_TRAIT(src, TRAIT_CY_MINING_1))
+			if(!src.has_cy_skill_perk(/datum/cy_skill/professional/mining, 1))
 				return 1.5
-			if(HAS_TRAIT(src, TRAIT_CY_MINING_6))
-				return 0.25
-			if(HAS_TRAIT(src, TRAIT_CY_MINING_2))
-				return 0.75
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/mining, 6))
+				return get_cy_skill_perk_value(/datum/cy_skill/professional/mining, 6, "value_1", 25) * 0.01
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/mining, 2))
+				return 1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/mining, 2, "value_1", 25) * 0.01)
 			return 1
 		if(/datum/cy_skill/professional/analysis)
 			var/multiplier = 1
-			if(!HAS_TRAIT(src, TRAIT_CY_ANALYSIS_1))
+			if(!src.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 1))
 				multiplier *= 1.5
-			if(HAS_TRAIT(src, TRAIT_CY_ANALYSIS_2))
-				multiplier *= 0.75
-			if(HAS_TRAIT(src, TRAIT_CY_ANALYSIS_4))
-				multiplier *= 0.75
-			return multiplier
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 2))
+				multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/analysis, 2, "value_1", 25) * 0.01)
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 4))
+				multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/analysis, 4, "value_2", 25) * 0.01)
+			return multiplier * get_cy_intelligence_action_delay_multiplier()
 		if(/datum/cy_skill/professional/construction)
-			if(!HAS_TRAIT(src, TRAIT_CY_CONSTRUCTION_1))
+			if(!src.has_cy_skill_perk(/datum/cy_skill/professional/construction, 1))
 				return 1.3
-			if(HAS_TRAIT(src, TRAIT_CY_CONSTRUCTION_2))
-				return 0.8
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/construction, 2))
+				return 1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/construction, 2, "value_2", 20) * 0.01)
 			return 1
 		if(/datum/cy_skill/professional/invention)
-			if(!HAS_TRAIT(src, TRAIT_CY_INVENTION_1))
-				return 1.3
-			if(HAS_TRAIT(src, TRAIT_CY_INVENTION_5))
-				return 0.7
-			if(HAS_TRAIT(src, TRAIT_CY_INVENTION_3))
-				return 0.9
-			return 1
-	var/level_modifier = get_cy_skill_perk_level(skill_type) * 0.08
-	var/perk_modifier = get_cy_skill_perk_work_speed_bonus(skill_type) * 0.01
-	return max(0.35, 1 - level_modifier - perk_modifier)
+			if(!src.has_cy_skill_perk(/datum/cy_skill/professional/invention, 1))
+				return 1.3 * get_cy_intelligence_action_delay_multiplier()
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/invention, 5))
+				return (1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/invention, 5, "value_1", 30) * 0.01)) * get_cy_intelligence_action_delay_multiplier()
+			if(src.has_cy_skill_perk(/datum/cy_skill/professional/invention, 3))
+				return (1 - (get_cy_skill_perk_value(/datum/cy_skill/professional/invention, 3, "value_2", 10) * 0.01)) * get_cy_intelligence_action_delay_multiplier()
+			return get_cy_intelligence_action_delay_multiplier()
+	return max(0.35, get_cy_skill_speed_multiplier_no_perks(skill_type))
 
 /mob/living/proc/get_cy_skill_probability_bonus(skill_type)
-	return (get_cy_skill_perk_level(skill_type) * CY_SKILL_VALUE_PER_LEVEL) + get_cy_skill_perk_check_bonus(skill_type)
+	return get_cy_skill_probability_bonus_no_perks(skill_type)
 
 /mob/living/proc/get_cy_skill_value_modifier(skill_type)
-	return get_cy_skill_perk_level(skill_type) + get_cy_skill_perk_quality_bonus(skill_type)
+	return get_cy_skill_level(skill_type)
 
 /mob/living/proc/get_cy_skill_speed_multiplier_no_perks(skill_type)
-	return max(0.4, 1 - get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_SPEED_PER_LEVEL)
+	var/multiplier = max(0.4, 1 - get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_SPEED_PER_LEVEL)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	if(skill?.governing_stat == /datum/cy_stat/intelligence)
+		multiplier *= get_cy_intelligence_action_delay_multiplier()
+	return multiplier
 
 /mob/living/proc/get_cy_skill_probability_bonus_no_perks(skill_type)
 	return get_cy_skill_level(skill_type) * CY_SKILL_VALUE_PER_LEVEL
@@ -75,7 +72,7 @@
 	return get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL
 
 /mob/living/proc/has_cy_skill_perk_level(skill_type, required_level)
-	return HAS_TRAIT(src, cy_skill_perk_trait(skill_type, required_level))
+	return has_cy_skill_perk(skill_type, required_level)
 
 /mob/living/proc/get_cy_skill_perk_level(skill_type)
 	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
@@ -102,41 +99,75 @@
 	return toughness_multiplier
 
 /mob/living/proc/get_cy_stagger_duration_multiplier()
-	var/multiplier = 1
+	var/multiplier = get_cy_spirit_effect_multiplier()
 	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 3))
-		multiplier *= body_position == LYING_DOWN ? 0.75 : 0.5
+		multiplier *= body_position == LYING_DOWN ? 0.75 : 1 - (get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 3, "value_1", 50) * 0.01)
 	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 4))
-		multiplier *= 0.5
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 4, "value_1", 50) * 0.01)
 	return multiplier
 
 /mob/living/proc/get_cy_negative_effect_duration_multiplier()
+	var/spirit_multiplier = get_cy_spirit_effect_multiplier()
 	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/composure, 5))
-		return 0.75
+		return spirit_multiplier * (1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/composure, 5, "value_1", 25) * 0.01))
 	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/composure, 2))
-		return 0.8
-	return 1
+		return spirit_multiplier * (1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/composure, 2, "value_1", 20) * 0.01))
+	return spirit_multiplier
 
 /mob/living/proc/get_cy_professional_quality_bonus(skill_type)
-	return (get_cy_skill_perk_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL) + (get_cy_skill_perk_quality_bonus(skill_type) * 0.05)
+	return get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL
+
+/mob/living/proc/cy_apply_cooking_perks_to_food(obj/item/food/food)
+	if(!food)
+		return FALSE
+	var/quality_bonus = 0
+	var/effect_level = 0
+	if(has_cy_skill_perk(/datum/cy_skill/professional/cooking, 2) && prob(get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 2, "value_2", 15)))
+		var/level_2_effect = get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 2, "value_3", 1)
+		quality_bonus += level_2_effect
+		effect_level = max(effect_level, level_2_effect)
+	if(has_cy_skill_perk(/datum/cy_skill/professional/cooking, 3))
+		effect_level = max(effect_level, min(get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 3, "value_1", 3), max(0, food.cy_quality - CY_QUALITY_AVERAGE + 1)))
+	if(has_cy_skill_perk(/datum/cy_skill/professional/cooking, 5))
+		var/level_5_effect = get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 5, "value_2", 1)
+		quality_bonus += level_5_effect
+		effect_level = max(effect_level, min(FOOD_COMPLEXITY_5, food.crafting_complexity + level_5_effect))
+	if(effect_level)
+		food.crafting_complexity = max(food.crafting_complexity, min(FOOD_COMPLEXITY_5, effect_level))
+	if(has_cy_skill_perk(/datum/cy_skill/professional/cooking, 6) && prob(get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 6, "value_2", 30)))
+		cy_emit_cooking_effect_gas(food, get_cy_skill_perk_value(/datum/cy_skill/professional/cooking, 6, "value_3", 1))
+	if(!quality_bonus && !effect_level)
+		return FALSE
+	food.cy_set_quality(food.cy_quality + quality_bonus)
+	food.cy_quality_affects_stats = TRUE
+	food.cy_initialize_quality_core()
+	food.cy_rebuild_item_stats()
+	return TRUE
+
+/mob/living/proc/cy_emit_cooking_effect_gas(obj/item/food/food, effect_level = FOOD_COMPLEXITY_1)
+	if(!food)
+		return FALSE
+	var/list/available_buffs = GLOB.food_buffs[min(max(effect_level, FOOD_COMPLEXITY_1), FOOD_COMPLEXITY_5)]
+	var/datum/status_effect/food/buff = food.crafted_food_buff || pick_weight(available_buffs)
+	if(!buff)
+		return FALSE
+	food.visible_message(span_notice("[food] releases an aromatic cloud."))
+	for(var/mob/living/target in viewers(2, food))
+		target.apply_status_effect(buff)
+	return TRUE
 
 /mob/living/proc/award_cy_professional_activity(skill_type, amount = CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
 	if(!ispath(skill_type, /datum/cy_skill/professional) || amount <= 0)
 		return FALSE
-	return award_cy_raw_skill_experience(skill_type, amount)
+	return perform_cy_skill_check(skill_type, amount)
 
 /mob/living/proc/get_cy_cohort_limit()
-	var/inspiration_level = get_cy_skill_level(/datum/cy_skill/charisma/inspiration)
-	switch(inspiration_level)
-		if(CY_SKILL_LEVEL_SKILLED)
-			return 2
-		if(CY_SKILL_LEVEL_TRAINED)
-			return 3
-		if(CY_SKILL_LEVEL_EXPERT)
-			return 4
-		if(CY_SKILL_LEVEL_PROFESSIONAL)
-			return 6
-		if(CY_SKILL_LEVEL_MASTER to INFINITY)
-			return 8
+	if(has_cy_skill_perk(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_MASTER))
+		return get_cy_skill_perk_value(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_MASTER, "cohort_limit", 8)
+	for(var/level in CY_SKILL_LEVEL_PROFESSIONAL to CY_SKILL_LEVEL_SKILLED step -1)
+		var/cohort_limit = get_cy_skill_perk_value(/datum/cy_skill/charisma/inspiration, level, "cohort_limit", null)
+		if(!isnull(cohort_limit))
+			return cohort_limit
 	return CY_COHORT_BASE_LIMIT
 
 /mob/living/proc/is_cy_cohort_member(mob/living/target)
@@ -173,10 +204,12 @@
 	if(!is_cy_cohort_member(target))
 		return 0
 	var/multiplier = 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_TRAINED))
-		multiplier *= 1.25
-	if(has_cy_skill_perk_level(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_EXPERT))
-		multiplier *= 1.2
+	var/effectiveness_bonus = get_cy_skill_perk_value(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_TRAINED, "effectiveness_bonus", 0)
+	if(effectiveness_bonus)
+		multiplier *= 1 + (effectiveness_bonus * 0.01)
+	var/cohort_mood_bonus = get_cy_skill_perk_value(/datum/cy_skill/charisma/inspiration, CY_SKILL_LEVEL_PROFESSIONAL, "cohort_mood_max_bonus", 0)
+	if(cohort_mood_bonus)
+		multiplier *= 1 + (cohort_mood_bonus * 0.01)
 	return multiplier
 
 /mob/living/proc/get_cy_theft_notice_chance(mob/living/victim)
@@ -288,69 +321,16 @@
 		skill_perks.Cut()
 	granted_skill_perks.Cut()
 
-/datum/cy_skill_holder/proc/get_skill_perk_check_bonus(skill_type)
-	var/bonus = 0
+/datum/cy_skill_holder/proc/get_skill_perk(skill_type, level)
 	var/list/perk_list = granted_skill_perks[skill_type]
 	if(!length(perk_list))
-		return bonus
+		return null
 	for(var/perk_type in perk_list)
 		var/datum/cy_skill_perk/perk = perk_list[perk_type]
-		bonus += perk.check_bonus
+		if(perk?.level == level)
+			return perk
 
-	return bonus
-
-/datum/cy_skill_holder/proc/modify_check_chance_by_perks(skill_type, chance)
-	var/list/perk_list = granted_skill_perks[skill_type]
-	if(!length(perk_list))
-		return chance
-	for(var/perk_type in perk_list)
-		var/datum/cy_skill_perk/perk = perk_list[perk_type]
-		chance = perk.modify_check_chance(chance)
-
-	return chance
-
-/datum/cy_skill_holder/proc/get_skill_perk_experience_bonus(skill_type)
-	var/bonus = 0
-	var/list/perk_list = granted_skill_perks[skill_type]
-	if(!length(perk_list))
-		return bonus
-	for(var/perk_type in perk_list)
-		var/datum/cy_skill_perk/perk = perk_list[perk_type]
-		bonus += perk.experience_bonus
-
-	return bonus
-
-/datum/cy_skill_holder/proc/modify_experience_gain_by_perks(skill_type, experience)
-	var/list/perk_list = granted_skill_perks[skill_type]
-	if(!length(perk_list))
-		return experience
-	for(var/perk_type in perk_list)
-		var/datum/cy_skill_perk/perk = perk_list[perk_type]
-		experience = perk.modify_experience_gain(experience)
-
-	return experience
-
-/datum/cy_skill_holder/proc/get_skill_perk_work_speed_bonus(skill_type)
-	var/bonus = 0
-	var/list/perk_list = granted_skill_perks[skill_type]
-	if(!length(perk_list))
-		return bonus
-	for(var/perk_type in perk_list)
-		var/datum/cy_skill_perk/perk = perk_list[perk_type]
-		bonus = perk.modify_work_speed_modifier(bonus)
-
-	return bonus
-
-/datum/cy_skill_holder/proc/get_skill_perk_quality_bonus(skill_type)
-	var/bonus = 0
-	var/list/perk_list = granted_skill_perks[skill_type]
-	if(!length(perk_list))
-		return bonus
-	for(var/perk_type in perk_list)
-		var/datum/cy_skill_perk/perk = perk_list[perk_type]
-		bonus = perk.modify_quality_modifier(bonus)
-
-	return bonus
+	return null
 
 /datum/cy_skill_holder/proc/grant_skill_perk(skill_type, perk_type)
 	if(!is_valid_skill(skill_type) || !ispath(perk_type, /datum/cy_skill_perk))

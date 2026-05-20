@@ -918,6 +918,10 @@
 
 	crowbar.play_tool_sound(src, 50)
 	// user.visible_message(span_notice("[user] deconstructs [src]."), span_notice("You deconstruct [src]."))
+	if(istype(user))
+		user.perform_cy_skill_check(/datum/cy_skill/professional/construction, CY_PROFESSIONAL_SKILL_EXPERIENCE_BASE)
+		if(user.has_cy_skill_perk(/datum/cy_skill/professional/construction, 6) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/professional/construction, 6, "value_1", 30)))
+			drop_custom_materials(0.3)
 	deconstruct(TRUE)
 	return ITEM_INTERACT_SUCCESS
 

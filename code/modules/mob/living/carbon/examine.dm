@@ -591,8 +591,8 @@
 
 	if(ishuman(user) && get_dist(user, src) <= CY_MEDICAL_EXAMINE_CLOSE_RANGE)
 		var/mob/living/carbon/human/human_user = user
-		if(HAS_TRAIT(human_user, TRAIT_CY_MEDICINE_3))
-			for(var/cy_line in get_cy_diagnostic_lines(user, HAS_TRAIT(human_user, TRAIT_CY_MEDICINE_4)))
+		if(human_user.has_cy_skill_perk(/datum/cy_skill/professional/medicine, 3))
+			for(var/cy_line in get_cy_diagnostic_lines(user, human_user.has_cy_skill_perk(/datum/cy_skill/professional/medicine, 4)))
 				. += span_notice(cy_line)
 
 	var/limbs_text = get_mismatched_limb_text()

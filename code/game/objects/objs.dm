@@ -398,6 +398,10 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 	SHOULD_CALL_PARENT(TRUE)
 	if(!isliving(shocking))
 		return FALSE
+	if(shocking.has_cy_skill_perk(/datum/cy_skill/professional/electricity, 3))
+		chance = min(chance, shocking.get_cy_skill_perk_value(/datum/cy_skill/professional/electricity, 3, "value_1", 50))
+	if(shocking.has_cy_skill_perk(/datum/cy_skill/professional/electricity, 6))
+		chance *= 1 - (shocking.get_cy_skill_perk_value(/datum/cy_skill/professional/electricity, 6, "value_1", 50) * 0.01)
 	if(!prob(chance))
 		return FALSE // you lucked out, no shock for you
 

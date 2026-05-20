@@ -114,8 +114,7 @@
 	var/delay = base_delay
 	if(skill_type)
 		delay *= get_cy_skill_speed_multiplier(skill_type)
-	var/dexterity = get_cy_stat(/datum/cy_stat/dexterity)
-	delay *= max(0.45, 1 - max(0, dexterity - CY_STAT_DEFAULT) * 0.02)
+	delay *= get_cy_dexterity_action_delay_multiplier()
 	return max(1, round(delay))
 
 /mob/living/proc/apply_cy_action_delay(base_delay = CY_BASE_ACTION_DELAY, skill_type = null)
@@ -252,10 +251,11 @@
 		return TRUE
 	var/stamina_cost = CY_PARKOUR_JUMP_STAMINA_COST * jump_distance
 	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 2))
-		stamina_cost *= 0.8
+		stamina_cost *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 2, "value_1", 20) * 0.01)
 	adjust_stamina_loss(stamina_cost, updating_stamina = FALSE, forced = TRUE)
 	visible_message(span_notice("[src] прыгает вперёд."), span_notice("Вы прыгаете вперёд."))
 	forceMove(landing)
+	perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, max(1, jump_distance * 10))
 	apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
 	return TRUE
 
@@ -266,6 +266,7 @@
 	var/success = zMove(direction, target_turf, z_move_flags = ZMOVE_FLIGHT_FLAGS|ZMOVE_FEEDBACK)
 	if(success)
 		adjust_stamina_loss(CY_PARKOUR_CLIMB_STAMINA_COST, updating_stamina = FALSE, forced = TRUE)
+		perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, 20)
 		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
 		return TRUE
 	to_chat(src, span_warning("Вы не находите удобного пути."))
@@ -278,6 +279,7 @@
 	if(result)
 		visible_message(span_notice("[src] подтягивается наверх."), span_notice("Вы подтягиваетесь наверх."))
 		adjust_stamina_loss(CY_PARKOUR_CLIMB_STAMINA_COST, updating_stamina = FALSE, forced = TRUE)
+		perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, 25)
 		clear_cy_wall_hang(FALSE)
 	else
 		to_chat(src, span_warning("Вы не можете подняться выше."))
@@ -296,6 +298,7 @@
 			if(prob(CY_PARKOUR_SLIDE_FALL_CHANCE))
 				Knockdown(2 SECONDS, daze_amount = 1 SECONDS)
 		adjust_stamina_loss(max(1, round(CY_PARKOUR_CLIMB_STAMINA_COST * 0.5)), updating_stamina = FALSE, forced = TRUE)
+		perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, safe ? 15 : 25)
 		clear_cy_wall_hang(FALSE)
 	else
 		if(!safe && prob(CY_PARKOUR_SLIDE_FALL_CHANCE))
@@ -579,6 +582,7 @@
 		if(!Adjacent(living_target))
 			return FALSE
 		disarm(living_target, null)
+		perform_cy_skill_check(/datum/cy_skill/strength/grappling, 25)
 		if(has_cy_skill_perk_level(/datum/cy_skill/strength/grappling, 4))
 			living_target.Knockdown(1 SECONDS + get_cy_skill_level(/datum/cy_skill/strength/grappling) * 0.25 SECONDS, daze_amount = 0.5 SECONDS)
 		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/strength/grappling)
@@ -606,9 +610,14 @@
 			living_target.throw_at(get_cy_shove_target_turf(living_target, CY_KICK_SHOVE_DISTANCE), CY_KICK_SHOVE_DISTANCE, 1, src, force = MOVE_FORCE_OVERPOWERING)
 		var/kick_knockdown_chance = 25 + get_cy_skill_level(/datum/cy_skill/dexterity/fast_melee) * 5
 		if(has_cy_skill_perk_level(/datum/cy_skill/strength/power_melee, 3))
-			kick_knockdown_chance += 10
+			kick_knockdown_chance += get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 3, "value_1", 25) * 0.4
 		if(prob(kick_knockdown_chance))
 			living_target.Knockdown(CY_KICK_KNOCKDOWN_TIME)
+		perform_cy_random_skill_check(list(
+			/datum/cy_skill/strength/power_melee,
+			/datum/cy_skill/dexterity/fast_melee,
+			/datum/cy_skill/perception/precise_melee,
+		), max(1, round(kick_knockdown_chance)))
 		adjust_staggered_up_to(CY_KICK_SELF_STAGGER, 10 SECONDS)
 		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] пинает [living_target.declent_ru(ACCUSATIVE)]!"), span_notice("Вы пинаете [living_target.declent_ru(ACCUSATIVE)]."))
 		log_combat(src, living_target, "kicked")
@@ -631,6 +640,7 @@
 	face_atom(living_target)
 	do_attack_animation(living_target, ATTACK_EFFECT_PUNCH)
 	var/damage = 8 + get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 2
+	perform_cy_skill_check(/datum/cy_skill/strength/power_melee, max(1, damage))
 	living_target.apply_damage(damage, BRUTE, BODY_ZONE_HEAD)
 	living_target.adjust_stamina_loss(20 + get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 5)
 	living_target.Knockdown(3 SECONDS, daze_amount = 1.5 SECONDS)
@@ -690,10 +700,28 @@
 		if(attacker_intent == CY_ATTACK_INTENT_TRICKY)
 			clear_cy_active_defense(TRUE)
 			return FAILED_BLOCK
+		var/dodge_difficulty = attack_type == MELEE_ATTACK ? 45 : 70
+		if(has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 3))
+			dodge_difficulty -= get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 3, "value_1", 15)
+		if(!perform_cy_skill_check(/datum/cy_skill/dexterity/evasion, max(1, dodge_difficulty)))
+			var/failed_cost = 10
+			if(has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 2))
+				failed_cost *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 2, "value_2", 10) * 0.01)
+			adjust_stamina_loss(failed_cost)
+			clear_cy_active_defense(TRUE)
+			return FAILED_BLOCK
 		var/atom/dodge_source = attacker ? attacker : hit_by
 		var/turf/dodge_turf = get_cy_dodge_turf(dodge_source)
-		if(dodge_turf)
+		if(dodge_turf && !has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 5))
 			Move(dodge_turf, get_dir(src, dodge_turf))
+		var/success_cost = 10
+		if(has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 2))
+			success_cost *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 2, "value_1", 20) * 0.01)
+		adjust_stamina_loss(success_cost)
+		if(!has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 1) && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 1, "value_1", 10)))
+			Knockdown(1 SECONDS)
+		if(attacker && has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 6) && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 6, "value_1", 20)))
+			attacker.apply_cy_open_defense(get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 6, "value_2", 1) SECONDS)
 		attacker?.apply_cy_open_defense()
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] уходит от атаки."), span_notice("Вы уходите от атаки."))
 		clear_cy_active_defense(TRUE)
@@ -702,6 +730,16 @@
 		if(attacker_intent == CY_ATTACK_INTENT_PREEMPTIVE)
 			clear_cy_active_defense(TRUE)
 			return FAILED_BLOCK
+		var/parry_difficulty = 45
+		if(has_cy_skill_perk(/datum/cy_skill/perception/concentration, 2))
+			parry_difficulty -= get_cy_skill_perk_value(/datum/cy_skill/perception/concentration, 2, "value_1", 15)
+		if(!has_cy_skill_perk(/datum/cy_skill/perception/concentration, 1))
+			parry_difficulty += get_cy_skill_perk_value(/datum/cy_skill/perception/concentration, 1, "value_1", 10)
+		if(!perform_cy_skill_check(/datum/cy_skill/perception/concentration, max(1, parry_difficulty)))
+			clear_cy_active_defense(TRUE)
+			return FAILED_BLOCK
+		if(has_cy_skill_perk(/datum/cy_skill/perception/concentration, 5))
+			attacker?.apply_cy_open_defense(CY_DEFENSE_OPEN_TIME * 2)
 		attacker?.apply_cy_open_defense()
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] парирует атаку."), span_notice("Вы парируете атаку."))
 		clear_cy_active_defense(TRUE)
@@ -719,6 +757,7 @@
 	cy_last_defense_action = defense_action
 	cy_active_defense_action = defense_action
 	var/defense_skill = defense_action == CY_DEFENSE_ACTION_DODGE ? /datum/cy_skill/dexterity/evasion : /datum/cy_skill/perception/concentration
+	perform_cy_skill_check(defense_skill, 25)
 	var/skill_window_bonus = get_cy_skill_level(defense_skill) * 0.05 SECONDS
 	if(body_position == LYING_DOWN)
 		skill_window_bonus *= 0.5

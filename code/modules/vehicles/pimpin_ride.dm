@@ -11,6 +11,8 @@
 	var/obj/item/storage/bag/trash/trash_bag
 	/// The installed upgrade, if present
 	var/obj/item/janicart_upgrade/installed_upgrade
+	/// Extra upgrades installed through the driving perk branch.
+	var/list/obj/item/janicart_upgrade/cy_extra_installed_upgrades
 
 /obj/vehicle/ridden/janicart/Initialize(mapload)
 	. = ..()
@@ -27,12 +29,15 @@
 		QDEL_NULL(trash_bag)
 	if (installed_upgrade)
 		QDEL_NULL(installed_upgrade)
+	QDEL_LIST(cy_extra_installed_upgrades)
 	return ..()
 
 /obj/vehicle/ridden/janicart/examine(mob/user)
 	. = ..()
 	if (installed_upgrade)
 		. += "It has been upgraded with [installed_upgrade], which can be removed with a screwdriver."
+	if(length(cy_extra_installed_upgrades))
+		. += "Extra installed upgrades: [english_list(cy_extra_installed_upgrades)]."
 
 /obj/vehicle/ridden/janicart/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	. = ..()
@@ -53,10 +58,18 @@
 		return ITEM_INTERACT_SUCCESS
 
 	if(istype(tool, /obj/item/janicart_upgrade))
-		if(installed_upgrade)
-			to_chat(user, span_warning("[src] already has an upgrade installed! Use a screwdriver to remove it."))
-			return ITEM_INTERACT_BLOCKING
 		var/obj/item/janicart_upgrade/new_upgrade = tool
+		if(installed_upgrade)
+			var/extra_limit = cy_get_extra_upgrade_limit(user)
+			if(length(cy_extra_installed_upgrades) >= extra_limit)
+				to_chat(user, span_warning("[src] already has an upgrade installed! Use a screwdriver to remove it."))
+				return ITEM_INTERACT_BLOCKING
+			new_upgrade.forceMove(src)
+			new_upgrade.install(src)
+			LAZYADD(cy_extra_installed_upgrades, new_upgrade)
+			to_chat(user, span_notice("You install [new_upgrade] as an extra upgrade on [src]."))
+			update_appearance()
+			return ITEM_INTERACT_SUCCESS
 		new_upgrade.forceMove(src)
 		new_upgrade.install(src)
 		installed_upgrade = new_upgrade
@@ -71,6 +84,15 @@
 	return NONE
 
 /obj/vehicle/ridden/janicart/screwdriver_act(mob/living/user, obj/item/tool)
+	if(length(cy_extra_installed_upgrades))
+		var/obj/item/janicart_upgrade/extra_upgrade = cy_extra_installed_upgrades[length(cy_extra_installed_upgrades)]
+		cy_extra_installed_upgrades -= extra_upgrade
+		extra_upgrade.uninstall(src)
+		extra_upgrade.forceMove(get_turf(user))
+		user.put_in_hands(extra_upgrade)
+		to_chat(user, span_notice("You remove [extra_upgrade] from [src]"))
+		update_appearance()
+		return ITEM_INTERACT_SUCCESS
 	if (!installed_upgrade)
 		return ITEM_INTERACT_BLOCKING
 	installed_upgrade.uninstall(src)
@@ -92,6 +114,15 @@
 		var/mutable_appearance/overlay = new(SSgreyscale.GetColoredIconByType(installed_upgrade.overlay_greyscale_config, installed_upgrade.greyscale_colors))
 		overlay.icon_state = "janicart_upgrade"
 		. += overlay
+
+/obj/vehicle/ridden/janicart/proc/cy_get_extra_upgrade_limit(mob/living/user)
+	if(!istype(user))
+		return 0
+	if(user.has_cy_skill_perk(/datum/cy_skill/professional/driving, 5))
+		return user.get_cy_skill_perk_value(/datum/cy_skill/professional/driving, 5, "value_1", 2)
+	if(user.has_cy_skill_perk(/datum/cy_skill/professional/driving, 3))
+		return user.get_cy_skill_perk_value(/datum/cy_skill/professional/driving, 3, "value_1", 1)
+	return 0
 
 /obj/vehicle/ridden/janicart/attack_hand(mob/user, list/modifiers)
 	// right click removes bag without unbuckling when possible

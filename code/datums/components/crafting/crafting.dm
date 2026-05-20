@@ -95,6 +95,17 @@
 				break
 
 		if(needed_amount > 0)
+			for(var/instance_path in item_instances)
+				for(var/obj/item/item as anything in item_instances[instance_path])
+					if((item.type in recipe.blacklist) || is_type_in_typecache(recipe.global_blacklist, item.type))
+						continue
+					needed_amount -= cy_get_analysis_substitute_amount(a, item, requirement_path)
+					if(needed_amount <= 0)
+						break
+				if(needed_amount <= 0)
+					break
+
+		if(needed_amount > 0)
 			return FALSE
 
 		// Store the instances of what we will use for recipe.check_requirements() for requirement_path
@@ -131,6 +142,19 @@
 
 	//Skip extra requirements when unit testing, like, underwater basket weaving? Get the hell out of here
 	return PERFORM_ALL_TESTS(crafting) || recipe.check_requirements(a, requirements_list)
+
+/datum/component/personal_crafting/proc/cy_get_analysis_substitute_amount(atom/crafter, obj/item/item, requirement_path)
+	if(!ispath(requirement_path, /obj/item/stack) || !item?.cy_analysis_material_reward_chance || !item.custom_materials)
+		return 0
+	var/mob/living/analyzer = crafter
+	if(!istype(analyzer) || !analyzer.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 5))
+		return 0
+	var/amount = 0
+	for(var/datum/material/material_type as anything in item.custom_materials)
+		var/sheet_type = initial(material_type.sheet_type)
+		if(sheet_type && ispath(sheet_type, requirement_path))
+			amount += max(1, round(item.custom_materials[material_type] / SHEET_MATERIAL_AMOUNT))
+	return amount
 
 /datum/component/personal_crafting/proc/get_environment(atom/a, list/blacklist = null, radius_range = 1)
 	. = list()
@@ -432,7 +456,21 @@
 			var/obj/item/stack/tally_stack
 			while(amount > 0)
 				var/obj/item/stack/origin_stack = locate(path_key) in surroundings
-				if(isnull(origin_stack)) //This would only happen if the previous checks for contents and tools were flawed.
+				if(isnull(origin_stack))
+					var/obj/item/analyzed_item
+					for(var/obj/item/possible_substitute as anything in surroundings)
+						if(cy_get_analysis_substitute_amount(atom, possible_substitute, path_key) <= 0)
+							continue
+						analyzed_item = possible_substitute
+						break
+					if(analyzed_item)
+						return_list += analyzed_item
+						if(!(path_key in recipe.requirements_mats_blacklist))
+							for(var/material in analyzed_item.custom_materials)
+								total_materials[material] += analyzed_item.custom_materials[material]
+						amount -= cy_get_analysis_substitute_amount(atom, analyzed_item, path_key)
+						surroundings -= analyzed_item
+						continue
 					stack_trace("couldn't fulfill the required amount for [path_key]. Dangit")
 					break
 				if(QDELING(origin_stack))

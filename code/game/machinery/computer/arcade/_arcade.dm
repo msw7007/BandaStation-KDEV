@@ -77,7 +77,7 @@
 
 ///Dispenses the proper prizes and gives them a positive mood event. If valid, has a small chance to give a pulse rifle.
 /obj/machinery/computer/arcade/proc/prizevend(mob/living/user, prizes = 1)
-	if(HAS_TRAIT(user, TRAIT_CY_STYLE_6) && HAS_TRAIT(user, TRAIT_GAMERGOD))
+	if(user.has_cy_skill_perk(/datum/cy_skill/charisma/style, 6) && HAS_TRAIT(user, TRAIT_GAMERGOD))
 		visible_message(span_notice("[user] inputs an intense cheat code!"),\
 		span_notice("You hear a flurry of buttons being pressed."))
 		say("CODE ACTIVATED: EXTRA PRIZES.")

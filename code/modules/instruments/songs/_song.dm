@@ -233,18 +233,22 @@
 		return FALSE
 	var/mob/living/performer = music_player
 	var/mob/living/living_listener = listener
-	if(!HAS_TRAIT(performer, TRAIT_CY_MUSIC_1))
+	if(!performer.has_cy_skill_perk(/datum/cy_skill/professional/music, 1))
 		return FALSE
-	living_listener.apply_status_effect(/datum/status_effect/good_music)
-	if(HAS_TRAIT(performer, TRAIT_CY_MUSIC_3) && performer.is_cy_cohort_member(living_listener))
-		living_listener.adjust_stamina_loss(-1 * performer.get_cy_cohort_effect_multiplier(living_listener), updating_stamina = FALSE, forced = TRUE)
-	if(HAS_TRAIT(performer, TRAIT_CY_MUSIC_5) && living_listener != performer && !performer.is_cy_cohort_member(living_listener) && prob(3))
-		living_listener.adjust_confusion_up_to(1 SECONDS, 3 SECONDS)
-	if(HAS_TRAIT(performer, TRAIT_CY_MUSIC_6))
+	if(performer.has_cy_skill_perk(/datum/cy_skill/professional/music, 2))
+		living_listener.apply_status_effect(/datum/status_effect/good_music/strong)
+	else
+		living_listener.apply_status_effect(/datum/status_effect/good_music)
+	if(performer.has_cy_skill_perk(/datum/cy_skill/professional/music, 3) && performer.is_cy_cohort_member(living_listener))
+		living_listener.adjust_stamina_loss(-performer.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 3, "value_1", 1) * performer.get_cy_cohort_effect_multiplier(living_listener), updating_stamina = FALSE, forced = TRUE)
+	if(performer.has_cy_skill_perk(/datum/cy_skill/professional/music, 5) && living_listener != performer && !performer.is_cy_cohort_member(living_listener) && prob(performer.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 5, "value_1", 3)))
+		var/confusion_duration = performer.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 5, "value_2", 3) * 1 SECONDS
+		living_listener.adjust_confusion_up_to(1 SECONDS, confusion_duration)
+	if(performer.has_cy_skill_perk(/datum/cy_skill/professional/music, 6))
 		if(performer.is_cy_cohort_member(living_listener))
-			living_listener.adjust_pain_loss(-1, forced = TRUE)
-		else if(living_listener != performer && prob(2))
-			living_listener.adjust_stamina_loss(2, updating_stamina = FALSE, forced = TRUE)
+			living_listener.adjust_pain_loss(-performer.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 6, "value_1", 1), forced = TRUE)
+		else if(living_listener != performer && prob(performer.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 6, "value_2", 2)))
+			living_listener.adjust_stamina_loss(performer.get_cy_skill_perk_value(/datum/cy_skill/professional/music, 6, "value_3", 2), updating_stamina = FALSE, forced = TRUE)
 	return TRUE
 
 /**
