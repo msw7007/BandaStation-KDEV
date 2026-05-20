@@ -1,6 +1,7 @@
 export type Channel =
   | 'Say'
   | 'Whis'
+  | 'Whisper'
   | 'Radio'
   | 'OOC'
   | 'LOOC'
@@ -48,7 +49,9 @@ export class ChannelIterator {
   }
 
   public set(channel: Channel): void {
-    this.index = this.channels.indexOf(channel) || 0;
+    const normalizedChannel = channel === 'Whisper' ? 'Whis' : channel;
+    const nextIndex = this.channels.indexOf(normalizedChannel);
+    this.index = nextIndex >= 0 ? nextIndex : 0;
   }
 
   public current(): Channel {

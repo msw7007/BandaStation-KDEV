@@ -72,11 +72,19 @@
 	var/list/click_data = get_loc_from_mousepos(mousepos_x, mousepos_y, sizex, sizey, src)
 
 	var/keycount = 0
+	var/handled_modified_nonmovement_keybind = FALSE
 	for(var/kb_name in prefs.key_bindings_by_key[full_key])
 		keycount++
 		var/datum/keybinding/kb = GLOB.keybindings_by_name[kb_name]
-		if(kb.can_use(src) && kb.down(src, click_data[1], click_data[2], click_data[3]) && keycount >= MAX_COMMANDS_PER_KEY)
-			break
+		if(kb.can_use(src) && kb.down(src, click_data[1], click_data[2], click_data[3]))
+			if(full_key != _key && !istype(kb, /datum/keybinding/movement))
+				handled_modified_nonmovement_keybind = TRUE
+			if(keycount >= MAX_COMMANDS_PER_KEY)
+				break
+	if(movement && handled_modified_nonmovement_keybind)
+		next_move_dir_add &= ~movement
+		keys_held -= _key
+		calculate_move_dir()
 
 	holder?.key_down(_key, src, full_key)
 	mob.focus?.key_down(_key, src, full_key)
@@ -114,4 +122,3 @@
 	holder?.key_up(_key, src)
 	mob.focus?.key_up(_key, src)
 	mob.update_mouse_pointer()
-

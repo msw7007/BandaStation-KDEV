@@ -406,11 +406,11 @@
 		var/mob/living/running_target = target
 		if(running_target.cy_wrestling_running)
 			return perform_cy_wrestling_elbow(running_target)
-	if(cy_has_click_modifier(modifiers, RIGHT_CLICK) && pulling && ismob(pulling) && pulling != target && grab_state >= GRAB_AGGRESSIVE && is_cy_grabbing_arm_zone())
+	if(cy_has_click_modifier(modifiers, RIGHT_CLICK) && pulling && ismob(pulling) && pulling != target && grab_state >= GRAB_AGGRESSIVE && grab_state < GRAB_NECK && !ismob(target))
 		return perform_cy_wrestling_launch(target)
 	if(ismob(target) && pulling == target && grab_state >= GRAB_NECK)
 		if(cy_has_click_modifier(modifiers, MIDDLE_CLICK))
-			return perform_cy_carry_knee_strike(target)
+			return perform_cy_neck_knee_strike(target)
 		if(cy_has_click_modifier(modifiers, RIGHT_CLICK))
 			return perform_cy_neck_back_throw(target)
 		if(!cy_has_click_modifier(modifiers, CTRL_CLICK) && !cy_has_click_modifier(modifiers, SHIFT_CLICK) && !cy_has_click_modifier(modifiers, ALT_CLICK))
@@ -1066,6 +1066,20 @@
 	apply_cy_action_delay(CLICK_CD_GRABBING, /datum/cy_skill/strength/grappling)
 	return TRUE
 
+/mob/living/proc/perform_cy_neck_knee_strike(mob/living/target)
+	if(!target || pulling != target || grab_state < GRAB_NECK)
+		return FALSE
+	target.apply_damage(24, BRUTE, BODY_ZONE_CHEST)
+	target.adjust_stamina_loss(35)
+	target.adjust_confusion(3 SECONDS)
+	target.Knockdown(3 SECONDS)
+	adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] бьёт [target.declent_ru(ACCUSATIVE)] позвоночником о колено!"), span_notice("Вы бьёте [target.declent_ru(ACCUSATIVE)] позвоночником о колено."))
+	if(prob(70))
+		stop_pulling()
+	apply_cy_action_delay(CLICK_CD_GRABBING, /datum/cy_skill/strength/grappling)
+	return TRUE
+
 /mob/living/proc/is_cy_furniture_surface(atom/target)
 	return istype(target, /obj/structure/bed) || istype(target, /obj/structure/chair) || istype(target, /obj/structure/table)
 
@@ -1148,14 +1162,16 @@
 	if(back_turf && !back_turf.density)
 		target.forceMove(back_turf)
 	target.Knockdown(4 SECONDS)
+	Knockdown(2 SECONDS)
 	target.apply_damage(20, BRUTE, BODY_ZONE_CHEST)
 	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] перебрасывает [target.declent_ru(ACCUSATIVE)] себе за спину!"), span_notice("Вы перебрасываете [target.declent_ru(ACCUSATIVE)] себе за спину."))
+	stop_pulling()
 	apply_cy_action_delay(CLICK_CD_GRABBING, /datum/cy_skill/strength/grappling)
 	return TRUE
 
 /mob/living/proc/perform_cy_wrestling_launch(atom/towards)
 	var/mob/living/target = pulling
-	if(!target || grab_state < GRAB_AGGRESSIVE || !is_cy_grabbing_arm_zone())
+	if(!target || grab_state < GRAB_AGGRESSIVE || grab_state >= GRAB_NECK)
 		return FALSE
 	var/launch_dir = get_dir(src, towards)
 	if(!launch_dir)
@@ -1192,12 +1208,37 @@
 		Knockdown(CY_WRESTLING_RUN_KNOCKDOWN_TIME)
 	return TRUE
 
+/mob/living/proc/get_cy_wrestling_hard_obstacle(turf/target_turf)
+	if(!target_turf)
+		return null
+	for(var/atom/movable/blocker as anything in target_turf)
+		if(blocker == src || !blocker.density)
+			continue
+		if(istype(blocker, /obj/structure/table) || istype(blocker, /obj/machinery/vending))
+			return blocker
+	return null
+
+/mob/living/proc/resolve_cy_wrestling_hard_obstacle(atom/movable/obstacle)
+	if(!obstacle)
+		return FALSE
+	apply_damage(CY_WRESTLING_RUN_DAMAGE, BRUTE, BODY_ZONE_CHEST)
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] врезается в [obstacle.declent_ru(ACCUSATIVE)] и падает!"), span_warning("Вы врезаетесь в [obstacle.declent_ru(ACCUSATIVE)] и падаете!"))
+	if(istype(obstacle, /obj/machinery/vending))
+		var/obj/machinery/vending/vendor = obstacle
+		if(!vendor.tilted && vendor.tiltable)
+			vendor.tilt(src)
+	clear_cy_wrestling_run(TRUE)
+	return TRUE
+
 /mob/living/proc/process_cy_wrestling_run_step()
 	if(!cy_wrestling_running || stat == DEAD || cy_wrestling_run_steps_left <= 0)
 		clear_cy_wrestling_run(FALSE)
 		return FALSE
 	var/turf/next_turf = get_step(src, cy_wrestling_run_dir)
 	var/damaged_during_launch = health < cy_wrestling_start_health
+	var/atom/movable/hard_obstacle = get_cy_wrestling_hard_obstacle(next_turf)
+	if(hard_obstacle)
+		return resolve_cy_wrestling_hard_obstacle(hard_obstacle)
 	if(!next_turf || next_turf.density || !Move(next_turf, cy_wrestling_run_dir))
 		if(!cy_wrestling_rebounded && !damaged_during_launch)
 			cy_wrestling_rebounded = TRUE

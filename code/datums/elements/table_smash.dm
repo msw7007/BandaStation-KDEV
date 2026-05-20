@@ -103,8 +103,9 @@
 /datum/element/table_smash/proc/riding_offhand_act(mob/living/user, obj/item/riding_offhand/riding_item, obj/structure/table/table)
 	var/mob/living/carried_mob = riding_item.rider
 	if (user.combat_mode)
-		user.unbuckle_mob(carried_mob)
-		tablelimbsmash(user, carried_mob)
+		if(carried_mob.buckled == user)
+			user.unbuckle_mob(carried_mob)
+		tablelimbsmash(user, carried_mob, table)
 		return ITEM_INTERACT_SUCCESS
 
 	var/tableplace_delay = 3.5 SECONDS
@@ -124,7 +125,8 @@
 		span_userdanger("[user] begins to[skills_space] place [carried_mob] onto [table]..."))
 	if (!do_after(user, tableplace_delay, target = carried_mob))
 		return ITEM_INTERACT_BLOCKING
-	user.unbuckle_mob(carried_mob)
+	if(carried_mob.buckled == user)
+		user.unbuckle_mob(carried_mob)
 	tableplace(user, carried_mob, table)
 	return ITEM_INTERACT_SUCCESS
 
@@ -167,6 +169,8 @@
 
 /// Even more aggressively smash a single part of a mob onto the table
 /datum/element/table_smash/proc/tablelimbsmash(mob/living/user, mob/living/pushed_mob, obj/structure/table/table)
+	if(!table)
+		return
 	pushed_mob.Knockdown(3 SECONDS)
 	var/obj/item/bodypart/banged_limb = pushed_mob.get_bodypart(user.zone_selected) || pushed_mob.get_bodypart(BODY_ZONE_HEAD)
 	var/extra_wound = 0

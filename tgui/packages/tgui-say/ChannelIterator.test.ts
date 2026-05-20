@@ -25,6 +25,11 @@ describe('ChannelIterator', () => {
     expect(channelIterator.current()).toBe('OOC');
   });
 
+  it('should normalize legacy whisper channel names', () => {
+    channelIterator.set('Whisper');
+    expect(channelIterator.current()).toBe('Whis');
+  });
+
   it('should return true when current channel is "Say"', () => {
     channelIterator.set('Say');
     expect(channelIterator.isSay()).toBe(true);

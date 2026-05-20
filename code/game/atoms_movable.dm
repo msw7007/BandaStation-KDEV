@@ -1710,8 +1710,8 @@
 			else // Grab got upgraded from a passive one.
 				pulling.add_traits(list(TRAIT_IMMOBILIZED, TRAIT_HANDS_BLOCKED), CHOKEHOLD_TRAIT)
 		if(GRAB_NECK, GRAB_KILL)
-			if(. <= GRAB_AGGRESSIVE)
-				ADD_TRAIT(pulling, TRAIT_FLOORED, CHOKEHOLD_TRAIT)
+			if(. <= GRAB_PASSIVE)
+				pulling.add_traits(list(TRAIT_IMMOBILIZED, TRAIT_HANDS_BLOCKED), CHOKEHOLD_TRAIT)
 
 /**
  * Adds the deadchat_plays component to this atom with simple movement commands.

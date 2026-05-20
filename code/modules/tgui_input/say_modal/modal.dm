@@ -90,7 +90,7 @@
  */
 /datum/tgui_say/proc/open(payload)
 	if(!payload?["channel"])
-		CRASH("No channel provided to an open TGUI-Say")
+		payload["channel"] = saved_channel || SAY_CHANNEL
 	window_open = TRUE
 	// BANDASTATION ADDITION START - Mentors
 	var/static/list/no_thinking_bubble_channels = list(
