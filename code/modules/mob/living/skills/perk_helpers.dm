@@ -294,6 +294,7 @@
 /proc/cy_safe_params2list(params)
 	if(!istext(params) || !length(params))
 		return list()
+	return params2list(params)
 
 /datum/cy_skill_holder/proc/get_granted_perk_list(skill_type)
 	var/list/perk_list = granted_skill_perks[skill_type]
