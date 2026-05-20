@@ -1,6 +1,6 @@
 ///Main proc for primary alt click
 /mob/proc/AltClickOn(atom/target)
-	base_click_alt(target)
+	return base_click_alt(target)
 
 /**
  * ### Base proc for alt click interaction left click. Returns if the click was intercepted & handled
@@ -8,6 +8,14 @@
  * If you wish to add custom `click_alt` behavior for a single type, use that proc.
  */
 /mob/proc/base_click_alt(atom/target)
+	SHOULD_NOT_OVERRIDE(TRUE)
+
+	return try_click_alt(target)
+
+/**
+ * Run the actual alt-left hook chain without living-only loot panel fallback.
+ */
+/mob/proc/try_click_alt(atom/target)
 	SHOULD_NOT_OVERRIDE(TRUE)
 
 	// Check if they've hooked in to prevent src from alt clicking anything
@@ -67,7 +75,7 @@
 
 ///Main proc for secondary alt click
 /mob/proc/AltClickSecondaryOn(atom/target)
-	base_click_alt_secondary(target)
+	return base_click_alt_secondary(target)
 
 /**
  * ### Base proc for alt click interaction right click.
@@ -77,17 +85,27 @@
 /mob/proc/base_click_alt_secondary(atom/target)
 	SHOULD_NOT_OVERRIDE(TRUE)
 
+	return try_click_alt_secondary(target)
+
+/**
+ * Run the actual alt-right hook chain.
+ */
+/mob/proc/try_click_alt_secondary(atom/target)
+	SHOULD_NOT_OVERRIDE(TRUE)
+
 	//Hook on the mob to intercept the click
 	if(SEND_SIGNAL(src, COMSIG_MOB_ALTCLICKON_SECONDARY, target) & COMSIG_MOB_CANCEL_CLICKON)
-		return
+		return TRUE
 
 	//Hook on the atom to intercept the click
 	if(SEND_SIGNAL(target, COMSIG_CLICK_ALT_SECONDARY, src) & COMPONENT_CANCEL_CLICK_ALT_SECONDARY)
-		return
+		return TRUE
 
 	// If it has a custom click_alt_secondary then do that
 	if(can_perform_action(target, target.interaction_flags_click | SILENT_ADJACENCY))
-		target.click_alt_secondary(src)
+		return target.click_alt_secondary(src) & CLICK_ACTION_ANY
+
+	return FALSE
 
 /**
  * ## Custom alt click secondary interaction

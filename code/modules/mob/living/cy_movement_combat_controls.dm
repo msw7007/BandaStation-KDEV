@@ -453,14 +453,21 @@
 	if(cy_has_click_modifier(modifiers, RIGHT_CLICK) && ismob(target) && pulling == target && grab_state < GRAB_NECK)
 		return perform_cy_grab_zone_special(target)
 	if(cy_has_click_modifier(modifiers, ALT_CLICK))
+		if(combat_mode)
+			if(cy_has_click_modifier(modifiers, MIDDLE_CLICK))
+				activate_selected_cy_daemon(target)
+				return TRUE
+			prepare_cy_combat_intent(target, modifiers)
+			return FALSE
 		if(cy_has_click_modifier(modifiers, MIDDLE_CLICK))
 			try_open_loot_panel_on(target)
 			return TRUE
-		if(combat_mode)
-			prepare_cy_combat_intent(target, modifiers)
-			return FALSE
 		if(cy_has_click_modifier(modifiers, RIGHT_CLICK))
+			if(try_click_alt_secondary(target))
+				return TRUE
 			perform_cy_additional_secondary_action(target)
+			return TRUE
+		if(try_click_alt(target))
 			return TRUE
 		perform_cy_additional_primary_action(target)
 		return TRUE
