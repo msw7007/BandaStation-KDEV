@@ -195,6 +195,8 @@
 /mob/living/proc/apply_cy_damage_pain(damage_dealt, damagetype, def_zone = null, forced = FALSE)
 	if(damage_dealt <= 0 || damagetype == PAIN || stat == DEAD)
 		return 0
+	if(isbodypart(def_zone))
+		return 0
 	if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 6))
 		return 0
 	if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 3) && prob(get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 3, "value_1", 20)))
@@ -205,9 +207,6 @@
 	var/pain_amount = round(damage_dealt * pain_multiplier * 1.5, DAMAGE_PRECISION)
 	if(pain_amount <= 0)
 		return 0
-	if(isbodypart(def_zone))
-		adjust_pain_loss(pain_amount * 0.1, updating_health = FALSE, forced = forced)
-		return pain_amount
 	adjust_pain_loss(pain_amount, updating_health = FALSE, forced = forced)
 	return pain_amount
 
@@ -226,10 +225,9 @@
 /mob/living/proc/apply_cy_damage_organ_effects(damage_dealt, damagetype, def_zone = null, forced = FALSE)
 	if(damage_dealt <= 0 || forced || stat == DEAD || !iscarbon(src))
 		return 0
-	var/hit_zone = def_zone
 	if(isbodypart(def_zone))
-		var/obj/item/bodypart/actual_hit = def_zone
-		hit_zone = actual_hit.body_zone
+		return 0
+	var/hit_zone = def_zone
 
 	var/organ_damage = 0
 	switch(damagetype)
