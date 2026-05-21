@@ -21,8 +21,10 @@
 	/// The mob's current health.
 	var/health = MAX_LIVING_HEALTH
 
-	/// The max amount of stamina damage we can have at once (Does NOT effect stamcrit thresholds. See crit_threshold)
-	var/max_stamina = 120
+	/// Maximum active stamina pool.
+	var/max_stamina = STAMINA_DEFAULT
+	/// Active stamina pool spent by long actions, combat defenses, attacks and running.
+	var/stamina = STAMINA_DEFAULT
 	///Stamina damage, or exhaustion. You recover it slowly naturally, and are knocked down if it gets too high. Holodeck and hallucinations deal this.
 	var/staminaloss = 0
 
@@ -246,6 +248,19 @@
 
 	/// How long it takes to return to 0 stam
 	var/stamina_regen_time = 10 SECONDS
+	/// Last world.time when active stamina was spent.
+	var/last_stamina_spend = 0
+	var/stamina_regen_accumulator = 0
+	var/energy_regen_accumulator = 0
+	var/satiation_drain_accumulator = 0
+	var/hydration_drain_accumulator = 0
+	var/tireness_drain_accumulator = 0
+	var/tireness_recovery_accumulator = 0
+	var/sleep_deprivation_energy_drain_accumulator = 0
+	var/tireness_sleep_grace_until = 0
+	var/time_at_min_mood = 0
+	var/last_control_loss = 0
+	var/last_combat_time = 0
 
 	/// Lazylists of pixel offsets this mob is currently using
 	/// Modify this via add_offsets and remove_offsets,

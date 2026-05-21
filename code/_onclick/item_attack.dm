@@ -55,6 +55,8 @@
 		return TRUE
 
 	// At this point the attack is really about to happen
+	var/mob/living/living_user = isliving(user) ? user : null
+	living_user?.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
 
 	var/attackby_result
 	if (is_right_clicking)
@@ -78,7 +80,6 @@
 	// This can mean nothing happened, this can mean the target took damage, etc.
 
 	if(user.client && isitem(target))
-		var/mob/living/living_user = astype(user)
 		if(isnull(user.get_inactive_held_item() && living_user?.num_hands > 1))
 			SStutorials.suggest_tutorial(user, /datum/tutorial/switch_hands, modifiers)
 		else

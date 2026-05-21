@@ -252,6 +252,8 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 
 	var/endtime = world.time + delay
 	var/starttime = world.time
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/next_stamina_spend = world.time + 1 SECONDS
 	. = TRUE
 	while (world.time < endtime)
 		stoplag(1)
@@ -277,6 +279,12 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 			|| (!(timed_action_flags & IGNORE_TARGET_LOC_CHANGE) && target.loc != target_loc)))
 			. = FALSE
 			break
+
+		if(progress && living_user && world.time >= next_stamina_spend)
+			next_stamina_spend += 1 SECONDS
+			if(!living_user.spend_stamina(STAMINA_COST_PROGRESS_TICK, "progress"))
+				. = FALSE
+				break
 
 	if(!QDELETED(progbar))
 		progbar.end_progress()

@@ -25,6 +25,21 @@
 /// Queues a blood update for the next life tick for the mob
 #define QUEUE_BLOOD_UPDATE(mob) mob.living_flags |= BLOOD_UPDATE_QUEUED
 
+// Core living resource defaults and costs.
+#define STAMINA_DEFAULT 100
+#define ENERGY_POOL_DEFAULT 100
+#define NEED_LEVEL_DEFAULT 350
+#define TIRENESS_DEFAULT 450
+
+#define STAMINA_COST_PROGRESS_TICK 5
+#define STAMINA_COST_JUMP 10
+#define STAMINA_COST_DODGE 5
+#define STAMINA_COST_PARRY 3
+#define STAMINA_COST_ATTACK 3
+#define STAMINA_COST_RUN_TILE 4
+
+#define BODY_STATE_TRAIT "body_state"
+
 // Used in living mob offset list for determining pixel offsets
 #define PIXEL_W_OFFSET "w"
 #define PIXEL_X_OFFSET "x"

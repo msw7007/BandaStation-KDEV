@@ -114,7 +114,25 @@
 	/// Hunger level of the mob
 	var/nutrition = NUTRITION_LEVEL_START_MIN // randomised in Initialize
 	/// Satiation level of the mob
-	var/satiety = 0//Carbon
+	var/satiety = NEED_LEVEL_DEFAULT
+	/// Hydration level of the mob
+	var/hydration = NEED_LEVEL_DEFAULT
+	/// Restedness level of the mob
+	var/tireness = TIRENESS_DEFAULT
+	/// Long-term reserve spent to rapidly recover stamina
+	var/energy_pool = ENERGY_POOL_DEFAULT
+	/// Maximum long-term reserve
+	var/max_energy_pool = ENERGY_POOL_DEFAULT
+	/// Chrome load the body can safely tolerate
+	var/chromity = 0
+	/// Important codes and network keys remembered by the mob
+	var/list/memory_holder = list()
+	/// Equipment-derived style score
+	var/style = 0
+	/// Mood score derived from moodlets and effects
+	var/mood = 0
+	/// Installed neural implant corporate alignment
+	var/corp_align = null
 
 	/// How many ticks this mob has been over reating
 	var/overeatduration = 0 // How long this guy is overeating //Carbon

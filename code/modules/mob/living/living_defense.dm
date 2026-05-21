@@ -224,6 +224,9 @@
 		return
 	. = combat_mode
 	combat_mode = new_mode
+	last_combat_time = world.time
+	if(!combat_mode)
+		tireness_sleep_grace_until = world.time + 15 SECONDS
 	SEND_SIGNAL(src, COMSIG_COMBAT_MODE_TOGGLED)
 	hud_used?.screen_objects[HUD_MOB_INTENTS]?.update_appearance()
 	if(silent || !client?.prefs.read_preference(/datum/preference/toggle/sound_combatmode))

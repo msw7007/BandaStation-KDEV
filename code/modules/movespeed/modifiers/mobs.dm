@@ -27,6 +27,10 @@
 /datum/movespeed_modifier/basic_stamina_slowdown
 	variable = TRUE
 
+/datum/movespeed_modifier/body_state
+	variable = TRUE
+	blacklisted_movetypes = FLOATING
+
 /datum/movespeed_modifier/damage_slowdown
 	blacklisted_movetypes = FLOATING
 	variable = TRUE

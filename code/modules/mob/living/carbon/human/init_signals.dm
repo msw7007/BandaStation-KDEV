@@ -46,10 +46,11 @@
 	// When gaining NOHUNGER, we restore nutrition to normal levels, since we no longer interact with the hunger system
 	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
 		set_nutrition(NUTRITION_LEVEL_FED, forced = TRUE)
-		satiety = 0
+		satiety = MAX_SATIETY
 		overeatduration = 0
 		remove_traits(list(TRAIT_FAT, TRAIT_OFF_BALANCE_TACKLER), OBESITY)
 	else
+		satiety = NEED_LEVEL_DEFAULT
 		update_nutrition()
 
 /// Signal proc for [COMSIG_ATOM_CONTENTS_WEIGHT_CLASS_CHANGED] to check if an item is suddenly too heavy for our pockets

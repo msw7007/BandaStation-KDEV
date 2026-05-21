@@ -50,6 +50,11 @@
 		return NONE
 	if(attack_type == PROJECTILE_ATTACK)
 		return NONE
+	if(attack_type == OVERWHELMING_ATTACK)
+		if(!cqc_user.can_dodge())
+			return NONE
+	else if(!cqc_user.can_parry())
+		return NONE
 
 	var/blocking_text = "блокируете"
 	var/blocking_text_s = "блокирует"
@@ -75,6 +80,7 @@
 			span_danger("[capitalize(cqc_user.declent_ru(NOMINATIVE))] [blocking_text_s] [attack_text]!"),
 			span_userdanger("Вы [blocking_text] [attack_text]!"),
 		)
+	cqc_user.spend_stamina(attack_type == OVERWHELMING_ATTACK ? STAMINA_COST_DODGE : STAMINA_COST_PARRY, "defense")
 	return SUCCESSFUL_BLOCK
 
 

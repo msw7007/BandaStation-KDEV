@@ -9,8 +9,8 @@
 #define HARD_CRIT 3
 #define DEAD 4
 
-//Maximum healthiness an individual can have
-#define MAX_SATIETY 600
+//Maximum satiation/hydration/tireness an individual can have.
+#define MAX_SATIETY 500
 
 // bitflags for machine stat variable
 

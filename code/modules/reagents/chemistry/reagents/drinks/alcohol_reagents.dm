@@ -6,6 +6,7 @@
 	description = "A well-known alcohol with a variety of applications."
 	color = "#404030" // rgb: 64, 64, 48
 	nutriment_factor = 0
+	hydration_factor = 3
 	taste_description = "alcohol"
 	metabolization_rate = 0.5 * REAGENTS_METABOLISM
 	creation_purity = 1 // impure base reagents are a big no-no
@@ -1789,7 +1790,7 @@
 
 /datum/reagent/consumable/ethanol/squirt_cider/on_mob_life(mob/living/carbon/drinker, seconds_per_tick, metabolization_ratio)
 	. = ..()
-	drinker.satiety += 5 * metabolization_ratio * seconds_per_tick //for context, vitamins give 15 satiety per second
+	drinker.adjust_satiation(5 * metabolization_ratio * seconds_per_tick)
 
 /datum/reagent/consumable/ethanol/fringe_weaver
 	name = "Fringe Weaver"
@@ -1814,7 +1815,7 @@
 
 /datum/reagent/consumable/ethanol/sugar_rush/on_mob_life(mob/living/carbon/drinker, seconds_per_tick, metabolization_ratio)
 	. = ..()
-	drinker.satiety -= 10 * metabolization_ratio * seconds_per_tick //junky as hell! a whole glass will keep you from being able to eat junk food
+	drinker.adjust_satiation(-10 * metabolization_ratio * seconds_per_tick)
 
 /datum/reagent/consumable/ethanol/crevice_spike
 	name = "Crevice Spike"

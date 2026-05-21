@@ -15,6 +15,8 @@
 	creation_purity = CONSUMABLE_STANDARD_PURITY
 	/// How much nutrition this reagent supplies. Look at get_nutriment_factor() for an understanding.
 	var/nutriment_factor = 1
+	/// How much hydration one metabolized unit restores.
+	var/hydration_factor = 5
 	/// affects mood, typically higher for mixed drinks with more complex recipes'
 	var/quality = 0
 
@@ -25,11 +27,11 @@
 
 /datum/reagent/consumable/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
-	if(!ishuman(affected_mob) || HAS_TRAIT(affected_mob, TRAIT_NOHUNGER))
+	if(HAS_TRAIT(affected_mob, TRAIT_NOHUNGER))
 		return
 
-	var/mob/living/carbon/human/affected_human = affected_mob
-	affected_human.adjust_nutrition(0.5 * get_nutriment_factor(affected_mob) * metabolization_ratio * seconds_per_tick)
+	affected_mob.adjust_nutrition(0.5 * get_nutriment_factor(affected_mob) * metabolization_ratio * seconds_per_tick)
+	affected_mob.adjust_hydration(hydration_factor * metabolization_ratio * seconds_per_tick)
 
 /datum/reagent/consumable/expose_mob(mob/living/exposed_mob, methods=TOUCH, reac_volume)
 	. = ..()
@@ -77,6 +79,7 @@
 
 /datum/reagent/consumable/nutriment/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	affected_mob.adjust_satiation(2 * metabolization_ratio * seconds_per_tick)
 	if(SPT_PROB(30, seconds_per_tick))
 		var/heal = 0.5 * brute_heal * metabolization_ratio
 		if(affected_mob.heal_bodypart_damage(brute = heal, burn = heal, updating_health = FALSE, required_bodytype = BODYTYPE_ORGANIC))
@@ -136,8 +139,7 @@
 
 /datum/reagent/consumable/nutriment/vitamin/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
-	if(affected_mob.satiety < MAX_SATIETY)
-		affected_mob.satiety += 15 * metabolization_ratio * seconds_per_tick
+	affected_mob.adjust_satiation(1 * metabolization_ratio * seconds_per_tick)
 
 /// The basic resource of vat growing.
 /datum/reagent/consumable/nutriment/protein

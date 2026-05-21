@@ -984,7 +984,7 @@
 	// I don't really care to keep this under a flag
 	set_nutrition(NUTRITION_LEVEL_FED + 50)
 	overeatduration = 0
-	satiety = 0
+	satiety = NEED_LEVEL_DEFAULT
 
 	// These should be tracked by status effects
 	losebreath = 0
@@ -1050,6 +1050,12 @@
 	if(pulling)
 		update_pull_movespeed()
 
+	if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING) && !can_run())
+		move_intent = MOVE_INTENT_WALK
+		hud_used?.screen_objects[HUD_MOB_MOVE_INTENT]?.update_appearance()
+		update_move_intent_slowdown()
+		SEND_SIGNAL(src, COMSIG_MOVE_INTENT_TOGGLED)
+
 	. = ..()
 
 	if(moving_diagonally != FIRST_DIAG_STEP && isliving(pulledby))
@@ -1063,6 +1069,8 @@
 			active_storage.hide_contents(src)
 
 	if(!buckled && !moving_diagonally && loc != old_loc)
+		if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
+			spend_stamina(STAMINA_COST_RUN_TILE, "run")
 		var/blood_flow = get_bleed_rate()
 		var/health_check = body_position == LYING_DOWN && prob(get_brute_loss() * 200 / maxHealth)
 		var/bleeding_check = blood_flow > 3 && prob(blood_flow * 16)

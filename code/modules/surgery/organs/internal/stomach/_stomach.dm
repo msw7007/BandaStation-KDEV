@@ -147,24 +147,11 @@
 			to_chat(human, span_danger("You suddenly feel blubbery!"))
 			human.add_traits(list(TRAIT_FAT, TRAIT_OFF_BALANCE_TACKLER), OBESITY)
 
-	// nutrition decrease and satiety
+	// Nutrition remains as the legacy digestion pool; satiation is drained by /mob/living/Life.
 	if (human.nutrition > 0 && human.stat != DEAD)
-		// THEY HUNGER
 		var/hunger_rate = HUNGER_FACTOR
 		if(human.mob_mood && human.mob_mood.sanity > SANITY_DISTURBED)
 			hunger_rate *= max(1 - 0.002 * human.mob_mood.sanity, 0.5) //0.85 to 0.75
-		// Whether we cap off our satiety or move it towards 0
-		if(human.satiety > MAX_SATIETY)
-			human.satiety = MAX_SATIETY
-		else if(human.satiety > 0)
-			human.satiety--
-		else if(human.satiety < -MAX_SATIETY)
-			human.satiety = -MAX_SATIETY
-		else if(human.satiety < 0)
-			human.satiety++
-			if(SPT_PROB(round(-human.satiety/77), seconds_per_tick))
-				human.set_jitter_if_lower(10 SECONDS)
-			hunger_rate = 3 * HUNGER_FACTOR
 		hunger_rate *= hunger_modifier
 		hunger_rate *= human.physiology.hunger_mod
 		human.adjust_nutrition(-hunger_rate * seconds_per_tick)
@@ -192,10 +179,6 @@
 		if(human.metabolism_efficiency == 1.25)
 			to_chat(human, span_notice("You no longer feel vigorous."))
 		human.metabolism_efficiency = 1
-
-	//Hunger slowdown for if mood isn't enabled
-	if(CONFIG_GET(flag/disable_human_mood))
-		handle_hunger_slowdown(human)
 
 ///for when mood is disabled and hunger should handle slowdowns
 /obj/item/organ/stomach/proc/handle_hunger_slowdown(mob/living/carbon/human/human)

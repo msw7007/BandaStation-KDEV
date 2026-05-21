@@ -333,6 +333,9 @@
 	if(attack_type != UNARMED_ATTACK)
 		return NONE
 
+	if(!boxer.can_parry())
+		return NONE
+
 	//Determines unarmed defense against boxers using our current active arm.
 	var/obj/item/bodypart/arm/active_arm = boxer.get_active_hand()
 	var/base_unarmed_effectiveness = active_arm.unarmed_effectiveness
@@ -372,6 +375,7 @@
 	if(block_text == "избегает")
 		playsound(boxer.loc, active_arm.unarmed_miss_sound, 25, TRUE, -1)
 
+	boxer.spend_stamina(STAMINA_COST_PARRY, "parry")
 	return SUCCESSFUL_BLOCK
 
 /datum/martial_art/boxing/can_use(mob/living/martial_artist)

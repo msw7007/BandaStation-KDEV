@@ -291,6 +291,9 @@
 	if(!can_deflect(carp_user))
 		return
 
+	if(!carp_user.can_dodge())
+		return NONE
+
 	if(attack_type == PROJECTILE_ATTACK || attack_type == THROWN_PROJECTILE_ATTACK)
 		return NONE
 
@@ -302,6 +305,7 @@
 		span_userdanger("Вы уворачиваетесь от [attack_text]"),
 	)
 	playsound(carp_user.loc, 'sound/items/weapons/punchmiss.ogg', 25, TRUE, -1)
+	carp_user.spend_stamina(STAMINA_COST_DODGE, "dodge")
 	return SUCCESSFUL_BLOCK
 
 /* Determines how 'carp-y' or how 'martial arts-y' we are, granting us the ability to avoid attacks.

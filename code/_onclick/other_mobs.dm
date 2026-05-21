@@ -45,6 +45,9 @@
 	if(!can_unarmed_attack())
 		return FALSE
 
+	if(combat_mode || isliving(attack_target))
+		spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
+
 	sigreturn = SEND_SIGNAL(src, COMSIG_LIVING_UNARMED_ATTACK, attack_target, proximity_flag, modifiers)
 	if(sigreturn & COMPONENT_CANCEL_ATTACK_CHAIN)
 		return TRUE

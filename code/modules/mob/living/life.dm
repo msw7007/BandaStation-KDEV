@@ -47,6 +47,7 @@
 			handle_mutations(seconds_per_tick)
 			//Breathing, if applicable
 			handle_breathing(seconds_per_tick)
+			handle_body_state(seconds_per_tick)
 			handle_ssd(seconds_per_tick) // BANDASTATION ADD - SSD INDICATOR
 
 		handle_diseases(seconds_per_tick) // DEAD check is in the proc itself; we want it to spread even if the mob is dead, but to handle its disease-y properties only if you're not.
@@ -80,6 +81,279 @@
 
 /mob/living/proc/handle_diseases(seconds_per_tick)
 	return
+
+/mob/living/proc/handle_body_state(seconds_per_tick)
+	drain_needs(seconds_per_tick)
+	recover_stamina(seconds_per_tick)
+	recover_energy_pool(seconds_per_tick)
+	recover_tireness(seconds_per_tick)
+	process_mood_state(seconds_per_tick)
+	apply_body_state_effects()
+
+/mob/living/proc/drain_needs(seconds_per_tick)
+	if(!HAS_TRAIT(src, TRAIT_NOHUNGER))
+		satiation_drain_accumulator += seconds_per_tick
+		while(satiation_drain_accumulator >= 20)
+			satiation_drain_accumulator -= 20
+			adjust_satiation(-1)
+	else
+		satiation_drain_accumulator = 0
+
+	hydration_drain_accumulator += seconds_per_tick
+	while(hydration_drain_accumulator >= 10)
+		hydration_drain_accumulator -= 10
+		adjust_hydration(-1)
+
+	tireness_drain_accumulator += seconds_per_tick
+	while(tireness_drain_accumulator >= 15)
+		tireness_drain_accumulator -= 15
+		adjust_tireness(-1)
+
+	if(has_sleep_deprivation())
+		sleep_deprivation_energy_drain_accumulator += seconds_per_tick
+		while(sleep_deprivation_energy_drain_accumulator >= 60)
+			sleep_deprivation_energy_drain_accumulator -= 60
+			adjust_energy_pool(-2)
+	else
+		sleep_deprivation_energy_drain_accumulator = 0
+
+	if(tireness <= 0 && !combat_mode && world.time >= tireness_sleep_grace_until && !IsSleeping() && !IsUnconscious())
+		SetSleeping(30 SECONDS)
+
+/mob/living/proc/recover_stamina(seconds_per_tick)
+	if(stamina >= max_stamina || is_exhausted_by_needs())
+		stamina_regen_accumulator = 0
+		return
+	if(world.time < last_stamina_spend + 10 SECONDS)
+		stamina_regen_accumulator = 0
+		return
+
+	stamina_regen_accumulator += seconds_per_tick
+	while(stamina_regen_accumulator >= 5)
+		stamina_regen_accumulator -= 5
+		var/recovery = 5
+		if(buckled || resting)
+			recovery += 5
+		if(body_position == LYING_DOWN && (IsSleeping() || IsUnconscious()))
+			recovery += 10
+		if(stamina < max_stamina && energy_pool >= 2)
+			adjust_energy_pool(-2)
+			recovery += 15
+		adjust_stamina(recovery, FALSE)
+
+/mob/living/proc/recover_energy_pool(seconds_per_tick)
+	if(energy_pool >= max_energy_pool || has_sleepiness() || has_strong_hunger() || has_strong_thirst())
+		energy_regen_accumulator = 0
+		return
+
+	var/recovery = get_energy_pool_recovery()
+	if(recovery <= 0)
+		energy_regen_accumulator = 0
+		return
+
+	energy_regen_accumulator += seconds_per_tick
+	while(energy_regen_accumulator >= 10)
+		energy_regen_accumulator -= 10
+		adjust_energy_pool(recovery)
+
+/mob/living/proc/recover_tireness(seconds_per_tick)
+	if(tireness >= MAX_SATIETY || body_position != LYING_DOWN || (!IsSleeping() && !IsUnconscious()))
+		tireness_recovery_accumulator = 0
+		return
+
+	tireness_recovery_accumulator += seconds_per_tick
+	while(tireness_recovery_accumulator >= 5)
+		tireness_recovery_accumulator -= 5
+		var/recovery = 10
+		if(istype(buckled, /obj/structure/bed))
+			recovery += 10
+			if(locate(/obj/item/pillow) in loc)
+				recovery += 20
+			if(locate(/obj/item/bedsheet) in loc)
+				recovery += 10
+		if(!has_hunger() && !has_overeating())
+			recovery += 20
+		if(!has_thirst() && !has_overdrinking())
+			recovery += 10
+		adjust_tireness(recovery)
+
+/mob/living/proc/process_mood_state(seconds_per_tick)
+	mood = clamp(mood, -30, 20)
+	if(mood <= -30)
+		time_at_min_mood += seconds_per_tick
+		if(time_at_min_mood >= 10 MINUTES && world.time >= last_control_loss + 30 SECONDS)
+			trigger_hysteria()
+
+/mob/living/proc/apply_body_state_effects()
+	var/stamina_ratio = max_stamina ? stamina / max_stamina : 0
+	var/move_slowdown = 0
+	var/action_slowdown = 0
+
+	if(stamina <= 0)
+		move_slowdown = max(move_slowdown, 0.2)
+		action_slowdown = max(action_slowdown, 0.2)
+	else if(stamina_ratio <= 0.1)
+		move_slowdown = max(move_slowdown, 0.2)
+		action_slowdown = max(action_slowdown, 0.2)
+	else if(stamina_ratio <= 0.5)
+		move_slowdown = max(move_slowdown, 0.1)
+		action_slowdown = max(action_slowdown, 0.1)
+
+	if(has_dehydration())
+		move_slowdown = max(move_slowdown, 0.2)
+	if(tireness > 450)
+		move_slowdown -= 0.1
+
+	if(mood > 0)
+		action_slowdown -= 0.1 * (mood / 20)
+	else if(mood < 0)
+		action_slowdown += 0.5 * (abs(mood) / 30)
+
+	if(move_slowdown)
+		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/body_state, multiplicative_slowdown = move_slowdown)
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/body_state)
+
+	if(action_slowdown)
+		add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/body_state, multiplicative_slowdown = action_slowdown)
+	else
+		remove_actionspeed_modifier(/datum/actionspeed_modifier/body_state)
+
+	if(stamina <= 0 && energy_pool <= 0)
+		Stun(10 SECONDS)
+		ADD_TRAIT(src, TRAIT_IMMOBILIZED, BODY_STATE_TRAIT)
+	else
+		REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, BODY_STATE_TRAIT)
+
+/mob/living/proc/spend_stamina(amount, source, allow_negative = FALSE)
+	if(amount <= 0)
+		return TRUE
+	if(!allow_negative && stamina < amount)
+		return FALSE
+	adjust_stamina(-amount, TRUE)
+	return TRUE
+
+/mob/living/proc/adjust_stamina(amount, counts_as_spend = FALSE)
+	var/old_value = stamina
+	stamina = clamp(stamina + amount, 0, max_stamina)
+	if(counts_as_spend && stamina < old_value)
+		last_stamina_spend = world.time
+		stamina_regen_accumulator = 0
+	apply_body_state_effects()
+	return stamina - old_value
+
+/mob/living/proc/adjust_energy_pool(amount)
+	var/old_value = energy_pool
+	energy_pool = clamp(energy_pool + amount, 0, max_energy_pool)
+	return energy_pool - old_value
+
+/mob/living/proc/adjust_satiation(amount)
+	var/old_value = satiety
+	satiety = clamp(satiety + amount, 0, MAX_SATIETY)
+	return satiety - old_value
+
+/mob/living/proc/adjust_hydration(amount)
+	var/old_value = hydration
+	hydration = clamp(hydration + amount, 0, MAX_SATIETY)
+	return hydration - old_value
+
+/mob/living/proc/adjust_tireness(amount)
+	var/old_value = tireness
+	tireness = clamp(tireness + amount, 0, MAX_SATIETY)
+	return tireness - old_value
+
+/mob/living/proc/adjust_mood(amount)
+	var/old_value = mood
+	mood = clamp(mood + amount, -30, 20)
+	apply_body_state_effects()
+	return mood - old_value
+
+/mob/living/proc/get_energy_pool_recovery()
+	if(body_position == LYING_DOWN)
+		var/recovery = 2
+		if(istype(buckled, /obj/structure/bed))
+			recovery += 2
+			if(locate(/obj/item/pillow) in loc)
+				recovery += 2
+			if(locate(/obj/item/bedsheet) in loc)
+				recovery += 2
+			if(!has_hunger())
+				recovery += 2
+		return recovery
+	if(resting || buckled)
+		return 2
+	return 0
+
+/mob/living/proc/get_check_penalty()
+	if(stamina <= 0)
+		return 0.2
+	if(stamina <= max_stamina * 0.1)
+		return 0.1
+	if(stamina <= max_stamina * 0.5)
+		return 0.05
+	return 0
+
+/mob/living/proc/get_experience_multiplier()
+	return 1 + max(0, style) / 15 * 0.5 + max(0, mood) / 20 * 0.5
+
+/mob/living/proc/can_dodge()
+	return stamina > max_stamina * 0.1 && stamina >= STAMINA_COST_DODGE
+
+/mob/living/proc/can_parry()
+	return stamina > max_stamina * 0.1 && stamina >= STAMINA_COST_PARRY
+
+/mob/living/proc/can_jump()
+	return stamina > max_stamina * 0.1 && stamina >= STAMINA_COST_JUMP
+
+/mob/living/proc/can_run()
+	return stamina > max_stamina * 0.1 && stamina >= STAMINA_COST_RUN_TILE
+
+/mob/living/proc/is_exhausted_by_needs()
+	return has_starvation_exhaustion() || has_dehydration()
+
+/mob/living/proc/has_hunger()
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		return FALSE
+	return satiety < 200
+
+/mob/living/proc/has_overeating()
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		return FALSE
+	return satiety > 450
+
+/mob/living/proc/has_strong_hunger()
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		return FALSE
+	return satiety < 130
+
+/mob/living/proc/has_starvation_exhaustion()
+	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
+		return FALSE
+	return satiety < 80
+
+/mob/living/proc/has_thirst()
+	return hydration < 180
+
+/mob/living/proc/has_overdrinking()
+	return hydration > 450
+
+/mob/living/proc/has_strong_thirst()
+	return hydration < 100
+
+/mob/living/proc/has_dehydration()
+	return hydration < 20
+
+/mob/living/proc/has_sleepiness()
+	return tireness < 200
+
+/mob/living/proc/has_sleep_deprivation()
+	return tireness < 50
+
+/mob/living/proc/trigger_hysteria()
+	last_control_loss = world.time
+	time_at_min_mood = 0
+	visible_message(span_warning("[src] loses control!"), span_userdanger("You lose control of yourself."))
+	Stun(30 SECONDS)
 
 // Base mob environment handler for body temperature
 /mob/living/proc/handle_environment(datum/gas_mixture/environment, seconds_per_tick)

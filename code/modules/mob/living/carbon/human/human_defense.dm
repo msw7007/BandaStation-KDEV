@@ -82,6 +82,8 @@
 	. = ..()
 	if(. == SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
+	if(!can_parry())
+		return FAILED_BLOCK
 
 	var/block_chance_modifier = round(damage / -3)
 	for(var/obj/item/worn_thing in get_equipped_items(INCLUDE_HELD|INCLUDE_PROSTHETICS|INCLUDE_ABSTRACT))
@@ -95,6 +97,7 @@
 
 		var/final_block_chance = worn_thing.block_chance - (clamp((armour_penetration - worn_thing.armour_penetration) / 2, 0, 100)) + block_chance_modifier
 		if(worn_thing.hit_reaction(src, hit_by, attack_text, final_block_chance, damage, attack_type, damage_type))
+			spend_stamina(STAMINA_COST_PARRY, "parry")
 			return SUCCESSFUL_BLOCK
 
 	return FAILED_BLOCK
