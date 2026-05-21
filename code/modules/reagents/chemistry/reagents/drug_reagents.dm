@@ -239,7 +239,7 @@
 	ph = 8.2
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
-	metabolized_traits = list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_ANALGESIA, TRAIT_STIMULATED)
+	metabolized_traits = list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_CY_ANALGESIA_FAST, TRAIT_STIMULATED)
 	var/datum/brain_trauma/special/psychotic_brawling/bath_salts/rage
 
 /datum/reagent/drug/bath_salts/on_mob_metabolize(mob/living/affected_mob)
@@ -317,7 +317,7 @@
 	inverse_chem_val = 0.4
 	inverse_chem = /datum/reagent/inverse/happiness
 	addiction_types = list(/datum/addiction/hallucinogens = 30)
-	metabolized_traits = list(TRAIT_FEARLESS, TRAIT_ANALGESIA)
+	metabolized_traits = list(TRAIT_FEARLESS, TRAIT_CY_ANALGESIA_FAST)
 
 /datum/reagent/drug/happiness/on_mob_metabolize(mob/living/affected_mob)
 	. = ..()
@@ -361,7 +361,7 @@
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
 	addiction_types = list(/datum/addiction/stimulants = 400)
-	metabolized_traits = list(TRAIT_BATON_RESISTANCE, TRAIT_ANALGESIA, TRAIT_STIMULATED)
+	metabolized_traits = list(TRAIT_BATON_RESISTANCE, TRAIT_CY_ANALGESIA_FAST, TRAIT_STIMULATED)
 
 /datum/reagent/drug/pumpup/on_mob_metabolize(mob/living/carbon/affected_mob)
 	. = ..()
@@ -452,7 +452,7 @@
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
 	addiction_types = list(/datum/addiction/maintenance_drugs = 300)
-	metabolized_traits = list(TRAIT_HARDLY_WOUNDED, TRAIT_ANALGESIA)
+	metabolized_traits = list(TRAIT_HARDLY_WOUNDED, TRAIT_CY_ANALGESIA_FAST)
 
 /datum/reagent/drug/maint/sludge/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()

@@ -415,6 +415,8 @@
 			continue
 		can_gauze = TRUE
 		break
+	if(limb.has_cy_limb_bleeding_trauma() || limb.has_cy_limb_surface_trauma())
+		can_gauze = TRUE
 
 	. = NONE
 	var/surgery_prepped = HAS_TRAIT(limb, TRAIT_READY_TO_OPERATE)
@@ -490,6 +492,8 @@
 	for(var/datum/wound/burn/flesh/wound in limb.wounds)
 		wound.sanitization += sanitization * (wound.infection > 0.1 ? 0.2 : 1)
 		wound.flesh_healing += flesh_regeneration * (wound.infection > 0.1 ? 0 : 1)
+	limb.close_cy_limb_bleeding_traumas(include_internal = FALSE)
+	limb.treat_cy_limb_surface_traumas()
 
 /// Used via signal to update wounds
 /obj/item/stack/medical/wrap/proc/update_wounds(datum/source, obj/item/bodypart/limb)

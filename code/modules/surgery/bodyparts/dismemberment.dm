@@ -176,6 +176,7 @@
 
 	var/base_chance = wounding_dmg
 	base_chance += (get_damage() / max_damage * 50) // how much damage we dealt with this blow, + 50% of the damage percentage we already had on this bodypart
+	base_chance += get_cy_limb_trauma_dismember_bonus()
 
 	for (var/datum/wound/iterated_wound as anything in wounds)
 		base_chance += iterated_wound.get_dismember_chance_bonus(base_chance)

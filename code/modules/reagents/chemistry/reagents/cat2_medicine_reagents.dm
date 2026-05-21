@@ -631,7 +631,7 @@
 		REMOVE_TRAIT(affected_mob, TRAIT_STABLEHEART, type) //we have to remove the stable heart trait before we give them a heart attack
 		affected_mob.remove_traits(subject_traits, type)
 		to_chat(affected_mob, span_danger("You feel something rupturing inside your chest!"))
-		if(!HAS_TRAIT(affected_mob, TRAIT_ANALGESIA))
+		if(!affected_mob.get_cy_analgesia_decay())
 			affected_mob.emote("scream")
 		affected_mob.set_heartattack(TRUE)
 		volume = 0

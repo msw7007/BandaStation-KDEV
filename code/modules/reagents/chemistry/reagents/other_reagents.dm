@@ -1682,11 +1682,13 @@
 
 /datum/reagent/nitrous_oxide/on_mob_metabolize(mob/living/affected_mob)
 	. = ..()
+	ADD_TRAIT(affected_mob, TRAIT_CY_ANALGESIA_INSTANT, type)
 	if(!HAS_TRAIT(affected_mob, TRAIT_COAGULATING)) //IF the mob does not have a coagulant in them, we add the blood mess trait to make the bleed quicker
 		ADD_TRAIT(affected_mob, TRAIT_BLOOD_FOUNTAIN, type)
 
 /datum/reagent/nitrous_oxide/on_mob_end_metabolize(mob/living/affected_mob)
 	. = ..()
+	REMOVE_TRAIT(affected_mob, TRAIT_CY_ANALGESIA_INSTANT, type)
 	REMOVE_TRAIT(affected_mob, TRAIT_BLOOD_FOUNTAIN, type)
 
 /datum/reagent/nitrous_oxide/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
@@ -3077,7 +3079,7 @@
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
 	self_consuming = TRUE
-	metabolized_traits = list(TRAIT_ANALGESIA)
+	metabolized_traits = list(TRAIT_CY_ANALGESIA_FAST)
 	/// Whether we've had at least WOUND_DETERMINATION_SEVERE (2.5u) of determination at any given time. No damage slowdown immunity or indication we're having a second wind if it's just a single moderate wound
 	var/significant = FALSE
 

@@ -845,6 +845,21 @@
 						return TRUE
 					lungs.clear_cy_puncture(1)
 					return TRUE
+			if(selected_limb?.has_cy_limb_bleeding_trauma())
+				var/internal_access = LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_ORGANS_CUT)
+				if(selected_limb.has_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA) && !internal_access)
+					return FALSE
+				user.visible_message(span_notice("[user] seals damaged vessels in [patient]'s [selected_limb.plaintext_zone]."), span_notice("You seal damaged vessels in [patient]'s [selected_limb.plaintext_zone]."))
+				if(!do_after(user, action_time, target = patient))
+					return TRUE
+				selected_limb.close_cy_limb_bleeding_traumas(include_internal = internal_access)
+				return TRUE
+			if(selected_limb?.cy_internal_blood_pool > 0 && LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_ORGANS_CUT))
+				user.visible_message(span_notice("[user] drains pooled blood from [patient]'s [selected_limb.plaintext_zone]."), span_notice("You drain pooled blood from [patient]'s [selected_limb.plaintext_zone]."))
+				if(!do_after(user, action_time, target = patient))
+					return TRUE
+				selected_limb.drain_cy_internal_blood(20)
+				return TRUE
 			if(patient.get_bleed_rate() <= 0)
 				return FALSE
 			user.visible_message(span_notice("[user] clamps bleeding vessels on [patient]."), span_notice("You clamp bleeding vessels on [patient]."))
@@ -857,20 +872,23 @@
 				limb.refresh_bleed_rate()
 			return TRUE
 		if(TOOL_CAUTERY)
-			if(!selected_limb || (selected_limb.get_burn_damage() <= 0 && selected_limb.get_brute_damage() <= 0))
+			if(!selected_limb || (selected_limb.get_burn_damage() <= 0 && selected_limb.get_brute_damage() <= 0 && !length(selected_limb.cy_limb_traumas)))
 				return FALSE
 			user.visible_message(span_notice("[user] seals damaged tissue on [patient]."), span_notice("You seal damaged tissue on [patient]."))
 			if(!do_after(user, action_time, target = patient))
 				return TRUE
+			selected_limb.close_cy_limb_bleeding_traumas(include_internal = FALSE)
+			selected_limb.treat_cy_limb_surface_traumas()
 			selected_limb.heal_damage(2, 6, forced = TRUE)
 			selected_limb.refresh_bleed_rate()
 			return TRUE
 		if(TOOL_BONESET)
-			if(!selected_limb || selected_limb.get_brute_damage() <= 0)
+			if(!selected_limb || (selected_limb.get_brute_damage() <= 0 && !selected_limb.has_cy_limb_trauma(CY_LIMB_TRAUMA_DISLOCATION) && !selected_limb.has_cy_limb_trauma(CY_LIMB_TRAUMA_FRACTURE)))
 				return FALSE
 			user.visible_message(span_notice("[user] sets damaged bones on [patient]."), span_notice("You set damaged bones on [patient]."))
 			if(!do_after(user, action_time, target = patient))
 				return TRUE
+			selected_limb.set_cy_limb_bone_traumas()
 			selected_limb.heal_damage(8, 0, forced = TRUE, blunt = 8)
 			return TRUE
 		if(TOOL_BLOODFILTER)

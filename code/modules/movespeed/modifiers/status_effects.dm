@@ -4,6 +4,10 @@
 /datum/movespeed_modifier/status_effect/bonechill
 	multiplicative_slowdown = 3
 
+/datum/movespeed_modifier/cy_limb_trauma
+	variable = TRUE
+	blacklisted_movetypes = (FLYING|FLOATING)
+
 /datum/movespeed_modifier/status_effect/lightpink
 	multiplicative_slowdown = -0.5
 	blacklisted_movetypes = (FLYING|FLOATING)

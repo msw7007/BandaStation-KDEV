@@ -144,6 +144,11 @@
 	/// The wounds currently afflicting this body part
 	var/list/wounds
 
+	/// CP limb trauma id -> severity.
+	var/list/cy_limb_traumas
+	/// Blood collected inside the body by aortic trauma. Surgery/drainage can clear it later.
+	var/cy_internal_blood_pool = 0
+
 	/// The scars currently afflicting this body part
 	var/list/scars
 	/// Our current stored wound damage multiplier
@@ -361,6 +366,8 @@
 		var/wound_desc = wound.get_limb_examine_description()
 		if(wound_desc)
 			. += wound_desc
+	for(var/trauma_desc in get_cy_limb_trauma_descriptions())
+		. += trauma_desc
 
 	var/surgery_examine = get_surgery_examine()
 	if(surgery_examine)
@@ -435,6 +442,8 @@
 		var/wound_desc = wound.get_self_check_description(adept_organ_feeler)
 		if(wound_desc)
 			check_list += "\t[wound_desc]"
+	for(var/trauma_desc in get_cy_limb_trauma_descriptions())
+		check_list += "\t[trauma_desc]"
 
 	var/surgery_check = get_surgery_self_check()
 	if(surgery_check)
@@ -676,9 +685,141 @@
 	SHOULD_CALL_PARENT(TRUE)
 	var/datum/component/pain_tracker/pain_tracker = get_pain_tracker()
 	var/changed = pain_tracker.process_pain(seconds_per_tick)
+	changed ||= process_cy_limb_traumas(seconds_per_tick)
 	if(owner)
 		owner.sync_pain_damage()
 	return changed
+
+/obj/item/bodypart/proc/has_cy_limb_trauma(trauma_id)
+	return LAZYACCESS(cy_limb_traumas, trauma_id)
+
+/obj/item/bodypart/proc/get_cy_limb_trauma_severity(trauma_id)
+	return LAZYACCESS(cy_limb_traumas, trauma_id) || 0
+
+/obj/item/bodypart/proc/add_cy_limb_trauma(trauma_id, severity = CY_TRAUMA_SEVERITY_MODERATE)
+	if(!trauma_id)
+		return FALSE
+	LAZYINITLIST(cy_limb_traumas)
+	var/current_severity = cy_limb_traumas[trauma_id] || 0
+	if(current_severity >= severity)
+		return FALSE
+	cy_limb_traumas[trauma_id] = severity
+	if(can_be_disabled)
+		update_disabled()
+	owner?.update_cy_limb_trauma_modifiers()
+	return TRUE
+
+/obj/item/bodypart/proc/remove_cy_limb_trauma(trauma_id)
+	if(!LAZYACCESS(cy_limb_traumas, trauma_id))
+		return FALSE
+	cy_limb_traumas -= trauma_id
+	if(!length(cy_limb_traumas))
+		cy_limb_traumas = null
+	if(can_be_disabled)
+		update_disabled()
+	owner?.update_cy_limb_trauma_modifiers()
+	return TRUE
+
+/obj/item/bodypart/proc/get_cy_limb_trauma_residual_pain()
+	if(!length(cy_limb_traumas))
+		return 0
+	var/pain_floor = 0
+	for(var/trauma_id in cy_limb_traumas)
+		var/severity = cy_limb_traumas[trauma_id]
+		switch(trauma_id)
+			if(CY_LIMB_TRAUMA_PUNCTURE)
+				pain_floor += severity >= CY_TRAUMA_SEVERITY_SEVERE ? 10 : 5
+			if(CY_LIMB_TRAUMA_AORTA)
+				pain_floor += severity >= CY_TRAUMA_SEVERITY_SEVERE ? 20 : 10
+			if(CY_LIMB_TRAUMA_CUT)
+				pain_floor += severity >= CY_TRAUMA_SEVERITY_SEVERE ? 8 : 4
+			if(CY_LIMB_TRAUMA_AVULSION)
+				pain_floor += severity >= CY_TRAUMA_SEVERITY_SEVERE ? 24 : 12
+			if(CY_LIMB_TRAUMA_DISLOCATION)
+				pain_floor += severity >= CY_TRAUMA_SEVERITY_SEVERE ? 16 : 8
+			if(CY_LIMB_TRAUMA_FRACTURE)
+				pain_floor += severity >= CY_TRAUMA_SEVERITY_SEVERE ? 25 : 12
+			if(CY_LIMB_TRAUMA_FIRE_BURN, CY_LIMB_TRAUMA_COLD_BURN, CY_LIMB_TRAUMA_CHEM_BURN)
+				pain_floor += 8
+			if(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE, CY_LIMB_TRAUMA_COLD_BURN_SEVERE, CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL)
+				pain_floor += 16
+	return round(pain_floor, DAMAGE_PRECISION)
+
+/obj/item/bodypart/proc/get_cy_limb_trauma_descriptions()
+	. = list()
+	if(!length(cy_limb_traumas))
+		return
+	for(var/trauma_id in cy_limb_traumas)
+		var/severity_text = cy_limb_traumas[trauma_id] >= CY_TRAUMA_SEVERITY_SEVERE ? "severe" : "moderate"
+		switch(trauma_id)
+			if(CY_LIMB_TRAUMA_PUNCTURE)
+				. += span_warning("There is a [severity_text] puncture trauma in [src].")
+			if(CY_LIMB_TRAUMA_AORTA)
+				. += span_warning("There are signs of [severity_text] internal arterial bleeding in [src].")
+			if(CY_LIMB_TRAUMA_CUT)
+				. += span_warning("There is a [severity_text] cut trauma on [src].")
+			if(CY_LIMB_TRAUMA_AVULSION)
+				. += span_warning("There is a [severity_text] avulsion trauma on [src].")
+			if(CY_LIMB_TRAUMA_DISLOCATION)
+				. += span_warning("[src] appears [severity_text]ly dislocated.")
+			if(CY_LIMB_TRAUMA_FRACTURE)
+				. += span_warning("[src] appears [severity_text]ly fractured.")
+			if(CY_LIMB_TRAUMA_FIRE_BURN)
+				. += span_warning("There is a second degree thermal burn on [src].")
+			if(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE)
+				. += span_warning("There is a third degree thermal burn on [src].")
+			if(CY_LIMB_TRAUMA_COLD_BURN)
+				. += span_warning("There is a second degree cold burn on [src].")
+			if(CY_LIMB_TRAUMA_COLD_BURN_SEVERE)
+				. += span_warning("There is a third degree cold burn on [src].")
+			if(CY_LIMB_TRAUMA_CHEM_BURN)
+				. += span_warning("There is a moderate chemical burn on [src].")
+			if(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL)
+				. += span_warning("There is a critical chemical burn on [src].")
+
+/obj/item/bodypart/proc/process_cy_limb_traumas(seconds_per_tick)
+	if(!owner || !length(cy_limb_traumas))
+		return FALSE
+	var/changed = FALSE
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_PUNCTURE) && can_bleed())
+		owner.bleed((get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_PUNCTURE) >= CY_TRAUMA_SEVERITY_SEVERE ? 0.24 : 0.12) * seconds_per_tick)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_CUT) && can_bleed())
+		owner.bleed((get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_CUT) >= CY_TRAUMA_SEVERITY_SEVERE ? 0.48 : 0.25) * seconds_per_tick)
+		if(slash_dam <= 3 && SPT_PROB(2, seconds_per_tick))
+			changed ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_CUT)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION) && can_bleed())
+		owner.bleed((get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_AVULSION) >= CY_TRAUMA_SEVERITY_SEVERE ? 0.9 : 0.5) * seconds_per_tick)
+		if(slash_dam <= 2 && SPT_PROB(0.4, seconds_per_tick))
+			changed ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA) && can_bleed())
+		var/internal_loss = (get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_AORTA) >= CY_TRAUMA_SEVERITY_SEVERE ? 0.5 : 0.28) * seconds_per_tick
+		cy_internal_blood_pool += internal_loss
+		owner.bleed(internal_loss, TRUE)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_DISLOCATION) && body_zone == BODY_ZONE_HEAD)
+		owner.AdjustParalyzed(0.5 SECONDS * seconds_per_tick)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN) || has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL))
+		var/chem_rate = has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL) ? 0.35 : 0.18
+		set_pierce_dam(min(max_damage, pierce_dam + chem_rate * seconds_per_tick))
+		adjust_pain_damage(chem_rate * 4 * seconds_per_tick, update_owner = FALSE)
+		changed = TRUE
+	if((has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN) && heat_dam <= 2 && SPT_PROB(0.8, seconds_per_tick)) || (has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE) && heat_dam <= 2 && SPT_PROB(0.4, seconds_per_tick)))
+		changed ||= remove_cy_limb_trauma(has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE) ? CY_LIMB_TRAUMA_FIRE_BURN_SEVERE : CY_LIMB_TRAUMA_FIRE_BURN)
+	if((has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN) && cold_dam <= 2 && SPT_PROB(0.8, seconds_per_tick)) || (has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE) && cold_dam <= 2 && SPT_PROB(0.4, seconds_per_tick)))
+		changed ||= remove_cy_limb_trauma(has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE) ? CY_LIMB_TRAUMA_COLD_BURN_SEVERE : CY_LIMB_TRAUMA_COLD_BURN)
+	owner.update_cy_limb_trauma_modifiers()
+	return changed
+
+/obj/item/bodypart/proc/on_owner_cy_limb_trauma_activity()
+	SIGNAL_HANDLER
+	if(!owner || !has_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION))
+		return
+	if(LAZYACCESS(applied_items, LIMB_ITEM_GAUZE))
+		return
+	add_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION, CY_TRAUMA_SEVERITY_SEVERE)
+	set_slash_dam(min(max_damage, slash_dam + 0.5))
+	if(can_bleed())
+		owner.bleed(1)
+	adjust_pain_damage(2, update_owner = FALSE)
 
 /obj/item/bodypart/proc/get_pain_tracker() as /datum/component/pain_tracker
 	var/datum/component/pain_tracker/pain_tracker = GetComponent(/datum/component/pain_tracker)
@@ -720,6 +861,159 @@
 		var/thermal_damage = (fire * 0.08) + (cold * 0.06) + (acid * 0.12)
 		for(var/obj/item/organ/organ as anything in contained_organs)
 			organ.apply_organ_damage(thermal_damage)
+
+/obj/item/bodypart/proc/apply_cy_limb_trauma_damage_modifiers(list/damage_parts)
+	if(!length(cy_limb_traumas))
+		return
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN) || has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE))
+		var/severe_fire_burn = has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE)
+		damage_parts["fire"] *= severe_fire_burn ? 1.35 : 1.2
+		damage_parts["cold"] *= severe_fire_burn ? 2 : 1.75
+		damage_parts["blunt"] *= severe_fire_burn ? 1.2 : 1.1
+		damage_parts["pierce"] *= severe_fire_burn ? 1.2 : 1.1
+		damage_parts["slash"] *= severe_fire_burn ? 1.2 : 1.1
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN) || has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE))
+		var/severe_cold_burn = has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE)
+		damage_parts["cold"] *= severe_cold_burn ? 1.3 : 1.15
+		damage_parts["blunt"] *= severe_cold_burn ? 1.15 : 1.08
+		damage_parts["pierce"] *= severe_cold_burn ? 1.15 : 1.08
+		damage_parts["slash"] *= severe_cold_burn ? 1.15 : 1.08
+
+/obj/item/bodypart/proc/apply_cy_limb_traumas_from_physical(blunt = 0, pierce = 0, slash = 0)
+	if(!owner)
+		return
+	var/physical_damage = blunt + pierce + slash
+	if(pierce >= 6)
+		add_cy_limb_trauma(CY_LIMB_TRAUMA_PUNCTURE, pierce >= 18 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+		if(body_zone == BODY_ZONE_CHEST && pierce >= 12 && prob(min(pierce * 2, 45)))
+			add_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA, pierce >= 24 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+	if(slash >= 6)
+		add_cy_limb_trauma(CY_LIMB_TRAUMA_CUT, slash >= 18 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+		if(slash >= 18 && prob(min(slash * 1.5, 45)))
+			add_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION, slash >= 30 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+	if(blunt >= 10)
+		if(body_zone != BODY_ZONE_CHEST && prob(min(blunt * 1.5, 45)))
+			add_cy_limb_trauma(CY_LIMB_TRAUMA_DISLOCATION, blunt >= 25 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+		if(prob(min(blunt * 1.2, 40)))
+			add_cy_limb_trauma(CY_LIMB_TRAUMA_FRACTURE, blunt >= 25 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+	if(!physical_damage || !can_bleed())
+		return
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_PUNCTURE))
+		owner.bleed(physical_damage * 0.04)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_CUT))
+		owner.bleed(physical_damage * 0.06)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION))
+		owner.bleed(physical_damage * 0.12)
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA))
+		var/internal_loss = physical_damage * 0.08
+		cy_internal_blood_pool += internal_loss
+		owner.bleed(internal_loss, TRUE)
+	if(body_zone == BODY_ZONE_CHEST && get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_FRACTURE) >= CY_TRAUMA_SEVERITY_SEVERE && prob(min(physical_damage * 1.5, 35)))
+		add_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA, CY_TRAUMA_SEVERITY_MODERATE)
+
+/obj/item/bodypart/proc/apply_cy_limb_traumas_from_thermal(fire = 0, cold = 0, acid = 0)
+	if(!owner)
+		return
+	if(fire >= 10)
+		add_cy_limb_trauma(fire >= 24 ? CY_LIMB_TRAUMA_FIRE_BURN_SEVERE : CY_LIMB_TRAUMA_FIRE_BURN, fire >= 24 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+	if(cold >= 10)
+		add_cy_limb_trauma(cold >= 24 ? CY_LIMB_TRAUMA_COLD_BURN_SEVERE : CY_LIMB_TRAUMA_COLD_BURN, cold >= 24 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+	if(acid >= 8)
+		add_cy_limb_trauma(acid >= 20 ? CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL : CY_LIMB_TRAUMA_CHEM_BURN, acid >= 20 ? CY_TRAUMA_SEVERITY_SEVERE : CY_TRAUMA_SEVERITY_MODERATE)
+
+/obj/item/bodypart/proc/get_cy_limb_trauma_dismember_bonus()
+	var/bonus = 0
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION))
+		bonus += get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_AVULSION) >= CY_TRAUMA_SEVERITY_SEVERE ? 20 : 10
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_FRACTURE))
+		bonus += get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_FRACTURE) >= CY_TRAUMA_SEVERITY_SEVERE ? 15 : 6
+	if(has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE) || has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE) || has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL))
+		bonus += 12
+	return bonus
+
+/obj/item/bodypart/proc/has_cy_limb_bleeding_trauma()
+	return has_cy_limb_trauma(CY_LIMB_TRAUMA_PUNCTURE) || has_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA) || has_cy_limb_trauma(CY_LIMB_TRAUMA_CUT) || has_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION)
+
+/obj/item/bodypart/proc/has_cy_limb_surface_trauma()
+	return has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN) || has_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE) || has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN) || has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE) || has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN) || has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL)
+
+/obj/item/bodypart/proc/close_cy_limb_bleeding_traumas(include_internal = FALSE)
+	var/closed = FALSE
+	closed ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_PUNCTURE)
+	closed ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_CUT)
+	closed ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_AVULSION)
+	if(include_internal)
+		closed ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_AORTA)
+	if(closed)
+		refresh_bleed_rate()
+	return closed
+
+/obj/item/bodypart/proc/drain_cy_internal_blood(amount = INFINITY)
+	if(cy_internal_blood_pool <= 0)
+		return 0
+	. = min(cy_internal_blood_pool, amount)
+	cy_internal_blood_pool -= .
+
+/obj/item/bodypart/proc/treat_cy_limb_surface_traumas()
+	var/treated = FALSE
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN)
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_FIRE_BURN_SEVERE)
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN)
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE)
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN)
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL)
+	return treated
+
+/obj/item/bodypart/proc/set_cy_limb_bone_traumas()
+	var/treated = FALSE
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_DISLOCATION)
+	treated ||= remove_cy_limb_trauma(CY_LIMB_TRAUMA_FRACTURE)
+	return treated
+
+/mob/living/carbon/proc/update_cy_limb_trauma_modifiers()
+	var/move_slowdown = 0
+	var/action_slowdown = 0
+	for(var/obj/item/bodypart/part as anything in get_bodyparts())
+		if(!length(part.cy_limb_traumas))
+			continue
+		var/is_leg = part.body_zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
+		var/is_arm = part.body_zone in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM)
+		var/is_chest = part.body_zone == BODY_ZONE_CHEST
+		var/is_head = part.body_zone == BODY_ZONE_HEAD
+		var/cold_severity = max(part.has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN) ? CY_TRAUMA_SEVERITY_MODERATE : 0, part.has_cy_limb_trauma(CY_LIMB_TRAUMA_COLD_BURN_SEVERE) ? CY_TRAUMA_SEVERITY_SEVERE : 0)
+		if(cold_severity)
+			var/cold_penalty = cold_severity >= CY_TRAUMA_SEVERITY_SEVERE ? 0.45 : 0.2
+			if(is_leg || is_chest)
+				move_slowdown += cold_penalty
+			if(is_arm)
+				action_slowdown += cold_penalty
+			if(is_head)
+				action_slowdown += cold_severity >= CY_TRAUMA_SEVERITY_SEVERE ? 0.35 : 0.15
+		var/dislocation_severity = part.get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_DISLOCATION)
+		if(dislocation_severity)
+			var/dislocation_penalty = dislocation_severity >= CY_TRAUMA_SEVERITY_SEVERE ? 0.5 : 0.25
+			if(is_leg)
+				move_slowdown += dislocation_penalty
+			if(is_arm)
+				action_slowdown += dislocation_penalty
+		var/fracture_severity = part.get_cy_limb_trauma_severity(CY_LIMB_TRAUMA_FRACTURE)
+		if(fracture_severity)
+			var/fracture_penalty = fracture_severity >= CY_TRAUMA_SEVERITY_SEVERE ? 0.65 : 0.3
+			if(is_leg || is_chest)
+				move_slowdown += fracture_penalty
+			if(is_arm)
+				action_slowdown += fracture_penalty
+		var/chem_severity = max(part.has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN) ? CY_TRAUMA_SEVERITY_MODERATE : 0, part.has_cy_limb_trauma(CY_LIMB_TRAUMA_CHEM_BURN_CRITICAL) ? CY_TRAUMA_SEVERITY_SEVERE : 0)
+		if(chem_severity)
+			action_slowdown += chem_severity >= CY_TRAUMA_SEVERITY_SEVERE ? 0.2 : 0.1
+	if(move_slowdown > 0)
+		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cy_limb_trauma, multiplicative_slowdown = min(move_slowdown, 2))
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/cy_limb_trauma)
+	if(action_slowdown > 0)
+		add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/cy_limb_trauma, multiplicative_slowdown = min(action_slowdown, 2))
+	else
+		remove_actionspeed_modifier(/datum/actionspeed_modifier/cy_limb_trauma)
 
 /obj/item/bodypart/proc/apply_physical_damage_effects(blunt = 0, pierce = 0, slash = 0, attack_direction = null, damage_source)
 	if(!owner)
@@ -823,6 +1117,14 @@
 	fire = round(max(fire * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
 	cold = round(max(cold * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
 	acid = round(max(acid * dmg_multi * burn_modifier, 0), DAMAGE_PRECISION)
+	var/list/cy_damage_parts = list("blunt" = blunt, "pierce" = pierce, "slash" = slash, "fire" = fire, "cold" = cold, "acid" = acid)
+	apply_cy_limb_trauma_damage_modifiers(cy_damage_parts)
+	blunt = round(cy_damage_parts["blunt"], DAMAGE_PRECISION)
+	pierce = round(cy_damage_parts["pierce"], DAMAGE_PRECISION)
+	slash = round(cy_damage_parts["slash"], DAMAGE_PRECISION)
+	fire = round(cy_damage_parts["fire"], DAMAGE_PRECISION)
+	cold = round(cy_damage_parts["cold"], DAMAGE_PRECISION)
+	acid = round(cy_damage_parts["acid"], DAMAGE_PRECISION)
 	brute = blunt + pierce + slash
 	burn = fire + cold + acid
 
@@ -935,6 +1237,8 @@
 		set_acid_dam(acid_dam + acid)
 	apply_damage_pain(blunt = blunt, pierce = pierce, slash = slash, fire = fire, cold = cold, acid = acid)
 	apply_organ_spillover(blunt = blunt, pierce = pierce, slash = slash, fire = fire, cold = cold, acid = acid)
+	apply_cy_limb_traumas_from_physical(blunt = blunt, pierce = pierce, slash = slash)
+	apply_cy_limb_traumas_from_thermal(fire = fire, cold = cold, acid = acid)
 	apply_physical_damage_effects(blunt = blunt, pierce = pierce, slash = slash, attack_direction = attack_direction, damage_source = damage_source)
 	apply_thermal_damage_effects(fire = fire, cold = cold, acid = acid, damage_source = damage_source)
 
@@ -1268,6 +1572,7 @@
 	SHOULD_CALL_PARENT(TRUE)
 
 	owner = null
+	old_owner.update_cy_limb_trauma_modifiers()
 
 	if(LAZYLEN(bodypart_traits))
 		old_owner.remove_traits(bodypart_traits, bodypart_trait_source)
@@ -1279,7 +1584,7 @@
 		SIGNAL_ADDTRAIT(TRAIT_NOBLOOD),
 	))
 
-	UnregisterSignal(old_owner, list(COMSIG_ATOM_RESTYLE, COMSIG_COMPONENT_CLEAN_ACT, COMSIG_LIVING_SET_BODY_POSITION))
+	UnregisterSignal(old_owner, list(COMSIG_ATOM_RESTYLE, COMSIG_COMPONENT_CLEAN_ACT, COMSIG_LIVING_SET_BODY_POSITION, COMSIG_MOVABLE_MOVED, COMSIG_DO_AFTER_BEGAN))
 
 	if(LIMB_HAS_SURGERY_STATE(src, ALL_SURGERY_FISH_STATES(body_zone)))
 		qdel(old_owner.GetComponent(/datum/component/fishing_spot))
@@ -1311,9 +1616,11 @@
 	RegisterSignal(owner, COMSIG_ATOM_RESTYLE, PROC_REF(on_attempt_feature_restyle_mob))
 	RegisterSignal(owner, COMSIG_COMPONENT_CLEAN_ACT, PROC_REF(on_owner_clean))
 	RegisterSignal(owner, COMSIG_LIVING_SET_BODY_POSITION, PROC_REF(refresh_bleed_rate))
+	RegisterSignals(owner, list(COMSIG_MOVABLE_MOVED, COMSIG_DO_AFTER_BEGAN), PROC_REF(on_owner_cy_limb_trauma_activity))
 
 	forceMove(owner)
 	RegisterSignal(src, COMSIG_MOVABLE_MOVED, PROC_REF(on_forced_removal)) //this must be set after we moved, or we insta gib
+	owner.update_cy_limb_trauma_modifiers()
 
 	if(LIMB_HAS_SURGERY_STATE(src, ALL_SURGERY_FISH_STATES(body_zone)))
 		owner.AddComponent(/datum/component/fishing_spot, /datum/fish_source/surgery)

@@ -154,7 +154,7 @@
 
 /mob/living/carbon/sync_pain_damage()
 	painloss = get_pain_loss()
-	if(stat == DEAD || HAS_TRAIT(src, TRAIT_ANALGESIA))
+	if(stat == DEAD || has_cy_instant_analgesia())
 		remove_movespeed_modifier(/datum/movespeed_modifier/pain_slowdown)
 		remove_actionspeed_modifier(/datum/actionspeed_modifier/pain_slowdown)
 		return

@@ -601,6 +601,12 @@ Remember to update _globalvars/traits.dm if you're adding/removing/renaming trai
 #define TRAIT_USER_SCOPED "user_scoped"
 /// Mob is unable to feel pain
 #define TRAIT_ANALGESIA "analgesia"
+/// CP13 fast phantom analgesia. Masks pain quickly while present; residual pain returns when it ends.
+#define TRAIT_CY_ANALGESIA_FAST "cy_analgesia_fast"
+/// CP13 slow medical analgesia. Masks pain slowly while present; residual pain returns when it ends.
+#define TRAIT_CY_ANALGESIA_SLOW "cy_analgesia_slow"
+/// CP13 instant analgesia from anesthesia/sleep. Pain is masked to zero while present.
+#define TRAIT_CY_ANALGESIA_INSTANT "cy_analgesia_instant"
 /// Mob does not get a damage overlay from brute/burn
 #define TRAIT_NO_DAMAGE_OVERLAY "no_damage_overlay"
 /// Mob has a scar on their left/right eye

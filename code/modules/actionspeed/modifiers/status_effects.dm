@@ -7,6 +7,9 @@
 /datum/actionspeed_modifier/pain_slowdown
 	variable = TRUE
 
+/datum/actionspeed_modifier/cy_limb_trauma
+	variable = TRUE
+
 /datum/actionspeed_modifier/oxygenation
 	variable = TRUE
 

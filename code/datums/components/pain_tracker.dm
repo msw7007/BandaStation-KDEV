@@ -21,13 +21,20 @@
 
 /datum/component/pain_tracker/proc/get_residual_pain()
 	var/obj/item/bodypart/limb = parent
-	return round((limb.blunt_dam * 1.25 + limb.pierce_dam + limb.slash_dam * 0.8 + limb.heat_dam * 1.2 + limb.cold_dam * 0.7 + limb.acid_dam * 1.4) * 0.1, DAMAGE_PRECISION)
+	return round((limb.blunt_dam * 1.25 + limb.pierce_dam + limb.slash_dam * 0.8 + limb.heat_dam * 1.2 + limb.cold_dam * 0.7 + limb.acid_dam * 1.4) * 0.1 + limb.get_cy_limb_trauma_residual_pain(), DAMAGE_PRECISION)
 
 /datum/component/pain_tracker/proc/process_pain(seconds_per_tick)
 	var/old_pain = pain_damage
 	var/pain_floor = get_residual_pain()
-	if(pain_damage > pain_floor)
-		adjust_pain(-min(pain_damage - pain_floor, 5 * seconds_per_tick))
+	var/obj/item/bodypart/limb = parent
+	var/mob/living/owner = limb.owner
+	var/analgesia_decay = owner?.get_cy_analgesia_decay() || 0
+	if(analgesia_decay == INFINITY)
+		set_pain(0)
+	else if(analgesia_decay > 0)
+		adjust_pain(-min(pain_damage, analgesia_decay * seconds_per_tick))
+	else if(pain_damage > pain_floor)
+		adjust_pain(-min(pain_damage - pain_floor, CY_PAIN_DECAY_PER_SECOND * seconds_per_tick))
 	else if(pain_damage < pain_floor)
 		set_pain(pain_floor)
 	return old_pain != pain_damage

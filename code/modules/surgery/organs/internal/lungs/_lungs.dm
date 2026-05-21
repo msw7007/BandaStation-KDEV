@@ -505,6 +505,7 @@
 /// Causes random euphoria and giggling. Large amounts knock you down
 /obj/item/organ/lungs/proc/too_much_n2o(mob/living/carbon/breather, datum/gas_mixture/breath, n2o_pp, old_n2o_pp)
 	if(n2o_pp < n2o_para_min)
+		REMOVE_TRAIT(breather, TRAIT_CY_ANALGESIA_INSTANT, REF(src))
 		// Small amount of N2O, small side-effects.
 		if(n2o_pp <= n2o_detect_min)
 			if(old_n2o_pp > n2o_detect_min)
@@ -523,6 +524,7 @@
 		return
 
 	// More N2O, more severe side-effects. Causes stun/sleep.
+	ADD_TRAIT(breather, TRAIT_CY_ANALGESIA_INSTANT, REF(src))
 	if(old_n2o_pp < n2o_para_min)
 		if(!HAS_TRAIT(breather, TRAIT_ANOSMIA))
 			breather.throw_alert(ALERT_TOO_MUCH_N2O, /atom/movable/screen/alert/too_much_n2o)
@@ -538,6 +540,7 @@
 /// N2O side-effects. "Too much N2O!"
 /obj/item/organ/lungs/proc/safe_n2o(mob/living/carbon/breather, datum/gas_mixture/breath, old_n2o_pp)
 	n2o_euphoria = EUPHORIA_INACTIVE
+	REMOVE_TRAIT(breather, TRAIT_CY_ANALGESIA_INSTANT, REF(src))
 	breather.clear_alert(ALERT_TOO_MUCH_N2O)
 
 // Breathe in nitrium. It's helpful, but has nasty side effects

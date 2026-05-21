@@ -944,7 +944,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 	overdose_threshold = 20
 	ph = 2.5
 	addiction_types = list(/datum/addiction/opioids = 10)
-	metabolized_traits = list(TRAIT_ANALGESIA)
+	metabolized_traits = list(TRAIT_CY_ANALGESIA_FAST)
 	tox_damage = 0
 
 /datum/reagent/inverse/krokodil/expose_mob(mob/living/exposed_mob, methods=TOUCH, reac_volume)
@@ -985,7 +985,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 	. = ..()
 	if(is_simian(affected_mob))
 		affected_mob.gain_trauma(/datum/brain_trauma/special/primal_instincts, TRAUMA_RESILIENCE_ABSOLUTE)
-		affected_mob.add_traits(list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_ANALGESIA, TRAIT_STIMULATED), type)
+		affected_mob.add_traits(list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_CY_ANALGESIA_FAST, TRAIT_STIMULATED), type)
 		if(jungle_arts)
 			return
 		jungle_arts = new(src)
@@ -995,7 +995,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 /datum/reagent/inverse/bath_salts/on_mob_end_metabolize(mob/living/carbon/affected_mob)
 	. = ..()
 	QDEL_NULL(jungle_arts)
-	affected_mob.remove_traits(list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_ANALGESIA, TRAIT_STIMULATED), type)
+	affected_mob.remove_traits(list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_CY_ANALGESIA_FAST, TRAIT_STIMULATED), type)
 	affected_mob.Sleeping(30 SECONDS)
 	if(is_simian(affected_mob))
 		affected_mob.cure_trauma_type(/datum/brain_trauma/special/primal_instincts, resilience = TRAUMA_RESILIENCE_ABSOLUTE)
@@ -1022,7 +1022,7 @@ Basically, we fill the time between now and 2s from now with hands based off the
 		affected_mob.emote(pick("screech","scratch","jump","look"))
 
 	QDEL_NULL(jungle_arts)
-	affected_mob.remove_traits(list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_ANALGESIA, TRAIT_STIMULATED), type)
+	affected_mob.remove_traits(list(TRAIT_STUNIMMUNE, TRAIT_SLEEPIMMUNE, TRAIT_CY_ANALGESIA_FAST, TRAIT_STIMULATED), type)
 
 /datum/reagent/inverse/aranesp
 	name = "Epoetin Alfa"

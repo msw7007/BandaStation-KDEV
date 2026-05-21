@@ -211,6 +211,18 @@
 	adjust_pain_loss(pain_amount, updating_health = FALSE, forced = forced)
 	return pain_amount
 
+/mob/living/proc/has_cy_instant_analgesia()
+	return HAS_TRAIT(src, TRAIT_ANALGESIA) || HAS_TRAIT(src, TRAIT_CY_ANALGESIA_INSTANT) || IsSleeping()
+
+/mob/living/proc/get_cy_analgesia_decay()
+	if(has_cy_instant_analgesia())
+		return INFINITY
+	if(HAS_TRAIT(src, TRAIT_CY_ANALGESIA_FAST))
+		return CY_PAINKILLER_FAST_DECAY_PER_SECOND
+	if(HAS_TRAIT(src, TRAIT_CY_ANALGESIA_SLOW))
+		return CY_PAINKILLER_SLOW_DECAY_PER_SECOND
+	return 0
+
 /mob/living/proc/apply_cy_damage_organ_effects(damage_dealt, damagetype, def_zone = null, forced = FALSE)
 	if(damage_dealt <= 0 || forced || stat == DEAD || !iscarbon(src))
 		return 0

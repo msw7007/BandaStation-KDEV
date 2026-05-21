@@ -351,6 +351,7 @@
 	//-- NITROUS OXIDE --//
 	if(n2o_pp > n2o_para_min)
 		// More N2O, more severe side-effects. Causes stun/sleep.
+		ADD_TRAIT(src, TRAIT_CY_ANALGESIA_INSTANT, "n2o_breath")
 		n2o_euphoria = EUPHORIA_ACTIVE
 		if(!HAS_TRAIT(src, TRAIT_ANOSMIA))
 			throw_alert(ALERT_TOO_MUCH_N2O, /atom/movable/screen/alert/too_much_n2o)
@@ -361,6 +362,7 @@
 		if(n2o_pp > n2o_sleep_min)
 			Sleeping(max(AmountSleeping() + 40, 200))
 	else if(n2o_pp > 0.01)
+		REMOVE_TRAIT(src, TRAIT_CY_ANALGESIA_INSTANT, "n2o_breath")
 		// No alert for small amounts, but the mob randomly feels euphoric.
 		if(prob(20))
 			n2o_euphoria = EUPHORIA_ACTIVE
@@ -369,6 +371,7 @@
 			n2o_euphoria = EUPHORIA_INACTIVE
 	else
 	// Reset side-effects, for zero or extremely small amounts of N2O.
+		REMOVE_TRAIT(src, TRAIT_CY_ANALGESIA_INSTANT, "n2o_breath")
 		n2o_euphoria = EUPHORIA_INACTIVE
 		clear_alert(ALERT_TOO_MUCH_N2O)
 
@@ -513,7 +516,7 @@
 	updatehealth()
 
 /mob/living/carbon/proc/handle_pain_damage(seconds_per_tick)
-	if(HAS_TRAIT(src, TRAIT_ANALGESIA) || has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 6))
+	if(has_cy_instant_analgesia() || has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 6))
 		return
 	var/pain_threshold = CY_PAIN_THRESHOLD
 	if(!has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 1))

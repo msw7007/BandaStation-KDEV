@@ -184,6 +184,8 @@
 			"missing" = IS_STUMP(limb),
 			"bleed_rate" = limb.cached_bleed_rate,
 			"wounds" = length(limb.wounds),
+			"traumas" = limb.cy_limb_traumas?.Copy(),
+			"internal_blood_pool" = limb.cy_internal_blood_pool,
 		)
 	return limb_data
 
@@ -222,10 +224,4 @@
 		adjust_organ_loss(pick_n_take(fallback_organs), amount * CY_TOXIN_ORGAN_SPILLOVER_MULTIPLIER, required_organ_flag = ORGAN_ORGANIC)
 	return TRUE
 
-/mob/living/carbon/human/proc/apply_cy_rapid_bloodloss(amount)
-	if(amount <= 0)
-		return FALSE
-	adjust_organ_loss(ORGAN_SLOT_HEART, amount * CY_FAST_BLOOD_LOSS_HEART_DAMAGE_PER_UNIT, required_organ_flag = ORGAN_ORGANIC)
-	adjust_organ_loss(ORGAN_SLOT_BRAIN, amount * CY_FAST_BLOOD_LOSS_BRAIN_DAMAGE_PER_UNIT, required_organ_flag = ORGAN_ORGANIC)
-	return TRUE
 // CYBERPUNK 13 STAGE 3 CORE MEDICAL ROUTING FIX3 END

@@ -723,7 +723,7 @@
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
 	glass_price = DRINK_PRICE_EASY
-	metabolized_traits = list(TRAIT_FEARLESS, TRAIT_ANALGESIA)
+	metabolized_traits = list(TRAIT_FEARLESS, TRAIT_CY_ANALGESIA_FAST)
 	var/tough_text
 
 /datum/reagent/consumable/ethanol/brave_bull/on_mob_metabolize(mob/living/drinker)
@@ -2392,7 +2392,7 @@
 	taste_description = "sugary tartness"
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
-	metabolized_traits = list(TRAIT_ANALGESIA)
+	metabolized_traits = list(TRAIT_CY_ANALGESIA_FAST)
 
 /datum/reagent/consumable/ethanol/pina_colada
 	name = "Pina Colada"
