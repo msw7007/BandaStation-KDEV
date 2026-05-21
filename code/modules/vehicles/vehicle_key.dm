@@ -44,39 +44,15 @@
 	fall_chance = 70
 
 /obj/item/key/janitor/suicide_act(mob/living/carbon/user)
-	switch(user.get_cy_skill_perk_level(/datum/cy_skill/professional/analysis))
-		if(CY_SKILL_LEVEL_UNTRAINED to CY_SKILL_LEVEL_BEGINNER) //Their mind is too weak to ascend as a janny
-			user.visible_message(span_suicide("[user] is putting \the [src] in [user.p_their()] mouth and is trying to become one with the janicart, but has no idea where to start! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
-			user.gib(DROP_ALL_REMAINS)
-			return MANUAL_SUICIDE
-		if(CY_SKILL_LEVEL_SKILLED to CY_SKILL_LEVEL_TRAINED) //At least they tried
-			user.visible_message(span_suicide("[user] is putting \the [src] in [user.p_their()] mouth and has inefficiently become one with the janicart! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
-			user.AddElement(/datum/element/cleaning)
-			addtimer(CALLBACK(src, PROC_REF(manual_suicide), user), 5.1 SECONDS)
-			return MANUAL_SUICIDE
-		if(CY_SKILL_LEVEL_EXPERT to CY_SKILL_LEVEL_PROFESSIONAL) //They are worthy enough, but can it go even further beyond?
-			user.visible_message(span_suicide("[user] is putting \the [src] in [user.p_their()] mouth and has skillfully become one with the janicart! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
-			user.AddElement(/datum/element/cleaning)
-			for(var/i in 1 to 100)
-				addtimer(CALLBACK(user, TYPE_PROC_REF(/atom, add_atom_colour), (i % 2)? "#a245bb" : "#7a7d82", ADMIN_COLOUR_PRIORITY), i)
-			addtimer(CALLBACK(src, PROC_REF(manual_suicide), user), 101)
-			return MANUAL_SUICIDE
-		if(CY_SKILL_LEVEL_MASTER to INFINITY) //Holy shit, look at that janny go!
-			user.visible_message(span_suicide("[user] is putting \the [src] in [user.p_their()] mouth and has epically become one with the janicart, and they're even in overdrive mode! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
-			user.AddElement(/datum/element/cleaning)
-			playsound(src, 'sound/effects/magic/lightning_chargeup.ogg', 50, TRUE, -1)
-			user.reagents.add_reagent(/datum/reagent/drug/methamphetamine, 10) //Gotta go fast!
-			for(var/i in 1 to 150)
-				addtimer(CALLBACK(user, TYPE_PROC_REF(/atom, add_atom_colour), (i % 2)? "#a245bb" : "#7a7d82", ADMIN_COLOUR_PRIORITY), i)
-			addtimer(CALLBACK(src, PROC_REF(manual_suicide), user), 151)
-			return MANUAL_SUICIDE
+	user.visible_message(span_suicide("[user] is putting \the [src] in [user.p_their()] mouth and has inefficiently become one with the janicart! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
+	user.AddElement(/datum/element/cleaning)
+	addtimer(CALLBACK(src, PROC_REF(manual_suicide), user), 5.1 SECONDS)
+	return MANUAL_SUICIDE
 
 /obj/item/key/proc/manual_suicide(mob/living/user)
 	if(user)
 		user.remove_atom_colour(ADMIN_COLOUR_PRIORITY)
 		user.visible_message(span_suicide("[user] forgot [user.p_they()] isn't actually a janicart! That's a paddlin'!"))
-		if(user.has_cy_skill_perk(/datum/cy_skill/professional/analysis, 6)) //Janny janny janny janny janny
-			playsound(src, 'sound/effects/adminhelp.ogg', 50, TRUE, -1)
 		user.adjust_oxy_loss(200)
 		user.death(FALSE)
 

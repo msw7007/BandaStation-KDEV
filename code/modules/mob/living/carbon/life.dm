@@ -513,12 +513,22 @@
 	updatehealth()
 
 /mob/living/carbon/proc/handle_pain_damage(seconds_per_tick)
-	if(painloss <= CY_PAIN_THRESHOLD || HAS_TRAIT(src, TRAIT_ANALGESIA))
+	if(HAS_TRAIT(src, TRAIT_ANALGESIA) || has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 6))
 		return
-	var/excess_pain = painloss - CY_PAIN_THRESHOLD
+	var/pain_threshold = CY_PAIN_THRESHOLD
+	if(!has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 1))
+		pain_threshold *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 1, "value_1", 20) * 0.01)
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 2))
+		pain_threshold *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 2, "value_1", 30) * 0.01)
+	if(painloss <= pain_threshold)
+		return
+	var/excess_pain = painloss - pain_threshold
 	adjust_psychic_loss((excess_pain / 400) * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 	if(SPT_PROB(min(excess_pain / 8, 18), seconds_per_tick))
-		Knockdown(rand(1 SECONDS, 2 SECONDS))
+		if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 5))
+			Immobilize(get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 5, "value_1", 2) SECONDS)
+		else
+			Knockdown(rand(1 SECONDS, 2 SECONDS))
 	if(SPT_PROB(min(excess_pain / 12, 10), seconds_per_tick))
 		dropItemToGround(get_active_held_item())
 

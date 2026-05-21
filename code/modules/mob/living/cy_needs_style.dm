@@ -30,8 +30,8 @@
 	return 0
 
 /mob/living/proc/update_cy_need_stat_modifiers()
-	var/hunger_and_thirst = get_cy_hunger_level() + get_cy_thirst_level()
-	var/sleep_deprivation = get_cy_sleep_deprivation_level()
+	var/hunger_and_thirst = round((get_cy_hunger_level() + get_cy_thirst_level()) * get_cy_survival_need_penalty_multiplier())
+	var/sleep_deprivation = has_cy_skill_perk(/datum/cy_skill/spirit/survival, 3) ? 0 : get_cy_sleep_deprivation_level()
 	set_cy_stat_modifier(/datum/cy_stat/spirit, "cy_needs_hunger_thirst", -hunger_and_thirst)
 	set_cy_stat_modifier(/datum/cy_stat/dexterity, "cy_needs_hunger_thirst", -hunger_and_thirst)
 	set_cy_stat_modifier(/datum/cy_stat/perception, "cy_needs_sleep", -sleep_deprivation)

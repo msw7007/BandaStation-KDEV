@@ -1228,6 +1228,10 @@
 			damage_on_resist_fail += puller_art.grab_damage_modifier
 			effective_grab_state += puller_art.grab_state_modifier
 			escape_chance += puller_art.grab_escape_chance_modifier
+		if(human_puller.has_cy_skill_perk(/datum/cy_skill/strength/grappling, 3) && human_puller.get_cy_grab_offhand(src))
+			effective_grab_state += max(1, round(human_puller.get_cy_stat(/datum/cy_stat/strength) * (human_puller.get_cy_skill_perk_value(/datum/cy_skill/strength/grappling, 3, "value_1", 50) * 0.01)))
+		if(human_puller.has_cy_skill_perk(/datum/cy_skill/strength/grappling, 6))
+			effective_grab_state++
 
 	//We only resist our grab state if we are currently in a grab equal to or greater than GRAB_AGGRESSIVE (1). Otherwise, break out immediately!
 	if(effective_grab_state >= GRAB_AGGRESSIVE)

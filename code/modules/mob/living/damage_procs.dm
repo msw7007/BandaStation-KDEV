@@ -57,6 +57,8 @@
 	if(!forced)
 		damage_amount *= ((100 - blocked) / 100)
 		damage_amount *= get_incoming_damage_modifier(damage_amount, damagetype, def_zone, sharpness, attack_direction, attacking_item)
+		if(world.time < cy_parry_resist_until)
+			damage_amount *= CY_PARRY_SUCCESS_DAMAGE_MULTIPLIER
 	if(damage_amount <= 0)
 		return 0
 	if(!forced)
@@ -166,8 +168,8 @@
 	if(damagetype in list(BRUTE, BLUNT, PIERCE, SLASH, BURN, FIRE, COLD, ACID_DAMAGE))
 		if(!src.has_cy_skill_perk(/datum/cy_skill/strength/toughness, 1))
 			modifier += get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 1, "value_1", 10)
-		if(src.has_cy_skill_perk(/datum/cy_skill/strength/toughness, 5))
-			modifier -= body_position == LYING_DOWN ? 10 : get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 5, "value_1", 20)
+		if(src.has_cy_skill_perk(/datum/cy_skill/strength/toughness, 4))
+			modifier -= get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 4, "value_1", 20)
 	return modifier
 
 /mob/living/proc/get_cy_damage_pain_multiplier(damagetype)
@@ -190,6 +192,10 @@
 
 /mob/living/proc/apply_cy_damage_pain(damage_dealt, damagetype, def_zone = null, forced = FALSE)
 	if(damage_dealt <= 0 || damagetype == PAIN || stat == DEAD)
+		return 0
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 6))
+		return 0
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 3) && prob(get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 3, "value_1", 20)))
 		return 0
 	var/pain_multiplier = get_cy_damage_pain_multiplier(damagetype)
 	if(!pain_multiplier)

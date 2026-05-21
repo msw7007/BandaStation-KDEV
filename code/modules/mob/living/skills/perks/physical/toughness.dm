@@ -21,6 +21,24 @@
 		"value_1" = 20
 	)
 
+/datum/cy_skill_perk/physical/toughness/level_2/on_gain(mob/living/owner)
+	. = ..()
+	if(!iscarbon(owner))
+		return
+	var/mob/living/carbon/carbon_owner = owner
+	var/health_multiplier = 1 + (get_val("value_1", 20) * 0.01)
+	for(var/obj/item/organ/organ as anything in carbon_owner.organs)
+		organ.maxHealth *= health_multiplier
+
+/datum/cy_skill_perk/physical/toughness/level_2/on_loss(mob/living/owner)
+	. = ..()
+	if(!iscarbon(owner))
+		return
+	var/mob/living/carbon/carbon_owner = owner
+	var/health_multiplier = 1 + (get_val("value_1", 20) * 0.01)
+	for(var/obj/item/organ/organ as anything in carbon_owner.organs)
+		organ.maxHealth /= health_multiplier
+
 /datum/cy_skill_perk/physical/toughness/level_3
 	id = "toughness_3"
 	level = 3

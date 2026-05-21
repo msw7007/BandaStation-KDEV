@@ -899,6 +899,18 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		return FALSE
 
 	var/armor_block = target.run_armor_check(affecting, MELEE)
+	var/cy_empowered_hit = user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 2) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 2, "value_1", 10))
+	if(cy_empowered_hit)
+		damage *= 1 + (user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 2, "value_2", 20) * 0.01)
+	var/cy_crushing_hit = FALSE
+	if(armor_block <= 0 && user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 3) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 3, "value_1", 50)))
+		cy_crushing_hit = TRUE
+		limb_accuracy += 20
+	if((cy_empowered_hit || cy_crushing_hit) && user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 5) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 5, "value_1", 30)))
+		armor_block = 0
+	if(user != target && user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 3))
+		var/equipment_pressure = max(1, round(user.get_cy_stat(/datum/cy_stat/strength) * (user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 3, "value_1", 25) * 0.01)))
+		target.damage_clothes(equipment_pressure, BRUTE, MELEE, affecting)
 
 	// In a brawl, drunkenness is a boon if you're a bit drunk but not too much. Else you're easier to hit.
 	// But, generally, getting hit while drunk is probably a good way to start throwing up
@@ -987,6 +999,12 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		target.adjust_dizzy_up_to(4 SECONDS, 8 SECONDS)
 		target.adjust_confusion_up_to(4 SECONDS, 8 SECONDS)
 
+	if(user != target && cy_crushing_hit && user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 4))
+		target.Immobilize(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 4, "value_1", 2) SECONDS)
+
+	if(user != target && cy_crushing_hit && hit_zone == BODY_ZONE_HEAD && user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 6) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 6, "value_1", 25)))
+		target.Paralyze(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 6, "value_2", 2) SECONDS)
+
 	// If our target is staggered and has sustained enough damage, we can apply a randomly determined status effect to inflict when we punch them.
 	// The effects are based on the punching effectiveness of our attacker. Some effects are not reachable by the average human, and require augmentation to reach or being a species with a heavy punch effectiveness.
 	// Or they're just drunk enough.
@@ -1001,7 +1019,9 @@ GLOBAL_LIST_EMPTY(features_by_species)
 /// Handles the stagger combo effect of our punch. Follows the same logic as the above proc, target is our owner, user is our attacker.
 /datum/species/proc/stagger_combo(mob/living/carbon/human/user, mob/living/carbon/human/target, atk_verb = "ударяет", limb_accuracy = 0, armor_block = 0)
 	// Randomly determines the effects of our punch. Limb accuracy is a bonus, armor block is a defense, attacker athletics provides a minor to significant bonus.
-	var/roll_them_bones = rand(-20, 20) + limb_accuracy - armor_block + ((user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics) / 2) || 0) + ((user.get_cy_skill_perk_level(/datum/cy_skill/strength/power_melee) * 2) || 0)
+	var/roll_them_bones = rand(-20, 20) + limb_accuracy - armor_block + ((user.get_cy_skill_value_modifier(/datum/cy_skill/spirit/athletics) / 2) || 0)
+	if(user.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 4))
+		roll_them_bones += user.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 4, "value_1", 25) * 0.2
 
 	switch(roll_them_bones)
 		if (-INFINITY to 0) //Mostly a gimmie, this one just keeps them staggered briefly

@@ -132,12 +132,14 @@
 	if(isfile(footstep_sounds) || istext(footstep_sounds))
 		/// the volume for this is defined on attach when the sound gets set footstep_sounds
 		playsound(source.loc, footstep_sounds, volume, falloff_distance = 1, vary = sound_vary)
+		source.notify_cy_listeners_of_footstep(direction)
 		return
 
 	var/turf_footstep = prepared_steps[footstep_type]
 	if(isnull(turf_footstep) || !footstep_sounds[turf_footstep])
 		return
 	playsound(source.loc, pick(footstep_sounds[turf_footstep][1]), footstep_sounds[turf_footstep][2] * volume, TRUE, footstep_sounds[turf_footstep][3] + e_range, falloff_distance = 1, vary = sound_vary)
+	source.notify_cy_listeners_of_footstep(direction)
 
 /datum/element/footstep/proc/play_humanstep(mob/living/carbon/human/source, atom/oldloc, direction, forced, list/old_locs, momentum_change)
 	SIGNAL_HANDLER
@@ -214,6 +216,7 @@
 
 	if(heard_clients)
 		play_fov_effect(source, 5, "footstep", direction, ignore_self = TRUE, override_list = heard_clients)
+	source.notify_cy_listeners_of_footstep(direction)
 
 
 ///Prepares a footstep for machine walking

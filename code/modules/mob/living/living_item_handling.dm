@@ -128,6 +128,7 @@
 		drift_force *= WEIGHT_TO_NEWTONS(thrown_item.w_class)
 
 	newtonian_move(get_angle(target, src), drift_force = drift_force)
+	var/atom/throw_target = get_cy_throw_target(thrown_thing, target)
 	var/final_throw_range = thrown_thing.throw_range + extra_throw_range
 	var/final_throw_speed = max(1, thrown_thing.throw_speed + power_throw)
 	var/final_throw_force = move_force
@@ -143,7 +144,8 @@
 		thrown_thing.pass_flags |= PASSDOORS | PASSTABLE | PASSSTRUCTURE | PASSMACHINE | PASSFLAPS | PASSITEM
 	else
 		final_throw_range += 2
-	thrown_thing.safe_throw_at(target, final_throw_range, final_throw_speed, src, null, null, cy_roll_throw ? CALLBACK(thrown_thing, TYPE_PROC_REF(/atom/movable, restore_cy_roll_pass_flags), old_pass_flags) : null, final_throw_force, final_throw_gentle)
+	apply_cy_action_delay(CLICK_CD_RANGE * get_cy_throw_action_delay_multiplier(), /datum/cy_skill/perception/throwing)
+	thrown_thing.safe_throw_at(throw_target, final_throw_range, final_throw_speed, src, null, null, cy_roll_throw ? CALLBACK(thrown_thing, TYPE_PROC_REF(/atom/movable, restore_cy_roll_pass_flags), old_pass_flags) : null, final_throw_force, final_throw_gentle)
 	if(cy_roll_throw && !thrown_thing.throwing)
 		thrown_thing.restore_cy_roll_pass_flags(old_pass_flags)
 

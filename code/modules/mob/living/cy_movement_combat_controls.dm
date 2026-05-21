@@ -6,6 +6,10 @@
 	movetypes = (~FLYING)
 	multiplicative_slowdown = CY_SPRINT_SPEED_MODIFIER
 
+/datum/movespeed_modifier/cy_sprint_athletics
+	movetypes = (~FLYING)
+	multiplicative_slowdown = -0.2
+
 /datum/movespeed_modifier/cy_shoulder_carry
 	movetypes = (~FLYING)
 	multiplicative_slowdown = 0.7
@@ -13,6 +17,18 @@
 /datum/movespeed_modifier/cy_arms_carry
 	movetypes = (~FLYING)
 	multiplicative_slowdown = 0.3
+
+/datum/movespeed_modifier/cy_untrained_weapon_carry
+	movetypes = (~FLYING)
+	multiplicative_slowdown = 0.3
+
+/datum/movespeed_modifier/cy_acrobatics_speed
+	movetypes = (~FLYING)
+	multiplicative_slowdown = -0.15
+
+/datum/movespeed_modifier/cy_acrobatics_master_speed
+	movetypes = (~FLYING)
+	multiplicative_slowdown = -0.2
 
 /datum/movespeed_modifier/cy_implant_overload
 	movetypes = (~FLYING)
@@ -23,10 +39,15 @@
 		if(cy_sprinting)
 			cy_sprinting = FALSE
 			remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint)
+			remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint_athletics)
 		return FALSE
 	if(!cy_sprinting)
 		cy_sprinting = TRUE
 		add_movespeed_modifier(/datum/movespeed_modifier/cy_sprint)
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 4) && cy_force_reserve >= cy_force_reserve_max * (get_cy_skill_perk_value(/datum/cy_skill/spirit/athletics, 4, "value_2", 80) * 0.01))
+		add_movespeed_modifier(/datum/movespeed_modifier/cy_sprint_athletics)
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint_athletics)
 	return TRUE
 
 /mob/living/proc/set_cy_sprint_enabled(enabled)
@@ -34,11 +55,13 @@
 		if(!enabled && cy_sprinting)
 			cy_sprinting = FALSE
 			remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint)
+			remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint_athletics)
 		return FALSE
 	cy_sprint_enabled = enabled
 	if(!cy_sprint_enabled)
 		cy_sprinting = FALSE
 		remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint)
+		remove_movespeed_modifier(/datum/movespeed_modifier/cy_sprint_athletics)
 		to_chat(src, span_notice("Вы замедляете бег."))
 		return TRUE
 	if(get_stamina_loss() >= CY_SPRINT_STAMINA_STOP_LOSS || body_position != STANDING_UP || stat != CONSCIOUS)
@@ -57,7 +80,10 @@
 		return FALSE
 	if(!cy_sprinting)
 		return FALSE
-	adjust_stamina_loss(CY_SPRINT_STAMINA_COST_PER_STEP, updating_stamina = FALSE, forced = TRUE)
+	var/stamina_cost = CY_SPRINT_STAMINA_COST_PER_STEP
+	if(!has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 1))
+		stamina_cost *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/spirit/athletics, 1, "value_1", 10) * 0.01)
+	adjust_stamina_loss(stamina_cost, updating_stamina = FALSE, forced = TRUE)
 	if(get_stamina_loss() >= CY_SPRINT_STAMINA_STOP_LOSS)
 		set_cy_sprint_enabled(FALSE)
 	return TRUE
@@ -212,10 +238,13 @@
 	if(hang_dir & SOUTH)
 		y_offset -= CY_PARKOUR_HANG_PIXEL_OFFSET
 	add_offsets(CY_PARKOUR_HANG_OFFSET_SOURCE, null, x_offset, y_offset, null, animate = FALSE)
-	adjust_stamina_loss(CY_PARKOUR_CLIMB_STAMINA_COST, updating_stamina = FALSE, forced = TRUE)
+	adjust_stamina_loss(get_cy_parkour_stamina_cost(CY_PARKOUR_CLIMB_STAMINA_COST), updating_stamina = FALSE, forced = TRUE)
 	visible_message(span_notice("[src] цепляется за поверхность."), span_notice("Вы цепляетесь за поверхность."))
 	if(jump_to_surface && looking_vertically == UP)
-		addtimer(CALLBACK(src, PROC_REF(perform_cy_parkour_climb_up)), 2)
+		var/climb_delay = has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6) ? 0 : 2
+		if(has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 2))
+			climb_delay = round(climb_delay * (1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/acrobatics, 2, "value_1", 25) * 0.01)))
+		addtimer(CALLBACK(src, PROC_REF(perform_cy_parkour_climb_up)), climb_delay)
 	return TRUE
 
 /mob/living/proc/get_cy_parkour_landing_turf(atom/target, distance = 1)
@@ -240,22 +269,26 @@
 /mob/living/proc/perform_cy_parkour_jump(atom/target)
 	if(stat != CONSCIOUS || body_position != STANDING_UP)
 		return FALSE
+	if(cy_sprinting && !has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 1))
+		to_chat(src, span_warning("You are not trained enough to sprint-jump."))
+		return TRUE
 	var/jump_distance = cy_sprinting ? 2 : 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/dexterity/acrobatics, 4))
-		jump_distance++
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/athletics, 6))
-		jump_distance++
+	if(has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 5) && cy_sprinting)
+		jump_distance = 1
 	var/turf/landing = get_cy_parkour_landing_turf(target, jump_distance)
 	if(!landing)
 		to_chat(src, span_warning("Вы не видите подходящего места для прыжка."))
 		return TRUE
 	var/stamina_cost = CY_PARKOUR_JUMP_STAMINA_COST * jump_distance
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 2))
-		stamina_cost *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 2, "value_1", 20) * 0.01)
+	if(has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 3))
+		stamina_cost *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/acrobatics, 3, "value_1", 20) * 0.01)
+		if(pulledby && pulledby.grab_state > GRAB_PASSIVE)
+			pulledby.setGrabState(max(GRAB_PASSIVE, pulledby.grab_state - 1))
 	adjust_stamina_loss(stamina_cost, updating_stamina = FALSE, forced = TRUE)
 	visible_message(span_notice("[src] прыгает вперёд."), span_notice("Вы прыгаете вперёд."))
 	forceMove(landing)
 	perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, max(1, jump_distance * 10))
+	apply_cy_acrobatics_speed_bonus()
 	apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
 	return TRUE
 
@@ -265,9 +298,12 @@
 	var/turf/target_turf = get_turf(target)
 	var/success = zMove(direction, target_turf, z_move_flags = ZMOVE_FLIGHT_FLAGS|ZMOVE_FEEDBACK)
 	if(success)
-		adjust_stamina_loss(CY_PARKOUR_CLIMB_STAMINA_COST, updating_stamina = FALSE, forced = TRUE)
+		if(!has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6))
+			adjust_stamina_loss(get_cy_parkour_stamina_cost(CY_PARKOUR_CLIMB_STAMINA_COST), updating_stamina = FALSE, forced = TRUE)
 		perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, 20)
-		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
+		apply_cy_acrobatics_speed_bonus()
+		if(!has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6))
+			apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
 		return TRUE
 	to_chat(src, span_warning("Вы не находите удобного пути."))
 	return TRUE
@@ -278,12 +314,15 @@
 	var/result = zMove(UP, z_move_flags = ZMOVE_FLIGHT_FLAGS|ZMOVE_FEEDBACK)
 	if(result)
 		visible_message(span_notice("[src] подтягивается наверх."), span_notice("Вы подтягиваетесь наверх."))
-		adjust_stamina_loss(CY_PARKOUR_CLIMB_STAMINA_COST, updating_stamina = FALSE, forced = TRUE)
+		if(!has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6))
+			adjust_stamina_loss(get_cy_parkour_stamina_cost(CY_PARKOUR_CLIMB_STAMINA_COST), updating_stamina = FALSE, forced = TRUE)
 		perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, 25)
+		apply_cy_acrobatics_speed_bonus()
 		clear_cy_wall_hang(FALSE)
 	else
 		to_chat(src, span_warning("Вы не можете подняться выше."))
-	apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
+	if(!has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6))
+		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
 	return TRUE
 
 /mob/living/proc/perform_cy_parkour_descend(safe = TRUE)
@@ -297,14 +336,17 @@
 			visible_message(span_notice("[src] скользит вниз по поверхности."), span_notice("Вы скользите вниз по поверхности."))
 			if(prob(CY_PARKOUR_SLIDE_FALL_CHANCE))
 				Knockdown(2 SECONDS, daze_amount = 1 SECONDS)
-		adjust_stamina_loss(max(1, round(CY_PARKOUR_CLIMB_STAMINA_COST * 0.5)), updating_stamina = FALSE, forced = TRUE)
+		if(!has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6))
+			adjust_stamina_loss(get_cy_parkour_stamina_cost(max(1, round(CY_PARKOUR_CLIMB_STAMINA_COST * 0.5))), updating_stamina = FALSE, forced = TRUE)
 		perform_cy_skill_check(/datum/cy_skill/dexterity/acrobatics, safe ? 15 : 25)
+		apply_cy_acrobatics_speed_bonus()
 		clear_cy_wall_hang(FALSE)
 	else
 		if(!safe && prob(CY_PARKOUR_SLIDE_FALL_CHANCE))
 			Knockdown(2 SECONDS, daze_amount = 1 SECONDS)
 		to_chat(src, span_warning("Спускаться здесь некуда."))
-	apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
+	if(!has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 6))
+		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/acrobatics)
 	return TRUE
 
 /mob/living/proc/perform_cy_parkour_transfer(atom/target)
@@ -315,6 +357,19 @@
 	if(!my_turf || !target_turf || get_dist(my_turf, target_turf) > 1)
 		return FALSE
 	return start_cy_wall_hang(target, FALSE)
+
+/mob/living/proc/get_cy_parkour_stamina_cost(base_cost)
+	if(has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 3))
+		return base_cost * (1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/acrobatics, 3, "value_1", 20) * 0.01))
+	return base_cost
+
+/mob/living/proc/apply_cy_acrobatics_speed_bonus()
+	if(has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 5))
+		add_movespeed_modifier(/datum/movespeed_modifier/cy_acrobatics_master_speed)
+	if(has_cy_skill_perk(/datum/cy_skill/dexterity/acrobatics, 4))
+		add_movespeed_modifier(/datum/movespeed_modifier/cy_acrobatics_speed)
+		addtimer(CALLBACK(src, TYPE_PROC_REF(/mob, remove_movespeed_modifier), /datum/movespeed_modifier/cy_acrobatics_speed), get_cy_skill_perk_value(/datum/cy_skill/dexterity/acrobatics, 4, "value_2", 30) SECONDS)
+	return TRUE
 
 /mob/living/proc/handle_cy_parkour_click(atom/target, list/modifiers)
 	if(!target || !islist(modifiers))
@@ -424,9 +479,11 @@
 			return perform_cy_carry_floor_slam(target)
 	if(cy_defense_hold)
 		if(cy_has_click_modifier(modifiers, RIGHT_CLICK))
+			cy_defense_hold_used = TRUE
 			perform_cy_defense_action(CY_DEFENSE_ACTION_DODGE, target)
 			return TRUE
 		if(!cy_has_click_modifier(modifiers, MIDDLE_CLICK))
+			cy_defense_hold_used = TRUE
 			perform_cy_defense_action(CY_DEFENSE_ACTION_PARRY, target)
 			return TRUE
 	if(cy_has_click_modifier(modifiers, CTRL_CLICK))
@@ -590,8 +647,6 @@
 			return FALSE
 		disarm(living_target, null)
 		perform_cy_skill_check(/datum/cy_skill/strength/grappling, 25)
-		if(has_cy_skill_perk_level(/datum/cy_skill/strength/grappling, 4))
-			living_target.Knockdown(1 SECONDS + get_cy_skill_level(/datum/cy_skill/strength/grappling) * 0.25 SECONDS, daze_amount = 0.5 SECONDS)
 		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/strength/grappling)
 		return TRUE
 	if(ismovable(target))
@@ -615,9 +670,9 @@
 			living_target.apply_damage(CY_KICK_PRONE_BRUTE_DAMAGE, BRUTE)
 		else
 			living_target.throw_at(get_cy_shove_target_turf(living_target, CY_KICK_SHOVE_DISTANCE), CY_KICK_SHOVE_DISTANCE, 1, src, force = MOVE_FORCE_OVERPOWERING)
-		var/kick_knockdown_chance = 25 + get_cy_skill_level(/datum/cy_skill/dexterity/fast_melee) * 5
-		if(has_cy_skill_perk_level(/datum/cy_skill/strength/power_melee, 3))
-			kick_knockdown_chance += get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 3, "value_1", 25) * 0.4
+		var/kick_knockdown_chance = 25
+		if(has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 6))
+			kick_knockdown_chance += get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 6, "value_2", 10)
 		if(prob(kick_knockdown_chance))
 			living_target.Knockdown(CY_KICK_KNOCKDOWN_TIME)
 		perform_cy_random_skill_check(list(
@@ -628,7 +683,10 @@
 		adjust_staggered_up_to(CY_KICK_SELF_STAGGER, 10 SECONDS)
 		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] пинает [living_target.declent_ru(ACCUSATIVE)]!"), span_notice("Вы пинаете [living_target.declent_ru(ACCUSATIVE)]."))
 		log_combat(src, living_target, "kicked")
-		apply_cy_action_delay(CLICK_CD_MELEE, /datum/cy_skill/dexterity/fast_melee)
+		var/kick_delay = CLICK_CD_MELEE
+		if(has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 5))
+			kick_delay *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 5, "value_1", 50) * 0.01)
+		apply_cy_action_delay(kick_delay, /datum/cy_skill/dexterity/fast_melee)
 		return TRUE
 	if(ismovable(target))
 		var/atom/movable/movable_target = target
@@ -642,14 +700,14 @@
 	if(next_move > world.time || !isliving(target) || get_active_held_item())
 		return FALSE
 	var/mob/living/living_target = target
-	if(!Adjacent(living_target) || !has_cy_skill_perk_level(/datum/cy_skill/strength/power_melee, 6))
+	if(!Adjacent(living_target) || !has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 6))
 		return FALSE
 	face_atom(living_target)
 	do_attack_animation(living_target, ATTACK_EFFECT_PUNCH)
-	var/damage = 8 + get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 2
+	var/damage = 8 + round(get_cy_stat(/datum/cy_stat/strength) * (get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 6, "value_1", 50) * 0.01))
 	perform_cy_skill_check(/datum/cy_skill/strength/power_melee, max(1, damage))
 	living_target.apply_damage(damage, BRUTE, BODY_ZONE_HEAD)
-	living_target.adjust_stamina_loss(20 + get_cy_skill_level(/datum/cy_skill/strength/power_melee) * 5)
+	living_target.adjust_stamina_loss(20 + damage)
 	living_target.Knockdown(3 SECONDS, daze_amount = 1.5 SECONDS)
 	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] бьёт [living_target.declent_ru(ACCUSATIVE)] апперкотом!"), span_notice("Вы проводите апперкот по [living_target.declent_ru(DATIVE)]."))
 	log_combat(src, living_target, "cyberpunk uppercut")
@@ -696,10 +754,16 @@
 		clear_cy_active_defense(TRUE)
 		return FAILED_BLOCK
 	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
+	if(!attacker && isitem(hit_by))
+		var/obj/item/attacking_item = hit_by
+		if(isliving(attacking_item.loc))
+			attacker = attacking_item.loc
 	var/attacker_intent = attacker?.get_cy_current_attack_intent()
 	var/bypass_chance = 0
 	if(attacker)
 		bypass_chance = attacker.get_cy_weapon_defense_bypass_bonus(attacker.get_active_held_item())
+		if(cy_active_defense_action == CY_DEFENSE_ACTION_PARRY && attacker.has_cy_skill_perk(/datum/cy_skill/strength/heavy_weapons, 3))
+			bypass_chance = max(bypass_chance, attacker.get_cy_skill_perk_value(/datum/cy_skill/strength/heavy_weapons, 3, "value_1", 20))
 	if(bypass_chance && prob(bypass_chance))
 		clear_cy_active_defense(TRUE)
 		return FAILED_BLOCK
@@ -719,8 +783,15 @@
 			return FAILED_BLOCK
 		var/atom/dodge_source = attacker ? attacker : hit_by
 		var/turf/dodge_turf = get_cy_dodge_turf(dodge_source)
-		if(dodge_turf && !has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 5))
-			Move(dodge_turf, get_dir(src, dodge_turf))
+		if(has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 5))
+			dodge_turf = null
+		else
+			if(!dodge_turf)
+				clear_cy_active_defense(TRUE)
+				return FAILED_BLOCK
+			if(!Move(dodge_turf, get_dir(src, dodge_turf)))
+				clear_cy_active_defense(TRUE)
+				return FAILED_BLOCK
 		var/success_cost = 10
 		if(has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 2))
 			success_cost *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 2, "value_1", 20) * 0.01)
@@ -728,7 +799,10 @@
 		if(!has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 1) && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 1, "value_1", 10)))
 			Knockdown(1 SECONDS)
 		if(attacker && has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 6) && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 6, "value_1", 20)))
-			attacker.apply_cy_open_defense(get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 6, "value_2", 1) SECONDS)
+			SetInvisibility(INVISIBILITY_MAXIMUM, id = /datum/cy_skill_perk/physical/evasion/level_6)
+			addtimer(CALLBACK(src, TYPE_PROC_REF(/atom, SetInvisibility), INVISIBILITY_NONE, /datum/cy_skill_perk/physical/evasion/level_6), get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 6, "value_2", 1) SECONDS)
+		if(attacker && has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 4) && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 4, "value_1", 25)))
+			perform_cy_kick(attacker)
 		attacker?.apply_cy_open_defense()
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] уходит от атаки."), span_notice("Вы уходите от атаки."))
 		clear_cy_active_defense(TRUE)
@@ -742,12 +816,20 @@
 			parry_difficulty -= get_cy_skill_perk_value(/datum/cy_skill/perception/concentration, 2, "value_1", 15)
 		if(!has_cy_skill_perk(/datum/cy_skill/perception/concentration, 1))
 			parry_difficulty += get_cy_skill_perk_value(/datum/cy_skill/perception/concentration, 1, "value_1", 10)
+		if(get_active_held_item() && get_inactive_held_item() && !has_cy_skill_perk(/datum/cy_skill/perception/concentration, 4))
+			parry_difficulty += get_cy_skill_perk_value(/datum/cy_skill/perception/concentration, 4, "value_1", 15)
 		if(!perform_cy_skill_check(/datum/cy_skill/perception/concentration, max(1, parry_difficulty)))
 			clear_cy_active_defense(TRUE)
 			return FAILED_BLOCK
 		if(has_cy_skill_perk(/datum/cy_skill/perception/concentration, 5))
 			attacker?.apply_cy_open_defense(CY_DEFENSE_OPEN_TIME * 2)
 		attacker?.apply_cy_open_defense()
+		if(attacker && has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 4) && prob(get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 4, "value_1", 25)))
+			perform_cy_kick(attacker)
+		if(attacker && attacker.has_cy_skill_perk(/datum/cy_skill/strength/power_melee, 3))
+			var/equipment_pressure = max(1, round(attacker.get_cy_stat(/datum/cy_stat/strength) * (attacker.get_cy_skill_perk_value(/datum/cy_skill/strength/power_melee, 3, "value_1", 25) * 0.01)))
+			damage_clothes(equipment_pressure, BRUTE, MELEE)
+		cy_parry_resist_until = max(cy_parry_resist_until, world.time + CY_PARRY_SUCCESS_RESIST_TIME)
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] парирует атаку."), span_notice("Вы парируете атаку."))
 		clear_cy_active_defense(TRUE)
 		return SUCCESSFUL_BLOCK
@@ -943,7 +1025,8 @@
 				var/shoulder_result = human_user.fireman_carry(carbon_target)
 				if(shoulder_result)
 					human_user.cy_carrying_on_shoulder = TRUE
-					human_user.add_movespeed_modifier(/datum/movespeed_modifier/cy_shoulder_carry)
+					if(!human_user.has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 3))
+						human_user.add_movespeed_modifier(/datum/movespeed_modifier/cy_shoulder_carry)
 				return TRUE
 			return FALSE
 		if(isliving(dropped))
@@ -980,7 +1063,8 @@
 	if(!buckle_mob(target, TRUE, TRUE, CARRIER_NEEDS_ARM))
 		return FALSE
 	cy_carrying_in_arms = TRUE
-	add_movespeed_modifier(/datum/movespeed_modifier/cy_arms_carry)
+	if(!has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 3))
+		add_movespeed_modifier(/datum/movespeed_modifier/cy_arms_carry)
 	return TRUE
 
 /mob/living/proc/clear_cy_carry_state()
@@ -1110,6 +1194,8 @@
 
 /mob/living/proc/perform_cy_grab_zone_special(mob/living/target)
 	if(!target || pulling != target || grab_state >= GRAB_NECK)
+		return FALSE
+	if(grab_state < GRAB_AGGRESSIVE && !has_cy_skill_perk(/datum/cy_skill/strength/grappling, 5))
 		return FALSE
 	var/selected_zone = zone_selected
 	switch(selected_zone)

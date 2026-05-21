@@ -203,7 +203,10 @@
 /mob/living/attackby(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(..())
 		return TRUE
-	user.changeNext_move(round(attacking_item.attack_speed * user.get_cy_weapon_cooldown_multiplier(attacking_item)))
+	var/attack_delay = round(attacking_item.attack_speed * user.get_cy_weapon_cooldown_multiplier(attacking_item))
+	if(attacking_item.w_class <= WEIGHT_CLASS_SMALL && user.has_cy_skill_perk(/datum/cy_skill/dexterity/light_weapons, 3) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/dexterity/light_weapons, 3, "value_1", 25)))
+		attack_delay = 0
+	user.changeNext_move(attack_delay)
 	return attacking_item.attack(src, user, modifiers, attack_modifiers)
 
 /mob/living/attackby_secondary(obj/item/weapon, mob/living/user, list/modifiers, list/attack_modifiers)
@@ -354,6 +357,17 @@
 	var/wounding = attacking_item.wound_bonus
 	if((attacking_item.item_flags & SURGICAL_TOOL) && !user.combat_mode && HAS_TRAIT(user, TRAIT_READY_TO_OPERATE))
 		wounding = CANT_WOUND
+	if(user.has_cy_skill_perk(/datum/cy_skill/strength/heavy_weapons, 5) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/strength/heavy_weapons, 5, "value_1", 20)))
+		wounding += 20
+	var/cy_empowered_hit = user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 2) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 2, "value_1", 10))
+	if(cy_empowered_hit)
+		final_force *= 1 + (user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 2, "value_2", 20) * 0.01)
+	var/cy_crushing_hit = FALSE
+	if(armor_block <= 0 && user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 3) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 3, "value_1", 50)))
+		cy_crushing_hit = TRUE
+		wounding += 20
+	if((cy_empowered_hit || cy_crushing_hit) && user.has_cy_skill_perk(/datum/cy_skill/perception/weakspot_analysis, 5) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/perception/weakspot_analysis, 5, "value_1", 30)))
+		armor_block = 0
 
 	if(user != src)
 		// This doesn't factor in armor, or most damage modifiers (physiology). Your mileage may vary
@@ -382,11 +396,14 @@
 	)
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
-	user.apply_cy_stat_weapon_onhit_effects(src, attacking_item, targeting, damage_done)
+	user.apply_cy_stat_weapon_onhit_effects(src, attacking_item, targeting, damage_done, cy_crushing_hit, cy_empowered_hit)
 	if(damage_done > 0)
 		user.award_cy_weapon_activity(attacking_item, max(1, round(damage_done * CY_WEAPON_SKILL_MELEE_EXPERIENCE_PER_DAMAGE, 1)))
 	user.reveal_cy_stealth("attack")
-	user.changeNext_move(round(CLICK_CD_MELEE * user.get_cy_weapon_cooldown_multiplier(attacking_item) * user.get_cy_dexterity_action_delay_multiplier()))
+	var/attack_delay = round(CLICK_CD_MELEE * user.get_cy_weapon_cooldown_multiplier(attacking_item) * user.get_cy_dexterity_action_delay_multiplier())
+	if(attacking_item.w_class <= WEIGHT_CLASS_SMALL && user.has_cy_skill_perk(/datum/cy_skill/dexterity/light_weapons, 3) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/dexterity/light_weapons, 3, "value_1", 25)))
+		attack_delay = 0
+	user.changeNext_move(attack_delay)
 
 	return damage_done
 

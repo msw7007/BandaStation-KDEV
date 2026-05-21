@@ -193,14 +193,20 @@
 	if(.)
 		return
 	var/mob/living/living_user = user.mob
-	living_user.throw_mode_on(THROW_MODE_HOLD)
+	living_user.cy_defense_hold = TRUE
+	living_user.cy_defense_hold_used = FALSE
+	return TRUE
 
 /datum/keybinding/living/hold_throw_mode/up(client/user, turf/target)
 	. = ..()
 	if(.)
 		return
 	var/mob/living/living_user = user.mob
-	living_user.throw_mode_off(THROW_MODE_HOLD)
+	if(living_user.cy_defense_hold && !living_user.cy_defense_hold_used)
+		living_user.perform_cy_defense_action()
+	living_user.cy_defense_hold = FALSE
+	living_user.cy_defense_hold_used = FALSE
+	return TRUE
 
 
 /datum/keybinding/living/toggle_cy_sprint

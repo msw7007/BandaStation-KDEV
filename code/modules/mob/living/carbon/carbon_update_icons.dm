@@ -243,11 +243,22 @@
 	. = ..()
 	remove_overlay(HANDS_LAYER)
 	if (handcuffed)
+		remove_movespeed_modifier(/datum/movespeed_modifier/cy_untrained_weapon_carry)
 		drop_all_held_items()
 		return
 
 	overlays_standing[HANDS_LAYER] = get_held_overlays()
 	apply_overlay(HANDS_LAYER)
+	var/needs_weapon_penalty = FALSE
+	for(var/obj/item/held_item in held_items)
+		if(!held_item || !held_item.force)
+			continue
+		needs_weapon_penalty = TRUE
+		break
+	if(needs_weapon_penalty && !has_cy_skill_perk(/datum/cy_skill/strength/heavy_weapons, 1))
+		add_movespeed_modifier(/datum/movespeed_modifier/cy_untrained_weapon_carry)
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/cy_untrained_weapon_carry)
 
 /// Generate held item overlays
 /mob/living/carbon/proc/get_held_overlays()

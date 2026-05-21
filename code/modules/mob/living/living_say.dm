@@ -402,8 +402,16 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 
 	// Pre-process listeners to account for line-of-sight
 	for(var/atom/movable/listening_movable as anything in listening)
-		if(!(listening_movable in in_view) && !HAS_TRAIT(listening_movable, TRAIT_XRAY_HEARING))
+		var/cy_can_listen_through = FALSE
+		if(isliving(listening_movable))
+			var/mob/living/listening_living = listening_movable
+			cy_can_listen_through = listening_living.cy_can_hear_event(source)
+		if(!(listening_movable in in_view) && !HAS_TRAIT(listening_movable, TRAIT_XRAY_HEARING) && !cy_can_listen_through)
 			listening.Remove(listening_movable)
+	for(var/mob/living/listening_living as anything in GLOB.mob_living_list)
+		if(listening_living == src || !listening_living.client || !listening_living.cy_can_hear_event(source))
+			continue
+		listening |= listening_living
 
 	SEND_SIGNAL(src, COMSIG_LIVING_SEND_SPEECH, listening)
 

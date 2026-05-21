@@ -40,6 +40,8 @@
 /mob/living/proc/queue_cy_stamina_recovery(delay = CY_STAMINA_ACTIVE_REGEN_DELAY)
 	if(cy_stamina_recovery_queued || QDELETED(src) || stat == DEAD)
 		return FALSE
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 6))
+		delay *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/athletics, 6, "value_1", 70) * 0.01)
 	cy_stamina_recovery_queued = TRUE
 	addtimer(CALLBACK(src, PROC_REF(try_cy_active_stamina_recovery)), delay)
 	return TRUE
@@ -59,6 +61,8 @@
 	if(cy_force_reserve > 0)
 		recovery_amount = max_stamina * CY_STAMINA_FORCE_REGEN_FRACTION
 		var/force_cost = cy_force_reserve_max * CY_STAMINA_FORCE_REGEN_COST_FRACTION
+		if(has_cy_skill_perk(/datum/cy_skill/spirit/athletics, 5) && staminaloss >= max_stamina * (get_cy_skill_perk_value(/datum/cy_skill/spirit/athletics, 5, "value_2", 60) * 0.01))
+			recovery_amount = force_cost * 3
 		adjust_cy_force_reserve(-force_cost)
 	else
 		recovery_amount = max_stamina * CY_STAMINA_EXHAUSTED_REGEN_FRACTION

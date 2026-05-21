@@ -333,7 +333,13 @@
 		return GRAB_SKIP
 	if(SEND_SIGNAL(src, COMSIG_LIVING_GRAB, target) & (COMPONENT_CANCEL_ATTACK_CHAIN|COMPONENT_SKIP_ATTACK))
 		return FALSE
+	if(target.has_cy_skill_perk(/datum/cy_skill/dexterity/evasion, 4) && prob(target.get_cy_skill_perk_value(/datum/cy_skill/dexterity/evasion, 4, "value_1", 50)) && target.perform_cy_skill_check(/datum/cy_skill/dexterity/evasion, 35))
+		visible_message(span_warning("[capitalize(src.declent_ru(NOMINATIVE))] loses the grab angle and tangles up."), span_warning("You lose the grab angle and tangle up."))
+		Knockdown(1 SECONDS)
+		return FALSE
 	if(target.check_block(src, 0, "захват [declent_ru(GENITIVE)]", UNARMED_ATTACK))
+		if(!has_cy_skill_perk(/datum/cy_skill/strength/grappling, 1) && prob(get_cy_skill_perk_value(/datum/cy_skill/strength/grappling, 1, "value_1", 25)))
+			Knockdown(1 SECONDS)
 		return FALSE
 	target.grabbedby(src)
 	return GRAB_SUCCESS
@@ -365,7 +371,12 @@
 /mob/living/proc/grippedby(mob/living/user, instant = FALSE)
 	if(user.grab_state >= user.max_grab)
 		return
-	user.changeNext_move(CLICK_CD_GRABBING)
+	var/grab_delay = CLICK_CD_GRABBING
+	user.changeNext_move(grab_delay)
+	var/grab_stamina_cost = 8
+	if(user.has_cy_skill_perk(/datum/cy_skill/strength/grappling, 4))
+		grab_stamina_cost *= 0.7
+	user.adjust_stamina_loss(grab_stamina_cost)
 	var/sound_to_play = 'sound/items/weapons/thudswoosh.ogg'
 	if(ishuman(user))
 		var/mob/living/carbon/human/H = user
@@ -389,6 +400,10 @@
 		if(!user.pulling || user.pulling != src || user.grab_state != old_grab_state)
 			return FALSE
 	user.setGrabState(user.grab_state + 1)
+	if(has_cy_skill_perk(/datum/cy_skill/strength/toughness, 5) && user.grab_state > GRAB_AGGRESSIVE && prob(get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 5, "value_1", 20)))
+		user.setGrabState(user.grab_state - 1)
+	if(user.has_cy_skill_perk(/datum/cy_skill/strength/grappling, 6) && user.get_cy_grab_offhand(src))
+		adjust_staggered_up_to(1.5 SECONDS * get_cy_stagger_duration_multiplier(), 5 SECONDS)
 	switch(user.grab_state)
 		if(GRAB_AGGRESSIVE)
 			var/add_log = ""

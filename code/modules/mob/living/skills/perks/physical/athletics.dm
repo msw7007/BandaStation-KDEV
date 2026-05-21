@@ -21,6 +21,20 @@
 		"value_1" = 20
 	)
 
+/datum/cy_skill_perk/physical/athletics/level_2/on_gain(mob/living/owner)
+	. = ..()
+	var/multiplier = 1 + (get_val("value_1", 20) * 0.01)
+	owner.max_stamina *= multiplier
+	owner.cy_force_reserve_max *= multiplier
+	owner.cy_force_reserve = min(owner.cy_force_reserve_max, owner.cy_force_reserve * multiplier)
+
+/datum/cy_skill_perk/physical/athletics/level_2/on_loss(mob/living/owner)
+	. = ..()
+	var/multiplier = 1 + (get_val("value_1", 20) * 0.01)
+	owner.max_stamina /= multiplier
+	owner.cy_force_reserve_max /= multiplier
+	owner.cy_force_reserve = min(owner.cy_force_reserve_max, owner.cy_force_reserve)
+
 /datum/cy_skill_perk/physical/athletics/level_3
 	id = "athletics_3"
 	level = 3

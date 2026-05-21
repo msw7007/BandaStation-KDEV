@@ -90,11 +90,18 @@
 		cy_chameleon_level = 0
 		animate(src, alpha = cy_stealth_original_alpha || 255, time = 0.2 SECONDS)
 		return 0
-	var/stealth_level = get_cy_skill_level(/datum/cy_skill/charisma/stealth)
 	var/light_factor = get_cy_stealth_light_factor()
-	var/light_hide = round((1 - light_factor) * CY_STEALTH_CHAMELEON_MAX)
-	var/skill_bonus = stealth_level * 10
-	var/move_penalty = (world.time - cy_last_stealth_move_time) <= 1 SECONDS ? CY_STEALTH_MOVE_PENALTY : 0
+	var/light_threshold_multiplier = has_cy_skill_perk(/datum/cy_skill/charisma/stealth, 4) ? 1 + (get_cy_skill_perk_value(/datum/cy_skill/charisma/stealth, 4, "value_1", 50) * 0.01) : 1
+	var/effective_light_factor = clamp(light_factor / light_threshold_multiplier, 0, 1)
+	var/light_hide = round((1 - effective_light_factor) * CY_STEALTH_CHAMELEON_MAX)
+	var/skill_bonus = 0
+	if(has_cy_skill_perk(/datum/cy_skill/charisma/stealth, 6))
+		skill_bonus = effective_light_factor >= 0.5 ? get_cy_skill_perk_value(/datum/cy_skill/charisma/stealth, 6, "value_2", 70) : get_cy_skill_perk_value(/datum/cy_skill/charisma/stealth, 6, "value_1", 90)
+	else if(has_cy_skill_perk(/datum/cy_skill/charisma/stealth, 3))
+		skill_bonus = get_cy_skill_perk_value(/datum/cy_skill/charisma/stealth, 3, "value_1", 60)
+	else if(!has_cy_skill_perk(/datum/cy_skill/charisma/stealth, 1))
+		skill_bonus = -20
+	var/move_penalty = (world.time - cy_last_stealth_move_time) <= 1 SECONDS && !has_cy_skill_perk(/datum/cy_skill/charisma/stealth, 2) ? CY_STEALTH_MOVE_PENALTY : 0
 	var/weight_penalty = round(get_cy_equipment_noise_weight() * CY_STEALTH_WEIGHT_PENALTY_PER_CLASS)
 	var/wall_bonus = cy_wall_pressed ? CY_STEALTH_WALL_CHAMELEON_BONUS : 0
 	var/hidden_bonus = cy_hidden_under ? CY_STEALTH_HIDDEN_CHAMELEON_BONUS : 0
@@ -180,11 +187,9 @@
 /mob/living/proc/cy_can_hear_event(atom/source)
 	if(!source)
 		return FALSE
-	if(get_dist(src, source) <= world.view)
-		return TRUE
 	if(!cy_listen_mode)
 		return FALSE
-	if(get_dist(src, source) > world.view + 3)
+	if(get_dist(src, source) > 5)
 		return FALSE
 	var/turf/start = get_turf(src)
 	var/turf/end = get_turf(source)
@@ -196,3 +201,21 @@
 			dense_turfs++
 			if(dense_turfs > 1)
 				return FALSE
+	return TRUE
+
+/mob/living/proc/notify_cy_listeners_of_footstep(direction)
+	var/static/list/next_footstep_notice_by_listener_source = list()
+	for(var/atom/movable/listening_movable as anything in get_hearers_in_range(5, src))
+		if(!isliving(listening_movable) || listening_movable == src)
+			continue
+		var/mob/living/listener = listening_movable
+		if(!listener.cy_listen_mode || !listener.cy_can_hear_event(src))
+			continue
+		var/cooldown_key = "[REF(listener)]-[REF(src)]"
+		if(next_footstep_notice_by_listener_source[cooldown_key] > world.time)
+			continue
+		next_footstep_notice_by_listener_source[cooldown_key] = world.time + 1.5 SECONDS
+		var/source_dir = get_dir(listener, src)
+		var/source_text = source_dir ? dir2text(source_dir) : "nearby"
+		to_chat(listener, span_hear("You hear footsteps [source_text]."))
+	return TRUE

@@ -11,6 +11,13 @@
 
 /mob/living/proc/get_cy_skill_speed_multiplier(skill_type)
 	switch(skill_type)
+		if(/datum/cy_skill/dexterity/fast_melee)
+			var/multiplier = 1
+			if(!has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 1))
+				multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 1, "value_1", 10) * 0.01)
+			if(has_cy_skill_perk(/datum/cy_skill/dexterity/fast_melee, 2))
+				multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/dexterity/fast_melee, 2, "value_1", 50) * 0.001 * get_cy_stat(/datum/cy_stat/dexterity))
+			return max(0.35, multiplier)
 		if(/datum/cy_skill/professional/cooking)
 			if(!src.has_cy_skill_perk(/datum/cy_skill/professional/cooking, 1))
 				return 1.3
@@ -86,33 +93,106 @@
 	return CY_SKILL_MINIMUM_LEVEL
 
 /mob/living/proc/get_cy_skill_level_ratio(skill_type)
-	return clamp(get_cy_skill_level(skill_type) / CY_SKILL_MAXIMUM_LEVEL, 0, 1)
+	var/datum/cy_skill/skill = get_cy_skill_datum(skill_type)
+	return clamp(get_cy_skill_level(skill_type) / max(1, skill?.max_level || CY_SKILL_MAXIMUM_LEVEL), 0, 1)
 
 /mob/living/proc/get_cy_incoming_damage_multiplier()
 	var/toughness_multiplier = 1
-	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 6))
-		toughness_multiplier = body_position == LYING_DOWN ? 0.9 : 0.8
-	else if(!get_cy_skill_level(/datum/cy_skill/strength/toughness))
-		toughness_multiplier = 1.1
+	if(has_cy_skill_perk(/datum/cy_skill/strength/toughness, 6))
+		toughness_multiplier = 1 - (get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 6, "value_1", 20) * 0.01)
+	else if(!has_cy_skill_perk(/datum/cy_skill/strength/toughness, 1))
+		toughness_multiplier = 1 + (get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 1, "value_1", 10) * 0.01)
 	if(world.time < cy_surrender_until)
 		toughness_multiplier *= 0.7
 	return toughness_multiplier
 
 /mob/living/proc/get_cy_stagger_duration_multiplier()
 	var/multiplier = get_cy_spirit_effect_multiplier()
-	if(has_cy_skill_perk_level(/datum/cy_skill/strength/toughness, 3))
-		multiplier *= body_position == LYING_DOWN ? 0.75 : 1 - (get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 3, "value_1", 50) * 0.01)
-	if(has_cy_skill_perk_level(/datum/cy_skill/spirit/endurance, 4))
+	if(has_cy_skill_perk(/datum/cy_skill/strength/toughness, 3))
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/strength/toughness, 3, "value_1", 50) * 0.01)
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/endurance, 4))
 		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/endurance, 4, "value_1", 50) * 0.01)
 	return multiplier
 
 /mob/living/proc/get_cy_negative_effect_duration_multiplier()
 	var/spirit_multiplier = get_cy_spirit_effect_multiplier()
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/composure, 5))
+	if(has_cy_skill_perk(/datum/cy_skill/intelligence/composure, 5))
 		return spirit_multiplier * (1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/composure, 5, "value_1", 25) * 0.01))
-	if(has_cy_skill_perk_level(/datum/cy_skill/intelligence/composure, 2))
+	if(has_cy_skill_perk(/datum/cy_skill/intelligence/composure, 2))
 		return spirit_multiplier * (1 - (get_cy_skill_perk_value(/datum/cy_skill/intelligence/composure, 2, "value_1", 20) * 0.01))
 	return spirit_multiplier
+
+/mob/living/proc/get_cy_hacking_chain_break_modifier()
+	var/modifier = 0
+	if(!has_cy_skill_perk(/datum/cy_skill/intelligence/hacking, 1))
+		modifier += get_cy_skill_perk_value(/datum/cy_skill/intelligence/hacking, 1, "value_1", 10)
+	if(has_cy_skill_perk(/datum/cy_skill/intelligence/hacking, 2))
+		modifier -= get_cy_skill_perk_value(/datum/cy_skill/intelligence/hacking, 2, "value_1", 25)
+	return modifier
+
+/mob/living/proc/get_cy_hacking_timer_multiplier()
+	if(has_cy_skill_perk(/datum/cy_skill/intelligence/hacking, 3))
+		return 1 + (get_cy_skill_perk_value(/datum/cy_skill/intelligence/hacking, 3, "value_1", 30) * 0.01)
+	return 1
+
+/mob/living/proc/can_cy_remote_hack()
+	return has_cy_skill_perk(/datum/cy_skill/intelligence/hacking, 4)
+
+/mob/living/proc/should_cy_suppress_hack_alarm()
+	return has_cy_skill_perk(/datum/cy_skill/intelligence/hacking, 5) && prob(get_cy_skill_perk_value(/datum/cy_skill/intelligence/hacking, 5, "value_1", 50))
+
+/mob/living/proc/should_cy_gain_instant_hack_charge()
+	return has_cy_skill_perk(/datum/cy_skill/intelligence/hacking, 6) && prob(get_cy_skill_perk_value(/datum/cy_skill/intelligence/hacking, 6, "value_1", 10))
+
+/mob/living/proc/get_cy_throw_difficulty(atom/movable/thrown_thing, atom/target)
+	var/distance = max(1, get_dist(src, target))
+	var/difficulty = 25 + distance * 5
+	if(!has_cy_skill_perk(/datum/cy_skill/perception/throwing, 1))
+		difficulty += get_cy_skill_perk_value(/datum/cy_skill/perception/throwing, 1, "value_1", 50)
+	if(has_cy_skill_perk(/datum/cy_skill/perception/throwing, 2))
+		difficulty -= get_cy_skill_perk_value(/datum/cy_skill/perception/throwing, 2, "value_1", 20)
+	if(has_cy_skill_perk(/datum/cy_skill/perception/throwing, 3))
+		difficulty -= min(distance, get_cy_skill_perk_value(/datum/cy_skill/perception/throwing, 3, "value_1", 5)) * 5
+	if(isitem(thrown_thing))
+		var/obj/item/thrown_item = thrown_thing
+		difficulty += max(0, thrown_item.w_class - WEIGHT_CLASS_NORMAL) * 10
+	return max(1, difficulty)
+
+/mob/living/proc/get_cy_throw_target(atom/movable/thrown_thing, atom/target)
+	if(!target)
+		return null
+	var/difficulty = get_cy_throw_difficulty(thrown_thing, target)
+	if(perform_cy_skill_check(/datum/cy_skill/perception/throwing, difficulty))
+		return target
+	var/turf/target_turf = get_turf(target)
+	if(!target_turf)
+		return target
+	var/miss_distance = clamp(round(difficulty / 35), 1, 3)
+	var/turf/miss_turf = get_ranged_target_turf(target_turf, pick(GLOB.alldirs), miss_distance)
+	return miss_turf || target
+
+/mob/living/proc/get_cy_throw_action_delay_multiplier()
+	if(has_cy_skill_perk(/datum/cy_skill/perception/throwing, 4))
+		return 1 - (get_cy_skill_perk_value(/datum/cy_skill/perception/throwing, 4, "value_1", 25) * 0.01)
+	return 1
+
+/mob/living/proc/get_cy_survival_need_rate_multiplier(include_sleep = TRUE)
+	var/multiplier = 1
+	if(!has_cy_skill_perk(/datum/cy_skill/spirit/survival, 1))
+		multiplier *= 1 + (get_cy_skill_perk_value(/datum/cy_skill/spirit/survival, 1, "value_1", 20) * 0.01)
+	if(!include_sleep && has_cy_skill_perk(/datum/cy_skill/spirit/survival, 4))
+		multiplier *= 1 - (get_cy_skill_perk_value(/datum/cy_skill/spirit/survival, 4, "value_1", 25) * 0.01)
+	return max(0.1, multiplier)
+
+/mob/living/proc/get_cy_survival_recovery_multiplier()
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/survival, 2))
+		return 1 + (get_cy_skill_perk_value(/datum/cy_skill/spirit/survival, 2, "value_1", 20) * 0.01)
+	return 1
+
+/mob/living/proc/get_cy_survival_need_penalty_multiplier()
+	if(has_cy_skill_perk(/datum/cy_skill/spirit/survival, 5))
+		return get_cy_skill_perk_value(/datum/cy_skill/spirit/survival, 5, "value_1", 50) * 0.01
+	return 1
 
 /mob/living/proc/get_cy_professional_quality_bonus(skill_type)
 	return get_cy_skill_level(skill_type) * CY_PROFESSIONAL_SKILL_QUALITY_PER_LEVEL
@@ -213,25 +293,21 @@
 	return multiplier
 
 /mob/living/proc/get_cy_theft_notice_chance(mob/living/victim)
-	var/theft_level = get_cy_skill_level(/datum/cy_skill/charisma/theft)
-	if(theft_level >= CY_SKILL_LEVEL_EXPERT)
+	if(has_cy_skill_perk(/datum/cy_skill/charisma/theft, 3))
 		var/victim_perception = victim?.get_cy_stat(/datum/cy_stat/perception) || CY_STAT_DEFAULT
-		if(victim_perception < theft_level * 3)
+		if(victim_perception < get_cy_skill_perk_value(/datum/cy_skill/charisma/theft, 3, "value_1", 3) * max(1, get_cy_skill_level(/datum/cy_skill/charisma/theft)))
 			return 0
-	if(theft_level >= CY_SKILL_LEVEL_SKILLED)
-		return is_cy_stealthing() ? 50 : 75
-	if(theft_level >= CY_SKILL_LEVEL_BEGINNER)
-		return 100
+	if(has_cy_skill_perk(/datum/cy_skill/charisma/theft, 2))
+		return is_cy_stealthing() ? 100 - get_cy_skill_perk_value(/datum/cy_skill/charisma/theft, 2, "value_1", 50) : 100 - get_cy_skill_perk_value(/datum/cy_skill/charisma/theft, 2, "value_2", 25)
 	return 100
 
 /mob/living/proc/get_cy_theft_delay_multiplier()
-	var/theft_level = get_cy_skill_level(/datum/cy_skill/charisma/theft)
-	if(theft_level >= CY_SKILL_LEVEL_EXPERT)
+	if(has_cy_skill_perk(/datum/cy_skill/charisma/theft, 4))
 		return 0
-	return max(0.35, 1 - theft_level * 0.08)
+	return 1
 
 /mob/living/proc/can_cy_steal_strippable_key(key)
-	if(get_cy_skill_level(/datum/cy_skill/charisma/theft) >= CY_SKILL_LEVEL_MASTER)
+	if(has_cy_skill_perk(/datum/cy_skill/charisma/theft, 6))
 		return TRUE
 	return !(key in list(
 		STRIPPABLE_ITEM_LHAND,

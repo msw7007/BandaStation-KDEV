@@ -340,6 +340,8 @@
 
 	/// Defensive hold state for Space + click controls.
 	var/cy_defense_hold = FALSE
+	/// Whether the current defensive hold was consumed by Space + click.
+	var/cy_defense_hold_used = FALSE
 	/// Last defensive action used for Space repeat.
 	var/cy_last_defense_action = CY_DEFENSE_ACTION_DODGE
 	/// Defensive action currently active in the combat pipeline.

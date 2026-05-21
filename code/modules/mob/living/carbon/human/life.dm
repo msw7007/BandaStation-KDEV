@@ -57,6 +57,7 @@
 	process_cy_clinical_death(seconds_per_tick)
 	on_cy_body_abandoned()
 	process_cy_implant_overheat(seconds_per_tick)
+	process_cy_survival_regeneration(seconds_per_tick)
 	// For special species interactions
 	dna.species.spec_life(src, seconds_per_tick)
 	return stat != DEAD
@@ -84,7 +85,7 @@
 	if(HAS_TRAIT(src, TRAIT_NOHUNGER))
 		return
 
-	adjust_hydration(-THIRST_FACTOR * seconds_per_tick)
+	adjust_hydration(-THIRST_FACTOR * get_cy_survival_need_rate_multiplier(FALSE) * seconds_per_tick)
 	switch(hydration)
 		if(-INFINITY to NEED_LEVEL_CRITICAL)
 			adjust_tox_loss(0.2 * seconds_per_tick, updating_health = FALSE, forced = TRUE)
@@ -101,26 +102,27 @@
 /mob/living/carbon/human/proc/handle_rest_need(seconds_per_tick)
 	var/resting_body = resting || body_position == LYING_DOWN || IsSleeping()
 	if(client && stat == CONSCIOUS && !resting_body)
-		adjust_rest(-FATIGUE_FACTOR * seconds_per_tick)
+		adjust_rest(-FATIGUE_FACTOR * get_cy_survival_need_rate_multiplier(TRUE) * seconds_per_tick)
 	else if(rest < NEED_LEVEL_FULL)
 		var/recovery_rate = REST_RECOVERY_FACTOR
 		if(IsSleeping())
 			recovery_rate *= 4
 		else if(resting_body)
 			recovery_rate *= 2
-		adjust_rest(recovery_rate * seconds_per_tick)
+		adjust_rest(recovery_rate * get_cy_survival_recovery_multiplier() * seconds_per_tick)
 
-	switch(rest)
-		if(-INFINITY to NEED_LEVEL_CRITICAL)
-			adjust_stamina_loss(0.4 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
-			if(SPT_PROB(1, seconds_per_tick))
-				adjust_confusion(1 SECONDS)
-			if(SPT_PROB(0.7, seconds_per_tick))
-				adjust_drowsiness(2 SECONDS)
-		if(NEED_LEVEL_CRITICAL to NEED_LEVEL_LOW)
-			adjust_stamina_loss(0.15 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
-			if(SPT_PROB(0.75, seconds_per_tick))
-				adjust_dizzy(1 SECONDS)
+	if(!has_cy_skill_perk(/datum/cy_skill/spirit/survival, 3))
+		switch(rest)
+			if(-INFINITY to NEED_LEVEL_CRITICAL)
+				adjust_stamina_loss(0.4 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+				if(SPT_PROB(1, seconds_per_tick))
+					adjust_confusion(1 SECONDS)
+				if(SPT_PROB(0.7, seconds_per_tick))
+					adjust_drowsiness(2 SECONDS)
+			if(NEED_LEVEL_CRITICAL to NEED_LEVEL_LOW)
+				adjust_stamina_loss(0.15 * seconds_per_tick, updating_stamina = FALSE, forced = TRUE)
+				if(SPT_PROB(0.75, seconds_per_tick))
+					adjust_dizzy(1 SECONDS)
 
 /mob/living/carbon/human/get_status_tab_items()
 	. = ..()
@@ -142,9 +144,19 @@
 	var/digestion_penalty = stomach ? 0.2 : 0.35
 	adjust_tox_loss(digestion_penalty * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 	if(nutrition > NUTRITION_LEVEL_STARVING)
-		adjust_nutrition(-HUNGER_FACTOR * seconds_per_tick)
+		adjust_nutrition(-HUNGER_FACTOR * get_cy_survival_need_rate_multiplier(FALSE) * seconds_per_tick)
 	if(SPT_PROB(stomach ? 1 : 2, seconds_per_tick))
 		vomit(vomit_flags = MOB_VOMIT_MESSAGE | MOB_VOMIT_HARM, lost_nutrition = 3, purge_ratio = 0.03)
+
+/mob/living/carbon/human/proc/process_cy_survival_regeneration(seconds_per_tick)
+	if(!has_cy_skill_perk(/datum/cy_skill/spirit/survival, 6) || stat == DEAD)
+		return FALSE
+	heal_overall_damage(brute = 0.25 * seconds_per_tick, burn = 0.25 * seconds_per_tick, updating_health = FALSE, required_bodytype = BODYTYPE_ORGANIC)
+	for(var/obj/item/organ/organ as anything in organs)
+		if(organ.damage > 0)
+			organ.apply_organ_damage(-0.15 * seconds_per_tick)
+	updatehealth()
+	return TRUE
 
 /mob/living/carbon/human/proc/handle_toxin_organ_damage(seconds_per_tick)
 	var/toxin_load = get_tox_loss()

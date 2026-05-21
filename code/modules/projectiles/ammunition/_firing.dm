@@ -27,6 +27,8 @@
 	var/next_delay = click_cooldown_override || CLICK_CD_RANGE
 	if(firing_item)
 		next_delay = round(next_delay * user.get_cy_weapon_cooldown_multiplier(firing_item))
+		if(firing_item.w_class <= WEIGHT_CLASS_SMALL && user.has_cy_skill_perk(/datum/cy_skill/dexterity/light_weapons, 3) && prob(user.get_cy_skill_perk_value(/datum/cy_skill/dexterity/light_weapons, 3, "value_1", 25)))
+			next_delay = 0
 	if(HAS_TRAIT(user, TRAIT_DOUBLE_TAP))
 		next_delay = round(next_delay * 0.5)
 	user.changeNext_move(next_delay)

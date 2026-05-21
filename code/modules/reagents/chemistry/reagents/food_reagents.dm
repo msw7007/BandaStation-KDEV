@@ -29,8 +29,9 @@
 		return
 
 	var/mob/living/carbon/human/affected_human = affected_mob
-	affected_human.adjust_nutrition(0.5 * get_nutriment_factor(affected_mob) * metabolization_ratio * seconds_per_tick)
-	affected_human.adjust_hydration(CONSUMABLE_HYDRATION_FACTOR * metabolization_ratio * seconds_per_tick)
+	var/survival_recovery = affected_human.get_cy_survival_recovery_multiplier()
+	affected_human.adjust_nutrition(0.5 * get_nutriment_factor(affected_mob) * survival_recovery * metabolization_ratio * seconds_per_tick)
+	affected_human.adjust_hydration(CONSUMABLE_HYDRATION_FACTOR * survival_recovery * metabolization_ratio * seconds_per_tick)
 
 /datum/reagent/consumable/expose_mob(mob/living/exposed_mob, methods=TOUCH, reac_volume)
 	. = ..()
