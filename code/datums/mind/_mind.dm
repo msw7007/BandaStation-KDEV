@@ -75,6 +75,20 @@
 	var/list/skills_rewarded
 	///Assoc list of skills. Use SKILL_LVL to access level, and SKILL_EXP to access skill's exp.
 	var/list/known_skills = list()
+	///Assoc list of character attributes, keyed by ATTRIBUTE_* id.
+	var/list/character_attributes = list()
+	///Admin-facing character level. Players spend level_points, not this value directly.
+	var/character_level = 1
+	///Unconverted general experience banked until comfortable sleep.
+	var/unconverted_general_experience = 0
+	///Spendable points for raising attributes or converting into skill points.
+	var/level_points = 0
+	///Spendable points for professional/combat skills once the character sheet exists.
+	var/skill_points = 0
+	///Skill unlock experience waiting for comfortable sleep conversion.
+	var/list/pending_skill_experience = list()
+	///Converted skill unlock experience. Future character sheet uses this to remove training caps.
+	var/list/converted_skill_experience = list()
 	///Weakref to thecharacter we joined in as- either at roundstart or latejoin, so we know for persistent scars if we ended as the same person or not
 	var/datum/weakref/original_character
 	/// The index for what character slot, if any, we were loaded from, so we can track persistent scars on a per-character basis. Each character slot gets PERSISTENT_SCAR_SLOTS scar slots
@@ -110,11 +124,13 @@
 /datum/mind/New(_key)
 	key = _key
 	init_known_skills()
+	init_character_attributes()
 	set_assigned_role(SSjob.get_job_type(/datum/job/unassigned)) // Unassigned by default.
 
 /datum/mind/Destroy()
 	SSticker.minds -= src
 	QDEL_NULL(antag_hud)
+	QDEL_LIST_ASSOC_VAL(character_attributes)
 	QDEL_LIST_ASSOC_VAL(memories)
 	QDEL_NULL(memory_panel)
 	QDEL_LIST(antag_datums)
