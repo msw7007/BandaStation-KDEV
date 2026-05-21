@@ -54,6 +54,7 @@
 	process_cy_character_progression(seconds_per_tick)
 	handle_toxin_organ_damage(seconds_per_tick)
 	process_cy_oxygenation(seconds_per_tick)
+	process_cy_critical_failures(seconds_per_tick)
 	process_cy_clinical_death(seconds_per_tick)
 	on_cy_body_abandoned()
 	process_cy_implant_overheat(seconds_per_tick)

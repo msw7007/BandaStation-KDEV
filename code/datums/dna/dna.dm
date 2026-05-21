@@ -189,15 +189,30 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		return FALSE
 	if(mutation.type == /datum/mutation/race)
 		return FALSE
-	if(!iscarbon(holder))
+	return cy_register_genetic_change(1, "mutation:[mutation.type]", 1)
+
+/datum/dna/proc/cy_register_genetic_change(amount = 1, segment_id, segment_instability = 1)
+	if(!holder || !iscarbon(holder))
+		return FALSE
+	if(amount <= 0)
 		return FALSE
 	var/mob/living/carbon/carbon_holder = holder
-	carbon_holder.adjust_cy_humanoidity(-1)
+	if(segment_id)
+		LAZYINITLIST(cy_gene_segments)
+		if(length(cy_gene_segments) < CY_GENETIC_MAX_SEGMENTS || cy_gene_segments[segment_id])
+			cy_gene_segments[segment_id] = max(cy_gene_segments[segment_id] || 0, segment_instability)
+	carbon_holder.adjust_cy_humanoidity(-amount)
 	return TRUE
 
 /datum/dna/proc/cy_sync_reserved_gene_segments()
 	LAZYINITLIST(cy_gene_segments)
 	cy_gene_segments[CY_GENE_SEGMENT_HUMANITY_APPEARANCE] = round(100 - cy_humanoidity)
+	while(length(cy_gene_segments) > CY_GENETIC_MAX_SEGMENTS)
+		for(var/segment in cy_gene_segments)
+			if(segment == CY_GENE_SEGMENT_HUMANITY_APPEARANCE)
+				continue
+			cy_gene_segments -= segment
+			break
 	return cy_gene_segments
 
 /datum/dna/proc/check_mutation(mutation_type)
@@ -469,25 +484,31 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 /// Sets the DNA of the mob to the given DNA.
 /mob/living/carbon/human/proc/hardset_dna(unique_identity, list/mutation_index, list/default_mutation_genes, newreal_name, newblood_type, datum/species/mrace, newfeatures, list/mutations, force_transfer_mutations)
+	var/cy_genetic_edits = 0
 	if(newfeatures)
 		dna.features = newfeatures
 		dna.generate_unique_features()
+		cy_genetic_edits++
 
 	if(mrace)
 		var/datum/species/newrace = new mrace.type
 		newrace.copy_properties_from(mrace)
 		set_species(newrace, icon_update=0)
+		cy_genetic_edits++
 
 	if(newreal_name)
 		dna.real_name = newreal_name
 		dna.generate_unique_enzymes()
+		cy_genetic_edits++
 
 	if(newblood_type)
 		set_blood_type(newblood_type)
+		cy_genetic_edits++
 
 	if(unique_identity)
 		dna.unique_identity = unique_identity
 		updateappearance(icon_update = 0)
+		cy_genetic_edits++
 
 	if(LAZYLEN(mutation_index))
 		dna.mutation_index = mutation_index.Copy()
@@ -496,6 +517,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		else
 			dna.default_mutation_genes = mutation_index.Copy()
 		domutcheck()
+		cy_genetic_edits++
 
 	if(mrace || newfeatures || unique_identity)
 		update_body(is_creating = TRUE)
@@ -506,6 +528,8 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 			var/list/allowed_sources = mutation.sources & GLOB.standard_mutation_sources
 			if(allowed_sources)
 				dna.add_mutation(mutation, allowed_sources)
+	if(cy_genetic_edits)
+		dna.cy_register_genetic_change(cy_genetic_edits, "hardset:[type]", cy_genetic_edits)
 
 /mob/living/carbon/proc/create_dna()
 	dna = new /datum/dna(src)
@@ -657,6 +681,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	var/mutblock_path = pick(GLOB.dna_identity_blocks)
 	var/datum/dna_block/identity/mutblock = GLOB.dna_identity_blocks[mutblock_path]
 	dna.unique_identity = mutblock.modified_hash(dna.unique_identity, random_string(mutblock.block_length, GLOB.hex_characters))
+	dna.cy_register_genetic_change(1, "identity:[mutblock_path]", 1)
 	updateappearance(mutations_overlay_update = TRUE)
 
 /mob/living/carbon/proc/random_mutate_unique_features()
@@ -665,6 +690,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	var/mutblock_path = pick(GLOB.dna_feature_blocks)
 	var/datum/dna_block/feature/mutblock = GLOB.dna_feature_blocks[mutblock_path]
 	dna.unique_features = mutblock.modified_hash(dna.unique_features, random_string(mutblock.block_length, GLOB.hex_characters))
+	dna.cy_register_genetic_change(1, "features:[mutblock_path]", 1)
 	updateappearance(mutcolor_update = TRUE, mutations_overlay_update = TRUE)
 
 /mob/living/carbon/proc/clean_dna()
@@ -681,23 +707,29 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		CRASH("[M] does not have DNA")
 	if(HAS_TRAIT(M, TRAIT_NO_DNA_SCRAMBLE))
 		return
+	var/cy_genetic_edits = 0
 	if(se)
 		for(var/i=1, i <= DNA_MUTATION_BLOCKS, i++)
 			if(prob(probability))
 				M.dna.generate_dna_blocks()
+				cy_genetic_edits++
 		M.domutcheck()
 	if(ui)
 		for(var/block_id in GLOB.dna_identity_blocks)
 			var/datum/dna_block/identity/block = GLOB.dna_identity_blocks[block_id]
 			if(prob(probability))
 				M.dna.unique_identity = block.modified_hash(M.dna.unique_identity, random_string(block.block_length, GLOB.hex_characters))
+				cy_genetic_edits++
 	if(uf)
 		for(var/block_id in GLOB.dna_feature_blocks)
 			var/datum/dna_block/feature/block = GLOB.dna_feature_blocks[block_id]
 			if(prob(probability))
-				M.dna.unique_identity = block.modified_hash(M.dna.unique_identity, random_string(block.block_length, GLOB.hex_characters))
+				M.dna.unique_features = block.modified_hash(M.dna.unique_features, random_string(block.block_length, GLOB.hex_characters))
+				cy_genetic_edits++
 	if(ui || uf)
 		M.updateappearance(mutcolor_update=uf, mutations_overlay_update=1)
+	if(cy_genetic_edits)
+		M.dna.cy_register_genetic_change(cy_genetic_edits, "scramble:[se]-[ui]-[uf]", cy_genetic_edits)
 
 //value in range 1 to values. values must be greater than 0
 //all arguments assumed to be positive integers

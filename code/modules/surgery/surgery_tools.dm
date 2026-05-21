@@ -801,7 +801,50 @@
 	var/action_time = max(0.5 SECONDS, (3 SECONDS - (medicine_level * 0.25 SECONDS)) * toolspeed)
 	var/obj/item/bodypart/selected_limb = patient.get_bodypart(user.zone_selected)
 	switch(tool_behaviour)
+		if(TOOL_SCALPEL)
+			if(!selected_limb || LIMB_HAS_ANY_SURGERY_STATE(selected_limb, ALL_SURGERY_SKIN_STATES))
+				return FALSE
+			user.visible_message(span_notice("[user] makes a careful incision on [patient]'s [selected_limb.plaintext_zone]."), span_notice("You make a careful incision on [patient]'s [selected_limb.plaintext_zone]."))
+			if(!do_after(user, action_time, target = patient))
+				return TRUE
+			selected_limb.add_surgical_state(SURGERY_SKIN_CUT|SURGERY_VESSELS_UNCLAMPED)
+			if(selected_limb.can_bleed())
+				selected_limb.refresh_bleed_rate()
+			return TRUE
+		if(TOOL_RETRACTOR)
+			if(!selected_limb)
+				return FALSE
+			if(LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_SKIN_CUT))
+				user.visible_message(span_notice("[user] retracts the incision on [patient]'s [selected_limb.plaintext_zone]."), span_notice("You retract the incision on [patient]'s [selected_limb.plaintext_zone]."))
+				if(!do_after(user, action_time, target = patient))
+					return TRUE
+				selected_limb.add_surgical_state(SURGERY_SKIN_OPEN | (LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_VESSELS_CLAMPED) ? NONE : SURGERY_VESSELS_UNCLAMPED))
+				selected_limb.remove_surgical_state(SURGERY_SKIN_CUT)
+				return TRUE
+			if(LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_SKIN_OPEN) && !LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_ORGANS_CUT))
+				user.visible_message(span_notice("[user] opens access to deeper tissue on [patient]'s [selected_limb.plaintext_zone]."), span_notice("You open access to deeper tissue on [patient]'s [selected_limb.plaintext_zone]."))
+				if(!do_after(user, action_time, target = patient))
+					return TRUE
+				selected_limb.add_surgical_state(SURGERY_ORGANS_CUT)
+				return TRUE
+			return FALSE
 		if(TOOL_HEMOSTAT)
+			if(selected_limb && LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_VESSELS_UNCLAMPED))
+				user.visible_message(span_notice("[user] clamps open vessels on [patient]'s [selected_limb.plaintext_zone]."), span_notice("You clamp open vessels on [patient]'s [selected_limb.plaintext_zone]."))
+				if(!do_after(user, action_time, target = patient))
+					return TRUE
+				selected_limb.add_surgical_state(SURGERY_VESSELS_CLAMPED)
+				selected_limb.remove_surgical_state(SURGERY_VESSELS_UNCLAMPED)
+				selected_limb.refresh_bleed_rate()
+				return TRUE
+			if(selected_limb?.body_zone == BODY_ZONE_CHEST && LIMB_HAS_SURGERY_STATE(selected_limb, SURGERY_ORGANS_CUT))
+				var/obj/item/organ/lungs/lungs = patient.get_organ_slot(ORGAN_SLOT_LUNGS)
+				if(lungs?.get_cy_condition_stacks(CY_ORGAN_CONDITION_LUNG_PUNCTURE))
+					user.visible_message(span_notice("[user] seals a puncture in [patient]'s lungs."), span_notice("You seal a puncture in [patient]'s lungs."))
+					if(!do_after(user, action_time, target = patient))
+						return TRUE
+					lungs.clear_cy_puncture(1)
+					return TRUE
 			if(patient.get_bleed_rate() <= 0)
 				return FALSE
 			user.visible_message(span_notice("[user] clamps bleeding vessels on [patient]."), span_notice("You clamp bleeding vessels on [patient]."))
@@ -846,7 +889,17 @@
 		return ITEM_INTERACT_SUCCESS
 	return ..()
 
+/obj/item/retractor/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(cy_try_free_medical_treatment(interacting_with, user))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
 /obj/item/cautery/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(cy_try_free_medical_treatment(interacting_with, user))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/scalpel/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	if(cy_try_free_medical_treatment(interacting_with, user))
 		return ITEM_INTERACT_SUCCESS
 	return ..()

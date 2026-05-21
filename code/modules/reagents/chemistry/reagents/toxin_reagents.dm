@@ -1245,6 +1245,10 @@
 		exposed_carbon.adjust_brute_loss(min(6*toxpwr, reac_volume * toxpwr), required_bodytype = affected_bodytype)
 		return
 	if(methods & INJECT)
+		var/internal_burn = 0.25 * min(6 * toxpwr, reac_volume * toxpwr) * normalise_creation_purity()
+		if(internal_burn > 0)
+			for(var/organ_slot in list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_LIVER, ORGAN_SLOT_STOMACH, ORGAN_SLOT_BRAIN))
+				exposed_carbon.adjust_organ_loss(organ_slot, internal_burn, required_organ_flag = ORGAN_ORGANIC)
 		exposed_carbon.adjust_brute_loss(1.5 * min(6*toxpwr, reac_volume * toxpwr), required_bodytype = affected_bodytype)
 		return
 	exposed_carbon.acid_act(acidpwr, reac_volume)

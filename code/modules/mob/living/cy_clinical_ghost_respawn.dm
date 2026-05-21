@@ -1,7 +1,26 @@
 /mob/living/proc/on_cy_enter_clinical_death()
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_body = src
+		carbon_body.set_heartattack(TRUE)
 	if(mind)
 		mind.degrade_cy_memories_on_death(src)
 	return TRUE
+
+/mob/living/carbon/human/proc/process_cy_critical_failures(seconds_per_tick)
+	if(!is_cy_critical() || is_cy_clinically_dead() || stat == DEAD)
+		return FALSE
+	if(SPT_PROB(2.5, seconds_per_tick))
+		var/list/organ_slots = list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_LIVER, ORGAN_SLOT_STOMACH, ORGAN_SLOT_BRAIN)
+		adjust_organ_loss(pick(organ_slots), rand(1, 3), required_organ_flag = ORGAN_ORGANIC)
+		return TRUE
+	if(SPT_PROB(2.5, seconds_per_tick))
+		var/list/obj/item/bodypart/bodyparts = get_bodyparts()
+		if(length(bodyparts))
+			var/obj/item/bodypart/failing_part = pick(bodyparts)
+			failing_part.receive_damage(blunt = rand(1, 3), forced = TRUE, wound_bonus = CANT_WOUND)
+			update_damage_overlays()
+			return TRUE
+	return FALSE
 
 /mob/living/carbon/human/proc/process_cy_clinical_death(seconds_per_tick)
 	if(!clinical_death_started_at || stat == DEAD)
@@ -65,6 +84,10 @@
 	if(cy_abandoned_body_rescue_attempted)
 		return FALSE
 	cy_abandoned_body_rescue_attempted = TRUE
+	if(is_cy_clinically_dead())
+		brain_dead = TRUE
+		death()
+		return TRUE
 	visible_message(span_warning("An emergency rescue contract pings for [src]."))
 	cy_leave_forensic_trace(src, "abandoned body rescue", 60)
 	SScy_storyteller?.add_pressure(CY_STORY_PRESSURE_RESCUE, 5, src)

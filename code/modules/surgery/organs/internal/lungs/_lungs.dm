@@ -1084,6 +1084,7 @@
 	if(puncture_count >= 4)
 		return
 	puncture_count++
+	set_cy_condition(CY_ORGAN_CONDITION_LUNG_PUNCTURE, puncture_count)
 	adjust_received_pressure_mult(-0.25)
 
 #define LUNG_CAPACITY_ALERT_BUFFER 0.003

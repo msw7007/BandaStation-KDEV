@@ -423,11 +423,13 @@
 	stored_mob = original_body
 	gender = original_body.gender
 	name = "mutated [original_body.real_name]"
+	var/datum/mind/original_mind = original_body.mind
+	if(original_mind)
+		original_mind.transfer_to(src, force_key_move = TRUE)
 	original_body.death()
 	original_body.extinguish_mob()
 	original_body.apply_status_effect(/datum/status_effect/grouped/stasis, STASIS_LEGION_EATEN)
 	RegisterSignal(original_body, COMSIG_LIVING_REVIVE, PROC_REF(on_consumed_revive))
-	original_body.ghostize(FALSE)
 	original_body.forceMove(src)
 	ai_controller?.set_blackboard_key(BB_LEGION_CORPSE, original_body)
 	return TRUE

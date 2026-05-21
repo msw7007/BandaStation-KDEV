@@ -43,6 +43,7 @@
 /obj/item/dnainjector/proc/inject(mob/living/carbon/target, mob/user)
 	if(!target.can_mutate())
 		return FALSE
+	var/cy_field_edits = 0
 	for(var/removed_mutation in remove_mutations)
 		target.dna.remove_mutation(removed_mutation, list(MUTATION_SOURCE_ACTIVATED, MUTATION_SOURCE_MUTATOR))
 	for(var/added_mutation in add_mutations)
@@ -58,12 +59,17 @@
 			target.dna.unique_enzymes = fields["UE"]
 			target.name = target.real_name
 			target.set_blood_type(fields["blood_type"])
+			cy_field_edits++
 		if(fields["UI"]) //UI+UE
 			target.dna.unique_identity = merge_text(target.dna.unique_identity, fields["UI"])
+			cy_field_edits++
 		if(fields["UF"])
 			target.dna.unique_features = merge_text(target.dna.unique_features, fields["UF"])
+			cy_field_edits++
 		if(fields["UI"] || fields["UF"])
 			target.updateappearance(mutcolor_update = TRUE, mutations_overlay_update = TRUE)
+	if(cy_field_edits)
+		target.dna.cy_register_genetic_change(cy_field_edits, "injector:[type]", cy_field_edits)
 	return TRUE
 
 /obj/item/dnainjector/attack(mob/target, mob/user)
@@ -109,6 +115,7 @@
 	if(!target.can_mutate())
 		return FALSE
 	var/endtime = world.time + duration
+	var/cy_field_edits = 0
 	for(var/mutation in remove_mutations)
 		target.dna.remove_mutation(mutation, list(MUTATION_SOURCE_ACTIVATED, MUTATION_SOURCE_MUTATOR))
 	for(var/mutation in add_mutations)
@@ -132,20 +139,25 @@
 			target.name = target.real_name
 			target.set_blood_type(fields["blood_type"])
 			LAZYSET(target.dna.temporary_mutations, UE_CHANGED, endtime)
+			cy_field_edits++
 		if(fields["UI"]) //UI+UE
 			LAZYINITLIST(target.dna.previous)
 			if(!target.dna.previous["UI"])
 				target.dna.previous["UI"] = target.dna.unique_identity
 			target.dna.unique_identity = merge_text(target.dna.unique_identity, fields["UI"])
 			LAZYSET(target.dna.temporary_mutations, UI_CHANGED, endtime)
+			cy_field_edits++
 		if(fields["UF"]) //UI+UE
 			LAZYINITLIST(target.dna.previous)
 			if(!target.dna.previous["UF"])
 				target.dna.previous["UF"] = target.dna.unique_features
 			target.dna.unique_features = merge_text(target.dna.unique_features, fields["UF"])
 			LAZYSET(target.dna.temporary_mutations, UF_CHANGED, endtime)
+			cy_field_edits++
 		if(fields["UI"] || fields["UF"])
 			target.updateappearance(mutcolor_update = TRUE, mutations_overlay_update = TRUE)
+	if(cy_field_edits)
+		target.dna.cy_register_genetic_change(cy_field_edits, "timed_injector:[type]", cy_field_edits)
 	return TRUE
 
 /obj/item/dnainjector/timed/hulk

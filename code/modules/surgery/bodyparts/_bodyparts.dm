@@ -716,12 +716,6 @@
 		if(istype(target, /obj/item/organ/lungs))
 			var/obj/item/organ/lungs/punctured_lungs = target
 			punctured_lungs.add_lung_puncture()
-	if(slash > 0)
-		var/obj/item/organ/target = pick(contained_organs)
-		target.apply_organ_damage(slash * 0.15)
-		if(istype(target, /obj/item/organ/lungs) && slash >= 10)
-			var/obj/item/organ/lungs/cut_lungs = target
-			cut_lungs.add_lung_puncture()
 	if(fire > 0 || cold > 0 || acid > 0)
 		var/thermal_damage = (fire * 0.08) + (cold * 0.06) + (acid * 0.12)
 		for(var/obj/item/organ/organ as anything in contained_organs)

@@ -257,19 +257,24 @@
 		iter_part.update_part_wound_overlay()
 
 /// Bleeds amount units of blood from the mob, sometimes creating a blood splatter on the floor.
-/mob/living/proc/bleed(amount)
+/mob/living/proc/bleed(amount, internal = FALSE)
 	if(HAS_TRAIT(src, TRAIT_GODMODE) || !can_bleed())
 		return
 
 	var/amount_bled = -adjust_blood_volume(-amount)
+	if(internal && iscarbon(src))
+		var/lung_damage = min(amount_bled * 0.08, 3)
+		if(lung_damage > 0)
+			adjust_organ_loss(ORGAN_SLOT_LUNGS, lung_damage, required_organ_flag = ORGAN_ORGANIC)
+		return
 
 	// Blood loss still happens in locker, floor stays clean
 	if(isturf(loc) && prob(sqrt(amount_bled) * BLOOD_DRIP_RATE_MOD))
 		add_splatter_floor(loc, (amount_bled <= 10))
 
-/mob/living/carbon/human/bleed(amount)
+/mob/living/carbon/human/bleed(amount, internal = FALSE)
 	amount *= physiology.bleed_mod
-	return ..()
+	return ..(amount, internal)
 
 /// A helper to see how much blood we're losing per tick
 /mob/living/proc/get_bleed_rate()

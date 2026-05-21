@@ -159,6 +159,8 @@
 
 	SEND_SIGNAL(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, damage_dealt, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
 	if(damage_dealt > 0)
+		if(damagetype == BLUNT && wound_clothing && !forced)
+			damage_clothes(damage_dealt * 0.35, BRUTE, MELEE, def_zone)
 		apply_cy_damage_pain(damage_dealt, damagetype, def_zone, forced)
 		apply_cy_damage_organ_effects(damage_dealt, damagetype, def_zone, forced)
 	return damage_dealt
@@ -200,12 +202,10 @@
 	var/pain_multiplier = get_cy_damage_pain_multiplier(damagetype)
 	if(!pain_multiplier)
 		return 0
-	var/pain_amount = round(damage_dealt * pain_multiplier, DAMAGE_PRECISION)
+	var/pain_amount = round(damage_dealt * pain_multiplier * 1.5, DAMAGE_PRECISION)
 	if(pain_amount <= 0)
 		return 0
 	if(isbodypart(def_zone))
-		var/obj/item/bodypart/actual_hit = def_zone
-		actual_hit.adjust_pain_damage(pain_amount)
 		adjust_pain_loss(pain_amount * 0.1, updating_health = FALSE, forced = forced)
 		return pain_amount
 	adjust_pain_loss(pain_amount, updating_health = FALSE, forced = forced)
@@ -237,11 +237,6 @@
 			if(hit_zone == BODY_ZONE_CHEST && prob(min(60, damage_dealt * 2)))
 				organ_damage = damage_dealt * 0.15
 				adjust_organ_loss(pick(ORGAN_SLOT_LUNGS, ORGAN_SLOT_HEART, ORGAN_SLOT_LIVER), organ_damage, required_organ_flag = ORGAN_ORGANIC)
-				return organ_damage
-		if(SLASH)
-			if(hit_zone == BODY_ZONE_CHEST && prob(min(35, damage_dealt)))
-				organ_damage = damage_dealt * 0.08
-				adjust_organ_loss(pick(ORGAN_SLOT_LUNGS, ORGAN_SLOT_LIVER, ORGAN_SLOT_STOMACH), organ_damage, required_organ_flag = ORGAN_ORGANIC)
 				return organ_damage
 		if(ACID_DAMAGE)
 			if(hit_zone == BODY_ZONE_HEAD)
