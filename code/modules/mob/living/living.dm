@@ -1445,24 +1445,29 @@
 	if(!client || !hud_used)
 		return
 
-	var/atom/movable/screen/stamina/stamina = hud_used.screen_objects[HUD_MOB_STAMINA]
-	if (!stamina)
+	var/atom/movable/screen/stamina/stamina_hud = hud_used.screen_objects[HUD_MOB_STAMINA]
+	if (!stamina_hud)
 		return
 
 	if(stat == DEAD)
-		stamina.icon_state = "stamina_dead"
+		stamina_hud.icon_state = "stamina_dead"
+		stamina_hud.maptext = null
 		return
 
-	var/stam_crit_threshold = maxHealth - crit_threshold
-	if(shown_stamina_loss == null)
-		shown_stamina_loss = get_stamina_loss()
+	var/shown_stamina = clamp(stamina, 0, max_stamina)
+	if(!max_stamina)
+		stamina_hud.icon_state = "stamina_crit"
+		stamina_hud.maptext = null
+		return
 
-	if(shown_stamina_loss >= stam_crit_threshold)
-		stamina.icon_state = "stamina_crit"
-	else if(shown_stamina_loss > 0 && maxHealth > 0)
-		stamina.icon_state = "stamina_[ceil(shown_stamina_loss / (maxHealth * 0.2))]"
+	var/stamina_ratio = shown_stamina / max_stamina
+	if(shown_stamina <= 0)
+		stamina_hud.icon_state = "stamina_crit"
+	else if(stamina_ratio >= 1)
+		stamina_hud.icon_state = "stamina_full"
 	else
-		stamina.icon_state = "stamina_full"
+		stamina_hud.icon_state = "stamina_[clamp(ceil((1 - stamina_ratio) * 5), 1, 5)]"
+	stamina_hud.maptext = MAPTEXT("<div align='center' valign='middle' style='position:relative; top:7px; font-size:6px'>[round(shown_stamina)]/[round(max_stamina)]</div>")
 
 /mob/living/carbon/alien/update_stamina()
 	return

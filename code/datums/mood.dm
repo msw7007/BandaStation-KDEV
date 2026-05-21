@@ -302,6 +302,7 @@
 			mood_level = MOOD_LEVEL_HAPPY4
 
 	update_mood_icon()
+	mob_parent.sync_mood_from_moodlets()
 	SEND_SIGNAL(mob_parent, COMSIG_CARBON_MOOD_UPDATE)
 
 /// Updates the mob's mood icon

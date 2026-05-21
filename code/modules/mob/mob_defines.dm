@@ -123,6 +123,8 @@
 	var/energy_pool = ENERGY_POOL_DEFAULT
 	/// Maximum long-term reserve
 	var/max_energy_pool = ENERGY_POOL_DEFAULT
+	/// Current active chrome load from implants and effects
+	var/chrome_load = 0
 	/// Chrome load the body can safely tolerate
 	var/chromity = 0
 	/// Important codes and network keys remembered by the mob

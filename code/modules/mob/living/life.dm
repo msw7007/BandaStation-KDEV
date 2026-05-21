@@ -90,6 +90,21 @@
 	process_mood_state(seconds_per_tick)
 	apply_body_state_effects()
 
+/mob/living/get_status_tab_items()
+	. = ..()
+	. += ""
+	. += "Body State"
+	. += "Stamina: [round(stamina, 0.1)]/[round(max_stamina, 0.1)]"
+	. += "Energy Pool: [round(energy_pool, 0.1)]/[round(max_energy_pool, 0.1)]"
+	. += "Satiation: [round(satiety, 0.1)]/[MAX_SATIETY]"
+	. += "Hydration: [round(hydration, 0.1)]/[MAX_SATIETY]"
+	. += "Tireness: [round(tireness, 0.1)]/[MAX_SATIETY]"
+	. += "Chrome Load: [round(chrome_load, 0.1)]/[round(chromity, 0.1)]"
+	. += "Style: [round(style, 0.1)]/15"
+	. += "Mood: [round(mood, 0.1)]/20"
+	. += "Corp Align: [corp_align || "None"]"
+	. += "Memory Holder: [length(memory_holder)] entries"
+
 /mob/living/proc/drain_needs(seconds_per_tick)
 	if(!HAS_TRAIT(src, TRAIT_NOHUNGER))
 		satiation_drain_accumulator += seconds_per_tick
@@ -178,11 +193,17 @@
 		adjust_tireness(recovery)
 
 /mob/living/proc/process_mood_state(seconds_per_tick)
+	sync_mood_from_moodlets()
 	mood = clamp(mood, -30, 20)
 	if(mood <= -30)
 		time_at_min_mood += seconds_per_tick
 		if(time_at_min_mood >= 10 MINUTES && world.time >= last_control_loss + 30 SECONDS)
 			trigger_hysteria()
+
+/mob/living/proc/sync_mood_from_moodlets()
+	if(!QDELETED(mob_mood))
+		mood = clamp(mob_mood.mood, -30, 20)
+	return mood
 
 /mob/living/proc/apply_body_state_effects()
 	var/stamina_ratio = max_stamina ? stamina / max_stamina : 0
@@ -239,6 +260,7 @@
 	if(counts_as_spend && stamina < old_value)
 		last_stamina_spend = world.time
 		stamina_regen_accumulator = 0
+	update_stamina_hud()
 	apply_body_state_effects()
 	return stamina - old_value
 
