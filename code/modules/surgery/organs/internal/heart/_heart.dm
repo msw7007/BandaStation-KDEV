@@ -199,6 +199,7 @@
 	base_icon_state = "heart-c"
 	organ_flags = ORGAN_ROBOTIC
 	maxHealth = STANDARD_ORGAN_THRESHOLD * 0.75 //This also hits defib timer, so a bit higher than its less important counterparts
+	chromity_overheat = 10
 	failing_desc = "seems to be broken."
 	beat_noise = "a steady fsssh of hydraulics"
 	/// Whether or not we have a stabilization available. This prevents our owner from entering softcrit for an amount of time.
@@ -242,6 +243,8 @@
 	. = ..()
 
 	if(organ_flags & ORGAN_EMP)
+		return
+	if(!can_use_chrome_effects())
 		return
 
 	if(stabilization_available && owner.health <= owner.crit_threshold)

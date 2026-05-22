@@ -32,6 +32,10 @@
 	var/high_threshold = STANDARD_ORGAN_THRESHOLD * 0.45 //when severe organ damage occurs
 	var/low_threshold = STANDARD_ORGAN_THRESHOLD * 0.1 //when minor organ damage occurs
 	var/severe_cooldown //cooldown for severe effects, used for synthetic organ emp effects.
+	/// Minimum chromity overheat maintained by this organ while it works.
+	var/chromity_overheat = 0
+	/// Temporary minimum overheat maintained by an active organ effect.
+	var/chromity_active_overheat_floor = 0
 
 	// Organ variables for determining what we alert the owner with when they pass/clear the damage thresholds
 	var/prev_damage = 0
@@ -195,6 +199,30 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	///Damage decrements again by a percent of its maxhealth, up to a total of 4 extra times depending on the owner's health
 	healing_amount += (owner.satiety > 0) ? (4 * healing_factor * owner.satiety / MAX_SATIETY) : 0
 	apply_organ_damage(-healing_amount * maxHealth * seconds_per_tick, damage) // pass curent damage incase we are over cap
+
+/obj/item/organ/proc/can_use_chrome_effects()
+	if(isnull(owner) || !owner.has_neural_implant())
+		return FALSE
+	if(organ_flags & (ORGAN_FAILING|ORGAN_EMP))
+		return FALSE
+	return damage < maxHealth
+
+/obj/item/organ/proc/get_chromity_overheat_floor()
+	if(!can_use_chrome_effects())
+		return 0
+	return chromity_overheat + chromity_active_overheat_floor
+
+/obj/item/organ/proc/add_chromity_overheat(amount)
+	if(!can_use_chrome_effects())
+		return FALSE
+	return owner.adjust_chromity_overheat(amount)
+
+/obj/item/organ/proc/set_chromity_active_overheat_floor(amount)
+	var/old_value = chromity_active_overheat_floor
+	chromity_active_overheat_floor = max(0, amount)
+	if(owner)
+		owner.set_chromity_overheat(owner.chromity_overheat)
+	return chromity_active_overheat_floor - old_value
 
 /obj/item/organ/examine(mob/user)
 	. = ..()

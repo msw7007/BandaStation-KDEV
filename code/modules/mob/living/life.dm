@@ -87,6 +87,7 @@
 	recover_stamina(seconds_per_tick)
 	recover_energy_pool(seconds_per_tick)
 	recover_tireness(seconds_per_tick)
+	process_chromity_overheat(seconds_per_tick)
 	process_mood_state(seconds_per_tick)
 	apply_body_state_effects()
 
@@ -99,7 +100,8 @@
 	. += "Satiation: [round(satiety, 0.1)]/[MAX_SATIETY]"
 	. += "Hydration: [round(hydration, 0.1)]/[MAX_SATIETY]"
 	. += "Tireness: [round(tireness, 0.1)]/[MAX_SATIETY]"
-	. += "Chrome Load: [round(chrome_load, 0.1)]/[round(chromity, 0.1)]"
+	. += "Chromity Overheat: [round(chromity_overheat, 0.1)]/[round(chromity, 0.1)]"
+	. += "Chromity Floor: [round(get_chromity_overheat_floor(), 0.1)]"
 	. += "Style: [round(style, 0.1)]/15"
 	. += "Mood: [round(mood, 0.1)]/20"
 	. += "Corp Align: [corp_align || "None"]"
@@ -212,6 +214,39 @@
 
 	if(is_comfortably_sleeping_for_experience())
 		mind?.convert_rest_experience()
+
+/mob/living/proc/process_chromity_overheat(seconds_per_tick)
+	var/overheat_floor = get_chromity_overheat_floor()
+	if(chromity_overheat > overheat_floor)
+		chromity_overheat = max(overheat_floor, chromity_overheat - CHROMITY_OVERHEAT_DECAY)
+	else if(chromity_overheat < overheat_floor)
+		chromity_overheat = overheat_floor
+
+	if(chromity_overheat > chromity)
+		apply_chromity_overheat_damage(chromity_overheat - chromity)
+
+/mob/living/proc/get_chromity_overheat_floor()
+	return 0
+
+/mob/living/proc/has_neural_implant()
+	return !isnull(corp_align) && corp_align != ""
+
+/mob/living/proc/adjust_chromity_overheat(amount, respect_floor = TRUE)
+	var/old_value = chromity_overheat
+	var/minimum = respect_floor ? get_chromity_overheat_floor() : 0
+	chromity_overheat = max(minimum, chromity_overheat + amount)
+	return chromity_overheat - old_value
+
+/mob/living/proc/set_chromity_overheat(amount, respect_floor = TRUE)
+	var/old_value = chromity_overheat
+	var/minimum = respect_floor ? get_chromity_overheat_floor() : 0
+	chromity_overheat = max(minimum, amount)
+	return chromity_overheat - old_value
+
+/mob/living/proc/apply_chromity_overheat_damage(amount)
+	if(amount <= 0)
+		return
+	adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
 
 /mob/living/proc/sync_mood_from_moodlets()
 	if(!QDELETED(mob_mood))

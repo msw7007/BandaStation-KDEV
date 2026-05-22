@@ -132,6 +132,11 @@
 
 /obj/item/organ/liver/on_life(seconds_per_tick)
 	. = ..()
+	if(IS_ROBOTIC_ORGAN(src) && !can_use_chrome_effects())
+		owner.reagents.end_metabolization(keep_liverless = TRUE)
+		owner.reagents.metabolize(owner, seconds_per_tick, can_overdose = TRUE, liverless = TRUE)
+		return
+
 	//If your liver is failing, then we use the liverless version of metabolize
 	if((organ_flags & ORGAN_FAILING) || HAS_TRAIT(owner, TRAIT_LIVERLESS_METABOLISM))
 		owner.reagents.end_metabolization(keep_liverless = TRUE)
@@ -242,6 +247,7 @@
 	icon_state = "liver-c"
 	organ_flags = ORGAN_ROBOTIC
 	maxHealth = STANDARD_ORGAN_THRESHOLD*0.5
+	chromity_overheat = 5
 	toxTolerance = 2
 	liver_resistance = 0.9 * LIVER_DEFAULT_TOX_RESISTANCE // -10%
 	var/emp_vulnerability = 80 //Chance of permanent effects if emp-ed.

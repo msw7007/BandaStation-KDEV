@@ -38,6 +38,14 @@
 		return TRUE
 
 ///////////////
+
+/mob/living/carbon/get_chromity_overheat_floor()
+	if(!has_neural_implant())
+		return 0
+
+	. = 0
+	for(var/obj/item/organ/organ as anything in organs)
+		. += organ.get_chromity_overheat_floor()
 // BREATHING //
 ///////////////
 
