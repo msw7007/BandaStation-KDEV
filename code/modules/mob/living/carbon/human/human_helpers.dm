@@ -8,7 +8,7 @@
 //Useful when player do something with computers
 /mob/living/carbon/human/proc/get_assignment(if_no_id = "No id", if_no_job = "No job", hand_first = TRUE)
 	var/obj/item/card/id/id = get_idcard(hand_first)
-	if(HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE))
+	if(HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE) || is_incognito())
 		return if_no_id
 	if(id)
 		. = id.assignment
@@ -25,7 +25,7 @@
 //Useful when player do something with computers
 /mob/living/carbon/human/proc/get_authentification_name(if_no_id = "Неизвестный")
 	var/obj/item/card/id/id = get_idcard(FALSE)
-	if(HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE))
+	if(HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE) || is_incognito())
 		return if_no_id
 	if(id)
 		return id.registered_name
@@ -61,6 +61,9 @@
 	if(HAS_TRAIT(src, TRAIT_UNKNOWN_APPEARANCE) || HAS_TRAIT(src, TRAIT_INVISIBLE_MAN))
 		return "Неизвестный"
 
+	if(is_incognito())
+		return get_incognito_description()
+
 	// We have a face and an ID
 	if(face_name && id_name)
 		var/normal_id_name = get_id_name("") // need to check base ID name to avoid "John (as Captain John)"
@@ -71,6 +74,27 @@
 
 	// Just go down the list of stuff we recorded
 	return face_name || id_name || "Неизвестный"
+
+/mob/living/carbon/human/proc/is_incognito()
+	return is_face_obscured()
+
+/mob/living/carbon/human/proc/get_incognito_description()
+	return "[incognito_adjective] [incognito_noun]"
+
+/mob/living/carbon/human/proc/get_voice_description()
+	return "[voice_adjective] [voice_noun]"
+
+/mob/living/carbon/human/proc/get_appearance_descriptor_text()
+	if(!length(appearance_descriptors))
+		return null
+	return english_list(appearance_descriptors)
+
+/mob/living/carbon/human/proc/apply_preference_sprite_scale()
+	var/scale_x = preference_sprite_size * preference_sprite_width
+	var/scale_y = preference_sprite_size * preference_sprite_height
+	var/matrix/new_transform = matrix()
+	new_transform.Scale(scale_x, scale_y)
+	transform = new_transform
 
 /**
  * Gets what the face of this mob looks like

@@ -494,7 +494,7 @@
 
 /// The maximum amount of positive quirks one character can have at roundstart.
 /datum/config_entry/number/max_positive_quirks
-	default = 6
+	default = 2
 	min_val = -1
 
 /datum/config_entry/number/max_positive_quirks/ValidateAndSet(str_val)
@@ -514,7 +514,7 @@
 
 /// Max personalities you can have at once
 /datum/config_entry/number/max_personalities
-	default = 5
+	default = 3
 
 /**
  * A config that skews with the random spawners weights

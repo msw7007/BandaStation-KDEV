@@ -228,6 +228,12 @@
 	var/fov_view
 	/// Lazy list of FOV traits that will apply a FOV view when handled.
 	var/list/fov_traits
+	/// Directional FOV used by theft, rear attacks and other code-only awareness checks.
+	var/code_fov_angle = 360
+	/// Whether this mob is actively listening through nearby obstructions.
+	var/listening_intently = FALSE
+	/// Whether this mob has manually extended their view to inspect distant targets.
+	var/focused_look = FALSE
 	///what multiplicative slowdown we get from turfs currently.
 	var/current_turf_slowdown = 0
 
@@ -235,6 +241,22 @@
 	var/looking_vertically = NONE
 	///looking holder we use for look_up and look_down. we use this over resetting to the turf because we want to glide
 	var/atom/movable/looking_holder/looking_holder
+	/// Whether stealth mode is active for this mob.
+	var/stealth_mode = FALSE
+	/// Current chameleon strength from stealth, 0-100.
+	var/chameleon = 0
+	/// Upper chameleon cap while hidden under furniture.
+	var/chameleon_cap = STEALTH_CHAMELEON_MAX
+	/// Furniture currently hiding this mob during stealth mode.
+	var/atom/movable/stealth_cover
+	/// Flat bonus provided by future demons/implants to chameleon checks.
+	var/chameleon_bonus = 0
+	/// Flat bonus provided by future demons/implants to chameleon change speed.
+	var/chameleon_speed_bonus = 0
+	/// True if a future demon marks this mob as a camera glitch.
+	var/camera_glitch_trail = FALSE
+	/// True if a future demon removes this mob from camera feeds.
+	var/camera_erased = FALSE
 
 	/// Living mob's mood datum
 	var/datum/mood/mob_mood

@@ -32,6 +32,8 @@
 /mob/living/carbon/human/get_voice(add_id_name = FALSE)
 	if(HAS_TRAIT(src, TRAIT_UNKNOWN_VOICE))
 		return "Unknown"
+	if(is_incognito())
+		return get_voice_description()
 	var/id_name = get_id_name("")
 	if(HAS_TRAIT(src, TRAIT_VOICE_MATCHES_ID) && id_name)
 		return id_name
@@ -42,9 +44,16 @@
 	return real_name
 
 /mob/living/carbon/human/get_message_voice(visible_name)
+	if(is_incognito())
+		return visible_name ? get_incognito_description() : get_voice_description()
 	. = ..()
 	if(. != name)
 		. += " (as [get_id_name("Unknown", honorifics = TRUE)])"
+
+/mob/living/carbon/human/get_message_chat_color()
+	if(is_incognito())
+		return "#808080"
+	return voice_color || ..()
 
 /mob/living/carbon/human/binarycheck()
 	if(stat >= SOFT_CRIT)

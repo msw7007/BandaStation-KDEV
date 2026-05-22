@@ -311,6 +311,10 @@
  * * check_loc - TRUE if src and M have to be on the same turf, false otherwise
  */
 /atom/movable/proc/user_buckle_mob(mob/living/M, mob/user, check_loc = TRUE)
+	var/mob/living/living_user = user
+	if(M == user && istype(living_user) && living_user.stealth_mode && can_hide_under_stealth_cover(living_user))
+		return living_user.hide_under_stealth_cover(src)
+
 	// Is buckling even possible? Do a full suite of checks.
 	if(!is_user_buckle_possible(M, user, check_loc))
 		return FALSE
@@ -334,6 +338,18 @@
 	. = buckle_mob(M, check_loc = check_loc)
 	if(.)
 		buckle_feedback(M, user)
+
+/atom/movable/proc/can_hide_under_stealth_cover(mob/living/user)
+	return FALSE
+
+/obj/structure/table/can_hide_under_stealth_cover(mob/living/user)
+	return TRUE
+
+/obj/structure/chair/can_hide_under_stealth_cover(mob/living/user)
+	return TRUE
+
+/obj/structure/bed/can_hide_under_stealth_cover(mob/living/user)
+	return TRUE
 
 /// Feedback displayed to nearby players after a mob is buckled to src.
 /atom/movable/proc/buckle_feedback(mob/living/being_buckled, mob/buckler)

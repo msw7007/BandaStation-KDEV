@@ -292,14 +292,19 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 		use_runechat = FALSE
 
 	var/message = ""
+	var/speech_hearing_state = get_speech_hearing_state(speaker, message_range, !!message_mods[WHISPER_MODE], radio_freq)
+	if(!speech_hearing_state)
+		return FALSE
+	if(speech_hearing_state == SPEECH_HEARING_MUFFLED)
+		raw_message = stars(raw_message)
 	// if someone is whispering we make an extra type of message that is obfuscated for people out of range
 	// Less than or equal to 0 means normal hearing. More than 0 and less than or equal to eavesdrop_range means
 	// partial hearing. More than eavesdrop_range means no hearing. Exception for GOOD_HEARING trait
 	var/dist = get_dist(speaker, src) - message_range
-	if(dist > 0 && dist <= eavesdrop_range && !HAS_TRAIT(src, TRAIT_GOOD_HEARING))
+	if(!speech_hearing_state && dist > 0 && dist <= eavesdrop_range && !HAS_TRAIT(src, TRAIT_GOOD_HEARING))
 		raw_message = stars(raw_message)
 	var/speaker_name = span_name("[message_mods[MODE_SPEAKER_NAME_OVERRIDE] || speaker]")
-	if(message_range != INFINITY && dist > eavesdrop_range && !HAS_TRAIT(src, TRAIT_GOOD_HEARING))
+	if(!speech_hearing_state && message_range != INFINITY && dist > eavesdrop_range && !HAS_TRAIT(src, TRAIT_GOOD_HEARING))
 		// Too far away and don't have good hearing, you can't hear anything
 		if(is_blind() || HAS_TRAIT(speaker, TRAIT_INVISIBLE_MAN)) // Can't see them speak either
 			return FALSE
@@ -370,7 +375,10 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 			create_chat_message(speaker, message_language, raw_message, spans)
 
 	// Recompose message for AI hrefs, language incomprehension.
-	message = compose_message(speaker, message_language, raw_message, radio_freq, radio_freq_name, radio_freq_color, spans, message_mods)
+	var/can_identify_speaker = can_identify_speech_source(speaker, message_range, radio_freq)
+	message = compose_message(speaker, message_language, raw_message, radio_freq, radio_freq_name, radio_freq_color, spans, message_mods, can_identify_speaker)
+	if(!can_identify_speaker)
+		message = "[get_speech_direction_marker(speaker)] [message]"
 	var/show_message_success = show_message(message, MSG_AUDIBLE, deaf_message, deaf_type, avoid_highlight)
 
 	// BANDASTATION ADDITION START - TTS
@@ -389,6 +397,100 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 
 	return understood && show_message_success
 
+/mob/living/proc/get_speech_hearing_state(atom/movable/speaker, message_range, is_whisper, radio_freq)
+	if(radio_freq || speaker == src || message_range == INFINITY)
+		return SPEECH_HEARING_CLEAR
+	if(stealth_blocks_speech_wall_hearing(speaker))
+		return SPEECH_HEARING_NONE
+	var/hearing_distance = get_planar_hearing_distance(speaker)
+	if(speaker.z != z)
+		if(hearing_distance > HEARING_OTHER_Z_RANGE)
+			return SPEECH_HEARING_NONE
+		return (HAS_TRAIT(src, TRAIT_GOOD_HEARING) || listening_intently) ? SPEECH_HEARING_CLEAR : SPEECH_HEARING_MUFFLED
+	var/can_see_source = can_see_speech_source(speaker, message_range)
+	if(can_see_source && !is_whisper && hearing_distance <= message_range)
+		return SPEECH_HEARING_CLEAR
+	if(is_whisper)
+		if(listening_intently)
+			if(can_see_source && hearing_distance <= get_open_whisper_listen_range())
+				return SPEECH_HEARING_CLEAR
+			if(!can_see_source && hearing_distance <= get_intent_listen_range(TRUE))
+				return SPEECH_HEARING_CLEAR
+		var/muffled_range = HEARING_WALL_WHISPER_RANGE + (HAS_TRAIT(src, TRAIT_GOOD_HEARING) ? LISTEN_HEARING_QUIRK_BONUS : 0)
+		if(hearing_distance <= muffled_range)
+			return SPEECH_HEARING_MUFFLED
+		return SPEECH_HEARING_NONE
+	if(listening_intently && hearing_distance <= get_intent_listen_range(FALSE))
+		return SPEECH_HEARING_CLEAR
+	if(hearing_distance <= HEARING_WALL_SPEECH_RANGE)
+		return SPEECH_HEARING_MUFFLED
+	return SPEECH_HEARING_NONE
+
+/mob/living/proc/get_intent_listen_range(is_whisper = FALSE)
+	var/range = is_whisper ? LISTEN_WHISPER_WALL_RANGE : LISTEN_NORMAL_WALL_RANGE
+	if(HAS_TRAIT(src, TRAIT_GOOD_HEARING))
+		range += is_whisper ? LISTEN_HEARING_QUIRK_BONUS : LISTEN_HEARING_QUIRK_INTENT_BONUS
+	return range
+
+/mob/living/proc/get_open_whisper_listen_range()
+	return LISTEN_WHISPER_OPEN_RANGE + (HAS_TRAIT(src, TRAIT_GOOD_HEARING) ? LISTEN_HEARING_QUIRK_BONUS : 0)
+
+/mob/living/proc/can_hear_speech_through_wall(atom/movable/speaker, message_range, is_whisper = FALSE)
+	return get_speech_hearing_state(speaker, message_range, is_whisper, null) != SPEECH_HEARING_NONE
+
+/mob/living/proc/can_see_speech_source(atom/movable/speaker, message_range)
+	var/view_range = client ? client.view : world.view
+	return (speaker in view(view_range, src)) && in_code_fov(speaker, ignore_self = TRUE)
+
+/mob/living/proc/can_identify_speech_source(atom/movable/speaker, message_range, radio_freq)
+	if(radio_freq || speaker == src)
+		return TRUE
+	return can_see_speech_source(speaker, message_range)
+
+/mob/living/proc/get_planar_hearing_distance(atom/movable/speaker)
+	var/turf/my_turf = get_turf(src)
+	var/turf/speaker_turf = get_turf(speaker)
+	if(!my_turf || !speaker_turf)
+		return INFINITY
+	return max(abs(speaker_turf.x - my_turf.x), abs(speaker_turf.y - my_turf.y))
+
+/mob/living/proc/get_speech_direction_marker(atom/movable/speaker)
+	var/turf/my_turf = get_turf(src)
+	var/turf/speaker_turf = get_turf(speaker)
+	if(!my_turf || !speaker_turf)
+		return ""
+	var/dir_to_source = get_dir(my_turf, speaker_turf)
+	var/marker = get_planar_direction_marker(dir_to_source)
+	if(speaker_turf.z > my_turf.z)
+		marker = "[marker]↑"
+	else if(speaker_turf.z < my_turf.z)
+		marker = "[marker]↓"
+	return marker
+
+/mob/living/proc/get_planar_direction_marker(direction)
+	switch(direction)
+		if(NORTH)
+			return "↑"
+		if(NORTHEAST)
+			return "↗"
+		if(EAST)
+			return "→"
+		if(SOUTHEAST)
+			return "↘"
+		if(SOUTH)
+			return "↓"
+		if(SOUTHWEST)
+			return "↙"
+		if(WEST)
+			return "←"
+		if(NORTHWEST)
+			return "↖"
+	return "?"
+
+/mob/living/proc/stealth_blocks_speech_wall_hearing(atom/movable/speaker)
+	var/mob/living/living_speaker = speaker
+	return istype(living_speaker) && living_speaker.stealth_muffles_sound()
+
 /mob/living/send_speech(message_raw, message_range = 6, obj/source = src, bubble_type = bubble_icon, list/spans, datum/language/message_language = null, list/message_mods = list(), forced = null, tts_message, list/tts_filter)
 	var/whisper_range = 0
 	var/is_speaker_whispering = FALSE
@@ -396,14 +498,29 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 		// Needed for good hearing trait. The actual filtering for whispers happens at the /mob/living/Hear proc
 		whisper_range = MESSAGE_RANGE - WHISPER_RANGE
 		is_speaker_whispering = TRUE
+	if(stealth_muffles_sound())
+		message_range = min(message_range, 1)
+		whisper_range = 0
 
-	var/list/in_view = get_hearers_in_view(message_range + whisper_range, source)
-	var/list/listening = get_hearers_in_range(message_range + whisper_range, source)
+	var/hearing_candidate_range = max(message_range + whisper_range, HEARING_WALL_SPEECH_RANGE + LISTEN_HEARING_QUIRK_INTENT_BONUS)
+	var/list/in_view = get_hearers_in_view(hearing_candidate_range, source)
+	var/list/listening = get_hearers_in_range(hearing_candidate_range, source)
 
 	// Pre-process listeners to account for line-of-sight
 	for(var/atom/movable/listening_movable as anything in listening)
-		if(!(listening_movable in in_view) && !HAS_TRAIT(listening_movable, TRAIT_XRAY_HEARING))
+		if((listening_movable in in_view) || HAS_TRAIT(listening_movable, TRAIT_XRAY_HEARING))
+			continue
+		var/mob/living/listening_living = listening_movable
+		if(istype(listening_living) && listening_living.can_hear_speech_through_wall(source, message_range, is_speaker_whispering))
+			continue
+		else
 			listening.Remove(listening_movable)
+
+	for(var/mob/living/other_z_listener as anything in GLOB.alive_mob_list)
+		if(other_z_listener.z == z || !other_z_listener.client)
+			continue
+		if(other_z_listener.get_speech_hearing_state(source, message_range, is_speaker_whispering, null) != SPEECH_HEARING_NONE)
+			listening |= other_z_listener
 
 	SEND_SIGNAL(src, COMSIG_LIVING_SEND_SPEECH, listening)
 

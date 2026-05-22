@@ -968,10 +968,12 @@ generate/load female uniform sprites matching all previously decided variables
 
 /// Updates eye sprites if relevant
 /mob/living/proc/update_eyes(refresh = TRUE)
+	update_code_fov()
 	return
 
 /mob/living/carbon/human/update_eyes(refresh = TRUE)
 	remove_overlay(EYES_LAYER)
+	update_code_fov()
 
 	var/obj/item/bodypart/head/noggin = get_bodypart(BODY_ZONE_HEAD)
 	if(isnull(noggin) || noggin.is_husked || noggin.is_invisible)

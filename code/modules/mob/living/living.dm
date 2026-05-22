@@ -659,6 +659,7 @@
 
 	if(I?.registered_account)
 		account = I.registered_account
+		remember_data("bank_account", account.account_id)
 		return account
 
 /mob/living/proc/toggle_resting()
@@ -2996,6 +2997,30 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 
 	to_chat(src, "Вы наклоняете голову вниз.")
 	look_down()
+
+/mob/living/verb/toggle_stealth()
+	set name = "Toggle Stealth"
+	set category = "IC"
+
+	if(stat > CONSCIOUS || INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS))
+		return
+	toggle_stealth_mode()
+
+/mob/living/verb/toggle_listening()
+	set name = "Listen Carefully"
+	set category = "IC"
+
+	if(stat > CONSCIOUS || HAS_TRAIT(src, TRAIT_DEAF))
+		return
+	toggle_intent_listen()
+
+/mob/living/verb/toggle_focused_look_verb()
+	set name = "Focus Look"
+	set category = "IC"
+
+	if(stat > CONSCIOUS || is_blind())
+		return
+	toggle_focused_look()
 
 /**
  * Totals the physical cash on the mob and returns the total.

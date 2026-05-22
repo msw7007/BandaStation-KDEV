@@ -1,6 +1,10 @@
 /mob/living/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
+	clear_focused_look()
+	if(listening_intently)
+		toggle_intent_listen()
 	update_turf_movespeed(loc)
+	update_stealth_chameleon()
 	if(HAS_TRAIT(src, TRAIT_NEGATES_GRAVITY))
 		if(!isgroundlessturf(loc))
 			ADD_TRAIT(src, TRAIT_IGNORING_GRAVITY, IGNORING_GRAVITY_NEGATION)
@@ -88,6 +92,96 @@
 	else if(current_turf_slowdown)
 		remove_movespeed_modifier(/datum/movespeed_modifier/turf_slowdown)
 		current_turf_slowdown = 0
+
+/mob/living/proc/toggle_stealth_mode()
+	if(stealth_mode)
+		end_stealth()
+		return FALSE
+	start_stealth()
+	return TRUE
+
+/mob/living/proc/start_stealth()
+	if(stealth_mode)
+		return
+	stealth_mode = TRUE
+	ADD_TRAIT(src, TRAIT_SNEAK, TRAIT_GENERIC)
+	update_stealth_chameleon()
+	balloon_alert(src, "stealth on")
+
+/mob/living/proc/end_stealth(revealed = FALSE)
+	if(!stealth_mode && !chameleon && !stealth_cover)
+		return
+	stealth_mode = FALSE
+	chameleon = 0
+	chameleon_cap = STEALTH_CHAMELEON_MAX
+	stealth_cover = null
+	alpha = initial(alpha)
+	REMOVE_TRAIT(src, TRAIT_SNEAK, TRAIT_GENERIC)
+	if(revealed)
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] emerges from concealment."))
+	else
+		balloon_alert(src, "stealth off")
+
+/mob/living/proc/get_stealth_light_level()
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return 1
+	return current_turf.get_lumcount()
+
+/mob/living/proc/get_stealth_skill_bonus()
+	return 0
+
+/mob/living/proc/get_stealth_equipment_weight()
+	var/total_weight = 0
+	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_POCKETS|INCLUDE_HELD|INCLUDE_PROSTHETICS|INCLUDE_ABSTRACT))
+		total_weight += item.w_class
+	return total_weight
+
+/mob/living/proc/get_stealth_equipment_weight_limit()
+	return STEALTH_BASE_EQUIPMENT_WEIGHT_LIMIT + get_stealth_skill_bonus()
+
+/mob/living/proc/stealth_muffles_sound()
+	return stealth_mode && chameleon >= STEALTH_SOUND_MUTE_THRESHOLD && get_stealth_equipment_weight() <= get_stealth_equipment_weight_limit()
+
+/mob/living/proc/update_stealth_chameleon()
+	if(!stealth_mode)
+		return
+	var/light_level = get_stealth_light_level()
+	var/target_chameleon = clamp(round((1 - light_level) * STEALTH_CHAMELEON_MAX) + get_stealth_skill_bonus() + chameleon_bonus, 0, chameleon_cap)
+	var/change_rate = (target_chameleon > chameleon ? STEALTH_CHAMELEON_FADE_RATE : STEALTH_CHAMELEON_LIGHT_RATE) + chameleon_speed_bonus
+	if(chameleon < target_chameleon)
+		chameleon = min(chameleon + change_rate, target_chameleon)
+	else if(chameleon > target_chameleon)
+		chameleon = max(chameleon - change_rate, target_chameleon)
+	apply_chameleon_alpha()
+
+/mob/living/proc/apply_chameleon_alpha()
+	if(!stealth_mode)
+		alpha = initial(alpha)
+		return
+	alpha = round(STEALTH_ALPHA_MAXIMUM - ((STEALTH_ALPHA_MAXIMUM - STEALTH_ALPHA_MINIMUM) * (chameleon / STEALTH_CHAMELEON_MAX)))
+
+/mob/living/proc/get_stealth_damage_multiplier()
+	if(!stealth_mode)
+		return 1
+	return clamp(STEALTH_DAMAGE_MULTIPLIER_MIN + ((STEALTH_DAMAGE_MULTIPLIER_MAX - STEALTH_DAMAGE_MULTIPLIER_MIN) * (chameleon / STEALTH_CHAMELEON_MAX)), STEALTH_DAMAGE_MULTIPLIER_MIN, STEALTH_DAMAGE_MULTIPLIER_MAX)
+
+/mob/living/proc/reveal_from_stealth_attack()
+	if(!stealth_mode)
+		return
+	end_stealth(revealed = TRUE)
+
+/mob/living/proc/hide_under_stealth_cover(atom/movable/cover)
+	if(!cover)
+		return FALSE
+	if(!stealth_mode)
+		start_stealth()
+	stealth_cover = cover
+	chameleon_cap = STEALTH_CHAMELEON_HIDDEN_CAP
+	chameleon = STEALTH_CHAMELEON_HIDDEN_CAP
+	apply_chameleon_alpha()
+	balloon_alert(src, "hidden")
+	return TRUE
 
 /mob/living/proc/update_pull_movespeed()
 	SEND_SIGNAL(src, COMSIG_LIVING_UPDATING_PULL_MOVESPEED)

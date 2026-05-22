@@ -1,6 +1,6 @@
 import { type Feature, FeatureTextInput } from '../base';
 
-export const flavor_text: Feature<string> = {
+export const legacy_flavor_text: Feature<string> = {
   name: 'Описание внешности',
   description: 'Опишите вашего персонажа!',
   component: FeatureTextInput,

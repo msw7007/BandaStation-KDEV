@@ -916,6 +916,12 @@
 	SEND_SIGNAL(src, COMSIG_MOB_GET_STATUS_TAB_ITEMS, .)
 	return .
 
+/mob/proc/remember_data(title, information)
+	if(!title)
+		return FALSE
+	LAZYINITLIST(memory_holder)
+	memory_holder[title] = information
+	return TRUE
 
 /mob/proc/swap_hand(held_index, silent = FALSE)
 	SHOULD_NOT_OVERRIDE(TRUE) // Override perform_hand_swap instead

@@ -47,6 +47,28 @@
 
 	/// Which body type to use
 	var/physique = MALE
+	/// Freeform body shape descriptor chosen in preferences.
+	var/body_shape = "average"
+	/// Overall sprite scale chosen in preferences.
+	var/preference_sprite_size = 1
+	/// Vertical sprite scale chosen in preferences.
+	var/preference_sprite_height = 1
+	/// Horizontal sprite scale chosen in preferences.
+	var/preference_sprite_width = 1
+	/// Four short appearance descriptors shown even while incognito.
+	var/list/appearance_descriptors = list()
+	/// Freeform character description hidden by incognito.
+	var/flavor_text = ""
+	/// Adjective shown when the face is hidden.
+	var/incognito_adjective = "unknown"
+	/// Noun shown when the face is hidden.
+	var/incognito_noun = "figure"
+	/// Adjective used when only the voice can be identified.
+	var/voice_adjective = "unknown"
+	/// Noun used when only the voice can be identified.
+	var/voice_noun = "voice"
+	/// Preferred TTS/chat color while not incognito.
+	var/voice_color = "#c8c8c8"
 
 	//consider updating /mob/living/carbon/human/copy_clothing_prefs() if adding more of these
 	var/underwear = "Nude" //Which underwear the player wants

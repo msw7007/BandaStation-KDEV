@@ -49,6 +49,101 @@
 		return angle < vision_angle
 	return angle > vision_angle
 
+/// Code-only field of view used by mechanics that care where the mob is facing, not by the client's rendered view.
+/mob/living/proc/in_code_fov(atom/observed_atom, ignore_self = FALSE)
+	if(ignore_self && observed_atom == src)
+		return TRUE
+	if(is_blind())
+		return FALSE
+	if(code_fov_angle >= 360)
+		return TRUE
+	var/turf/my_turf = get_turf(src)
+	var/turf/observed_turf = get_turf(observed_atom)
+	if(!my_turf || !observed_turf)
+		return FALSE
+	var/rel_x = observed_turf.x - my_turf.x
+	var/rel_y = observed_turf.y - my_turf.y
+	if(rel_x >= -1 && rel_x <= 1 && rel_y >= -1 && rel_y <= 1)
+		return TRUE
+	var/vector_len = sqrt(abs(rel_x) ** 2 + abs(rel_y) ** 2)
+	var/dir_x = 0
+	var/dir_y = 0
+	if(dir & NORTH)
+		dir_y += vector_len
+	else if(dir & SOUTH)
+		dir_y -= vector_len
+	if(dir & EAST)
+		dir_x += vector_len
+	else if(dir & WEST)
+		dir_x -= vector_len
+	var/angle = arccos((dir_x * rel_x + dir_y * rel_y) / (sqrt(dir_x**2 + dir_y**2) * sqrt(rel_x**2 + rel_y**2)))
+	return angle <= (code_fov_angle / 2)
+
+/// Multiplier for attacks against this mob from outside its code FOV.
+/mob/living/proc/get_rear_attack_multiplier(atom/movable/attacker)
+	if(in_code_fov(attacker, ignore_self = TRUE))
+		return 1
+	return 1.25
+
+/// Updates code-only FOV from current eye damage. Visual TG FOV remains separate.
+/mob/living/proc/update_code_fov()
+	var/eye_damage = get_eye_damage_percent()
+	if(eye_damage >= 75)
+		code_fov_angle = 90
+	else if(eye_damage >= 50)
+		code_fov_angle = 180
+	else if(eye_damage >= 25)
+		code_fov_angle = 270
+	else
+		code_fov_angle = 360
+
+/// Override on carbon/human if a different eye damage source becomes canonical.
+/mob/living/proc/get_eye_damage_percent()
+	return 0
+
+/mob/living/carbon/get_eye_damage_percent()
+	var/obj/item/organ/eyes/eyes = get_organ_slot(ORGAN_SLOT_EYES)
+	if(!eyes?.maxHealth)
+		return 100
+	return (eyes.damage / eyes.maxHealth) * 100
+
+/// Toggle distant inspection by extending the client's view without changing code FOV.
+/mob/living/proc/toggle_focused_look()
+	if(!client)
+		return FALSE
+	if(focused_look)
+		clear_focused_look()
+		return TRUE
+	focused_look = TRUE
+	balloon_alert(src, "choose focus")
+	return TRUE
+
+/mob/living/proc/focus_look_at(atom/target)
+	if(!client || !target)
+		return FALSE
+	var/turf/my_turf = get_turf(src)
+	var/turf/target_turf = get_turf(target)
+	if(!my_turf || !target_turf)
+		return FALSE
+	var/x_offset = clamp(target_turf.x - my_turf.x, -FOCUS_LOOK_MAX_TILES, FOCUS_LOOK_MAX_TILES)
+	var/y_offset = clamp(target_turf.y - my_turf.y, -FOCUS_LOOK_MAX_TILES, FOCUS_LOOK_MAX_TILES)
+	animate(client, pixel_x = x_offset * FOCUS_LOOK_PIXEL_MULTIPLIER, pixel_y = y_offset * FOCUS_LOOK_PIXEL_MULTIPLIER, time = 0.25 SECONDS, easing = SINE_EASING|EASE_OUT)
+	return TRUE
+
+/mob/living/proc/clear_focused_look()
+	if(!focused_look && !client?.pixel_x && !client?.pixel_y)
+		return
+	focused_look = FALSE
+	if(client)
+		animate(client, pixel_x = 0, pixel_y = 0, time = 0.15 SECONDS, easing = SINE_EASING|EASE_OUT)
+	balloon_alert(src, "focused look off")
+
+/// Toggle active listening through one wall block.
+/mob/living/proc/toggle_intent_listen()
+	listening_intently = !listening_intently
+	balloon_alert(src, listening_intently ? "listening" : "stopped listening")
+	return listening_intently
+
 /// Updates the applied FOV value and applies the handler to client if able
 /mob/living/proc/update_fov()
 	var/highest_fov

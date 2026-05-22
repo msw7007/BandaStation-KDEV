@@ -196,6 +196,11 @@
 	if(HAS_TRAIT(source, TRAIT_LIGHT_STEP))
 		volume_multiplier = 0.6
 		range_adjustment = -2
+	if(isliving(source))
+		var/mob/living/stealthy_source = source
+		if(stealthy_source.stealth_muffles_sound())
+			volume_multiplier *= 0.25
+			range_adjustment -= 5
 
 	// list returned by playsound() filled by client mobs who heard the footstep. given to play_fov_effect()
 	var/list/heard_clients

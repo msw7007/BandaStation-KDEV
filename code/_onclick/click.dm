@@ -68,6 +68,12 @@
 		return
 	next_click = world.time + 1
 
+	if(isliving(src))
+		var/mob/living/living_user = src
+		if(living_user.focused_look)
+			living_user.focus_look_at(A)
+			return
+
 	if(check_click_intercept(params,A) || HAS_TRAIT(src, TRAIT_NO_TRANSFORM))
 		return
 

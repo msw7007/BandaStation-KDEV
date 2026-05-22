@@ -21,6 +21,15 @@
 	// give us some space between clothing examine and the rest
 	ADD_NEWLINE_IF_NECESSARY(.)
 
+	if(ishuman(src))
+		var/mob/living/carbon/human/human_source = src
+		var/descriptor_text = human_source.get_appearance_descriptor_text()
+		if(descriptor_text)
+			. += span_notice("They look [descriptor_text].")
+		if(human_source.flavor_text && !human_source.is_incognito())
+			. += span_notice(human_source.flavor_text)
+		ADD_NEWLINE_IF_NECESSARY(.)
+
 	var/appears_dead = FALSE
 	var/just_sleeping = FALSE
 

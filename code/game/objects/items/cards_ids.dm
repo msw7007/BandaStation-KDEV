@@ -513,6 +513,9 @@
 
 	registered_account = account
 	LAZYOR(registered_account.bank_cards, src)
+	var/mob/card_holder = loc
+	if(istype(card_holder))
+		card_holder.remember_data("bank_account", registered_account.account_id)
 	registered_account.civilian_bounty?.on_selected(src)
 
 /// Clears the economy account from the ID card.
