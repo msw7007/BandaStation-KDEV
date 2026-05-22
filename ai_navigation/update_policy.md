@@ -49,7 +49,7 @@ A missing or wrong entry does not mean the thing does not exist.
 | Fast | `entrypoints.md`, `subsystem_map.md`, `system_map.md` | new systems, new `SS*`, renamed paths |
 | Medium | `signal_map.md`, `combat_signal_map.md`, `movement_signal_map.md`, `spell_signal_map.md`, `runtime_flow.md`, `core_procs.md` | contracts change with features |
 | Slow | `architecture.md`, `router.md`, `processing_hazards.md`, `type_index.md` | structural changes are rare |
-| Rarely | `AGENTS.md`, `human_checking.md`, `coding_standards.md`, `task_templates.md`, `update_policy.md` | policy files, not derived from code |
+| Rarely | root `AGENTS.md`, `ai_navigation/AGENTS.md`, `human_checking.md`, `coding_standards.md`, `task_templates.md`, `update_policy.md` | policy files, not derived from code |
 
 Minimal refresh: rebuild the ownership layer (`subsystem_map.md`) and the routing layer (`system_map.md`, `entrypoints.md`, `router.md`) — that covers most routing value.
 
@@ -61,7 +61,7 @@ Minimal refresh: rebuild the ownership layer (`subsystem_map.md`) and the routin
 4. **Reasoning** — re-check `runtime_flow.md`, `system_dependencies.md`, `debug_routes.md`.
 5. **Contracts** — re-check the signal maps, `core_procs.md`, `processing_hazards.md`, `failure_modes.md` against current procs.
 6. **Workflow** — `human_checking.md`, `coding_standards.md`, `task_templates.md` only if policy/tooling changed.
-7. **Entry files** — final pass on `router.md`, `AGENTS.md`.
+7. **Entry files** — final pass on `router.md`, `ai_navigation/AGENTS.md`, and the root `AGENTS.md` (project entry — keep its index and routes in sync).
 
 ## Rebuild Commands
 
@@ -87,7 +87,7 @@ rg -n "genesis_call|modular_bandastation" tgstation.dme
 
 Run before closing a refresh:
 
-- [ ] every file referenced in `router.md` exists
+- [ ] every file referenced in `router.md` and the root `AGENTS.md` index exists
 - [ ] every `Open first` path in `entrypoints.md` resolves
 - [ ] every `SS*` in `subsystem_map.md` maps to a real file
 - [ ] `architecture.md` runtime backbone matches the current `SS*` set

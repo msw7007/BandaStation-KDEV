@@ -1,6 +1,8 @@
 # Repository Agent Guide
 
-Canonical path: `ai_navigation/AGENTS.md`. This is the **Guided Start** entrypoint — not the cheapest default. For ordinary work, `ai_navigation/router.md` is cheaper.
+This is the **Guided Start** mode document of the `ai_navigation/` layer — not the cheapest default. For ordinary work, `ai_navigation/router.md` is cheaper.
+
+The repository's auto-discovered entry file is the root `AGENTS.md`; it establishes the project rules and routes here for Guided Start. This file and the root `AGENTS.md` are consistent.
 
 ## Terminology
 
