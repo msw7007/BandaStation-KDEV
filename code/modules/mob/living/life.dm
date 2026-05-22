@@ -104,6 +104,16 @@
 	. += "Mood: [round(mood, 0.1)]/20"
 	. += "Corp Align: [corp_align || "None"]"
 	. += "Memory Holder: [length(memory_holder)] entries"
+	if(mind)
+		. += ""
+		. += "Character Attributes"
+		for(var/attribute_id in ATTRIBUTE_ALL)
+			var/datum/attribute/attribute = mind.get_attribute(attribute_id)
+			if(attribute)
+				. += "[attribute.name]: [attribute.value]/[ATTRIBUTE_MAXIMUM][attribute.super_mode ? " (Super)" : ""]"
+		. += "Unconverted General XP: [round(mind.unconverted_general_experience, 0.1)]/[ATTRIBUTE_LEVEL_POINT_EXPERIENCE]"
+		. += "Level Points: [mind.level_points]"
+		. += "Skill Points: [mind.skill_points]"
 
 /mob/living/proc/drain_needs(seconds_per_tick)
 	if(!HAS_TRAIT(src, TRAIT_NOHUNGER))
@@ -200,10 +210,20 @@
 		if(time_at_min_mood >= 10 MINUTES && world.time >= last_control_loss + 30 SECONDS)
 			trigger_hysteria()
 
+	if(is_comfortably_sleeping_for_experience())
+		mind?.convert_rest_experience()
+
 /mob/living/proc/sync_mood_from_moodlets()
 	if(!QDELETED(mob_mood))
 		mood = clamp(mob_mood.mood, -30, 20)
 	return mood
+
+/mob/living/proc/is_comfortably_sleeping_for_experience()
+	if(body_position != LYING_DOWN || (!IsSleeping() && !IsUnconscious()))
+		return FALSE
+	if(!istype(buckled, /obj/structure/bed))
+		return FALSE
+	return (locate(/obj/item/pillow) in loc) && (locate(/obj/item/bedsheet) in loc)
 
 /mob/living/proc/apply_body_state_effects()
 	var/stamina_ratio = max_stamina ? stamina / max_stamina : 0
