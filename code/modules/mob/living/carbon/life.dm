@@ -82,6 +82,16 @@
 
 	SEND_SIGNAL(src, COMSIG_CARBON_PRE_BREATHE, seconds_per_tick)
 
+	// LIGHTWEIGHT ATMOS: water environment short-circuits normal breathing.
+	// On a water turf without underwater gear, run the breath-hold timer
+	// instead of pulling air from the environment.
+	if(is_water_turf(get_turf(src)))
+		handle_water_breath(seconds_per_tick)
+		if(!has_underwater_breathing())
+			return
+	else
+		end_water_breath()
+
 	var/datum/gas_mixture/environment
 	if(loc)
 		environment = loc.return_air()

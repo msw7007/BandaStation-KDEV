@@ -21,45 +21,17 @@
  * is handled by the hotspot itself, specifically perform_exposure().
  */
 /turf/open/hotspot_expose(exposed_temperature, exposed_volume, soh)
+	// LIGHTWEIGHT ATMOS: hotspot reactions no longer exist. Any ignition
+	// source above FIRE_MINIMUM_TEMPERATURE_TO_EXIST spawns a fire gas cloud
+	// directly; freon/cold ignition goes through the freeze effect.
 	if(exposed_temperature < TCMB)
-		exposed_temperature = TCMB
-		CRASH("[src].hotspot_expose() called with exposed_temperature < [TCMB]")
-	//If the air doesn't exist we just return false
-	var/list/air_gases = air?.gases
-	if(!air_gases)
 		return
-
-	. = air_gases[/datum/gas/oxygen]
-	var/oxy = . ? .[MOLES] : 0
-	if (oxy < 0.5)
-		return
-	. = air_gases[/datum/gas/plasma]
-	var/plas = . ? .[MOLES] : 0
-	. = air_gases[/datum/gas/tritium]
-	var/trit = . ? .[MOLES] : 0
-	. = air_gases[/datum/gas/hydrogen]
-	var/h2 = . ? .[MOLES] : 0
-	. = air_gases[/datum/gas/freon]
-	var/freon = . ? .[MOLES] : 0
-	if(active_hotspot)
-		if(soh)
-			if(plas > 0.5 || trit > 0.5 || h2 > 0.5)
-				if(active_hotspot.temperature < exposed_temperature)
-					active_hotspot.temperature = exposed_temperature
-				if(active_hotspot.volume < exposed_volume)
-					active_hotspot.volume = exposed_volume
-			else if(freon > 0.5)
-				if(active_hotspot.temperature > exposed_temperature)
-					active_hotspot.temperature = exposed_temperature
-				if(active_hotspot.volume < exposed_volume)
-					active_hotspot.volume = exposed_volume
-		return
-
-	if(((exposed_temperature > PLASMA_MINIMUM_BURN_TEMPERATURE) && (plas > 0.5 || trit > 0.5 || h2 > 0.5)) || \
-		((exposed_temperature < FREON_MAXIMUM_BURN_TEMPERATURE) && (freon > 0.5)))
-
-		new /obj/effect/hotspot(src, exposed_volume * 25, exposed_temperature)
-		SSair.add_to_active(src)
+	if(exposed_temperature >= FIRE_MINIMUM_TEMPERATURE_TO_EXIST)
+		var/amount = clamp(exposed_volume * 0.5, 5, 80)
+		spawn_gas_cloud(src, /datum/gas_effect/fire, amount, exposed_temperature)
+	else if(exposed_temperature < 200) // below cold ignition threshold
+		var/amount = clamp(exposed_volume * 0.5, 5, 40)
+		spawn_gas_cloud(src, /datum/gas_effect/freeze, amount, exposed_temperature)
 
 /**
  * Hotspot objects interfaces with the temperature of turf gasmixtures while also providing visual effects.

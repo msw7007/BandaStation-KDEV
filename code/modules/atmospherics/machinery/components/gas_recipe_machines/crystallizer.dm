@@ -165,16 +165,19 @@
 	internal.garbage_collect()
 
 /obj/machinery/atmospherics/components/binary/crystallizer/process_atmos()
+	// LIGHTWEIGHT ATMOS: crystallizer gas-recipe chemistry is gutted.
+	// Object survives on maps for decoration; UI shows it but recipes
+	// never advance.
+	return
+
+// Original body retained for archaeology, no longer reachable.
+/obj/machinery/atmospherics/components/binary/crystallizer/proc/_legacy_process_atmos_disabled()
 	if(!on || !is_operational || selected_recipe == null)
 		return
-
 	inject_gases()
-
 	if(!internal.total_moles())
 		return
-
 	heat_conduction()
-
 	if(internal_check())
 		if(check_temp_requirements())
 			heat_calculations()

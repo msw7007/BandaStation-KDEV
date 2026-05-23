@@ -285,20 +285,27 @@
 	if(!istype(location))
 		return
 
+	// LIGHTWEIGHT ATMOS: firefighting foam now extinguishes fire/plasma clouds
+	// and absorbs some "plasma" representation from any plasma cloud on the
+	// turf. Original per-tile gas math is gone.
+	var/extinguished = FALSE
 	var/obj/effect/hotspot/hotspot = locate() in location
-	if(!(hotspot && location.air))
+	if(hotspot)
+		QDEL_NULL(hotspot)
+		extinguished = TRUE
+	for(var/obj/effect/gas_cloud/cloud in location)
+		if(istype(cloud.effect, /datum/gas_effect/fire))
+			qdel(cloud)
+			extinguished = TRUE
+		else if(istype(cloud.effect, /datum/gas_effect/plasma))
+			var/scrub_amt = min(30, cloud.amount)
+			cloud.amount -= scrub_amt
+			absorbed_plasma += scrub_amt
+			if(cloud.amount <= 0)
+				qdel(cloud)
+			extinguished = TRUE
+	if(!extinguished)
 		return
-
-	QDEL_NULL(hotspot)
-	var/datum/gas_mixture/air = location.air
-	if (air.gases[/datum/gas/plasma])
-		var/scrub_amt = min(30, air.gases[/datum/gas/plasma][MOLES]) //Absorb some plasma
-		air.adjust_gas(/datum/gas/plasma, -scrub_amt)
-		absorbed_plasma += scrub_amt
-	if (air.temperature > T20C)
-		air.temperature = max(air.temperature / 2, T20C)
-	air.garbage_collect()
-	location.air_update_turf(FALSE, FALSE)
 
 /obj/effect/particle_effect/fluid/foam/firefighting/make_result()
 	var/atom/movable/deposit = ..()
@@ -441,6 +448,9 @@
 
 	location.ClearWet()
 	location.temperature = T20C
+	// LIGHTWEIGHT ATMOS: scrub gas effect clouds in addition to legacy hotspots.
+	for(var/obj/effect/gas_cloud/cloud in location)
+		qdel(cloud)
 	if(location.air)
 		var/datum/gas_mixture/air = location.air
 		air.temperature = T20C

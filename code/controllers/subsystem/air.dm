@@ -106,129 +106,62 @@ SUBSYSTEM_DEF(air)
 
 
 /datum/controller/subsystem/air/fire(resumed = FALSE)
+	// LIGHTWEIGHT ATMOS: gas physics (active turfs, excited groups, hotspots,
+	// high-pressure delta, superconductivity, pipenets, atom_process) are gone.
+	// We still tick atmos_machinery so vent/scrubber/airalarm UIs and the
+	// adjacent/rebuild queues stay sane.
 	var/timer = TICK_USAGE_REAL
 
-	//Rebuilds can happen at any time, so this needs to be done outside of the normal system
 	cost_rebuilds = 0
 	cost_adjacent = 0
 
-	// We need to have a solid setup for turfs before fire, otherwise we'll get massive runtimes and strange behavior
 	if(length(adjacent_rebuild))
 		timer = TICK_USAGE_REAL
 		process_adjacent_rebuild()
-		//This does mean that the apperent rebuild costs fluctuate very quickly, this is just the cost of having them always process, no matter what
 		cost_adjacent = TICK_USAGE_REAL - timer
 		if(state != SS_RUNNING)
 			return
 
-	// Every time we fire, we want to make sure pipenets are rebuilt. The game state could have changed between each fire() proc call
-	// and anything missing a pipenet can lead to unintended behaviour at worse and various runtimes at best.
 	if(length(rebuild_queue) || length(expansion_queue))
 		timer = TICK_USAGE_REAL
 		process_rebuilds()
-		//This does mean that the apperent rebuild costs fluctuate very quickly, this is just the cost of having them always process, no matter what
 		cost_rebuilds = TICK_USAGE_REAL - timer
 		if(state != SS_RUNNING)
 			return
 
-	if(currentpart == SSAIR_PIPENETS || !resumed)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_pipenets(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_pipenets = MC_AVERAGE(cost_pipenets, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_ATMOSMACHINERY
+	timer = TICK_USAGE_REAL
+	if(!resumed)
+		cached_cost = 0
+	process_atmos_machinery(resumed)
+	cached_cost += TICK_USAGE_REAL - timer
+	if(state != SS_RUNNING)
+		return
+	cost_atmos_machinery = MC_AVERAGE(cost_atmos_machinery, TICK_DELTA_TO_MS(cached_cost))
 
-	if(currentpart == SSAIR_ATMOSMACHINERY)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_atmos_machinery(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_atmos_machinery = MC_AVERAGE(cost_atmos_machinery, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_ACTIVETURFS
+	// Drop stale physics-loop costs and stop these lists from accumulating.
+	cost_pipenets = 0
+	cost_turfs = 0
+	cost_hotspots = 0
+	cost_groups = 0
+	cost_highpressure = 0
+	cost_superconductivity = 0
+	cost_atoms = 0
+	if(length(active_turfs))
+		active_turfs.Cut()
+	if(length(hotspots))
+		hotspots.Cut()
+	if(length(excited_groups))
+		excited_groups.Cut()
+	if(length(high_pressure_delta))
+		high_pressure_delta.Cut()
+	if(length(active_super_conductivity))
+		active_super_conductivity.Cut()
+	if(length(atom_process))
+		atom_process.Cut()
 
-	if(currentpart == SSAIR_ACTIVETURFS)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_active_turfs(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_turfs = MC_AVERAGE(cost_turfs, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_HOTSPOTS
-
-	if(currentpart == SSAIR_HOTSPOTS) //We do this before excited groups to allow breakdowns to be independent of adding turfs while still *mostly preventing mass fires
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_hotspots(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_hotspots = MC_AVERAGE(cost_hotspots, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_EXCITEDGROUPS
-
-	if(currentpart == SSAIR_EXCITEDGROUPS)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_excited_groups(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_groups = MC_AVERAGE(cost_groups, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_HIGHPRESSURE
-
-	if(currentpart == SSAIR_HIGHPRESSURE)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_high_pressure_delta(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_highpressure = MC_AVERAGE(cost_highpressure, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_SUPERCONDUCTIVITY
-
-	if(currentpart == SSAIR_SUPERCONDUCTIVITY)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_super_conductivity(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_superconductivity = MC_AVERAGE(cost_superconductivity, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-		currentpart = SSAIR_PROCESS_ATOMS
-
-	if(currentpart == SSAIR_PROCESS_ATOMS)
-		timer = TICK_USAGE_REAL
-		if(!resumed)
-			cached_cost = 0
-		process_atoms(resumed)
-		cached_cost += TICK_USAGE_REAL - timer
-		if(state != SS_RUNNING)
-			return
-		cost_atoms = MC_AVERAGE(cost_atoms, TICK_DELTA_TO_MS(cached_cost))
-		resumed = FALSE
-
-
-	currentpart = SSAIR_PIPENETS
-	SStgui.update_uis(SSair) //Lightning fast debugging motherfucker
+	// Skip past the legacy state machine entirely.
+	currentpart = SSAIR_ATMOSMACHINERY
+	return
 
 /datum/controller/subsystem/air/Recover()
 	excited_groups = SSair.excited_groups

@@ -4,7 +4,7 @@ Generated 2026-05-21. Read this when the task touches `modular_bandastation/**`,
 
 ## What The Modular Layer Is
 
-`modular_bandastation/` is the BandaStation fork's **late-included overlay**. It is the final `#include` in `tgstation.dme` (line 6954), so its definitions compile **after** all of `code/**` and can override upstream TG behaviour by re-opening core types.
+`modular_bandastation/` is the BandaStation fork's **late-included overlay**. It is the final `#include` in `tgstation.dme` (line 6961, manually appended after `// END_INCLUDE` at line 6958 — outside the generated include block), so its definitions compile **after** all of `code/**` and can override upstream TG behaviour by re-opening core types.
 
 Each feature is a **modpack**: a `/datum/modpack/<name>` subtype. `SSmodpacks` instantiates every modpack at boot and runs `pre_initialize()` / `initialize()` / `post_initialize()`.
 

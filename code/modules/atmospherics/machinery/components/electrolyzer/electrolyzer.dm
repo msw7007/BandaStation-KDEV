@@ -87,34 +87,29 @@
 		. += "electrolyzer-open"
 
 /obj/machinery/electrolyzer/process_atmos()
-
+	// LIGHTWEIGHT ATMOS: electrolyzer reaction (H2O -> H2 + O2) is gutted —
+	// no per-turf gas mix means nothing to electrolyse. Keep the UI/idle
+	// state machine so the device looks alive but it does nothing useful.
 	if(!is_operational && on)
 		on = FALSE
 	if(!on)
 		return PROCESS_KILL
-
 	if((!cell || cell.charge <= 0) && !anchored)
 		on = FALSE
 		update_appearance(UPDATE_ICON)
 		return PROCESS_KILL
-
-	var/turf/our_turf = loc
-	if(!istype(our_turf))
-		if(mode != ELECTROLYZER_MODE_STANDBY)
-			mode = ELECTROLYZER_MODE_STANDBY
-			update_appearance(UPDATE_ICON)
-		return
-
-	var/new_mode = on ? ELECTROLYZER_MODE_WORKING : ELECTROLYZER_MODE_STANDBY //change the mode to working if the machine is on
-
-	if(mode != new_mode) //check if the mode is set correctly
+	var/new_mode = on ? ELECTROLYZER_MODE_WORKING : ELECTROLYZER_MODE_STANDBY
+	if(mode != new_mode)
 		mode = new_mode
 		update_appearance(UPDATE_ICON)
+	return
 
-	if(mode == ELECTROLYZER_MODE_STANDBY)
+// Original implementation kept below for reference but unreachable.
+/obj/machinery/electrolyzer/proc/_legacy_process_atmos_disabled()
+	var/turf/our_turf = loc
+	if(!istype(our_turf))
 		return
-
-	var/datum/gas_mixture/env = our_turf.return_air() //get air from the turf
+	var/datum/gas_mixture/env = our_turf.return_air()
 
 	if(!env)
 		return

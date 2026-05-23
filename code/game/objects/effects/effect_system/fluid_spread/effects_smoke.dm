@@ -292,20 +292,16 @@
 	if(!istype(chilly))
 		return
 
-	if(chilly.air)
-		var/datum/gas_mixture/air = chilly.air
-		if(!distcheck || get_dist(location, chilly) < blast) // Otherwise we'll get silliness like people using Nanofrost to kill people through walls with cold air
-			air.temperature = temperature
-
-		if(air.gases[/datum/gas/plasma])
-			var/mole_count = air.gases[/datum/gas/plasma][MOLES]
-			air.adjust_gas(/datum/gas/nitrogen, mole_count)
-			air.adjust_gas(/datum/gas/plasma, -mole_count)
-			air.garbage_collect()
-
+	// LIGHTWEIGHT ATMOS: freezing smoke now (1) deletes any fire/plasma clouds
+	// on the turf, (2) spawns a freeze cloud. The old per-turf plasma -> N2
+	// conversion is dropped because tile gas mixtures don't propagate.
+	if(!distcheck || get_dist(location, chilly) < blast)
+		for(var/obj/effect/gas_cloud/cloud in chilly)
+			if(istype(cloud.effect, /datum/gas_effect/fire) || istype(cloud.effect, /datum/gas_effect/plasma))
+				qdel(cloud)
 		for(var/obj/effect/hotspot/fire in chilly)
 			qdel(fire)
-		chilly.air_update_turf(FALSE, FALSE)
+		spawn_gas_cloud(chilly, /datum/gas_effect/freeze, 30, temperature)
 
 	if(weldvents)
 		for(var/obj/machinery/atmospherics/components/unary/comp in chilly)

@@ -210,11 +210,26 @@
 	local_turf.atmos_spawn_air(text)
 
 /turf/open/atmos_spawn_air(text)
-	if(!text || !air)
+	// LIGHTWEIGHT ATMOS: route legacy "spawn gas string" calls to gas clouds.
+	if(!text)
 		return
-
-	var/datum/gas_mixture/turf_mixture = SSair.parse_gas_string(text, /datum/gas_mixture/turf)
-
-	air.merge(turf_mixture)
-	archive()
-	SSair.add_to_active(src)
+	var/list/parts = splittext(text, ";")
+	var/temperature = T20C
+	var/list/gas_amounts = list()
+	for(var/part in parts)
+		var/list/kv = splittext(part, "=")
+		if(length(kv) < 2)
+			continue
+		var/key = LOWER_TEXT(trim(kv[1]))
+		var/value = text2num(trim(kv[2]))
+		if(isnull(value))
+			continue
+		if(key == "temp" || key == "temperature")
+			temperature = value
+			continue
+		gas_amounts[key] = value
+	for(var/key in gas_amounts)
+		var/path = atmos_legacy_gas_id_to_effect(key)
+		if(!path)
+			continue
+		spawn_gas_cloud(src, path, gas_amounts[key], temperature)

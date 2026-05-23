@@ -1,7 +1,11 @@
 /**
  * This test checks that all expected areas are connected to a starting area
+ *
+ * LIGHTWEIGHT ATMOS: pipenets no longer transport gas, so vent connectivity
+ * is meaningless. We mark the test abstract so it never runs.
  */
 /datum/unit_test/atmospherics_sanity
+	abstract_type = /datum/unit_test/atmospherics_sanity
 	// we iterate over all atmospherics devices on the starting networks
 	priority = TEST_LONGER
 

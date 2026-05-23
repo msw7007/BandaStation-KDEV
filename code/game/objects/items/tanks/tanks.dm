@@ -182,6 +182,9 @@
 /obj/item/tank/atom_deconstruct(disassembled = TRUE)
 	var/atom/location = loc
 	if(location)
+		// LIGHTWEIGHT ATMOS: spawn a visible vapour cloud when a tank
+		// is dismantled, in addition to the (now no-op) assume_air call.
+		dump_gas_mixture_as_cloud(get_turf(location), air_contents, 0.3)
 		location.assume_air(air_contents)
 		playsound(location, 'sound/effects/spray.ogg', 10, TRUE, -3)
 	return ..()

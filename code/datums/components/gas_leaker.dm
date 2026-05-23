@@ -72,15 +72,22 @@
 	return process_machine(master, airs)
 
 /datum/component/gas_leaker/proc/process_leak(obj/master, list/airs)
+	// LIGHTWEIGHT ATMOS: instead of equalising pressure to the turf air
+	// (which goes nowhere), spawn a small toxic gas cloud near the master
+	// while it's leaking. Without a "container contents" model we treat any
+	// damaged tank/canister/component as leaking generic toxic vapour at a
+	// rate scaled by damage severity.
 	var/current_integrity = master.get_integrity()
 	if(current_integrity > master.max_integrity * integrity_leak_percent)
 		return PROCESS_KILL
 	var/turf/location = get_turf(master)
-	var/true_rate = (1 - (current_integrity / master.max_integrity)) * leak_rate
-	for(var/datum/gas_mixture/mix as anything in airs)
-		var/pressure = mix.return_pressure()
-		if(mix.release_gas_to(location.return_air(), pressure, true_rate))
-			location.air_update_turf(FALSE, FALSE)
+	if(!isturf(location))
+		return
+	var/damage_factor = 1 - (current_integrity / master.max_integrity)
+	var/amount = damage_factor * leak_rate * 5
+	if(amount < 0.5)
+		return
+	spawn_gas_cloud(location, /datum/gas_effect/tox, amount, T20C)
 
 #undef PROCESS_OBJ
 #undef PROCESS_MACHINE

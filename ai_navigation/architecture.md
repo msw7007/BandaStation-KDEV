@@ -10,7 +10,7 @@ Generated 2026-05-21 for `BandaStation-Kagelite_DEV`. Orientation layer — read
 |---|---|
 | Active project file | `tgstation.dme` (repo root) — build this only |
 | First include (must stay first) | `code/genesis_call.dme` (`tgstation.dme:6`) |
-| Last include (modular overlay) | `modular_bandastation/modular_bandastation.dme` (`tgstation.dme:6954`, last line) |
+| Last include (modular overlay) | `modular_bandastation/modular_bandastation.dme` (`tgstation.dme:6961`, manually appended after `// END_INCLUDE`) |
 | Lint shim | `__odlint.dm` (`tgstation.dme:21`; OpenDream-only `#pragma` lints) |
 | Static analysis config | `SpacemanDMM.toml` (`environment = "tgstation.dme"`) |
 
@@ -35,13 +35,13 @@ The overlay model is detailed in `ai_navigation/modular_guide.md`.
 
 ## Include Order (invariants)
 
-`tgstation.dme` is a generated include manifest (~6954 lines). Do **not** hand-edit include lines without explicit approval (`ai_navigation/human_checking.md`). Stable invariants:
+`tgstation.dme` is a generated include manifest (~6961 lines). Do **not** hand-edit include lines without explicit approval (`ai_navigation/human_checking.md`). Stable invariants:
 
 1. `code/genesis_call.dme` is the FIRST include — guarantees earliest-executing code. Never let another `#include` precede it.
 2. `__odlint.dm`, `_maps/_basemap.dm`, byond-compat, `_compile_options.dm`, `_experiments.dm`, `code/world.dm` follow.
 3. `code/__DEFINES/**` — compile-time defines (must precede code that uses them).
 4. Core `code/**` — controllers, datums, game, modules, `_onclick`, etc.
-5. `interface/**` — BYOND skin (`tgstation.dme:6941-6950`).
+5. `interface/**` — BYOND skin (`tgstation.dme:6949-6957`), then `// END_INCLUDE` at line 6958.
 6. `modular_bandastation/modular_bandastation.dme` is the LAST include.
 
 ## Runtime Backbone

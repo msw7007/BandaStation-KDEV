@@ -152,13 +152,16 @@
 		var/athletics_skill =  (owner.mind?.get_skill_level(/datum/skill/athletics) || 1) - 1
 		owner.apply_damage(clamp((effective_stamina_per_interval - (athletics_skill / 2)) * gravity_modifier, 1, 100), STAMINA)
 
-	// You might not be swimming but you can breathe
+	// LIGHTWEIGHT ATMOS: oxy damage and losebreath are now handled exclusively
+	// by /mob/living/carbon/handle_water_breath (breath-hold timer). The
+	// swimming status effect keeps the stamina drain and movespeed modifier
+	// but no longer drowns mobs — the carbon breathe() path does that.
+	// Non-carbon basic mobs without underwater breathing still drown via the
+	// original oxy damage path.
+	if(iscarbon(owner))
+		return
 	if (HAS_TRAIT(owner, TRAIT_NODROWN) || HAS_TRAIT(owner, TRAIT_NOBREATH) || (owner.mob_size >= MOB_SIZE_HUMAN && owner.body_position == STANDING_UP))
 		return
-	if (iscarbon(owner))
-		var/mob/living/carbon/carbon_owner = owner
-		if (carbon_owner.internal || carbon_owner.external)
-			return
 	if (isbasicmob(owner))
 		var/mob/living/basic/basic_owner = owner
 		if (basic_owner.unsuitable_atmos_damage == 0)

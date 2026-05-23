@@ -28,9 +28,12 @@
 ///signal called by the stat of the target changing
 /datum/element/death_gases/proc/on_death(mob/living/target, gibbed)
 	SIGNAL_HANDLER
-	var/datum/gas_mixture/mix_to_spawn = new()
-	mix_to_spawn.add_gas(gas_type)
-	mix_to_spawn.set_gas(gas_type, amount_of_gas)
-	mix_to_spawn.set_temperature(T20C)
+	// LIGHTWEIGHT ATMOS: route to gas cloud instead of merging a gas_mixture
+	// into the turf (which no longer goes anywhere).
 	var/turf/open/our_turf = get_turf(target)
-	our_turf.assume_air(mix_to_spawn)
+	if(!istype(our_turf))
+		return
+	var/effect_path = atmos_legacy_gas_path_to_effect(gas_type)
+	if(!effect_path)
+		return
+	spawn_gas_cloud(our_turf, effect_path, amount_of_gas * 5, T20C)

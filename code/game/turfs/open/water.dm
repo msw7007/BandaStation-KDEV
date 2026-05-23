@@ -49,6 +49,10 @@
 	if(!isnull(fishing_datum))
 		add_lazy_fishing(fishing_datum)
 	ADD_TRAIT(src, TRAIT_CATCH_AND_RELEASE, INNATE_TRAIT)
+	// LIGHTWEIGHT ATMOS: mark this turf so the breath-hold system treats it
+	// as a water environment (gas clouds dissipate, mob breath-hold timer triggers).
+	// String literal because modular trait defines are included after main code.
+	ADD_TRAIT(src, "water_turf", INNATE_TRAIT)
 	if(reagent_to_extract)
 		AddElement(/datum/element/reagent_scoopable_atom, reagent_to_extract)
 

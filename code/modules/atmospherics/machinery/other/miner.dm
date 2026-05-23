@@ -131,14 +131,20 @@
 			mine_gas(seconds_per_tick)
 
 /obj/machinery/atmospherics/miner/proc/mine_gas(seconds_per_tick = 2)
+	// LIGHTWEIGHT ATMOS: instead of merging a gas mixture into the turf
+	// (which goes nowhere), spawn a gas effect cloud directly.
 	var/turf/open/O = get_turf(src)
 	if(!isopenturf(O))
 		return FALSE
-	var/datum/gas_mixture/merger = new
-	merger.assert_gas(spawn_id)
-	merger.gases[spawn_id][MOLES] = spawn_mol * seconds_per_tick
-	merger.temperature = spawn_temp
-	O.assume_air(merger)
+	var/effect_path = atmos_legacy_gas_path_to_effect(spawn_id)
+	if(!effect_path)
+		return FALSE
+	// Soft-cap: don't pile up on already-saturated tiles.
+	var/obj/effect/gas_cloud/existing = locate(/obj/effect/gas_cloud) in O
+	if(existing && existing.amount > 200)
+		return FALSE
+	spawn_gas_cloud(O, effect_path, spawn_mol * seconds_per_tick * 0.5, spawn_temp)
+	return TRUE
 
 /obj/machinery/atmospherics/miner/attack_ai(mob/living/silicon/user)
 	if(broken)

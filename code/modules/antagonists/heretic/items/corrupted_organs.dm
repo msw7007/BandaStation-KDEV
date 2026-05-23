@@ -248,14 +248,16 @@
 	. = ..()
 	if (!. || IS_IN_MANSUS(owner) || breather.has_reagent(/datum/reagent/water/holywater) || !prob(cough_chance))
 		return
-	breather.emote("cough");
+	breather.emote("cough")
+	// LIGHTWEIGHT ATMOS: cough up a visible gas cloud instead of dumping
+	// gas into the turf (which goes nowhere).
 	var/chosen_gas = pick_weight(gas_types)
-	var/datum/gas_mixture/mix_to_spawn = new()
-	mix_to_spawn.adjust_gas(pick(chosen_gas), gas_amount)
-	mix_to_spawn.temperature = breather.bodytemperature
-	log_atmos("[owner] coughed some gas into the air due to their corrupted lungs.", mix_to_spawn)
+	var/effect_path = atmos_legacy_gas_path_to_effect(pick(chosen_gas))
+	if(!effect_path)
+		effect_path = /datum/gas_effect/tox
 	var/turf/open/our_turf = get_turf(breather)
-	our_turf.assume_air(mix_to_spawn)
+	if(istype(our_turf))
+		spawn_gas_cloud(our_turf, effect_path, gas_amount, breather.bodytemperature)
 
 /obj/item/organ/lungs/corrupt/hear_breath_noise(mob/living/hearer)
 	hearer.playsound_local(src, 'sound/effects/magic/voidblink.ogg', 75, FALSE)

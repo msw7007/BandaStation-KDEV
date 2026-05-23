@@ -5,29 +5,14 @@
  */
 
 /obj/machinery/atmospherics/components/unary/hypertorus/core/process_atmos(seconds_per_tick)
-	/*
-	 *Pre-checks
-	 */
-	//first check if the machine is active
+	// LIGHTWEIGHT ATMOS: HFR fusion physics are disabled. The reactor object
+	// stays on maps as decoration but never simulates a reaction. Original
+	// pipeline of pre-check + fusion_process + damageheal + alert is gone.
 	if(!active)
 		return
-
-	//then check if the other machines are still there
 	if(!check_part_connectivity())
 		deactivate()
 		return
-
-	assert_gases()
-
-	// Run the reaction if it is either live or being started
-	if (start_power || power_level)
-		play_ambience(seconds_per_tick)
-		fusion_process(seconds_per_tick)
-		// Note that we process damage/healing even if the fusion process aborts.
-		// Running out of fuel won't save you if your moderator and coolant are exploding on their own.
-		process_moderator_overflow(seconds_per_tick)
-		process_damageheal(seconds_per_tick)
-		check_alert()
 	if (start_power)
 		remove_waste(seconds_per_tick)
 	update_pipenets()
