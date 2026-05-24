@@ -3,7 +3,7 @@
 		return FALSE
 	if(HAS_TRAIT(A, TRAIT_OUTDOOR_AIR))
 		return TRUE
-	if(A.outdoor)
+	if(A.outdoors)
 		return TRUE
 	if(istype(A, /area/space))
 		return FALSE
