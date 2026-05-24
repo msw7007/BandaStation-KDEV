@@ -1,12 +1,3 @@
-// ============================================================================
-// Concrete gas effect singletons.
-//
-// Effects are deliberately coarse — we collapse TG's ~15 distinct gases into
-// ~10 gameplay effects. Mapping between TG gases and effects lives in
-// `atmos_legacy_gas_id_to_effect()`.
-// ============================================================================
-
-// ---------- Generic toxic gas (plasma fumes, tritium, etc.) ----------
 /datum/gas_effect/tox
 	id = "tox"
 	name = "toxic vapour"
@@ -16,6 +7,8 @@
 	spread_rate = 0.4
 	decay_rate = 1.5
 	filter_tags = list(GAS_FILTER_TOXIC)
+	alarm_flags = CLOUD_ALARM_TOXIC
+	visibility_modifier = 1
 
 /datum/gas_effect/tox/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.04 * seconds_per_tick
@@ -23,7 +16,6 @@
 	if(prob(15))
 		breather.emote("cough")
 
-// ---------- Carbon dioxide ----------
 /datum/gas_effect/co2
 	id = "co2"
 	name = "carbon dioxide cloud"
@@ -40,7 +32,6 @@
 	if(amount > 30 && prob(8 * seconds_per_tick))
 		breather.adjust_drowsiness(2 SECONDS)
 
-// ---------- Nitrous oxide ----------
 /datum/gas_effect/n2o
 	id = "n2o"
 	name = "nitrous oxide cloud"
@@ -58,7 +49,6 @@
 	if(amount > 60 && prob(8 * seconds_per_tick))
 		breather.Sleeping(4 SECONDS)
 
-// ---------- Smoke (particulate; obscures vision and irritates) ----------
 /datum/gas_effect/smoke
 	id = "smoke"
 	name = "thick smoke"
@@ -68,6 +58,8 @@
 	spread_rate = 0.55
 	decay_rate = 2
 	filter_tags = list(GAS_FILTER_PARTICLE)
+	alarm_flags = CLOUD_ALARM_SMOKE
+	visibility_modifier = 2
 
 /datum/gas_effect/smoke/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	if(prob(25 * seconds_per_tick))
@@ -82,7 +74,6 @@
 	if(prob(10 * seconds_per_tick) && amount > 15)
 		C.emote("cough")
 
-// ---------- Sleeping smoke (knocks out) ----------
 /datum/gas_effect/sleeping_smoke
 	id = "sleeping_smoke"
 	name = "anaesthetic mist"
@@ -98,7 +89,6 @@
 	if(amount > 20 && prob(15 * seconds_per_tick))
 		breather.Sleeping(5 SECONDS)
 
-// ---------- Fire (replaces hotspot) ----------
 /datum/gas_effect/fire
 	id = "fire"
 	name = "burning air"
@@ -111,6 +101,9 @@
 	temperature_delta = 200
 	filter_tags = list(GAS_FILTER_HEAT)
 	affects_underwater = FALSE
+	alarm_flags = CLOUD_ALARM_FIRE
+	visibility_modifier = 1
+	scrubbable = FALSE
 
 /datum/gas_effect/fire/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.05 * seconds_per_tick
@@ -127,7 +120,6 @@
 	if(amount > 10 && prob(40))
 		L.ignite_mob()
 
-// ---------- Freezing cloud (cryotron / extinguisher / freon discharge) ----------
 /datum/gas_effect/freeze
 	id = "freeze"
 	name = "freezing mist"
@@ -139,6 +131,7 @@
 	temperature_delta = -120
 	filter_tags = list(GAS_FILTER_COLD)
 	affects_underwater = TRUE
+	alarm_flags = CLOUD_ALARM_COLD
 
 /datum/gas_effect/freeze/on_touch(atom/movable/AM, amount, seconds_per_tick)
 	if(isliving(AM))
@@ -149,7 +142,6 @@
 /datum/gas_effect/freeze/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	breather.adjust_bodytemperature(-2 * seconds_per_tick, 200)
 
-// ---------- Plasma fumes (toxic + combustible if fire nearby) ----------
 /datum/gas_effect/plasma
 	id = "plasma"
 	name = "plasma fumes"
@@ -159,6 +151,8 @@
 	spread_rate = 0.4
 	decay_rate = 1
 	filter_tags = list(GAS_FILTER_TOXIC, GAS_FILTER_CHEMICAL)
+	alarm_flags = CLOUD_ALARM_TOXIC | CLOUD_ALARM_CHEMICAL
+	visibility_modifier = 1
 
 /datum/gas_effect/plasma/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.06 * seconds_per_tick
@@ -166,7 +160,6 @@
 	if(prob(20 * seconds_per_tick))
 		breather.emote("cough")
 
-// ---------- Pure oxygen (healing for hypoxic mobs) ----------
 /datum/gas_effect/oxygen
 	id = "oxygen"
 	name = "oxygen-rich pocket"
@@ -181,7 +174,6 @@
 /datum/gas_effect/oxygen/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	breather.adjust_oxy_loss(-2 * seconds_per_tick)
 
-// ---------- Healing smoke (medical chems aerosol) ----------
 /datum/gas_effect/healing_smoke
 	id = "healing_smoke"
 	name = "medical mist"
@@ -196,3 +188,60 @@
 /datum/gas_effect/healing_smoke/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	breather.adjust_brute_loss(-0.5 * seconds_per_tick)
 	breather.adjust_fire_loss(-0.5 * seconds_per_tick)
+
+/datum/gas_effect/acid
+	id = "acid"
+	name = "acid mist"
+	color = "#9fff60"
+	density_type = GAS_DENSITY_HEAVY
+	spread_threshold = 5
+	spread_rate = 0.4
+	decay_rate = 2
+	filter_tags = list(GAS_FILTER_ACID, GAS_FILTER_CHEMICAL)
+	alarm_flags = CLOUD_ALARM_ACID
+	visibility_modifier = 1
+
+/datum/gas_effect/acid/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
+	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.03 * seconds_per_tick
+	breather.adjust_fire_loss(dose)
+	if(prob(15 * seconds_per_tick))
+		breather.emote("cough")
+
+/datum/gas_effect/acid/on_touch(atom/movable/AM, amount, seconds_per_tick)
+	if(!isliving(AM))
+		return
+	var/mob/living/L = AM
+	if(amount > 10)
+		L.adjust_fire_loss(0.4 * seconds_per_tick)
+		L.acid_act(min(amount * 0.3, 30), 5)
+
+/datum/gas_effect/chemical
+	id = "chemical"
+	name = "chemical aerosol"
+	color = "#d8c0ff"
+	density_type = GAS_DENSITY_NEUTRAL
+	spread_threshold = 4
+	spread_rate = 0.5
+	decay_rate = 1.5
+	filter_tags = list(GAS_FILTER_CHEMICAL)
+	alarm_flags = CLOUD_ALARM_CHEMICAL
+	visibility_modifier = 1
+	affects_underwater = TRUE
+
+/datum/gas_effect/biohazard
+	id = "biohazard"
+	name = "biohazardous fog"
+	color = "#7fc080"
+	density_type = GAS_DENSITY_HEAVY
+	spread_threshold = 5
+	spread_rate = 0.35
+	decay_rate = 1
+	filter_tags = list(GAS_FILTER_PARTICLE, GAS_FILTER_CHEMICAL)
+	alarm_flags = CLOUD_ALARM_BIOHAZARD | CLOUD_ALARM_TOXIC
+	visibility_modifier = 1
+
+/datum/gas_effect/biohazard/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
+	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.02 * seconds_per_tick
+	breather.adjust_tox_loss(dose)
+	if(prob(8 * seconds_per_tick))
+		breather.emote("cough")

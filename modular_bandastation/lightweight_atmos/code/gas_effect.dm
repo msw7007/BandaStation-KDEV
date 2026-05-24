@@ -1,62 +1,45 @@
-// ============================================================================
-// /datum/gas_effect — singleton "type of dangerous gas".
-//
-// One instance per effect type, cached in SSgas_effects.effect_singletons by
-// path. Concrete subtypes live in gas_effect_types.dm.
-// ============================================================================
-
 /datum/gas_effect
-	/// Stable identifier (e.g. "tox", "fire", "smoke").
 	var/id = "abstract"
-	/// Display name shown by scanners and admin tools.
 	var/name = "gas"
-	/// RGB hex for the cloud overlay.
 	var/color = "#888888"
-	/// Cloud icon state; defaults to "cloud".
 	var/icon_state = "cloud"
 
-	/// Density behaviour for Z-spread (see GAS_DENSITY_*).
 	var/density_type = GAS_DENSITY_NEUTRAL
 
-	/// Amount below which the cloud cannot spread to a neighbour.
 	var/spread_threshold = 5
-	/// Fraction of cloud amount that flows into a chosen neighbour per spread tick.
 	var/spread_rate = 0.4
-	/// Per-second decay applied by the subsystem.
 	var/decay_rate = 1
-	/// Per-second on-turf temperature delta (informational; not a physical sim).
 	var/temperature_delta = 0
 
-	/// Filter tags this effect carries. Masks/internals matching ALL listed
-	/// tags (or GAS_FILTER_ANY) fully block on_breathe.
 	var/list/filter_tags
 
-	/// Whether the cloud renders an overlay on the turf.
 	var/visible = TRUE
-	/// Whether this gas can persist in a water-environment turf.
 	var/affects_underwater = FALSE
-	/// Whether moving through the cloud (Crossed) triggers on_touch immediately.
 	var/touch_on_cross = TRUE
+
+	var/alarm_flags = CLOUD_ALARM_NONE
+	var/alarm_threshold = LIGHTWEIGHT_ATMOS_ALARM_THRESHOLD
+
+	var/visibility_modifier = 0
+
+	var/scrubbable = TRUE
+
+	var/list/default_chemicals = null
 
 /datum/gas_effect/New()
 	. = ..()
 	if(!filter_tags)
 		filter_tags = list()
 
-/// Effect applied per processing tick to a mob breathing this cloud.
-/// `amount` is the cloud's current strength (already capped via the cloud).
 /datum/gas_effect/proc/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	return
 
-/// Effect applied when a movable enters or stands on the cloud.
 /datum/gas_effect/proc/on_touch(atom/movable/AM, amount, seconds_per_tick)
 	return
 
-/// Optional hook called when the cloud's amount decays.
 /datum/gas_effect/proc/on_decay(turf/T, amount)
 	return
 
-/// Whether a wearer with the given filter-tag list is fully protected.
 /datum/gas_effect/proc/is_filtered_by(list/tags)
 	if(!length(tags) || !length(filter_tags))
 		return FALSE
@@ -66,3 +49,27 @@
 		if(!(tag in tags))
 			return FALSE
 	return TRUE
+
+/datum/gas_effect/proc/apply_chemicals_on_breathe(mob/living/carbon/breather, list/chem_pool, amount, seconds_per_tick)
+	if(!length(chem_pool) || !breather?.reagents)
+		return
+	var/dose_scale = LIGHTWEIGHT_ATMOS_CHEM_BREATH_FRACTION * seconds_per_tick * min(amount, GAS_EFFECT_PER_TICK_MAX) / max(GAS_EFFECT_PER_TICK_MAX, 1)
+	for(var/reagent_path in chem_pool)
+		var/dose = chem_pool[reagent_path] * dose_scale
+		if(dose <= 0)
+			continue
+		breather.reagents.add_reagent(reagent_path, dose)
+
+/datum/gas_effect/proc/apply_chemicals_on_touch(atom/movable/AM, list/chem_pool, amount, seconds_per_tick)
+	if(!length(chem_pool))
+		return
+	var/mob/living/L = AM
+	if(!istype(L) || !L.reagents)
+		return
+	var/dose_scale = LIGHTWEIGHT_ATMOS_CHEM_TOUCH_FRACTION * seconds_per_tick * min(amount, GAS_EFFECT_PER_TICK_MAX) / max(GAS_EFFECT_PER_TICK_MAX, 1)
+	for(var/reagent_path in chem_pool)
+		var/dose = chem_pool[reagent_path] * dose_scale
+		if(dose <= 0)
+			continue
+		L.reagents.add_reagent(reagent_path, dose, no_react = TRUE)
+	L.reagents.expose(L, TOUCH, 0.5)

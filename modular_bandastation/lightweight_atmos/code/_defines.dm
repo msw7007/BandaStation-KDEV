@@ -1,52 +1,81 @@
-// ============================================================================
-// Lightweight atmospherics: defines, constants, flags.
-// ============================================================================
-
-/// Maximum simultaneous gas clouds in the world. Newly-spawned clouds beyond
-/// this cap are silently dropped to keep CPU bounded.
 #define LIGHTWEIGHT_ATMOS_MAX_CLOUDS 600
 
-/// Below this amount, a cloud is removed.
 #define LIGHTWEIGHT_ATMOS_CLOUD_FLOOR 0.5
 
-/// Density behaviour of a gas effect along the Z-axis.
-#define GAS_DENSITY_LIGHT    -1   // rises (prefers up)
-#define GAS_DENSITY_NEUTRAL   0   // stays
-#define GAS_DENSITY_HEAVY     1   // sinks (prefers down)
+#define GAS_DENSITY_LIGHT    -1
+#define GAS_DENSITY_NEUTRAL   0
+#define GAS_DENSITY_HEAVY     1
 
-/// Filter tags — masks/internals match these against a gas effect's
-/// `filter_tags` list to decide whether they neutralise the effect.
-#define GAS_FILTER_PARTICLE  "particle"   // smoke, dust, aerosols
-#define GAS_FILTER_TOXIC     "toxic"      // tox, plasma fumes
+#define GAS_FILTER_PARTICLE  "particle"
+#define GAS_FILTER_TOXIC     "toxic"
 #define GAS_FILTER_CO2       "co2"
 #define GAS_FILTER_N2O       "n2o"
 #define GAS_FILTER_CHEMICAL  "chemical"
-#define GAS_FILTER_HEAT      "heat"       // burning hot air
+#define GAS_FILTER_HEAT      "heat"
 #define GAS_FILTER_COLD      "cold"
-#define GAS_FILTER_ANY       "any"        // catch-all (full hazmat / sealed suit)
+#define GAS_FILTER_ACID      "acid"
+#define GAS_FILTER_ANY       "any"
 
-/// Per-tick effects can ramp up; this is the upper bound on `amount`
-/// contribution to mob damage per single tick, regardless of how large the cloud is.
+#define CLOUD_ALARM_NONE            0
+#define CLOUD_ALARM_TOXIC          (1<<0)
+#define CLOUD_ALARM_FIRE           (1<<1)
+#define CLOUD_ALARM_COLD           (1<<2)
+#define CLOUD_ALARM_ACID           (1<<3)
+#define CLOUD_ALARM_CHEMICAL       (1<<4)
+#define CLOUD_ALARM_SMOKE          (1<<5)
+#define CLOUD_ALARM_OXYGEN_DANGER  (1<<6)
+#define CLOUD_ALARM_BIOHAZARD      (1<<7)
+
+#define COMSIG_AREA_CLOUD_ALARM "area_cloud_alarm"
+#define COMSIG_AREA_CLOUD_CLEARED "area_cloud_cleared"
+
+#define LIGHTWEIGHT_ATMOS_VENT_SCRUB_RATE 2
+
+#define LIGHTWEIGHT_ATMOS_ALARM_THRESHOLD 8
+
+#define LIGHTWEIGHT_ATMOS_CHEM_BREATH_FRACTION 0.05
+#define LIGHTWEIGHT_ATMOS_CHEM_TOUCH_FRACTION 0.03
+
+#define TRAIT_OUTDOOR_AIR "outdoor_air"
+
+#define AREA_AIR_O2_DEFAULT 1.0
+#define AREA_AIR_O2_TIGHT 0.6
+#define AREA_AIR_O2_SUFFOCATING 0.3
+#define AREA_AIR_O2_LETHAL 0.1
+
+#define AREA_AIR_CO2_DEFAULT 0.0
+#define AREA_AIR_CO2_TIGHT 0.4
+#define AREA_AIR_CO2_TOXIC 0.7
+
+#define AREA_AIR_O2_PER_BREATH 0.0015
+#define AREA_AIR_CO2_PER_BREATH 0.0015
+
+#define AREA_AIR_VENT_REFILL 0.06
+#define AREA_AIR_VENT_SCRUB_CO2 0.05
+
+#define AREA_AIR_OUTDOOR_REGEN 0.5
+#define AREA_AIR_INDOOR_DRIFT 0.0005
+
+#define AREA_AIR_TICK_INTERVAL 5
+
+#define AREA_AIR_QUALITY_GOOD 0
+#define AREA_AIR_QUALITY_TIGHT 1
+#define AREA_AIR_QUALITY_SUFFOCATING 2
+#define AREA_AIR_QUALITY_LETHAL 3
+#define AREA_AIR_QUALITY_TOXIC 4
+
 #define GAS_EFFECT_PER_TICK_MAX 50
 
-/// Clothing flag: this suit/mask/helmet supplies its own breathable air
-/// (rebreather, scuba, sealed hazmat). Wearer ignores environment + gas clouds.
 #define BREATHES_UNDERWATER (1<<29)
 
-/// Trait applied when a mob is connected to working internals.
 #define TRAIT_INTERNAL_BREATHER "internal_breather"
-/// Trait flagged on a mob currently holding its breath underwater.
 #define TRAIT_HOLDING_BREATH "holding_breath"
 
-/// Breath environment categories returned by `get_breath_environment()`.
 #define BREATH_ENV_NORMAL    "normal"
 #define BREATH_ENV_VACUUM    "vacuum"
 #define BREATH_ENV_WATER     "water"
 #define BREATH_ENV_INTERNALS "internals"
 
-/// Default time (seconds) a healthy mob can hold its breath underwater.
 #define HOLDING_BREATH_DEFAULT_SECONDS 30
 
-/// How many breaths a single "standard" tank holds before going empty.
-/// Replaces molar arithmetic with a flat counter.
 #define TANK_DEFAULT_BREATH_CAPACITY 100

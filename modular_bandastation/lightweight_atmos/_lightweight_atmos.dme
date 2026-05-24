@@ -12,3 +12,7 @@
 #include "code/water_breath.dm"
 #include "code/ssair_neutralise.dm"
 #include "code/atmos_sensitive_shim.dm"
+#include "code/alarms.dm"
+#include "code/outdoor_traits.dm"
+#include "code/area_air.dm"
+#include "code/vent_pump_lite.dm"

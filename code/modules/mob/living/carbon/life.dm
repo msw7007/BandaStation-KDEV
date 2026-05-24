@@ -93,6 +93,8 @@
 	else
 		end_water_breath()
 
+	breathe_from_area(seconds_per_tick)
+
 	var/datum/gas_mixture/environment
 	if(loc)
 		environment = loc.return_air()
