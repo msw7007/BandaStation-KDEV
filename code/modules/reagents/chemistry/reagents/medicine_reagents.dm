@@ -271,6 +271,10 @@
 	inverse_chem = /datum/reagent/inverse/spaceacillin
 	added_traits = list(TRAIT_VIRUS_RESISTANCE)
 
+/datum/reagent/medicine/spaceacillin/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
+	. = ..()
+	affected_mob.reduce_bodypart_infections(1.5 * metabolization_ratio * seconds_per_tick * normalise_creation_purity(), maximum_reduction = 50, maximum_treatable = 50)
+
 //Goon Chems. Ported mainly from Goonstation. Easily mixable (or not so easily) and provide a variety of effects.
 
 /datum/reagent/medicine/oxandrolone
@@ -391,6 +395,9 @@
 
 	if(methods & (PATCH|TOUCH))
 		exposed_mob.add_surgery_speed_mod(type, 0.9, min(reac_volume * 1 MINUTES, 5 MINUTES))
+		if(iscarbon(exposed_mob))
+			var/mob/living/carbon/carbon_mob = exposed_mob
+			carbon_mob.reduce_bodypart_infections(reac_volume * 0.5, maximum_reduction = 90, maximum_treatable = 90)
 		if(show_message)
 			to_chat(exposed_mob, span_danger("You feel your injuries fade away to nothing!") )
 

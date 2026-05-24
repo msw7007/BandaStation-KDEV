@@ -16,6 +16,12 @@
 			zone = BODY_ZONE_HEAD
 		if(BODY_ZONE_PRECISE_MOUTH)
 			zone = BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_EARS)
+			zone = BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_NECK)
+			zone = BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_ABDOMEN)
+			zone = BODY_ZONE_CHEST
 		if(BODY_ZONE_PRECISE_L_HAND)
 			zone = BODY_ZONE_L_ARM
 		if(BODY_ZONE_PRECISE_R_HAND)
@@ -86,7 +92,7 @@
 
 ///Would this zone be above the neck
 /proc/above_neck(zone)
-	var/list/zones = list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_EYES)
+	var/list/zones = list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK)
 	if(zones.Find(zone))
 		return TRUE
 	else

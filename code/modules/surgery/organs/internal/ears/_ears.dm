@@ -8,6 +8,7 @@
 
 	healing_factor = STANDARD_ORGAN_HEALING
 	decay_factor = STANDARD_ORGAN_DECAY
+	pain_multiplier = 0.5
 
 	low_threshold_passed = span_info("Your ears begin to resonate with an internal ring sometimes.")
 	now_failing = span_warning("You are unable to hear at all!")
@@ -102,10 +103,20 @@
 	UnregisterSignal(organ_owner, COMSIG_MOB_SAY)
 
 /obj/item/organ/ears/on_begin_failure()
+	add_organ_condition(ORGAN_CONDITION_DEAFNESS)
 	add_organ_trait(TRAIT_DEAF)
 
 /obj/item/organ/ears/on_failure_recovery()
+	remove_organ_condition(ORGAN_CONDITION_DEAFNESS)
 	remove_organ_trait(TRAIT_DEAF)
+
+/obj/item/organ/ears/on_condition_added(condition_flag)
+	if(condition_flag == ORGAN_CONDITION_DEAFNESS)
+		add_organ_trait(TRAIT_DEAF)
+
+/obj/item/organ/ears/on_condition_removed(condition_flag)
+	if(condition_flag == ORGAN_CONDITION_DEAFNESS)
+		remove_organ_trait(TRAIT_DEAF)
 
 /// Being deafened by loud noises makes you shout
 /obj/item/organ/ears/proc/adjust_speech(datum/source, list/speech_args)

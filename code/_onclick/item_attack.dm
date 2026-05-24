@@ -28,6 +28,9 @@
 		return source_atom.melee_attack_chain(user, target, modifiers, attack_modifiers)
 
 	var/is_right_clicking = LAZYACCESS(modifiers, RIGHT_CLICK)
+	var/mob/living/carbon/carbon_user = iscarbon(user) ? user : null
+	if(carbon_user?.handle_active_hand_medical_pain())
+		return TRUE
 
 	var/item_interact_result = target.base_item_interaction(user, src, modifiers)
 	if(item_interact_result & ITEM_INTERACT_SUCCESS)
@@ -371,6 +374,7 @@
 		sharpness = attacking_item.get_sharpness(),
 		attack_direction = get_dir(user, src),
 		attacking_item = attacking_item,
+		precise_zone = user.zone_selected,
 	)
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)

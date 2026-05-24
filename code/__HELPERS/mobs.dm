@@ -657,6 +657,12 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 			return "грудь"
 		if(BODY_ZONE_HEAD)
 			return "голова"
+		if(BODY_ZONE_PRECISE_EARS)
+			return "ears"
+		if(BODY_ZONE_PRECISE_NECK)
+			return "neck"
+		if(BODY_ZONE_PRECISE_ABDOMEN)
+			return "abdomen"
 		if(BODY_ZONE_PRECISE_R_HAND)
 			return "правая кисть"
 		if(BODY_ZONE_PRECISE_L_HAND)
@@ -687,6 +693,12 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 			return BODY_ZONE_HEAD
 		if(BODY_ZONE_PRECISE_MOUTH)
 			return BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_EARS)
+			return BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_NECK)
+			return BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_ABDOMEN)
+			return BODY_ZONE_CHEST
 		if(BODY_ZONE_PRECISE_R_HAND)
 			return BODY_ZONE_R_ARM
 		if(BODY_ZONE_PRECISE_L_HAND)

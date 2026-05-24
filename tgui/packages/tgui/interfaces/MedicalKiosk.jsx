@@ -143,6 +143,17 @@ const MedicalKioskScanResults1 = (props) => {
     burn_health,
     suffocation_health,
     toxin_health,
+    chemical_health,
+    oxygenation,
+    blood_pressure,
+    pain_total,
+    infection_total,
+    blunt_damage,
+    pierce_damage,
+    slash_damage,
+    heat_damage,
+    cold_damage,
+    acid_damage,
   } = data;
   return (
     <Section title="Patient Health">
@@ -172,6 +183,34 @@ const MedicalKioskScanResults1 = (props) => {
           <ProgressBar value={toxin_health / 100} color="bad">
             <AnimatedNumber value={toxin_health} />
           </ProgressBar>
+        </LabeledList.Item>
+        <LabeledList.Item label="Chemical Damage">
+          <ProgressBar value={chemical_health / 100} color="bad">
+            <AnimatedNumber value={chemical_health} />
+          </ProgressBar>
+        </LabeledList.Item>
+        <LabeledList.Divider />
+        <LabeledList.Item label="Physical Damage">
+          BLUNT <AnimatedNumber value={blunt_damage} />, PIERCE{' '}
+          <AnimatedNumber value={pierce_damage} />, SLASH{' '}
+          <AnimatedNumber value={slash_damage} />
+        </LabeledList.Item>
+        <LabeledList.Item label="Thermal Damage">
+          HEAT <AnimatedNumber value={heat_damage} />, COLD{' '}
+          <AnimatedNumber value={cold_damage} />, ACID{' '}
+          <AnimatedNumber value={acid_damage} />
+        </LabeledList.Item>
+        <LabeledList.Item label="Oxygenation">
+          <ProgressBar value={oxygenation / 100} color="good">
+            <AnimatedNumber value={oxygenation} />%
+          </ProgressBar>
+        </LabeledList.Item>
+        <LabeledList.Item label="Blood Pressure">
+          <AnimatedNumber value={blood_pressure} />%
+        </LabeledList.Item>
+        <LabeledList.Item label="Pain / Infection">
+          Pain <AnimatedNumber value={pain_total} />, infection{' '}
+          <AnimatedNumber value={infection_total} />%
         </LabeledList.Item>
       </LabeledList>
     </Section>

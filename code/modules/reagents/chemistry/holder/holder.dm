@@ -455,8 +455,10 @@
 			if(!belly)
 				var/expel_amount = round(amount, CHEMICAL_QUANTISATION_LEVEL)
 				if(expel_amount > 0 )
-					eater.expel_ingested(my_atom, expel_amount)
-				return
+					var/absorbed_amount = remove_all(expel_amount)
+					if(absorbed_amount)
+						eater.adjust_tox_loss(absorbed_amount, forced = TRUE)
+				return expel_amount
 			target_holder = belly.reagents
 			target_atom = belly
 		else if(!target.reagents)
@@ -464,6 +466,10 @@
 		else
 			target_holder = target.reagents
 			target_atom = target
+
+	if(methods && iscarbon(target_atom))
+		var/mob/living/carbon/carbon_target = target_atom
+		multiplier *= carbon_target.get_bloodstream_reagent_multiplier(methods, cached_reagents)
 
 	// Prevents small amount problems, as well as zero and below zero amounts.
 	amount = round(min(amount, total_volume, target_holder.maximum_volume - target_holder.total_volume), CHEMICAL_QUANTISATION_LEVEL)

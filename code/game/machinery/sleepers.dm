@@ -357,3 +357,22 @@
 			log_combat(user, occupant, "sprayed [chem] into", addition = "via [src]")
 		return TRUE
 	return ..()
+
+/obj/machinery/sleeper/bioscanner
+	name = "bio-scanner"
+	desc = "A diagnostic chamber that repeatedly scans the patient's full body state."
+	possible_chems = list()
+	deconstructable = TRUE
+	controls_inside = TRUE
+	circuit = null
+	var/next_bioscan = 0
+
+/obj/machinery/sleeper/bioscanner/process()
+	use_energy(idle_power_usage)
+	if(!occupant || state_open || world.time < next_bioscan)
+		return
+	next_bioscan = world.time + 10 SECONDS
+	var/mob/living/patient = occupant
+	var/report = healthscan(null, patient, SCANNER_VERBOSE, TRUE, FALSE)
+	if(report)
+		to_chat(patient, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)

@@ -88,11 +88,11 @@
 /// Updates code-only FOV from current eye damage. Visual TG FOV remains separate.
 /mob/living/proc/update_code_fov()
 	var/eye_damage = get_eye_damage_percent()
-	if(eye_damage >= 75)
+	if(eye_damage >= 70)
 		code_fov_angle = 90
-	else if(eye_damage >= 50)
+	else if(eye_damage >= 40)
 		code_fov_angle = 180
-	else if(eye_damage >= 25)
+	else if(eye_damage >= 10)
 		code_fov_angle = 270
 	else
 		code_fov_angle = 360

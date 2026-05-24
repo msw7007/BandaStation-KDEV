@@ -5,6 +5,7 @@
 
 	zone = BODY_ZONE_PRECISE_MOUTH
 	slot = ORGAN_SLOT_TONGUE
+	pain_multiplier = 0.1
 	attack_verb_continuous = list("licks", "slobbers", "slaps", "frenches", "tongues")
 	attack_verb_simple = list("lick", "slobber", "slap", "french", "tongue")
 	voice_filter = ""
@@ -154,14 +155,37 @@
 	organ_owner.voice_filter = initial(organ_owner.voice_filter)
 
 /obj/item/organ/tongue/on_begin_failure()
+	add_organ_condition(ORGAN_CONDITION_SPEECH_IMPAIRMENT)
 	remove_organ_trait(TRAIT_SPEAKS_CLEARLY)
 	add_organ_trait(TRAIT_AGEUSIA)
 
 /obj/item/organ/tongue/on_failure_recovery()
+	remove_organ_condition(ORGAN_CONDITION_SPEECH_IMPAIRMENT)
 	if(speakable_with)
 		add_organ_trait(TRAIT_SPEAKS_CLEARLY)
 	if(sense_of_taste)
 		remove_organ_trait(TRAIT_AGEUSIA)
+
+/obj/item/organ/tongue/on_life(seconds_per_tick)
+	. = ..()
+	if(owner && (organ_condition_flags & ORGAN_CONDITION_SPEECH_IMPAIRMENT))
+		owner.adjust_slurring_up_to(1 SECONDS * seconds_per_tick, 10 SECONDS)
+		owner.adjust_stutter_up_to(0.5 SECONDS * seconds_per_tick, 6 SECONDS)
+
+/obj/item/organ/tongue/on_high_damage_received()
+	add_organ_condition(ORGAN_CONDITION_SPEECH_IMPAIRMENT)
+
+/obj/item/organ/tongue/on_high_damage_healed()
+	if(!(organ_flags & ORGAN_FAILING))
+		remove_organ_condition(ORGAN_CONDITION_SPEECH_IMPAIRMENT)
+
+/obj/item/organ/tongue/on_condition_added(condition_flag)
+	if(condition_flag == ORGAN_CONDITION_SPEECH_IMPAIRMENT)
+		remove_organ_trait(TRAIT_SPEAKS_CLEARLY)
+
+/obj/item/organ/tongue/on_condition_removed(condition_flag)
+	if(condition_flag == ORGAN_CONDITION_SPEECH_IMPAIRMENT && speakable_with && !(organ_flags & ORGAN_FAILING))
+		add_organ_trait(TRAIT_SPEAKS_CLEARLY)
 
 /obj/item/organ/tongue/could_speak_language(datum/language/language_path)
 	return (language_path in languages_possible)

@@ -336,6 +336,10 @@
 		check_self_for_injuries()
 		return
 
+	if(helper.pulling == src && !helper.combat_mode && !combat_mode)
+		palpate_selected_bodypart(helper)
+		return
+
 	if(body_position == LYING_DOWN)
 		if(buckled)
 			to_chat(helper, span_warning("Для начала вам нужно отстегнуть [declent_ru(ACCUSATIVE)]!"))
@@ -441,6 +445,71 @@
 	if (incapacitated)
 		shake_up_animation()
 
+/mob/living/carbon/proc/palpate_selected_bodypart(mob/living/carbon/helper)
+	if(!istype(helper))
+		return FALSE
+	var/obj/item/bodypart/limb = get_bodypart(check_zone(helper.zone_selected))
+	if(!limb)
+		to_chat(helper, span_warning("There is no bodypart to palpate there."))
+		return TRUE
+	helper.visible_message(span_notice("[helper] palpates [src]'s [parse_zone_with_bodypart(limb.body_zone)]."), span_notice("You start palpating [src]'s [parse_zone_with_bodypart(limb.body_zone)]."))
+	if(!do_after(helper, 20 SECONDS, target = src))
+		return TRUE
+	if(helper.pulling != src || helper.combat_mode || combat_mode)
+		return TRUE
+	var/list/report = list()
+	report += span_notice("<b>Palpation: [parse_zone_with_bodypart(limb.body_zone)]</b>")
+	report += span_notice("Physical: BLUNT [round(limb.blunt_dam, 0.1)], PIERCE [round(limb.pierce_dam, 0.1)], SLASH [round(limb.slash_dam, 0.1)].")
+	report += span_notice("Thermal: HEAT [round(limb.heat_dam, 0.1)], COLD [round(limb.cold_dam, 0.1)], ACID [round(limb.acid_dam, 0.1)].")
+	report += span_notice("Pain [round(limb.pain, 0.1)], infection [round(limb.infection, 0.1)]%.")
+	if(limb.blunt_trauma || limb.pierce_trauma || limb.slash_trauma || limb.heat_trauma || limb.cold_trauma || limb.acid_trauma)
+		report += span_warning("Trauma flags: blunt [limb.blunt_trauma], pierce [limb.pierce_trauma], slash [limb.slash_trauma], heat [limb.heat_trauma], cold [limb.cold_trauma], acid [limb.acid_trauma].")
+	if(length(limb.wounds))
+		var/list/wound_names = list()
+		for(var/datum/wound/wound as anything in limb.wounds)
+			wound_names += wound.name
+		report += span_warning("Wounds: [english_list(wound_names)].")
+	to_chat(helper, boxed_message(report.Join("<br>")))
+	return TRUE
+
+/mob/living/carbon/proc/handle_bodypart_movement_trauma()
+	if(stat == DEAD || body_position == LYING_DOWN)
+		return
+	for(var/zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG))
+		var/obj/item/bodypart/leg = get_bodypart(zone)
+		if(!leg)
+			continue
+		if(leg.blunt_trauma >= TRAUMA_MINOR || leg.heat_trauma >= TRAUMA_MINOR || leg.acid_trauma >= TRAUMA_MINOR)
+			leg.add_bodypart_pain(1)
+		if(leg.cold_trauma >= TRAUMA_MINOR)
+			leg.add_bodypart_pain(0.7)
+		if((leg.blunt_trauma == TRAUMA_CRITICAL || leg.slash_trauma == TRAUMA_CRITICAL) && prob(max((leg.get_damage() / max(leg.max_damage, 1)) * 100, 0)))
+			Knockdown(2 SECONDS)
+	var/obj/item/bodypart/chest = get_bodypart(BODY_ZONE_CHEST)
+	if(chest && (chest.blunt_trauma == TRAUMA_CRITICAL || chest.cold_trauma == TRAUMA_CRITICAL || chest.acid_trauma == TRAUMA_CRITICAL))
+		chest.apply_organ_spill_damage(1, chest.last_precise_zone)
+
+/mob/living/carbon/proc/handle_active_hand_medical_pain()
+	if(stat == DEAD)
+		return FALSE
+	var/obj/item/bodypart/arm/active_arm = has_hand_for_held_index(active_hand_index)
+	if(!istype(active_arm))
+		return FALSE
+	if(active_arm.blunt_trauma >= TRAUMA_MINOR || active_arm.heat_trauma >= TRAUMA_MINOR || active_arm.acid_trauma >= TRAUMA_MINOR)
+		active_arm.add_bodypart_pain(1)
+	if(active_arm.cold_trauma >= TRAUMA_MINOR)
+		active_arm.add_bodypart_pain(0.7)
+	if(active_arm.acid_trauma == TRAUMA_CRITICAL)
+		to_chat(src, span_warning("Pain in your [active_arm.plaintext_zone] prevents the action."))
+		return TRUE
+	if(active_arm.blunt_trauma == TRAUMA_CRITICAL || active_arm.slash_trauma == TRAUMA_CRITICAL)
+		var/drop_chance = clamp((active_arm.get_damage() / max(active_arm.max_damage, 1)) * 100, 0, 100)
+		var/obj/item/held_item = get_item_for_held_index(active_hand_index)
+		if(held_item && prob(drop_chance))
+			dropItemToGround(held_item)
+			to_chat(src, span_warning("Pain shoots through your [active_arm.plaintext_zone], and you drop [held_item]."))
+	return FALSE
+
 /mob/proc/shake_up_animation()
 		var/direction = prob(50) ? -1 : 1
 		animate(src, pixel_w = SHAKE_ANIMATION_OFFSET * direction, time = 0.1 SECONDS, easing = QUAD_EASING | EASE_OUT, flags = ANIMATION_PARALLEL|ANIMATION_RELATIVE)
@@ -537,7 +606,17 @@
 	if(!forced && HAS_TRAIT(src, TRAIT_NOBREATH))
 		amount = min(amount, 0) //Prevents oxy damage but not healing
 
-	. = ..()
+	if(!can_adjust_oxy_loss(amount, forced, required_biotype, required_respiration_type))
+		return 0
+	var/old_loss = get_oxy_loss()
+	var/new_loss = clamp(old_loss + amount * CONFIG_GET(number/damage_multiplier), 0, maxHealth * 2)
+	oxygenation = clamp(100 - new_loss, 0, 100)
+	var/delta = new_loss - old_loss
+	if(delta)
+		adjust_organ_loss(ORGAN_SLOT_LUNGS, delta, required_organ_flag = ORGAN_ORGANIC)
+	. = old_loss - new_loss
+	if(updating_health && .)
+		updatehealth()
 	check_passout()
 
 /mob/living/carbon/proc/get_interaction_efficiency(zone)
@@ -546,7 +625,17 @@
 		return
 
 /mob/living/carbon/set_oxy_loss(amount, updating_health = TRUE, forced, required_biotype, required_respiration_type)
-	. = ..()
+	if(!can_adjust_oxy_loss(amount, forced, required_biotype, required_respiration_type))
+		return 0
+	var/old_loss = get_oxy_loss()
+	var/new_loss = clamp(amount, 0, maxHealth * 2)
+	oxygenation = clamp(100 - new_loss, 0, 100)
+	var/delta = new_loss - old_loss
+	if(delta)
+		adjust_organ_loss(ORGAN_SLOT_LUNGS, delta, required_organ_flag = ORGAN_ORGANIC)
+	. = old_loss - new_loss
+	if(updating_health && .)
+		updatehealth()
 	check_passout()
 
 /**

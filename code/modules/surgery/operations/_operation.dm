@@ -1183,7 +1183,24 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 	SEND_SIGNAL(surgeon, COMSIG_ATOM_SURGERY_FAILED, src, operating_on, tool)
 	play_operation_sound(operating_on, surgeon, tool, failure_sound)
+	apply_surgery_failure_damage(operating_on, surgeon, tool, operation_args)
 	on_failure(operating_on, surgeon, tool, operation_args)
+
+/datum/surgery_operation/proc/apply_surgery_failure_damage(atom/movable/operating_on, mob/living/surgeon, tool, list/operation_args)
+	PROTECTED_PROC(TRUE)
+	var/damage_amount = max(5, round(time / (1 SECONDS)))
+	if(isbodypart(operating_on))
+		var/obj/item/bodypart/limb = operating_on
+		limb.receive_damage(brute = damage_amount, wound_bonus = CANT_WOUND, sharpness = SHARP_EDGED, damage_source = tool, brute_type = BODYPART_DAMAGE_SLASH)
+		return
+	if(isorgan(operating_on))
+		var/obj/item/organ/organ = operating_on
+		organ.apply_organ_damage(damage_amount)
+		organ.bodypart_owner?.receive_damage(brute = damage_amount, wound_bonus = CANT_WOUND, sharpness = SHARP_EDGED, damage_source = tool, brute_type = BODYPART_DAMAGE_SLASH)
+		return
+	var/mob/living/patient = get_patient(operating_on)
+	if(patient)
+		patient.apply_damage(damage_amount, BRUTE, operation_args[OPERATION_TARGET_ZONE] || BODY_ZONE_CHEST, wound_bonus = CANT_WOUND, sharpness = SHARP_EDGED, attacking_item = tool, brute_type = BODYPART_DAMAGE_SLASH)
 
 /**
  * Used to customize behavior when the operation fails

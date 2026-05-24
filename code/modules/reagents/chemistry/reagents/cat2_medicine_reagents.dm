@@ -519,6 +519,7 @@
 	for(var/i in carbies.all_wounds)
 		var/datum/wound/iter_wound = i
 		iter_wound.on_synthflesh(reac_volume)
+	carbies.reduce_bodypart_infections(reac_volume, maximum_reduction = 90, maximum_treatable = 90)
 	var/need_mob_update = harmies + burnies
 	need_mob_update = carbies.adjust_tox_loss((harmies + burnies)*(0.5 + (0.25*(1-creation_purity))), updating_health = FALSE, required_biotype = affected_biotype) || need_mob_update //0.5 - 0.75
 

@@ -9,6 +9,7 @@
 
 	healing_factor = STANDARD_ORGAN_HEALING
 	decay_factor = STANDARD_ORGAN_DECAY
+	pain_multiplier = 0.2
 	maxHealth = 0.5 * STANDARD_ORGAN_THRESHOLD //half the normal health max since we go blind at 30, a permanent blindness at 50 therefore makes sense unless medicine is administered
 	high_threshold = 0.3 * STANDARD_ORGAN_THRESHOLD //threshold at 30
 	low_threshold = 0.2 * STANDARD_ORGAN_THRESHOLD //threshold at 20
@@ -438,9 +439,11 @@
 	owner?.assign_nearsightedness(EYE_DAMAGE, 3, TRUE)
 
 /obj/item/organ/eyes/on_begin_failure()
+	add_organ_condition(ORGAN_CONDITION_BLINDNESS)
 	owner?.become_blind(EYE_DAMAGE)
 
 /obj/item/organ/eyes/on_failure_recovery()
+	remove_organ_condition(ORGAN_CONDITION_BLINDNESS)
 	owner?.cure_blind(EYE_DAMAGE)
 
 /obj/item/organ/eyes/on_high_damage_healed()
@@ -451,6 +454,14 @@
 /obj/item/organ/eyes/on_low_damage_healed()
 	// clear nearsightedness from damage
 	owner?.cure_nearsighted(EYE_DAMAGE)
+
+/obj/item/organ/eyes/on_condition_added(condition_flag)
+	if(condition_flag == ORGAN_CONDITION_BLINDNESS)
+		owner?.become_blind(EYE_DAMAGE)
+
+/obj/item/organ/eyes/on_condition_removed(condition_flag)
+	if(condition_flag == ORGAN_CONDITION_BLINDNESS)
+		owner?.cure_blind(EYE_DAMAGE)
 
 /obj/item/organ/eyes/feel_for_damage(self_aware)
 	// Eye damage has visual effects, so we don't really need to "feel" it when self-examining

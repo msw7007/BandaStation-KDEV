@@ -41,6 +41,8 @@
 		return
 
 	. = ..()
+	infection = max(infection, limb.infection)
+	limb.infection = max(limb.infection, infection)
 	if(strikes_to_lose_limb <= 0) // we've already hit sepsis, nothing more to do
 		victim.adjust_tox_loss(0.25 * seconds_per_tick)
 		if(SPT_PROB(0.5, seconds_per_tick))
@@ -82,10 +84,12 @@
 	if(sanitization > 0)
 		var/bandage_factor = current_gauze?.burn_cleanliness_bonus || 1
 		infection = max(infection - (WOUND_BURN_SANITIZATION_RATE * seconds_per_tick), 0)
+		limb.infection = min(limb.infection, infection)
 		sanitization = max(sanitization - (WOUND_BURN_SANITIZATION_RATE * bandage_factor * seconds_per_tick), 0)
 		return
 
 	infection += infection_rate * seconds_per_tick
+	limb.infection = max(limb.infection, infection)
 	switch(infection)
 		if(0 to WOUND_INFECTION_MODERATE)
 			return
@@ -340,6 +344,88 @@
 	wound_path_to_generate = /datum/wound/burn/flesh/severe
 
 	threshold_minimum = 80
+
+/datum/wound/burn/flesh/frostbite
+	name = "Обморожение"
+	desc = "Ткани пациента повреждены холодом, работа конечности нарушена."
+	treat_text = "Согрейте конечность, примените термоповязки, медикаменты или проведите операционное лечение травмы."
+	treat_text_short = "Согрейте и обработайте конечность."
+	examine_desc = "побледнела, потеряла чувствительность и покрыта холодовой травмой"
+	occur_text = "мертвенно бледнеет от холода"
+	infection_rate = 0
+	damage_multiplier_penalty = 2
+	scar_keyword = "frostbite"
+
+/datum/wound/burn/flesh/frostbite/moderate
+	name = "Обморожение 1 уровня"
+	severity = WOUND_SEVERITY_MODERATE
+	interaction_efficiency_penalty = 1.5
+	limp_slowdown = 2
+	limp_chance = 20
+	flesh_damage = 5
+
+/datum/wound_pregen_data/flesh_burn/frostbite_first
+	abstract = FALSE
+	can_be_randomly_generated = FALSE
+	wound_series = WOUND_SERIES_FLESH_FROSTBITE
+	wound_path_to_generate = /datum/wound/burn/flesh/frostbite/moderate
+	threshold_minimum = 40
+
+/datum/wound/burn/flesh/frostbite/severe
+	name = "Обморожение 2 уровня"
+	severity = WOUND_SEVERITY_SEVERE
+	interaction_efficiency_penalty = 2
+	limp_slowdown = 5
+	limp_chance = 80
+	disabling = TRUE
+	flesh_damage = 12.5
+
+/datum/wound_pregen_data/flesh_burn/frostbite_second
+	abstract = FALSE
+	can_be_randomly_generated = FALSE
+	wound_series = WOUND_SERIES_FLESH_FROSTBITE
+	wound_path_to_generate = /datum/wound/burn/flesh/frostbite/severe
+	threshold_minimum = 80
+
+/datum/wound/burn/flesh/chemical
+	name = "Химический ожог"
+	desc = "Ткани пациента прожжены едким веществом."
+	treat_text = "Промойте рану, примените медикаменты, перевязку или проведите операционное лечение травмы."
+	treat_text_short = "Промойте, обработайте и перевяжите рану."
+	examine_desc = "покрыта едким химическим ожогом"
+	occur_text = "шипит от химического повреждения"
+	damage_multiplier_penalty = 1.2
+	flesh_damage = 7.5
+	scar_keyword = "chemicalburn"
+
+/datum/wound/burn/flesh/chemical/moderate
+	name = "Химический ожог 1 уровня"
+	severity = WOUND_SEVERITY_MODERATE
+	infection_rate = 0.03
+
+/datum/wound_pregen_data/flesh_burn/chemical_first
+	abstract = FALSE
+	can_be_randomly_generated = FALSE
+	wound_series = WOUND_SERIES_FLESH_CHEMICAL_BURN
+	wound_path_to_generate = /datum/wound/burn/flesh/chemical/moderate
+	threshold_minimum = 25
+
+/datum/wound/burn/flesh/chemical/severe
+	name = "Химический ожог 2 уровня"
+	severity = WOUND_SEVERITY_SEVERE
+	interaction_efficiency_penalty = 2
+	limp_slowdown = 3
+	limp_chance = 60
+	disabling = TRUE
+	infection_rate = 0.07
+	flesh_damage = 15
+
+/datum/wound_pregen_data/flesh_burn/chemical_second
+	abstract = FALSE
+	can_be_randomly_generated = FALSE
+	wound_series = WOUND_SERIES_FLESH_CHEMICAL_BURN
+	wound_path_to_generate = /datum/wound/burn/flesh/chemical/severe
+	threshold_minimum = 60
 
 /datum/wound/burn/flesh/critical
 	name = "Катастрофический ожог"

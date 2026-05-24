@@ -32,6 +32,11 @@
 ///Cooldown for being on the recently treated trait for the purposes for bounty submission
 #define RECENTLY_HEALED_COOLDOWN 5 MINUTES
 
+#define PAINKILLER_NONE 0
+#define PAINKILLER_WEAK 1
+#define PAINKILLER_STRONG 2
+#define PAINKILLER_INSTANT 3
+
 // Return values for the limb_applicable component's callback can_apply
 /// Block the standard application of this item
 #define LIMB_APPLICABLE_BLOCK_APPLICATION (1<<0)

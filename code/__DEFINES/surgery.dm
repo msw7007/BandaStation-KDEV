@@ -42,6 +42,17 @@
 /// Organ flags that correspond to bodytypes
 #define ORGAN_TYPE_FLAGS (ORGAN_ORGANIC | ORGAN_ROBOTIC | ORGAN_MINERAL | ORGAN_GHOST)
 
+/// Organ medical condition flags. These are not bodytypes; they are treatable organ states.
+#define ORGAN_CONDITION_CIRRHOSIS (1<<0)
+#define ORGAN_CONDITION_POISONING (1<<1)
+#define ORGAN_CONDITION_CARDIAC_ARREST (1<<2)
+#define ORGAN_CONDITION_LUNG_PUNCTURE (1<<3)
+#define ORGAN_CONDITION_INTERNAL_BLOOD (1<<4)
+#define ORGAN_CONDITION_BLINDNESS (1<<5)
+#define ORGAN_CONDITION_DEAFNESS (1<<6)
+#define ORGAN_CONDITION_SPEECH_IMPAIRMENT (1<<7)
+#define ORGAN_CONDITION_BRAIN_CONFUSION (1<<8)
+
 /// Scarring on the right eye
 #define RIGHT_EYE_SCAR (1<<0)
 /// Scarring on the left eye

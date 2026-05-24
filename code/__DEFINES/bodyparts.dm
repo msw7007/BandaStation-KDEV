@@ -6,7 +6,7 @@
 /// The max damage a limb can take before it stops taking damage.
 /// Used by the max_damage var.
 #define LIMB_MAX_HP_PROSTHESIS 20 //Used by surplus prosthesis limbs.
-#define LIMB_MAX_HP_DEFAULT 50 //Used by most all limbs by default.
+#define LIMB_MAX_HP_DEFAULT 100 //Used by most all limbs by default.
 #define LIMB_MAX_HP_ADVANCED 75 //Used by advanced robotic limbs.
 #define LIMB_MAX_HP_CORE 200 //Only use this for heads and torsos.
 
@@ -16,14 +16,30 @@
 #define LIMB_MAX_HP_ALIEN_CORE 500 //Used by xenomorph chests and heads
 #define LIMB_ALIEN_BURN_DAMAGE_MULTIPLIER 2 //Used by xenomorphs and their larvae
 
+/// Composite brute damage stored on bodyparts. Legacy BRUTE is the sum of these.
+#define BODYPART_DAMAGE_BLUNT "blunt"
+#define BODYPART_DAMAGE_PIERCE "pierce"
+#define BODYPART_DAMAGE_SLASH "slash"
+
+/// Composite burn/fire damage stored on bodyparts. Legacy BURN/FIRE is the sum of these.
+#define BODYPART_DAMAGE_HEAT "heat"
+#define BODYPART_DAMAGE_COLD "cold"
+#define BODYPART_DAMAGE_ACID "acid"
+
+#define TRAUMA_NONE 0
+#define TRAUMA_MINOR 1
+#define TRAUMA_CRITICAL 2
+
+#define PAIN_CHECK_INTERVAL (30 SECONDS)
+
 /// Limb Body Damage Coefficient
 /// A multiplication of the burn and brute damage that the limb's stored damage contributes to its attached mob's overall wellbeing.
-/// For instance, if a limb has 50 damage, and has a coefficient of 50%, the human is considered to have suffered 25 damage to their total health.
+/// Cyberpunk health uses direct 1:1 damage-to-health loss for every limb.
 
-#define LIMB_BODY_DAMAGE_COEFFICIENT_ADVANCED 0.5 //Used by advanced robotic limbs.
-#define LIMB_BODY_DAMAGE_COEFFICIENT_DEFAULT 0.75 //Used by all limbs by default.
+#define LIMB_BODY_DAMAGE_COEFFICIENT_ADVANCED 1 //Used by advanced robotic limbs.
+#define LIMB_BODY_DAMAGE_COEFFICIENT_DEFAULT 1 //Used by all limbs by default.
 #define LIMB_BODY_DAMAGE_COEFFICIENT_TOTAL 1 //Used by heads and torsos
-#define LIMB_BODY_DAMAGE_COEFFICIENT_PROSTHESIS 2.5 //Used by surplus prosthesis limbs
+#define LIMB_BODY_DAMAGE_COEFFICIENT_PROSTHESIS 1 //Used by surplus prosthesis limbs
 
 // EMP
 // Note most of these values are doubled on heavy EMP

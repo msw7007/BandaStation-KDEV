@@ -429,7 +429,9 @@
 	for(var/obj/item/bodypart/BP as anything in get_bodyparts())
 		total_brute += (BP.brute_dam * BP.body_damage_coeff)
 		total_burn += (BP.burn_dam * BP.body_damage_coeff)
-	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - total_burn - total_brute, DAMAGE_PRECISION))
+	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - get_chemical_loss() - total_burn - total_brute, DAMAGE_PRECISION))
+	if(health <= HEALTH_THRESHOLD_FULLCRIT && stat != DEAD && can_heartattack() && !undergoing_cardiac_arrest())
+		set_heartattack(TRUE)
 	update_stat()
 	update_stamina()
 

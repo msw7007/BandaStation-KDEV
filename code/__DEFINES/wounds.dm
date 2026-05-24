@@ -134,6 +134,10 @@ GLOBAL_LIST_INIT(bio_state_anatomy, list(
 #define WOUND_SERIES_BONE_BLUNT_BASIC "wound_series_bone_blunt_basic"
 /// T1-T3 Basic burn wounds. Requires flesh. From: burns.dm
 #define WOUND_SERIES_FLESH_BURN_BASIC "wound_series_flesh_burn_basic"
+/// T1-T2 Frostbite wounds. Requires flesh. From: burns.dm
+#define WOUND_SERIES_FLESH_FROSTBITE "wound_series_flesh_frostbite"
+/// T1-T2 Chemical burn wounds. Requires flesh. From: burns.dm
+#define WOUND_SERIES_FLESH_CHEMICAL_BURN "wound_series_flesh_chemical_burn"
 /// T1-T3 Bleeding puncture wounds. Requires flesh. Can cause bleeding, but doesn't require it. From: pierce.dm
 #define WOUND_SERIES_FLESH_PUNCTURE_BLEED "wound_series_flesh_puncture_bleed"
 /// Generic loss wounds. See loss.dm
@@ -219,6 +223,8 @@ GLOBAL_LIST_INIT(wounding_types_to_series, list(
 	),
 	WOUND_BURN = list(
 		WOUND_SERIES_FLESH_BURN_BASIC,
+		WOUND_SERIES_FLESH_FROSTBITE,
+		WOUND_SERIES_FLESH_CHEMICAL_BURN,
 	),
 	WOUND_PIERCE = list(
 		WOUND_SERIES_FLESH_PUNCTURE_BLEED

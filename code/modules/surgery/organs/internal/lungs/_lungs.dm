@@ -11,6 +11,7 @@
 
 	healing_factor = STANDARD_ORGAN_HEALING
 	decay_factor = STANDARD_ORGAN_DECAY * 0.9 // fails around 16.5 minutes, lungs are one of the last organs to die (of the ones we have)
+	pain_multiplier = 1.2
 
 	low_threshold_passed = span_warning("You feel short of breath.")
 	high_threshold_passed = span_warning("You feel some sort of constriction around your chest as your breathing becomes shallow and rapid.")
@@ -24,6 +25,10 @@
 
 	var/failed = FALSE
 	var/operated = FALSE //whether we can still have our damages fixed through surgery
+	/// Deep punctures in the lung tissue. Each puncture cuts breathing efficiency by 25%.
+	var/lung_punctures = 0
+	/// Internal blood pooled into the chest cavity from aorta or deep pierce trauma.
+	var/internal_blood_volume = 0
 
 	food_reagents = list(/datum/reagent/consumable/nutriment/organ_tissue = 5, /datum/reagent/medicine/salbutamol = 5)
 
@@ -402,12 +407,12 @@
 		to_chat(breather, span_alert("Your mouth feels like it's burning!"))
 	if (freon_pp > 40)
 		breather.emote("gasp")
-		breather.adjust_fire_loss(15)
+		breather.adjust_fire_loss(15, burn_type = BODYPART_DAMAGE_COLD)
 		if (prob(freon_pp / 2))
 			to_chat(breather, span_alert("Your throat closes up!"))
 			breather.set_silence_if_lower(6 SECONDS)
 	else
-		breather.adjust_fire_loss(freon_pp / 4)
+		breather.adjust_fire_loss(freon_pp / 4, burn_type = BODYPART_DAMAGE_COLD)
 
 /// Breathing in halon, convert it to a reagent
 /obj/item/organ/lungs/proc/too_much_halon(mob/living/carbon/breather, datum/gas_mixture/breath, halon_pp, old_halon_pp)
@@ -847,6 +852,12 @@
 
 /obj/item/organ/lungs/on_life(seconds_per_tick)
 	. = ..()
+	if(internal_blood_volume >= 10)
+		var/lung_damage = floor(internal_blood_volume / 10)
+		internal_blood_volume -= lung_damage * 10
+		apply_organ_damage(lung_damage, required_organ_flag = ORGAN_ORGANIC)
+		if(!internal_blood_volume)
+			remove_organ_condition(ORGAN_CONDITION_INTERNAL_BLOOD)
 	if(failed && !(organ_flags & ORGAN_FAILING))
 		failed = FALSE
 		return
@@ -857,6 +868,42 @@
 	if(organ_flags & ORGAN_FAILING && owner.stat == CONSCIOUS)
 		owner.visible_message(span_danger("[owner] grabs [owner.p_their()] throat, struggling for breath!"), span_userdanger("You suddenly feel like you can't breathe!"))
 		failed = TRUE
+
+/obj/item/organ/lungs/get_efficiency()
+	. = ..()
+	if(!.)
+		return
+	. = clamp(. - (0.25 * lung_punctures) - min(internal_blood_volume / 100, 0.5), 0, 1)
+
+/obj/item/organ/lungs/proc/add_lung_puncture(amount = 1)
+	if(amount <= 0)
+		return
+	lung_punctures = min(lung_punctures + amount, 4)
+	if(lung_punctures)
+		add_organ_condition(ORGAN_CONDITION_LUNG_PUNCTURE)
+
+/obj/item/organ/lungs/proc/clear_lung_punctures()
+	lung_punctures = 0
+	remove_organ_condition(ORGAN_CONDITION_LUNG_PUNCTURE)
+
+/obj/item/organ/lungs/proc/add_internal_blood(amount)
+	if(amount <= 0)
+		return
+	internal_blood_volume += amount
+	add_organ_condition(ORGAN_CONDITION_INTERNAL_BLOOD)
+
+/obj/item/organ/lungs/proc/drain_internal_blood(amount = INFINITY)
+	if(amount == INFINITY)
+		internal_blood_volume = 0
+	else
+		internal_blood_volume = max(internal_blood_volume - amount, 0)
+	if(!internal_blood_volume)
+		remove_organ_condition(ORGAN_CONDITION_INTERNAL_BLOOD)
+
+/obj/item/organ/lungs/clear_organ_conditions()
+	. = ..()
+	lung_punctures = 0
+	internal_blood_volume = 0
 
 /obj/item/organ/lungs/get_availability(datum/species/owner_species, mob/living/owner_mob)
 	return owner_species.mutantlungs

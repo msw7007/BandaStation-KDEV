@@ -33,6 +33,9 @@
 	attack_direction = null,
 	attacking_item,
 	wound_clothing = TRUE,
+	brute_type = null,
+	burn_type = null,
+	precise_zone = null,
 )
 	SHOULD_CALL_PARENT(TRUE)
 	var/damage_amount = damage
@@ -60,11 +63,13 @@
 					attack_direction = attack_direction,
 					damage_source = attacking_item,
 					wound_clothing = wound_clothing,
+					brute_type = brute_type,
+					precise_zone = precise_zone || actual_hit.body_zone,
 				))
 					update_damage_overlays()
 				damage_dealt = actual_hit.get_damage() - delta // Unfortunately bodypart receive_damage doesn't return damage dealt so we do it manually
 			else
-				damage_dealt = -1 * adjust_brute_loss(damage_amount, forced = forced)
+				damage_dealt = -1 * adjust_brute_loss(damage_amount, forced = forced, brute_type = brute_type)
 		if(BURN)
 			if(isbodypart(def_zone))
 				var/obj/item/bodypart/actual_hit = def_zone
@@ -79,11 +84,13 @@
 					attack_direction = attack_direction,
 					damage_source = attacking_item,
 					wound_clothing = wound_clothing,
+					burn_type = burn_type,
+					precise_zone = precise_zone || actual_hit.body_zone,
 				))
 					update_damage_overlays()
 				damage_dealt = actual_hit.get_damage() - delta // See above
 			else
-				damage_dealt = -1 * adjust_fire_loss(damage_amount, forced = forced)
+				damage_dealt = -1 * adjust_fire_loss(damage_amount, forced = forced, burn_type = burn_type)
 		if(TOX)
 			damage_dealt = -1 * adjust_tox_loss(damage_amount, forced = forced)
 		if(OXY)
@@ -276,7 +283,7 @@
 		return FALSE
 	return TRUE
 
-/mob/living/proc/adjust_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+/mob/living/proc/adjust_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL, brute_type = BODYPART_DAMAGE_BLUNT)
 	if (!can_adjust_brute_loss(amount, forced, required_bodytype))
 		return 0
 	. = bruteloss
@@ -410,7 +417,7 @@
 		return FALSE
 	return TRUE
 
-/mob/living/proc/adjust_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL)
+/mob/living/proc/adjust_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype = ALL, burn_type = BODYPART_DAMAGE_HEAT)
 	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
 		return 0
 	. = fireloss
@@ -504,8 +511,8 @@
 		updatehealth()
 
 /// damage ONE external organ, organ gets randomly selected from damaged ones.
-/mob/living/proc/take_bodypart_damage(brute = 0, burn = 0, updating_health = TRUE, required_bodytype, check_armor = FALSE, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE)
-	. = (adjust_brute_loss(abs(brute), updating_health = FALSE) + adjust_fire_loss(abs(burn), updating_health = FALSE))
+/mob/living/proc/take_bodypart_damage(brute = 0, burn = 0, updating_health = TRUE, required_bodytype, check_armor = FALSE, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE, brute_type = BODYPART_DAMAGE_BLUNT, burn_type = BODYPART_DAMAGE_HEAT)
+	. = (adjust_brute_loss(abs(brute), updating_health = FALSE, brute_type = brute_type) + adjust_fire_loss(abs(burn), updating_health = FALSE, burn_type = burn_type))
 	if(!.) // no change, no need to update
 		return FALSE
 	if(updating_health)
@@ -522,9 +529,9 @@
 		updatehealth()
 
 /// damage MANY bodyparts, in random order. note: stamina arg nonfunctional for carbon mobs
-/mob/living/proc/take_overall_damage(brute = 0, burn = 0, stamina = 0, updating_health = TRUE, forced = FALSE, required_bodytype)
-	. = (adjust_brute_loss(abs(brute), updating_health = FALSE, forced = forced) + \
-			adjust_fire_loss(abs(burn), updating_health = FALSE, forced = forced) + \
+/mob/living/proc/take_overall_damage(brute = 0, burn = 0, stamina = 0, updating_health = TRUE, forced = FALSE, required_bodytype, brute_type = BODYPART_DAMAGE_BLUNT, burn_type = BODYPART_DAMAGE_HEAT)
+	. = (adjust_brute_loss(abs(brute), updating_health = FALSE, forced = forced, brute_type = brute_type) + \
+			adjust_fire_loss(abs(burn), updating_health = FALSE, forced = forced, burn_type = burn_type) + \
 			adjust_stamina_loss(abs(stamina), updating_stamina = FALSE, forced = forced))
 	if(!.) // no change, no need to update
 		return FALSE

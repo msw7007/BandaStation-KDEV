@@ -8,7 +8,7 @@
 	all_surgery_states_required = SURGERY_SKIN_OPEN|SURGERY_ORGANS_CUT|SURGERY_BONE_SAWED
 	/// What % damage do we heal the organ to on success
 	/// Note that 0% damage = 100% health
-	var/heal_to_percent = 0.6
+	var/heal_to_percent = 0.5
 	/// What % damage do we apply to the organ on failure
 	var/failure_damage_percent = 0.2
 	/// If TRUE, an organ can be repaired multiple times
@@ -22,7 +22,10 @@
 		desc += " Эту процедуру можно провести только один раз для каждого органа."
 
 /datum/surgery_operation/organ/repair/state_check(obj/item/organ/organ)
-	if(organ.damage < (organ.maxHealth * heal_to_percent) || (!repeatable && HAS_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON)))
+	if((!repeatable && HAS_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON)) && !organ.organ_condition_flags)
+		return FALSE
+	var/required_damage_percent = (organ.organ_flags & ORGAN_ORGANIC) ? max(heal_to_percent, 0.5) : heal_to_percent
+	if(organ.damage < (organ.maxHealth * required_damage_percent) && !organ.organ_condition_flags)
 		return FALSE // conditionally available so we don't spam the radial with useless options, alas
 	return TRUE
 
@@ -37,8 +40,9 @@
 		. += "орган не должен был подвергаться хирургическому восстановлению ранее"
 
 /datum/surgery_operation/organ/repair/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
-	organ.set_organ_damage(organ.maxHealth * heal_to_percent)
+	organ.apply_surgical_resection(organ.maxHealth * heal_to_percent)
 	organ.organ_flags &= ~ORGAN_EMP
+	organ.clear_organ_conditions()
 	ADD_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON, TRAIT_GENERIC)
 
 /datum/surgery_operation/organ/repair/on_failure(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
@@ -73,6 +77,10 @@
 
 /datum/surgery_operation/organ/repair/lobectomy/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	. = ..()
+	var/obj/item/organ/lungs/lungs = organ
+	if(istype(lungs))
+		lungs.clear_lung_punctures()
+		lungs.drain_internal_blood()
 	display_results(
 		surgeon,
 		organ.owner,
@@ -201,6 +209,10 @@
 
 /datum/surgery_operation/organ/repair/coronary_bypass/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	. = ..()
+	var/obj/item/organ/heart/heart = organ
+	if(istype(heart))
+		heart.Restart()
+		heart.owner?.set_heartattack(FALSE)
 	display_results(
 		surgeon,
 		organ.owner,
@@ -458,6 +470,33 @@
 	display_pain(organ.owner, "Вы чувствуете пронзающую боль, проходящую сквозь голову прямо в мозг!")
 	organ.apply_organ_damage(70)
 
+/datum/surgery_operation/organ/repair/tongue
+	name = "Tongue reconstruction"
+	rnd_name = "Lingual repair"
+	desc = "Repairs tongue and mouth tissue enough to restore clear speech."
+	operation_flags = parent_type::operation_flags & ~OPERATION_AFFECTS_MOOD
+	implements = list(
+		TOOL_HEMOSTAT = 1.05,
+		TOOL_SCALPEL = 1.35,
+		/obj/item/knife = 2.25,
+	)
+	time = 5 SECONDS
+	target_type = /obj/item/organ/tongue
+	heal_to_percent = 0
+	repeatable = TRUE
+	all_surgery_states_required = SURGERY_SKIN_OPEN
+	any_surgery_states_blocked = SURGERY_VESSELS_UNCLAMPED
+
+/datum/surgery_operation/organ/repair/tongue/on_success(obj/item/organ/tongue/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	. = ..()
+	if(organ.owner)
+		organ.owner.adjust_slurring(-INFINITY)
+		organ.owner.adjust_stutter(-INFINITY)
+
+/datum/surgery_operation/organ/repair/tongue/on_failure(obj/item/organ/tongue/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	. = ..()
+	organ.add_organ_condition(ORGAN_CONDITION_SPEECH_IMPAIRMENT)
+
 /datum/surgery_operation/organ/repair/brain
 	name = "Операция на мозге"
 	rnd_name = "Нейрохирургия (Хирургия мозга)"
@@ -494,6 +533,8 @@
 
 /datum/surgery_operation/organ/repair/brain/on_success(obj/item/organ/brain/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	organ.apply_organ_damage(-organ.maxHealth * heal_to_percent) // no parent call, special healing for this one
+	organ.organ_flags &= ~ORGAN_EMP
+	organ.clear_organ_conditions()
 	display_results(
 		surgeon,
 		organ.owner,
@@ -503,6 +544,8 @@
 	)
 	display_pain(organ.owner, "Боль в голове отступает, думать становится немного легче!")
 	if (organ.owner)
+		organ.owner.adjust_confusion(-INFINITY)
+		organ.owner.adjust_dizzy(-INFINITY)
 		organ.owner.mind?.remove_antag_datum(/datum/antagonist/brainwashed)
 	else if (organ.brainmob)
 		organ.brainmob.mind?.remove_antag_datum(/datum/antagonist/brainwashed)

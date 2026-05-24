@@ -60,9 +60,9 @@
 			if(provide_pain_message != HAS_PAINFUL_TOXIN)
 				provide_pain_message = toxin.silent_toxin ? HAS_SILENT_TOXIN : HAS_PAINFUL_TOXIN
 
-	// if applicable, apply our liver damage and display the accompanying pain message
+	// if applicable, convert toxin pressure into toxLoss; carbon toxLoss handles liver/organ damage.
 	if(liver_damage)
-		liver.apply_organ_damage(min(liver_damage * seconds_per_tick , MAX_TOXIN_LIVER_DAMAGE * seconds_per_tick))
+		owner.adjust_tox_loss(min(liver_damage * 5 * seconds_per_tick, MAX_TOXIN_LIVER_DAMAGE * 5 * seconds_per_tick), updating_health = FALSE, forced = TRUE)
 
 	if(provide_pain_message && liver.damage > 10 && SPT_PROB(liver.damage/6, seconds_per_tick)) //the higher the damage the higher the probability
 		to_chat(owner, span_warning("You feel a dull pain in your abdomen."))

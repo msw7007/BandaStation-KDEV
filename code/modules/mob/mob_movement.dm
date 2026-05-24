@@ -388,7 +388,7 @@
 	return ..()
 
 //bodypart selection verbs - Cyberboss
-//8: repeated presses toggles through head - eyes - mouth
+//8: repeated presses toggles through head - eyes - mouth - ears - neck
 //7: mouth 8: head  9: eyes
 //4: r-arm 5: chest 6: l-arm
 //1: r-leg 2: groin 3: l-leg
@@ -403,7 +403,7 @@
  * Uses numpad keys 1-9
  */
 
-///Hidden verb to cycle through head zone with repeated presses, head - eyes - mouth. Bound to 8
+///Hidden verb to cycle through head zone with repeated presses, head - eyes - mouth - ears - neck. Bound to 8
 /client/verb/body_toggle_head()
 	set name = "body-toggle-head"
 	set hidden = TRUE
@@ -417,6 +417,10 @@
 			next_in_line = BODY_ZONE_PRECISE_EYES
 		if(BODY_ZONE_PRECISE_EYES)
 			next_in_line = BODY_ZONE_PRECISE_MOUTH
+		if(BODY_ZONE_PRECISE_MOUTH)
+			next_in_line = BODY_ZONE_PRECISE_EARS
+		if(BODY_ZONE_PRECISE_EARS)
+			next_in_line = BODY_ZONE_PRECISE_NECK
 		else
 			next_in_line = BODY_ZONE_HEAD
 
@@ -456,6 +460,28 @@
 	var/atom/movable/screen/zone_sel/selector = mob.hud_used.screen_objects[HUD_MOB_ZONE_SELECTOR]
 	selector.set_selected_zone(BODY_ZONE_PRECISE_MOUTH, mob)
 
+///Hidden verb to target the ears, unbound by default.
+/client/verb/body_ears()
+	set name = "body-ears"
+	set hidden = TRUE
+
+	if(!check_has_body_select())
+		return
+
+	var/atom/movable/screen/zone_sel/selector = mob.hud_used.screen_objects[HUD_MOB_ZONE_SELECTOR]
+	selector.set_selected_zone(BODY_ZONE_PRECISE_EARS, mob)
+
+///Hidden verb to target the neck, unbound by default.
+/client/verb/body_neck()
+	set name = "body-neck"
+	set hidden = TRUE
+
+	if(!check_has_body_select())
+		return
+
+	var/atom/movable/screen/zone_sel/selector = mob.hud_used.screen_objects[HUD_MOB_ZONE_SELECTOR]
+	selector.set_selected_zone(BODY_ZONE_PRECISE_NECK, mob)
+
 ///Hidden verb to target the right arm, bound to 4
 /client/verb/body_r_arm()
 	set name = "body-r-arm"
@@ -476,7 +502,7 @@
 		return
 
 	var/atom/movable/screen/zone_sel/selector = mob.hud_used.screen_objects[HUD_MOB_ZONE_SELECTOR]
-	selector.set_selected_zone(BODY_ZONE_CHEST, mob)
+	selector.set_selected_zone(mob.zone_selected == BODY_ZONE_CHEST ? BODY_ZONE_PRECISE_ABDOMEN : BODY_ZONE_CHEST, mob)
 
 ///Hidden verb to target the left arm, bound to 6
 /client/verb/body_l_arm()

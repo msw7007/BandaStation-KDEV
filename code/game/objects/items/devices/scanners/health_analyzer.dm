@@ -97,6 +97,14 @@
 	user.visible_message(span_notice("[user.declent_ru(NOMINATIVE)] анализирует жизненные показатели [M.declent_ru(GENITIVE)]."))
 	balloon_alert(user, "анализ жизненных показателей")
 	playsound(user.loc, 'sound/items/healthanalyzer.ogg', 50)
+	if(scanner_busy)
+		balloon_alert(user, "busy")
+		return
+	scanner_busy = TRUE
+	if(!do_after(user, 10 SECONDS, target = M))
+		scanner_busy = FALSE
+		return
+	scanner_busy = FALSE
 
 	var/readability_check = user.can_read(src) && !user.is_blind()
 	switch (scanmode)
@@ -116,6 +124,9 @@
 	if(!isliving(interacting_with))
 		return NONE
 	if(user.can_read(src) && !user.is_blind())
+		if(!advanced)
+			to_chat(user, span_warning("Basic analyzer does not show reagents."))
+			return ITEM_INTERACT_SUCCESS
 		chemscan(user, interacting_with)
 	return ITEM_INTERACT_SUCCESS
 
@@ -149,7 +160,7 @@
  * tochat - Whether to immediately post the result into the chat of the user, otherwise it will return the results.
  */
 /proc/healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE)
-	if(user.incapacitated)
+	if(user?.incapacitated)
 		return
 
 	// the final list of strings to render
@@ -218,6 +229,23 @@
 	// Body part damage report
 	if(iscarbon(target))
 		var/mob/living/carbon/carbontarget = target
+		var/total_blunt = 0
+		var/total_pierce = 0
+		var/total_slash = 0
+		var/total_heat = 0
+		var/total_cold = 0
+		var/total_acid = 0
+		var/total_infection = 0
+		for(var/obj/item/bodypart/iter_part as anything in carbontarget.get_bodyparts())
+			total_blunt += iter_part.blunt_dam
+			total_pierce += iter_part.pierce_dam
+			total_slash += iter_part.slash_dam
+			total_heat += iter_part.heat_dam
+			total_cold += iter_part.cold_dam
+			total_acid += iter_part.acid_dam
+			total_infection += iter_part.infection
+		render_list += "<span class='info ml-1'>Oxygenation: [round(carbontarget.oxygenation, 0.1)]%, pressure: [round(carbontarget.blood_pressure * 100, 1)]%, pain: [round(carbontarget.get_total_pain(), 0.1)], chemical loss: [round(carbontarget.get_chemical_loss(), 0.1)], infection: [round(total_infection, 0.1)].</span><br>"
+		render_list += "<span class='info ml-1'>Physical: blunt [ceil(total_blunt)], pierce [ceil(total_pierce)], slash [ceil(total_slash)]. Thermal: heat [ceil(total_heat)], cold [ceil(total_cold)], acid [ceil(total_acid)].</span><br>"
 		var/any_damage = brute_loss > 0 || fire_loss > 0 || oxy_loss > 0 || tox_loss > 0 || fire_loss > 0
 		var/any_missing = length(carbontarget.get_missing_limbs())
 		var/any_wounded = length(carbontarget.all_wounds)
@@ -267,6 +295,7 @@
 						dmgreport += "<td><font color='#00cc66'>[tox_loss > 0 ? ceil(tox_loss) : "0"]</font></td>"
 						dmgreport += "<td><font color='#33ccff'>[oxy_loss > 0 ? ceil(oxy_loss) : "0"]</font></td>"
 					dmgreport += "</tr>"
+					dmgreport += "<tr><td colspan=6><span class='info ml-2'>&rdsh; Components: blunt [ceil(limb.blunt_dam)], pierce [ceil(limb.pierce_dam)], slash [ceil(limb.slash_dam)], heat [ceil(limb.heat_dam)], cold [ceil(limb.cold_dam)], acid [ceil(limb.acid_dam)], pain [ceil(limb.pain)], infection [ceil(limb.infection)].</span></td></tr>"
 					if(has_any_embeds)
 						var/list/embedded_names = list()
 						for(var/obj/item/embed as anything in limb.embedded_objects)
@@ -284,7 +313,7 @@
 			dmgreport += "</table></font>"
 			render_list += dmgreport // tables do not need extra linebreak
 
-	if(ishuman(target))
+	if(advanced && ishuman(target))
 		var/mob/living/carbon/human/humantarget = target
 
 		// Organ damage, missing organs

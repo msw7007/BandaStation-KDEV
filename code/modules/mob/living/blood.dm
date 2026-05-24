@@ -249,17 +249,8 @@
 				investigate_log("has died of bloodloss.", INVESTIGATE_DEATHS)
 				death()
 
-	// Blood ratio! if you have 280 blood, this equals 0.5 as that's half of the current value, 560.
-	var/effective_blood_ratio = modified_blood_volume / BLOOD_VOLUME_NORMAL
-	var/target_oxyloss = max((1 - effective_blood_ratio) * 100, 0)
-
-	// If your ratio is less than one (you're missing any blood) and your oxyloss is under missing blood %, start getting oxy damage.
-	// This damage accrues faster the less blood you have.
-	// If the damage surpasses the KO threshold for oxyloss, then we'll always tick up so you die eventually
-	if(target_oxyloss > 0 && (get_oxy_loss() < target_oxyloss || (target_oxyloss >= OXYLOSS_PASSOUT_THRESHOLD && stat >= UNCONSCIOUS)))
-		// At roughly half blood this equals to 3 oxyloss per tick. At 90% blood it's close to 0.5
-		var/rounded_oxyloss = round(0.01 * (BLOOD_VOLUME_NORMAL - modified_blood_volume), 0.25) * seconds_per_tick
-		adjust_oxy_loss(rounded_oxyloss, updating_health = TRUE)
+	// Blood loss lowers oxygenation through the carbon oxygenation pipeline.
+	// OxyLoss is reserved for lung efficiency loss.
 
 /// Has each bodypart update its bleed/wound overlay icon states
 /mob/living/carbon/proc/update_bodypart_bleed_overlays()
@@ -292,6 +283,7 @@
 	. = 0
 	for(var/obj/item/bodypart/bodypart as anything in get_bodyparts())
 		. += bodypart.cached_bleed_rate
+	. *= max(blood_pressure, 0.1)
 
 /mob/living/carbon/human/get_bleed_rate()
 	return ..() * physiology.bleed_mod

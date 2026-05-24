@@ -8,23 +8,22 @@
 /datum/surgery_operation/proc/get_modified_failure_chance(operation_time, mob/living/patient, mob/living/surgeon, tool, list/operation_args)
 	var/fail_chance = clamp(GET_FAILURE_CHANCE(operation_time, operation_args[OPERATION_SPEED]), 0, 99)
 
-	// Боль
-	if(!(HAS_TRAIT(patient, TRAIT_ANALGESIA) || patient.stat >= 2))
-		fail_chance += 40
+	if(iscarbon(patient))
+		var/mob/living/carbon/carbon_patient = patient
+		fail_chance += carbon_patient.get_total_pain() / 5
 
-	// Свет или абдуктор
 	if(!(surgeon.has_nightvision() || isabductor(surgeon)))
 		var/turf/patient_turf = get_turf(patient)
-		var/light_amount = patient_turf.get_lumcount() // минимальное кол-во света для успеха - 0.6
-		if(light_amount < 0.6)
-			fail_chance += (1.0 - (light_amount / 0.6))**1.5 * 60.0
+		if(patient_turf)
+			var/light_amount = min(1, patient_turf.get_lumcount())
+			if(light_amount < 0.5)
+				fail_chance += (0.5 - light_amount) * 40
 
-	// Инструменты
 	var/tool_mod = 0
 	if(isitem(tool) || tool_check(tool))
 		var/obj/item/realtool = tool
 		var/tool_type = realtool.type
-		if(implements[tool] > 1.15) // чек на гетто инструмент
+		if(implements[tool] > 1.15)
 			tool_mod = SURGERY_TOOL_MOD_GHETTO
 		else
 			if(findtext("[tool_type]", "/advanced"))
@@ -38,7 +37,6 @@
 
 	fail_chance += tool_mod
 
-	// Кольцо на перчатках ухудшает точность работы
 	var/obj/item/clothing/gloves/worn_gloves = surgeon.get_item_by_slot(ITEM_SLOT_GLOVES)
 	if(istype(worn_gloves) && locate(/obj/item/clothing/accessory/gloves_accessory/ring) in worn_gloves.attached_accessories)
 		fail_chance += SURGERY_RING_FAIL_MOD - 5

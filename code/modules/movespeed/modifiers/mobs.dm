@@ -128,7 +128,7 @@
 	flags = IGNORE_NOSLOW
 
 /datum/movespeed_modifier/carbon_softcrit
-	multiplicative_slowdown = SOFTCRIT_ADD_SLOWDOWN
+	multiplicative_slowdown = 0.7
 	flags = IGNORE_NOSLOW
 
 /datum/movespeed_modifier/carbon_crawling

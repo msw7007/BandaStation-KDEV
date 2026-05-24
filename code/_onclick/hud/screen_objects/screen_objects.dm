@@ -763,6 +763,10 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 				if(8 to 11)
 					return BODY_ZONE_R_ARM
 				if(12 to 20)
+					if(icon_y in 14 to 17)
+						return BODY_ZONE_PRECISE_ABDOMEN
+					if(icon_y == 22 && (icon_x in 15 to 17))
+						return BODY_ZONE_PRECISE_NECK
 					return BODY_ZONE_CHEST
 				if(21 to 24)
 					return BODY_ZONE_L_ARM
@@ -772,10 +776,14 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 					if(23 to 24)
 						if(icon_x in 15 to 17)
 							return BODY_ZONE_PRECISE_MOUTH
+						if(icon_x in 14 to 18)
+							return BODY_ZONE_PRECISE_NECK
 					if(26) //Eyeline, eyes are on 15 and 17
 						if(icon_x in 14 to 18)
 							return BODY_ZONE_PRECISE_EYES
 					if(25 to 27)
+						if((icon_x in 12 to 13) || (icon_x in 19 to 20))
+							return BODY_ZONE_PRECISE_EARS
 						if(icon_x in 15 to 17)
 							return BODY_ZONE_PRECISE_EYES
 				return BODY_ZONE_HEAD
@@ -797,7 +805,13 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 	. = ..()
 	if(!hud?.mymob)
 		return
-	. += mutable_appearance(overlay_icon, "[hud.mymob.zone_selected]")
+	var/overlay_state = hud.mymob.zone_selected
+	switch(overlay_state)
+		if(BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK)
+			overlay_state = BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_ABDOMEN)
+			overlay_state = BODY_ZONE_CHEST
+	. += mutable_appearance(overlay_icon, "[overlay_state]")
 
 /atom/movable/screen/zone_sel/alien
 	icon = 'icons/hud/screen_alien.dmi'

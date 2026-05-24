@@ -25,6 +25,7 @@
 
 		if(.) //not dead
 			handle_blood(seconds_per_tick)
+			handle_oxygenation(seconds_per_tick)
 
 		if(stat != DEAD) // still not dead (blood could have changed that)
 			for(var/key in mind?.addiction_points)
@@ -333,7 +334,7 @@
 
 	//-- FREON --//
 	if(freon_pp)
-		adjust_fire_loss(freon_pp * 0.25)
+		adjust_fire_loss(freon_pp * 0.25, burn_type = BODYPART_DAMAGE_COLD)
 
 	//-- MIASMA --//
 	if(!miasma_pp)
@@ -485,6 +486,55 @@
 		reagents.remove_reagent(chem.type, chem.metabolization_rate * seconds_per_tick)
 		return COMSIG_MOB_STOP_REAGENT_TICK
 
+/mob/living/carbon/proc/get_bloodstream_reagent_multiplier(methods, list/cached_reagents)
+	if(methods & INHALE)
+		return get_organ_efficiency(ORGAN_SLOT_LUNGS)
+	if(methods & (INJECT|PATCH))
+		if(reagents_bypass_bloodstream_multiplier(cached_reagents))
+			return 1
+		return BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
+	return 1
+
+/mob/living/carbon/proc/reagents_bypass_bloodstream_multiplier(list/cached_reagents)
+	if(!length(cached_reagents))
+		return FALSE
+
+	var/datum/blood_type/blood_type = get_bloodtype()
+	var/datum/reagent/blood_reagent = get_blood_reagent()
+	for(var/datum/reagent/reagent as anything in cached_reagents)
+		if(reagent.type == blood_reagent)
+			continue
+		if(reagent.type == /datum/reagent/medicine/salglu_solution)
+			continue
+		if(blood_type?.restoration_chem && reagent.type == blood_type.restoration_chem)
+			continue
+		return FALSE
+	return TRUE
+
+/mob/living/carbon/proc/convert_liverless_reagents_to_toxin(seconds_per_tick)
+	if(!reagents?.total_volume)
+		return 0
+
+	var/converted_toxin = 0
+	var/datum/blood_type/blood_type = get_bloodtype()
+	var/datum/reagent/blood_reagent = get_blood_reagent()
+	var/list/cached_reagents = reagents.reagent_list.Copy()
+	for(var/datum/reagent/reagent as anything in cached_reagents)
+		if(QDELETED(reagent) || reagent.self_consuming)
+			continue
+		if(reagent.type == blood_reagent)
+			continue
+		if(reagent.type == /datum/reagent/medicine/salglu_solution)
+			continue
+		if(blood_type?.restoration_chem && reagent.type == blood_type.restoration_chem)
+			continue
+		var/converted_amount = min(reagent.volume, reagent.compute_metabolization(src, seconds_per_tick))
+		if(converted_amount <= 0)
+			continue
+		reagents.remove_reagent(reagent.type, converted_amount)
+		converted_toxin += converted_amount
+	return converted_toxin
+
 /mob/living/carbon/reagent_expose(datum/reagent/chem, methods = TOUCH, reac_volume, show_message = TRUE, touch_protection = 0)
 	. = ..()
 
@@ -523,6 +573,47 @@
 	for(var/obj/item/bodypart/limb as anything in get_bodyparts(include_stumps = TRUE))
 		. |= limb.on_life(seconds_per_tick)
 
+/mob/living/carbon/proc/get_organ_efficiency(slot)
+	var/obj/item/organ/organ = get_organ_slot(slot)
+	return organ?.get_efficiency() || 0
+
+/mob/living/carbon/proc/get_lung_puncture_count()
+	var/obj/item/organ/lungs/lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
+	return lungs?.lung_punctures || 0
+
+/mob/living/carbon/proc/handle_oxygenation(seconds_per_tick)
+	var/blood_ratio = BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
+	var/heart_efficiency = get_organ_efficiency(ORGAN_SLOT_HEART)
+	var/lung_efficiency = get_organ_efficiency(ORGAN_SLOT_LUNGS)
+	if(HAS_TRAIT(src, TRAIT_NOBREATH))
+		lung_efficiency = max(lung_efficiency, 1)
+	if(IsSleeping() || body_position == LYING_DOWN)
+		blood_pressure = max(0.4, blood_pressure - 0.02 * seconds_per_tick)
+	else
+		var/stamina_pressure = max_stamina ? clamp(1 - (stamina / max_stamina), 0, 1) : 0
+		blood_pressure = clamp(0.75 + heart_efficiency * 0.5 + stamina_pressure * 0.5, 0.1, 2)
+	if(HAS_TRAIT_FROM(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT) || undergoing_cardiac_arrest())
+		heart_efficiency = 0
+	var/new_oxygenation = clamp(blood_ratio * (heart_efficiency * 3) * blood_pressure * (lung_efficiency * 2) * 16.7, 0, 100)
+	if(new_oxygenation < oxygenation)
+		oxygenation = max(new_oxygenation, oxygenation - 5 * seconds_per_tick)
+	else
+		oxygenation = min(new_oxygenation, oxygenation + 5 * seconds_per_tick)
+	handle_low_oxygen_organ_damage(seconds_per_tick)
+
+/mob/living/carbon/proc/handle_low_oxygen_organ_damage(seconds_per_tick)
+	if(oxygenation < 70)
+		adjust_organ_loss(ORGAN_SLOT_BRAIN, ((70 - oxygenation) / 70) * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
+	if(oxygenation < 10)
+		adjust_organ_loss(ORGAN_SLOT_LIVER, ((10 - oxygenation) / 10) * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
+	if(oxygenation < 5)
+		var/damage = ((5 - oxygenation) / 5) * seconds_per_tick
+		adjust_organ_loss(ORGAN_SLOT_STOMACH, damage, required_organ_flag = ORGAN_ORGANIC)
+		adjust_organ_loss(ORGAN_SLOT_EYES, damage, required_organ_flag = ORGAN_ORGANIC)
+		adjust_organ_loss(ORGAN_SLOT_EARS, damage, required_organ_flag = ORGAN_ORGANIC)
+	if(oxygenation <= 0)
+		adjust_organ_loss(ORGAN_SLOT_TONGUE, 1 * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
+
 /mob/living/carbon/proc/handle_organs(seconds_per_tick)
 	if(stat == DEAD)
 		if(reagents && (reagents.has_reagent(/datum/reagent/toxin/formaldehyde, 1) || reagents.has_reagent(/datum/reagent/cryostylane))) // No organ decay if the body contains formaldehyde.
@@ -543,6 +634,11 @@
 		var/obj/item/organ/organ = organs_slot[slot]
 		if(organ?.owner) // This exist mostly because reagent metabolization can cause organ reshuffling
 			organ.on_life(seconds_per_tick)
+
+	if(undergoing_cardiac_arrest())
+		for(var/obj/item/organ/organ as anything in organs)
+			if(organ?.owner)
+				organ.on_death(seconds_per_tick)
 
 /mob/living/carbon/handle_diseases(seconds_per_tick)
 	for(var/datum/disease/disease as anything in diseases)
@@ -790,6 +886,9 @@
 
 	reagents.end_metabolization(src, keep_liverless = TRUE) //Stops trait-based effects on reagents, to prevent permanent buffs
 	reagents.metabolize(src, seconds_per_tick, can_overdose = TRUE, liverless = TRUE)
+	var/liverless_toxin = convert_liverless_reagents_to_toxin(seconds_per_tick)
+	if(liverless_toxin)
+		adjust_tox_loss(liverless_toxin, updating_health = FALSE, forced = TRUE)
 
 	if(HAS_TRAIT(src, TRAIT_STABLELIVER) || HAS_TRAIT(src, TRAIT_LIVERLESS_METABOLISM))
 		return

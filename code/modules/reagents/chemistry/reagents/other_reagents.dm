@@ -1172,9 +1172,13 @@
 		return
 
 	exposed_mob.add_surgery_speed_mod(type, 0.8, min(reac_volume * 1 MINUTES, 5 MINUTES))
+	if(iscarbon(exposed_mob))
+		var/mob/living/carbon/carbon_mob = exposed_mob
+		carbon_mob.reduce_bodypart_infections(reac_volume, maximum_reduction = 90, maximum_treatable = 90)
 
 /datum/reagent/space_cleaner/sterilizine/on_burn_wound_processing(datum/wound/burn/flesh/burn_wound)
 	burn_wound.sanitization += 0.9
+	burn_wound.limb?.reduce_infection(1.5, maximum_reduction = 90, maximum_treatable = 90)
 
 /datum/reagent/iron
 	name = "Iron"

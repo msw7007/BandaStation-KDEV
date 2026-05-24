@@ -88,6 +88,47 @@
 	var/brute_dam = 0
 	///The current amount of burn damage the limb has
 	var/burn_dam = 0
+	/// BLUNT portion of legacy BRUTE damage.
+	var/blunt_dam = 0
+	/// PIERCE portion of legacy BRUTE damage.
+	var/pierce_dam = 0
+	/// SLASH portion of legacy BRUTE damage.
+	var/slash_dam = 0
+	/// HEAT portion of legacy BURN damage.
+	var/heat_dam = 0
+	/// COLD portion of legacy BURN damage.
+	var/cold_dam = 0
+	/// ACID portion of legacy BURN damage.
+	var/acid_dam = 0
+	/// Active pain currently tied to this limb.
+	var/pain = 0
+	/// TRUE while pain has temporarily disabled this limb.
+	var/temporary_pain_disabled = FALSE
+	/// Infection progress on this limb, 0 to 100.
+	var/infection = 0
+	/// Internal blood pooled by aorta damage or comparable deep trauma.
+	var/internal_blood_volume = 0
+	/// Lung punctures transferred from this bodypart. Capped at 4 on chest.
+	var/lung_punctures = 0
+	/// Guard for syncing composite damage to legacy totals.
+	var/composite_damage_syncing = FALSE
+	/// Trauma states generated from composite damage.
+	var/blunt_trauma = TRAUMA_NONE
+	var/pierce_trauma = TRAUMA_NONE
+	var/slash_trauma = TRAUMA_NONE
+	var/heat_trauma = TRAUMA_NONE
+	var/cold_trauma = TRAUMA_NONE
+	var/acid_trauma = TRAUMA_NONE
+	/// Last precise zone hit on this bodypart.
+	var/last_precise_zone
+	/// Component totals already forwarded into organs. Prevents repeated organ damage from the same stored limb damage.
+	var/last_blunt_organ_damage = 0
+	var/last_pierce_organ_damage = 0
+	var/last_slash_organ_damage = 0
+	var/last_heat_organ_damage = 0
+	var/last_cold_organ_damage = 0
+	var/last_acid_organ_damage = 0
+	COOLDOWN_DECLARE(pain_collapse_cd)
 	///The maximum brute OR burn damage a bodypart can take. Once we hit this cap, no more damage of either type!
 	var/max_damage = 0
 
@@ -664,6 +705,403 @@
 //Return TRUE to get whatever mob this is in to update health.
 /obj/item/bodypart/proc/on_life(seconds_per_tick)
 	SHOULD_CALL_PARENT(TRUE)
+	. = FALSE
+	. |= handle_bodypart_pain(seconds_per_tick)
+	. |= handle_bodypart_infection(seconds_per_tick)
+	. |= handle_bodypart_trauma(seconds_per_tick)
+
+/obj/item/bodypart/proc/sync_composite_damage()
+	composite_damage_syncing = TRUE
+	set_brute_dam(round(blunt_dam + pierce_dam + slash_dam, DAMAGE_PRECISION))
+	set_burn_dam(round(heat_dam + cold_dam + acid_dam, DAMAGE_PRECISION))
+	composite_damage_syncing = FALSE
+
+/obj/item/bodypart/proc/infer_brute_damage_type(sharpness)
+	if(sharpness & SHARP_POINTY)
+		return BODYPART_DAMAGE_PIERCE
+	if(sharpness & SHARP_EDGED)
+		return BODYPART_DAMAGE_SLASH
+	return BODYPART_DAMAGE_BLUNT
+
+/obj/item/bodypart/proc/apply_composite_damage(brute = 0, burn = 0, sharpness = NONE, brute_type = null, burn_type = null, precise_zone = null, damage_source)
+	if(brute)
+		switch(brute_type || infer_brute_damage_type(sharpness))
+			if(BODYPART_DAMAGE_PIERCE)
+				pierce_dam = round(pierce_dam + brute, DAMAGE_PRECISION)
+				add_bodypart_pain(brute)
+			if(BODYPART_DAMAGE_SLASH)
+				slash_dam = round(slash_dam + brute, DAMAGE_PRECISION)
+				add_bodypart_pain(brute * 0.8)
+			else
+				blunt_dam = round(blunt_dam + brute, DAMAGE_PRECISION)
+				add_bodypart_pain(brute * 1.25)
+	if(burn)
+		switch(burn_type || BODYPART_DAMAGE_HEAT)
+			if(BODYPART_DAMAGE_COLD)
+				if(cold_trauma >= TRAUMA_MINOR)
+					burn *= 2
+				cold_dam = round(cold_dam + burn, DAMAGE_PRECISION)
+				add_bodypart_pain(burn * 0.7)
+			if(BODYPART_DAMAGE_ACID)
+				acid_dam = round(acid_dam + burn, DAMAGE_PRECISION)
+				add_bodypart_pain(burn * 1.4)
+			else
+				if(heat_trauma >= TRAUMA_MINOR)
+					burn *= 1.5
+				heat_dam = round(heat_dam + burn, DAMAGE_PRECISION)
+				add_bodypart_pain(burn * 1.2)
+	last_precise_zone = precise_zone
+	sync_composite_damage()
+	refresh_composite_traumas(precise_zone, damage_source)
+
+/obj/item/bodypart/proc/damage_covering_clothes(amount, damage_type = BRUTE)
+	if(!owner || amount <= 0 || !ishuman(owner))
+		return
+	var/mob/living/carbon/human/human_owner = owner
+	for(var/obj/item/clothing/clothes as anything in human_owner.get_clothing_on_part(src))
+		clothes.take_damage_zone(body_zone, amount, damage_type, 0)
+
+/obj/item/bodypart/proc/heal_composite_brute(amount)
+	if(amount <= 0)
+		return 0
+	var/total = blunt_dam + pierce_dam + slash_dam
+	if(total <= 0)
+		return 0
+	var/healed = min(amount, total)
+	var/ratio = healed / total
+	blunt_dam = round(max(blunt_dam - blunt_dam * ratio, 0), DAMAGE_PRECISION)
+	pierce_dam = round(max(pierce_dam - pierce_dam * ratio, 0), DAMAGE_PRECISION)
+	slash_dam = round(max(slash_dam - slash_dam * ratio, 0), DAMAGE_PRECISION)
+	last_blunt_organ_damage = min(last_blunt_organ_damage, blunt_dam)
+	last_pierce_organ_damage = min(last_pierce_organ_damage, pierce_dam)
+	last_slash_organ_damage = min(last_slash_organ_damage, slash_dam)
+	sync_composite_damage()
+	return healed
+
+/obj/item/bodypart/proc/heal_composite_burn(amount)
+	if(amount <= 0)
+		return 0
+	var/total = heat_dam + cold_dam + acid_dam
+	if(total <= 0)
+		return 0
+	var/healed = min(amount, total)
+	var/ratio = healed / total
+	heat_dam = round(max(heat_dam - heat_dam * ratio, 0), DAMAGE_PRECISION)
+	cold_dam = round(max(cold_dam - cold_dam * ratio, 0), DAMAGE_PRECISION)
+	acid_dam = round(max(acid_dam - acid_dam * ratio, 0), DAMAGE_PRECISION)
+	last_heat_organ_damage = min(last_heat_organ_damage, heat_dam)
+	last_cold_organ_damage = min(last_cold_organ_damage, cold_dam)
+	last_acid_organ_damage = min(last_acid_organ_damage, acid_dam)
+	sync_composite_damage()
+	return healed
+
+/obj/item/bodypart/proc/add_bodypart_pain(amount)
+	if(!owner || owner.stat == DEAD || owner.get_medical_painkiller_strength())
+		return
+	pain = round(max(pain + amount, 0), DAMAGE_PRECISION)
+
+/obj/item/bodypart/proc/handle_bodypart_pain(seconds_per_tick)
+	if(!owner)
+		return FALSE
+	var/target_pain = get_damage() * 0.5
+	var/painkiller_strength = owner.get_medical_painkiller_strength()
+	if(owner.stat >= UNCONSCIOUS || owner.IsSleeping() || painkiller_strength >= PAINKILLER_INSTANT)
+		pain = 0
+		target_pain = 0
+	else if(painkiller_strength >= PAINKILLER_STRONG)
+		pain = max(0, pain - 5 * seconds_per_tick)
+	else if(painkiller_strength >= PAINKILLER_WEAK)
+		pain = max(get_damage() * 0.1, pain - 3 * seconds_per_tick)
+	else if(pain > target_pain)
+		pain = max(target_pain, pain - 1 * seconds_per_tick)
+	else if(pain < target_pain)
+		pain = min(target_pain, pain + 1 * seconds_per_tick)
+	if(!COOLDOWN_FINISHED(src, pain_collapse_cd))
+		return FALSE
+	var/total_pain = owner.get_total_pain()
+	if(total_pain >= 100)
+		COOLDOWN_START(src, pain_collapse_cd, PAIN_CHECK_INTERVAL)
+		if(prob(max(total_pain - 150, 0)))
+			owner.Knockdown(5 SECONDS)
+		if(can_be_disabled && pain > max_damage && prob(max(pain - max_damage, 0)))
+			temporary_pain_disabled = TRUE
+			set_disabled(TRUE)
+			addtimer(CALLBACK(src, PROC_REF(clear_temporary_pain_disabled)), 5 SECONDS)
+		if(total_pain > 300 && prob(max(total_pain - 300, 0)))
+			owner.set_heartattack(TRUE)
+	return FALSE
+
+/obj/item/bodypart/proc/clear_temporary_pain_disabled()
+	temporary_pain_disabled = FALSE
+	if(!bodypart_disabled || has_disabling_wound() || HAS_TRAIT(src, TRAIT_PARALYSIS))
+		return
+	set_disabled(FALSE)
+	if(owner && can_be_disabled)
+		update_disabled()
+
+/obj/item/bodypart/proc/has_disabling_wound()
+	for(var/datum/wound/wound as anything in wounds)
+		if(wound.disabling)
+			return TRUE
+	return FALSE
+
+/obj/item/bodypart/proc/get_infection_weight()
+	var/weight = 0
+	if(HAS_ANY_SURGERY_STATE(surgery_state, SURGERY_SKIN_CUT|SURGERY_SKIN_OPEN))
+		weight = max(weight, 1)
+	if(pierce_trauma == TRAUMA_MINOR)
+		weight = max(weight, 1)
+	else if(pierce_trauma == TRAUMA_CRITICAL)
+		weight = max(weight, 2)
+	if(slash_trauma == TRAUMA_MINOR)
+		weight = max(weight, 1)
+	else if(slash_trauma == TRAUMA_CRITICAL)
+		weight = max(weight, 2)
+	if(heat_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL)
+		weight = max(weight, 4)
+	else if(heat_trauma == TRAUMA_MINOR || acid_trauma == TRAUMA_MINOR)
+		weight = max(weight, 2)
+	return weight
+
+/obj/item/bodypart/proc/has_foreign_blood_contact()
+	if(!owner)
+		return FALSE
+	var/list/own_blood = owner.get_blood_dna_list()
+	var/list/to_check = list(owner)
+	if(ishuman(owner))
+		var/mob/living/carbon/human/human_owner = owner
+		for(var/obj/item/equipped as anything in human_owner.get_equipped_items())
+			to_check += equipped
+	if(owner.body_position == LYING_DOWN)
+		to_check += get_turf(owner)
+	for(var/atom/checked as anything in to_check)
+		var/list/blood = GET_ATOM_BLOOD_DNA(checked)
+		if(!length(blood))
+			continue
+		for(var/dna in blood)
+			if(!(dna in own_blood))
+				return TRUE
+	return FALSE
+
+/obj/item/bodypart/proc/is_dirty_infection_turf()
+	if(!owner || owner.body_position != LYING_DOWN)
+		return FALSE
+	var/turf/current_turf = get_turf(owner)
+	if(!current_turf)
+		return FALSE
+	if(GET_ATOM_BLOOD_DNA_LENGTH(current_turf))
+		return TRUE
+	if(locate(/obj/effect/decal/cleanable) in current_turf)
+		return TRUE
+	if(istype(current_turf, /turf/open/floor/mineral))
+		return TRUE
+	if(findtext("[current_turf.type]", "grass") || findtext("[current_turf.type]", "asteroid") || findtext("[current_turf.type]", "asphalt") || findtext("[current_turf.type]", "concrete"))
+		return TRUE
+	return FALSE
+
+/obj/item/bodypart/proc/handle_bodypart_infection(seconds_per_tick)
+	if(!owner || owner.stat == DEAD)
+		return FALSE
+	var/wound_weight = get_infection_weight()
+	if(wound_weight)
+		var/factors = 0
+		if(has_foreign_blood_contact())
+			factors++
+		if(is_dirty_infection_turf())
+			factors++
+		if(factors)
+			var/chance = wound_weight * 10 * factors
+			if(SPT_PROB(chance, seconds_per_tick))
+				infection = min(100, infection + 1)
+	if(infection <= 0)
+		return FALSE
+	if(infection > 50)
+		owner.adjust_tox_loss(((infection - 50) / 10) * seconds_per_tick, updating_health = FALSE, forced = TRUE)
+	if(infection >= 60 && prob(max(infection - 60, 0)))
+		switch(body_zone)
+			if(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM)
+				if(held_index)
+					owner.dropItemToGround(owner.get_item_for_held_index(held_index))
+			if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
+				owner.Knockdown(2 SECONDS)
+	if(infection >= 100)
+		spread_bodypart_infection()
+	return TRUE
+
+/obj/item/bodypart/proc/spread_bodypart_infection()
+	if(!owner)
+		return
+	var/list/candidates = owner.get_bodyparts()
+	candidates -= src
+	if(!length(candidates))
+		return
+	var/obj/item/bodypart/target = pick(candidates)
+	target.infection = max(target.infection, 10)
+	infection = 90
+
+/obj/item/bodypart/proc/reduce_infection(amount, maximum_reduction = 50, maximum_treatable = 50)
+	var/current_infection = infection
+	for(var/datum/wound/burn/flesh/burn_wound in wounds)
+		current_infection = max(current_infection, burn_wound.infection)
+	if(current_infection <= 0 || current_infection > maximum_treatable)
+		return 0
+	var/reducible = min(current_infection, maximum_reduction)
+	var/reduced = min(amount, reducible)
+	var/new_infection = max(0, current_infection - reduced)
+	infection = min(infection, new_infection)
+	for(var/datum/wound/burn/flesh/burn_wound in wounds)
+		burn_wound.infection = min(burn_wound.infection, new_infection)
+		burn_wound.sanitization = max(burn_wound.sanitization, 1)
+	return reduced
+
+/obj/item/bodypart/proc/handle_bodypart_trauma(seconds_per_tick)
+	if(!owner)
+		return FALSE
+	if(istype(src, /obj/item/bodypart/arm))
+		var/obj/item/bodypart/arm/arm = src
+		if(cold_trauma == TRAUMA_CRITICAL)
+			arm.set_speed_modifiers(max(arm.interaction_modifier, 1), max(arm.click_cd_modifier, 2))
+		else if(arm.interaction_modifier == 1 && arm.click_cd_modifier == 2)
+			arm.set_speed_modifiers()
+	if(slash_trauma == TRAUMA_CRITICAL)
+		slash_dam = round(slash_dam + 0.05 * seconds_per_tick, DAMAGE_PRECISION)
+		add_bodypart_pain(0.05 * seconds_per_tick * 0.8)
+		sync_composite_damage()
+	if(acid_trauma >= TRAUMA_MINOR)
+		var/acid_cut = (acid_trauma == TRAUMA_CRITICAL ? 0.25 : 0.1) * seconds_per_tick
+		slash_dam = round(slash_dam + acid_cut, DAMAGE_PRECISION)
+		add_bodypart_pain(acid_cut * 1.4)
+		sync_composite_damage()
+	if(pierce_trauma == TRAUMA_CRITICAL && body_zone == BODY_ZONE_CHEST)
+		internal_blood_volume += 1 * seconds_per_tick
+		var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
+		lungs?.add_internal_blood(1 * seconds_per_tick)
+	if((blunt_trauma == TRAUMA_CRITICAL || cold_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL) && (body_zone == BODY_ZONE_CHEST || last_precise_zone == BODY_ZONE_PRECISE_ABDOMEN))
+		apply_organ_spill_damage(0.25 * seconds_per_tick, last_precise_zone)
+	return TRUE
+
+/obj/item/bodypart/proc/refresh_composite_traumas(precise_zone = null, damage_source)
+	var/old_blunt = blunt_trauma
+	var/old_pierce = pierce_trauma
+	var/old_slash = slash_trauma
+	var/old_heat = heat_trauma
+	var/old_cold = cold_trauma
+	var/old_acid = acid_trauma
+	blunt_trauma = get_threshold_state(blunt_dam, 0.4, 0.75)
+	pierce_trauma = get_threshold_state(pierce_dam, 0.3, 0.8)
+	slash_trauma = get_threshold_state(slash_dam, 0.33, 0.7)
+	heat_trauma = get_threshold_state(heat_dam, 0.5, 0.8)
+	cold_trauma = get_threshold_state(cold_dam, 0.4, 0.8)
+	acid_trauma = get_threshold_state(acid_dam, 0.25, 0.6)
+	if(owner)
+		if(blunt_trauma > old_blunt)
+			force_medical_wound(blunt_trauma == TRAUMA_CRITICAL ? /datum/wound/blunt/bone/severe : /datum/wound/blunt/bone/moderate, damage_source)
+			if(body_zone == BODY_ZONE_HEAD && precise_zone == BODY_ZONE_PRECISE_NECK)
+				owner.Paralyze(blunt_trauma == TRAUMA_CRITICAL ? 5 SECONDS : 2 SECONDS)
+				owner.Knockdown(blunt_trauma == TRAUMA_CRITICAL ? 5 SECONDS : 2 SECONDS)
+			else if(body_zone == BODY_ZONE_HEAD && blunt_trauma == TRAUMA_CRITICAL)
+				owner.adjust_confusion(10 SECONDS)
+		if(pierce_trauma > old_pierce)
+			force_medical_wound(pierce_trauma == TRAUMA_CRITICAL ? /datum/wound/pierce/bleed/critical/aorta : /datum/wound/pierce/bleed/moderate, damage_source)
+			if(body_zone == BODY_ZONE_CHEST && !(precise_zone in list(BODY_ZONE_PRECISE_ABDOMEN, BODY_ZONE_PRECISE_GROIN)))
+				lung_punctures = min(lung_punctures + 1, 4)
+				var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
+				lungs?.add_lung_puncture()
+		if(slash_trauma > old_slash)
+			force_medical_wound(slash_trauma == TRAUMA_CRITICAL ? /datum/wound/slash/flesh/critical : /datum/wound/slash/flesh/moderate, damage_source)
+		if(heat_trauma > old_heat)
+			force_medical_wound(heat_trauma == TRAUMA_CRITICAL ? /datum/wound/burn/flesh/severe : /datum/wound/burn/flesh/moderate, damage_source)
+		if(cold_trauma > old_cold)
+			force_medical_wound(cold_trauma == TRAUMA_CRITICAL ? /datum/wound/burn/flesh/frostbite/severe : /datum/wound/burn/flesh/frostbite/moderate, damage_source)
+		if(acid_trauma > old_acid)
+			force_medical_wound(acid_trauma == TRAUMA_CRITICAL ? /datum/wound/burn/flesh/chemical/severe : /datum/wound/burn/flesh/chemical/moderate, damage_source)
+	apply_organ_trauma_from_damage(precise_zone)
+
+/obj/item/bodypart/proc/force_medical_wound(datum/wound/wound_path, wound_source)
+	if(!wound_path)
+		return
+	return force_wound_upwards(wound_path, wound_source = wound_source)
+
+/obj/item/bodypart/proc/get_threshold_state(amount, minor, critical)
+	if(!max_damage)
+		return TRAUMA_NONE
+	var/ratio = amount / max_damage
+	if(ratio >= critical)
+		return TRAUMA_CRITICAL
+	if(ratio >= minor)
+		return TRAUMA_MINOR
+	return TRAUMA_NONE
+
+/obj/item/bodypart/proc/apply_organ_trauma_from_damage(precise_zone = null)
+	if(!owner)
+		return
+	var/blunt_delta = max(blunt_dam - last_blunt_organ_damage, 0)
+	var/pierce_delta = max(pierce_dam - last_pierce_organ_damage, 0)
+	var/slash_delta = max(slash_dam - last_slash_organ_damage, 0)
+	var/heat_delta = max(heat_dam - last_heat_organ_damage, 0)
+	var/cold_delta = max(cold_dam - last_cold_organ_damage, 0)
+	var/acid_delta = max(acid_dam - last_acid_organ_damage, 0)
+	last_blunt_organ_damage = blunt_dam
+	last_pierce_organ_damage = pierce_dam
+	last_slash_organ_damage = slash_dam
+	last_heat_organ_damage = heat_dam
+	last_cold_organ_damage = cold_dam
+	last_acid_organ_damage = acid_dam
+
+	if(blunt_delta && body_zone == BODY_ZONE_HEAD)
+		apply_random_organ_damage(list(ORGAN_SLOT_BRAIN, ORGAN_SLOT_EYES, ORGAN_SLOT_TONGUE, ORGAN_SLOT_EARS), blunt_delta * 0.1)
+	if(blunt_delta && body_zone == BODY_ZONE_CHEST)
+		if(precise_zone == BODY_ZONE_PRECISE_ABDOMEN || precise_zone == BODY_ZONE_PRECISE_GROIN)
+			apply_random_organ_damage(list(ORGAN_SLOT_STOMACH, ORGAN_SLOT_LIVER), blunt_delta * 0.15)
+		else
+			apply_random_organ_damage(list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS), blunt_delta * 0.15)
+	if(pierce_delta)
+		var/pierce_share = (precise_zone in list(BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_MOUTH)) ? 0.3 : 0.2
+		if(body_zone == BODY_ZONE_HEAD)
+			switch(precise_zone)
+				if(BODY_ZONE_PRECISE_EYES)
+					owner.adjust_organ_loss(ORGAN_SLOT_EYES, pierce_delta * pierce_share, required_organ_flag = ORGAN_ORGANIC)
+				if(BODY_ZONE_PRECISE_EARS)
+					owner.adjust_organ_loss(ORGAN_SLOT_EARS, pierce_delta * pierce_share, required_organ_flag = ORGAN_ORGANIC)
+				if(BODY_ZONE_PRECISE_MOUTH)
+					owner.adjust_organ_loss(ORGAN_SLOT_TONGUE, pierce_delta * pierce_share, required_organ_flag = ORGAN_ORGANIC)
+				else
+					apply_random_organ_damage(list(ORGAN_SLOT_BRAIN, ORGAN_SLOT_EYES, ORGAN_SLOT_TONGUE, ORGAN_SLOT_EARS), pierce_delta * pierce_share)
+		if(body_zone == BODY_ZONE_CHEST)
+			if(precise_zone == BODY_ZONE_PRECISE_ABDOMEN || precise_zone == BODY_ZONE_PRECISE_GROIN)
+				apply_random_organ_damage(list(ORGAN_SLOT_STOMACH, ORGAN_SLOT_LIVER), pierce_delta * 0.2)
+			else
+				apply_random_organ_damage(list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS), pierce_delta * 0.2)
+			if(pierce_trauma == TRAUMA_CRITICAL)
+				internal_blood_volume += pierce_delta * 0.2
+				var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
+				lungs?.add_internal_blood(pierce_delta * 0.2)
+	if(slash_delta)
+		if(body_zone == BODY_ZONE_HEAD)
+			switch(precise_zone)
+				if(BODY_ZONE_PRECISE_EYES)
+					owner.adjust_organ_loss(ORGAN_SLOT_EYES, slash_delta * 0.2, required_organ_flag = ORGAN_ORGANIC)
+				if(BODY_ZONE_PRECISE_EARS)
+					owner.adjust_organ_loss(ORGAN_SLOT_EARS, slash_delta * 0.2, required_organ_flag = ORGAN_ORGANIC)
+				if(BODY_ZONE_PRECISE_MOUTH)
+					owner.adjust_organ_loss(ORGAN_SLOT_TONGUE, slash_delta * 0.2, required_organ_flag = ORGAN_ORGANIC)
+		if(body_zone == BODY_ZONE_CHEST && slash_trauma == TRAUMA_CRITICAL)
+			apply_organ_spill_damage(slash_delta * 0.1, precise_zone)
+	if((heat_trauma == TRAUMA_CRITICAL || cold_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL) && body_zone == BODY_ZONE_CHEST)
+		apply_organ_spill_damage(max(heat_delta, cold_delta, acid_delta) * 0.1, precise_zone)
+
+/obj/item/bodypart/proc/apply_random_organ_damage(list/slots, amount)
+	if(!owner || amount <= 0 || !length(slots))
+		return
+	owner.adjust_organ_loss(pick(slots), amount, required_organ_flag = ORGAN_ORGANIC)
+
+/obj/item/bodypart/proc/apply_organ_spill_damage(amount, precise_zone = null)
+	if(!owner || amount <= 0)
+		return
+	if(precise_zone == BODY_ZONE_PRECISE_ABDOMEN || precise_zone == BODY_ZONE_PRECISE_GROIN)
+		apply_random_organ_damage(list(ORGAN_SLOT_STOMACH, ORGAN_SLOT_LIVER), amount)
+	else
+		apply_random_organ_damage(list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS), amount)
 
 /**
  * #receive_damage
@@ -684,7 +1122,7 @@
  * attack_direction - The direction the bodypart is attacked from, used to send blood flying in the opposite direction.
  * damage_source - The source of damage, typically a weapon.
  */
-/obj/item/bodypart/proc/receive_damage(brute = 0, burn = 0, blocked = 0, updating_health = TRUE, forced = FALSE, required_bodytype = null, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE, attack_direction = null, damage_source, wound_clothing = TRUE)
+/obj/item/bodypart/proc/receive_damage(brute = 0, burn = 0, blocked = 0, updating_health = TRUE, forced = FALSE, required_bodytype = null, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE, attack_direction = null, damage_source, wound_clothing = TRUE, brute_type = null, burn_type = null, precise_zone = null)
 	SHOULD_CALL_PARENT(TRUE)
 
 	var/hit_percent = forced ? 1 : (100-blocked)/100
@@ -716,6 +1154,7 @@
 	// what kind of wounds we're gonna roll for, take the greater between brute and burn, then if it's brute, we subdivide based on sharpness
 	var/wounding_type = (brute > burn ? WOUND_BLUNT : WOUND_BURN)
 	var/wounding_dmg = max(brute, burn)
+	var/use_composite_wounding = TRUE
 
 	if(wounding_type == WOUND_BLUNT && sharpness)
 		if(sharpness & SHARP_EDGED)
@@ -754,7 +1193,7 @@
 		if ((dismemberable_by_wound() || dismemberable_by_total_damage()) && try_dismember(wounding_type, wounding_dmg, wound_bonus, exposed_wound_bonus))
 			return
 		// now we have our wounding_type and are ready to carry on with wounds and dealing the actual damage
-		if(wounding_dmg >= WOUND_MINIMUM_DAMAGE && wound_bonus != CANT_WOUND)
+		if(wounding_dmg >= WOUND_MINIMUM_DAMAGE && wound_bonus != CANT_WOUND && !use_composite_wounding)
 			check_wounding(wounding_type, wounding_dmg, wound_bonus, exposed_wound_bonus, attack_direction, damage_source = damage_source, wound_clothing = wound_clothing)
 
 	for(var/datum/wound/iter_wound as anything in wounds)
@@ -773,10 +1212,10 @@
 
 	if(can_inflict <= 0)
 		return FALSE
-	if(brute)
-		set_brute_dam(brute_dam + brute)
-	if(burn)
-		set_burn_dam(burn_dam + burn)
+	var/resolved_brute_type = brute_type || infer_brute_damage_type(sharpness)
+	if(brute && resolved_brute_type == BODYPART_DAMAGE_BLUNT && wound_clothing)
+		damage_covering_clothes(brute * (blocked ? 0.3 : 0.5), BRUTE)
+	apply_composite_damage(brute, burn, sharpness, brute_type, burn_type, precise_zone, damage_source)
 
 	if(owner)
 		if(can_be_disabled)
@@ -886,9 +1325,9 @@
 		return
 
 	if(brute)
-		set_brute_dam(round(max(brute_dam - brute, 0), DAMAGE_PRECISION))
+		heal_composite_brute(brute)
 	if(burn)
-		set_burn_dam(round(max(burn_dam - burn, 0), DAMAGE_PRECISION))
+		heal_composite_burn(burn)
 
 	if(owner)
 		if(can_be_disabled)
@@ -899,8 +1338,13 @@
 
 ///Sets the damage of a bodypart when it is created.
 /obj/item/bodypart/proc/set_initial_damage(brute_damage, burn_damage)
-	set_brute_dam(brute_damage)
-	set_burn_dam(burn_damage)
+	blunt_dam = max(brute_damage, 0)
+	pierce_dam = 0
+	slash_dam = 0
+	heat_dam = max(burn_damage, 0)
+	cold_dam = 0
+	acid_dam = 0
+	sync_composite_damage()
 
 ///Proc to hook behavior associated to the change of the brute_dam variable's value.
 /obj/item/bodypart/proc/set_brute_dam(new_value)
@@ -910,6 +1354,11 @@
 		return
 	. = brute_dam
 	brute_dam = new_value
+	if(!composite_damage_syncing)
+		if(new_value > .)
+			blunt_dam += new_value - .
+		else
+			heal_composite_brute(. - new_value)
 
 ///Proc to hook behavior associated to the change of the burn_dam variable's value.
 /obj/item/bodypart/proc/set_burn_dam(new_value)
@@ -919,6 +1368,11 @@
 		return
 	. = burn_dam
 	burn_dam = new_value
+	if(!composite_damage_syncing)
+		if(new_value > .)
+			heat_dam += new_value - .
+		else
+			heal_composite_burn(. - new_value)
 
 //Returns total damage.
 /obj/item/bodypart/proc/get_damage()

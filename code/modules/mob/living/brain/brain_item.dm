@@ -18,6 +18,7 @@
 	maxHealth = BRAIN_DAMAGE_DEATH
 	low_threshold = 45
 	high_threshold = 120
+	pain_multiplier = 1
 
 	organ_traits = list(TRAIT_ADVANCEDTOOLUSER, TRAIT_LITERATE, TRAIT_CAN_STRIP)
 
@@ -336,6 +337,9 @@
 
 /obj/item/organ/brain/on_life(seconds_per_tick)
 	. = ..()
+	if(owner && (organ_condition_flags & ORGAN_CONDITION_BRAIN_CONFUSION))
+		owner.adjust_confusion_up_to(1 SECONDS * seconds_per_tick, 10 SECONDS)
+		owner.adjust_dizzy_up_to(0.5 SECONDS * seconds_per_tick, 6 SECONDS)
 
 	if(HAS_TRAIT(src, TRAIT_BRAIN_DAMAGE_NODEATH))
 		return
@@ -343,6 +347,19 @@
 		to_chat(owner, span_userdanger("The last spark of life in your brain fizzles out..."))
 		owner.investigate_log("has been killed by brain damage.", INVESTIGATE_DEATHS)
 		owner.death()
+
+/obj/item/organ/brain/on_high_damage_received()
+	add_organ_condition(ORGAN_CONDITION_BRAIN_CONFUSION)
+
+/obj/item/organ/brain/on_high_damage_healed()
+	if(!(organ_flags & ORGAN_FAILING))
+		remove_organ_condition(ORGAN_CONDITION_BRAIN_CONFUSION)
+
+/obj/item/organ/brain/on_begin_failure()
+	add_organ_condition(ORGAN_CONDITION_BRAIN_CONFUSION)
+
+/obj/item/organ/brain/on_failure_recovery()
+	remove_organ_condition(ORGAN_CONDITION_BRAIN_CONFUSION)
 
 /obj/item/organ/brain/on_bodypart_insert(obj/item/bodypart/limb)
 	. = ..()

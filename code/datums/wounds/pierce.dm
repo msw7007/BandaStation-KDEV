@@ -404,3 +404,20 @@
 	wound_path_to_generate = /datum/wound/pierce/bleed/critical
 
 	threshold_minimum = 100
+
+/datum/wound/pierce/bleed/critical/aorta
+	name = "Повреждение аорты"
+	desc = "Крупный сосуд пациента поврежден, кровь скапливается внутри тела и вырывается наружу при новом повреждении зоны."
+	treat_text = "Наложите швы или проведите операцию по устранению повреждения, затем слейте скопившуюся внутри кровь."
+	treat_text_short = "Наложите швы или проведите операцию, затем слейте внутреннюю кровь."
+	examine_desc = "имеет критическое колотое повреждение крупного сосуда"
+	occur_text = "пробивает крупный сосуд"
+	initial_flow = 1.75
+	internal_bleeding_chance = 100
+	internal_bleeding_coefficient = 3
+
+/datum/wound_pregen_data/flesh_pierce/aorta
+	abstract = FALSE
+	can_be_randomly_generated = FALSE
+	wound_path_to_generate = /datum/wound/pierce/bleed/critical/aorta
+	threshold_minimum = 80

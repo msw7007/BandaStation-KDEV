@@ -61,6 +61,12 @@
 
 	/// Used in [carbon/proc/check_breath] and [lungs/proc/check_breath]]
 	var/co2overloadtime = null
+	/// Oxygen saturation of the blood, 0-100. Legacy OXY loss reads as 100 - oxygenation.
+	var/oxygenation = 100
+	/// Blood pressure multiplier. Affects oxygenation and bleeding rate.
+	var/blood_pressure = 1
+	/// Accumulated chemical loss from caustic/toxic chemical effects.
+	var/chemical_loss = 0
 
 	var/obj/item/food/meat/slab/type_of_meat = /obj/item/food/meat/slab
 

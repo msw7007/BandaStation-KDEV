@@ -3,6 +3,9 @@
 	clear_focused_look()
 	if(listening_intently)
 		toggle_intent_listen()
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_mover = src
+		carbon_mover.handle_bodypart_movement_trauma()
 	update_turf_movespeed(loc)
 	update_stealth_chameleon()
 	if(HAS_TRAIT(src, TRAIT_NEGATES_GRAVITY))

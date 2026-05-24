@@ -135,15 +135,27 @@
 	if(IS_ROBOTIC_ORGAN(src) && !can_use_chrome_effects())
 		owner.reagents.end_metabolization(keep_liverless = TRUE)
 		owner.reagents.metabolize(owner, seconds_per_tick, can_overdose = TRUE, liverless = TRUE)
+		var/liverless_toxin = owner.convert_liverless_reagents_to_toxin(seconds_per_tick)
+		if(liverless_toxin)
+			owner.adjust_tox_loss(liverless_toxin, updating_health = FALSE, forced = TRUE)
 		return
 
 	//If your liver is failing, then we use the liverless version of metabolize
-	if((organ_flags & ORGAN_FAILING) || HAS_TRAIT(owner, TRAIT_LIVERLESS_METABOLISM))
+	if((organ_flags & ORGAN_FAILING) || (organ_condition_flags & ORGAN_CONDITION_CIRRHOSIS) || HAS_TRAIT(owner, TRAIT_LIVERLESS_METABOLISM))
 		owner.reagents.end_metabolization(keep_liverless = TRUE)
 		owner.reagents.metabolize(owner, seconds_per_tick, can_overdose = TRUE, liverless = TRUE)
+		var/liverless_toxin = owner.convert_liverless_reagents_to_toxin(seconds_per_tick)
+		if(liverless_toxin)
+			owner.adjust_tox_loss(liverless_toxin, updating_health = FALSE, forced = TRUE)
 		return
 
 	owner.reagents?.metabolize(owner, seconds_per_tick, can_overdose = TRUE)
+
+/obj/item/organ/liver/on_high_damage_received()
+	add_organ_condition(ORGAN_CONDITION_CIRRHOSIS)
+
+/obj/item/organ/liver/on_begin_failure()
+	add_organ_condition(ORGAN_CONDITION_CIRRHOSIS)
 
 /obj/item/organ/liver/handle_failing_organs(seconds_per_tick)
 	if(HAS_TRAIT(owner, TRAIT_STABLELIVER) || HAS_TRAIT(owner, TRAIT_LIVERLESS_METABOLISM))

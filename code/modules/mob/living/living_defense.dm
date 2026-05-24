@@ -142,6 +142,14 @@
 		apply_projectile_effects(proj, def_zone, blocked)
 
 /mob/living/proc/apply_projectile_effects(obj/projectile/proj, def_zone, armor_check)
+	var/projectile_brute_type = null
+	if(proj.damage_type == BRUTE)
+		if(proj.sharpness & SHARP_EDGED)
+			projectile_brute_type = BODYPART_DAMAGE_SLASH
+		else if((proj.sharpness & SHARP_POINTY) || proj.armor_flag == BULLET)
+			projectile_brute_type = BODYPART_DAMAGE_PIERCE
+		else
+			projectile_brute_type = BODYPART_DAMAGE_BLUNT
 	var/damage_dealt = apply_damage(
 		damage = proj.damage,
 		damagetype = proj.damage_type,
@@ -152,6 +160,8 @@
 		sharpness = proj.sharpness,
 		attack_direction = get_dir(proj.starting, src),
 		attacking_item = proj,
+		brute_type = projectile_brute_type,
+		precise_zone = def_zone,
 	)
 
 	if(proj.damage_type == BRUTE && damage_dealt >= 10 && proj.speed >= 1 && prob(0.1))
@@ -288,7 +298,7 @@
 		FALSE,
 		thrown_item.weak_against_armour,
 	)
-	apply_damage(thrown_item.throwforce, thrown_item.damtype, zone, armor, sharpness = thrown_item.get_sharpness(), wound_bonus = (nosell_hit * CANT_WOUND), attacking_item = thrown_item)
+	apply_damage(thrown_item.throwforce, thrown_item.damtype, zone, armor, sharpness = thrown_item.get_sharpness(), wound_bonus = (nosell_hit * CANT_WOUND), attacking_item = thrown_item, precise_zone = zone)
 	log_hit_combat(throwingdatum?.get_thrower(), thrown_item)
 
 	if(QDELETED(src)) //Damage can delete the mob.
@@ -585,7 +595,10 @@
 	return ..()
 
 /mob/living/acid_act(acidpwr, acid_volume)
-	take_bodypart_damage(acidpwr * min(1, acid_volume * 0.1))
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_target = src
+		carbon_target.adjust_chemical_loss(acidpwr * min(1, acid_volume * 0.05), updating_health = FALSE)
+	take_bodypart_damage(burn = acidpwr * min(1, acid_volume * 0.1), burn_type = BODYPART_DAMAGE_ACID)
 	return TRUE
 
 ///As the name suggests, this should be called to apply electric shocks.

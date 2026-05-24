@@ -19,6 +19,8 @@
 	var/slot
 	/// Random flags that describe this organ
 	var/organ_flags = ORGAN_ORGANIC | ORGAN_EDIBLE | ORGAN_VIRGIN
+	/// Treatable medical condition flags specific to organ function.
+	var/organ_condition_flags = NONE
 	/// Maximum damage the organ can take, ever.
 	var/maxHealth = STANDARD_ORGAN_THRESHOLD
 	/**
@@ -26,6 +28,10 @@
 	 * Should only ever be modified by apply_organ_damage!
 	 */
 	var/damage = 0
+	/// Active pain tied to organ damage.
+	var/pain = 0
+	/// Multiplier applied when organ damage generates pain.
+	var/pain_multiplier = 1
 	/// Healing factor and decay factor function on % of maxhealth, and do not work by applying a static number per tick
 	var/healing_factor = 0 //fraction of maxhealth healed per on_life(), set to 0 for generic organs
 	var/decay_factor = 0 //same as above but when without a living owner, set to 0 for generic organs
@@ -176,6 +182,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 
 /obj/item/organ/proc/on_life(seconds_per_tick) //repair organ damage if the organ is not failing
 	SHOULD_CALL_PARENT(TRUE)
+	handle_organ_pain(seconds_per_tick)
 
 	if(organ_flags & ORGAN_FAILING)
 		handle_failing_organs(seconds_per_tick)
@@ -211,6 +218,114 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(!can_use_chrome_effects())
 		return 0
 	return chromity_overheat + chromity_active_overheat_floor
+
+/obj/item/organ/proc/get_efficiency()
+	if(isnull(owner) || owner.stat == DEAD || (organ_flags & ORGAN_FAILING) || damage >= maxHealth)
+		return 0
+	var/health_efficiency = clamp(1 - (damage / maxHealth), 0, 1)
+	var/pain_efficiency = clamp(1 - (pain / max(maxHealth, 1)), 0, 1)
+	var/condition_efficiency = 1
+	if(organ_condition_flags & (ORGAN_CONDITION_CIRRHOSIS|ORGAN_CONDITION_CARDIAC_ARREST|ORGAN_CONDITION_BLINDNESS|ORGAN_CONDITION_DEAFNESS))
+		condition_efficiency = 0
+	else if(organ_condition_flags & (ORGAN_CONDITION_POISONING|ORGAN_CONDITION_SPEECH_IMPAIRMENT|ORGAN_CONDITION_BRAIN_CONFUSION))
+		condition_efficiency = 0.5
+	return clamp(health_efficiency * pain_efficiency * condition_efficiency, 0, 1)
+
+/obj/item/organ/proc/add_organ_condition(condition_flag)
+	if(organ_condition_flags & condition_flag)
+		return FALSE
+	organ_condition_flags |= condition_flag
+	on_condition_added(condition_flag)
+	return TRUE
+
+/obj/item/organ/proc/remove_organ_condition(condition_flag)
+	if(!(organ_condition_flags & condition_flag))
+		return FALSE
+	organ_condition_flags &= ~condition_flag
+	on_condition_removed(condition_flag)
+	return TRUE
+
+/obj/item/organ/proc/clear_organ_conditions()
+	var/static/list/all_conditions = list(
+		ORGAN_CONDITION_CIRRHOSIS,
+		ORGAN_CONDITION_POISONING,
+		ORGAN_CONDITION_CARDIAC_ARREST,
+		ORGAN_CONDITION_LUNG_PUNCTURE,
+		ORGAN_CONDITION_INTERNAL_BLOOD,
+		ORGAN_CONDITION_BLINDNESS,
+		ORGAN_CONDITION_DEAFNESS,
+		ORGAN_CONDITION_SPEECH_IMPAIRMENT,
+		ORGAN_CONDITION_BRAIN_CONFUSION,
+	)
+	for(var/condition_flag as anything in all_conditions)
+		remove_organ_condition(condition_flag)
+
+/obj/item/organ/proc/on_condition_added(condition_flag)
+	return
+
+/obj/item/organ/proc/on_condition_removed(condition_flag)
+	return
+
+/obj/item/organ/proc/get_condition_status_text()
+	if(!organ_condition_flags)
+		return
+	var/list/conditions = list()
+	if(organ_condition_flags & ORGAN_CONDITION_CIRRHOSIS)
+		conditions += "Cirrhosis"
+	if(organ_condition_flags & ORGAN_CONDITION_POISONING)
+		conditions += "Poisoning"
+	if(organ_condition_flags & ORGAN_CONDITION_CARDIAC_ARREST)
+		conditions += "Cardiac arrest"
+	if(organ_condition_flags & ORGAN_CONDITION_LUNG_PUNCTURE)
+		conditions += "Punctured lung"
+	if(organ_condition_flags & ORGAN_CONDITION_INTERNAL_BLOOD)
+		conditions += "Internal bleeding"
+	if(organ_condition_flags & ORGAN_CONDITION_BLINDNESS)
+		conditions += "Blindness"
+	if(organ_condition_flags & ORGAN_CONDITION_DEAFNESS)
+		conditions += "Deafness"
+	if(organ_condition_flags & ORGAN_CONDITION_SPEECH_IMPAIRMENT)
+		conditions += "Speech impairment"
+	if(organ_condition_flags & ORGAN_CONDITION_BRAIN_CONFUSION)
+		conditions += "Confusion"
+	return english_list(conditions)
+
+/obj/item/organ/proc/add_organ_pain(amount)
+	if(!owner || owner.stat == DEAD || owner.get_medical_painkiller_strength())
+		return
+	pain = round(max(pain + amount * pain_multiplier, 0), DAMAGE_PRECISION)
+
+/obj/item/organ/proc/handle_organ_pain(seconds_per_tick)
+	if(!owner)
+		return
+	var/target_pain = damage * 0.5 * pain_multiplier
+	var/painkiller_strength = owner.get_medical_painkiller_strength()
+	if(owner.stat >= UNCONSCIOUS || owner.IsSleeping() || painkiller_strength >= PAINKILLER_INSTANT)
+		pain = 0
+		target_pain = 0
+	else if(painkiller_strength >= PAINKILLER_STRONG)
+		pain = max(0, pain - 5 * seconds_per_tick)
+	else if(painkiller_strength >= PAINKILLER_WEAK)
+		pain = max(damage * 0.1 * pain_multiplier, pain - 3 * seconds_per_tick)
+	else if(pain > target_pain)
+		pain = max(target_pain, pain - 1 * seconds_per_tick)
+	else if(pain < target_pain)
+		pain = min(target_pain, pain + 1 * seconds_per_tick)
+
+/obj/item/organ/proc/apply_surgical_resection(target_damage)
+	if(IS_ROBOTIC_ORGAN(src))
+		set_organ_damage(target_damage)
+		return 0
+	var/old_damage = damage
+	var/final_damage = max(target_damage, maxHealth * 0.5)
+	if(old_damage <= final_damage)
+		return 0
+	set_organ_damage(final_damage)
+	var/healed_damage = old_damage - damage
+	maxHealth = max(1, maxHealth - healed_damage * 0.05)
+	high_threshold = min(high_threshold, maxHealth * 0.45)
+	low_threshold = min(low_threshold, maxHealth * 0.1)
+	return healed_damage
 
 /obj/item/organ/proc/add_chromity_overheat(amount)
 	if(!can_use_chrome_effects())
@@ -281,7 +396,12 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 		return FALSE
 	if(required_organ_flag && !(organ_flags & required_organ_flag))
 		return FALSE
+	var/old_damage = damage
 	damage = clamp(damage + damage_amount, 0, maximum)
+	if(damage > old_damage)
+		add_organ_pain(damage - old_damage)
+	if(owner && slot == ORGAN_SLOT_EYES)
+		owner.update_code_fov()
 	SEND_SIGNAL(src, COMSIG_ORGAN_ADJUST_DAMAGE, damage_amount, maximum, required_organ_flag)
 	. = (prev_damage - damage) // return net damage
 	var/message = check_damage_thresholds()
@@ -379,6 +499,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 			if(remove_hazardous && (organ.organ_flags & ORGAN_HAZARDOUS))
 				qdel(organ)
 				continue
+			organ.clear_organ_conditions()
 			// Species regenerate organs doesn't ALWAYS handle healing the organs because it's dumb
 			organ.set_organ_damage(0)
 
@@ -397,6 +518,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(!lungs)
 		lungs = new()
 		lungs.Insert(src)
+	lungs.clear_organ_conditions()
 	lungs.set_organ_damage(0)
 	lungs.received_pressure_mult = lungs::received_pressure_mult
 
@@ -406,24 +528,29 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	else
 		heart = new()
 		heart.Insert(src)
+	heart.clear_organ_conditions()
+	heart.Restart()
 	heart.set_organ_damage(0)
 
 	var/obj/item/organ/tongue/tongue = get_organ_slot(ORGAN_SLOT_TONGUE)
 	if(!tongue)
 		tongue = new()
 		tongue.Insert(src)
+	tongue.clear_organ_conditions()
 	tongue.set_organ_damage(0)
 
 	var/obj/item/organ/eyes/eyes = get_organ_slot(ORGAN_SLOT_EYES)
 	if(!eyes)
 		eyes = new()
 		eyes.Insert(src)
+	eyes.clear_organ_conditions()
 	eyes.set_organ_damage(0)
 
 	var/obj/item/organ/ears/ears = get_organ_slot(ORGAN_SLOT_EARS)
 	if(!ears)
 		ears = new()
 		ears.Insert(src)
+	ears.clear_organ_conditions()
 	ears.set_organ_damage(0)
 	ears.adjust_temporary_deafness(-INFINITY)
 
@@ -474,6 +601,10 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(advanced && (organ_flags & ORGAN_HAZARDOUS))
 		return conditional_tooltip("[colored ? "<font color='#cc3333'>" : ""]Вредное инородное тело[colored ? "</font>" : ""]", "Удалить хирургическим путем.", add_tooltips)
 
+	var/condition_text = get_condition_status_text()
+	if(condition_text)
+		return conditional_tooltip("[colored ? "<font color='#cc3333'>" : ""][condition_text][colored ? "</font>" : ""]", "Treat the organ surgically or replace it.", add_tooltips && owner?.stat != DEAD)
+
 	if(organ_flags & ORGAN_EMP)
 		return conditional_tooltip("[colored ? "<font color='#cc3333'>" : ""]Сбой, вызванный ЭМИ[colored ? "</font>" : ""]", "Починить или заменить хирургическим путем.", add_tooltips)
 
@@ -498,7 +629,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 /// Determines if this organ is shown when a user has condensed scans enabled
 /obj/item/organ/proc/show_on_condensed_scans()
 	// We don't need to show *most* damaged organs as they have no effects associated
-	return (organ_flags & (ORGAN_PROMINENT|ORGAN_HAZARDOUS|ORGAN_FAILING|ORGAN_VITAL))
+	return organ_condition_flags || (organ_flags & (ORGAN_PROMINENT|ORGAN_HAZARDOUS|ORGAN_FAILING|ORGAN_VITAL))
 
 /// Similar to get_status_text, but appends the text after the damage report, for additional status info
 /obj/item/organ/proc/get_status_appendix(advanced, add_tooltips)

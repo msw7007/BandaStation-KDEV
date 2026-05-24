@@ -14,6 +14,7 @@
 
 	healing_factor = STANDARD_ORGAN_HEALING
 	decay_factor = STANDARD_ORGAN_DECAY * 1.15 // ~13 minutes, the stomach is one of the first organs to die
+	pain_multiplier = 0.7
 
 	low_threshold_passed = span_info("Your stomach flashes with pain before subsiding. Food doesn't seem like a good idea right now.")
 	high_threshold_passed = span_warning("Your stomach flares up with constant pain- you can hardly stomach the idea of food right now!")
@@ -56,8 +57,9 @@
 	QDEL_LAZYLIST(stomach_contents)
 	return ..()
 
-/obj/item/organ/stomach/on_life(seconds_per_tick)
-	. = ..()
+/obj/item/organ/stomach/proc/handle_reagent_digestion(seconds_per_tick)
+	if(!owner)
+		return
 
 	//Manage species digestion
 	if(ishuman(owner))
@@ -67,8 +69,19 @@
 
 	var/mob/living/carbon/body = owner
 
-	// digest food, sent all reagents that can metabolize to the body
+	var/digestion_budget = 2 * seconds_per_tick
+	var/stomach_efficiency = get_efficiency()
+	if(organ_flags & ORGAN_FAILING)
+		var/toxin_amount = min(digestion_budget, reagents?.total_volume || 0)
+		if(toxin_amount > 0)
+			var/removed_amount = reagents.remove_all(toxin_amount)
+			body.adjust_tox_loss(removed_amount, forced = TRUE)
+		return
+
+	// Digest food and send processed reagents into the body.
 	for(var/datum/reagent/bit as anything in reagents?.reagent_list)
+		if(digestion_budget <= 0)
+			break
 
 		// If the reagent does not metabolize then it will sit in the stomach
 		// This has an effect on items like plastic causing them to take up space in the stomach
@@ -86,16 +99,18 @@
 		if(amount_food)
 			amount_max = max(amount_max - amount_food, 0)
 
-		// Transfer the amount of reagents based on volume with a min amount of 1u
-		var/amount = min((round(metabolism_efficiency * amount_max, 0.05) + rate_min) * seconds_per_tick, amount_max)
+		// Transfer up to 2 raw units per tick. A healthy stomach outputs 1.2x processed volume.
+		var/raw_amount = min((round(metabolism_efficiency * amount_max, 0.05) + rate_min) * seconds_per_tick, amount_max, digestion_budget)
 
-		if(amount <= 0)
+		if(raw_amount <= 0)
 			continue
 
-		// transfer the reagents over to the body at the rate of the stomach metabolim
-		// this way the body is where all reagents that are processed and react
-		// the stomach manages how fast they are feed in a drip style
-		reagents.trans_to(body, amount, target_id = bit.type)
+		var/processed_amount = raw_amount * 1.2 * stomach_efficiency
+		var/list/reagent_data = bit.data
+		reagents.remove_reagent(bit.type, raw_amount)
+		if(processed_amount > 0)
+			body.reagents.add_reagent(bit.type, processed_amount, reagent_data)
+		digestion_budget -= raw_amount
 
 	//Handle disgust
 	if(body)
@@ -251,6 +266,13 @@
 
 /obj/item/organ/stomach/on_life(seconds_per_tick)
 	. = ..()
+	handle_reagent_digestion(seconds_per_tick)
+	if(owner && (organ_condition_flags & ORGAN_CONDITION_POISONING))
+		add_organ_pain(0.5 * seconds_per_tick)
+		if(SPT_PROB(2, seconds_per_tick))
+			owner.emote("burp")
+		if(SPT_PROB(1, seconds_per_tick))
+			owner.vomit(VOMIT_CATEGORY_DEFAULT)
 	if (!owner || SSmobs.times_fired % 3 != 0)
 		return
 
@@ -387,6 +409,12 @@
 		hunger_bar.update_hunger_bar()
 	UnregisterSignal(stomach_owner, list(COMSIG_CARBON_VOMITED, COMSIG_HUMAN_GOT_PUNCHED))
 	return ..()
+
+/obj/item/organ/stomach/on_high_damage_received()
+	add_organ_condition(ORGAN_CONDITION_POISONING)
+
+/obj/item/organ/stomach/on_begin_failure()
+	add_organ_condition(ORGAN_CONDITION_POISONING)
 
 /obj/item/organ/stomach/feel_for_damage(self_aware)
 	if(damage < low_threshold)

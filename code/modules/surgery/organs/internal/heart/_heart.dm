@@ -9,6 +9,7 @@
 	item_flags = NO_BLOOD_ON_ITEM
 	healing_factor = STANDARD_ORGAN_HEALING
 	decay_factor = 2.5 * STANDARD_ORGAN_DECAY //designed to fail around 6 minutes after death
+	pain_multiplier = 1.5
 
 	low_threshold_passed = span_info("Prickles of pain appear then die out from within your chest...")
 	high_threshold_passed = span_warning("Something inside your chest hurts, and the pain isn't subsiding. You notice yourself breathing far faster than before.")
@@ -77,6 +78,7 @@
 	beating = FALSE
 	update_appearance()
 	beat = BEAT_NONE
+	add_organ_condition(ORGAN_CONDITION_CARDIAC_ARREST)
 	owner?.stop_sound_channel(CHANNEL_HEARTBEAT)
 	return TRUE
 
@@ -85,6 +87,7 @@
 		return FALSE
 
 	beating = TRUE
+	remove_organ_condition(ORGAN_CONDITION_CARDIAC_ARREST)
 	update_appearance()
 	return TRUE
 

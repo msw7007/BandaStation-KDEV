@@ -11,6 +11,9 @@
 	attack_direction = null,
 	attacking_item,
 	wound_clothing = TRUE,
+	brute_type = null,
+	burn_type = null,
+	precise_zone = null,
 )
 	// Spread damage should always have def zone be null
 	if(spread_damage)
@@ -19,6 +22,7 @@
 	// Otherwise if def zone is null, we'll get a random bodypart / zone to hit.
 	// ALso we'll automatically covnert string def zones into bodyparts to pass into parent call.
 	else if(!isbodypart(def_zone))
+		precise_zone ||= def_zone
 		var/random_zone = check_zone(def_zone || get_random_valid_zone(def_zone))
 		def_zone = get_bodypart(random_zone) || get_bodypart()
 
@@ -48,6 +52,9 @@
 	attack_direction = null,
 	attacking_item,
 	wound_clothing = TRUE,
+	brute_type = null,
+	burn_type = null,
+	precise_zone = null,
 )
 
 	// Add relevant DR modifiers into blocked value to pass to parent
@@ -125,11 +132,11 @@
 		amount += bodypart.burn_dam
 	return round(amount, DAMAGE_PRECISION)
 
-/mob/living/carbon/adjust_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+/mob/living/carbon/adjust_brute_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype, brute_type = BODYPART_DAMAGE_BLUNT)
 	if(!can_adjust_brute_loss(amount, forced, required_bodytype))
 		return 0
 	if(amount > 0)
-		. = take_overall_damage(brute = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+		. = take_overall_damage(brute = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype, brute_type = brute_type)
 	else
 		. = heal_overall_damage(brute = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
 
@@ -142,11 +149,11 @@
 		return FALSE
 	return adjust_brute_loss(diff, updating_health, forced, required_bodytype)
 
-/mob/living/carbon/adjust_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
+/mob/living/carbon/adjust_fire_loss(amount, updating_health = TRUE, forced = FALSE, required_bodytype, burn_type = BODYPART_DAMAGE_HEAT)
 	if(!can_adjust_fire_loss(amount, forced, required_bodytype))
 		return 0
 	if(amount > 0)
-		. = take_overall_damage(burn = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype)
+		. = take_overall_damage(burn = amount, updating_health = updating_health, forced = forced, required_bodytype = required_bodytype, burn_type = burn_type)
 	else
 		. = heal_overall_damage(burn = abs(amount), required_bodytype = required_bodytype, updating_health = updating_health, forced = forced)
 
@@ -158,6 +165,116 @@
 	if(!diff)
 		return FALSE
 	return adjust_fire_loss(diff, updating_health, forced, required_bodytype)
+
+/mob/living/carbon/get_oxy_loss()
+	return round(max(0, 100 - oxygenation), DAMAGE_PRECISION)
+
+/mob/living/carbon/proc/get_chemical_loss()
+	return round(chemical_loss, DAMAGE_PRECISION)
+
+/mob/living/carbon/proc/adjust_chemical_loss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	. = chemical_loss
+	chemical_loss = clamp(chemical_loss + amount * CONFIG_GET(number/damage_multiplier), 0, maxHealth * 2)
+	. -= chemical_loss
+	if(!.)
+		return FALSE
+	if(updating_health)
+		updatehealth()
+
+/mob/living/carbon/proc/set_chemical_loss(amount, updating_health = TRUE, forced = FALSE)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return 0
+	. = chemical_loss
+	chemical_loss = clamp(amount, 0, maxHealth * 2)
+	. -= chemical_loss
+	if(!.)
+		return FALSE
+	if(updating_health)
+		updatehealth()
+
+/mob/living/carbon/adjust_tox_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype = ALL)
+	if(!can_adjust_tox_loss(amount, forced, required_biotype))
+		return 0
+	if(!forced && HAS_TRAIT(src, TRAIT_TOXINLOVER))
+		amount = -amount
+		if(HAS_TRAIT(src, TRAIT_TOXIMMUNE))
+			amount = min(amount, 0)
+		if(amount > 0)
+			adjust_blood_volume(-5 * amount)
+		else
+			adjust_blood_volume(-amount)
+	else if(!forced && HAS_TRAIT(src, TRAIT_TOXIMMUNE))
+		amount = min(amount, 0)
+	. = toxloss
+	toxloss = clamp(toxloss + amount * CONFIG_GET(number/damage_multiplier), 0, maxHealth * 2)
+	if(toxloss > .)
+		apply_toxin_effects_to_organs(toxloss - .)
+	. -= toxloss
+	if(!.)
+		return FALSE
+	if(updating_health)
+		updatehealth()
+
+/mob/living/carbon/set_tox_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype = ALL)
+	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
+		return FALSE
+	if(!forced && !(mob_biotypes & required_biotype))
+		return FALSE
+	. = toxloss
+	toxloss = clamp(amount, 0, maxHealth * 2)
+	if(toxloss > .)
+		apply_toxin_effects_to_organs(toxloss - .)
+	. -= toxloss
+	if(!.)
+		return FALSE
+	if(updating_health)
+		updatehealth()
+
+/mob/living/carbon/proc/apply_toxin_effects_to_organs(amount)
+	if(amount <= 0)
+		return
+	var/obj/item/organ/liver = get_organ_slot(ORGAN_SLOT_LIVER)
+	if(liver && !(liver.organ_flags & ORGAN_FAILING) && liver.damage < liver.maxHealth)
+		liver.apply_organ_damage(amount / 5, required_organ_flag = ORGAN_ORGANIC)
+		return
+	var/list/targets = list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS, ORGAN_SLOT_STOMACH, ORGAN_SLOT_BRAIN, ORGAN_SLOT_EYES, ORGAN_SLOT_EARS, ORGAN_SLOT_TONGUE)
+	var/split_amount = amount / max(length(targets), 1)
+	for(var/slot in targets)
+		adjust_organ_loss(slot, split_amount, required_organ_flag = ORGAN_ORGANIC)
+
+/mob/living/carbon/proc/get_total_pain()
+	. = 0
+	for(var/obj/item/bodypart/part as anything in get_bodyparts(include_stumps = TRUE))
+		. += part.pain
+	for(var/obj/item/organ/organ as anything in organs)
+		. += organ.pain
+	return round(., DAMAGE_PRECISION)
+
+/mob/living/carbon/proc/get_medical_painkiller_strength()
+	if(stat >= UNCONSCIOUS || IsSleeping())
+		return PAINKILLER_INSTANT
+	if(!reagents)
+		return HAS_TRAIT(src, TRAIT_ANALGESIA) ? PAINKILLER_STRONG : PAINKILLER_NONE
+	if(reagents.has_reagent(/datum/reagent/medicine/adminordrazine, needs_metabolizing = TRUE))
+		return PAINKILLER_INSTANT
+	if(reagents.has_reagent(/datum/reagent/medicine/morphine, needs_metabolizing = TRUE) \
+		|| reagents.has_reagent(/datum/reagent/medicine/muscle_stimulant, needs_metabolizing = TRUE) \
+		|| reagents.has_reagent(/datum/reagent/medicine/mine_salve, needs_metabolizing = TRUE) \
+		|| reagents.has_reagent(/datum/reagent/determination, needs_metabolizing = TRUE))
+		return PAINKILLER_STRONG
+	if(reagents.has_reagent(/datum/reagent/medicine/granibitaluri, needs_metabolizing = TRUE))
+		return PAINKILLER_WEAK
+	return HAS_TRAIT(src, TRAIT_ANALGESIA) ? PAINKILLER_STRONG : PAINKILLER_NONE
+
+/mob/living/carbon/proc/reduce_bodypart_infections(amount, maximum_reduction = 50, maximum_treatable = 50)
+	var/remaining = amount
+	for(var/obj/item/bodypart/part as anything in get_bodyparts(include_stumps = TRUE))
+		if(remaining <= 0)
+			break
+		remaining -= part.reduce_infection(remaining, maximum_reduction, maximum_treatable)
+	return amount - remaining
 
 /mob/living/carbon/human/adjust_tox_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype = ALL)
 	. = ..()
@@ -296,7 +413,7 @@
  *
  * It automatically updates health status
  */
-/mob/living/carbon/take_bodypart_damage(brute = 0, burn = 0, updating_health = TRUE, required_bodytype, check_armor = FALSE, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE)
+/mob/living/carbon/take_bodypart_damage(brute = 0, burn = 0, updating_health = TRUE, required_bodytype, check_armor = FALSE, wound_bonus = 0, exposed_wound_bonus = 0, sharpness = NONE, brute_type = null, burn_type = null, precise_zone = null)
 	. = FALSE
 	if(HAS_TRAIT(src, TRAIT_GODMODE))
 		return
@@ -306,7 +423,7 @@
 
 	var/obj/item/bodypart/picked = pick(parts)
 	var/damage_calculator = picked.get_damage()
-	if(picked.receive_damage(abs(brute), abs(burn), check_armor ? run_armor_check(picked, (brute ? MELEE : burn ? FIRE : null)) : FALSE, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness))
+	if(picked.receive_damage(abs(brute), abs(burn), check_armor ? run_armor_check(picked, (brute ? MELEE : burn ? FIRE : null)) : FALSE, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, brute_type = brute_type, burn_type = burn_type, precise_zone = precise_zone))
 		update_damage_overlays()
 	return (damage_calculator - picked.get_damage())
 
@@ -343,7 +460,7 @@
 	if(update)
 		update_damage_overlays()
 
-/mob/living/carbon/take_overall_damage(brute = 0, burn = 0, stamina = 0, updating_health = TRUE, forced = FALSE, required_bodytype)
+/mob/living/carbon/take_overall_damage(brute = 0, burn = 0, stamina = 0, updating_health = TRUE, forced = FALSE, required_bodytype, brute_type = null, burn_type = null)
 	. = FALSE
 	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
 		return
@@ -363,7 +480,7 @@
 		. += picked.get_damage()
 
 		// disabling wounds from these for now cuz your entire body snapping cause your heart stopped would suck
-		update |= picked.receive_damage(brute_per_part, burn_per_part, blocked = FALSE, updating_health = FALSE, forced = forced, required_bodytype = required_bodytype, wound_bonus = CANT_WOUND)
+		update |= picked.receive_damage(brute_per_part, burn_per_part, blocked = FALSE, updating_health = FALSE, forced = forced, required_bodytype = required_bodytype, wound_bonus = CANT_WOUND, brute_type = brute_type, burn_type = burn_type)
 
 		. -= picked.get_damage() // return the net amount of damage healed
 
