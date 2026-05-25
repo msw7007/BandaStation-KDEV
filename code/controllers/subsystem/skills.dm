@@ -9,6 +9,8 @@ SUBSYSTEM_DEF(skills)
 	var/list/all_skills = list()
 	///List of level names with index corresponding to skill level
 	var/list/level_names = list("None", "Novice", "Apprentice", "Journeyman", "Expert", "Master", "Legendary") //List of skill level names. Note that indexes can be accessed like so: level_names[SKILL_LEVEL_NOVICE]
+	///Cyberpunk character skill level names. Stored one-based, level 0 is index 1.
+	var/list/character_level_names = CHARACTER_SKILL_LEVEL_NAMES
 
 /datum/controller/subsystem/skills/Initialize()
 	InitializeSkills()

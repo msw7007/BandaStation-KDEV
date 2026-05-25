@@ -542,6 +542,7 @@
 			user.visible_message(span_bolddanger("<i>[user] shocks [H] with \the [src]!"), span_warning("You shock [H] with \the [src]!"))
 			playsound(src, 'sound/machines/defib/defib_zap.ogg', 100, TRUE, -1)
 			playsound(src, 'sound/items/weapons/egloves.ogg', 100, TRUE, -1)
+			H.retune_implants_from_electricity(45)
 			H.emote("scream")
 			shock_pulling(45, H)
 			if(H.can_heartattack() && !H.undergoing_cardiac_arrest())
@@ -580,6 +581,7 @@
 				H.visible_message(span_warning("[H]'s body convulses a bit."))
 				playsound(src, SFX_BODYFALL, 50, TRUE)
 				playsound(src, 'sound/machines/defib/defib_zap.ogg', 75, TRUE, -1)
+				H.retune_implants_from_electricity(30)
 				shock_pulling(30, H)
 
 				var/defib_result = H.can_defib()
@@ -648,6 +650,7 @@
 				playsound(src, 'sound/machines/defib/defib_failed.ogg', 50, FALSE)
 			else if(H.undergoing_cardiac_arrest())
 				playsound(src, 'sound/machines/defib/defib_zap.ogg', 50, TRUE, -1)
+				H.retune_implants_from_electricity(30)
 				if(!(heart.organ_flags & ORGAN_FAILING))
 					H.set_heartattack(FALSE)
 					do_success()
@@ -658,6 +661,7 @@
 				user.visible_message(span_notice("[req_defib ? "[defib]" : "[src]"] pings: Patient's heart has stabilized, further applications may be necessary."))
 				SEND_SIGNAL(H, COMSIG_HEARTATTACK_DEFIB)
 				playsound(src, 'sound/machines/defib/defib_zap.ogg', 50, TRUE, -1)
+				H.retune_implants_from_electricity(30)
 				do_success()
 			else
 				user.visible_message(span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: Patient is not in a valid state. Operation aborted."))

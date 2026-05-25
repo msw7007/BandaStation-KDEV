@@ -71,3 +71,98 @@
 /datum/action/consume/fleshblob
 	devour_verb = "assimilate"
 	devour_time = 3 SECONDS
+
+/mob/living/basic/visceroid
+	name = "visceroid"
+	desc = "A hostile genetic collapse wearing the outline of a human body."
+	icon = 'icons/mob/simple/animal.dmi'
+	icon_state = "fleshblob"
+	icon_living = "fleshblob"
+	mob_biotypes = MOB_ORGANIC
+	mob_size = MOB_SIZE_LARGE
+	gender = NEUTER
+	basic_mob_flags = DEL_ON_DEATH
+	faction = list(FACTION_HOSTILE)
+	melee_damage_lower = 18
+	melee_damage_upper = 24
+	health = 260
+	maxHealth = 260
+	attack_sound = 'sound/items/weapons/bite.ogg'
+	attack_vis_effect = ATTACK_EFFECT_SMASH
+	attack_verb_continuous = "assimilates"
+	attack_verb_simple = "assimilate"
+	speed = 4
+	combat_mode = TRUE
+	ai_controller = /datum/ai_controller/basic_controller/fleshblob
+	var/list/swallowed_victims = list()
+	var/mob/living/carbon/human/origin_body
+	var/releasing_victims = FALSE
+
+/mob/living/basic/visceroid/Initialize(mapload, mob/living/carbon/human/source_body)
+	. = ..()
+	ADD_TRAIT(src, TRAIT_STRONG_GRABBER, INNATE_TRAIT)
+	AddComponent(\
+		/datum/component/blood_walk, \
+		blood_type = /obj/effect/decal/cleanable/blood/trail_holder, \
+		target_dir_change = TRUE, \
+	)
+	if(source_body)
+		origin_body = source_body
+
+/mob/living/basic/visceroid/proc/absorb_source_body(mob/living/carbon/human/source_body)
+	if(!source_body || QDELETED(source_body))
+		return FALSE
+	origin_body = source_body
+	swallow_victim(source_body, kill = FALSE)
+	source_body.Unconscious(GENETIC_TUMOR_DORMANT_TIME)
+	return TRUE
+
+/mob/living/basic/visceroid/melee_attack(mob/living/target, list/modifiers, ignore_cooldown = FALSE)
+	. = ..()
+	if(can_swallow_victim(target))
+		swallow_victim(target)
+
+/mob/living/basic/visceroid/proc/can_swallow_victim(mob/living/target)
+	if(!istype(target) || target == src || target.loc == src)
+		return FALSE
+	if(!(target.mob_biotypes & MOB_ORGANIC))
+		return FALSE
+	return target.stat >= SOFT_CRIT || target.IsSleeping() || target.IsUnconscious()
+
+/mob/living/basic/visceroid/proc/swallow_victim(mob/living/victim, kill = TRUE)
+	if(!victim || QDELETED(victim) || victim.loc == src)
+		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] folds [victim] into itself!"))
+	if(kill && victim.stat != DEAD)
+		victim.death()
+	victim.forceMove(src)
+	swallowed_victims[victim] = world.time
+	maxHealth += 25
+	health = min(maxHealth, health + 50)
+	return TRUE
+
+/mob/living/basic/visceroid/death(gibbed)
+	release_swallowed_victims()
+	return ..()
+
+/mob/living/basic/visceroid/Destroy()
+	release_swallowed_victims()
+	return ..()
+
+/mob/living/basic/visceroid/proc/release_swallowed_victims()
+	if(releasing_victims || !length(swallowed_victims))
+		return
+	releasing_victims = TRUE
+	var/turf/drop_turf = get_turf(src)
+	for(var/mob/living/victim as anything in swallowed_victims)
+		var/swallowed_at = swallowed_victims[victim]
+		if(QDELETED(victim))
+			continue
+		victim.forceMove(drop_turf)
+		if(ishuman(victim) && (victim == origin_body || (world.time - swallowed_at) >= VISCEROID_CONTAINMENT_TUMOR_TIME))
+			var/mob/living/carbon/human/human_victim = victim
+			human_victim.apply_genetic_tumor()
+			if(victim == origin_body)
+				human_victim.Unconscious(GENETIC_TUMOR_DORMANT_TIME)
+	swallowed_victims.Cut()
+	releasing_victims = FALSE

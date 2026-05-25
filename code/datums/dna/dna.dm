@@ -54,6 +54,14 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	///List of the default genes from this mutation to allow DNA Scanner highlighting
 	var/default_mutation_genes[DNA_MUTATION_BLOCKS]
 	var/stability = 100
+	/// CP13 body compatibility with chrome and neural interfaces.
+	var/humanoidity = HUMANOIDITY_DEFAULT
+	/// Permanent penalty from DNA infusions, genetic segments and non-cosmetic bio-modification.
+	var/humanoidity_genetic_penalty = 0
+	/// Temporary bonus from stabilizers. Does not remove the underlying genetic changes.
+	var/humanoidity_stabilized_bonus = 0
+	/// Prevents immediate repeated collapse until a forced genetic tumor relapse fires.
+	var/humanoidity_collapsed = FALSE
 	///Did we take something like mutagen? In that case we can't get our genes scanned to instantly cheese all the powers.
 	var/scrambled = FALSE
 	/// Weighted list of nonlethal meltdowns
@@ -92,6 +100,10 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	new_dna.temporary_mutations = LAZYLISTDUPLICATE(temporary_mutations)
 	new_dna.mutation_index = mutation_index
 	new_dna.default_mutation_genes = default_mutation_genes
+	new_dna.humanoidity = humanoidity
+	new_dna.humanoidity_genetic_penalty = humanoidity_genetic_penalty
+	new_dna.humanoidity_stabilized_bonus = humanoidity_stabilized_bonus
+	new_dna.humanoidity_collapsed = humanoidity_collapsed
 	//if the new DNA has a holder, transform them immediately, otherwise save it
 	if(new_dna.holder)
 		if (iscarbon(new_dna.holder))
@@ -323,6 +335,40 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 			holder.apply_status_effect(/datum/status_effect/dna_melt)
 		if(message && stability < old_stability)
 			to_chat(holder, message)
+	update_humanoidity(alert)
+
+/datum/dna/proc/get_effective_humanoidity()
+	return clamp(humanoidity + humanoidity_stabilized_bonus, 0, HUMANOIDITY_DEFAULT)
+
+/datum/dna/proc/get_humanoidity_chromity_multiplier()
+	var/effective_humanoidity = get_effective_humanoidity()
+	if(effective_humanoidity >= HUMANOIDITY_CHROMITY_START)
+		return 1
+	if(effective_humanoidity <= HUMANOIDITY_CHROMITY_ZERO)
+		return 0
+	return (effective_humanoidity - HUMANOIDITY_CHROMITY_ZERO) / (HUMANOIDITY_CHROMITY_START - HUMANOIDITY_CHROMITY_ZERO)
+
+/datum/dna/proc/adjust_humanoidity_genetic_penalty(amount, alert = TRUE)
+	humanoidity_genetic_penalty = max(0, humanoidity_genetic_penalty + amount)
+	return update_humanoidity(alert)
+
+/datum/dna/proc/update_humanoidity(alert = TRUE)
+	var/old_humanoidity = humanoidity
+	var/mutation_penalty = 0
+	for(var/datum/mutation/mutation in mutations)
+		if(istype(mutation, /datum/mutation/race))
+			continue
+		if(!(mutation.sources & GLOB.standard_mutation_sources))
+			continue
+		mutation_penalty += max(1, abs(mutation.instability) * GET_MUTATION_STABILIZER(mutation))
+	humanoidity = clamp(HUMANOIDITY_DEFAULT - humanoidity_genetic_penalty - mutation_penalty, 0, HUMANOIDITY_DEFAULT)
+	if(holder && alert && humanoidity < old_humanoidity)
+		to_chat(holder, span_warning("Your body feels less human."))
+	if(holder && get_effective_humanoidity() <= HUMANOIDITY_COLLAPSE_THRESHOLD && !humanoidity_collapsed && ishuman(holder))
+		var/mob/living/carbon/human/human_holder = holder
+		humanoidity_collapsed = TRUE
+		human_holder.cy_check_humanoidity_collapse()
+	return humanoidity
 
 /// Updates the UI, UE, and UF of the DNA according to the features, appearance, name, etc. of the DNA / holder.
 /datum/dna/proc/update_dna_identity()

@@ -48,7 +48,13 @@ GLOBAL_LIST_INIT(infuser_entries, prepare_infuser_entries())
 	var/list/output_organs
 	///message the target gets while being infused
 	var/infusion_desc = "mutant-like"
+	/// Permanent humanoidity penalty from this non-cosmetic biological change.
+	var/humanoidity_cost = DNA_INFUSER_BASE_HUMANOIDITY_COST
 
 ///Returns a list of organs that can be infused into the target human. Useful for custom behavior for certain entries
 /datum/infuser_entry/proc/get_output_organs(mob/living/carbon/human/target, atom/movable/infused_from)
 	return output_organs.Copy()
+
+/datum/infuser_entry/proc/get_humanoidity_cost()
+	var/tier_cost = max(0, tier + 1) * DNA_INFUSER_BASE_HUMANOIDITY_COST
+	return max(humanoidity_cost, tier_cost)

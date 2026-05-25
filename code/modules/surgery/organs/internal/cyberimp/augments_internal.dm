@@ -4,6 +4,7 @@
 	desc = "A state-of-the-art implant that improves a baseline's functionality."
 	abstract_type = /obj/item/organ/cyberimp
 	organ_flags = ORGAN_ROBOTIC
+	implant_flags = IMPLANT_REQUIRES_NEURAL
 	failing_desc = "seems to be broken."
 	/// icon of the bodypart overlay we're going to be applying to our owner
 	var/aug_icon = 'icons/mob/human/species/misc/bodypart_overlay_augmentations.dmi'
@@ -98,6 +99,27 @@
 	if(emp_stun_duration > 0)
 		owner.Stun(emp_stun_duration / severity)
 		to_chat(owner, span_warning("Your body seizes up!"))
+
+/obj/item/organ/cyberimp/brain/neural_interface
+	name = "neural interface implant"
+	desc = "The central neural bridge between the brain, chrome, memories and the Net."
+	icon_state = "brain_implant"
+	slot = ORGAN_SLOT_NEURAL_IMPLANT
+	implant_flags = IMPLANT_NEURAL_INTERFACE
+	emp_stun_duration = 0
+	var/corp_manufacturer = "independent"
+
+/obj/item/organ/cyberimp/brain/neural_interface/requires_neural_implant()
+	return FALSE
+
+/obj/item/organ/cyberimp/brain/neural_interface/on_mob_insert(mob/living/carbon/receiver, special, movement_flags)
+	. = ..()
+	receiver.corp_align = corp_manufacturer
+
+/obj/item/organ/cyberimp/brain/neural_interface/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	if(organ_owner?.corp_align == corp_manufacturer)
+		organ_owner.corp_align = null
 
 /obj/item/organ/cyberimp/brain/anti_drop
 	name = "anti-drop implant"

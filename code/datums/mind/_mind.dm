@@ -75,6 +75,12 @@
 	var/list/skills_rewarded
 	///Assoc list of skills. Use SKILL_LVL to access level, and SKILL_EXP to access skill's exp.
 	var/list/known_skills = list()
+	///Assoc list of Cyberpunk perk ranks. skill type -> list(perk index = rank).
+	var/list/character_skill_perks = list()
+	///Assoc list of Cyberpunk weapon/direct skill levels. skill type -> level.
+	var/list/character_skill_levels = list()
+	///Temporary or special giga-perk unlocks independent from current attribute value.
+	var/list/character_giga_perks = list()
 	///Assoc list of character attributes, keyed by ATTRIBUTE_* id.
 	var/list/character_attributes = list()
 	///Admin-facing character level. Players spend level_points, not this value directly.

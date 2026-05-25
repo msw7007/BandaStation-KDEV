@@ -350,6 +350,9 @@
 			data["subjectStatus"] = scanner_occupant.stat
 		data["subjectHealth"] = scanner_occupant.health
 		data["subjectEnzymes"] = scanner_occupant.dna.unique_enzymes
+		data["subjectHumanoidity"] = scanner_occupant.dna.get_effective_humanoidity()
+		data["subjectHumanoidityRaw"] = scanner_occupant.dna.humanoidity
+		data["subjectHumanoidityPenalty"] = scanner_occupant.dna.humanoidity_genetic_penalty
 		data["isMonkey"] = ismonkey(scanner_occupant)
 		data["subjectUNI"] = scanner_occupant.dna.unique_identity
 		data["subjectUF"] = scanner_occupant.dna.unique_features
@@ -363,6 +366,9 @@
 		data["subjectHealth"] = null
 		data["subjectDamage"] = null
 		data["subjectEnzymes"] = null
+		data["subjectHumanoidity"] = null
+		data["subjectHumanoidityRaw"] = null
+		data["subjectHumanoidityPenalty"] = null
 		data["storage"]["occupant"] = null
 
 	data["hasDelayedAction"] = (delayed_action != null)

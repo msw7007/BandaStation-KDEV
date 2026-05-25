@@ -98,3 +98,45 @@
 
 /mob/living/proc/reward_character_check_experience(skill_key, difficulty, attribute_limited = FALSE, action_multiplier = 1)
 	return mind?.reward_character_check_experience(skill_key, difficulty, attribute_limited, action_multiplier) || 0
+
+/mob/living/proc/get_character_skill_level(skill)
+	return mind?.get_character_skill_level(skill) || CHARACTER_SKILL_LEVEL_NONE
+
+/mob/living/proc/set_character_skill_level(skill, new_level, free = FALSE)
+	return mind?.set_character_skill_level(skill, new_level, free) || FALSE
+
+/mob/living/proc/adjust_character_skill_level(skill, amount = 1, free = FALSE)
+	return mind?.adjust_character_skill_level(skill, amount, free) || FALSE
+
+/mob/living/proc/get_character_skill_check(skill, modifier = 0, apply_body_penalty = TRUE)
+	return mind?.get_character_skill_check_value(skill, modifier, apply_body_penalty) || clamp((ATTRIBUTE_DEFAULT * 5) + modifier, CHARACTER_SKILL_CHECK_MINIMUM, CHARACTER_SKILL_CHECK_MAXIMUM)
+
+/mob/living/proc/roll_character_skill_check(skill, difficulty = 0, modifier = 0, apply_body_penalty = TRUE)
+	return mind?.roll_character_skill_check(skill, difficulty, modifier, apply_body_penalty) || prob(clamp((ATTRIBUTE_DEFAULT * 5) + modifier - difficulty, CHARACTER_SKILL_CHECK_MINIMUM, CHARACTER_SKILL_CHECK_MAXIMUM))
+
+/mob/living/proc/get_character_perk_rank(skill, perk_index)
+	return mind?.get_character_perk_rank(skill, perk_index) || 0
+
+/mob/living/proc/set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE)
+	return mind?.set_character_perk_rank(skill, perk_index, new_rank, free, allow_sequence_break) || FALSE
+
+/mob/living/proc/adjust_character_perk_rank(skill, perk_index, amount = 1, free = FALSE, allow_sequence_break = FALSE)
+	return mind?.adjust_character_perk_rank(skill, perk_index, amount, free, allow_sequence_break) || FALSE
+
+/mob/living/proc/get_character_perk_power_multiplier(skill, perk_index)
+	return mind?.get_character_perk_power_multiplier(skill, perk_index) || 0
+
+/mob/living/proc/has_character_giga_perk(attribute_id)
+	return mind?.has_character_giga_perk(attribute_id) || FALSE
+
+/mob/living/proc/get_weapon_skill_damage_multiplier(skill)
+	return mind?.get_weapon_skill_damage_multiplier(skill) || 1
+
+/mob/living/proc/get_weapon_skill_cooldown_multiplier(skill)
+	return mind?.get_weapon_skill_cooldown_multiplier(skill) || 1
+
+/mob/living/proc/get_weapon_skill_defense_break_bonus(skill)
+	return mind?.get_weapon_skill_defense_break_bonus(skill) || 0
+
+/mob/living/proc/teach_character_skill_to(mob/living/student, skill, difficulty = 1, action_multiplier = 1)
+	return mind?.teach_character_skill(student, skill, difficulty, action_multiplier) || FALSE

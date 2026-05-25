@@ -91,6 +91,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	var/obj/item/organ/stomach/mutantstomach = /obj/item/organ/stomach
 	///Replaces default appendix with a different organ.
 	var/obj/item/organ/appendix/mutantappendix = /obj/item/organ/appendix
+	///Default neural interface implant. Null means this species starts without one.
+	var/obj/item/organ/cyberimp/brain/neural_interface/mutantneuralimplant = /obj/item/organ/cyberimp/brain/neural_interface
 
 	/// Store body marking defines. See mobs.dm for bitflags
 	var/list/body_markings = list()
@@ -270,6 +272,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			return mutantliver
 		if(ORGAN_SLOT_STOMACH)
 			return mutantstomach
+		if(ORGAN_SLOT_NEURAL_IMPLANT)
+			return mutantneuralimplant
 		else
 			// Non-standard organs we might have
 			for(var/obj/item/organ/extra_organ as anything in mutant_organs)

@@ -100,8 +100,12 @@
 	. += "Satiation: [round(satiety, 0.1)]/[MAX_SATIETY]"
 	. += "Hydration: [round(hydration, 0.1)]/[MAX_SATIETY]"
 	. += "Tireness: [round(tireness, 0.1)]/[MAX_SATIETY]"
-	. += "Chromity Overheat: [round(chromity_overheat, 0.1)]/[round(chromity, 0.1)]"
+	. += "Chromity Overheat: [round(chromity_overheat, 0.1)]/[round(get_effective_chromity(), 0.1)]"
 	. += "Chromity Floor: [round(get_chromity_overheat_floor(), 0.1)]"
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_source = src
+		if(carbon_source.dna)
+			. += "Humanoidity: [round(carbon_source.dna.get_effective_humanoidity(), 0.1)]/[HUMANOIDITY_DEFAULT]"
 	. += "Style: [round(style, 0.1)]/15"
 	. += "Mood: [round(mood, 0.1)]/20"
 	. += "Corp Align: [corp_align || "None"]"
@@ -218,18 +222,42 @@
 /mob/living/proc/process_chromity_overheat(seconds_per_tick)
 	var/overheat_floor = get_chromity_overheat_floor()
 	if(chromity_overheat > overheat_floor)
-		chromity_overheat = max(overheat_floor, chromity_overheat - CHROMITY_OVERHEAT_DECAY)
+		chromity_overheat = max(overheat_floor, chromity_overheat - CHROMITY_OVERHEAT_DECAY * seconds_per_tick)
 	else if(chromity_overheat < overheat_floor)
 		chromity_overheat = overheat_floor
 
-	if(chromity_overheat > chromity)
-		apply_chromity_overheat_damage(chromity_overheat - chromity)
+	if(bodytemperature < T0C)
+		adjust_chromity_overheat(-seconds_per_tick, respect_floor = TRUE)
+
+	var/effective_chromity = get_effective_chromity()
+	if(chromity_overheat > effective_chromity)
+		apply_chromity_overheat_damage(chromity_overheat - effective_chromity)
 
 /mob/living/proc/get_chromity_overheat_floor()
-	return 0
+	var/floor_value = 0
+	if(!iscarbon(src))
+		return floor_value
+	var/mob/living/carbon/carbon_owner = src
+	for(var/obj/item/organ/organ as anything in carbon_owner.organs)
+		floor_value += organ.get_chromity_overheat_floor()
+	return floor_value
+
+/mob/living/proc/get_effective_chromity()
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_owner = src
+		if(carbon_owner.dna)
+			return chromity * carbon_owner.dna.get_humanoidity_chromity_multiplier()
+	return chromity
+
+/mob/living/proc/has_living_brain()
+	var/obj/item/organ/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
+	return !isnull(brain) && !(brain.organ_flags & ORGAN_FAILING) && brain.damage < brain.maxHealth
 
 /mob/living/proc/has_neural_implant()
-	return !isnull(corp_align) && corp_align != ""
+	if(!has_living_brain())
+		return FALSE
+	var/obj/item/organ/neural_interface = get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
+	return !isnull(neural_interface) && neural_interface.is_neural_interface() && neural_interface.is_implant_functional()
 
 /mob/living/proc/adjust_chromity_overheat(amount, respect_floor = TRUE)
 	var/old_value = chromity_overheat
@@ -246,7 +274,51 @@
 /mob/living/proc/apply_chromity_overheat_damage(amount)
 	if(amount <= 0)
 		return
-	adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
+	if(!has_neural_implant())
+		return
+	switch(rand(1, 100))
+		if(1 to 40)
+			var/obj/item/organ/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
+			brain?.add_organ_pain(amount)
+		if(41 to 55)
+			var/obj/item/organ/implant = pick_working_chrome_implant()
+			implant?.disable_implant(IMPLANT_OVERHEAT_SHUTDOWN_TIME, "overheat")
+		if(56 to 60)
+			var/obj/item/organ/implant = pick_working_chrome_implant()
+			implant?.on_implant_erroneous_activation()
+		else
+			adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
+
+/mob/living/proc/get_working_chrome_implants()
+	. = list()
+	if(!iscarbon(src))
+		return
+	var/mob/living/carbon/carbon_owner = src
+	for(var/obj/item/organ/organ as anything in carbon_owner.organs)
+		if(!organ.is_implant_functional())
+			continue
+		if(!organ.chromity_overheat && !organ.chromity_active_overheat_floor && !length(organ.actions))
+			continue
+		. += organ
+
+/mob/living/proc/pick_working_chrome_implant()
+	var/list/implants = get_working_chrome_implants()
+	if(!length(implants))
+		return null
+	return pick(implants)
+
+/mob/living/proc/retune_implants_from_electricity(power = 0)
+	var/retuned = FALSE
+	if(!iscarbon(src))
+		return retuned
+	var/mob/living/carbon/carbon_owner = src
+	for(var/obj/item/organ/organ as anything in carbon_owner.organs)
+		if(!organ.is_implant())
+			continue
+		if(!organ.is_implant_disabled())
+			continue
+		retuned |= organ.retune_implant()
+	return retuned
 
 /mob/living/proc/sync_mood_from_moodlets()
 	if(!QDELETED(mob_mood))

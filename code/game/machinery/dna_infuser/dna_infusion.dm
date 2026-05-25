@@ -48,6 +48,7 @@
 	new_organ = new new_organ()
 	new_organ.replace_into(src)
 	new_organ.organ_flags |= ORGAN_MUTANT
+	dna?.adjust_humanoidity_genetic_penalty(entry.get_humanoidity_cost())
 	return TRUE
 
 /// Picks a random mutated organ from the given infuser entry which is also compatible with this human.

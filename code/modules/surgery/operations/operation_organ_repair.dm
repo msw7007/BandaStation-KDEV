@@ -48,6 +48,41 @@
 /datum/surgery_operation/organ/repair/on_failure(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	organ.apply_organ_damage(organ.maxHealth * failure_damage_percent)
 
+/datum/surgery_operation/organ/repair/implant
+	name = "Repair implant"
+	desc = "Repair a damaged implant and restore its disabled runtime state."
+	target_type = /obj/item/organ/cyberimp
+	required_organ_flag = ORGAN_ROBOTIC
+	operation_flags = parent_type::operation_flags | OPERATION_MECHANIC | OPERATION_LOOPING
+	all_surgery_states_required = SURGERY_SKIN_OPEN|SURGERY_ORGANS_CUT
+	implements = list(
+		TOOL_MULTITOOL = 1.05,
+		TOOL_SCREWDRIVER = 1.25,
+		TOOL_WRENCH = 1.5,
+	)
+	time = 4 SECONDS
+	preop_sound = 'sound/items/tools/ratchet.ogg'
+	success_sound = 'sound/machines/airlock/doorclick.ogg'
+	failure_sound = 'sound/machines/buzz/buzz-sigh.ogg'
+
+/datum/surgery_operation/organ/repair/implant/state_check(obj/item/organ/organ)
+	return organ.is_implant() && (organ.damage || organ.is_implant_disabled() || (organ.organ_flags & ORGAN_FAILING))
+
+/datum/surgery_operation/organ/repair/implant/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	organ.repair_implant()
+	ADD_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON, TRAIT_GENERIC)
+
+/datum/surgery_operation/organ/repair/implant/retune
+	name = "Retune implant"
+	desc = "Restart and retune an EMP-disabled implant."
+	time = 2 SECONDS
+
+/datum/surgery_operation/organ/repair/implant/retune/state_check(obj/item/organ/organ)
+	return organ.is_implant() && organ.is_implant_disabled()
+
+/datum/surgery_operation/organ/repair/implant/retune/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	organ.retune_implant()
+
 /datum/surgery_operation/organ/repair/lobectomy
 	name = "Удаление поврежденной доли легкого"
 	rnd_name = "Лобэктомия (Восстановление лёгких)"

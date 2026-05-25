@@ -21,6 +21,34 @@
 	if(!.)
 		return if_no_job
 
+/mob/living/carbon/human/proc/cy_check_humanoidity_collapse(force = FALSE)
+	if(QDELETED(src) || stat == DEAD)
+		return FALSE
+	if(istype(loc, /mob/living/basic/visceroid))
+		return FALSE
+	if(!force && (!dna || dna.get_effective_humanoidity() > HUMANOIDITY_COLLAPSE_THRESHOLD))
+		return FALSE
+	return apply_cy_genetic_monster_failure()
+
+/mob/living/carbon/human/proc/apply_cy_genetic_monster_failure()
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] collapses into a twisting mass of altered flesh!"), span_userdanger("Your body stops obeying you."))
+	var/mob/living/basic/visceroid/monster = new(current_turf, src)
+	monster.absorb_source_body(src)
+	return TRUE
+
+/mob/living/carbon/human/proc/apply_genetic_tumor(dormant_time = GENETIC_TUMOR_DORMANT_TIME)
+	var/obj/item/organ/brain/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(!brain)
+		return FALSE
+	var/datum/brain_trauma/special/genetic_tumor/tumor = brain.has_trauma_type(/datum/brain_trauma/special/genetic_tumor, TRAUMA_RESILIENCE_MAGIC)
+	if(tumor)
+		tumor.reset_dormancy(dormant_time)
+		return TRUE
+	return brain.gain_trauma(/datum/brain_trauma/special/genetic_tumor, TRAUMA_RESILIENCE_MAGIC, dormant_time)
+
 //gets name from ID or ID inside PDA or PDA itself
 //Useful when player do something with computers
 /mob/living/carbon/human/proc/get_authentification_name(if_no_id = "Неизвестный")

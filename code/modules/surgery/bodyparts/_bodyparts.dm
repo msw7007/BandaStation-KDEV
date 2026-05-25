@@ -1147,6 +1147,14 @@
 	brute *= wound_damage_multiplier
 	burn *= wound_damage_multiplier
 
+	var/obj/item/organ/external_implant = get_damage_redirecting_external_implant()
+	if(external_implant)
+		external_implant.apply_external_implant_damage(brute * EXTERNAL_IMPLANT_DAMAGE_SHARE, burn * EXTERNAL_IMPLANT_DAMAGE_SHARE)
+		brute = round(brute * EXTERNAL_IMPLANT_LIMB_DAMAGE_SHARE, DAMAGE_PRECISION)
+		burn = round(burn * EXTERNAL_IMPLANT_LIMB_DAMAGE_SHARE, DAMAGE_PRECISION)
+		if(!brute && !burn)
+			return FALSE
+
 	/*
 	// START WOUND HANDLING
 	*/
@@ -1223,6 +1231,15 @@
 		if(updating_health)
 			owner.updatehealth()
 	return update_bodypart_damage_state()
+
+/obj/item/bodypart/proc/get_damage_redirecting_external_implant()
+	for(var/obj/item/organ/organ as anything in src)
+		if(!organ.is_external_implant())
+			continue
+		if(!organ.is_implant_functional())
+			continue
+		return organ
+	return null
 
 /// Returns a bitflag using ANATOMY_EXTERIOR or ANATOMY_INTERIOR. Used to determine if we as a whole have a interior or exterior biostate, or both.
 /obj/item/bodypart/proc/get_bio_state_status()

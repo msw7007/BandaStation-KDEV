@@ -614,6 +614,7 @@
 		return FALSE
 	if(!(flags & SHOCK_ILLUSION))
 		adjust_fire_loss(shock_damage)
+		retune_implants_from_electricity(shock_damage)
 		if(get_fire_loss() > 100)
 			add_shared_particles(/particles/smoke/burning)
 			addtimer(CALLBACK(src, TYPE_PROC_REF(/atom/movable, remove_shared_particles), /particles/smoke/burning), 10 SECONDS)

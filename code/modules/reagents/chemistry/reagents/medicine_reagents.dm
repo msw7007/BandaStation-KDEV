@@ -120,6 +120,18 @@
 		if(affected_mob.adjust_tox_loss(0.5 * metabolization_ratio, updating_health = FALSE, required_biotype = affected_biotype))
 			return UPDATE_MOB_HEALTH
 
+/datum/reagent/medicine/neurostabilizer
+	name = "Neurostabilizer"
+	description = "A stabilizing medicine that bleeds off neural implant overheat."
+	ph = 7.4
+	color = "#7CD4FF"
+	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
+	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
+
+/datum/reagent/medicine/neurostabilizer/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
+	. = ..()
+	affected_mob.adjust_chromity_overheat(-5 * metabolization_ratio * seconds_per_tick, respect_floor = TRUE)
+
 /datum/reagent/medicine/sansufentanyl
 	name = "Sansufentanyl"
 	description = "Temporary side effects include - nausea, dizziness, impaired motor coordination."

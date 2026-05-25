@@ -42,6 +42,12 @@
 	var/chromity_overheat = 0
 	/// Temporary minimum overheat maintained by an active organ effect.
 	var/chromity_active_overheat_floor = 0
+	/// Cyberpunk implant behavior flags. Plain organs keep this empty.
+	var/implant_flags = NONE
+	/// Until this world.time, implant effects are disabled by overheat, EMP or shock.
+	var/implant_disabled_until = 0
+	/// Last reason the implant was disabled, used by scanners and diagnostics.
+	var/implant_disable_reason = null
 
 	// Organ variables for determining what we alert the owner with when they pass/clear the damage thresholds
 	var/prev_damage = 0
@@ -207,10 +213,81 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	healing_amount += (owner.satiety > 0) ? (4 * healing_factor * owner.satiety / MAX_SATIETY) : 0
 	apply_organ_damage(-healing_amount * maxHealth * seconds_per_tick, damage) // pass curent damage incase we are over cap
 
-/obj/item/organ/proc/can_use_chrome_effects()
-	if(isnull(owner) || !owner.has_neural_implant())
+/obj/item/organ/proc/is_implant()
+	return implant_flags != NONE
+
+/obj/item/organ/proc/is_neural_interface()
+	return !!(implant_flags & IMPLANT_NEURAL_INTERFACE)
+
+/obj/item/organ/proc/requires_neural_implant()
+	return !!(implant_flags & IMPLANT_REQUIRES_NEURAL)
+
+/obj/item/organ/proc/is_external_implant()
+	return !!(implant_flags & IMPLANT_EXTERNAL)
+
+/obj/item/organ/proc/is_implant_disabled()
+	return (organ_flags & ORGAN_EMP) || (world.time < implant_disabled_until)
+
+/obj/item/organ/proc/is_implant_broken()
+	return (organ_flags & ORGAN_FAILING) || damage >= maxHealth
+
+/obj/item/organ/proc/is_implant_functional()
+	if(!is_implant() || isnull(owner))
 		return FALSE
+	if(owner.stat == DEAD || is_implant_broken() || is_implant_disabled())
+		return FALSE
+	if(requires_neural_implant() && !owner.has_neural_implant())
+		return FALSE
+	return TRUE
+
+/obj/item/organ/proc/disable_implant(duration = IMPLANT_OVERHEAT_SHUTDOWN_TIME, reason = "disabled")
+	if(!is_implant())
+		return FALSE
+	implant_disabled_until = max(implant_disabled_until, world.time + duration)
+	implant_disable_reason = reason
+	return TRUE
+
+/obj/item/organ/proc/retune_implant()
+	if(!is_implant())
+		return FALSE
+	organ_flags &= ~ORGAN_EMP
+	implant_disabled_until = 0
+	implant_disable_reason = null
+	return TRUE
+
+/obj/item/organ/proc/repair_implant()
+	if(!is_implant())
+		return FALSE
+	retune_implant()
+	set_organ_damage(0)
+	return TRUE
+
+/obj/item/organ/proc/apply_external_implant_damage(brute = 0, burn = 0)
+	if(!is_implant())
+		return FALSE
+	var/damage_amount = max(brute, 0) + max(burn, 0)
+	if(damage_amount <= 0)
+		return FALSE
+	apply_organ_damage(damage_amount)
+	return TRUE
+
+/obj/item/organ/proc/on_implant_erroneous_activation()
+	if(!is_implant_functional())
+		return FALSE
+	if(hascall(src, "ui_action_click"))
+		call(src, "ui_action_click")()
+		return TRUE
+	disable_implant(5 SECONDS, "misfire")
+	return TRUE
+
+/obj/item/organ/proc/can_use_chrome_effects()
+	if(isnull(owner))
+		return FALSE
+	if(is_implant())
+		return is_implant_functional()
 	if(organ_flags & (ORGAN_FAILING|ORGAN_EMP))
+		return FALSE
+	if(!owner.has_neural_implant())
 		return FALSE
 	return damage < maxHealth
 
@@ -386,6 +463,13 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 
 /obj/item/organ/item_action_slot_check(slot,mob/user)
 	return //so we don't grant the organ's action to mobs who pick up the organ.
+
+/obj/item/organ/emp_act(severity)
+	. = ..()
+	if(. & EMP_PROTECT_SELF)
+		return
+	if(is_implant())
+		disable_implant(IMPLANT_EMP_DISABLE_TIME, "EMP")
 
 ///Adjusts an organ's damage by the amount "damage_amount", up to a maximum amount, which is by default max damage. Returns the net change in organ damage.
 /obj/item/organ/proc/apply_organ_damage(damage_amount, maximum = maxHealth, required_organ_flag = NONE) //use for damaging effects
@@ -608,6 +692,9 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(organ_flags & ORGAN_EMP)
 		return conditional_tooltip("[colored ? "<font color='#cc3333'>" : ""]Сбой, вызванный ЭМИ[colored ? "</font>" : ""]", "Починить или заменить хирургическим путем.", add_tooltips)
 
+	if(is_implant() && is_implant_disabled())
+		return conditional_tooltip("[colored ? "<font color='#ff9933'>" : ""]Implant disabled[implant_disable_reason ? " ([implant_disable_reason])" : ""][colored ? "</font>" : ""]", "Retune surgically or restart with defibrillation/electrical shock.", add_tooltips)
+
 	var/tech_text = ""
 	if(owner.has_reagent(/datum/reagent/inverse/technetium))
 		tech_text = "[round((damage / maxHealth) * 100, 1)]% повреждено"
@@ -629,7 +716,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 /// Determines if this organ is shown when a user has condensed scans enabled
 /obj/item/organ/proc/show_on_condensed_scans()
 	// We don't need to show *most* damaged organs as they have no effects associated
-	return organ_condition_flags || (organ_flags & (ORGAN_PROMINENT|ORGAN_HAZARDOUS|ORGAN_FAILING|ORGAN_VITAL))
+	return organ_condition_flags || (organ_flags & (ORGAN_PROMINENT|ORGAN_HAZARDOUS|ORGAN_FAILING|ORGAN_VITAL)) || (is_implant() && is_implant_disabled())
 
 /// Similar to get_status_text, but appends the text after the damage report, for additional status info
 /obj/item/organ/proc/get_status_appendix(advanced, add_tooltips)

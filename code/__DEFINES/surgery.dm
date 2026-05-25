@@ -42,6 +42,20 @@
 /// Organ flags that correspond to bodytypes
 #define ORGAN_TYPE_FLAGS (ORGAN_ORGANIC | ORGAN_ROBOTIC | ORGAN_MINERAL | ORGAN_GHOST)
 
+/// Implant needs a working neural interface to run active effects.
+#define IMPLANT_REQUIRES_NEURAL (1<<0)
+/// Implant is a passive prosthesis and may work without neural interface.
+#define IMPLANT_PASSIVE (1<<1)
+/// Implant is mounted externally and takes damage before the limb.
+#define IMPLANT_EXTERNAL (1<<2)
+/// Implant is the body's neural interface.
+#define IMPLANT_NEURAL_INTERFACE (1<<3)
+
+#define IMPLANT_EMP_DISABLE_TIME (1 MINUTES)
+#define IMPLANT_OVERHEAT_SHUTDOWN_TIME (30 SECONDS)
+#define EXTERNAL_IMPLANT_DAMAGE_SHARE 0.75
+#define EXTERNAL_IMPLANT_LIMB_DAMAGE_SHARE 0.25
+
 /// Organ medical condition flags. These are not bodytypes; they are treatable organ states.
 #define ORGAN_CONDITION_CIRRHOSIS (1<<0)
 #define ORGAN_CONDITION_POISONING (1<<1)
