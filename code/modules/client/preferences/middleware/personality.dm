@@ -5,6 +5,9 @@
 	)
 
 /datum/preference_middleware/personality/proc/handle_personality(list/params, mob/user)
+	if(!SSpersonalities.initialized)
+		SSpersonalities.init_personalities()
+
 	var/datum/personality/personality_type = text2path(params["personality_type"])
 	if(!ispath(personality_type, /datum/personality))
 		return FALSE
@@ -27,6 +30,9 @@
 	return TRUE
 
 /datum/preference_middleware/personality/get_constant_data()
+	if(!SSpersonalities.initialized)
+		SSpersonalities.init_personalities()
+
 	var/list/data = list()
 
 	data["personalities"] = list()
@@ -47,6 +53,9 @@
 	return data
 
 /datum/preference_middleware/personality/get_ui_static_data(mob/user)
+	if(!SSpersonalities.initialized)
+		SSpersonalities.init_personalities()
+
 	var/list/data = list()
 
 	var/max = CONFIG_GET(number/max_personalities)
@@ -56,11 +65,16 @@
 	return data
 
 /datum/preference_middleware/personality/get_ui_data(mob/user)
+	if(!SSpersonalities.initialized)
+		SSpersonalities.init_personalities()
+
 	var/list/data = list()
 
 	data["selected_personalities"] = list()
 	for(var/personality_key in preferences.read_preference(/datum/preference/personality))
 		var/datum/personality/personality = SSpersonalities.personalities_by_key[personality_key]
+		if(!istype(personality))
+			continue
 		data["selected_personalities"] += personality.type
 
 	return data
