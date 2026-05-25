@@ -8,7 +8,7 @@ import { useBackend } from '../../backend';
 import { Window } from '../../layouts';
 import { logger } from '../../logging';
 import { LoadingScreen } from '../common/LoadingScreen';
-import { CharacterPreferenceWindow } from './CharacterPreferences';
+import { CharacterSetupWindow } from './CharacterSetup';
 import { GamePreferenceWindow } from './GamePreferences';
 import {
   GamePreferencesSelectedPage,
@@ -28,8 +28,8 @@ export function PreferencesMenu() {
 
   return (
     <Window
-      width={900}
-      height={741}
+      width={isCharacterWindow ? 1250 : 900}
+      height={isCharacterWindow ? 900 : 741}
       title={title}
       theme="ss220"
       buttons={
@@ -72,7 +72,7 @@ function PrefsWindowInner(props) {
   switch (window) {
     case PrefsWindow.Character:
       title = 'Настройки персонажа';
-      content = <CharacterPreferenceWindow />;
+      content = <CharacterSetupWindow />;
       break;
     case PrefsWindow.Game:
       title = 'Настройки игры';

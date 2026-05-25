@@ -224,7 +224,12 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 			remove_current_slot()
 			return TRUE
 		if ("rotate")
-			character_preview_view.setDir(turn(character_preview_view.dir, -90))
+			var/rotation_value = params["rotation"]
+			if(!isnum(rotation_value))
+				rotation_value = text2num(rotation_value)
+			if(!rotation_value)
+				rotation_value = -90
+			character_preview_view.setDir(turn(character_preview_view.dir, rotation_value))
 			return TRUE
 		if ("set_preference")
 			var/requested_preference_key = params["preference"]

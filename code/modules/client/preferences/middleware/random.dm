@@ -2,6 +2,7 @@
 /datum/preference_middleware/random
 	action_delegations = list(
 		"randomize_character" = PROC_REF(randomize_character),
+		"randomize_appearance_only" = PROC_REF(randomize_appearance_only),
 		"set_random_preference" = PROC_REF(set_random_preference),
 	)
 
@@ -31,6 +32,11 @@
 
 	preferences.character_preview_view.update_body()
 
+	return TRUE
+
+/datum/preference_middleware/random/proc/randomize_appearance_only(list/params, mob/user)
+	preferences.randomise_appearance_prefs(~(RANDOMIZE_NAME|RANDOMIZE_SPECIES))
+	preferences.character_preview_view?.update_body()
 	return TRUE
 
 /datum/preference_middleware/random/proc/set_random_preference(list/params, mob/user)

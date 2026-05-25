@@ -3,6 +3,10 @@
 #define BODY_SHAPE_STOCKY "stocky"
 #define BODY_SHAPE_SOFT "soft"
 #define BODY_SHAPE_ANGULAR "angular"
+#define CORP_ALIGN_NONE "none"
+#define CORP_ALIGN_BEN "ben"
+#define CORP_ALIGN_RYAZNOV "ryaznov"
+#define CORP_ALIGN_STARLIGHT "starlight"
 
 /proc/body_descriptor_choices()
 	return list(
@@ -29,6 +33,14 @@
 
 /proc/voice_noun_choices()
 	return list("voice", "speaker", "whisper", "tone", "accent", "murmur")
+
+/proc/corp_align_choices()
+	return list(
+		CORP_ALIGN_NONE = "Нет",
+		CORP_ALIGN_BEN = "Бэнь",
+		CORP_ALIGN_RYAZNOV = "Рязнов",
+		CORP_ALIGN_STARLIGHT = "Старлайт",
+	)
 
 /datum/preference/numeric/sprite_size
 	category = PREFERENCE_CATEGORY_SECONDARY_FEATURES
@@ -212,8 +224,33 @@
 /datum/preference/color/voice_color/apply_to_human(mob/living/carbon/human/target, value)
 	target.voice_color = "#[value]"
 
+/datum/preference/choiced/corp_align
+	category = PREFERENCE_CATEGORY_NON_CONTEXTUAL
+	savefile_identifier = PREFERENCE_CHARACTER
+	savefile_key = "corp_align"
+	randomize_by_default = FALSE
+	should_update_preview = FALSE
+
+/datum/preference/choiced/corp_align/init_possible_values()
+	return assoc_to_keys(corp_align_choices())
+
+/datum/preference/choiced/corp_align/create_default_value()
+	return CORP_ALIGN_NONE
+
+/datum/preference/choiced/corp_align/compile_constant_data()
+	var/list/data = ..()
+	data[CHOICED_PREFERENCE_DISPLAY_NAMES] = corp_align_choices()
+	return data
+
+/datum/preference/choiced/corp_align/apply_to_human(mob/living/carbon/human/target, value)
+	target.corp_align = value == CORP_ALIGN_NONE ? null : value
+
 #undef BODY_SHAPE_AVERAGE
 #undef BODY_SHAPE_LEAN
 #undef BODY_SHAPE_STOCKY
 #undef BODY_SHAPE_SOFT
 #undef BODY_SHAPE_ANGULAR
+#undef CORP_ALIGN_NONE
+#undef CORP_ALIGN_BEN
+#undef CORP_ALIGN_RYAZNOV
+#undef CORP_ALIGN_STARLIGHT

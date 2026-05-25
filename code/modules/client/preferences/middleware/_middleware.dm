@@ -54,3 +54,187 @@
 /// Called after every update_preference
 /datum/preference_middleware/proc/post_set_preference(mob/user, preference, value)
 	return
+
+/// Read-only adapter data for the CyberPunk 13 character setup shell.
+/datum/preference_middleware/character_setup
+	key = "character_setup"
+
+/datum/preference_middleware/character_setup/get_constant_data()
+	return list(
+		"attributes" = get_attribute_definitions(),
+		"physical_skills" = get_skill_definitions(CHARACTER_SKILL_KIND_PHYSICAL),
+		"professional_skills" = get_skill_definitions(CHARACTER_SKILL_KIND_PROFESSIONAL),
+		"weapon_skills" = get_skill_definitions(CHARACTER_SKILL_KIND_WEAPON),
+		"implant_slots" = get_implant_slot_definitions(),
+	)
+
+/datum/preference_middleware/character_setup/get_ui_data(mob/user)
+	var/list/data = list()
+	var/datum/mind/user_mind = user?.mind
+
+	var/list/attributes = list()
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		attributes[attribute_id] = list(
+			"value" = user_mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT,
+			"min" = ATTRIBUTE_MINIMUM,
+			"max" = ATTRIBUTE_MAXIMUM,
+			"super_threshold" = ATTRIBUTE_SUPER_THRESHOLD,
+			"editable" = FALSE,
+			"disabled_reason" = "TODO: roundstart attribute build saving is not wired to preferences yet.",
+		)
+
+	var/list/skills = list()
+	for(var/skill_type in GLOB.skill_types)
+		var/datum/skill/skill_path = skill_type
+		if(initial(skill_path.abstract_type) == skill_type)
+			continue
+		var/datum/skill/skill_datum = SSskills.all_skills[skill_type]
+		var/temporary_skill = FALSE
+		if(isnull(skill_datum))
+			skill_datum = new skill_type
+			temporary_skill = TRUE
+		if(skill_datum.is_character_skill())
+			var/list/perks = list()
+			if(skill_datum.uses_perks())
+				for(var/perk_index in 1 to length(skill_datum.perks))
+					perks["[perk_index]"] = user_mind?.get_character_perk_rank(skill_type, perk_index) || 0
+			skills["[skill_type]"] = list(
+				"level" = user_mind?.get_character_skill_level(skill_type) || CHARACTER_SKILL_LEVEL_NONE,
+				"spent_points" = user_mind?.get_character_skill_spent_points(skill_type) || 0,
+				"perks" = perks,
+				"editable" = FALSE,
+				"disabled_reason" = "TODO: character skill build saving is not wired to preferences yet.",
+			)
+		if(temporary_skill)
+			qdel(skill_datum)
+
+	var/list/implant_metrics = list(
+		"chromity" = CHROMITY_DEFAULT,
+		"chromity_max" = CHROMITY_DEFAULT,
+		"overheat" = CHROMITY_OVERHEAT_DEFAULT,
+		"overheat_floor" = CHROMITY_OVERHEAT_DEFAULT,
+		"has_neural_implant" = TRUE,
+		"editable" = FALSE,
+		"disabled_reason" = "TODO: preference-time implant loadout is not wired yet.",
+	)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		implant_metrics["chromity"] = living_user.get_effective_chromity()
+		implant_metrics["chromity_max"] = living_user.chromity
+		implant_metrics["overheat"] = living_user.chromity_overheat
+		implant_metrics["overheat_floor"] = living_user.get_chromity_overheat_floor()
+		implant_metrics["has_neural_implant"] = living_user.has_neural_implant()
+
+	data["character_setup"] = list(
+		"attributes" = attributes,
+		"skills" = skills,
+		"implant_metrics" = implant_metrics,
+	)
+
+	return data
+
+/datum/preference_middleware/character_setup/proc/get_attribute_definitions()
+	return list(
+		ATTRIBUTE_STRENGTH = list(
+			"id" = ATTRIBUTE_STRENGTH,
+			"name" = "Сила",
+			"description" = "Физическая мощь, тяжелое оружие, захваты и крепость.",
+		),
+		ATTRIBUTE_DEXTERITY = list(
+			"id" = ATTRIBUTE_DEXTERITY,
+			"name" = "Ловкость",
+			"description" = "Скорость, легкое оружие, акробатика и изворотливость.",
+		),
+		ATTRIBUTE_PERCEPTION = list(
+			"id" = ATTRIBUTE_PERCEPTION,
+			"name" = "Восприятие",
+			"description" = "Точность, метание, анализ слабостей и концентрация.",
+		),
+		ATTRIBUTE_INTELLIGENCE = list(
+			"id" = ATTRIBUTE_INTELLIGENCE,
+			"name" = "Интеллект",
+			"description" = "Код, демоны, взлом и нейрализация.",
+		),
+		ATTRIBUTE_SPIRIT = list(
+			"id" = ATTRIBUTE_SPIRIT,
+			"name" = "Дух",
+			"description" = "Выживание, выдержка, атлетика и совместимость.",
+		),
+		ATTRIBUTE_CHARISMA = list(
+			"id" = ATTRIBUTE_CHARISMA,
+			"name" = "Харизма",
+			"description" = "Скрытность, воровство, воодушевление и стиль.",
+		),
+	)
+
+/datum/preference_middleware/character_setup/proc/get_skill_definitions(skill_kind)
+	var/list/skills = list()
+	for(var/skill_type in GLOB.skill_types)
+		var/datum/skill/skill_path = skill_type
+		if(initial(skill_path.abstract_type) == skill_type)
+			continue
+		var/datum/skill/skill_datum = new skill_type
+		if(skill_datum.skill_kind != skill_kind)
+			qdel(skill_datum)
+			continue
+
+		skills += list(list(
+			"id" = "[skill_type]",
+			"name" = skill_datum.name,
+			"title" = skill_datum.title,
+			"description" = skill_datum.desc,
+			"attribute_id" = skill_datum.attribute_id,
+			"kind" = skill_datum.skill_kind,
+			"point_pool" = skill_datum.point_pool,
+			"max_character_level" = skill_datum.max_character_level,
+			"max_perk_rank" = skill_datum.max_perk_rank,
+			"requires_sequential_perks" = skill_datum.requires_sequential_perks,
+			"giga_perk_name" = skill_datum.giga_perk_name,
+			"giga_perk_desc" = skill_datum.giga_perk_desc,
+			"weapon_damage_bonus_per_level" = skill_datum.weapon_damage_bonus_per_level,
+			"weapon_cooldown_reduction_per_level" = skill_datum.weapon_cooldown_reduction_per_level,
+			"weapon_defense_break_bonus_per_level" = skill_datum.weapon_defense_break_bonus_per_level,
+			"perks" = get_perk_definitions(skill_datum),
+		))
+		qdel(skill_datum)
+
+	return skills
+
+/datum/preference_middleware/character_setup/proc/get_perk_definitions(datum/skill/skill_datum)
+	var/list/perks = list()
+	for(var/perk_index in 1 to length(skill_datum.perks))
+		var/datum/skill_perk/perk = skill_datum.perks[perk_index]
+		perks += list(list(
+			"index" = perk.index,
+			"name" = perk.name,
+			"description" = perk.desc,
+			"max_rank" = perk.max_rank,
+		))
+	return perks
+
+/datum/preference_middleware/character_setup/proc/get_implant_slot_definitions()
+	return list(
+		list("id" = "left_arm_1", "name" = "Левая рука I", "zone" = BODY_ZONE_L_ARM, "default_state" = "empty"),
+		list("id" = "left_arm_2", "name" = "Левая рука II", "zone" = BODY_ZONE_L_ARM, "default_state" = "empty"),
+		list("id" = "right_arm_1", "name" = "Правая рука I", "zone" = BODY_ZONE_R_ARM, "default_state" = "empty"),
+		list("id" = "right_arm_2", "name" = "Правая рука II", "zone" = BODY_ZONE_R_ARM, "default_state" = "empty"),
+		list("id" = "left_leg", "name" = "Левая нога", "zone" = BODY_ZONE_L_LEG, "default_state" = "empty"),
+		list("id" = "right_leg", "name" = "Правая нога", "zone" = BODY_ZONE_R_LEG, "default_state" = "empty"),
+		list("id" = "spine_1", "name" = "Позвоночник I", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
+		list("id" = "spine_2", "name" = "Позвоночник II", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_HEART, "name" = "Сердце", "zone" = BODY_ZONE_CHEST, "default_state" = "organ"),
+		list("id" = ORGAN_SLOT_LUNGS, "name" = "Лёгкие", "zone" = BODY_ZONE_CHEST, "default_state" = "organ"),
+		list("id" = ORGAN_SLOT_STOMACH, "name" = "Желудок", "zone" = BODY_ZONE_PRECISE_GROIN, "default_state" = "organ"),
+		list("id" = ORGAN_SLOT_LIVER, "name" = "Печень", "zone" = BODY_ZONE_PRECISE_GROIN, "default_state" = "organ"),
+		list("id" = "belly", "name" = "Брюхо", "zone" = BODY_ZONE_PRECISE_GROIN, "default_state" = "empty"),
+		list("id" = "chest", "name" = "Грудь", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
+		list("id" = "neck", "name" = "Шея", "zone" = BODY_ZONE_PRECISE_NECK, "default_state" = "empty"),
+		list("id" = "skull", "name" = "Череп", "zone" = BODY_ZONE_HEAD, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_BRAIN, "name" = "Мозг", "zone" = BODY_ZONE_HEAD, "default_state" = "organ"),
+		list("id" = ORGAN_SLOT_EYES, "name" = "Глаза", "zone" = BODY_ZONE_HEAD, "default_state" = "organ"),
+		list("id" = ORGAN_SLOT_EARS, "name" = "Уши", "zone" = BODY_ZONE_HEAD, "default_state" = "organ"),
+		list("id" = ORGAN_SLOT_TONGUE, "name" = "Язык / рот", "zone" = BODY_ZONE_PRECISE_MOUTH, "default_state" = "organ"),
+		list("id" = "jaw", "name" = "Челюсть", "zone" = BODY_ZONE_PRECISE_MOUTH, "default_state" = "empty"),
+		list("id" = "eyelids", "name" = "Веки", "zone" = BODY_ZONE_HEAD, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_NEURAL_IMPLANT, "name" = "Нейросетевой имплант", "zone" = BODY_ZONE_HEAD, "default_state" = "neural_implant"),
+	)

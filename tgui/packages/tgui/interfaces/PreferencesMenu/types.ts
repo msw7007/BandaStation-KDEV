@@ -79,9 +79,26 @@ export type Department = {
   head?: string;
 };
 
+export type RoleOutfitItem = {
+  slot: string;
+  item_name: string;
+  item_type: string;
+  icon?: string | null;
+  icon_state?: string | null;
+  source: string;
+  guaranteed: BooleanLike;
+  warning?: string | null;
+};
+
 export type Job = {
   description: string;
   department: string;
+  supervisors?: string;
+  paycheck?: number;
+  paycheck_department?: string;
+  total_positions?: number;
+  spawn_positions?: number;
+  outfit_items?: RoleOutfitItem[];
 };
 
 export type Quirk = {
@@ -166,11 +183,84 @@ export type CharacterPreferencesData = {
   randomization: Record<string, RandomSetting>;
 };
 
+export type CharacterSetupAttribute = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+export type CharacterSetupRuntimeAttribute = {
+  value: number;
+  min: number;
+  max: number;
+  super_threshold: number;
+  editable: BooleanLike;
+  disabled_reason?: string;
+};
+
+export type CharacterSetupPerk = {
+  index: number;
+  name: string;
+  description: string;
+  max_rank: number;
+};
+
+export type CharacterSetupSkill = {
+  id: typePath;
+  name: string;
+  title: string;
+  description: string;
+  attribute_id: string;
+  kind: 'physical' | 'professional' | 'weapon' | string;
+  point_pool: string;
+  max_character_level: number;
+  max_perk_rank: number;
+  requires_sequential_perks: BooleanLike;
+  giga_perk_name?: string;
+  giga_perk_desc?: string;
+  weapon_damage_bonus_per_level?: number;
+  weapon_cooldown_reduction_per_level?: number;
+  weapon_defense_break_bonus_per_level?: number;
+  perks: CharacterSetupPerk[];
+};
+
+export type CharacterSetupRuntimeSkill = {
+  level: number;
+  spent_points: number;
+  perks: Record<string, number>;
+  editable: BooleanLike;
+  disabled_reason?: string;
+};
+
+export type CharacterSetupImplantSlot = {
+  id: string;
+  name: string;
+  zone: string;
+  default_state: string;
+};
+
+export type CharacterSetupImplantMetrics = {
+  chromity: number;
+  chromity_max: number;
+  overheat: number;
+  overheat_floor: number;
+  has_neural_implant: BooleanLike;
+  editable: BooleanLike;
+  disabled_reason?: string;
+};
+
+export type CharacterSetupRuntimeData = {
+  attributes: Record<string, CharacterSetupRuntimeAttribute>;
+  skills: Record<typePath, CharacterSetupRuntimeSkill>;
+  implant_metrics: CharacterSetupImplantMetrics;
+};
+
 export type PreferencesMenuData = {
   character_preview_view: string;
   character_profiles: (string | null)[];
 
   character_preferences: CharacterPreferencesData;
+  character_setup?: CharacterSetupRuntimeData;
 
   content_unlocked: BooleanLike;
 
@@ -270,6 +360,13 @@ export type ServerData = {
   };
   loadout: {
     loadout_tabs: LoadoutCategory[];
+  };
+  character_setup?: {
+    attributes: Record<string, CharacterSetupAttribute>;
+    physical_skills: CharacterSetupSkill[];
+    professional_skills: CharacterSetupSkill[];
+    weapon_skills: CharacterSetupSkill[];
+    implant_slots: CharacterSetupImplantSlot[];
   };
   species: Record<string, Species>;
   [otherKey: string]: unknown;

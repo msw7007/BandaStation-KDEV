@@ -124,9 +124,9 @@
 		bodypart = limb_owner.get_bodypart(deprecise_zone(zone))
 
 	if(bodypart_owner == bodypart)
-		stack_trace("Organ bodypart_insert called when organ is already owned by that bodypart")
+		return TRUE
 	else if(!isnull(bodypart_owner))
-		stack_trace("Organ bodypart_insert called when organ is already owned by a different bodypart")
+		bodypart_remove(limb = bodypart_owner, movement_flags = movement_flags, drop_location = bodypart)
 
 	// In the event that we're already in the bodypart, DO NOT MOVE IT! otherwise it triggers forced_removal
 	if(loc != bodypart)
@@ -135,7 +135,7 @@
 	// Don't re-register if we are already owned
 	if(bodypart_owner != bodypart)
 		bodypart_owner = bodypart
-		RegisterSignal(src, COMSIG_MOVABLE_MOVED, PROC_REF(forced_removal))
+		RegisterSignal(src, COMSIG_MOVABLE_MOVED, PROC_REF(forced_removal), override = TRUE)
 		// Apply unique side-effects. Return value does not matter.
 		on_bodypart_insert(bodypart)
 

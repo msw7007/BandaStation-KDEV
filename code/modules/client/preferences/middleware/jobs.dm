@@ -1,5 +1,6 @@
 /datum/preference_middleware/jobs
 	action_delegations = list(
+		"reset_role_preferences" = PROC_REF(reset_role_preferences),
 		"set_job_preference" = PROC_REF(set_job_preference),
 	)
 
@@ -23,6 +24,11 @@
 
 	preferences.character_preview_view?.update_body()
 
+	return TRUE
+
+/datum/preference_middleware/jobs/proc/reset_role_preferences(list/params, mob/user)
+	preferences.job_preferences = list()
+	preferences.character_preview_view?.update_body()
 	return TRUE
 
 /datum/preference_middleware/jobs/get_constant_data()
@@ -54,12 +60,73 @@
 		jobs[job.title] = list(
 			"description" = job.description,
 			"department" = department_name,
+			"supervisors" = job.supervisors,
+			"paycheck" = job.paycheck,
+			"paycheck_department" = job.paycheck_department,
+			"total_positions" = job.total_positions,
+			"spawn_positions" = job.spawn_positions,
+			"outfit_items" = serialize_outfit_preview(job),
 		)
 
 	data["departments"] = departments
 	data["jobs"] = jobs
 
 	return data
+
+/datum/preference_middleware/jobs/proc/serialize_outfit_preview(datum/job/job)
+	var/list/outfit_items = list()
+	var/datum/outfit/outfit_type = job.outfit
+	if(!ispath(outfit_type, /datum/outfit))
+		return outfit_items
+
+	add_outfit_preview_item(outfit_items, "ID", outfit_type::id, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Uniform", outfit_type::uniform, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Suit", outfit_type::suit, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Suit storage", outfit_type::suit_store, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Back", outfit_type::back, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Belt", outfit_type::belt, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Ears", outfit_type::ears, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Glasses", outfit_type::glasses, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Gloves", outfit_type::gloves, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Head", outfit_type::head, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Mask", outfit_type::mask, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Neck", outfit_type::neck, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Shoes", outfit_type::shoes, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Left pocket", outfit_type::l_pocket, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Right pocket", outfit_type::r_pocket, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Left hand", outfit_type::l_hand, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Right hand", outfit_type::r_hand, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Accessory", outfit_type::accessory, "job outfit", TRUE)
+	add_outfit_preview_item(outfit_items, "Survival box", outfit_type::box, "job outfit", TRUE)
+
+	for(var/item_type in outfit_type::backpack_contents)
+		add_outfit_preview_item(outfit_items, "Backpack", item_type, "backpack contents", FALSE, outfit_type::backpack_contents[item_type])
+	for(var/item_type in outfit_type::belt_contents)
+		add_outfit_preview_item(outfit_items, "Belt", item_type, "belt contents", FALSE, outfit_type::belt_contents[item_type])
+	for(var/item_type in outfit_type::implants)
+		add_outfit_preview_item(outfit_items, "Implant", item_type, "job implant", TRUE)
+	for(var/item_type in outfit_type::skillchips)
+		add_outfit_preview_item(outfit_items, "Skillchip", item_type, "job skillchip", TRUE)
+
+	return outfit_items
+
+/datum/preference_middleware/jobs/proc/add_outfit_preview_item(list/outfit_items, slot, item_type, source, guaranteed = TRUE, amount = 1)
+	if(!ispath(item_type, /obj/item))
+		return
+	var/obj/item/item_path = item_type
+	if(!isnum(amount) || amount < 1)
+		amount = 1
+	for(var/index in 1 to amount)
+		outfit_items += list(list(
+			"slot" = slot,
+			"item_name" = item_path::name,
+			"item_type" = "[item_type]",
+			"icon" = item_path::icon_preview || item_path::icon,
+			"icon_state" = item_path::icon_state_preview || item_path::icon_state,
+			"source" = source,
+			"guaranteed" = guaranteed,
+			"warning" = guaranteed ? null : "Stored item; final placement depends on outfit/loadout equip logic.",
+		))
 
 /datum/preference_middleware/jobs/get_ui_data(mob/user)
 	var/list/data = list()
