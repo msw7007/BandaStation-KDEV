@@ -252,6 +252,8 @@ export type CharacterSetupImplantMetrics = {
 export type CharacterSetupRuntimeData = {
   attributes: Record<string, CharacterSetupRuntimeAttribute>;
   skills: Record<typePath, CharacterSetupRuntimeSkill>;
+  level_points: number;
+  skill_points: number;
   implant_metrics: CharacterSetupImplantMetrics;
 };
 

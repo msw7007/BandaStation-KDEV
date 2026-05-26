@@ -1,4 +1,5 @@
 import { classes } from 'tgui-core/react';
+import type { MouseEvent } from 'react';
 
 type PerkNodeProps = {
   name: string;
@@ -8,10 +9,20 @@ type PerkNodeProps = {
   locked?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  onContextMenu?: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 export function PerkNode(props: PerkNodeProps) {
-  const { description, disabled, locked, maxRank, name, onClick, rank } = props;
+  const {
+    description,
+    disabled,
+    locked,
+    maxRank,
+    name,
+    onClick,
+    onContextMenu,
+    rank,
+  } = props;
 
   return (
     <button
@@ -23,6 +34,7 @@ export function PerkNode(props: PerkNodeProps) {
       disabled={disabled || locked}
       title={description}
       onClick={onClick}
+      onContextMenu={onContextMenu}
     >
       <span>{name}</span>
       <b>
@@ -31,4 +43,3 @@ export function PerkNode(props: PerkNodeProps) {
     </button>
   );
 }
-

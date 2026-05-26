@@ -162,7 +162,7 @@ function BodyModificationList() {
 }
 
 export function CharacterTab() {
-  const { data } = useBackend<PreferencesMenuData>();
+  const { act, data } = useBackend<PreferencesMenuData>();
   const serverData = useServerPrefs();
   const setup = serverData?.character_setup;
   const runtime = data.character_setup;
@@ -172,14 +172,39 @@ export function CharacterTab() {
   const runtimeAttributes = runtime?.attributes || {};
   const runtimeSkills = runtime?.skills || {};
   const metrics = runtime?.implant_metrics;
+  const levelPoints = runtime?.level_points || 0;
+
+  const adjustAttribute = (attributeId: string, delta: number) =>
+    act('adjust_character_attribute', {
+      attribute_id: attributeId,
+      delta,
+    });
+
+  const adjustPerk = (skillId: string, perkIndex: number, delta: number) =>
+    act('adjust_character_perk', {
+      skill: skillId,
+      perk_index: perkIndex,
+      delta,
+    });
 
   return (
     <div className="CharacterSetup__layout">
       <CyberPanel title="A. Атрибуты и развитие" scrollable>
         <CyberSectionHeader>Базовые характеристики</CyberSectionHeader>
+        <div className="CharacterSetup__spent">
+          <span>Очки характеристик: {levelPoints}</span>
+        </div>
         {attributeOrder.map((attributeId) => {
           const attribute = attributeDefs[attributeId];
           const runtimeAttribute = runtimeAttributes[attributeId];
+          const attributeValue = runtimeAttribute?.value || 5;
+          const spentPhysicalPoints = skillsForAttribute(
+            setup?.physical_skills || [],
+            attributeId,
+          ).reduce(
+            (sum, skill) => sum + (runtimeSkills[skill.id]?.spent_points || 0),
+            0,
+          );
           return (
             <div
               key={attributeId}
@@ -191,12 +216,16 @@ export function CharacterTab() {
               onClick={() => setSelectedAttribute(attributeId)}
             >
               <CyberPointControl
-                disabled
+                disabled={!runtimeAttribute?.editable}
                 label={attribute?.name || attributeId}
                 max={runtimeAttribute?.max}
                 min={runtimeAttribute?.min}
+                minusDisabled={spentPhysicalPoints >= attributeValue}
+                plusDisabled={levelPoints <= 0}
                 reason={runtimeAttribute?.disabled_reason}
-                value={runtimeAttribute?.value || 5}
+                value={attributeValue}
+                onMinus={() => adjustAttribute(attributeId, -1)}
+                onPlus={() => adjustAttribute(attributeId, 1)}
               />
             </div>
           );
@@ -219,6 +248,7 @@ export function CharacterTab() {
           attributeId={selectedAttribute}
           runtimeSkills={runtimeSkills}
           skills={setup?.physical_skills || []}
+          onAdjustPerk={adjustPerk}
         />
       </CyberPanel>
 

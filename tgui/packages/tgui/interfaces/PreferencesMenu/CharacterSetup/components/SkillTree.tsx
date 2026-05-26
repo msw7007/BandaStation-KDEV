@@ -9,10 +9,11 @@ type SkillTreeProps = {
   runtimeSkills?: Record<string, CharacterSetupRuntimeSkill>;
   attributeId?: string;
   compact?: boolean;
+  onAdjustPerk?: (skillId: string, perkIndex: number, delta: number) => void;
 };
 
 export function SkillTree(props: SkillTreeProps) {
-  const { attributeId, compact, runtimeSkills, skills } = props;
+  const { attributeId, compact, onAdjustPerk, runtimeSkills, skills } = props;
   const shownSkills = attributeId
     ? skills.filter((skill) => skill.attribute_id === attributeId)
     : skills;
@@ -33,16 +34,32 @@ export function SkillTree(props: SkillTreeProps) {
             </header>
             {skill.perks.length ? (
               <div className="SkillTree__perks">
-                {skill.perks.map((perk) => (
-                  <PerkNode
-                    key={perk.index}
-                    disabled
-                    name={perk.name}
-                    description={perk.description}
-                    maxRank={perk.max_rank}
-                    rank={runtime?.perks?.[String(perk.index)] || 0}
-                  />
-                ))}
+                {skill.perks.map((perk) => {
+                  const rank = runtime?.perks?.[String(perk.index)] || 0;
+                  const previousRank =
+                    perk.index <= 1
+                      ? 1
+                      : runtime?.perks?.[String(perk.index - 1)] || 0;
+                  const locked =
+                    !!skill.requires_sequential_perks && rank <= 0 && previousRank <= 0;
+                  const disabled = !runtime?.editable || !onAdjustPerk;
+                  return (
+                    <PerkNode
+                      key={perk.index}
+                      disabled={disabled}
+                      locked={locked}
+                      name={perk.name}
+                      description={perk.description}
+                      maxRank={perk.max_rank}
+                      rank={rank}
+                      onClick={() => onAdjustPerk?.(skill.id, perk.index, 1)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        onAdjustPerk?.(skill.id, perk.index, -1);
+                      }}
+                    />
+                  );
+                })}
               </div>
             ) : isWeaponSkill ? (
               <div className="SkillTree__weapon">

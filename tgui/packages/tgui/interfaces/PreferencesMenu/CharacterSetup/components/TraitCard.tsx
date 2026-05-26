@@ -10,6 +10,7 @@ type TraitCardProps = {
   disabled?: boolean;
   positive?: string | null;
   negative?: string | null;
+  neutral?: string | null;
   onClick?: () => void;
 };
 
@@ -20,6 +21,7 @@ export function TraitCard(props: TraitCardProps) {
     icon,
     name,
     negative,
+    neutral,
     onClick,
     positive,
     selected,
@@ -27,15 +29,26 @@ export function TraitCard(props: TraitCardProps) {
   } = props;
 
   return (
-    <button
+    <div
       className={classes([
         'TraitCard',
         selected && 'selected',
+        disabled && 'disabled',
         value !== undefined && value > 0 && 'positive',
         value !== undefined && value < 0 && 'negative',
       ])}
-      disabled={disabled}
-      onClick={onClick}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      onClick={disabled ? undefined : onClick}
+      onKeyDown={(event) => {
+        if (disabled || !onClick) {
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
       <span className="TraitCard__icon">
         <Icon name={icon || 'diamond'} />
@@ -45,9 +58,9 @@ export function TraitCard(props: TraitCardProps) {
         {!!description && <small>{description}</small>}
         {!!positive && <em className="good">+ {positive}</em>}
         {!!negative && <em className="bad">- {negative}</em>}
+        {!!neutral && <em className="neutral">± {neutral}</em>}
       </span>
       {value !== undefined && <span className="TraitCard__value">{value}</span>}
-    </button>
+    </div>
   );
 }
-

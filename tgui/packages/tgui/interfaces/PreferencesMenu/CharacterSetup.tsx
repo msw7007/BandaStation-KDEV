@@ -12,10 +12,10 @@ import { RolesTab } from './CharacterSetup/tabs/RolesTab';
 
 const tabs: CyberTab[] = [
   { id: 'data', label: 'Информация', icon: 'user' },
-  { id: 'character', label: 'Персонаж', icon: 'person-running' },
+  { id: 'traits', label: 'Черты', icon: 'heart' },
+  { id: 'character', label: 'Биометрика', icon: 'person-running' },
   { id: 'equipment', label: 'Снаряжение', icon: 'briefcase' },
   { id: 'roles', label: 'Роли', icon: 'users' },
-  { id: 'traits', label: 'Характер', icon: 'heart' },
 ];
 
 export function CharacterSetupWindow() {

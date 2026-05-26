@@ -382,7 +382,7 @@ function SpeciesPickerModal(props: {
           ))}
         </div>
         <div className="CharacterSetup__speciesDetails">
-          <CharacterPreview height="180px" id={props.previewId} />
+          <CharacterPreview height="180px" id={props.previewId} transparent />
           <h3>{currentSpecies?.name || props.currentSpeciesKey}</h3>
           <p>{currentSpecies?.desc || 'Описание вида недоступно.'}</p>
           {!!currentSpecies?.enabled_features?.length && (
@@ -460,6 +460,15 @@ export function DataTab() {
           Выбрать вид / тип тела
         </CyberButton>
       </div>
+      {!!getChoiceOptions(serverData, 'gender').length && (
+        <CyberSelect
+          icon="venus-mars"
+          label="Пол"
+          value={String(value(data, 'gender') ?? '')}
+          options={getChoiceOptions(serverData, 'gender')}
+          onSelected={(newValue) => setPreference(act, 'gender', newValue)}
+        />
+      )}
       <CyberSelect
         icon="person"
         label="Форма тела / телосложение"

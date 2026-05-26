@@ -58,6 +58,10 @@
 /// Read-only adapter data for the CyberPunk 13 character setup shell.
 /datum/preference_middleware/character_setup
 	key = "character_setup"
+	action_delegations = list(
+		"adjust_character_attribute" = PROC_REF(adjust_character_attribute),
+		"adjust_character_perk" = PROC_REF(adjust_character_perk),
+	)
 
 /datum/preference_middleware/character_setup/get_constant_data()
 	return list(
@@ -74,13 +78,14 @@
 
 	var/list/attributes = list()
 	for(var/attribute_id in ATTRIBUTE_ALL)
+		var/attribute_editable = !!user_mind
 		attributes[attribute_id] = list(
 			"value" = user_mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT,
 			"min" = ATTRIBUTE_MINIMUM,
 			"max" = ATTRIBUTE_MAXIMUM,
 			"super_threshold" = ATTRIBUTE_SUPER_THRESHOLD,
-			"editable" = FALSE,
-			"disabled_reason" = "TODO: roundstart attribute build saving is not wired to preferences yet.",
+			"editable" = attribute_editable,
+			"disabled_reason" = attribute_editable ? null : "Character mind is not available.",
 		)
 
 	var/list/skills = list()
@@ -102,8 +107,8 @@
 				"level" = user_mind?.get_character_skill_level(skill_type) || CHARACTER_SKILL_LEVEL_NONE,
 				"spent_points" = user_mind?.get_character_skill_spent_points(skill_type) || 0,
 				"perks" = perks,
-				"editable" = FALSE,
-				"disabled_reason" = "TODO: character skill build saving is not wired to preferences yet.",
+				"editable" = !!user_mind,
+				"disabled_reason" = user_mind ? null : "Character mind is not available.",
 			)
 		if(temporary_skill)
 			qdel(skill_datum)
@@ -128,10 +133,57 @@
 	data["character_setup"] = list(
 		"attributes" = attributes,
 		"skills" = skills,
+		"level_points" = user_mind?.level_points || 0,
+		"skill_points" = user_mind?.skill_points || 0,
 		"implant_metrics" = implant_metrics,
 	)
 
 	return data
+
+/datum/preference_middleware/character_setup/proc/adjust_character_attribute(list/params, mob/user)
+	var/attribute_id = params["attribute_id"]
+	if(!(attribute_id in ATTRIBUTE_ALL))
+		return FALSE
+
+	var/datum/mind/user_mind = user?.mind
+	if(!user_mind)
+		return FALSE
+
+	var/delta = round(params["delta"])
+	if(!delta)
+		return FALSE
+
+	var/current_value = user_mind.get_attribute_value(attribute_id)
+	if(delta > 0)
+		if(user_mind.level_points <= 0 || current_value >= ATTRIBUTE_MAXIMUM)
+			return FALSE
+		user_mind.level_points--
+		user_mind.adjust_attribute_value(attribute_id, 1)
+		return TRUE
+
+	if(current_value <= ATTRIBUTE_MINIMUM)
+		return FALSE
+	if(user_mind.get_attribute_physical_perk_points(attribute_id) > current_value - 1)
+		return FALSE
+	user_mind.adjust_attribute_value(attribute_id, -1)
+	user_mind.level_points++
+	return TRUE
+
+/datum/preference_middleware/character_setup/proc/adjust_character_perk(list/params, mob/user)
+	var/datum/mind/user_mind = user?.mind
+	if(!user_mind)
+		return FALSE
+
+	var/skill_type = text2path(params["skill"])
+	if(!ispath(skill_type, /datum/skill))
+		return FALSE
+
+	var/perk_index = round(params["perk_index"])
+	var/delta = round(params["delta"])
+	if(!perk_index || !delta)
+		return FALSE
+
+	return user_mind.adjust_character_perk_rank(skill_type, perk_index, delta)
 
 /datum/preference_middleware/character_setup/proc/get_attribute_definitions()
 	return list(
