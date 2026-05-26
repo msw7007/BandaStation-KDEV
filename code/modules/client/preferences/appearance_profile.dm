@@ -4,9 +4,15 @@
 #define BODY_SHAPE_SOFT "soft"
 #define BODY_SHAPE_ANGULAR "angular"
 #define CORP_ALIGN_NONE "none"
-#define CORP_ALIGN_BEN "ben"
-#define CORP_ALIGN_RYAZNOV "ryaznov"
-#define CORP_ALIGN_STARLIGHT "starlight"
+#define CORP_ALIGN_SUN_YON "sun_yon"
+#define CORP_ALIGN_ISHIKAWA "ishikawa"
+#define CORP_ALIGN_HO_SHI "ho_shi"
+#define CORP_ALIGN_KOWALSKI "kowalski"
+#define CORP_ALIGN_TYAZHMARSH "tyazhmarsh"
+#define CORP_ALIGN_TESLA_SCIENCE "tesla_science"
+#define CORP_ALIGN_BLACKROCK_INVESTIGATE "blackrock_investigate"
+#define CORP_ALIGN_TRANS_TRAVEL "trans_travel"
+#define CORP_ALIGN_SAMANTHAS_KEIR "samanthas_keir"
 
 /proc/body_descriptor_choices()
 	return list(
@@ -36,10 +42,16 @@
 
 /proc/corp_align_choices()
 	return list(
-		CORP_ALIGN_NONE = "Нет",
-		CORP_ALIGN_BEN = "Бэнь",
-		CORP_ALIGN_RYAZNOV = "Рязнов",
-		CORP_ALIGN_STARLIGHT = "Старлайт",
+		CORP_ALIGN_NONE = "Независимый",
+		CORP_ALIGN_SUN_YON = "Сан Йон Корпорейшн",
+		CORP_ALIGN_ISHIKAWA = "Ишикава Индастриз",
+		CORP_ALIGN_HO_SHI = "Хо Ши Текнолоджис",
+		CORP_ALIGN_KOWALSKI = "Ковальски и Ко",
+		CORP_ALIGN_TYAZHMARSH = "ТяжМарш Продакшен",
+		CORP_ALIGN_TESLA_SCIENCE = "Тесла Саенс",
+		CORP_ALIGN_BLACKROCK_INVESTIGATE = "Блэкрок Инвестигейт",
+		CORP_ALIGN_TRANS_TRAVEL = "Транс Трэвел",
+		CORP_ALIGN_SAMANTHAS_KEIR = "Самантас Кеир",
 	)
 
 /datum/preference/numeric/sprite_size
@@ -244,6 +256,9 @@
 
 /datum/preference/choiced/corp_align/apply_to_human(mob/living/carbon/human/target, value)
 	target.corp_align = value == CORP_ALIGN_NONE ? null : value
+	var/obj/item/organ/cyberimp/brain/neural_interface/neural_interface = target.get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
+	if(istype(neural_interface))
+		neural_interface.corp_manufacturer = value == CORP_ALIGN_NONE ? initial(neural_interface.corp_manufacturer) : value
 
 #undef BODY_SHAPE_AVERAGE
 #undef BODY_SHAPE_LEAN
@@ -251,6 +266,12 @@
 #undef BODY_SHAPE_SOFT
 #undef BODY_SHAPE_ANGULAR
 #undef CORP_ALIGN_NONE
-#undef CORP_ALIGN_BEN
-#undef CORP_ALIGN_RYAZNOV
-#undef CORP_ALIGN_STARLIGHT
+#undef CORP_ALIGN_SUN_YON
+#undef CORP_ALIGN_ISHIKAWA
+#undef CORP_ALIGN_HO_SHI
+#undef CORP_ALIGN_KOWALSKI
+#undef CORP_ALIGN_TYAZHMARSH
+#undef CORP_ALIGN_TESLA_SCIENCE
+#undef CORP_ALIGN_BLACKROCK_INVESTIGATE
+#undef CORP_ALIGN_TRANS_TRAVEL
+#undef CORP_ALIGN_SAMANTHAS_KEIR

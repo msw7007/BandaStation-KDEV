@@ -202,7 +202,14 @@ export type CharacterSetupPerk = {
   index: number;
   name: string;
   description: string;
+  rank_descriptions?: string[];
   max_rank: number;
+};
+
+export type CharacterSetupRuntimePerk = {
+  rank: number;
+  can_increase: BooleanLike;
+  can_decrease: BooleanLike;
 };
 
 export type CharacterSetupSkill = {
@@ -227,7 +234,9 @@ export type CharacterSetupSkill = {
 export type CharacterSetupRuntimeSkill = {
   level: number;
   spent_points: number;
-  perks: Record<string, number>;
+  perks: Record<string, CharacterSetupRuntimePerk | number>;
+  can_increase: BooleanLike;
+  can_decrease: BooleanLike;
   editable: BooleanLike;
   disabled_reason?: string;
 };
@@ -254,6 +263,8 @@ export type CharacterSetupRuntimeData = {
   skills: Record<typePath, CharacterSetupRuntimeSkill>;
   level_points: number;
   skill_points: number;
+  professional_skill_points: number;
+  weapon_skill_points: number;
   implant_metrics: CharacterSetupImplantMetrics;
 };
 

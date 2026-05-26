@@ -2067,6 +2067,19 @@ $department_map: (
     grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   }
 
+  &__pool {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.35rem;
+    color: var(--cy-cyan);
+
+    span {
+      padding: 0.25rem 0.45rem;
+      border: 1px solid var(--cy-border);
+      background: rgba(5, 8, 13, 0.7);
+    }
+  }
+
   &__branch {
     display: grid;
     gap: 0.4rem;
@@ -2098,26 +2111,129 @@ $department_map: (
   &__missing {
     border-color: var(--cy-danger-border);
   }
+
+  &__weaponControl {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    > b {
+      min-width: 2.25rem;
+      color: var(--cy-cyan);
+      text-align: right;
+    }
+  }
+
+  &__weaponTrack {
+    flex: 1;
+    height: 0.45rem;
+    border: 1px solid var(--cy-border);
+    background: rgba(5, 8, 13, 0.9);
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--cy-cyan);
+      box-shadow: 0 0 0.6rem rgba(24, 216, 255, 0.42);
+    }
+  }
 }
 
 .PerkNode {
-  min-height: 3.25rem;
+  aspect-ratio: 1;
+  min-height: 0;
   display: grid;
   align-content: center;
+  justify-items: center;
   gap: 0.25rem;
   color: var(--cy-muted);
   background-color: rgba(5, 8, 13, 0.72);
   border: 1px solid rgba(255, 51, 74, 0.25);
   padding: 0.35rem 0.25rem;
+  text-align: center;
 
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  &__icon {
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 1px solid var(--cy-border);
+    background:
+      linear-gradient(135deg, transparent 30%, rgba(24, 216, 255, 0.25) 31%, rgba(24, 216, 255, 0.25) 69%, transparent 70%),
+      rgba(5, 8, 13, 0.9);
+    transform: rotate(45deg);
   }
 
   b {
     color: var(--cy-cyan);
+  }
+
+  &__tooltip {
+    max-width: 24rem;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.55rem 0.65rem;
+    color: var(--cy-text);
+    background: rgba(5, 8, 13, 0.96);
+    border: 1px solid var(--cy-cyan);
+    box-shadow: 0 0 1rem rgba(24, 216, 255, 0.22);
+
+    strong {
+      color: var(--cy-cyan);
+      text-transform: uppercase;
+    }
+
+    em {
+      color: var(--cy-red);
+      font-style: normal;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+    }
+
+    span {
+      color: var(--cy-muted);
+      line-height: 1.25;
+    }
+
+    .PerkNode__rank {
+      color: var(--cy-red);
+    }
+  }
+
+  &__levels {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: grid;
+      gap: 0.15rem;
+      padding: 0.35rem 0.45rem;
+      border-left: 2px solid var(--cy-cyan);
+      background: rgba(5, 8, 13, 0.42);
+
+      b {
+        color: #d7e7ee !important;
+      }
+
+      span {
+        color: #d7e7ee !important;
+      }
+
+      &.taken {
+        border-left-color: #ff334a !important;
+        background: rgba(5, 8, 13, 0.42);
+
+        b,
+        span {
+          color: #18d8ff !important;
+        }
+      }
+
+      &.pending {
+        border-left-color: #18d8ff !important;
+      }
+    }
   }
 
   &.taken {

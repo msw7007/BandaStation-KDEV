@@ -62,9 +62,6 @@ export function CharacterTraitsTab() {
   const serverData = useServerPrefs();
   const [personalitySearch, setPersonalitySearch] = useState('');
   const [quirkSearch, setQuirkSearch] = useState('');
-  const [quirkMode, setQuirkMode] = useState<'available' | 'selected' | 'all'>(
-    'available',
-  );
 
   const selectedPersonalities = data.selected_personalities || [];
   const selectedQuirks = data.selected_quirks || [];
@@ -90,13 +87,6 @@ export function CharacterTraitsTab() {
   }, [allPersonalities, personalitySearch]);
 
   const quirkEntries = Object.entries(quirks).filter(([key, quirk]) => {
-    const selected = selectedQuirks.includes(key);
-    if (quirkMode === 'available' && selected) {
-      return false;
-    }
-    if (quirkMode === 'selected' && !selected) {
-      return false;
-    }
     const query = quirkSearch.toLowerCase();
     return `${quirk.name} ${quirk.description}`.toLowerCase().includes(query);
   });
@@ -202,10 +192,6 @@ export function CharacterTraitsTab() {
             value={personalitySearch}
             onChange={setPersonalitySearch}
           />
-          <span>
-            Персонализации: {selectedPersonalities.length}/
-            {data.max_personalities === -1 ? '∞' : data.max_personalities}
-          </span>
         </div>
         <div className="CharacterSetup__storeList">
           {personalities.map((personality) => {
@@ -391,30 +377,6 @@ export function CharacterTraitsTab() {
             value={quirkSearch}
             onChange={setQuirkSearch}
           />
-        </div>
-        <div className="CharacterSetup__quirkCounters">
-          <span>Очки: {displayedQuirkBalance}</span>
-          <span>Положительные: {positiveSelected}/{maxPositive}</span>
-        </div>
-        <div className="CharacterSetup__segmented">
-          <button
-            className={quirkMode === 'available' ? 'active' : ''}
-            onClick={() => setQuirkMode('available')}
-          >
-            Доступные
-          </button>
-          <button
-            className={quirkMode === 'selected' ? 'active' : ''}
-            onClick={() => setQuirkMode('selected')}
-          >
-            Выбранные
-          </button>
-          <button
-            className={quirkMode === 'all' ? 'active' : ''}
-            onClick={() => setQuirkMode('all')}
-          >
-            Все quirks
-          </button>
         </div>
         <div className="CharacterSetup__storeList">
           {quirkEntries.map(([key, quirk]) => {

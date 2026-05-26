@@ -61,6 +61,7 @@
 	action_delegations = list(
 		"adjust_character_attribute" = PROC_REF(adjust_character_attribute),
 		"adjust_character_perk" = PROC_REF(adjust_character_perk),
+		"adjust_character_skill_level" = PROC_REF(adjust_character_skill_level),
 	)
 
 /datum/preference_middleware/character_setup/get_constant_data()
@@ -75,6 +76,7 @@
 /datum/preference_middleware/character_setup/get_ui_data(mob/user)
 	var/list/data = list()
 	var/datum/mind/user_mind = user?.mind
+	user_mind?.recalculate_character_skill_point_pools()
 
 	var/list/attributes = list()
 	for(var/attribute_id in ATTRIBUTE_ALL)
@@ -102,11 +104,22 @@
 			var/list/perks = list()
 			if(skill_datum.uses_perks())
 				for(var/perk_index in 1 to length(skill_datum.perks))
-					perks["[perk_index]"] = user_mind?.get_character_perk_rank(skill_type, perk_index) || 0
+					var/perk_rank = user_mind?.get_character_perk_rank(skill_type, perk_index) || 0
+					var/independent_perk = !skill_datum.requires_sequential_perks
+					var/can_increase = user_mind?.can_set_character_perk_rank(skill_type, perk_index, perk_rank + 1, FALSE, independent_perk) || FALSE
+					var/can_decrease = user_mind?.can_set_character_perk_rank(skill_type, perk_index, perk_rank - 1, FALSE, independent_perk) || FALSE
+					perks["[perk_index]"] = list(
+						"rank" = perk_rank,
+						"can_increase" = can_increase,
+						"can_decrease" = can_decrease,
+					)
+			var/skill_level = user_mind?.get_character_skill_level(skill_type) || CHARACTER_SKILL_LEVEL_NONE
 			skills["[skill_type]"] = list(
-				"level" = user_mind?.get_character_skill_level(skill_type) || CHARACTER_SKILL_LEVEL_NONE,
+				"level" = skill_level,
 				"spent_points" = user_mind?.get_character_skill_spent_points(skill_type) || 0,
 				"perks" = perks,
+				"can_increase" = user_mind?.can_pay_character_skill_points(skill_type, 1) && skill_level < skill_datum.max_character_level,
+				"can_decrease" = skill_level > CHARACTER_SKILL_LEVEL_NONE,
 				"editable" = !!user_mind,
 				"disabled_reason" = user_mind ? null : "Character mind is not available.",
 			)
@@ -134,7 +147,9 @@
 		"attributes" = attributes,
 		"skills" = skills,
 		"level_points" = user_mind?.level_points || 0,
-		"skill_points" = user_mind?.skill_points || 0,
+		"skill_points" = (user_mind?.professional_skill_points || 0) + (user_mind?.weapon_skill_points || 0),
+		"professional_skill_points" = user_mind?.professional_skill_points || 0,
+		"weapon_skill_points" = user_mind?.weapon_skill_points || 0,
 		"implant_metrics" = implant_metrics,
 	)
 
@@ -149,7 +164,8 @@
 	if(!user_mind)
 		return FALSE
 
-	var/delta = round(params["delta"])
+	var/raw_delta = params["delta"]
+	var/delta = round(text2num("[raw_delta]") || 0)
 	if(!delta)
 		return FALSE
 
@@ -159,6 +175,7 @@
 			return FALSE
 		user_mind.level_points--
 		user_mind.adjust_attribute_value(attribute_id, 1)
+		preferences.save_character()
 		return TRUE
 
 	if(current_value <= ATTRIBUTE_MINIMUM)
@@ -167,6 +184,7 @@
 		return FALSE
 	user_mind.adjust_attribute_value(attribute_id, -1)
 	user_mind.level_points++
+	preferences.save_character()
 	return TRUE
 
 /datum/preference_middleware/character_setup/proc/adjust_character_perk(list/params, mob/user)
@@ -178,12 +196,45 @@
 	if(!ispath(skill_type, /datum/skill))
 		return FALSE
 
-	var/perk_index = round(params["perk_index"])
-	var/delta = round(params["delta"])
+	var/raw_perk_index = params["perk_index"]
+	var/perk_index = round(text2num("[raw_perk_index]") || 0)
+	var/raw_delta = params["delta"]
+	var/delta = round(text2num("[raw_delta]") || 0)
 	if(!perk_index || !delta)
 		return FALSE
 
-	return user_mind.adjust_character_perk_rank(skill_type, perk_index, delta)
+	var/datum/skill/skill_datum = GetSkillRef(skill_type)
+	if(!skill_datum || !skill_datum.uses_perks())
+		return FALSE
+
+	var/independent_perk = !skill_datum.requires_sequential_perks
+	if(!user_mind.adjust_character_perk_rank(skill_type, perk_index, delta, FALSE, independent_perk))
+		return FALSE
+	preferences.save_character()
+	return TRUE
+
+/datum/preference_middleware/character_setup/proc/adjust_character_skill_level(list/params, mob/user)
+	var/datum/mind/user_mind = user?.mind
+	if(!user_mind)
+		return FALSE
+
+	var/skill_type = text2path(params["skill"])
+	if(!ispath(skill_type, /datum/skill))
+		return FALSE
+
+	var/raw_delta = params["delta"]
+	var/delta = round(text2num("[raw_delta]") || 0)
+	if(!delta)
+		return FALSE
+
+	var/datum/skill/skill_datum = GetSkillRef(skill_type)
+	if(!skill_datum || skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
+		return FALSE
+
+	if(!user_mind.adjust_character_skill_level(skill_type, delta))
+		return FALSE
+	preferences.save_character()
+	return TRUE
 
 /datum/preference_middleware/character_setup/proc/get_attribute_definitions()
 	return list(
@@ -225,9 +276,14 @@
 		var/datum/skill/skill_path = skill_type
 		if(initial(skill_path.abstract_type) == skill_type)
 			continue
-		var/datum/skill/skill_datum = new skill_type
+		var/datum/skill/skill_datum = GetSkillRef(skill_type)
+		var/temporary_skill = FALSE
+		if(isnull(skill_datum))
+			skill_datum = new skill_type
+			temporary_skill = TRUE
 		if(skill_datum.skill_kind != skill_kind)
-			qdel(skill_datum)
+			if(temporary_skill)
+				qdel(skill_datum)
 			continue
 
 		skills += list(list(
@@ -248,7 +304,8 @@
 			"weapon_defense_break_bonus_per_level" = skill_datum.weapon_defense_break_bonus_per_level,
 			"perks" = get_perk_definitions(skill_datum),
 		))
-		qdel(skill_datum)
+		if(temporary_skill)
+			qdel(skill_datum)
 
 	return skills
 
@@ -260,6 +317,7 @@
 			"index" = perk.index,
 			"name" = perk.name,
 			"description" = perk.desc,
+			"rank_descriptions" = perk.get_rank_descriptions(),
 			"max_rank" = perk.max_rank,
 		))
 	return perks

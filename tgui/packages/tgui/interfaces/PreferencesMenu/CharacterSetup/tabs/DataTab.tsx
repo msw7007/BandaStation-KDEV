@@ -209,7 +209,7 @@ const appearanceCategories: AppearanceCategory[] = [
   },
   {
     id: 'genitals',
-    label: 'Гениталии',
+    label: 'Пол',
     icon: 'venus-mars',
     controls: [],
   },
@@ -460,15 +460,6 @@ export function DataTab() {
           Выбрать вид / тип тела
         </CyberButton>
       </div>
-      {!!getChoiceOptions(serverData, 'gender').length && (
-        <CyberSelect
-          icon="venus-mars"
-          label="Пол"
-          value={String(value(data, 'gender') ?? '')}
-          options={getChoiceOptions(serverData, 'gender')}
-          onSelected={(newValue) => setPreference(act, 'gender', newValue)}
-        />
-      )}
       <CyberSelect
         icon="person"
         label="Форма тела / телосложение"
@@ -534,6 +525,22 @@ export function DataTab() {
           {renderVoicePanel()}
           <CyberSectionHeader>Глаза</CyberSectionHeader>
           {renderControls(eyeControls)}
+        </>
+      );
+    }
+
+    if (selectedAppearanceCategory.id === 'genitals') {
+      return (
+        <>
+          {!!getChoiceOptions(serverData, 'gender').length && (
+            <CyberSelect
+              icon="venus-mars"
+              label="Пол"
+              value={String(value(data, 'gender') ?? '')}
+              options={getChoiceOptions(serverData, 'gender')}
+              onSelected={(newValue) => setPreference(act, 'gender', newValue)}
+            />
+          )}
         </>
       );
     }
@@ -731,7 +738,7 @@ export function DataTab() {
           <CyberSectionHeader>Нейроинтерфейс</CyberSectionHeader>
           <CyberSelect
             icon="network-wired"
-            label="Корпорация"
+            label="Производитель"
             value={String(value(data, 'corp_align') ?? 'none')}
             options={getChoiceOptions(serverData, 'corp_align')}
             onSelected={(newValue) => setPreference(act, 'corp_align', newValue)}

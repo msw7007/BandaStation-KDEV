@@ -1,4 +1,7 @@
+import { Button } from 'tgui-core/components';
+
 import type {
+  CharacterSetupRuntimePerk,
   CharacterSetupRuntimeSkill,
   CharacterSetupSkill,
 } from '../../types';
@@ -10,10 +13,37 @@ type SkillTreeProps = {
   attributeId?: string;
   compact?: boolean;
   onAdjustPerk?: (skillId: string, perkIndex: number, delta: number) => void;
+  onAdjustSkillLevel?: (skillId: string, delta: number) => void;
 };
 
+function getRuntimePerk(
+  runtime: CharacterSetupRuntimeSkill | undefined,
+  perkIndex: number,
+): CharacterSetupRuntimePerk {
+  const rawPerk = runtime?.perks?.[String(perkIndex)];
+  if (typeof rawPerk === 'number') {
+    return {
+      rank: rawPerk,
+      can_increase: !!runtime?.editable,
+      can_decrease: rawPerk > 0 && !!runtime?.editable,
+    };
+  }
+  return {
+    rank: rawPerk?.rank || 0,
+    can_increase: !!rawPerk?.can_increase,
+    can_decrease: !!rawPerk?.can_decrease,
+  };
+}
+
 export function SkillTree(props: SkillTreeProps) {
-  const { attributeId, compact, onAdjustPerk, runtimeSkills, skills } = props;
+  const {
+    attributeId,
+    compact,
+    onAdjustPerk,
+    onAdjustSkillLevel,
+    runtimeSkills,
+    skills,
+  } = props;
   const shownSkills = attributeId
     ? skills.filter((skill) => skill.attribute_id === attributeId)
     : skills;
@@ -35,13 +65,9 @@ export function SkillTree(props: SkillTreeProps) {
             {skill.perks.length ? (
               <div className="SkillTree__perks">
                 {skill.perks.map((perk) => {
-                  const rank = runtime?.perks?.[String(perk.index)] || 0;
-                  const previousRank =
-                    perk.index <= 1
-                      ? 1
-                      : runtime?.perks?.[String(perk.index - 1)] || 0;
-                  const locked =
-                    !!skill.requires_sequential_perks && rank <= 0 && previousRank <= 0;
+                  const runtimePerk = getRuntimePerk(runtime, perk.index);
+                  const rank = runtimePerk.rank;
+                  const locked = !runtimePerk.can_increase && !runtimePerk.can_decrease;
                   const disabled = !runtime?.editable || !onAdjustPerk;
                   return (
                     <PerkNode
@@ -50,12 +76,20 @@ export function SkillTree(props: SkillTreeProps) {
                       locked={locked}
                       name={perk.name}
                       description={perk.description}
+                      rankDescriptions={perk.rank_descriptions}
                       maxRank={perk.max_rank}
                       rank={rank}
-                      onClick={() => onAdjustPerk?.(skill.id, perk.index, 1)}
+                      skillKind={skill.kind}
+                      onClick={() => {
+                        if (runtimePerk.can_increase) {
+                          onAdjustPerk?.(skill.id, perk.index, 1);
+                        }
+                      }}
                       onContextMenu={(event) => {
                         event.preventDefault();
-                        onAdjustPerk?.(skill.id, perk.index, -1);
+                        if (runtimePerk.can_decrease) {
+                          onAdjustPerk?.(skill.id, perk.index, -1);
+                        }
                       }}
                     />
                   );
@@ -63,7 +97,42 @@ export function SkillTree(props: SkillTreeProps) {
               </div>
             ) : isWeaponSkill ? (
               <div className="SkillTree__weapon">
-                <span>Уровень: {runtime?.level || 0}</span>
+                <div className="SkillTree__weaponControl">
+                  <Button
+                    icon="minus"
+                    disabled={
+                      !runtime?.editable ||
+                      !onAdjustSkillLevel ||
+                      !runtime?.can_decrease ||
+                      (runtime?.level || 0) <= 0
+                    }
+                    onClick={() => onAdjustSkillLevel?.(skill.id, -1)}
+                  />
+                  <div className="SkillTree__weaponTrack">
+                    <span
+                      style={{
+                        width: `${Math.round(
+                          ((runtime?.level || 0) /
+                            Math.max(skill.max_character_level, 1)) *
+                            100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <b>
+                    {runtime?.level || 0}/{skill.max_character_level}
+                  </b>
+                  <Button
+                    icon="plus"
+                    disabled={
+                      !runtime?.editable ||
+                      !onAdjustSkillLevel ||
+                      !runtime?.can_increase ||
+                      (runtime?.level || 0) >= skill.max_character_level
+                    }
+                    onClick={() => onAdjustSkillLevel?.(skill.id, 1)}
+                  />
+                </div>
                 <small>
                   +{Math.round((skill.weapon_damage_bonus_per_level || 0) * 100)}%
                   урона, -

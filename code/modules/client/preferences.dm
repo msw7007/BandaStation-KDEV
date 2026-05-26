@@ -77,6 +77,16 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 
 	/// The savefile relating to character preferences, PREFERENCE_CHARACTER
 	var/list/character_data
+	/// Saved CyberPunk 13 character attribute values for the selected character slot.
+	var/list/character_setup_attributes = list()
+	/// Saved CyberPunk 13 character perk ranks, keyed by skill type string.
+	var/list/character_setup_perks = list()
+	/// Saved CyberPunk 13 direct skill levels, keyed by skill type string.
+	var/list/character_setup_skill_levels = list()
+	/// Saved spendable professional skill points for the selected character slot.
+	var/character_setup_professional_skill_points = PROFESSIONAL_SKILL_POINTS_DEFAULT
+	/// Saved spendable weapon skill points for the selected character slot.
+	var/character_setup_weapon_skill_points = WEAPON_SKILL_POINTS_DEFAULT
 
 	/// A list of keys that have been updated since the last save.
 	var/list/recently_updated_keys = list()

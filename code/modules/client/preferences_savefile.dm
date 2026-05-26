@@ -388,6 +388,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 
 	//Custom emote panel
 	custom_emote_panel = save_data?["custom_emote_panel"] // BANDASTATION ADD - Emote Panel
+	load_character_setup_data(save_data)
 
 	//Quirks
 	all_quirks = save_data?["all_quirks"]
@@ -413,6 +414,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 
 	all_quirks = SSquirks.filter_invalid_quirks(SANITIZE_LIST(all_quirks))
 	validate_quirks()
+	apply_character_setup_to_mind(parent?.mob?.mind)
 
 	return TRUE
 
@@ -420,6 +422,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 	SHOULD_NOT_SLEEP(TRUE)
 	if(!path)
 		return FALSE
+	sync_character_setup_from_mind(parent?.mob?.mind)
 	var/tree_key = "character[default_slot]"
 	if(!(tree_key in savefile.get_entry()))
 		savefile.set_entry(tree_key, list())
@@ -453,11 +456,239 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 
 	// BANDASTATION ADD - Emote Panel
 	save_data["custom_emote_panel"] = custom_emote_panel // BANDASTATION ADD - Emote Panel
+	save_character_setup_data(save_data)
 
 	//Quirks
 	save_data["all_quirks"] = all_quirks
 
 	return TRUE
+
+/datum/preferences/proc/reset_character_setup_data()
+	character_setup_attributes = list()
+	character_setup_perks = list()
+	character_setup_skill_levels = list()
+	character_setup_professional_skill_points = PROFESSIONAL_SKILL_POINTS_DEFAULT
+	character_setup_weapon_skill_points = WEAPON_SKILL_POINTS_DEFAULT
+
+/datum/preferences/proc/load_character_setup_data(list/save_data)
+	reset_character_setup_data()
+	if(!islist(save_data))
+		return
+
+	character_setup_attributes = sanitize_character_setup_attributes(save_data["character_setup_attributes"])
+	character_setup_perks = sanitize_character_setup_perks(save_data["character_setup_perks"])
+	character_setup_skill_levels = sanitize_character_setup_skill_levels(save_data["character_setup_skill_levels"])
+	character_setup_professional_skill_points = sanitize_integer(save_data["character_setup_professional_skill_points"], 0, PROFESSIONAL_SKILL_POINTS_DEFAULT, PROFESSIONAL_SKILL_POINTS_DEFAULT)
+	character_setup_weapon_skill_points = sanitize_integer(save_data["character_setup_weapon_skill_points"], 0, WEAPON_SKILL_POINTS_DEFAULT, WEAPON_SKILL_POINTS_DEFAULT)
+
+/datum/preferences/proc/save_character_setup_data(list/save_data)
+	if(!islist(save_data))
+		return
+	save_data["character_setup_attributes"] = character_setup_attributes
+	save_data["character_setup_perks"] = character_setup_perks
+	save_data["character_setup_skill_levels"] = character_setup_skill_levels
+	save_data["character_setup_professional_skill_points"] = character_setup_professional_skill_points
+	save_data["character_setup_weapon_skill_points"] = character_setup_weapon_skill_points
+
+/datum/preferences/proc/sync_character_setup_from_mind(datum/mind/source_mind)
+	if(!source_mind)
+		return FALSE
+
+	var/list/saved_attributes = list()
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		saved_attributes[attribute_id] = clamp(round(source_mind.get_attribute_value(attribute_id)), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
+	character_setup_attributes = saved_attributes
+
+	var/list/saved_perks = list()
+	for(var/perk_skill_type in source_mind.character_skill_perks)
+		var/datum/skill/perk_skill_datum = GetSkillRef(perk_skill_type)
+		var/temporary_perk_skill = FALSE
+		if(isnull(perk_skill_datum) && ispath(perk_skill_type, /datum/skill))
+			perk_skill_datum = new perk_skill_type
+			temporary_perk_skill = TRUE
+		if(!perk_skill_datum || !perk_skill_datum.uses_perks())
+			if(temporary_perk_skill)
+				qdel(perk_skill_datum)
+			continue
+		var/list/saved_skill_perks = list()
+		for(var/perk_index in 1 to length(perk_skill_datum.perks))
+			var/rank = source_mind.get_character_perk_rank(perk_skill_type, perk_index)
+			if(rank > 0)
+				saved_skill_perks["[perk_index]"] = rank
+		if(length(saved_skill_perks))
+			saved_perks["[perk_skill_type]"] = saved_skill_perks
+		if(temporary_perk_skill)
+			qdel(perk_skill_datum)
+	character_setup_perks = saved_perks
+
+	var/list/saved_skill_levels = list()
+	for(var/level_skill_type in source_mind.character_skill_levels)
+		var/datum/skill/level_skill_datum = GetSkillRef(level_skill_type)
+		var/temporary_level_skill = FALSE
+		if(isnull(level_skill_datum) && ispath(level_skill_type, /datum/skill))
+			level_skill_datum = new level_skill_type
+			temporary_level_skill = TRUE
+		if(!level_skill_datum || level_skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
+			if(temporary_level_skill)
+				qdel(level_skill_datum)
+			continue
+		var/level = source_mind.get_character_skill_level(level_skill_type)
+		if(level > CHARACTER_SKILL_LEVEL_NONE)
+			saved_skill_levels["[level_skill_type]"] = level
+		if(temporary_level_skill)
+			qdel(level_skill_datum)
+	character_setup_skill_levels = saved_skill_levels
+
+	character_setup_professional_skill_points = clamp(round(source_mind.professional_skill_points), 0, PROFESSIONAL_SKILL_POINTS_DEFAULT)
+	character_setup_weapon_skill_points = clamp(round(source_mind.weapon_skill_points), 0, WEAPON_SKILL_POINTS_DEFAULT)
+	return TRUE
+
+/datum/preferences/proc/apply_character_setup_to_mind(datum/mind/target_mind)
+	if(!target_mind)
+		return FALSE
+
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		target_mind.set_attribute_value(attribute_id, character_setup_attributes[attribute_id] || ATTRIBUTE_DEFAULT)
+
+	target_mind.character_skill_perks = list()
+	for(var/perk_skill_key in character_setup_perks)
+		var/perk_skill_type = text2path(perk_skill_key)
+		if(!ispath(perk_skill_type, /datum/skill))
+			continue
+		var/datum/skill/perk_skill_datum = GetSkillRef(perk_skill_type)
+		var/temporary_perk_skill = FALSE
+		if(isnull(perk_skill_datum))
+			perk_skill_datum = new perk_skill_type
+			temporary_perk_skill = TRUE
+		if(!perk_skill_datum || !perk_skill_datum.uses_perks())
+			if(temporary_perk_skill)
+				qdel(perk_skill_datum)
+			continue
+		var/list/saved_skill_perks = character_setup_perks[perk_skill_key]
+		var/list/target_skill_perks = list()
+		if(islist(saved_skill_perks))
+			for(var/perk_key in saved_skill_perks)
+				var/perk_index = text2num("[perk_key]")
+				if(perk_index < 1 || perk_index > length(perk_skill_datum.perks))
+					continue
+				var/rank = clamp(round(saved_skill_perks[perk_key]), 0, perk_skill_datum.max_perk_rank)
+				if(rank > 0)
+					target_skill_perks["[perk_index]"] = rank
+		target_mind.character_skill_perks[perk_skill_type] = target_skill_perks
+		if(temporary_perk_skill)
+			qdel(perk_skill_datum)
+
+	target_mind.character_skill_levels = list()
+	for(var/level_skill_key in character_setup_skill_levels)
+		var/level_skill_type = text2path(level_skill_key)
+		if(!ispath(level_skill_type, /datum/skill))
+			continue
+		var/datum/skill/level_skill_datum = GetSkillRef(level_skill_type)
+		var/temporary_level_skill = FALSE
+		if(isnull(level_skill_datum))
+			level_skill_datum = new level_skill_type
+			temporary_level_skill = TRUE
+		if(!level_skill_datum || level_skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
+			if(temporary_level_skill)
+				qdel(level_skill_datum)
+			continue
+		target_mind.character_skill_levels[level_skill_type] = clamp(round(character_setup_skill_levels[level_skill_key]), CHARACTER_SKILL_LEVEL_NONE, level_skill_datum.max_character_level)
+		if(temporary_level_skill)
+			qdel(level_skill_datum)
+
+	var/professional_points_spent = 0
+	for(var/stored_skill_type in target_mind.character_skill_perks)
+		var/datum/skill/professional_skill_datum = GetSkillRef(stored_skill_type)
+		var/temporary_professional_skill = FALSE
+		if(isnull(professional_skill_datum) && ispath(stored_skill_type, /datum/skill))
+			professional_skill_datum = new stored_skill_type
+			temporary_professional_skill = TRUE
+		if(!professional_skill_datum || professional_skill_datum.skill_kind != CHARACTER_SKILL_KIND_PROFESSIONAL)
+			if(temporary_professional_skill)
+				qdel(professional_skill_datum)
+			continue
+		var/list/stored_professional_perks = target_mind.character_skill_perks[stored_skill_type]
+		for(var/stored_professional_perk_index in stored_professional_perks)
+			professional_points_spent += max(0, round(stored_professional_perks[stored_professional_perk_index]))
+		if(temporary_professional_skill)
+			qdel(professional_skill_datum)
+
+	var/weapon_points_spent = 0
+	for(var/stored_weapon_skill_type in target_mind.character_skill_levels)
+		var/datum/skill/weapon_skill_datum = GetSkillRef(stored_weapon_skill_type)
+		var/temporary_weapon_skill = FALSE
+		if(isnull(weapon_skill_datum) && ispath(stored_weapon_skill_type, /datum/skill))
+			weapon_skill_datum = new stored_weapon_skill_type
+			temporary_weapon_skill = TRUE
+		if(!weapon_skill_datum || weapon_skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
+			if(temporary_weapon_skill)
+				qdel(weapon_skill_datum)
+			continue
+		weapon_points_spent += max(0, round(target_mind.character_skill_levels[stored_weapon_skill_type]))
+		if(temporary_weapon_skill)
+			qdel(weapon_skill_datum)
+
+	target_mind.professional_skill_points = max(0, PROFESSIONAL_SKILL_POINTS_DEFAULT - professional_points_spent)
+	target_mind.weapon_skill_points = max(0, WEAPON_SKILL_POINTS_DEFAULT - weapon_points_spent)
+	return TRUE
+
+/datum/preferences/proc/sanitize_character_setup_attributes(value)
+	var/list/input = sanitize_islist(value, list())
+	var/list/output = list()
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		output[attribute_id] = sanitize_integer(input[attribute_id], ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM, ATTRIBUTE_DEFAULT)
+	return output
+
+/datum/preferences/proc/sanitize_character_setup_perks(value)
+	var/list/input = sanitize_islist(value, list())
+	var/list/output = list()
+	for(var/skill_key in input)
+		var/skill_type = text2path(skill_key)
+		if(!ispath(skill_type, /datum/skill))
+			continue
+		var/datum/skill/skill_datum = GetSkillRef(skill_type)
+		var/temporary_skill = FALSE
+		if(isnull(skill_datum))
+			skill_datum = new skill_type
+			temporary_skill = TRUE
+		if(!skill_datum || !skill_datum.uses_perks())
+			if(temporary_skill)
+				qdel(skill_datum)
+			continue
+		var/list/source_perks = sanitize_islist(input[skill_key], list())
+		var/list/perks = list()
+		for(var/perk_index in 1 to length(skill_datum.perks))
+			var/rank = sanitize_integer(source_perks["[perk_index]"], 0, skill_datum.max_perk_rank, 0)
+			if(rank > 0)
+				perks["[perk_index]"] = rank
+		if(length(perks))
+			output[skill_key] = perks
+		if(temporary_skill)
+			qdel(skill_datum)
+	return output
+
+/datum/preferences/proc/sanitize_character_setup_skill_levels(value)
+	var/list/input = sanitize_islist(value, list())
+	var/list/output = list()
+	for(var/skill_key in input)
+		var/skill_type = text2path(skill_key)
+		if(!ispath(skill_type, /datum/skill))
+			continue
+		var/datum/skill/skill_datum = GetSkillRef(skill_type)
+		var/temporary_skill = FALSE
+		if(isnull(skill_datum))
+			skill_datum = new skill_type
+			temporary_skill = TRUE
+		if(!skill_datum || skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
+			if(temporary_skill)
+				qdel(skill_datum)
+			continue
+		var/level = sanitize_integer(input[skill_key], CHARACTER_SKILL_LEVEL_NONE, skill_datum.max_character_level, CHARACTER_SKILL_LEVEL_NONE)
+		if(level > CHARACTER_SKILL_LEVEL_NONE)
+			output[skill_key] = level
+		if(temporary_skill)
+			qdel(skill_datum)
+	return output
 
 /datum/preferences/proc/switch_to_slot(new_slot)
 	if(new_slot == default_slot) // sanity check, nothing to do here.

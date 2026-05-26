@@ -18,46 +18,87 @@ import { CyberPanel, CyberSectionHeader } from '../components/CyberPanel';
 import { SkillTree } from '../components/SkillTree';
 import { attributeOrder } from '../helpers';
 
-const implantIcons: Record<string, string> = {
-  left_arm_1: 'hand',
-  left_arm_2: 'hand',
-  right_arm_1: 'hand',
-  right_arm_2: 'hand',
-  left_leg: 'shoe-prints',
-  right_leg: 'shoe-prints',
-  spine_1: 'bone',
-  spine_2: 'bone',
-  heart: 'heart-pulse',
-  lungs: 'lungs',
-  stomach: 'circle',
-  liver: 'filter',
-  belly: 'circle-dot',
-  chest: 'vest',
-  neck: 'link',
-  skull: 'skull',
-  brain: 'brain',
-  eyes: 'eye',
-  ears: 'ear-listen',
-  tongue: 'comment-dots',
-  jaw: 'teeth',
-  eyelids: 'eye-low-vision',
-  neural_implant: 'network-wired',
-};
+const implantBodyParts = [
+  {
+    id: 'head',
+    label: 'Голова',
+    icon: 'head-side-virus',
+    slotIds: [
+      'neck',
+      'skull',
+      'brain',
+      'eyes',
+      'ears',
+      'tongue',
+      'jaw',
+      'eyelids',
+      'neural_implant',
+    ],
+  },
+  {
+    id: 'left_arm',
+    label: 'Левая рука',
+    icon: 'hand',
+    slotIds: ['left_arm_1', 'left_arm_2'],
+  },
+  {
+    id: 'left_leg',
+    label: 'Левая нога',
+    icon: 'shoe-prints',
+    slotIds: ['left_leg'],
+  },
+  {
+    id: 'torso',
+    label: 'Торс',
+    icon: 'vest',
+    slotIds: [
+      'spine_1',
+      'spine_2',
+      'heart',
+      'lungs',
+      'stomach',
+      'liver',
+      'belly',
+      'chest',
+    ],
+  },
+  {
+    id: 'right_arm',
+    label: 'Правая рука',
+    icon: 'hand',
+    slotIds: ['right_arm_1', 'right_arm_2'],
+  },
+  {
+    id: 'right_leg',
+    label: 'Правая нога',
+    icon: 'shoe-prints',
+    slotIds: ['right_leg'],
+  },
+];
 
-function toImplantSlots(slots: CharacterSetupImplantSlot[] = []): PaperdollSlot[] {
-  return slots.map((slot) => ({
-    id: slot.id,
-    icon: implantIcons[slot.id] || 'microchip',
-    label: slot.name,
-    state:
-      slot.default_state === 'organ'
-        ? 'орган'
-        : slot.default_state === 'neural_implant'
-          ? 'нейро'
-          : 'пусто',
-    disabled: true,
-    warning: 'TODO: preference-time implant install/remove backend is not wired.',
-  }));
+function toImplantBodyPartSlots(slots: CharacterSetupImplantSlot[] = []): PaperdollSlot[] {
+  const slotsById = new Map(slots.map((slot) => [slot.id, slot]));
+
+  return implantBodyParts.map((bodyPart) => {
+    const bodyPartSlots = bodyPart.slotIds
+      .map((slotId) => slotsById.get(slotId))
+      .filter((slot): slot is CharacterSetupImplantSlot => !!slot);
+    const occupiedSlots = bodyPartSlots.filter(
+      (slot) => slot.default_state !== 'empty',
+    ).length;
+    const slotNames = bodyPartSlots.map((slot) => slot.name).join(', ');
+
+    return {
+      id: bodyPart.id,
+      icon: bodyPart.icon,
+      label: bodyPart.label,
+      state: `${occupiedSlots}/${bodyPartSlots.length}`,
+      disabled: true,
+      warning: slotNames
+        ? `Внутренние слоты: ${slotNames}. Операции установки/извлечения здесь не запускаются.`
+        : 'Нет доступных внутренних слотов.',
+    };
+  });
 }
 
 function skillsForAttribute(skills: CharacterSetupSkill[], attributeId: string) {
@@ -173,6 +214,8 @@ export function CharacterTab() {
   const runtimeSkills = runtime?.skills || {};
   const metrics = runtime?.implant_metrics;
   const levelPoints = runtime?.level_points || 0;
+  const professionalSkillPoints = runtime?.professional_skill_points || 0;
+  const weaponSkillPoints = runtime?.weapon_skill_points || 0;
 
   const adjustAttribute = (attributeId: string, delta: number) =>
     act('adjust_character_attribute', {
@@ -184,6 +227,12 @@ export function CharacterTab() {
     act('adjust_character_perk', {
       skill: skillId,
       perk_index: perkIndex,
+      delta,
+    });
+
+  const adjustSkillLevel = (skillId: string, delta: number) =>
+    act('adjust_character_skill_level', {
+      skill: skillId,
       delta,
     });
 
@@ -260,12 +309,10 @@ export function CharacterTab() {
         <div className="CharacterSetup__metrics">
           <span>Хромированность: {metrics?.chromity ?? 50}/{metrics?.chromity_max ?? 50}</span>
           <span>Перегрев: {metrics?.overheat ?? 0}</span>
-          <span>Пассивный минимум: {metrics?.overheat_floor ?? 0}</span>
-          <span>{metrics?.has_neural_implant ? 'Нейроимплант установлен' : 'Нет нейроимпланта'}</span>
         </div>
         <CharacterPaperdollHub
           previewId={data.character_preview_view}
-          slots={toImplantSlots(setup?.implant_slots)}
+          slots={toImplantBodyPartSlots(setup?.implant_slots)}
         />
         <div className="CharacterSetup__localNote">
           Слоты отображаются как build preview. Операции установки/извлечения
@@ -277,9 +324,25 @@ export function CharacterTab() {
 
       <CyberPanel title="B. Навыки и профессиональный рост" scrollable>
         <CyberSectionHeader>Профессиональные навыки</CyberSectionHeader>
-        <SkillTree compact runtimeSkills={runtimeSkills} skills={setup?.professional_skills || []} />
+        <div className="SkillTree__pool">
+          <span>Очки профессий: {professionalSkillPoints}</span>
+        </div>
+        <SkillTree
+          compact
+          runtimeSkills={runtimeSkills}
+          skills={setup?.professional_skills || []}
+          onAdjustPerk={adjustPerk}
+        />
         <CyberSectionHeader>Боевые / оружейные навыки</CyberSectionHeader>
-        <SkillTree compact runtimeSkills={runtimeSkills} skills={setup?.weapon_skills || []} />
+        <div className="SkillTree__pool">
+          <span>Очки боя: {weaponSkillPoints}</span>
+        </div>
+        <SkillTree
+          compact
+          runtimeSkills={runtimeSkills}
+          skills={setup?.weapon_skills || []}
+          onAdjustSkillLevel={adjustSkillLevel}
+        />
       </CyberPanel>
     </div>
   );
