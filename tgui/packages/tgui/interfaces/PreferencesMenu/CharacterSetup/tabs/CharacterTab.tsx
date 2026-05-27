@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useBackend } from 'tgui/backend';
-import { Button, Dropdown } from 'tgui-core/components';
+import { Button, DmIcon, Dropdown, Icon } from 'tgui-core/components';
 
 import type {
   BodyModification,
@@ -16,6 +16,7 @@ import {
 import { CyberPointControl } from '../components/CyberInput';
 import { CyberPanel, CyberSectionHeader } from '../components/CyberPanel';
 import { SkillTree } from '../components/SkillTree';
+import { SlotButton } from '../components/SlotButton';
 import { attributeOrder } from '../helpers';
 
 const implantBodyParts = [
@@ -24,59 +25,61 @@ const implantBodyParts = [
     label: 'Голова',
     icon: 'head-side-virus',
     slotIds: [
-      'neck',
-      'skull',
+      'neck_device',
+      'skull_device',
       'brain',
-      'eyes',
+      'brain_cns',
+      'eye_sight',
       'ears',
       'tongue',
-      'jaw',
-      'eyelids',
-      'neural_implant',
+      'jaw_device',
+      'eyelid_device',
     ],
   },
   {
     id: 'left_arm',
     label: 'Левая рука',
     icon: 'hand',
-    slotIds: ['left_arm_1', 'left_arm_2'],
+    slotIds: ['l_arm_device', 'l_arm_muscle'],
   },
   {
     id: 'left_leg',
     label: 'Левая нога',
     icon: 'shoe-prints',
-    slotIds: ['left_leg'],
+    slotIds: ['l_leg_device'],
   },
   {
     id: 'torso',
     label: 'Торс',
     icon: 'vest',
     slotIds: [
-      'spine_1',
-      'spine_2',
+      'spine',
+      'spine_secondary',
       'heart',
       'lungs',
       'stomach',
       'liver',
-      'belly',
-      'chest',
+      'belly_device',
+      'chest_device',
     ],
   },
   {
     id: 'right_arm',
     label: 'Правая рука',
     icon: 'hand',
-    slotIds: ['right_arm_1', 'right_arm_2'],
+    slotIds: ['r_arm_device', 'r_arm_muscle'],
   },
   {
     id: 'right_leg',
     label: 'Правая нога',
     icon: 'shoe-prints',
-    slotIds: ['right_leg'],
+    slotIds: ['r_leg_device'],
   },
 ];
 
-function toImplantBodyPartSlots(slots: CharacterSetupImplantSlot[] = []): PaperdollSlot[] {
+function toImplantBodyPartSlots(
+  slots: CharacterSetupImplantSlot[] = [],
+): PaperdollSlot[] {
   const slotsById = new Map(slots.map((slot) => [slot.id, slot]));
 
   return implantBodyParts.map((bodyPart) => {
@@ -93,7 +96,6 @@ function toImplantBodyPartSlots(slots: CharacterSetupImplantSlot[] = []): Paperd
       icon: bodyPart.icon,
       label: bodyPart.label,
       state: `${occupiedSlots}/${bodyPartSlots.length}`,
-      disabled: true,
       warning: slotNames
         ? `Внутренние слоты: ${slotNames}. Операции установки/извлечения здесь не запускаются.`
         : 'Нет доступных внутренних слотов.',
@@ -105,34 +107,173 @@ function skillsForAttribute(skills: CharacterSetupSkill[], attributeId: string) 
   return skills.filter((skill) => skill.attribute_id === attributeId);
 }
 
-function groupBodyModifications(modifications: BodyModification[] = []) {
-  return modifications.reduce<Record<string, BodyModification[]>>((groups, modification) => {
-    const groupName = modification.category || 'Прочее';
-    groups[groupName] ||= [];
-    groups[groupName].push(modification);
-    return groups;
-  }, {});
+const bodyModificationKindLabels: Record<string, string> = {
+  amputation: 'Ампутации',
+  feature: 'Особенности',
+  implant: 'Импланты',
+  organ: 'Органы',
+  prosthesis: 'Протезы',
+};
+
+type ModificationSlotOption = {
+  id: string;
+  label: string;
+  icon: string;
+  kind: 'slot' | 'limb' | 'placeholder';
+  slotId?: string;
+  disabled?: boolean;
+  state?: string;
+};
+
+function getBodyPartModificationSlots(
+  bodyPartId: string,
+  slots: CharacterSetupImplantSlot[] = [],
+): ModificationSlotOption[] {
+  const bodyPart = implantBodyParts.find((part) => part.id === bodyPartId);
+  const slotsById = new Map(slots.map((slot) => [slot.id, slot]));
+  const options: ModificationSlotOption[] = [];
+
+  if (['left_arm', 'right_arm', 'left_leg', 'right_leg'].includes(bodyPartId)) {
+    options.push({
+      id: `${bodyPartId}:limb`,
+      label: 'Роботизация',
+      icon: bodyPartId.includes('arm') ? 'hand' : 'shoe-prints',
+      kind: 'limb',
+      state: 'body',
+    });
+  }
+
+  if (['head', 'torso'].includes(bodyPartId)) {
+    options.push({
+      id: `${bodyPartId}:robotization`,
+      label:
+        bodyPartId === 'head'
+          ? 'Роботизация головы'
+          : 'Роботизация торса',
+      icon: bodyPartId === 'head' ? 'head-side-virus' : 'vest',
+      kind: 'placeholder',
+      disabled: true,
+      state: 'TODO',
+    });
+  }
+
+  for (const slotId of bodyPart?.slotIds || []) {
+    const slot = slotsById.get(slotId);
+    options.push({
+      id: `slot:${slotId}`,
+      label: slot?.name || slotId,
+      icon: slot?.icon || bodyPart?.icon || 'microchip',
+      kind: 'slot',
+      slotId,
+      state: slot?.default_state === 'empty' ? '0/1' : '1/1',
+    });
+  }
+
+  return options;
 }
 
-function BodyModificationList() {
+function groupBodyModifications(modifications: BodyModification[] = []) {
+  return modifications.reduce<Record<string, BodyModification[]>>(
+    (groups, modification) => {
+      const kindName =
+        bodyModificationKindLabels[modification.kind || ''] ||
+        modification.category ||
+        'Прочее';
+      const groupName = modification.grade
+        ? `${kindName}: ${modification.grade}`
+        : kindName;
+      groups[groupName] ||= [];
+      groups[groupName].push(modification);
+      return groups;
+    },
+    {},
+  );
+}
+
+type BodyModificationListProps = {
+  selectedBodyPart?: string | null;
+  selectedSlot?: ModificationSlotOption | null;
+  slots?: CharacterSetupImplantSlot[];
+};
+
+function BodyModificationList(props: BodyModificationListProps) {
   const { act, data } = useBackend<PreferencesMenuData>();
   const serverData = useServerPrefs();
-  const groupedModifications = groupBodyModifications(serverData?.body_modifications || []);
+  const { selectedBodyPart, selectedSlot, slots = [] } = props;
+  const [search, setSearch] = useState('');
+  const slotNames = new Map(slots.map((slot) => [slot.id, slot.name]));
   const applied = new Set(data.applied_body_modifications || []);
   const incompatible = new Set(data.incompatible_body_modifications || []);
   const manufacturers = data.manufacturers || {};
   const selectedManufacturer = data.selected_manufacturer || {};
+  const searchLower = search.trim().toLowerCase();
 
-  if (!serverData?.body_modifications?.length) {
+  const zoneModifications = (serverData?.body_modifications || [])
+    .filter((modification) => {
+      if (!selectedSlot || !selectedBodyPart || selectedSlot.disabled) {
+        return false;
+      }
+
+      if (selectedSlot.kind === 'limb') {
+        return (
+          modification.body_part === selectedBodyPart &&
+          ['amputation', 'prosthesis'].includes(modification.kind || '')
+        );
+      }
+
+      return modification.slot_id === selectedSlot.slotId;
+    })
+    .filter((modification) => {
+      if (!searchLower) {
+        return true;
+      }
+      return (
+        modification.name.toLowerCase().includes(searchLower) ||
+        modification.description.toLowerCase().includes(searchLower)
+      );
+    });
+  const groupedModifications = groupBodyModifications(zoneModifications);
+
+  const filterControls = (
+    <div className="CharacterSetup__bodyModFilters">
+      <input
+        placeholder="Поиск..."
+        value={search}
+        onChange={(event) => setSearch(event.currentTarget.value)}
+      />
+    </div>
+  );
+
+  if (!selectedSlot) {
     return (
       <div className="CharacterSetup__localNote">
-        В текущих prefs нет доступных модификаций тела.
+        Выберите слот или роботизацию зоны, чтобы открыть список модификаций.
+      </div>
+    );
+  }
+
+  if (selectedSlot.disabled) {
+    return (
+      <div className="CharacterSetup__localNote">
+        Эта категория пока заготовлена под общую систему модификаций.
+      </div>
+    );
+  }
+
+  if (!zoneModifications.length) {
+    return (
+      <div className="CharacterSetup__bodyMods">
+        {filterControls}
+        <div className="CharacterSetup__localNote">
+          Для выбранного слота нет доступных модификаций.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="CharacterSetup__bodyMods">
+      {filterControls}
       {Object.entries(groupedModifications).map(([category, modifications]) => (
         <div className="CharacterSetup__bodyModGroup" key={category}>
           <b>{category}</b>
@@ -150,11 +291,58 @@ function BodyModificationList() {
                 }
                 key={modification.key}
               >
-                <div>
-                  <strong>{modification.name}</strong>
-                  <span>{modification.description}</span>
-                  {!!modification.cost && <small>Стоимость: {modification.cost}</small>}
-                  {isBlocked && <em>Несовместимо с выбранными модификациями</em>}
+                <div className="CharacterSetup__bodyModInfo">
+                  <div className="CharacterSetup__bodyModIcon">
+                    {modification.icon && modification.icon_state ? (
+                      <DmIcon
+                        height="32px"
+                        icon={modification.icon}
+                        icon_state={modification.icon_state}
+                        width="32px"
+                      />
+                    ) : (
+                      <Icon
+                        name={
+                          modification.kind === 'amputation'
+                            ? 'scissors'
+                            : modification.kind === 'prosthesis'
+                              ? 'hand'
+                              : modification.kind === 'organ'
+                                ? 'heart-pulse'
+                                : 'microchip'
+                        }
+                      />
+                    )}
+                  </div>
+                  <div className="CharacterSetup__bodyModText">
+                    <strong>{modification.name}</strong>
+                    <span>{modification.description}</span>
+                    {!!modification.grade && (
+                      <small>
+                        Градация: {modification.grade}
+                        {!!modification.tier && ` / T${modification.tier}`}
+                      </small>
+                    )}
+                    {!!modification.locked_reason && (
+                      <small>{modification.locked_reason}</small>
+                    )}
+                    {!!modification.cost && (
+                      <small>Стоимость: {modification.cost}</small>
+                    )}
+                    {!!modification.chromity_cost && (
+                      <small>Хром: {modification.chromity_cost}</small>
+                    )}
+                    {!!modification.slot_id && (
+                      <small>
+                        Слот:{' '}
+                        {slotNames.get(modification.slot_id) ||
+                          modification.slot_id}
+                      </small>
+                    )}
+                    {isBlocked && (
+                      <em>Несовместимо с выбранными модификациями</em>
+                    )}
+                  </div>
                 </div>
                 <div className="CharacterSetup__bodyModActions">
                   {isApplied && !!manufacturerOptions.length && (
@@ -208,6 +396,9 @@ export function CharacterTab() {
   const setup = serverData?.character_setup;
   const runtime = data.character_setup;
   const [selectedAttribute, setSelectedAttribute] = useState('strength');
+  const [selectedBodyPart, setSelectedBodyPart] = useState<string | null>(null);
+  const [selectedModificationSlotId, setSelectedModificationSlotId] =
+    useState<string | null>(null);
 
   const attributeDefs = setup?.attributes || {};
   const runtimeAttributes = runtime?.attributes || {};
@@ -216,6 +407,20 @@ export function CharacterTab() {
   const levelPoints = runtime?.level_points || 0;
   const professionalSkillPoints = runtime?.professional_skill_points || 0;
   const weaponSkillPoints = runtime?.weapon_skill_points || 0;
+  const selectedImplantBodyPart = implantBodyParts.find(
+    (bodyPart) => bodyPart.id === selectedBodyPart,
+  );
+  const modificationSlots = selectedBodyPart
+    ? getBodyPartModificationSlots(selectedBodyPart, setup?.implant_slots)
+    : [];
+  const selectedModificationSlot =
+    modificationSlots.find((slot) => slot.id === selectedModificationSlotId) ||
+    null;
+
+  const selectBodyPart = (bodyPartId: string) => {
+    setSelectedBodyPart(bodyPartId);
+    setSelectedModificationSlotId(null);
+  };
 
   const adjustAttribute = (attributeId: string, delta: number) =>
     act('adjust_character_attribute', {
@@ -286,7 +491,10 @@ export function CharacterTab() {
         <div className="CharacterSetup__spent">
           <span>
             Вложено:{' '}
-            {skillsForAttribute(setup?.physical_skills || [], selectedAttribute).reduce(
+            {skillsForAttribute(
+              setup?.physical_skills || [],
+              selectedAttribute,
+            ).reduce(
               (sum, skill) => sum + (runtimeSkills[skill.id]?.spent_points || 0),
               0,
             )}
@@ -302,24 +510,65 @@ export function CharacterTab() {
       </CyberPanel>
 
       <CyberPanel
-        className="CharacterSetup__centerPanel"
+        className="CharacterSetup__centerPanel CharacterSetup__biometricsPanel"
         title="C. Аугментации и импланты"
-        scrollable
       >
-        <div className="CharacterSetup__metrics">
-          <span>Хромированность: {metrics?.chromity ?? 50}/{metrics?.chromity_max ?? 50}</span>
-          <span>Перегрев: {metrics?.overheat ?? 0}</span>
+        <div className="CharacterSetup__implantFixed">
+          <div className="CharacterSetup__metrics">
+            <span>
+              Хромированность: {metrics?.chromity ?? 50}/
+              {metrics?.chromity_max ?? 50}
+              {!!metrics?.chromity_used && ` (-${metrics.chromity_used})`}
+            </span>
+            <span>Перегрев: {metrics?.overheat ?? 0}</span>
+          </div>
+          <CharacterPaperdollHub
+            previewId={data.character_preview_view}
+            selectedSlot={selectedBodyPart || undefined}
+            slots={toImplantBodyPartSlots(setup?.implant_slots)}
+            onSelectSlot={selectBodyPart}
+          />
+          <div className="CharacterSetup__localNote">
+            Слоты отображаются как build preview. Операции установки/извлечения
+            здесь не запускаются.
+          </div>
         </div>
-        <CharacterPaperdollHub
-          previewId={data.character_preview_view}
-          slots={toImplantBodyPartSlots(setup?.implant_slots)}
-        />
-        <div className="CharacterSetup__localNote">
-          Слоты отображаются как build preview. Операции установки/извлечения
-          здесь не запускаются.
+        <div className="CharacterSetup__implantScroll">
+          <CyberSectionHeader>
+            {selectedImplantBodyPart?.label || 'Выберите зону'}
+          </CyberSectionHeader>
+          {!selectedBodyPart ? (
+            <div className="CharacterSetup__localNote">
+              Нажмите на голову, торс, руку или ногу вокруг куклы.
+            </div>
+          ) : (
+            <>
+              <div className="CharacterSetup__implantSlotGrid">
+                {modificationSlots.map((slot) => (
+                  <SlotButton
+                    key={slot.id}
+                    disabled={slot.disabled}
+                    icon={slot.icon}
+                    label={slot.label}
+                    selected={selectedModificationSlotId === slot.id}
+                    state={slot.state}
+                    warning={
+                      slot.disabled
+                        ? 'Заготовка под общую роботизацию зоны.'
+                        : undefined
+                    }
+                    onClick={() => setSelectedModificationSlotId(slot.id)}
+                  />
+                ))}
+              </div>
+              <BodyModificationList
+                selectedBodyPart={selectedBodyPart}
+                selectedSlot={selectedModificationSlot}
+                slots={setup?.implant_slots}
+              />
+            </>
+          )}
         </div>
-        <CyberSectionHeader>Протезы и модификации тела</CyberSectionHeader>
-        <BodyModificationList />
       </CyberPanel>
 
       <CyberPanel title="B. Навыки и профессиональный рост" scrollable>

@@ -9,7 +9,7 @@
 	var/list/data = list()
 	data["applied_body_modifications"] = get_applied_body_modifications()
 	data["incompatible_body_modifications"] = get_incompatible_body_modifications(user)
-	data["manufacturers"] = get_prosthesis_manufacturers()
+	data["manufacturers"] = get_body_modification_manufacturers()
 	data["selected_manufacturer"] = get_selected_manufacturers(user)
 	return data
 
@@ -24,6 +24,17 @@
 				"description" = body_modification.get_description(),
 				"cost" = body_modification.cost,
 				"category" = body_modification.category,
+				"body_part" = body_modification.body_part,
+				"body_zone" = body_modification.body_zone,
+				"slot_id" = body_modification.slot_id,
+				"kind" = body_modification.modification_kind,
+				"icon" = body_modification.icon,
+				"icon_state" = body_modification.icon_state,
+				"tier" = body_modification.tier,
+				"grade" = body_modification.grade,
+				"availability" = body_modification.availability,
+				"locked_reason" = body_modification.locked_reason,
+				"chromity_cost" = body_modification.chromity_cost,
 			)
 		)
 
@@ -69,17 +80,17 @@
 
 	return incompatible_body_modifications
 
-/datum/preference_middleware/body_modifications/proc/get_prosthesis_manufacturers()
+/datum/preference_middleware/body_modifications/proc/get_body_modification_manufacturers()
 	PRIVATE_PROC(TRUE)
 
 	var/list/manufacturers_map = list()
 	for(var/key in GLOB.body_modifications)
 		var/datum/body_modification/modification = GLOB.body_modifications[key]
-		if(!istype(modification, /datum/body_modification/bodypart_prosthesis))
+		var/list/manufacturers = modification.get_manufacturers()
+		if(!length(manufacturers))
 			continue
 
-		var/datum/body_modification/bodypart_prosthesis/prosthesis = modification
-		manufacturers_map[key] = prosthesis.manufacturers || list()
+		manufacturers_map[key] = manufacturers
 
 	return manufacturers_map
 
@@ -91,11 +102,10 @@
 
 	for(var/key in GLOB.body_modifications)
 		var/datum/body_modification/modification = GLOB.body_modifications[key]
-		if(!istype(modification, /datum/body_modification/bodypart_prosthesis))
+		if(!length(modification.get_manufacturers()))
 			continue
 
-		var/datum/body_modification/bodypart_prosthesis/prosthesis = modification
-		current_brands[key] = player_modifications[key]?["selected_manufacturer"] || prosthesis.get_default_manufacturer()
+		current_brands[key] = player_modifications[key]?["selected_manufacturer"] || modification.get_default_manufacturer()
 
 	return current_brands
 
@@ -111,6 +121,12 @@
 	var/list/updated_preference = get_body_modifications_copy()
 	if(!isnull(updated_preference[key]))
 		return FALSE
+
+	if(!isnull(modification.slot_id))
+		for(var/current_key in updated_preference.Copy())
+			var/datum/body_modification/current_modification = GLOB.body_modifications[current_key]
+			if(current_modification?.slot_id == modification.slot_id)
+				updated_preference -= current_key
 
 	if(modification.ui_params_valid(params))
 		updated_preference[key] = modification.handle_ui_params(params)
@@ -141,7 +157,7 @@
 		return FALSE
 
 	var/datum/body_modification/modification = GLOB.body_modifications[key]
-	if(!istype(modification, /datum/body_modification/bodypart_prosthesis))
+	if(!istype(modification))
 		return FALSE
 
 	if(!modification.ui_params_valid(params))

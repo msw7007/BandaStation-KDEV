@@ -1054,6 +1054,53 @@ $department_map: (
     gap: 0.7rem;
   }
 
+  &__bodyModFilters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.4rem;
+
+    input,
+    select {
+      min-width: 0;
+      color: var(--cy-text);
+      background-color: rgba(5, 8, 13, 0.72);
+      border: 1px solid var(--cy-border);
+      padding: 0.28rem 0.4rem;
+    }
+  }
+
+  &__biometricsPanel {
+    .CyberPanel__content {
+      overflow: hidden;
+    }
+  }
+
+  &__implantFixed {
+    display: grid;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+  }
+
+  &__implantScroll {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 0.55rem;
+    padding-right: 0.25rem;
+    overflow-y: auto;
+  }
+
+  &__implantSlotGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+    gap: 0.45rem;
+    align-items: stretch;
+
+    .SlotButton {
+      min-height: 4.25rem;
+    }
+  }
+
   &__bodyModGroup {
     display: grid;
     gap: 0.45rem;
@@ -1098,6 +1145,54 @@ $department_map: (
     &.selected {
       border-color: var(--cy-cyan);
       background-color: rgba(24, 216, 255, 0.08);
+    }
+  }
+
+  &__bodyModInfo {
+    display: grid !important;
+    grid-template-columns: 2.35rem minmax(0, 1fr);
+    align-items: start;
+    gap: 0.45rem;
+
+    em {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &__bodyModText {
+    display: grid;
+    min-width: 0;
+    gap: 0.15rem;
+
+    strong,
+    span,
+    small {
+      display: block;
+    }
+
+    span {
+      color: var(--cy-muted);
+      line-height: 1.25;
+    }
+
+    small {
+      color: var(--cy-cyan);
+      line-height: 1.2;
+    }
+  }
+
+  &__bodyModIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    color: var(--cy-cyan);
+    background-color: rgba(24, 216, 255, 0.06);
+    border: 1px solid var(--cy-border);
+
+    .DmIcon {
+      image-rendering: pixelated;
     }
   }
 

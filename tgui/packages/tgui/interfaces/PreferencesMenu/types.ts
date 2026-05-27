@@ -251,6 +251,7 @@ export type CharacterSetupImplantSlot = {
 export type CharacterSetupImplantMetrics = {
   chromity: number;
   chromity_max: number;
+  chromity_used?: number;
   overheat: number;
   overheat_floor: number;
   has_neural_implant: BooleanLike;
@@ -346,6 +347,17 @@ export type BodyModification = {
   category: string;
   description: string;
   cost: number;
+  body_part?: string | null;
+  body_zone?: string | null;
+  slot_id?: string | null;
+  kind?: string | null;
+  icon?: string | null;
+  icon_state?: string | null;
+  tier?: number;
+  grade?: string | null;
+  availability?: string | null;
+  locked_reason?: string | null;
+  chromity_cost?: number;
   manufacturers?: Record<string, string>;
   selectedManufacturer?: string;
 };
