@@ -519,6 +519,8 @@ export function CharacterTab() {
               Хромированность: {metrics?.chromity ?? 50}/
               {metrics?.chromity_max ?? 50}
               {!!metrics?.chromity_used && ` (-${metrics.chromity_used})`}
+              {!!metrics?.ice_chromity_penalty &&
+                `, лед -${metrics.ice_chromity_penalty}`}
             </span>
             <span>Перегрев: {metrics?.overheat ?? 0}</span>
           </div>

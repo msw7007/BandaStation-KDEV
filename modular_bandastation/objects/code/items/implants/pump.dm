@@ -21,6 +21,8 @@
 	/// time between injections
 
 /obj/item/organ/cyberimp/chest/pump/on_life(seconds_per_tick, times_fired)
+	if(!is_implant_functional())
+		return ..()
 	if(!TIMER_COOLDOWN_FINISHED(src, COOLDOWN_PUMP))
 		return ..()
 

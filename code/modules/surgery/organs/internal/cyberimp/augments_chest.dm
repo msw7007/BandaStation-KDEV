@@ -17,6 +17,9 @@
 /obj/item/organ/cyberimp/chest/nutriment/on_life(seconds_per_tick)
 	. = ..()
 
+	if(!is_implant_functional())
+		return
+
 	if(synthesizing)
 		return
 
@@ -68,6 +71,9 @@
 	try_heal()
 
 /obj/item/organ/cyberimp/chest/reviver/proc/try_heal()
+	if(!is_implant_functional())
+		return
+
 	if(reviving)
 		if(owner.stat == CONSCIOUS)
 			COOLDOWN_START(src, reviver_cooldown, revive_cost)
@@ -197,6 +203,10 @@
 	toggle()
 
 /obj/item/organ/cyberimp/chest/thrusters/proc/toggle(silent = FALSE)
+	if(!is_implant_functional())
+		if(!silent)
+			to_chat(owner, span_warning("Your thrusters set doesn't respond."))
+		return
 	if(on)
 		deactivate()
 	else
@@ -204,6 +214,10 @@
 
 /obj/item/organ/cyberimp/chest/thrusters/proc/activate(silent = FALSE)
 	if(on)
+		return
+	if(!is_implant_functional())
+		if(!silent)
+			to_chat(owner, span_warning("Your thrusters set doesn't respond."))
 		return
 	if(organ_flags & ORGAN_FAILING)
 		if(!silent)

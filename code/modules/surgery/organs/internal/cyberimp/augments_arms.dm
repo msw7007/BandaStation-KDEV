@@ -172,6 +172,10 @@
 	return TRUE
 
 /obj/item/organ/cyberimp/arm/toolkit/proc/Extend(obj/item/augment)
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("The implant doesn't respond."))
+		return
 	if(!(augment in src))
 		return
 
@@ -215,29 +219,32 @@
 	INVOKE_ASYNC(src, PROC_REF(ui_action_click))
 
 /obj/item/organ/cyberimp/arm/toolkit/ui_action_click()
+	if(active_item)
+		Retract()
+		return
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("The implant doesn't respond."))
+		return
 	if((organ_flags & ORGAN_FAILING) || (!active_item && !contents.len))
 		to_chat(owner, span_warning("The implant doesn't respond. It seems to be broken..."))
 		return
 
-	if(!active_item || (active_item in src))
-		active_item = null
-		if(contents.len == 1)
-			Extend(contents[1])
-		else
-			var/list/choice_list = list()
-			for(var/datum/weakref/augment_ref in items_list)
-				var/obj/item/augment_item = augment_ref.resolve()
-				if(!augment_item)
-					items_list -= augment_ref
-					continue
-				choice_list[augment_item] = image(augment_item)
-			var/obj/item/choice = show_radial_menu(owner, owner, choice_list)
-			if(owner && owner == usr && owner.stat != DEAD && (src in owner.organs) && !active_item && (choice in contents))
-				// This monster sanity check is a nice example of how bad input is.
-				Extend(choice)
+	active_item = null
+	if(contents.len == 1)
+		Extend(contents[1])
 	else
-		Retract()
-
+		var/list/choice_list = list()
+		for(var/datum/weakref/augment_ref in items_list)
+			var/obj/item/augment_item = augment_ref.resolve()
+			if(!augment_item)
+				items_list -= augment_ref
+				continue
+			choice_list[augment_item] = image(augment_item)
+		var/obj/item/choice = show_radial_menu(owner, owner, choice_list)
+		if(owner && owner == usr && owner.stat != DEAD && (src in owner.organs) && !active_item && (choice in contents))
+			// This monster sanity check is a nice example of how bad input is.
+			Extend(choice)
 /obj/item/organ/cyberimp/arm/toolkit/gun/emp_act(severity)
 	. = ..()
 	if(. & EMP_PROTECT_SELF)

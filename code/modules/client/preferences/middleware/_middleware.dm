@@ -71,6 +71,7 @@
 		"professional_skills" = get_skill_definitions(CHARACTER_SKILL_KIND_PROFESSIONAL),
 		"weapon_skills" = get_skill_definitions(CHARACTER_SKILL_KIND_WEAPON),
 		"implant_slots" = get_implant_slot_definitions(),
+		"neural_interface_manufacturers" = get_neural_interface_manufacturer_definitions(),
 	)
 
 /datum/preference_middleware/character_setup/get_ui_data(mob/user)
@@ -128,10 +129,12 @@
 
 	var/chromity_max = get_preference_chromity_max(user_mind)
 	var/chromity_used = get_preference_body_modification_chromity_cost()
+	var/neural_ice_chromity_penalty = 0
 	var/list/implant_metrics = list(
 		"chromity" = max(0, chromity_max - chromity_used),
 		"chromity_max" = chromity_max,
 		"chromity_used" = chromity_used,
+		"ice_chromity_penalty" = neural_ice_chromity_penalty,
 		"overheat" = CHROMITY_OVERHEAT_DEFAULT,
 		"overheat_floor" = CHROMITY_OVERHEAT_DEFAULT,
 		"has_neural_implant" = TRUE,
@@ -140,8 +143,12 @@
 	)
 	if(isliving(user))
 		var/mob/living/living_user = user
+		neural_ice_chromity_penalty = living_user.get_neural_ice_chromity_penalty()
+		chromity_used += neural_ice_chromity_penalty
 		implant_metrics["chromity"] = max(0, chromity_max - chromity_used)
 		implant_metrics["chromity_max"] = chromity_max
+		implant_metrics["chromity_used"] = chromity_used
+		implant_metrics["ice_chromity_penalty"] = neural_ice_chromity_penalty
 		implant_metrics["overheat"] = living_user.chromity_overheat
 		implant_metrics["overheat_floor"] = living_user.get_chromity_overheat_floor()
 		implant_metrics["has_neural_implant"] = living_user.has_neural_implant()
@@ -316,20 +323,14 @@
 	var/list/perks = list()
 	for(var/perk_index in 1 to length(skill_datum.perks))
 		var/datum/skill_perk/perk = skill_datum.perks[perk_index]
-		perks += list(list(
-			"index" = perk.index,
-			"name" = perk.name,
-			"description" = perk.desc,
-			"rank_descriptions" = perk.get_rank_descriptions(),
-			"max_rank" = perk.max_rank,
-		))
+		perks += list(perk.get_static_data())
 	return perks
 
 /datum/preference_middleware/character_setup/proc/get_preference_chromity_max(datum/mind/user_mind)
 	var/chromity_max = CHROMITY_DEFAULT
 	var/compatibility_bonus = user_mind?.get_character_perk_effectiveness(SKILL_COMPATIBILITY, 2) || 0
 	if(compatibility_bonus > 0)
-		chromity_max += round(CHROMITY_DEFAULT * 0.2 * compatibility_bonus)
+		chromity_max += round(CHROMITY_DEFAULT * (compatibility_bonus / 100))
 	return chromity_max
 
 /datum/preference_middleware/character_setup/proc/get_preference_body_modification_chromity_cost()
@@ -371,3 +372,9 @@
 		list("id" = ORGAN_SLOT_JAW_AUG, "name" = "Челюсть", "zone" = BODY_ZONE_PRECISE_MOUTH, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_EYELID_AUG, "name" = "Веки / HUD", "zone" = BODY_ZONE_HEAD, "default_state" = "empty"),
 	)
+
+/datum/preference_middleware/character_setup/proc/get_neural_interface_manufacturer_definitions()
+	var/list/manufacturers = list()
+	for(var/manufacturer_id in cyberpunk_neural_interface_choices())
+		manufacturers += list(cyberpunk_manufacturer_info(manufacturer_id))
+	return manufacturers

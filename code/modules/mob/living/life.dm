@@ -249,16 +249,6 @@
 			return chromity * carbon_owner.dna.get_humanoidity_chromity_multiplier()
 	return chromity
 
-/mob/living/proc/has_living_brain()
-	var/obj/item/organ/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
-	return !isnull(brain) && !(brain.organ_flags & ORGAN_FAILING) && brain.damage < brain.maxHealth
-
-/mob/living/proc/has_neural_implant()
-	if(!has_living_brain())
-		return FALSE
-	var/obj/item/organ/neural_interface = get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
-	return !isnull(neural_interface) && neural_interface.is_neural_interface() && neural_interface.is_implant_functional()
-
 /mob/living/proc/adjust_chromity_overheat(amount, respect_floor = TRUE)
 	var/old_value = chromity_overheat
 	var/minimum = respect_floor ? get_chromity_overheat_floor() : 0

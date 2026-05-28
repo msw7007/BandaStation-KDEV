@@ -14,6 +14,12 @@
 #define CORP_ALIGN_TRANS_TRAVEL "trans_travel"
 #define CORP_ALIGN_SAMANTHAS_KEIR "samanthas_keir"
 
+#define CORP_GROUP_BEN "ben"
+#define CORP_GROUP_RYAZNOV "ryaznov"
+#define CORP_GROUP_STARLIGHT "starlight"
+#define CORP_SYNERGY_EXACT 1.1
+#define CORP_SYNERGY_GROUP 1.05
+
 /proc/body_descriptor_choices()
 	return list(
 		"scarred",
@@ -53,6 +59,108 @@
 		CORP_ALIGN_TRANS_TRAVEL = "Транс Трэвел",
 		CORP_ALIGN_SAMANTHAS_KEIR = "Самантас Кеир",
 	)
+
+/proc/cyberpunk_neural_interface_choices()
+	var/list/all_choices = corp_align_choices()
+	var/list/choices = list()
+	for(var/manufacturer_id in all_choices)
+		if(manufacturer_id == CORP_ALIGN_NONE)
+			continue
+		choices[manufacturer_id] = all_choices[manufacturer_id]
+	return choices
+
+/proc/cyberpunk_major_corp_for_manufacturer(manufacturer)
+	switch(manufacturer)
+		if(CORP_ALIGN_SUN_YON, CORP_ALIGN_ISHIKAWA, CORP_ALIGN_HO_SHI)
+			return CORP_GROUP_BEN
+		if(CORP_ALIGN_KOWALSKI, CORP_ALIGN_TYAZHMARSH, CORP_ALIGN_TESLA_SCIENCE)
+			return CORP_GROUP_RYAZNOV
+		if(CORP_ALIGN_BLACKROCK_INVESTIGATE, CORP_ALIGN_TRANS_TRAVEL, CORP_ALIGN_SAMANTHAS_KEIR)
+			return CORP_GROUP_STARLIGHT
+	return null
+
+/proc/cyberpunk_corporate_synergy_multiplier(neural_manufacturer, equipment_manufacturer)
+	if(!neural_manufacturer || !equipment_manufacturer || neural_manufacturer == CORP_ALIGN_NONE || equipment_manufacturer == CORP_ALIGN_NONE)
+		return 1
+	if(neural_manufacturer == equipment_manufacturer)
+		return CORP_SYNERGY_EXACT
+	var/neural_group = cyberpunk_major_corp_for_manufacturer(neural_manufacturer)
+	if(neural_group && neural_group == cyberpunk_major_corp_for_manufacturer(equipment_manufacturer))
+		return CORP_SYNERGY_GROUP
+	return 1
+
+/proc/cyberpunk_manufacturer_info(manufacturer)
+	var/list/choices = corp_align_choices()
+	var/list/info = list(
+		"id" = manufacturer,
+		"display_name" = choices[manufacturer] || manufacturer,
+		"major" = cyberpunk_major_corp_for_manufacturer(manufacturer),
+	)
+	switch(manufacturer)
+		if(CORP_ALIGN_SUN_YON)
+			info["specialization"] = "Точность"
+			info["energy_weapons"] = "Дальнее оружие имеет меньший разброс, рукопашное имеет выше пробитие."
+			info["classic_weapons"] = "Меньше разброс у огнестрела, выше пробитие колющего и режущего оружия."
+			info["demons"] = "Выше точность и эффективность одиночных демонов по одной цели."
+			info["implants"] = "Импланты стабилизации, прицеливания, дальности взгляда и богомолы."
+			info["defense"] = "Локальная защита уязвимых зон, лучше держит точечные попадания."
+		if(CORP_ALIGN_ISHIKAWA)
+			info["specialization"] = "Скрытность"
+			info["energy_weapons"] = "Дальнее оружие не оставляет следов, рукопашное может принимать форму предметов."
+			info["classic_weapons"] = "Оружие сложнее обнаружить детекторами."
+			info["demons"] = "Применение демонов значительно снижает местоположение источника сигнала."
+			info["implants"] = "Импланты маскировки, подавления шума, скрытия внешности, обманки и нити."
+			info["defense"] = "Защита ускоряет скрытность и поиск сигнатур вокруг."
+		if(CORP_ALIGN_HO_SHI)
+			info["specialization"] = "Скорость"
+			info["energy_weapons"] = "Дальнее оружие скорострельнее, рукопашное быстрее совершает удар."
+			info["classic_weapons"] = "Сниженный вес, ускоряющие детали, оружие быстрее проводит атаку."
+			info["demons"] = "Повышена скорость активации демона, ниже задержка между применениями."
+			info["implants"] = "Импланты ускорения, джетпаков, крюк-кошка и буст рефлексов."
+			info["defense"] = "Ускоряющая движение защита, позволяет планировать с высот."
+		if(CORP_ALIGN_KOWALSKI)
+			info["specialization"] = "Надёжность"
+			info["energy_weapons"] = "Оружие расходует меньше энергии и дольше изнашивается."
+			info["classic_weapons"] = "Оружие дольше изнашивается и не разрушается от эксплуатации."
+			info["demons"] = "Демоны стабильнее, меньше шанс провала или ослабления."
+			info["implants"] = "Импланты легче переносят перегрузку, слабее штрафы несовместимости, щит."
+			info["defense"] = "Стабильная защита без условий, меньше потеря прочности при уроне."
+		if(CORP_ALIGN_TYAZHMARSH)
+			info["specialization"] = "Поражаемость"
+			info["energy_weapons"] = "Дальнее оружие наносит АОЕ, ближнее оружие наносит клив."
+			info["classic_weapons"] = "Дальнее оружие наносит АОЕ, защищено от АОЕ, ближнее наносит конус."
+			info["demons"] = "Демоны работают по группе и способны перескакивать на другие цели."
+			info["implants"] = "Взрывной удар, ручная ракетница, дробовик, защитный кожух."
+			info["defense"] = "Поглощает АОЕ как прямой урон и поглощает урон от мелких снарядов."
+		if(CORP_ALIGN_TESLA_SCIENCE)
+			info["specialization"] = "Сила"
+			info["energy_weapons"] = "Оружие наносит увеличенный урон."
+			info["classic_weapons"] = "Оружие наносит увеличенный урон."
+			info["demons"] = "Демоны сильнее по эффекту."
+			info["implants"] = "Рывки, броски, скачки, тяжелые руки и имплант устойчивости."
+			info["defense"] = "Энергетический щит, щиты поглощения и репульса, перевод урона в огонь."
+		if(CORP_ALIGN_BLACKROCK_INVESTIGATE)
+			info["specialization"] = "Контроль"
+			info["energy_weapons"] = "Замедление от урона оружием, дебаффы при защите с оружием."
+			info["classic_weapons"] = "Контроль от урона оружием, замедление при защите."
+			info["demons"] = "Эффективность дебаффов увеличивается, демоны остановки."
+			info["implants"] = "Импланты сопротивления разным формам контроля."
+			info["defense"] = "Защитные одежды снижают время под контролем."
+		if(CORP_ALIGN_TRANS_TRAVEL)
+			info["specialization"] = "Массовость"
+			info["energy_weapons"] = "Дальнее оружие имеет шанс дополнительного выстрела, ближнее - дополнительного удара."
+			info["classic_weapons"] = "Дальнее оружие имеет шанс не потратить снаряд."
+			info["demons"] = "Демоны проще распространяются на несколько союзников или врагов."
+			info["implants"] = "Телепортация, вызов, реколл и распространение эффектов."
+			info["defense"] = "Телепортирует от атакующего, за спину атакующему, скрывает и подменяет."
+		if(CORP_ALIGN_SAMANTHAS_KEIR)
+			info["specialization"] = "Влияние"
+			info["energy_weapons"] = "Энергетическое оружие при попадании снижает защиту цели."
+			info["classic_weapons"] = "Классическое оружие при попадании снижает психику цели."
+			info["demons"] = "Демоны усиливают психическое воздействие."
+			info["implants"] = "Импланты воздействия на психику, социализацию и эмоции."
+			info["defense"] = "Защита от психического воздействия и сканирования эмоций."
+	return info
 
 /datum/preference/numeric/sprite_size
 	category = PREFERENCE_CATEGORY_SECONDARY_FEATURES
@@ -275,3 +383,8 @@
 #undef CORP_ALIGN_BLACKROCK_INVESTIGATE
 #undef CORP_ALIGN_TRANS_TRAVEL
 #undef CORP_ALIGN_SAMANTHAS_KEIR
+#undef CORP_GROUP_BEN
+#undef CORP_GROUP_RYAZNOV
+#undef CORP_GROUP_STARLIGHT
+#undef CORP_SYNERGY_EXACT
+#undef CORP_SYNERGY_GROUP

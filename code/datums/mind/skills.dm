@@ -162,13 +162,27 @@
 	var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
 	return perk?.has_rank(src, required_rank)
 
-/datum/mind/proc/get_character_perk_effectiveness(skill, perk_index)
+/datum/mind/proc/get_character_perk_effectiveness(skill, perk_index, effect_key = null)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.uses_perks())
 		return 0
 	perk_index = normalize_character_skill_number(perk_index)
 	var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
-	return perk?.get_effectiveness(src) || 0
+	return perk?.get_effectiveness(src, effect_key) || 0
+
+/datum/mind/proc/get_character_perk_effectiveness_by_type(perk_type, effect_key = null)
+	if(!ispath(perk_type, /datum/skill_perk))
+		return 0
+	for(var/skill_type in GLOB.skill_types)
+		var/datum/skill/skill_datum = get_character_skill_datum(skill_type)
+		if(!skill_datum || !skill_datum.uses_perks())
+			continue
+		for(var/perk_index in 1 to length(skill_datum.perks))
+			var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
+			if(perk?.type != perk_type)
+				continue
+			return perk.get_effectiveness(src, effect_key) || 0
+	return 0
 
 /datum/mind/proc/passes_character_perk_check(skill, perk_index, required_rank = 1, probability = 100)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)

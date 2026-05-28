@@ -252,11 +252,24 @@ export type CharacterSetupImplantMetrics = {
   chromity: number;
   chromity_max: number;
   chromity_used?: number;
+  ice_chromity_penalty?: number;
   overheat: number;
   overheat_floor: number;
   has_neural_implant: BooleanLike;
   editable: BooleanLike;
   disabled_reason?: string;
+};
+
+export type CharacterSetupNeuralManufacturer = {
+  id: string;
+  display_name: string;
+  major?: string;
+  specialization?: string;
+  energy_weapons?: string;
+  classic_weapons?: string;
+  demons?: string;
+  implants?: string;
+  defense?: string;
 };
 
 export type CharacterSetupRuntimeData = {
@@ -392,6 +405,7 @@ export type ServerData = {
     professional_skills: CharacterSetupSkill[];
     weapon_skills: CharacterSetupSkill[];
     implant_slots: CharacterSetupImplantSlot[];
+    neural_interface_manufacturers?: CharacterSetupNeuralManufacturer[];
   };
   species: Record<string, Species>;
   [otherKey: string]: unknown;

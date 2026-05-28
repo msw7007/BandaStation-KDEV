@@ -107,19 +107,107 @@
 	slot = ORGAN_SLOT_NEURAL_IMPLANT
 	implant_flags = IMPLANT_NEURAL_INTERFACE
 	emp_stun_duration = 0
+	chromity_overheat = 0
 	var/corp_manufacturer = "independent"
+	/// Legal key used by direct interfaces to bypass this neural implant's ice.
+	var/cryptographic_key
+	/// Configurable digital ice bound to this neural interface.
+	var/datum/cyber_ice/neural_ice
+
+/obj/item/organ/cyberimp/brain/neural_interface/Initialize(mapload)
+	. = ..()
+	if(!cryptographic_key)
+		cryptographic_key = generate_neural_cryptokey()
+	neural_ice = new()
+
+/obj/item/organ/cyberimp/brain/neural_interface/Destroy()
+	QDEL_NULL(neural_ice)
+	return ..()
 
 /obj/item/organ/cyberimp/brain/neural_interface/requires_neural_implant()
 	return FALSE
 
+/obj/item/organ/cyberimp/brain/neural_interface/is_implant_functional()
+	if(!..())
+		return FALSE
+	return has_living_brain()
+
+/obj/item/organ/cyberimp/brain/neural_interface/on_life(seconds_per_tick)
+	. = ..()
+	if(!owner || owner.stat == DEAD || damage <= 0)
+		return
+	var/repaired_amount = min(damage, NEURAL_INTERFACE_SELF_REPAIR_PER_SECOND * seconds_per_tick)
+	if(repaired_amount <= 0)
+		return
+	apply_organ_damage(-repaired_amount)
+	add_organ_pain(repaired_amount * NEURAL_INTERFACE_SELF_REPAIR_PAIN_MULTIPLIER)
+
 /obj/item/organ/cyberimp/brain/neural_interface/on_mob_insert(mob/living/carbon/receiver, special, movement_flags)
 	. = ..()
-	receiver.corp_align = corp_manufacturer
+	if(!cryptographic_key)
+		cryptographic_key = generate_neural_cryptokey()
+	receiver.corp_align = corp_manufacturer == "independent" ? null : corp_manufacturer
 
 /obj/item/organ/cyberimp/brain/neural_interface/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
 	if(organ_owner?.corp_align == corp_manufacturer)
 		organ_owner.corp_align = null
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/has_living_brain()
+	var/obj/item/organ/brain = owner?.get_organ_slot(ORGAN_SLOT_BRAIN)
+	return !isnull(brain) && !(brain.organ_flags & ORGAN_FAILING) && brain.damage < brain.maxHealth
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/generate_neural_cryptokey()
+	return uppertext(copytext(md5("[REF(src)]-[world.realtime]-[rand(1, 999999)]"), 1, 17))
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice() as /datum/cyber_ice
+	if(!neural_ice)
+		neural_ice = new()
+	return neural_ice
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_chromity_penalty()
+	return get_ice().get_chromity_penalty()
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_timer_duration(hacking_skill = 0)
+	return get_ice().get_timer_duration(hacking_skill)
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_grid_size(hacking_skill = 0)
+	return get_ice().get_grid_size(hacking_skill)
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_sequence_length(hacking_skill = 0)
+	return get_ice().get_sequence_length(hacking_skill, get_ice_grid_size(hacking_skill))
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_reserve()
+	return get_ice().current_reserve
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_max_reserve()
+	return get_ice().get_max_reserve()
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/set_ice_distribution(timer, size, sequence, reserve)
+	return get_ice().set_distribution(timer, size, sequence, reserve)
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/has_cryptographic_key(key)
+	return !isnull(key) && key == cryptographic_key
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/get_cryptographic_key()
+	if(!cryptographic_key)
+		cryptographic_key = generate_neural_cryptokey()
+	return cryptographic_key
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/start_ice_hack(mob/living/hacker, provided_key = null)
+	if(!hacker || !is_implant_functional())
+		return null
+	if(has_cryptographic_key(provided_key))
+		to_chat(hacker, span_notice("Cryptographic key accepted. ICE bypassed."))
+		return TRUE
+	var/datum/cyber_ice_hack_session/session = new(hacker, get_ice(), owner, hacker.get_cyber_hacking_skill())
+	session.ui_interact(hacker)
+	return session
+
+/obj/item/organ/cyberimp/brain/neural_interface/retune_implant()
+	. = ..()
+	if(. && !cryptographic_key)
+		cryptographic_key = generate_neural_cryptokey()
 
 /obj/item/organ/cyberimp/brain/anti_drop
 	name = "anti-drop implant"
@@ -131,6 +219,10 @@
 	actions_types = list(/datum/action/item_action/organ_action/toggle)
 
 /obj/item/organ/cyberimp/brain/anti_drop/ui_action_click()
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
+		return
 	active = !active
 	if(active)
 		var/list/hold_list = owner.get_empty_held_indexes()
@@ -214,16 +306,16 @@
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/on_signal(datum/source, amount)
 	SIGNAL_HANDLER
-	if(!(organ_flags & ORGAN_FAILING) && amount > 0)
+	if(is_implant_functional() && amount > 0)
 		addtimer(CALLBACK(src, PROC_REF(clear_stuns)), stun_cap_amount, TIMER_UNIQUE|TIMER_OVERRIDE)
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/on_stamcrit(datum/source)
 	SIGNAL_HANDLER
-	if(!(organ_flags & ORGAN_FAILING))
+	if(is_implant_functional())
 		addtimer(CALLBACK(src, PROC_REF(clear_stuns)), stun_cap_amount, TIMER_UNIQUE|TIMER_OVERRIDE)
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/clear_stuns()
-	if(isnull(owner) || (organ_flags & ORGAN_FAILING) || !COOLDOWN_FINISHED(src, implant_cooldown))
+	if(!is_implant_functional() || !COOLDOWN_FINISHED(src, implant_cooldown))
 		return
 
 	owner.SetStun(0)
@@ -272,6 +364,10 @@
 	actions_types = list(/datum/action/item_action/organ_action/use)
 
 /obj/item/organ/cyberimp/brain/connector/ui_action_click()
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
+		return
 
 	to_chat(owner, span_warning("You start fiddling around with [src]..."))
 	playsound(owner, 'sound/items/taperecorder/tape_flip.ogg', 20, vary = TRUE) // asmr
