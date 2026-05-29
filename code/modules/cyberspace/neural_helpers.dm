@@ -80,10 +80,11 @@
 	if(!has_neural_implant())
 		to_chat(src, span_warning("Your body has no functional neural interface."))
 		return
-	var/list/nodes = build_cyberspace_nodes_for_area(src)
+	var/datum/cyberspace_layer/layer = SScyberspace?.get_layer()
+	var/list/nodes = layer?.nodes || build_cyberspace_nodes_for_area(src)
 	if(!length(nodes))
 		to_chat(src, span_warning("No cyberspace nodes resolve in this area."))
 		return
-	var/datum/cyberspace_node/node = nodes[1]
-	to_chat(src, span_notice("Resolved local node at [node.cyber_x], [node.cyber_y] with [node.get_object_count()] object(s) and [node.net_data] net-data."))
+	var/datum/cyberspace_node/node = layer?.get_nearest_node(src) || nodes[1]
+	to_chat(src, span_notice("Resolved local node at [node.cyber_x], [node.cyber_y], source Z [node.source_z], area [node.physical_area?.name || "unknown"], with [node.get_object_count()] object(s) and [node.net_data] net-data."))
 	node.start_ice_hack(src)

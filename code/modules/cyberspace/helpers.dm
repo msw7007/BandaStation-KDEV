@@ -12,17 +12,58 @@
 	if(!length(candidates) && is_cyberspace_network_object(origin))
 		candidates += origin
 
-	for(var/atom/movable/candidate as anything in candidates)
-		var/datum/cyberspace_node/new_node = new(candidate)
-		new_node.add_object(candidate)
-		nodes += new_node
+	nodes = build_cyberspace_nodes_from_candidates(candidates)
 
-	nodes = merge_nearby_cyberspace_nodes(nodes)
 	if(!length(nodes))
 		var/datum/cyberspace_node/fallback_node = new(origin)
 		fallback_node.add_object(origin)
 		nodes += fallback_node
 	return nodes
+
+/proc/build_all_cyberspace_nodes()
+	var/list/candidates = collect_all_cyberspace_network_objects()
+	return build_cyberspace_nodes_from_candidates(candidates)
+
+/proc/build_cyberspace_nodes_from_candidates(list/candidates)
+	var/list/nodes = list()
+	var/list/grouped_nodes = list()
+	for(var/atom/movable/candidate as anything in candidates)
+		if(!candidate)
+			continue
+		var/group_key = get_cyberspace_node_group_key(candidate)
+		var/list/datum/cyberspace_node/group_nodes = grouped_nodes[group_key]
+		if(!group_nodes)
+			group_nodes = list()
+			grouped_nodes[group_key] = group_nodes
+		var/datum/cyberspace_node/target_node
+		for(var/datum/cyberspace_node/existing_node as anything in group_nodes)
+			if(existing_node?.get_object_count() < CYBERSPACE_NODE_MAX_OBJECTS)
+				target_node = existing_node
+				break
+		if(!target_node)
+			target_node = new(candidate)
+			group_nodes += target_node
+			nodes += target_node
+		target_node.add_object(candidate)
+	return merge_nearby_cyberspace_nodes(nodes)
+
+/proc/get_cyberspace_node_group_key(atom/movable/candidate)
+	var/area/candidate_area = get_area(candidate)
+	var/area_key = candidate_area ? "\ref[candidate_area]" : "[/area]"
+	return "[candidate.z]|[area_key]"
+
+/proc/collect_all_cyberspace_network_objects()
+	var/list/candidates = list()
+	for(var/obj/machinery/machine as anything in SSmachines.get_all_machines())
+		if(is_cyberspace_network_object(machine) && is_cyberspace_source_z_level(machine.z))
+			candidates |= machine
+	for(var/mob/living/living_mob as anything in GLOB.mob_living_list)
+		if(is_cyberspace_network_object(living_mob) && is_cyberspace_source_z_level(living_mob.z))
+			candidates |= living_mob
+	for(var/obj/item/organ/cyberimp/implant as anything in world)
+		if(is_cyberspace_network_object(implant) && is_cyberspace_source_z_level(implant.z))
+			candidates |= implant
+	return candidates
 
 /proc/collect_cyberspace_network_objects(area/origin_area, origin_z)
 	var/list/candidates = list()
@@ -38,8 +79,10 @@
 					candidates += candidate
 	return candidates
 
-/proc/is_cyberspace_source_z_level(z_level, origin_z)
-	if(z_level == origin_z)
+/proc/is_cyberspace_source_z_level(z_level, origin_z = null)
+	if(SScyberspace?.cyberspace_z == z_level)
+		return FALSE
+	if(!isnull(origin_z) && z_level == origin_z)
 		return TRUE
 	if(is_reserved_level(z_level) || is_centcom_level(z_level) || is_secret_level(z_level))
 		return FALSE
@@ -48,27 +91,69 @@
 /proc/merge_nearby_cyberspace_nodes(list/datum/cyberspace_node/nodes)
 	if(!length(nodes))
 		return nodes
-	var/merged = TRUE
-	while(merged)
-		merged = FALSE
-		for(var/i in 1 to length(nodes))
-			var/datum/cyberspace_node/left_node = nodes[i]
-			if(!left_node)
+	var/list/merged_nodes = list()
+	var/list/spatial_buckets = list()
+	for(var/datum/cyberspace_node/current_node as anything in nodes)
+		if(!current_node)
+			continue
+		var/datum/cyberspace_node/merge_candidate = find_cyberspace_node_merge_candidate(current_node, spatial_buckets)
+		while(merge_candidate)
+			remove_cyberspace_node_from_bucket(merge_candidate, spatial_buckets)
+			merged_nodes -= merge_candidate
+			current_node.merge_from(merge_candidate)
+			qdel(merge_candidate)
+			merge_candidate = find_cyberspace_node_merge_candidate(current_node, spatial_buckets)
+		merged_nodes += current_node
+		add_cyberspace_node_to_bucket(current_node, spatial_buckets)
+	return merged_nodes
+
+/proc/get_cyberspace_node_bucket_size()
+	return max(1, CYBERSPACE_NODE_MERGE_RANGE + 1)
+
+/proc/get_cyberspace_node_bucket_x(datum/cyberspace_node/node)
+	return FLOOR(node.cyber_x / get_cyberspace_node_bucket_size(), 1)
+
+/proc/get_cyberspace_node_bucket_y(datum/cyberspace_node/node)
+	return FLOOR(node.cyber_y / get_cyberspace_node_bucket_size(), 1)
+
+/proc/get_cyberspace_node_bucket_key(bucket_x, bucket_y)
+	return "[bucket_x],[bucket_y]"
+
+/proc/add_cyberspace_node_to_bucket(datum/cyberspace_node/node, list/spatial_buckets)
+	if(!node || !spatial_buckets)
+		return FALSE
+	var/bucket_key = get_cyberspace_node_bucket_key(get_cyberspace_node_bucket_x(node), get_cyberspace_node_bucket_y(node))
+	var/list/bucket = spatial_buckets[bucket_key]
+	if(!bucket)
+		bucket = list()
+		spatial_buckets[bucket_key] = bucket
+	bucket += node
+	return TRUE
+
+/proc/remove_cyberspace_node_from_bucket(datum/cyberspace_node/node, list/spatial_buckets)
+	if(!node || !spatial_buckets)
+		return FALSE
+	var/bucket_key = get_cyberspace_node_bucket_key(get_cyberspace_node_bucket_x(node), get_cyberspace_node_bucket_y(node))
+	var/list/bucket = spatial_buckets[bucket_key]
+	if(!bucket)
+		return FALSE
+	bucket -= node
+	return TRUE
+
+/proc/find_cyberspace_node_merge_candidate(datum/cyberspace_node/node, list/spatial_buckets)
+	if(!node || !spatial_buckets)
+		return null
+	var/base_bucket_x = get_cyberspace_node_bucket_x(node)
+	var/base_bucket_y = get_cyberspace_node_bucket_y(node)
+	for(var/bucket_x in (base_bucket_x - 1) to (base_bucket_x + 1))
+		for(var/bucket_y in (base_bucket_y - 1) to (base_bucket_y + 1))
+			var/list/bucket = spatial_buckets[get_cyberspace_node_bucket_key(bucket_x, bucket_y)]
+			if(!length(bucket))
 				continue
-			if(i >= length(nodes))
-				continue
-			for(var/j in (i + 1) to length(nodes))
-				var/datum/cyberspace_node/right_node = nodes[j]
-				if(!right_node || !left_node.can_merge_with(right_node))
-					continue
-				left_node.merge_from(right_node)
-				nodes.Cut(j, j + 1)
-				qdel(right_node)
-				merged = TRUE
-				break
-			if(merged)
-				break
-	return nodes
+			for(var/datum/cyberspace_node/candidate as anything in bucket)
+				if(candidate && node.can_merge_with(candidate))
+					return candidate
+	return null
 
 /proc/is_cyberspace_network_object(atom/movable/candidate)
 	if(!candidate)
@@ -80,6 +165,11 @@
 		|| istype(candidate, /obj/machinery/camera) \
 		|| istype(candidate, /obj/machinery/vending) \
 		|| istype(candidate, /obj/machinery/computer) \
+		|| istype(candidate, /obj/machinery/airalarm) \
+		|| istype(candidate, /obj/machinery/firealarm) \
+		|| istype(candidate, /obj/machinery/power/apc) \
+		|| istype(candidate, /obj/machinery/requests_console) \
+		|| istype(candidate, /obj/machinery/status_display) \
 		|| istype(candidate, /obj/machinery/porta_turret) \
 		|| istype(candidate, /mob/living/basic/bot) \
 		|| istype(candidate, /mob/living/simple_animal/bot) \

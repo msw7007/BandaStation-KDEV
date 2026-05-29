@@ -8,6 +8,8 @@
 	icon_state = "shield2"
 	anchored = TRUE
 	density = FALSE
+	layer = ABOVE_MOB_LAYER
+	plane = GAME_PLANE
 	alpha = 200
 	color = "#18d8ff"
 	mouse_opacity = MOUSE_OPACITY_ICON
@@ -18,53 +20,87 @@
 	node = new_node
 	if(node?.physical_area)
 		name = "node: [node.physical_area.name]"
-	desc = "Objects: [node?.get_object_count() || 0]. Net-data: [node?.net_data || 0]. Left click attacks ICE or enters with a key. Right click extracts available net-data."
+	desc = "Objects: [node?.get_object_count() || 0]. Net-data: [node?.net_data || 0]. LMB activates access, combat LMB attacks protection. RMB connects first, then extracts data."
+	maptext = "<span class='maptext' style='color:#18d8ff;text-shadow:0 0 4px #18d8ff;font-size:8px'>NODE</span>"
+	maptext_width = 64
+	maptext_x = -16
+	maptext_y = 20
 
 /obj/effect/cyberspace_node_shell/Destroy(force)
 	node = null
 	return ..()
 
+/obj/effect/cyberspace_node_shell/Click(location, control, params)
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK))
+		attack_hand_secondary(usr, modifiers)
+	else
+		attack_hand(usr, modifiers)
+	return TRUE
+
 /obj/effect/cyberspace_node_shell/attack_hand(mob/user, list/modifiers)
 	var/mob/living/body = get_cyberspace_user_body(user)
 	if(!body || !node)
 		return TRUE
-	if(node.has_access(body))
-		open_node_actions(body)
+	if(body.combat_mode)
+		node.start_cyberspace_attack(body, src)
 		return TRUE
-	node.start_ice_hack(body)
+	open_node_actions(body)
 	return TRUE
 
 /obj/effect/cyberspace_node_shell/attack_hand_secondary(mob/user, list/modifiers)
 	var/mob/living/body = get_cyberspace_user_body(user)
 	if(!body || !node)
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
-	var/extracted_data = node.extract_net_data(body)
-	if(extracted_data > 0)
-		to_chat(body, span_notice("You extract [extracted_data] net-data and cached cryptographic keys from [name]."))
-	else
-		to_chat(body, span_warning("[name] has no accessible net-data."))
+	if(!body.cyberspace_session?.is_connected_to_node(node))
+		node.start_cyberspace_connection(body, src)
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	node.extract_connected_net_data(body, src)
 	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 
 /obj/effect/cyberspace_node_shell/proc/open_node_actions(mob/living/user)
 	if(!user || !node)
 		return FALSE
-	var/action = tgui_input_list(user, "Node access granted. Choose a network action.", name, list(
+	var/has_access = node.has_access(user)
+	var/list/actions = list(
+		"View linked objects",
+		"Start ICE hack",
+		"Connect",
 		"Extract net-data",
-		"Open control UI",
-		"Glitch",
-		"Short",
-		"Settings",
-		"Cancel",
-	))
+	)
+	if(has_access)
+		actions += list(
+			"Open control UI",
+			"Glitch",
+			"Short",
+			"Settings",
+		)
+	actions += "Cancel"
+	var/action = tgui_input_list(user, "[has_access ? "Node access granted" : "Node protection active"]. Choose a network action.", name, actions)
 	if(!action || action == "Cancel")
 		return FALSE
-	if(action == "Extract net-data")
-		var/extracted_data = node.extract_net_data(user)
-		if(extracted_data > 0)
-			to_chat(user, span_notice("You extract [extracted_data] net-data and cached cryptographic keys from [name]. Total net-data: [user.mind?.cyber_net_data || 0]."))
-		else
-			to_chat(user, span_warning("[name] has no accessible net-data."))
+	if(action == "View linked objects")
+		var/list/live_objects = node.get_live_objects()
+		if(!length(live_objects))
+			to_chat(user, span_warning("[name] has no linked objects left."))
+			return FALSE
+		var/list/object_names = list()
+		for(var/atom/movable/live_object as anything in live_objects)
+			object_names += "[live_object] ([live_object.type])"
+		tgui_alert(user, jointext(object_names, "\n"), "Linked objects")
 		return TRUE
+	if(action == "Start ICE hack")
+		node.start_ice_hack(user)
+		return TRUE
+	if(action == "Connect")
+		node.start_cyberspace_connection(user, src)
+		return TRUE
+	if(action == "Extract net-data")
+		node.extract_connected_net_data(user, src)
+		return TRUE
+	if(!has_access)
+		to_chat(user, span_warning("[name] is still protected. Break ICE or obtain a cryptokey before using control actions."))
+		return FALSE
 	var/list/live_objects = node.get_live_objects()
 	if(!length(live_objects))
 		to_chat(user, span_warning("[name] has no linked objects left."))
@@ -86,11 +122,78 @@
 			node.run_control_mode(user, target, "settings")
 	return TRUE
 
+/obj/effect/cyberspace_object_trace
+	name = "network trace"
+	desc = "A local object's digital trace inside this cyberspace node."
+	anchored = TRUE
+	density = FALSE
+	layer = ABOVE_MOB_LAYER
+	plane = GAME_PLANE
+	alpha = 170
+	color = "#18d8ff"
+	mouse_opacity = MOUSE_OPACITY_ICON
+	var/datum/weakref/linked_object_ref
+	var/datum/cyberspace_node/node
+
+/obj/effect/cyberspace_object_trace/Initialize(mapload, atom/movable/linked_object, datum/cyberspace_node/source_node)
+	. = ..()
+	node = source_node
+	if(linked_object)
+		linked_object_ref = WEAKREF(linked_object)
+		appearance = linked_object.appearance
+		layer = ABOVE_MOB_LAYER
+		plane = GAME_PLANE
+		alpha = 170
+		color = "#18d8ff"
+		name = "trace: [linked_object.name]"
+		desc = "Digital trace of [linked_object] ([linked_object.type]). LMB opens node actions, combat LMB attacks protection. RMB connects first, then extracts data."
+		maptext = "<span class='maptext' style='color:#18d8ff;text-shadow:0 0 4px #18d8ff;font-size:7px'>TRACE</span>"
+		maptext_width = 64
+		maptext_x = -16
+		maptext_y = 18
+
+/obj/effect/cyberspace_object_trace/Destroy(force)
+	linked_object_ref = null
+	node = null
+	return ..()
+
+/obj/effect/cyberspace_object_trace/Click(location, control, params)
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK))
+		attack_hand_secondary(usr, modifiers)
+	else
+		attack_hand(usr, modifiers)
+	return TRUE
+
+/obj/effect/cyberspace_object_trace/attack_hand(mob/user, list/modifiers)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body || !node)
+		return TRUE
+	if(body.combat_mode)
+		node.start_cyberspace_attack(body, src)
+		return TRUE
+	var/obj/effect/cyberspace_node_shell/proxy = new(get_turf(src), node)
+	proxy.open_node_actions(body)
+	qdel(proxy)
+	return TRUE
+
+/obj/effect/cyberspace_object_trace/attack_hand_secondary(mob/user, list/modifiers)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body || !node)
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	if(!body.cyberspace_session?.is_connected_to_node(node))
+		node.start_cyberspace_connection(body, src)
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	node.extract_connected_net_data(body, src)
+	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+
 /obj/effect/cyberspace_imprint_shell
 	name = "neural imprint"
 	desc = "A green neural-interface trace. It can be attacked as a personal ICE target."
 	anchored = TRUE
 	density = FALSE
+	layer = ABOVE_MOB_LAYER
+	plane = GAME_PLANE
 	alpha = CYBERSPACE_IMPRINT_ALPHA
 	color = "#4cff6b"
 	mouse_opacity = MOUSE_OPACITY_ICON
@@ -103,6 +206,8 @@
 	if(target_body)
 		body_ref = WEAKREF(target_body)
 		appearance = target_body.appearance
+		layer = ABOVE_MOB_LAYER
+		plane = GAME_PLANE
 		alpha = CYBERSPACE_IMPRINT_ALPHA
 		color = "#4cff6b"
 		name = "[target_body.real_name || target_body.name]'s neural imprint"
@@ -111,6 +216,10 @@
 	body_ref = null
 	node = null
 	return ..()
+
+/obj/effect/cyberspace_imprint_shell/Click(location, control, params)
+	attack_hand(usr, params2list(params))
+	return TRUE
 
 /obj/effect/cyberspace_imprint_shell/attack_hand(mob/user, list/modifiers)
 	var/mob/living/body = get_cyberspace_user_body(user)
@@ -133,7 +242,13 @@
 	alpha = 210
 	anchored = TRUE
 	density = FALSE
+	layer = ABOVE_MOB_LAYER
+	plane = GAME_PLANE
 	var/claimed = FALSE
+
+/obj/effect/cyberspace_storage_node/Click(location, control, params)
+	attack_hand(usr, params2list(params))
+	return TRUE
 
 /obj/effect/cyberspace_storage_node/attack_hand(mob/user, list/modifiers)
 	if(claimed)

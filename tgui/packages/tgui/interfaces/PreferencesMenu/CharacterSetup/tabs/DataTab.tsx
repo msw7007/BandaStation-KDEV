@@ -414,6 +414,7 @@ export function DataTab() {
     data.character_preferences.names[nameKey] ||
     data.character_profiles[data.active_slot - 1] ||
     '';
+  const hackerAlias = data.character_preferences.names.hacker_alias || '';
   const ttsSeeds = serverData?.text_to_speech?.seeds || [];
   const currentSpeciesKey = String(data.character_preferences.misc.species ?? '');
   const currentSpeciesName =
@@ -573,6 +574,12 @@ export function DataTab() {
           label="Полное имя"
           value={currentName}
           onChange={(newValue) => setPreference(act, nameKey, newValue)}
+        />
+        <CyberInput
+          icon="id-badge"
+          label="Никнейм"
+          value={hackerAlias}
+          onChange={(newValue) => setPreference(act, 'hacker_alias', newValue)}
         />
         <CyberSlider
           icon="calendar"
