@@ -244,6 +244,8 @@ type CyberPointControlProps = {
   min?: number;
   max?: number;
   disabled?: boolean;
+  minusDisabled?: boolean;
+  plusDisabled?: boolean;
   reason?: string;
   onMinus?: () => void;
   onPlus?: () => void;
@@ -260,13 +262,13 @@ export function CyberPointControl(props: CyberPointControlProps) {
       <div className="CyberPointControl__buttons">
         <Button
           icon="minus"
-          disabled={disabled || (min !== undefined && value <= min)}
+          disabled={disabled || props.minusDisabled || (min !== undefined && value <= min)}
           onClick={props.onMinus}
         />
         <strong>{value}</strong>
         <Button
           icon="plus"
-          disabled={disabled || (max !== undefined && value >= max)}
+          disabled={disabled || props.plusDisabled || (max !== undefined && value >= max)}
           onClick={props.onPlus}
         />
       </div>

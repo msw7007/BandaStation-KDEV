@@ -126,6 +126,27 @@
 /mob/living/proc/get_character_perk_power_multiplier(skill, perk_index)
 	return mind?.get_character_perk_power_multiplier(skill, perk_index) || 0
 
+/mob/living/proc/has_character_perk(skill, perk_index, required_rank = 1)
+	return mind?.has_character_perk(skill, perk_index, required_rank) || FALSE
+
+/mob/living/proc/get_character_perk_effectiveness(skill, perk_index, effect_key = null)
+	return mind?.get_character_perk_effectiveness(skill, perk_index, effect_key) || 0
+
+/mob/living/proc/get_character_perk_effectiveness_by_type(perk_type, effect_key = null)
+	return mind?.get_character_perk_effectiveness_by_type(perk_type, effect_key) || 0
+
+/mob/living/proc/passes_character_perk_check(skill, perk_index, required_rank = 1, probability = 100)
+	return mind?.passes_character_perk_check(skill, perk_index, required_rank, probability) || FALSE
+
+/mob/living/proc/get_character_perk_check_result(skill, perk_index, required_rank = 1, probability = 100)
+	return mind?.get_character_perk_check_result(skill, perk_index, required_rank, probability) || list(
+		"has_perk" = FALSE,
+		"rank" = 0,
+		"required_rank" = required_rank,
+		"effectiveness" = 0,
+		"passed" = FALSE,
+	)
+
 /mob/living/proc/has_character_giga_perk(attribute_id)
 	return mind?.has_character_giga_perk(attribute_id) || FALSE
 

@@ -91,6 +91,14 @@
 	var/level_points = 0
 	///Spendable points for professional/combat skills once the character sheet exists.
 	var/skill_points = 0
+	///Spendable points for professional character skill perks.
+	var/professional_skill_points = PROFESSIONAL_SKILL_POINTS_DEFAULT
+	///Spendable points for weapon character skill levels.
+	var/weapon_skill_points = WEAPON_SKILL_POINTS_DEFAULT
+	///Digital access keys learned by this character. Key id -> /datum/cyberspace_cryptokey.
+	var/list/cyber_cryptokeys = list()
+	///Net-data extracted from breached cyberspace nodes.
+	var/cyber_net_data = 0
 	///Skill unlock experience waiting for comfortable sleep conversion.
 	var/list/pending_skill_experience = list()
 	///Converted skill unlock experience. Future character sheet uses this to remove training caps.

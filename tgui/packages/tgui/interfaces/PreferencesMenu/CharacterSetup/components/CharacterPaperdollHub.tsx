@@ -62,7 +62,12 @@ export function CharacterPaperdollHub(props: CharacterPaperdollHubProps) {
         {renderSlots(leftSlots)}
       </div>
       <div className="CharacterPaperdollHub__preview">
-        <CharacterPreview height={compact ? '300px' : '360px'} id={previewId} />
+        <CharacterPreview
+          height={compact ? '260px' : '360px'}
+          id={previewId}
+          transparent
+          width={compact ? '200px' : undefined}
+        />
       </div>
       <div className="CharacterPaperdollHub__slots CharacterPaperdollHub__slots--right">
         {renderSlots(rightSlots)}

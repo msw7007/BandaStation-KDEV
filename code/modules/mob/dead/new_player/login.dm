@@ -13,6 +13,7 @@
 		mind = new /datum/mind(key)
 		mind.active = TRUE
 		mind.set_current(src)
+		client?.prefs?.apply_character_setup_to_mind(mind)
 
 	// Check if user should be added to interview queue
 	if (!client.holder && CONFIG_GET(flag/panic_bunker) && CONFIG_GET(flag/panic_bunker_interview) && !(client.ckey in GLOB.interviews.approved_ckeys))

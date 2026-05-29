@@ -1,46 +1,43 @@
 /datum/body_modification/bodypart_prosthesis
 	name = "Body Part Prosthesis"
 	abstract_type = /datum/body_modification/bodypart_prosthesis
+	modification_kind = "prosthesis"
 	var/replacement_bodypart_type = null
 	var/manufacturers = list(
-		"General",
-		"Bishop",
-		"Bishop MK2",
-		"Bishop Nano",
-		"Etamin Industry",
-		"Etamin Industry Lumineux",
-		"Gromtech",
-		"Hephaestus",
-		"Hephaestus Titan",
-		"Interdyne",
-		"Morpheus",
-		"Shellguard",
-		"Wardtakahashi",
-		"Wardtakahashi Pro",
-		"Xion",
-		"Xion Light",
-		"Zeng-Hu",
+		"Сульфур T1",
+		"Сан Йон Корпорейшн MK-2",
+		"Ишикава Индастриз MK-2",
+		"Хо Ши Текнолоджис MK-2",
+		"Ковальски и Ко MK-2",
+		"ТяжМарш Продакшен MK-2",
+		"Тесла Саенс MK-2",
+		"Блэкрок Инвестигейт MK-2",
+		"Транс Трэвел MK-2",
+		"Самантас Кеир MK-2",
+		"Сан Йон Корпорейшн MK-3",
+		"Ишикава Индастриз MK-3",
+		"Хо Ши Текнолоджис MK-3",
 	)
 
-	var/static/list/manufacturer_suffixes = list(
-		"General" = null,
-		"Bishop" = "bishop",
-		"Bishop MK2" = "bishop_mk2",
-		"Bishop Nano" = "bishop_nano",
-		"Etamin Industry" = "etamin_industry",
-		"Etamin Industry Lumineux" = "etamin_industry_lumineux",
-		"Gromtech" = "gromtech",
-		"Hephaestus" = "hephaestus",
-		"Hephaestus Titan" = "hephaestus_titan",
-		"Interdyne" = "interdyne",
-		"Morpheus" = "morpheus",
-		"Shellguard" = "shellguard",
-		"Wardtakahashi" = "wardtakahashi",
-		"Wardtakahashi Pro" = "wardtakahashi_pro",
-		"Xion" = "xion",
-		"Xion Light" = "xion_light",
-		"Zeng-Hu" = "zenghu",
-	)
+	var/static/list/manufacturer_suffixes = list()
+
+/datum/body_modification/bodypart_prosthesis/New()
+	. = ..()
+	if(!replacement_bodypart_type)
+		return
+
+	if(isnull(body_zone))
+		body_zone = get_body_zone()
+	if(isnull(body_part))
+		body_part = body_zone_to_character_setup_part(body_zone)
+	grade = "T1-T3"
+	tier = null
+	var/obj/item/bodypart/bodypart_probe = new replacement_bodypart_type()
+	if(isnull(icon))
+		icon = bodypart_probe.icon
+	if(isnull(icon_state))
+		icon_state = bodypart_probe.icon_state
+	qdel(bodypart_probe)
 
 /datum/body_modification/bodypart_prosthesis/apply_to_human(mob/living/carbon/target, additional_params)
 	. = ..()
@@ -89,6 +86,9 @@
 	var/brand = params["manufacturer"]
 	return list("selected_manufacturer" = brand)
 
+/datum/body_modification/bodypart_prosthesis/get_manufacturers()
+	return manufacturers || list()
+
 /datum/body_modification/bodypart_prosthesis/proc/get_replacement_type(manufacturer)
 	var/base_type_str = "[replacement_bodypart_type]"
 	if(!findtext(base_type_str, "/"))
@@ -101,9 +101,9 @@
 	if(isnull(suffix) || !length(suffix))
 		return text2path(base_type_str)
 
-	return text2path("[base_type_str]/[suffix]")
+	return text2path("[base_type_str]/[suffix]") || text2path(base_type_str)
 
-/datum/body_modification/bodypart_prosthesis/proc/get_default_manufacturer()
+/datum/body_modification/bodypart_prosthesis/get_default_manufacturer()
 	return length(manufacturers) ? manufacturers[1] : ""
 
 /datum/body_modification/bodypart_prosthesis/proc/get_body_zone()

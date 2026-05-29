@@ -72,6 +72,12 @@
 	organ.repair_implant()
 	ADD_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON, TRAIT_GENERIC)
 
+/datum/surgery_operation/organ/repair/implant/neural_interface
+	name = "Repair neural interface"
+	desc = "Repair a damaged neural interface implant and restore its runtime state."
+	target_type = /obj/item/organ/cyberimp/brain/neural_interface
+	time = 5 SECONDS
+
 /datum/surgery_operation/organ/repair/implant/retune
 	name = "Retune implant"
 	desc = "Restart and retune an EMP-disabled implant."
@@ -82,6 +88,44 @@
 
 /datum/surgery_operation/organ/repair/implant/retune/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	organ.retune_implant()
+
+/datum/surgery_operation/organ/repair/implant/retune/neural_interface
+	name = "Retune neural interface"
+	desc = "Restart and retune a disabled neural interface implant."
+	target_type = /obj/item/organ/cyberimp/brain/neural_interface
+
+/datum/surgery_operation/organ/repair/implant/configure_ice
+	name = "Configure neural ICE"
+	desc = "Redistribute the neural interface ICE points between timer, grid size, sequence length and reserve."
+	target_type = /obj/item/organ/cyberimp/brain/neural_interface
+	time = 5 SECONDS
+
+/datum/surgery_operation/organ/repair/implant/configure_ice/state_check(obj/item/organ/organ)
+	return istype(organ, /obj/item/organ/cyberimp/brain/neural_interface)
+
+/datum/surgery_operation/organ/repair/implant/configure_ice/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = organ
+	var/datum/cyber_ice/ice = interface.get_ice()
+	var/total_points = ice.get_total_points()
+	var/timer = tgui_input_number(surgeon, "Timer ICE points. Total points must stay [total_points].", "Neural ICE", ice.timer_points, total_points, 0)
+	if(isnull(timer))
+		return
+	var/size = tgui_input_number(surgeon, "Size ICE points. Total points must stay [total_points].", "Neural ICE", ice.size_points, total_points, 0)
+	if(isnull(size))
+		return
+	var/sequence = tgui_input_number(surgeon, "Sequence ICE points. Total points must stay [total_points].", "Neural ICE", ice.sequence_points, total_points, 0)
+	if(isnull(sequence))
+		return
+	var/reserve = tgui_input_number(surgeon, "Reserve ICE points. Total points must stay [total_points].", "Neural ICE", ice.reserve_points, total_points, 0)
+	if(isnull(reserve))
+		return
+	if(round(timer) + round(size) + round(sequence) + round(reserve) != total_points)
+		to_chat(surgeon, span_warning("ICE configuration rejected: point total must remain [total_points]."))
+		return
+	if(!interface.set_ice_distribution(timer, size, sequence, reserve))
+		to_chat(surgeon, span_warning("ICE configuration rejected."))
+		return
+	to_chat(surgeon, span_notice("Neural ICE redistributed."))
 
 /datum/surgery_operation/organ/repair/lobectomy
 	name = "Удаление поврежденной доли легкого"

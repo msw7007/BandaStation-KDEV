@@ -25,7 +25,8 @@
 /datum/status_effect/strandling/proc/on_breathe(mob/living/source)
 	SIGNAL_HANDLER
 
-	if(source.get_organ_slot(ORGAN_SLOT_BREATHING_TUBE))
+	var/mob/living/carbon/carbon_source = source
+	if(istype(carbon_source) && carbon_source.can_breathe_tube())
 		return
 
 	source.losebreath++

@@ -21,6 +21,8 @@
 	/// time between injections
 
 /obj/item/organ/cyberimp/chest/pump/on_life(seconds_per_tick, times_fired)
+	if(!is_implant_functional())
+		return ..()
 	if(!TIMER_COOLDOWN_FINISHED(src, COOLDOWN_PUMP))
 		return ..()
 
@@ -94,6 +96,33 @@
 			REAGENT_THRESHOLD = 4
 		)
 	)
+
+/obj/item/organ/cyberimp/chest/kebab_generator
+	name = "Животюрница 2.0"
+	desc = "Абсурдный желудочный имплант, синтезирующий готовый кебаб по запросу."
+	icon_state = "adv_nutriment_implant"
+	aug_overlay = "nutripump_adv"
+	slot = ORGAN_SLOT_STOMACH_AID
+	chromity_overheat = 10
+	actions_types = list(/datum/action/item_action/organ_action/use)
+	COOLDOWN_DECLARE(kebab_cooldown)
+
+/obj/item/organ/cyberimp/chest/kebab_generator/ui_action_click(mob/user, datum/action/source)
+	if(!is_implant_functional())
+		to_chat(owner, span_warning("[capitalize(declent_ru(NOMINATIVE))] не отвечает."))
+		return
+	if(!COOLDOWN_FINISHED(src, kebab_cooldown))
+		to_chat(owner, span_warning("[capitalize(declent_ru(NOMINATIVE))] ещё разогревается."))
+		return
+
+	COOLDOWN_START(src, kebab_cooldown, 5 SECONDS)
+	add_chromity_overheat(30)
+
+	var/obj/item/food/kebab/generated_kebab = new(owner.drop_location())
+	if(owner.put_in_hands(generated_kebab))
+		to_chat(owner, span_notice("[capitalize(declent_ru(NOMINATIVE))] выдаёт свежий кебаб."))
+	else
+		to_chat(owner, span_notice("[capitalize(declent_ru(NOMINATIVE))] выкладывает свежий кебаб рядом."))
 
 #undef REAGENT_AMOUNT
 #undef REAGENT_THRESHOLD

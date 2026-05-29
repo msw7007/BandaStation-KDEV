@@ -6,6 +6,10 @@
 	var/obj/item/organ/attached_organ = target
 	if(!attached_organ.owner)
 		return FALSE
+	if(attached_organ.is_implant() && !attached_organ.is_implant_functional())
+		if(feedback)
+			attached_organ.owner.balloon_alert(attached_organ.owner, "implant inactive")
+		return FALSE
 	return ..()
 
 /datum/action/item_action/organ_action/toggle

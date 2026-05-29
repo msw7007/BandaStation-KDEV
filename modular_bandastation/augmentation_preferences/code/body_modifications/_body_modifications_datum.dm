@@ -1,3 +1,25 @@
+GLOBAL_LIST_INIT(character_setup_organ_replacement_roots, list(
+	/obj/item/organ/brain,
+	/obj/item/organ/ears,
+	/obj/item/organ/eyes,
+	/obj/item/organ/heart,
+	/obj/item/organ/liver,
+	/obj/item/organ/lungs,
+	/obj/item/organ/stomach,
+	/obj/item/organ/tongue,
+))
+GLOBAL_LIST_INIT(character_setup_hidden_organ_replacements, list(
+	/obj/item/organ/eyes/robotic,
+	/obj/item/organ/eyes/robotic/basic,
+	/obj/item/organ/eyes/robotic/basic/moth,
+	/obj/item/organ/brain/cybernetic,
+	/obj/item/organ/ears/cybernetic,
+	/obj/item/organ/heart/cybernetic,
+	/obj/item/organ/liver/cybernetic,
+	/obj/item/organ/lungs/cybernetic,
+	/obj/item/organ/stomach/cybernetic,
+	/obj/item/organ/tongue/robot,
+))
 GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_modifications())
 
 /proc/init_body_modifications()
@@ -8,7 +30,124 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 
 		body_modifications[body_modification_type::key] = new body_modification_type()
 
+	for(var/obj/item/organ/cyberimp/implant_type as anything in subtypesof(/obj/item/organ/cyberimp))
+		if(implant_type == implant_type::abstract_type)
+			continue
+		if(implant_type == /obj/item/organ/cyberimp/eyes)
+			continue
+		if(ispath(implant_type, /obj/item/organ/cyberimp/brain/neural_interface))
+			continue
+
+		var/obj/item/organ/cyberimp/implant_probe = new implant_type()
+		var/implant_slot = implant_probe.slot
+		var/implant_zone = implant_probe.zone
+		var/list/valid_zones = implant_probe.valid_zones
+		if(length(valid_zones))
+			for(var/target_zone in valid_zones)
+				var/list/zone_slots = get_character_setup_cyberimp_slots(implant_probe, target_zone, valid_zones[target_zone])
+				if(!length(zone_slots))
+					continue
+				for(var/zone_slot in zone_slots)
+					register_character_setup_cyberimp(body_modifications, implant_type, zone_slot, get_character_setup_cyberimp_zone(implant_probe, target_zone))
+			qdel(implant_probe)
+			continue
+
+		if(!implant_slot)
+			qdel(implant_probe)
+			continue
+		for(var/zone_slot in get_character_setup_cyberimp_slots(implant_probe, implant_zone, implant_slot))
+			register_character_setup_cyberimp(body_modifications, implant_type, zone_slot, get_character_setup_cyberimp_zone(implant_probe, implant_zone))
+		qdel(implant_probe)
+
+	for(var/organ_root in GLOB.character_setup_organ_replacement_roots)
+		for(var/obj/item/organ/organ_type as anything in subtypesof(organ_root))
+			if(!is_character_setup_visible_organ_replacement(organ_type))
+				continue
+
+			var/obj/item/organ/organ_probe = new organ_type()
+			if(!organ_probe.slot || !organ_probe.name)
+				qdel(organ_probe)
+				continue
+
+			register_character_setup_organ_replacement(body_modifications, organ_type, organ_probe)
+			qdel(organ_probe)
+
 	return body_modifications
+
+/proc/register_character_setup_cyberimp(list/body_modifications, implant_type, target_slot, target_zone)
+	var/datum/body_modification/cybernetic_implant/modification = new(implant_type, target_slot, target_zone)
+	body_modifications[modification.key] = modification
+
+/proc/register_character_setup_organ_replacement(list/body_modifications, organ_type, obj/item/organ/organ_probe)
+	var/datum/body_modification/dynamic_organ_replacement/modification = new(organ_type, organ_probe)
+	if(!modification.key)
+		qdel(modification)
+		return
+	body_modifications[modification.key] = modification
+
+/proc/is_character_setup_visible_organ_replacement(organ_type)
+	if(organ_type in GLOB.character_setup_hidden_organ_replacements)
+		return FALSE
+
+	var/organ_type_text = "[organ_type]"
+	if(findtext(organ_type_text, "/cybernetic"))
+		return TRUE
+	if(findtext(organ_type_text, "/robotic"))
+		return TRUE
+	if(findtext(organ_type_text, "/evolved"))
+		return TRUE
+	if(findtext(organ_type_text, "/night_vision"))
+		return TRUE
+
+	return FALSE
+
+/proc/get_character_setup_cyberimp_zone(obj/item/organ/cyberimp/implant, target_zone)
+	switch(implant.slot)
+		if(ORGAN_SLOT_BREATHING_TUBE)
+			return BODY_ZONE_PRECISE_NECK
+
+	return target_zone
+
+/proc/get_character_setup_cyberimp_slots(obj/item/organ/cyberimp/implant, target_zone, target_slot)
+	if(istype(implant, /obj/item/organ/cyberimp/arm))
+		switch(target_zone)
+			if(BODY_ZONE_L_ARM)
+				return list(ORGAN_SLOT_LEFT_ARM_AUG, ORGAN_SLOT_LEFT_ARM_MUSCLE)
+			if(BODY_ZONE_R_ARM)
+				return list(ORGAN_SLOT_RIGHT_ARM_AUG, ORGAN_SLOT_RIGHT_ARM_MUSCLE)
+
+	switch(target_slot)
+		if(ORGAN_SLOT_THRUSTERS)
+			return list(ORGAN_SLOT_SPINE_SECONDARY)
+		if(ORGAN_SLOT_HUD)
+			return list(ORGAN_SLOT_EYELID_AUG)
+		if(ORGAN_SLOT_HEART_AID)
+			return list(ORGAN_SLOT_CHEST_AUG)
+		if(ORGAN_SLOT_STOMACH_AID)
+			return list(ORGAN_SLOT_BELLY_AUG)
+		if(ORGAN_SLOT_BRAIN_CEREBELLUM, ORGAN_SLOT_BRAIN_HIPPOCAMPUS)
+			return list(ORGAN_SLOT_BRAIN_CNS)
+		if(ORGAN_SLOT_BREATHING_TUBE)
+			return list(ORGAN_SLOT_NECK_AUG)
+
+	return target_slot ? list(target_slot) : list()
+
+/proc/body_zone_to_character_setup_part(body_zone)
+	switch(body_zone)
+		if(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK)
+			return "head"
+		if(BODY_ZONE_L_ARM)
+			return "left_arm"
+		if(BODY_ZONE_R_ARM)
+			return "right_arm"
+		if(BODY_ZONE_L_LEG)
+			return "left_leg"
+		if(BODY_ZONE_R_LEG)
+			return "right_leg"
+		if(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_GROIN)
+			return "torso"
+
+	return "torso"
 
 /datum/body_modification
 	abstract_type = /datum/body_modification
@@ -17,6 +156,24 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 	var/cost = 0
 	var/list/incompatible_body_modifications = list()
 	var/category = null
+	/// Coarse setup zone used by the Biometrics UI.
+	var/body_part = null
+	/// Exact organ/body zone, when known.
+	var/body_zone = null
+	/// Internal slot this modification occupies/replaces, when known.
+	var/slot_id = null
+	/// UI grouping: organ, implant, prosthesis, amputation, feature.
+	var/modification_kind = "feature"
+	/// Optional icon preview for the modification picker.
+	var/icon = null
+	var/icon_state = null
+	/// RnD/build grade shown in character setup.
+	var/tier = null
+	var/grade = null
+	var/availability = "available"
+	var/locked_reason = null
+	/// Preference-time chrome load used by the biometrics setup preview.
+	var/chromity_cost = 0
 
 /datum/body_modification/New()
 	..()
@@ -70,3 +227,10 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 /// as `/datum/body_modification/proc/is_valid_preference_params` is called before
 /datum/body_modification/proc/handle_ui_params(params)
 	return list()
+
+/datum/body_modification/proc/get_manufacturers()
+	return list()
+
+/datum/body_modification/proc/get_default_manufacturer()
+	var/list/manufacturers = get_manufacturers()
+	return length(manufacturers) ? manufacturers[1] : null

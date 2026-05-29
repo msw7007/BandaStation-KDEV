@@ -1,7 +1,13 @@
 /datum/body_modification/limb_amputation
 	name = "Body Part Amputation"
 	abstract_type = /datum/body_modification/limb_amputation
+	modification_kind = "amputation"
 	var/limb_body_zone = null
+
+/datum/body_modification/limb_amputation/New()
+	. = ..()
+	body_zone = limb_body_zone
+	body_part = body_zone_to_character_setup_part(body_zone)
 
 /datum/body_modification/limb_amputation/apply_to_human(mob/living/carbon/target, additional_params)
 	. = ..()

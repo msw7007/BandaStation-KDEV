@@ -209,7 +209,7 @@ const appearanceCategories: AppearanceCategory[] = [
   },
   {
     id: 'genitals',
-    label: 'Гениталии',
+    label: 'Пол',
     icon: 'venus-mars',
     controls: [],
   },
@@ -382,7 +382,7 @@ function SpeciesPickerModal(props: {
           ))}
         </div>
         <div className="CharacterSetup__speciesDetails">
-          <CharacterPreview height="180px" id={props.previewId} />
+          <CharacterPreview height="180px" id={props.previewId} transparent />
           <h3>{currentSpecies?.name || props.currentSpeciesKey}</h3>
           <p>{currentSpecies?.desc || 'Описание вида недоступно.'}</p>
           {!!currentSpecies?.enabled_features?.length && (
@@ -525,6 +525,22 @@ export function DataTab() {
           {renderVoicePanel()}
           <CyberSectionHeader>Глаза</CyberSectionHeader>
           {renderControls(eyeControls)}
+        </>
+      );
+    }
+
+    if (selectedAppearanceCategory.id === 'genitals') {
+      return (
+        <>
+          {!!getChoiceOptions(serverData, 'gender').length && (
+            <CyberSelect
+              icon="venus-mars"
+              label="Пол"
+              value={String(value(data, 'gender') ?? '')}
+              options={getChoiceOptions(serverData, 'gender')}
+              onSelected={(newValue) => setPreference(act, 'gender', newValue)}
+            />
+          )}
         </>
       );
     }
@@ -722,7 +738,7 @@ export function DataTab() {
           <CyberSectionHeader>Нейроинтерфейс</CyberSectionHeader>
           <CyberSelect
             icon="network-wired"
-            label="Корпорация"
+            label="Производитель"
             value={String(value(data, 'corp_align') ?? 'none')}
             options={getChoiceOptions(serverData, 'corp_align')}
             onSelected={(newValue) => setPreference(act, 'corp_align', newValue)}

@@ -220,7 +220,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	return !!(implant_flags & IMPLANT_NEURAL_INTERFACE)
 
 /obj/item/organ/proc/requires_neural_implant()
-	return !!(implant_flags & IMPLANT_REQUIRES_NEURAL)
+	return (implant_flags & IMPLANT_REQUIRES_NEURAL) && !(implant_flags & IMPLANT_PASSIVE)
 
 /obj/item/organ/proc/is_external_implant()
 	return !!(implant_flags & IMPLANT_EXTERNAL)

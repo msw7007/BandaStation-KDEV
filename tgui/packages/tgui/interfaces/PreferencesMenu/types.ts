@@ -202,7 +202,14 @@ export type CharacterSetupPerk = {
   index: number;
   name: string;
   description: string;
+  rank_descriptions?: string[];
   max_rank: number;
+};
+
+export type CharacterSetupRuntimePerk = {
+  rank: number;
+  can_increase: BooleanLike;
+  can_decrease: BooleanLike;
 };
 
 export type CharacterSetupSkill = {
@@ -227,7 +234,9 @@ export type CharacterSetupSkill = {
 export type CharacterSetupRuntimeSkill = {
   level: number;
   spent_points: number;
-  perks: Record<string, number>;
+  perks: Record<string, CharacterSetupRuntimePerk | number>;
+  can_increase: BooleanLike;
+  can_decrease: BooleanLike;
   editable: BooleanLike;
   disabled_reason?: string;
 };
@@ -242,6 +251,8 @@ export type CharacterSetupImplantSlot = {
 export type CharacterSetupImplantMetrics = {
   chromity: number;
   chromity_max: number;
+  chromity_used?: number;
+  ice_chromity_penalty?: number;
   overheat: number;
   overheat_floor: number;
   has_neural_implant: BooleanLike;
@@ -249,9 +260,25 @@ export type CharacterSetupImplantMetrics = {
   disabled_reason?: string;
 };
 
+export type CharacterSetupNeuralManufacturer = {
+  id: string;
+  display_name: string;
+  major?: string;
+  specialization?: string;
+  energy_weapons?: string;
+  classic_weapons?: string;
+  demons?: string;
+  implants?: string;
+  defense?: string;
+};
+
 export type CharacterSetupRuntimeData = {
   attributes: Record<string, CharacterSetupRuntimeAttribute>;
   skills: Record<typePath, CharacterSetupRuntimeSkill>;
+  level_points: number;
+  skill_points: number;
+  professional_skill_points: number;
+  weapon_skill_points: number;
   implant_metrics: CharacterSetupImplantMetrics;
 };
 
@@ -333,6 +360,17 @@ export type BodyModification = {
   category: string;
   description: string;
   cost: number;
+  body_part?: string | null;
+  body_zone?: string | null;
+  slot_id?: string | null;
+  kind?: string | null;
+  icon?: string | null;
+  icon_state?: string | null;
+  tier?: number;
+  grade?: string | null;
+  availability?: string | null;
+  locked_reason?: string | null;
+  chromity_cost?: number;
   manufacturers?: Record<string, string>;
   selectedManufacturer?: string;
 };
@@ -367,6 +405,7 @@ export type ServerData = {
     professional_skills: CharacterSetupSkill[];
     weapon_skills: CharacterSetupSkill[];
     implant_slots: CharacterSetupImplantSlot[];
+    neural_interface_manufacturers?: CharacterSetupNeuralManufacturer[];
   };
   species: Record<string, Species>;
   [otherKey: string]: unknown;
