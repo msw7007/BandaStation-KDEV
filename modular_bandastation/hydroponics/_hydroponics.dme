@@ -1,3 +1,7 @@
 #include "_hydroponics.dm"
 
 #include "code/biogenerator_designs.dm"
+#include "code/cultivator.dm"
+#include "code/mutation_targets.dm"
+#include "code/negative_plant.dm"
+#include "code/seed_requirements.dm"

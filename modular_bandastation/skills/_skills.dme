@@ -2,3 +2,8 @@
 
 #include "code/dodge_shift/dodge_shift_element.dm"
 #include "code/dodge_shift/dodge_shift_spell.dm"
+
+#include "code/food_botany/_defines.dm"
+#include "code/food_botany/skill_datums.dm"
+#include "code/food_botany/integration_cooking.dm"
+#include "code/food_botany/integration_analysis.dm"

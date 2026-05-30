@@ -2047,7 +2047,6 @@
 #include "code\datums\skills\cyberpunk\perks\physical\intelligence.dm"
 #include "code\datums\skills\cyberpunk\perks\physical\spirit.dm"
 #include "code\datums\skills\cyberpunk\perks\physical\charisma.dm"
-#include "code\datums\skills\cyberpunk\perks\professional.dm"
 #include "code\datums\skills\cyberpunk\perks\professional\surgery.dm"
 #include "code\datums\skills\cyberpunk\perks\professional\chemistry.dm"
 #include "code\datums\skills\cyberpunk\perks\professional\electrics.dm"
