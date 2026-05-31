@@ -40,6 +40,7 @@ type Storage = {
   memory_capacity: number;
   free_memory: number;
   cooldown?: number;
+  cryptokeys?: number;
   demons: Demon[];
 };
 
@@ -99,6 +100,13 @@ const cardStyle = {
   border: `1px solid ${cy.redDark}`,
   marginBottom: '6px',
   padding: '7px',
+};
+
+const specialButtonStyle = {
+  minHeight: '18px',
+  padding: '1px 4px',
+  fontSize: '11px',
+  lineHeight: '14px',
 };
 
 const clampNumber = (value: string, min: number, max: number, fallback: number) => {
@@ -220,7 +228,7 @@ export const CyberDemonCompiler = () => {
     });
 
   return (
-    <Window title="Demon Compiler" width={1040} height={700}>
+    <Window title="Demon Compiler" width={1180} height={740}>
       <Window.Content style={{ background: cy.bg, color: cy.text }}>
         <Stack fill>
           <Stack.Item width="34%">
@@ -277,13 +285,14 @@ export const CyberDemonCompiler = () => {
                 </Stack.Item>
                 <Stack.Item>
                   <div style={labelStyle}>Special effects {specials.length}/{maxSpecials}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px' }}>
                     {data.specials?.map((choice) => {
                       const selected = specials.includes(choice.id);
                       return (
                         <Button
                           key={choice.id}
                           fluid
+                          style={specialButtonStyle}
                           selected={selected}
                           disabled={!selected && specials.length >= maxSpecials}
                           onClick={() => toggleSpecial(choice.id)}
@@ -335,56 +344,66 @@ export const CyberDemonCompiler = () => {
             </Section>
           </Stack.Item>
 
-          <Stack.Item width="31%">
-            <Section title="DISK CONTENTS" style={{ background: cy.panel, border: `1px solid ${cy.redDark}` }}>
-              <StorageHeader storage={data.disk} emptyText="No demon disk found." />
-              <div style={{ maxHeight: '585px', overflowY: 'auto', paddingRight: '4px' }}>
-                {data.disk?.present && !data.disk.demons?.length && <div style={{ color: cy.muted, fontStyle: 'italic' }}>Disk is empty.</div>}
-                {data.disk?.present &&
-                  data.disk.demons?.map((demon) => (
-                    <DemonCard key={demon.index} demon={demon}>
-                      <Button icon="copy" onClick={() => loadTemplate(demon)}>
-                        Develop copy
-                      </Button>
-                      <Button
-                        icon="download"
-                        disabled={!data.deck?.present || demon.memory > (data.deck?.free_memory || 0)}
-                        onClick={() => act('load_from_disk', { index: demon.index })}
-                      >
-                        Deck
-                      </Button>
-                      <Button icon="trash" color="red" disabled={demon.prebuilt} onClick={() => act('delete_disk', { index: demon.index })} />
-                    </DemonCard>
-                  ))}
-              </div>
-            </Section>
-          </Stack.Item>
-
           <Stack.Item grow>
-            <Section title="STORAGE" style={{ background: cy.panel, border: `1px solid ${cy.redDark}` }}>
-              <div style={labelStyle}>Net-data: {data.net_data || 0}</div>
-              {data.terminal?.present && (
-                <div style={{ ...cardStyle, borderColor: data.terminal.cooldown ? cy.red : cy.cyanSoft }}>
-                  Terminal: {data.terminal.name} {data.terminal.cooldown ? `(${data.terminal.cooldown}s cooldown)` : '(ready)'}
+            <Section title="STORAGE / DISK" style={{ background: cy.panel, border: `1px solid ${cy.redDark}` }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                <div style={{ ...cardStyle, borderColor: cy.cyanSoft, marginBottom: 0 }}>
+                  <div style={labelStyle}>Net-data</div>
+                  <b>{data.net_data || 0}</b>
                 </div>
-              )}
-              <StoragePanel
-                title="Cyberdeck"
-                storage={data.deck}
-                emptyText="No cyberdeck found."
-                renderActions={(demon) => (
-                  <>
-                    <Button
-                      icon="save"
-                      disabled={demon.prebuilt || !data.disk?.present || demon.memory > (data.disk?.free_memory || 0)}
-                      onClick={() => act('copy_to_disk', { index: demon.index })}
-                    >
-                      Disk
-                    </Button>
-                    <Button icon="trash" color="red" disabled={demon.prebuilt} onClick={() => act('delete_deck', { index: demon.index })} />
-                  </>
+                {data.terminal?.present && (
+                  <div style={{ ...cardStyle, borderColor: data.terminal.cooldown ? cy.red : cy.cyanSoft, marginBottom: 0 }}>
+                    <div style={labelStyle}>Compiler</div>
+                    {data.terminal.name} {data.terminal.cooldown ? `(${data.terminal.cooldown}s cooldown)` : '(ready)'}
+                  </div>
                 )}
-              />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <StorageHeader storage={data.disk} emptyText="No demon disk inserted." />
+                  {data.disk?.present && (
+                    <div style={{ color: cy.muted, fontSize: '11px', marginBottom: '5px' }}>
+                      Cryptokeys: {data.disk.cryptokeys || 0}
+                    </div>
+                  )}
+                  <div style={{ maxHeight: '610px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {data.disk?.present && !data.disk.demons?.length && <div style={{ color: cy.muted, fontStyle: 'italic' }}>Disk is empty.</div>}
+                    {data.disk?.present &&
+                      data.disk.demons?.map((demon) => (
+                        <DemonCard key={demon.index} demon={demon}>
+                          <Button icon="copy" onClick={() => loadTemplate(demon)}>
+                            Develop copy
+                          </Button>
+                          <Button
+                            icon="download"
+                            disabled={!data.deck?.present || demon.memory > (data.deck?.free_memory || 0)}
+                            onClick={() => act('load_from_disk', { index: demon.index })}
+                          >
+                            Deck
+                          </Button>
+                          <Button icon="trash" color="red" disabled={demon.prebuilt} onClick={() => act('delete_disk', { index: demon.index })} />
+                        </DemonCard>
+                      ))}
+                  </div>
+                </div>
+                <StoragePanel
+                  title="Cyberdeck"
+                  storage={data.deck}
+                  emptyText="No cyberdeck found."
+                  renderActions={(demon) => (
+                    <>
+                      <Button
+                        icon="save"
+                        disabled={demon.prebuilt || !data.disk?.present || demon.memory > (data.disk?.free_memory || 0)}
+                        onClick={() => act('copy_to_disk', { index: demon.index })}
+                      >
+                        Disk
+                      </Button>
+                      <Button icon="trash" color="red" disabled={demon.prebuilt} onClick={() => act('delete_deck', { index: demon.index })} />
+                    </>
+                  )}
+                />
+              </div>
             </Section>
           </Stack.Item>
         </Stack>
@@ -420,18 +439,18 @@ const DemonCard = (props: { demon: Demon; children?: ReactNode }) => {
   const { demon, children } = props;
   return (
     <div style={cardStyle}>
-      <Stack align="center">
-        <Stack.Item grow>
-          <div style={{ color: cy.cyan, fontWeight: 800 }}>
-            {demon.name} {demon.prebuilt ? <span style={{ color: cy.red }}>[prebuilt]</span> : ''}
-          </div>
-          <div style={{ color: cy.muted, fontSize: '11px' }}>{demon.description}</div>
-          <div style={{ color: cy.text, fontSize: '11px' }}>
-            {demon.effect} | power {demon.power} | {demon.memory} memory | {demon.net_data_cost} data
-          </div>
-        </Stack.Item>
-        {children && <Stack.Item>{children}</Stack.Item>}
-      </Stack>
+      <div style={{ color: cy.cyan, fontWeight: 800, lineHeight: 1.2 }}>
+        {demon.name} {demon.prebuilt ? <span style={{ color: cy.red }}>[prebuilt]</span> : ''}
+      </div>
+      <div style={{ color: cy.muted, fontSize: '11px', lineHeight: 1.25, marginTop: '2px' }}>{demon.description}</div>
+      <div style={{ color: cy.text, fontSize: '11px', lineHeight: 1.25, marginTop: '3px' }}>
+        {demon.effect} | power {demon.power} | {demon.memory} memory | {demon.net_data_cost} data
+      </div>
+      {children && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 };

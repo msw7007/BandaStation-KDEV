@@ -85,7 +85,7 @@
 
 /obj/effect/cyberspace_node_shell/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(!.)
+	if(.)
 		return
 	return cyberspace_node_ui_act(action, params, ui, ui.user || usr, node, src, name)
 
@@ -360,7 +360,7 @@
 
 /obj/effect/cyberspace_object_trace/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(!.)
+	if(.)
 		return
 	return cyberspace_node_ui_act(action, params, ui, ui.user || usr, node, src, name)
 

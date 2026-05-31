@@ -392,16 +392,25 @@
 	if(!do_after(caster, cast_time, target = target, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_TARGET_LOC_CHANGE|IGNORE_HELD_ITEM, hidden = TRUE))
 		to_chat(caster, span_warning("[demon_name] fizzles before activation."))
 		return FALSE
-	if(activation_delay > 0)
-		to_chat(caster, span_notice("[demon_name] is queued for activation."))
-		if(!do_after(caster, activation_delay, target = target, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_TARGET_LOC_CHANGE|IGNORE_HELD_ITEM, hidden = TRUE))
-			to_chat(caster, span_warning("[demon_name] loses its activation window."))
-			return FALSE
 	apply_psychic_damage(caster)
-	var/success = apply_effect(caster, target, current_power, physical_world)
-	if(success && cooldown > 0)
+	if(cooldown > 0)
 		next_use = world.time + cooldown
-	return success
+	if(activation_delay > 0)
+		to_chat(caster, span_notice("[demon_name] is unpacking and will activate in [DisplayTimeText(activation_delay)]."))
+		addtimer(CALLBACK(src, PROC_REF(activate_deployment), WEAKREF(caster), WEAKREF(target), current_power, physical_world), activation_delay)
+		return TRUE
+	return activate_deployment(WEAKREF(caster), WEAKREF(target), current_power, physical_world)
+
+/datum/cyberspace_demon/proc/activate_deployment(datum/weakref/caster_ref, datum/weakref/target_ref, current_power, physical_world)
+	var/mob/living/caster = caster_ref?.resolve()
+	var/atom/target = target_ref?.resolve()
+	if(!target || QDELETED(target))
+		if(caster)
+			to_chat(caster, span_warning("[demon_name] loses its target before activation."))
+		return FALSE
+	if(caster)
+		to_chat(caster, span_notice("[demon_name] activates."))
+	return apply_effect(caster, target, current_power, physical_world)
 
 /datum/cyberspace_demon/proc/apply_psychic_damage(mob/living/caster)
 	var/damage = psychic_damage
@@ -483,7 +492,7 @@
 /datum/cyberspace_demon/proc/apply_periodic_effect_tick(datum/weakref/caster_ref, datum/weakref/target_ref, current_power, physical_world)
 	var/mob/living/caster = caster_ref?.resolve()
 	var/atom/target = target_ref?.resolve()
-	if(!caster || !target)
+	if(!target)
 		return FALSE
 	return apply_primary_effect(caster, target, current_power, physical_world, FALSE)
 
@@ -500,7 +509,7 @@
 		if(announce)
 			to_chat(caster, span_notice("[demon_name] changes [target_node_name] protection by [protection_ice.current_reserve - old_reserve]. Reserve: [protection_ice.current_reserve]/[protection_ice.get_max_reserve()]."))
 		return TRUE
-	if(target_node && (effect in list(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX, CYBER_DEMON_EFFECT_OVERHEAT)))
+	if(target_node && (effect in list(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX)))
 		var/datum/cyber_ice/ice = target_node.get_ice()
 		if(!ice)
 			return FALSE
@@ -525,7 +534,7 @@
 		if(CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID)
 			var/mob/living/living_target = target
 			if(istype(living_target))
-				if(caster.is_projected_into_cyberspace())
+				if(!physical_world || living_target.is_projected_into_cyberspace())
 					living_target.adjust_chromity_overheat(absolute_power)
 				else
 					living_target.apply_damage(absolute_power, BURN)
@@ -535,7 +544,7 @@
 		if(CYBER_DEMON_EFFECT_TOX)
 			var/mob/living/living_target = target
 			if(istype(living_target))
-				if(caster.is_projected_into_cyberspace())
+				if(!physical_world || living_target.is_projected_into_cyberspace())
 					living_target.adjust_chromity_overheat(absolute_power)
 				else
 					living_target.apply_damage(absolute_power, TOX)
@@ -574,7 +583,10 @@
 				if(istype(trace))
 					key_node = trace.node
 			if(!key_node)
-				to_chat(caster, span_warning("[demon_name] needs a cyberspace node target."))
+				if(announce && caster)
+					to_chat(caster, span_warning("[demon_name] needs a cyberspace node target."))
+				return FALSE
+			if(!caster?.mind)
 				return FALSE
 			for(var/datum/cyberspace_cryptokey/cryptokey as anything in key_node.cryptokeys)
 				caster.mind?.remember_cyber_cryptokey(cryptokey)
@@ -712,7 +724,7 @@
 /datum/cyberspace_demon/proc/apply_jump_effect_delayed(datum/weakref/caster_ref, datum/weakref/origin_ref, current_power, physical_world)
 	var/mob/living/caster = caster_ref?.resolve()
 	var/atom/origin = origin_ref?.resolve()
-	if(!caster || !origin)
+	if(!origin)
 		return FALSE
 	apply_jump_effect(caster, origin, current_power, physical_world)
 	return TRUE
@@ -728,7 +740,8 @@
 				excluded += candidate
 				applied++
 	if(applied)
-		to_chat(caster, span_notice("[demon_name] hits [applied] nearby network target[applied == 1 ? "" : "s"]."))
+		if(caster)
+			to_chat(caster, span_notice("[demon_name] hits [applied] nearby network target[applied == 1 ? "" : "s"]."))
 
 /datum/cyberspace_demon/proc/apply_jump_effect(mob/living/caster, atom/origin, current_power, physical_world)
 	var/atom/current_origin = origin
@@ -744,26 +757,28 @@
 		current_origin = next_target
 		jumps++
 	if(jumps)
-		to_chat(caster, span_notice("[demon_name] jumps through [jumps] extra target[jumps == 1 ? "" : "s"]."))
+		if(caster)
+			to_chat(caster, span_notice("[demon_name] jumps through [jumps] extra target[jumps == 1 ? "" : "s"]."))
 
 /datum/cyberspace_demon/proc/apply_spread_effect(datum/weakref/caster_ref, datum/weakref/origin_ref, current_power, physical_world)
 	var/mob/living/caster = caster_ref?.resolve()
 	var/atom/origin = origin_ref?.resolve()
-	if(!caster || !origin)
+	if(!origin)
 		return FALSE
 	var/list/excluded = list(origin, caster)
 	var/atom/next_target = find_secondary_effect_target(caster, origin, excluded)
 	if(!next_target)
 		return FALSE
 	if(apply_primary_effect(caster, next_target, current_power, physical_world, FALSE))
-		to_chat(caster, span_notice("[demon_name] spreads from [origin] to [next_target]."))
+		if(caster)
+			to_chat(caster, span_notice("[demon_name] spreads from [origin] to [next_target]."))
 		return TRUE
 	return FALSE
 
 /datum/cyberspace_demon/proc/apply_repeat_effect(datum/weakref/caster_ref, datum/weakref/origin_ref, current_power, physical_world, repeats_left)
 	var/mob/living/caster = caster_ref?.resolve()
 	var/atom/origin = origin_ref?.resolve()
-	if(!caster || !origin || repeats_left <= 0)
+	if(!origin || repeats_left <= 0)
 		return FALSE
 	var/atom/repeat_target = origin
 	if(CYBER_DEMON_SPECIAL_JUMP in special_effects)
@@ -771,7 +786,8 @@
 	if(!repeat_target)
 		return FALSE
 	if(apply_primary_effect(caster, repeat_target, current_power, physical_world, FALSE))
-		to_chat(caster, span_notice("[demon_name] repeats on [repeat_target]."))
+		if(caster)
+			to_chat(caster, span_notice("[demon_name] repeats on [repeat_target]."))
 		addtimer(CALLBACK(src, PROC_REF(apply_repeat_effect), caster_ref, WEAKREF(repeat_target), current_power, physical_world, repeats_left - 1), max(1 SECONDS, duration || CYBER_DEMON_SPECIAL_SPREAD_DELAY))
 		return TRUE
 	return FALSE
@@ -790,7 +806,7 @@
 	if(!candidate || QDELETED(candidate) || candidate == origin || candidate == caster)
 		return FALSE
 	switch(effect)
-		if(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX, CYBER_DEMON_EFFECT_OVERHEAT, CYBER_DEMON_EFFECT_OVERHEAT_DELTA, CYBER_DEMON_EFFECT_PROTECTION)
+		if(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX, CYBER_DEMON_EFFECT_OVERHEAT_DELTA, CYBER_DEMON_EFFECT_PROTECTION)
 			return istype(candidate, /mob/living) || istype(candidate, /obj/effect/cyberspace_wall_shell) || istype(candidate, /obj/effect/cyberspace_node_shell) || istype(candidate, /obj/effect/cyberspace_object_trace)
 		if(CYBER_DEMON_EFFECT_BUFF, CYBER_DEMON_EFFECT_DEBUFF, CYBER_DEMON_EFFECT_ATTRIBUTE, CYBER_DEMON_EFFECT_SKILL, CYBER_DEMON_EFFECT_STAMINA, CYBER_DEMON_EFFECT_BLIND, CYBER_DEMON_EFFECT_DEAF, CYBER_DEMON_EFFECT_SILENCE, CYBER_DEMON_EFFECT_BLOCK_IMPLANTS, CYBER_DEMON_EFFECT_BLOCK_DEMONS)
 			return istype(candidate, /mob/living)
@@ -944,7 +960,6 @@
 		"Нагрев электроники (HEAT)" = CYBER_DEMON_EFFECT_BURN,
 		"Кислотный сбой (ACID)" = CYBER_DEMON_EFFECT_ACID,
 		"Токсичный сбой имплантов" = CYBER_DEMON_EFFECT_TOX,
-		"Перегрев имплантов" = CYBER_DEMON_EFFECT_OVERHEAT,
 		"Изменить перегрев имплантов" = CYBER_DEMON_EFFECT_OVERHEAT_DELTA,
 		"Изменить характеристику" = CYBER_DEMON_EFFECT_ATTRIBUTE,
 		"Изменить навык" = CYBER_DEMON_EFFECT_SKILL,
@@ -968,8 +983,8 @@
 		"Прыжок" = CYBER_DEMON_SPECIAL_JUMP,
 		"Повтор" = CYBER_DEMON_SPECIAL_REPEAT,
 		"Стелс" = CYBER_DEMON_SPECIAL_STEALTH,
-		"Слабый ЭМП по завершению" = CYBER_DEMON_SPECIAL_EMP_LIGHT,
-		"Сильный ЭМП по завершению" = CYBER_DEMON_SPECIAL_EMP_HEAVY,
+		"Слабый ЭМИ" = CYBER_DEMON_SPECIAL_EMP_LIGHT,
+		"Сильный ЭМИ" = CYBER_DEMON_SPECIAL_EMP_HEAVY,
 	)
 
 /proc/get_cyberdemon_manufacturer_choices()
@@ -1161,6 +1176,8 @@
 	var/list/effects_data = list()
 	var/list/effects = get_cyberdemon_effect_choices()
 	for(var/name in effects)
+		if(effects[name] == CYBER_DEMON_EFFECT_OVERHEAT)
+			continue
 		effects_data += list(list(
 			"name" = name,
 			"id" = effects[name],
@@ -1192,6 +1209,13 @@
 	if(!disk)
 		disk = locate(/obj/item/cyberdemon_disk) in user.contents
 	return disk
+
+/proc/find_accessible_cyberdemon_disk(mob/user, obj/item/clothing/gloves/cyberdeck/deck, obj/machinery/cyberdemon_terminal/terminal)
+	if(terminal?.inserted_disk)
+		return terminal.inserted_disk
+	if(deck?.inserted_disk)
+		return deck.inserted_disk
+	return find_held_cyberdemon_disk(user)
 
 /proc/find_held_engram_chip(mob/user)
 	if(!user)
@@ -1231,6 +1255,7 @@
 			"used_memory" = disk?.get_used_memory() || 0,
 			"memory_capacity" = disk?.memory_capacity || 0,
 			"free_memory" = disk?.get_free_memory() || 0,
+			"cryptokeys" = 0,
 			"demons" = disk_demons,
 		),
 		"terminal" = list(
@@ -1254,12 +1279,19 @@
 		"skills" = cyberdemon_skills_ui_data(),
 	)
 
+/proc/cyberdemon_parse_ui_index(value)
+	if(isnum(value))
+		return round(value)
+	return round(text2num("[value]"))
+
 /proc/delete_cyberdemon_from_list(list/demons, index, mob/user, source_name)
-	index = text2num("[index]")
+	index = cyberdemon_parse_ui_index(index)
 	if(index < 1 || index > length(demons))
+		to_chat(user, span_warning("Invalid demon index for [source_name]."))
 		return FALSE
 	var/datum/cyberspace_demon/demon = demons[index]
 	if(!demon)
+		to_chat(user, span_warning("No demon exists in that [source_name] slot."))
 		return FALSE
 	if(demon.prebuilt)
 		to_chat(user, span_warning("Prebuilt demons cannot be deleted from [source_name]."))
@@ -1296,17 +1328,23 @@
 			return TRUE
 		if("delete_deck")
 			if(deck)
-				delete_cyberdemon_from_list(deck.demons, params["index"], user, deck)
+				if(delete_cyberdemon_from_list(deck.demons, params["index"], user, deck))
+					deck.sync_demon_actions(user)
 			return TRUE
 		if("delete_disk")
 			if(disk)
 				delete_cyberdemon_from_list(disk.demons, params["index"], user, disk)
 			return TRUE
 		if("copy_to_disk")
-			if(!deck || !disk)
+			if(!deck)
+				to_chat(user, span_warning("No cyberdeck is available."))
 				return TRUE
-			var/index = text2num("[params["index"]]")
+			if(!disk)
+				to_chat(user, span_warning("No demon disk is available."))
+				return TRUE
+			var/index = cyberdemon_parse_ui_index(params["index"])
 			if(index < 1 || index > length(deck.demons))
+				to_chat(user, span_warning("Invalid cyberdeck demon slot."))
 				return TRUE
 			var/datum/cyberspace_demon/demon = deck.demons[index]
 			if(demon?.prebuilt)
@@ -1316,15 +1354,90 @@
 				to_chat(user, span_notice("You copy [demon.demon_name] to [disk]."))
 			return TRUE
 		if("load_from_disk")
-			if(!deck || !disk)
+			if(!deck)
+				to_chat(user, span_warning("No cyberdeck is available."))
 				return TRUE
-			var/index = text2num("[params["index"]]")
+			if(!disk)
+				to_chat(user, span_warning("No demon disk is available."))
+				return TRUE
+			var/index = cyberdemon_parse_ui_index(params["index"])
 			if(index < 1 || index > length(disk.demons))
+				to_chat(user, span_warning("Invalid demon disk slot."))
 				return TRUE
 			var/datum/cyberspace_demon/demon = disk.demons[index]
-			if(demon && deck.store_demon(demon.copy(), user))
+			if(!demon)
+				to_chat(user, span_warning("No demon exists in that disk slot."))
+				return TRUE
+			var/datum/cyberspace_demon/demon_copy = demon.copy()
+			if(deck.store_demon(demon_copy, user))
 				to_chat(user, span_notice("You load [demon.demon_name] from [disk] to [deck]."))
+				SStgui.update_uis(deck)
+				SStgui.update_uis(disk)
+			else
+				qdel(demon_copy)
 			return TRUE
+	return FALSE
+
+/datum/action/cooldown/cyberdemon
+	name = "Cyberdemon"
+	desc = "Runs a compiled demon from a cyberdeck."
+	background_icon_state = "bg_spell"
+	button_icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	button_icon_state = "skillchip"
+	overlay_icon_state = "bg_spell_border"
+	click_to_activate = TRUE
+	unset_after_click = TRUE
+	check_flags = AB_CHECK_CONSCIOUS
+	var/obj/item/clothing/gloves/cyberdeck/deck
+	var/datum/cyberspace_demon/demon
+
+/datum/action/cooldown/cyberdemon/New(datum/cyberspace_demon/new_demon, obj/item/clothing/gloves/cyberdeck/new_deck)
+	. = ..(new_demon)
+	demon = new_demon
+	deck = new_deck
+	if(demon)
+		name = demon.demon_name
+		desc = demon.description
+		cooldown_time = demon.cooldown
+
+/datum/action/cooldown/cyberdemon/Destroy()
+	deck = null
+	demon = null
+	return ..()
+
+/datum/action/cooldown/cyberdemon/IsAvailable(feedback = FALSE)
+	. = ..()
+	if(!.)
+		return FALSE
+	if(QDELETED(deck) || QDELETED(demon))
+		return FALSE
+	var/mob/living/living_owner = owner
+	if(!istype(living_owner) || !(deck in living_owner.contents))
+		if(feedback && owner)
+			owner.balloon_alert(owner, "no cyberdeck")
+		return FALSE
+	if(world.time < deck.compile_cooldown_until)
+		if(feedback)
+			living_owner.balloon_alert(living_owner, "deck cooling")
+		return FALSE
+	if(living_owner.cyberdemon_demons_blocked())
+		if(feedback)
+			living_owner.balloon_alert(living_owner, "demons blocked")
+		return FALSE
+	if(demon.cooldown > 0 && world.time < demon.next_use)
+		if(feedback)
+			living_owner.balloon_alert(living_owner, "cooling")
+		return FALSE
+	return TRUE
+
+/datum/action/cooldown/cyberdemon/Activate(atom/target)
+	var/mob/living/user = owner
+	if(!istype(user) || !target || target == deck || QDELETED(deck) || QDELETED(demon))
+		return FALSE
+	if(demon.apply(user, target, deck))
+		if(demon.cooldown > 0)
+			StartCooldown(demon.cooldown)
+		return TRUE
 	return FALSE
 
 /obj/item/clothing/gloves/cyberdeck
@@ -1335,11 +1448,37 @@
 	var/list/demons = list()
 	var/compile_cooldown_until = 0
 	var/obj/item/cyberdemon_disk/inserted_disk
+	var/list/demon_actions = list()
 
 /obj/item/clothing/gloves/cyberdeck/Destroy(force)
+	clear_demon_actions()
 	QDEL_LIST(demons)
 	QDEL_NULL(inserted_disk)
 	return ..()
+
+/obj/item/clothing/gloves/cyberdeck/equipped(mob/living/user, slot)
+	. = ..()
+	if(istype(user))
+		sync_demon_actions(user)
+
+/obj/item/clothing/gloves/cyberdeck/dropped(mob/living/user)
+	. = ..()
+	clear_demon_actions()
+
+/obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions()
+	QDEL_LIST(demon_actions)
+	demon_actions = list()
+
+/obj/item/clothing/gloves/cyberdeck/proc/sync_demon_actions(mob/living/user)
+	clear_demon_actions()
+	if(!istype(user) || !(src in user.contents))
+		return
+	for(var/datum/cyberspace_demon/demon as anything in demons)
+		if(QDELETED(demon))
+			continue
+		var/datum/action/cooldown/cyberdemon/demon_action = new(demon, src)
+		demon_actions += demon_action
+		demon_action.Grant(user)
 
 /obj/item/clothing/gloves/cyberdeck/proc/get_used_memory()
 	var/used_memory = 0
@@ -1365,6 +1504,9 @@
 	if(!can_store_demon(demon, user))
 		return FALSE
 	demons += demon
+	var/mob/living/living_user = user
+	if(istype(living_user))
+		sync_demon_actions(living_user)
 	return TRUE
 
 /obj/item/clothing/gloves/cyberdeck/proc/can_compile(mob/user)
@@ -1412,6 +1554,9 @@
 	demons -= demon
 	to_chat(user, span_notice("You delete [demon.demon_name] from [src]."))
 	qdel(demon)
+	var/mob/living/living_user = user
+	if(istype(living_user))
+		sync_demon_actions(living_user)
 	return TRUE
 
 /obj/item/clothing/gloves/cyberdeck/proc/find_held_demon_disk(mob/user)
@@ -1487,13 +1632,13 @@
 	return cyberdemon_compiler_static_data()
 
 /obj/item/clothing/gloves/cyberdeck/ui_data(mob/user)
-	return cyberdemon_storage_ui_data(src, inserted_disk || find_held_cyberdemon_disk(user), null, user)
+	return cyberdemon_storage_ui_data(src, find_accessible_cyberdemon_disk(user, src, null), null, user)
 
 /obj/item/clothing/gloves/cyberdeck/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(!.)
+	if(.)
 		return
-	return handle_cyberdemon_compiler_action(action, params, ui.user, src, inserted_disk || find_held_cyberdemon_disk(ui.user), null)
+	return handle_cyberdemon_compiler_action(action, params, ui.user, src, find_accessible_cyberdemon_disk(ui.user, src, null), null)
 
 /obj/item/clothing/gloves/cyberdeck/attack_self(mob/living/user, modifiers)
 	if(!istype(user))
@@ -1534,7 +1679,8 @@
 	name = "demon disk"
 	desc = "A removable storage disk for compiled demons."
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
-	icon_state = "datadisk0"
+	icon_state = "skillchip"
+	inhand_icon_state = "electronic"
 	w_class = WEIGHT_CLASS_SMALL
 	var/memory_capacity = CYBER_DEMON_DISK_MEMORY
 	var/list/demons = list()
@@ -1636,7 +1782,7 @@
 
 /obj/item/cyberdemon_disk/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(!.)
+	if(.)
 		return
 	return handle_cyberdemon_compiler_action(action, params, ui.user, find_held_cyberdeck(ui.user), src, null)
 
@@ -1716,13 +1862,15 @@
 	return cyberdemon_compiler_static_data()
 
 /obj/machinery/cyberdemon_terminal/ui_data(mob/user)
-	return cyberdemon_storage_ui_data(find_held_cyberdeck(user), inserted_disk || find_held_cyberdemon_disk(user), src, user)
+	var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(user)
+	return cyberdemon_storage_ui_data(deck, find_accessible_cyberdemon_disk(user, deck, src), src, user)
 
 /obj/machinery/cyberdemon_terminal/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(!.)
+	if(.)
 		return
-	return handle_cyberdemon_compiler_action(action, params, ui.user, find_held_cyberdeck(ui.user), inserted_disk || find_held_cyberdemon_disk(ui.user), src)
+	var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(ui.user)
+	return handle_cyberdemon_compiler_action(action, params, ui.user, deck, find_accessible_cyberdemon_disk(ui.user, deck, src), src)
 
 /datum/cyberdemon_debug_compiler
 	var/mob/living/owner
@@ -1748,10 +1896,12 @@
 	return cyberdemon_compiler_static_data()
 
 /datum/cyberdemon_debug_compiler/ui_data(mob/user)
-	return cyberdemon_storage_ui_data(find_held_cyberdeck(user), find_held_cyberdemon_disk(user), null, user, TRUE, "temporary IC compiler", 0)
+	var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(user)
+	return cyberdemon_storage_ui_data(deck, find_accessible_cyberdemon_disk(user, deck, null), null, user, TRUE, "temporary IC compiler", 0)
 
 /datum/cyberdemon_debug_compiler/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(!.)
+	if(.)
 		return
-	return handle_cyberdemon_compiler_action(action, params, ui.user, find_held_cyberdeck(ui.user), find_held_cyberdemon_disk(ui.user), null)
+	var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(ui.user)
+	return handle_cyberdemon_compiler_action(action, params, ui.user, deck, find_accessible_cyberdemon_disk(ui.user, deck, null), null)

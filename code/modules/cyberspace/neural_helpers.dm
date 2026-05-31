@@ -2,31 +2,34 @@
 
 /mob/living/var/tmp/datum/cyberdemon_debug_compiler/cyberdemon_debug_compiler
 
-/proc/create_debug_cyberdemon_disk(mob/living/user, disk_label = null)
+/proc/create_debug_cyberdemon_disk(mob/living/user, disk_label = "Core: wall / blink / cloak / vanish")
 	if(!istype(user))
 		return null
-	var/list/disk_options = list(
-		"Core: wall / blink / cloak / vanish",
-		"Soul: soulcatcher / soulconduit / wall / blink",
-		"Debug: all prebuilt demons",
-	)
 	var/list/disk_types = list(
 		"Core: wall / blink / cloak / vanish" = /obj/item/cyberdemon_disk/prebuilt,
 		"Soul: soulcatcher / soulconduit / wall / blink" = /obj/item/cyberdemon_disk/prebuilt/soul,
 		"Debug: all prebuilt demons" = /obj/item/cyberdemon_disk/prebuilt/debug_all,
 	)
 	var/selected_label = disk_label
-	if(!selected_label || !(selected_label in disk_types))
-		selected_label = tgui_input_list(user, "Choose a temporary prebuilt demon disk.", "Demon disk", disk_options)
-	if(!selected_label)
-		return null
+	if(!(selected_label in disk_types))
+		selected_label = "Core: wall / blink / cloak / vanish"
 	var/disk_type = disk_types[selected_label]
 	var/obj/item/cyberdemon_disk/disk = new disk_type(get_turf(user))
-	if(user.put_in_hands(disk))
+	if(user.put_in_hands(disk, forced = TRUE))
 		to_chat(user, span_notice("You create [disk] ([selected_label])."))
 	else
 		to_chat(user, span_notice("[disk] ([selected_label]) appears at your feet."))
 	return disk
+
+/proc/create_debug_cyberdeck(mob/living/user)
+	if(!istype(user))
+		return null
+	var/obj/item/clothing/gloves/cyberdeck/deck = new(get_turf(user))
+	if(user.put_in_hands(deck, forced = TRUE))
+		to_chat(user, span_notice("You create [deck]."))
+	else
+		to_chat(user, span_notice("[deck] appears at your feet."))
+	return deck
 
 /mob/living/proc/has_living_brain()
 	var/obj/item/organ/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
@@ -124,8 +127,6 @@
 
 	if(stat > CONSCIOUS)
 		return
-	if(!find_held_cyberdemon_disk(src))
-		create_debug_cyberdemon_disk(src, "Core: wall / blink / cloak / vanish")
 	if(!cyberdemon_debug_compiler)
 		cyberdemon_debug_compiler = new(src)
 	cyberdemon_debug_compiler.ui_interact(src)
@@ -138,6 +139,15 @@
 	if(stat > CONSCIOUS)
 		return
 	create_debug_cyberdemon_disk(src)
+
+/mob/living/verb/create_test_cyberdeck()
+	set name = "Create Test Cyberdeck"
+	set category = "IC"
+	set desc = "Create a temporary cyberdeck for development testing."
+
+	if(stat > CONSCIOUS)
+		return
+	create_debug_cyberdeck(src)
 
 /mob/living/verb/create_test_engram_chip()
 	set name = "Create Test Engram Chip"

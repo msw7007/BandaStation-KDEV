@@ -2,7 +2,7 @@
 	. = ..()
 	if(. == COMPONENT_INCOMPATIBLE)
 		return
-	if(ismovable(parent))
+	if(istype(parent, /obj/item/food))
 		parent.AddComponent(/datum/component/perishable, src) // pass ourselves; we aren't in the parent's component list yet
 
 /obj/item/food/Initialize(mapload)
