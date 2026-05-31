@@ -40,6 +40,7 @@
 	return ..()
 
 /obj/effect/cyberspace_wall_shell/CanAllowThrough(atom/movable/mover, border_dir)
+	..()
 	var/mob/eye/cyberspace_avatar/avatar = mover
 	if(istype(avatar) && wall_data)
 		avatar.last_moved = max(avatar.last_moved, world.time + round(wall_data.get_slowdown() / 10))

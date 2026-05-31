@@ -39,16 +39,20 @@
 	return TRUE
 
 /obj/effect/cyberspace_node_shell/attack_hand(mob/user, list/modifiers)
+	if(!cyberspace_node_requires_adjacent(user, src))
+		return TRUE
 	var/mob/living/body = get_cyberspace_user_body(user)
 	if(!body || !node)
 		return TRUE
 	if(body.combat_mode)
 		node.start_cyberspace_attack(body, src)
 		return TRUE
-	open_node_actions(body)
+	ui_interact(body)
 	return TRUE
 
 /obj/effect/cyberspace_node_shell/attack_hand_secondary(mob/user, list/modifiers)
+	if(!cyberspace_node_requires_adjacent(user, src))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	var/mob/living/body = get_cyberspace_user_body(user)
 	if(!body || !node)
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
@@ -61,66 +65,215 @@
 /obj/effect/cyberspace_node_shell/proc/open_node_actions(mob/living/user)
 	if(!user || !node)
 		return FALSE
-	var/has_access = node.has_access(user)
-	var/list/actions = list(
-		"View linked objects",
-		"Start ICE hack",
-		"Connect",
-		"Extract net-data",
+	ui_interact(user)
+	return TRUE
+
+/obj/effect/cyberspace_node_shell/ui_state(mob/user)
+	return GLOB.always_state
+
+/obj/effect/cyberspace_node_shell/ui_interact(mob/user, datum/tgui/ui)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body || !node)
+		return
+	ui = SStgui.try_update_ui(body, src, ui)
+	if(!ui)
+		ui = new(body, src, "CyberNode", name)
+		ui.open()
+
+/obj/effect/cyberspace_node_shell/ui_data(mob/user)
+	return cyberspace_node_ui_data(user, node, name)
+
+/obj/effect/cyberspace_node_shell/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(!.)
+		return
+	return cyberspace_node_ui_act(action, params, ui, ui.user || usr, node, src, name)
+
+/obj/effect/cyberspace_node_shell/proc/get_ui_target(list/params)
+	return cyberspace_node_ui_target(node, params)
+
+/proc/cyberspace_node_interaction_actor(mob/user)
+	if(istype(user, /mob/eye/cyberspace_avatar))
+		return user
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(body?.cyberspace_session?.avatar)
+		return body.cyberspace_session.avatar
+	return user
+
+/proc/cyberspace_node_is_adjacent(mob/user, atom/target)
+	var/mob/actor = cyberspace_node_interaction_actor(user)
+	if(!actor || !target)
+		return FALSE
+	var/turf/actor_turf = get_turf(actor)
+	var/turf/target_turf = get_turf(target)
+	if(!actor_turf || !target_turf || actor_turf.z != target_turf.z)
+		return FALSE
+	return get_dist(actor_turf, target_turf) <= 1
+
+/proc/cyberspace_node_requires_adjacent(mob/user, atom/target)
+	if(cyberspace_node_is_adjacent(user, target))
+		return TRUE
+	var/mob/living/body = get_cyberspace_user_body(user)
+	var/mob/message_target = body || user
+	if(message_target)
+		to_chat(message_target, span_warning("Подойдите вплотную к [target] в киберпространстве."))
+	return FALSE
+
+/proc/cyberspace_node_ui_data(mob/user, datum/cyberspace_node/node, node_name)
+	var/list/data = list()
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body || !node)
+		return data
+	var/datum/cyber_ice/ice = node.get_ice()
+	var/has_access = node.has_access(body)
+	var/connected = body.cyberspace_session?.is_connected_to_node(node)
+	data["node_name"] = node_name
+	data["area"] = node.physical_area?.name || "Unknown"
+	data["objects_count"] = node.get_object_count()
+	data["net_data"] = node.net_data
+	data["extracted"] = node.extracted
+	data["has_access"] = has_access
+	data["connected"] = connected
+	data["can_ice"] = node.can_open_ice_hack()
+	data["combat_mode"] = body.combat_mode
+	data["protection_integrity"] = node.get_protection_integrity_percent()
+	data["permissions"] = list(
+		"open_ui" = node.can_use_control_function(body, "open_ui"),
+		"emag_activate" = node.can_use_control_function(body, "emag_activate"),
+		"emp_activate" = node.can_use_control_function(body, "emp_activate"),
+		"shutdown" = node.can_use_control_function(body, "shutdown"),
+		"settings" = node.can_use_control_function(body, "settings"),
 	)
-	if(has_access)
-		actions += list(
-			"Open control UI",
-			"Glitch",
-			"Short",
-			"Settings",
-		)
-	actions += "Cancel"
-	var/action = tgui_input_list(user, "[has_access ? "Node access granted" : "Node protection active"]. Choose a network action.", name, actions)
-	if(!action || action == "Cancel")
-		return FALSE
-	if(action == "View linked objects")
-		var/list/live_objects = node.get_live_objects()
-		if(!length(live_objects))
-			to_chat(user, span_warning("[name] has no linked objects left."))
-			return FALSE
-		var/list/object_names = list()
-		for(var/atom/movable/live_object as anything in live_objects)
-			object_names += "[live_object] ([live_object.type])"
-		tgui_alert(user, jointext(object_names, "\n"), "Linked objects")
-		return TRUE
-	if(action == "Start ICE hack")
-		node.start_ice_hack(user)
-		return TRUE
-	if(action == "Connect")
-		node.start_cyberspace_connection(user, src)
-		return TRUE
-	if(action == "Extract net-data")
-		node.extract_connected_net_data(user, src)
-		return TRUE
-	if(!has_access)
-		to_chat(user, span_warning("[name] is still protected. Break ICE or obtain a cryptokey before using control actions."))
-		return FALSE
+	data["protection"] = list(
+		"reserve" = ice.current_reserve,
+		"max_reserve" = ice.get_max_reserve(),
+		"breached" = ice.is_breached(),
+		"alarm" = ice.alarm_triggered,
+	)
+
 	var/list/live_objects = node.get_live_objects()
-	if(!length(live_objects))
-		to_chat(user, span_warning("[name] has no linked objects left."))
+	var/list/objects = list()
+	var/object_index = 1
+	for(var/atom/movable/live_object as anything in live_objects)
+		objects += list(cyberspace_node_object_ui_data(live_object, object_index))
+		object_index++
+	data["objects"] = objects
+	return data
+
+/proc/cyberspace_node_ui_act(action, list/params, datum/tgui/ui, mob/user, datum/cyberspace_node/node, atom/visual_anchor, node_name)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body || !node)
 		return FALSE
-	var/atom/movable/target = tgui_input_list(user, "Choose a linked object.", name, live_objects)
+	if(action != "refresh" && !cyberspace_node_requires_adjacent(user, visual_anchor))
+		return FALSE
+	var/static/list/target_commands = list(
+		"open_ui" = TRUE,
+		"emag_activate" = TRUE,
+		"emp_activate" = TRUE,
+		"shutdown" = TRUE,
+		"settings" = TRUE,
+	)
+	if(target_commands[action])
+		to_chat(body, span_notice("Cyberspace node receives command: [action]."))
+	switch(action)
+		if("connect")
+			return node.start_cyberspace_connection(body, visual_anchor)
+		if("extract")
+			return !!node.extract_connected_net_data(body, visual_anchor)
+		if("attack")
+			return node.start_cyberspace_attack(body, visual_anchor)
+		if("ice")
+			return !!node.start_ice_hack(body)
+		if("refresh")
+			return TRUE
+	var/atom/movable/target = cyberspace_node_ui_target(node, params)
 	if(!target)
+		to_chat(body, span_warning("[node_name] has no matching linked object."))
 		return FALSE
 	switch(action)
-		if("Open control UI")
-			if(hascall(target, "ui_interact"))
-				call(target, "ui_interact")(user)
-			else
-				node.run_control_mode(user, target, "control")
-		if("Glitch")
-			node.run_control_mode(user, target, "glitch")
-		if("Short")
-			node.run_control_mode(user, target, "short")
-		if("Settings")
-			node.run_control_mode(user, target, "settings")
-	return TRUE
+		if("open_ui")
+			return node.run_control_mode(body, target, "open_ui")
+		if("emag_activate")
+			return node.run_control_mode(body, target, "emag_activate")
+		if("emp_activate")
+			return node.run_control_mode(body, target, "emp_activate")
+		if("shutdown")
+			return node.run_control_mode(body, target, "shutdown")
+		if("settings")
+			return node.run_control_mode(body, target, "settings")
+		else
+			return FALSE
+
+/proc/cyberspace_node_ui_target(datum/cyberspace_node/node, list/params)
+	if(!node || !params)
+		return null
+	var/target_index = text2num("[params["target_index"]]")
+	if(target_index < 1)
+		return null
+	var/list/live_objects = node.get_live_objects()
+	if(target_index > length(live_objects))
+		return null
+	return live_objects[target_index]
+
+/proc/cyberspace_node_object_ui_data(atom/movable/target, object_index)
+	var/list/functions = list()
+	if(cyberspace_target_can_open_ui(target))
+		functions += "interface"
+	if(cyberspace_target_can_emag(target))
+		functions += "emag_activate"
+	if(cyberspace_target_can_emp(target))
+		functions += "emp_activate"
+	if(cyberspace_target_can_settings(target))
+		functions += "settings"
+	return list(
+		"index" = object_index,
+		"name" = target.name,
+		"type" = "[target.type]",
+		"category" = cyberspace_node_object_category(target),
+		"status" = cyberspace_node_object_status(target),
+		"has_ui" = cyberspace_target_can_open_ui(target),
+		"critical_ice" = is_cyberspace_ice_hack_target(target),
+		"functions" = functions,
+	)
+
+/proc/cyberspace_node_object_category(atom/movable/target)
+	if(istype(target, /obj/machinery/door))
+		return "door"
+	if(istype(target, /obj/machinery/computer))
+		return "computer"
+	if(istype(target, /obj/machinery/camera))
+		return "camera"
+	if(istype(target, /obj/machinery/vending))
+		return "vending"
+	if(istype(target, /obj/machinery/power/apc))
+		return "power"
+	if(istype(target, /obj/machinery/airalarm) || istype(target, /obj/machinery/firealarm))
+		return "alarm"
+	if(istype(target, /obj/structure/server) || istype(target, /obj/machinery/telecomms/server) || istype(target, /obj/machinery/rnd/server))
+		return "server"
+	if(isliving(target))
+		return "neural"
+	if(istype(target, /obj/item/organ/cyberimp))
+		return "implant"
+	if(istype(target, /obj/machinery))
+		return "machine"
+	return "object"
+
+/proc/cyberspace_node_object_status(atom/movable/target)
+	if(!target)
+		return "missing"
+	if("machine_stat" in target.vars)
+		var/machine_state = target.vars["machine_stat"]
+		if(machine_state & BROKEN)
+			return "broken"
+		if(machine_state & NOPOWER)
+			return "no power"
+		if(machine_state & EMPED)
+			return "emp"
+		return "online"
+	if(QDELETED(target))
+		return "deleted"
+	return "active"
 
 /obj/effect/cyberspace_object_trace
 	name = "network trace"
@@ -141,6 +294,7 @@
 	if(linked_object)
 		linked_object_ref = WEAKREF(linked_object)
 		appearance = linked_object.appearance
+		dir = linked_object.dir
 		layer = ABOVE_MOB_LAYER
 		plane = GAME_PLANE
 		alpha = 170
@@ -166,18 +320,20 @@
 	return TRUE
 
 /obj/effect/cyberspace_object_trace/attack_hand(mob/user, list/modifiers)
+	if(!cyberspace_node_requires_adjacent(user, src))
+		return TRUE
 	var/mob/living/body = get_cyberspace_user_body(user)
 	if(!body || !node)
 		return TRUE
 	if(body.combat_mode)
 		node.start_cyberspace_attack(body, src)
 		return TRUE
-	var/obj/effect/cyberspace_node_shell/proxy = new(get_turf(src), node)
-	proxy.open_node_actions(body)
-	qdel(proxy)
+	ui_interact(body)
 	return TRUE
 
 /obj/effect/cyberspace_object_trace/attack_hand_secondary(mob/user, list/modifiers)
+	if(!cyberspace_node_requires_adjacent(user, src))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	var/mob/living/body = get_cyberspace_user_body(user)
 	if(!body || !node)
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
@@ -186,6 +342,27 @@
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	node.extract_connected_net_data(body, src)
 	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+
+/obj/effect/cyberspace_object_trace/ui_state(mob/user)
+	return GLOB.always_state
+
+/obj/effect/cyberspace_object_trace/ui_interact(mob/user, datum/tgui/ui)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body || !node)
+		return
+	ui = SStgui.try_update_ui(body, src, ui)
+	if(!ui)
+		ui = new(body, src, "CyberNode", name)
+		ui.open()
+
+/obj/effect/cyberspace_object_trace/ui_data(mob/user)
+	return cyberspace_node_ui_data(user, node, name)
+
+/obj/effect/cyberspace_object_trace/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(!.)
+		return
+	return cyberspace_node_ui_act(action, params, ui, ui.user || usr, node, src, name)
 
 /obj/effect/cyberspace_imprint_shell
 	name = "neural imprint"

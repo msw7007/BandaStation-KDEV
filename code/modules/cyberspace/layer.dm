@@ -96,6 +96,7 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 	var/datum/space_level/cyberspace_level = SSmapping.add_new_zlevel("Cyberspace", list(ZTRAIT_CYBERSPACE = TRUE))
 	if(!cyberspace_level)
 		return FALSE
+	ensure_spatial_grid_for_z(cyberspace_level)
 	SScyberspace.cyberspace_z = cyberspace_level.z_value
 	width = world.maxx
 	height = world.maxy
@@ -109,6 +110,13 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 	if(!origin_turf)
 		return FALSE
 	return TRUE
+
+/datum/cyberspace_layer/proc/ensure_spatial_grid_for_z(datum/space_level/cyberspace_level)
+	if(!cyberspace_level || !SSspatial_grid?.initialized)
+		return
+	if(length(SSspatial_grid.grids_by_z_level) >= cyberspace_level.z_value && SSspatial_grid.grids_by_z_level[cyberspace_level.z_value])
+		return
+	SSspatial_grid.propogate_spatial_grid_to_new_z(null, cyberspace_level)
 
 /datum/cyberspace_layer/proc/build(mob/living/source)
 	if(!source)
@@ -253,9 +261,14 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 		var/turf/node_turf = resolve_node_turf(node)
 		if(!node_turf)
 			continue
+		if(node.trace_only)
+			var/list/live_objects = node.get_live_objects()
+			var/atom/movable/linked_object = length(live_objects) ? live_objects[1] : node.anchor
+			var/obj/effect/cyberspace_object_trace/trace = new(node_turf, linked_object, node)
+			rendered_entities += trace
+			continue
 		var/obj/effect/cyberspace_node_shell/shell = new(node_turf, node)
 		rendered_entities += shell
-		render_object_traces(node, node_turf)
 		render_imprints(node, node_turf)
 
 /datum/cyberspace_layer/proc/render_object_traces(datum/cyberspace_node/node, turf/node_turf)
@@ -385,16 +398,8 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 	return locate(origin_turf.x + round(width * 0.5), origin_turf.y + round(height * 0.5), origin_turf.z)
 
 /datum/cyberspace_layer/proc/get_entry_turf_for(atom/movable/source)
-	var/datum/cyberspace_node/nearest_node = get_nearest_node(source)
-	if(!nearest_node)
-		return get_entry_turf()
-	var/turf/node_turf = resolve_node_turf(nearest_node)
-	if(!node_turf)
-		return get_entry_turf()
-	for(var/direction in GLOB.alldirs)
-		var/turf/step_turf = get_step(node_turf, direction)
-		if(step_turf && !step_turf.density && network_turf_lookup[step_turf])
-			return step_turf
-	if(!node_turf.density && network_turf_lookup[node_turf])
-		return node_turf
+	if(source)
+		var/turf/source_coordinate_turf = resolve_physical_turf(source.x, source.y)
+		if(source_coordinate_turf && !source_coordinate_turf.density)
+			return source_coordinate_turf
 	return get_entry_turf()

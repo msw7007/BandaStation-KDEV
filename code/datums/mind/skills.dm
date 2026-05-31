@@ -1,3 +1,28 @@
+/datum/mind/var/list/cyberdemon_skill_modifiers = list()
+
+/datum/mind/proc/get_cyberdemon_skill_modifier(skill)
+	var/total_modifier = 0
+	for(var/modifier_key in cyberdemon_skill_modifiers)
+		var/list/modifier_data = cyberdemon_skill_modifiers[modifier_key]
+		if(!modifier_data || modifier_data["skill"] != skill)
+			continue
+		total_modifier += modifier_data["amount"] || 0
+	return total_modifier
+
+/datum/mind/proc/add_cyberdemon_skill_modifier(skill, amount, duration, source_name = "demon")
+	if(!skill || !amount || duration <= 0)
+		return null
+	var/modifier_key = "[source_name]-[skill]-[world.time]-[rand(1, 99999)]"
+	cyberdemon_skill_modifiers[modifier_key] = list(
+		"skill" = skill,
+		"amount" = amount,
+	)
+	addtimer(CALLBACK(src, PROC_REF(remove_cyberdemon_skill_modifier), modifier_key), duration)
+	return modifier_key
+
+/datum/mind/proc/remove_cyberdemon_skill_modifier(modifier_key)
+	cyberdemon_skill_modifiers -= modifier_key
+
 /datum/mind/proc/init_known_skills()
 	for (var/type in GLOB.skill_types)
 		known_skills[type] = list(SKILL_LEVEL_NONE, 0)
@@ -243,7 +268,8 @@
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.is_character_skill())
 		return clamp((get_skill_level(skill) * 10) + modifier, CHARACTER_SKILL_CHECK_MINIMUM, CHARACTER_SKILL_CHECK_MAXIMUM)
-	var/check_value = (get_character_skill_level(skill) * 10) + (get_attribute_value(skill_datum.attribute_id) * 5) + modifier
+	var/effective_skill_level = max(CHARACTER_SKILL_LEVEL_NONE, get_character_skill_level(skill) + get_cyberdemon_skill_modifier(skill))
+	var/check_value = (effective_skill_level * 10) + (get_attribute_value(skill_datum.attribute_id) * 5) + modifier
 	if(apply_body_penalty && isliving(current))
 		var/mob/living/living_current = current
 		check_value *= (1 - living_current.get_check_penalty())

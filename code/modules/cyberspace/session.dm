@@ -99,12 +99,15 @@
 	var/active = FALSE
 	var/next_layer_refresh = 0
 	var/datum/weakref/connected_node_ref
+	var/datum/weakref/engram_anchor_ref
 	var/attack_token
 
-/datum/cyberspace_session/New(mob/living/body, mode = CYBERSPACE_MODE_AVATAR)
+/datum/cyberspace_session/New(mob/living/body, mode = CYBERSPACE_MODE_AVATAR, atom/movable/engram_anchor = null)
 	. = ..()
 	src.body = body
 	src.mode = mode
+	if(engram_anchor)
+		engram_anchor_ref = WEAKREF(engram_anchor)
 
 /datum/cyberspace_session/Destroy(force)
 	if(body?.cyberspace_session == src)
@@ -117,16 +120,18 @@
 	connection_origin = null
 	local_nodes = null
 	connected_node_ref = null
+	engram_anchor_ref = null
 	attack_token = null
 	return ..()
 
 /datum/cyberspace_session/proc/begin()
 	if(!body || body.stat > CONSCIOUS)
 		return FALSE
-	if(!body.has_neural_implant())
+	if(mode != CYBERSPACE_MODE_ENGRAM && !body.has_neural_implant())
 		to_chat(body, span_warning("Your body has no functional neural interface."))
 		return FALSE
-	body_origin = get_turf(body)
+	var/atom/movable/entry_source = get_engram_anchor() || body
+	body_origin = get_turf(entry_source)
 	if(!body_origin)
 		return FALSE
 	layer = SScyberspace?.ensure_ready()
@@ -135,15 +140,17 @@
 		return FALSE
 	body.cyberspace_session = src
 	local_nodes = layer.nodes
-	var/datum/cyberspace_node/entry_node = layer.get_nearest_node(body)
-	var/turf/entry_turf = layer.get_entry_turf_for(body)
+	var/datum/cyberspace_node/entry_node = layer.get_nearest_node(entry_source)
+	var/turf/entry_turf = layer.get_entry_turf_for(entry_source)
 	if(!entry_turf)
 		return FALSE
 	avatar = new(entry_turf)
 	avatar_origin = entry_turf
 	avatar.assign_body(body, src)
 	active = TRUE
-	if(entry_node)
+	if(mode == CYBERSPACE_MODE_ENGRAM)
+		to_chat(body, span_notice("Your engram unfolds into the cyberspace layer from [entry_source]."))
+	else if(entry_node)
 		to_chat(body, span_notice("Your neural interface projects an avatar into the cyberspace layer near [entry_node.physical_area?.name || "unknown area"] ([entry_node.get_object_count()] linked object(s), [length(local_nodes)] total node(s))."))
 	else
 		to_chat(body, span_notice("Your neural interface projects an avatar into the cyberspace layer. [length(local_nodes)] total node(s) resolve."))
@@ -161,15 +168,26 @@
 /datum/cyberspace_session/proc/can_return_to_body()
 	if(!body || !avatar || !body_origin)
 		return FALSE
-	return get_dist(avatar, body_origin) <= CYBERSPACE_RETURN_TO_BODY_RANGE
+	var/atom/movable/anchor = get_engram_anchor()
+	if(mode == CYBERSPACE_MODE_ENGRAM && anchor)
+		var/turf/anchor_turf = get_cyberspace_reference_turf(anchor)
+		return anchor_turf && get_dist(avatar, anchor_turf) <= CYBERSPACE_ENGRAM_PHYSICAL_RANGE
+	var/turf/body_turf = get_cyberspace_reference_turf(body)
+	return body_turf && get_dist(avatar, body_turf) <= CYBERSPACE_RETURN_TO_BODY_RANGE
 
 /datum/cyberspace_session/proc/check_avatar_link()
 	if(!active || QDELETED(src) || !body || !avatar)
 		return
 	if(body.stat == DEAD || !body.has_neural_implant())
+		if(mode != CYBERSPACE_MODE_ENGRAM)
+			end_session(FALSE)
+			return
+	var/atom/movable/anchor = get_engram_anchor()
+	if(mode == CYBERSPACE_MODE_ENGRAM && !anchor)
 		end_session(FALSE)
 		return
-	var/turf/safe_origin = connection_origin || avatar_origin
+	var/turf/anchor_turf = anchor ? get_cyberspace_reference_turf(anchor) : null
+	var/turf/safe_origin = connection_origin || anchor_turf || get_cyberspace_reference_turf(body) || avatar_origin
 	var/current_distance = get_dist(avatar, safe_origin)
 	if(current_distance > get_safe_distance())
 		apply_distance_strain(current_distance)
@@ -180,6 +198,24 @@
 
 /datum/cyberspace_session/proc/get_safe_distance()
 	return mode == CYBERSPACE_MODE_ENGRAM ? CYBERSPACE_ENGRAM_SAFE_DISTANCE : CYBERSPACE_AVATAR_SAFE_DISTANCE
+
+/datum/cyberspace_session/proc/get_engram_anchor()
+	return engram_anchor_ref?.resolve()
+
+/datum/cyberspace_session/proc/set_engram_anchor(atom/movable/new_anchor)
+	if(!new_anchor)
+		return FALSE
+	engram_anchor_ref = WEAKREF(new_anchor)
+	body_origin = get_turf(new_anchor)
+	var/turf/anchor_turf = get_cyberspace_reference_turf(new_anchor)
+	connection_origin = anchor_turf || avatar_origin
+	avatar_origin = anchor_turf || avatar_origin
+	return TRUE
+
+/datum/cyberspace_session/proc/get_cyberspace_reference_turf(atom/movable/source)
+	if(!source)
+		return null
+	return layer?.get_entry_turf_for(source)
 
 /datum/cyberspace_session/proc/apply_distance_strain(current_distance)
 	var/overflow = max(0, current_distance - get_safe_distance())

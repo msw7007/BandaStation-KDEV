@@ -167,16 +167,31 @@ SUBSYSTEM_DEF(spatial_grid)
 ///creates the spatial grid for a new z level
 /datum/controller/subsystem/spatial_grid/proc/propogate_spatial_grid_to_new_z(datum/controller/subsystem/processing/dcs/fucking_dcs, datum/space_level/z_level)
 	SIGNAL_HANDLER
+	if(!z_level)
+		return
+	ensure_grid_for_z(z_level.z_value)
 
+/datum/controller/subsystem/spatial_grid/proc/build_grid_for_z(z_value)
 	var/list/new_cell_grid = list()
-
-	grids_by_z_level += list(new_cell_grid)
 
 	for(var/y in 1 to cells_on_y_axis)
 		new_cell_grid += list(list())
 		for(var/x in 1 to cells_on_x_axis)
-			var/datum/spatial_grid_cell/cell = new(x, y, z_level.z_value)
+			var/datum/spatial_grid_cell/cell = new(x, y, z_value)
 			new_cell_grid[y] += cell
+	return new_cell_grid
+
+/datum/controller/subsystem/spatial_grid/proc/ensure_grid_for_z(z_value)
+	if(!z_value || z_value < 1 || !cells_on_x_axis || !cells_on_y_axis)
+		return null
+	if(length(grids_by_z_level) < z_value)
+		grids_by_z_level.len = z_value
+	var/list/grid_level = grids_by_z_level[z_value]
+	if(grid_level)
+		return grid_level
+	grid_level = build_grid_for_z(z_value)
+	grids_by_z_level[z_value] = grid_level
+	return grid_level
 
 ///adds cells to the grid for every z level when world.maxx or world.maxy is expanded after this subsystem is initialized. hopefully this is never needed.
 ///because i never tested this.
@@ -232,6 +247,8 @@ SUBSYSTEM_DEF(spatial_grid)
  */
 /datum/controller/subsystem/spatial_grid/proc/orthogonal_range_search(atom/center, type, range)
 	var/turf/center_turf = get_turf(center)
+	if(!center_turf)
+		return list()
 
 	var/center_x = center_turf.x//used inside the macros
 	var/center_y = center_turf.y
@@ -239,7 +256,9 @@ SUBSYSTEM_DEF(spatial_grid)
 	. = list()
 
 	//technically THIS list only contains lists, but inside those lists are grid cell datums and we can go without a SINGLE var init if we do this
-	var/list/list/datum/spatial_grid_cell/grid_level = grids_by_z_level[center_turf.z]
+	var/list/list/datum/spatial_grid_cell/grid_level = ensure_grid_for_z(center_turf.z)
+	if(!grid_level)
+		return .
 
 	switch(type)
 		if(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)
@@ -267,7 +286,9 @@ SUBSYSTEM_DEF(spatial_grid)
 	if(!target_turf)
 		return
 
-	return grids_by_z_level[target_turf.z][GET_SPATIAL_INDEX(target_turf.y)][GET_SPATIAL_INDEX(target_turf.x)]
+	var/list/grid_level = ensure_grid_for_z(target_turf.z)
+	var/list/grid_row = grid_level?[GET_SPATIAL_INDEX(target_turf.y)]
+	return grid_row?[GET_SPATIAL_INDEX(target_turf.x)]
 
 ///get all grid cells intersecting the bounding box around center with sides of length 2 * range
 /datum/controller/subsystem/spatial_grid/proc/get_cells_in_range(atom/center, range)
@@ -276,6 +297,8 @@ SUBSYSTEM_DEF(spatial_grid)
 ///get all grid cells intersecting the bounding box around center with sides of length (2 * range_x, 2 * range_y)
 /datum/controller/subsystem/spatial_grid/proc/get_cells_in_bounds(atom/center, range_x, range_y)
 	var/turf/center_turf = get_turf(center)
+	if(!center_turf)
+		return list()
 
 	var/center_x = center_turf.x
 	var/center_y = center_turf.y
@@ -290,13 +313,19 @@ SUBSYSTEM_DEF(spatial_grid)
 	var/max_x = min(GET_SPATIAL_INDEX(center_x + range_x), cells_on_x_axis)
 	var/max_y = min(GET_SPATIAL_INDEX(center_y + range_y), cells_on_y_axis)
 
-	var/list/grid_level = grids_by_z_level[center_turf.z]
+	var/list/grid_level = ensure_grid_for_z(center_turf.z)
+	if(!grid_level)
+		return intersecting_grid_cells
 
 	for(var/row in min_y to max_y)
 		var/list/grid_row = grid_level[row]
+		if(!grid_row)
+			continue
 
 		for(var/x_index in min_x to max_x)
-			intersecting_grid_cells += grid_row[x_index]
+			var/datum/spatial_grid_cell/grid_cell = grid_row[x_index]
+			if(grid_cell)
+				intersecting_grid_cells += grid_cell
 
 	return intersecting_grid_cells
 
@@ -367,7 +396,11 @@ SUBSYSTEM_DEF(spatial_grid)
 	var/y_index = GET_SPATIAL_INDEX(target_turf.y)
 	var/z_index = target_turf.z
 
-	var/datum/spatial_grid_cell/intersecting_cell = grids_by_z_level[z_index][y_index][x_index]
+	var/list/grid_level = ensure_grid_for_z(z_index)
+	var/list/grid_row = grid_level?[y_index]
+	var/datum/spatial_grid_cell/intersecting_cell = grid_row?[x_index]
+	if(!intersecting_cell)
+		return FALSE
 	for(var/type in spatial_grid_categories[new_target.spatial_grid_key])
 		switch(type)
 			if(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)
@@ -398,7 +431,11 @@ SUBSYSTEM_DEF(spatial_grid)
 	var/y_index = GET_SPATIAL_INDEX(target_turf.y)
 	var/z_index = target_turf.z
 
-	var/datum/spatial_grid_cell/intersecting_cell = grids_by_z_level[z_index][y_index][x_index]
+	var/list/grid_level = ensure_grid_for_z(z_index)
+	var/list/grid_row = grid_level?[y_index]
+	var/datum/spatial_grid_cell/intersecting_cell = grid_row?[x_index]
+	if(!intersecting_cell)
+		return FALSE
 	switch(exclusive_type)
 		if(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)
 			var/list/new_target_contents = new_target.important_recursive_contents //cache for sanic speeds (lists are references anyways)
@@ -436,7 +473,11 @@ SUBSYSTEM_DEF(spatial_grid)
 	var/y_index = GET_SPATIAL_INDEX(target_turf.y)
 	var/z_index = target_turf.z
 
-	var/datum/spatial_grid_cell/intersecting_cell = grids_by_z_level[z_index][y_index][x_index]
+	var/list/grid_level = ensure_grid_for_z(z_index)
+	var/list/grid_row = grid_level?[y_index]
+	var/datum/spatial_grid_cell/intersecting_cell = grid_row?[x_index]
+	if(!intersecting_cell)
+		return FALSE
 	for(var/type in spatial_grid_categories[old_target.spatial_grid_key])
 		switch(type)
 			if(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)
@@ -468,7 +509,11 @@ SUBSYSTEM_DEF(spatial_grid)
 	var/y_index = GET_SPATIAL_INDEX(target_turf.y)
 	var/z_index = target_turf.z
 
-	var/datum/spatial_grid_cell/intersecting_cell = grids_by_z_level[z_index][y_index][x_index]
+	var/list/grid_level = ensure_grid_for_z(z_index)
+	var/list/grid_row = grid_level?[y_index]
+	var/datum/spatial_grid_cell/intersecting_cell = grid_row?[x_index]
+	if(!intersecting_cell)
+		return FALSE
 
 	switch(exclusive_type)
 		if(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)

@@ -25,8 +25,10 @@
 	var/area/physical_area
 	/// Physical area type is kept separately so nearest-node lookup can prefer the local area even if the area datum changes.
 	var/physical_area_type
-	/// Source-world Z level. Nodes on different physical Z levels must not be merged by identical X/Y coordinates.
+	/// Representative source-world Z level. Aggregate nodes can merge same-area objects across main-map Z levels.
 	var/source_z = 0
+	/// Single-object trace nodes are rendered as TRACE and never merged into aggregate area nodes.
+	var/trace_only = FALSE
 	/// Representative physical object for messages and fallback targeting.
 	var/atom/movable/anchor
 	var/cyber_x = 0
@@ -101,11 +103,13 @@
 /datum/cyberspace_node/proc/can_merge_with(datum/cyberspace_node/other_node)
 	if(!other_node)
 		return FALSE
-	if(source_z && other_node.source_z && source_z != other_node.source_z)
+	if(trace_only || other_node.trace_only)
 		return FALSE
 	if(get_object_count() + other_node.get_object_count() > CYBERSPACE_NODE_MAX_OBJECTS)
 		return FALSE
-	return abs(cyber_x - other_node.cyber_x) <= CYBERSPACE_NODE_MERGE_RANGE && abs(cyber_y - other_node.cyber_y) <= CYBERSPACE_NODE_MERGE_RANGE
+	var/x_delta = cyber_x - other_node.cyber_x
+	var/y_delta = cyber_y - other_node.cyber_y
+	return sqrt((x_delta * x_delta) + (y_delta * y_delta)) <= CYBERSPACE_NODE_MERGE_RANGE
 
 /datum/cyberspace_node/proc/merge_from(datum/cyberspace_node/other_node)
 	if(!other_node || !can_merge_with(other_node))
@@ -130,8 +134,17 @@
 		ice = create_cyber_node_ice(max(1, get_object_count()))
 	return ice
 
+/datum/cyberspace_node/proc/can_open_ice_hack()
+	for(var/atom/movable/object as anything in get_live_objects())
+		if(is_cyberspace_ice_hack_target(object))
+			return TRUE
+	return FALSE
+
 /datum/cyberspace_node/proc/start_ice_hack(mob/living/hacker, datum/cyberspace_cryptokey/provided_key = null)
 	if(!hacker)
+		return null
+	if(!can_open_ice_hack())
+		to_chat(hacker, span_warning("This node has no neural interface or server-grade ICE endpoint. Use direct attack, connection, or node actions instead."))
 		return null
 	if(has_access(hacker, provided_key))
 		to_chat(hacker, span_notice("Cryptographic key accepted. Node ICE bypassed."))
@@ -151,6 +164,27 @@
 		for(var/datum/cyberspace_cryptokey/cryptokey as anything in cryptokeys)
 			if(user.mind.has_cyber_cryptokey(cryptokey))
 				return TRUE
+	return FALSE
+
+/datum/cyberspace_node/proc/get_protection_integrity_percent()
+	var/datum/cyber_ice/node_ice = get_ice()
+	var/max_reserve = max(1, node_ice.get_max_reserve())
+	return clamp(round((node_ice.current_reserve / max_reserve) * 100), 0, 100)
+
+/datum/cyberspace_node/proc/can_use_control_function(mob/living/user, function_id)
+	switch(function_id)
+		if("control")
+			return has_access(user)
+		if("open_ui")
+			return has_access(user)
+		if("settings")
+			return has_access(user)
+		if("emag_activate")
+			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMAG_INTEGRITY_THRESHOLD
+		if("emp_activate")
+			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD
+		if("shutdown")
+			return get_protection_integrity_percent() <= CYBERSPACE_NODE_SHUTDOWN_INTEGRITY_THRESHOLD
 	return FALSE
 
 /datum/cyberspace_node/proc/extract_net_data(mob/living/user)
@@ -259,19 +293,84 @@
 	return extracted_data
 
 /datum/cyberspace_node/proc/run_control_mode(mob/living/user, atom/movable/target, mode = "control")
-	if(!user || !target || !has_access(user))
+	if(!user || !target)
+		return FALSE
+	if(!can_use_control_function(user, mode))
+		to_chat(user, span_warning("Cyberspace command failed: [target] refuses [mode]. Break more protection or use a valid cryptographic key."))
 		return FALSE
 	switch(mode)
 		if("control")
 			to_chat(user, span_notice("Node grants control access to [target]."))
-		if("glitch")
-			target.emag_act(user)
-		if("short")
-			target.emp_act(EMP_HEAVY)
+		if("open_ui")
+			return cyberspace_target_open_ui(user, target)
+		if("emag_activate")
+			return cyberspace_target_emag(user, target)
+		if("emp_activate")
+			return cyberspace_target_emp(user, target)
+		if("shutdown")
+			return cyberspace_target_shutdown(user, target)
 		if("settings")
-			to_chat(user, span_notice("Node exposes settings for [target]."))
+			return cyberspace_target_settings(user, target)
 		else
 			return FALSE
+	return TRUE
+
+/proc/cyberspace_target_can_open_ui(atom/movable/target)
+	return !isnull(target) && hascall(target, "ui_interact")
+
+/proc/cyberspace_target_can_settings(atom/movable/target)
+	return cyberspace_target_can_open_ui(target)
+
+/proc/cyberspace_target_can_emag(atom/movable/target)
+	return !isnull(target) && hascall(target, "emag_act")
+
+/proc/cyberspace_target_can_emp(atom/movable/target)
+	return !isnull(target) && hascall(target, "emp_act")
+
+/proc/cyberspace_target_can_shutdown(atom/movable/target)
+	return istype(target, /obj/machinery)
+
+/proc/cyberspace_target_open_ui(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_open_ui(target))
+		to_chat(user, span_warning("[target] does not expose a remote interface."))
+		return FALSE
+	to_chat(user, span_notice("Cyberspace command accepted: opening remote interface for [target]."))
+	call(target, "ui_interact")(user)
+	return TRUE
+
+/proc/cyberspace_target_settings(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_settings(target))
+		to_chat(user, span_warning("[target] does not expose configurable remote settings."))
+		return FALSE
+	to_chat(user, span_notice("Cyberspace command accepted: opening remote settings for [target]."))
+	call(target, "ui_interact")(user)
+	return TRUE
+
+/proc/cyberspace_target_emag(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_emag(target))
+		to_chat(user, span_warning("[target] does not expose /proc/emag_activate(target)."))
+		return FALSE
+	to_chat(user, span_notice("Cyberspace command accepted: executing /proc/emag_activate(target) on [target]."))
+	var/result = call(target, "emag_act")(user)
+	to_chat(user, result ? span_notice("/proc/emag_activate(target) reports success.") : span_warning("/proc/emag_activate(target) reports no visible effect."))
+	return TRUE
+
+/proc/cyberspace_target_emp(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_emp(target))
+		to_chat(user, span_warning("[target] does not expose /proc/emp_activate(target)."))
+		return FALSE
+	to_chat(user, span_notice("Cyberspace command accepted: executing /proc/emp_activate(target) on [target]."))
+	var/result = call(target, "emp_act")(EMP_HEAVY)
+	to_chat(user, result ? span_notice("/proc/emp_activate(target) reports success.") : span_warning("/proc/emp_activate(target) reports no visible confirmation."))
+	return TRUE
+
+/proc/cyberspace_target_shutdown(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_shutdown(target))
+		to_chat(user, span_warning("[target] does not expose a shutdown channel."))
+		return FALSE
+	var/obj/machinery/target_machine = target
+	to_chat(user, span_notice("Cyberspace command accepted: executing /proc/shutdown(target) on [target]."))
+	target_machine.set_machine_stat(target_machine.machine_stat | NOPOWER)
 	return TRUE
 
 /datum/cyberspace_node/proc/get_live_objects()

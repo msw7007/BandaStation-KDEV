@@ -186,6 +186,13 @@
 /obj/item/organ/cyberimp/brain/neural_interface/proc/set_ice_distribution(timer, size, sequence, reserve)
 	return get_ice().set_distribution(timer, size, sequence, reserve)
 
+/obj/item/organ/cyberimp/brain/neural_interface/proc/open_ice_configuration(mob/living/user)
+	if(!user)
+		return FALSE
+	var/datum/cyber_ice_configurator/configurator = new(src, owner)
+	configurator.ui_interact(user)
+	return TRUE
+
 /obj/item/organ/cyberimp/brain/neural_interface/proc/has_cryptographic_key(key)
 	return !isnull(key) && key == cryptographic_key
 
