@@ -1,3 +1,10 @@
 #include "_food_and_drinks.dm"
 
 #include "code/drinks.dm"
+
+#include "code/quality/_quality_defines.dm"
+#include "code/quality/quality_labels.dm"
+#include "code/quality/perishable_quality.dm"
+#include "code/quality/compatibility.dm"
+#include "code/quality/decomposition_hook.dm"
+#include "code/quality/cold_areas.dm"
