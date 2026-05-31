@@ -30,6 +30,7 @@
 	for(var/atom/movable/candidate as anything in candidates)
 		if(!candidate)
 			continue
+		var/trace_only = is_cyberspace_trace_object(candidate)
 		var/group_key = get_cyberspace_node_group_key(candidate)
 		var/list/datum/cyberspace_node/group_nodes = grouped_nodes[group_key]
 		if(!group_nodes)
@@ -37,20 +38,25 @@
 			grouped_nodes[group_key] = group_nodes
 		var/datum/cyberspace_node/target_node
 		for(var/datum/cyberspace_node/existing_node as anything in group_nodes)
+			if(existing_node?.trace_only != trace_only)
+				continue
 			if(existing_node?.get_object_count() < CYBERSPACE_NODE_MAX_OBJECTS)
 				target_node = existing_node
 				break
 		if(!target_node)
 			target_node = new(candidate)
+			target_node.trace_only = trace_only
 			group_nodes += target_node
 			nodes += target_node
 		target_node.add_object(candidate)
 	return merge_nearby_cyberspace_nodes(nodes)
 
 /proc/get_cyberspace_node_group_key(atom/movable/candidate)
+	if(is_cyberspace_trace_object(candidate))
+		return "trace|\ref[candidate]"
 	var/area/candidate_area = get_area(candidate)
-	var/area_key = candidate_area ? "\ref[candidate_area]" : "[/area]"
-	return "[candidate.z]|[area_key]"
+	var/area_key = candidate_area ? "[candidate_area.type]" : "[/area]"
+	return "area|[area_key]"
 
 /proc/collect_all_cyberspace_network_objects()
 	var/list/candidates = list()
@@ -163,6 +169,7 @@
 		return living_candidate.can_be_net_target() && !living_candidate.is_projected_into_cyberspace()
 	return istype(candidate, /obj/machinery/door) \
 		|| istype(candidate, /obj/machinery/camera) \
+		|| istype(candidate, /obj/machinery/light) \
 		|| istype(candidate, /obj/machinery/vending) \
 		|| istype(candidate, /obj/machinery/computer) \
 		|| istype(candidate, /obj/machinery/airalarm) \
@@ -175,6 +182,28 @@
 		|| istype(candidate, /mob/living/simple_animal/bot) \
 		|| istype(candidate, /obj/item/organ/cyberimp)
 
+/proc/is_cyberspace_trace_object(atom/movable/candidate)
+	if(!candidate)
+		return FALSE
+	return istype(candidate, /obj/machinery/door) \
+		|| istype(candidate, /obj/machinery/camera) \
+		|| istype(candidate, /obj/machinery/light)
+
+/proc/is_cyberspace_ice_hack_target(atom/movable/candidate)
+	if(!candidate)
+		return FALSE
+	if(isliving(candidate))
+		var/mob/living/living_candidate = candidate
+		return living_candidate.can_be_net_target()
+	return istype(candidate, /obj/structure/server) \
+		|| istype(candidate, /obj/machinery/rnd/server) \
+		|| istype(candidate, /obj/machinery/telecomms/server) \
+		|| istype(candidate, /obj/machinery/telecomms/message_server) \
+		|| istype(candidate, /obj/machinery/computer/telecomms/server) \
+		|| istype(candidate, /obj/machinery/computer/rdservercontrol) \
+		|| istype(candidate, /obj/machinery/quantum_server) \
+		|| istype(candidate, /obj/machinery/cyberdemon_terminal)
+
 /proc/get_cyberspace_manufacturer(atom/movable/target)
 	if(!target)
 		return "independent"
@@ -185,7 +214,7 @@
 	return "independent"
 
 /proc/get_cyberspace_net_data_amount(atom/movable/target)
-	if(istype(target, /obj/machinery/door) || istype(target, /obj/machinery/camera))
+	if(istype(target, /obj/machinery/door) || istype(target, /obj/machinery/camera) || istype(target, /obj/machinery/light))
 		return CYBERSPACE_NET_DATA_DOOR_CAMERA
 	if(istype(target, /obj/machinery/computer) || istype(target, /obj/structure/server))
 		return CYBERSPACE_NET_DATA_TERMINAL_SERVER

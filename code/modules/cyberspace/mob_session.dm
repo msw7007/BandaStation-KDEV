@@ -3,12 +3,16 @@
 
 /mob/living
 	var/datum/cyberspace_session/cyberspace_session
+	var/tmp/cyberspace_transition_blocked_until = 0
 
-/mob/living/proc/start_cyberspace_session(mode = CYBERSPACE_MODE_AVATAR)
+/mob/living/proc/start_cyberspace_session(mode = CYBERSPACE_MODE_AVATAR, atom/movable/engram_anchor = null)
 	if(cyberspace_session)
 		cyberspace_session.end_session()
 		return TRUE
-	var/datum/cyberspace_session/session = new(src, mode)
+	if(world.time < cyberspace_transition_blocked_until)
+		to_chat(src, span_warning("Your neural pattern is transition-locked for [DisplayTimeText(cyberspace_transition_blocked_until - world.time)]."))
+		return FALSE
+	var/datum/cyberspace_session/session = new(src, mode, engram_anchor)
 	if(!session.begin())
 		qdel(session)
 		return FALSE

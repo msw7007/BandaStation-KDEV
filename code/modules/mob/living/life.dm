@@ -243,11 +243,13 @@
 	return floor_value
 
 /mob/living/proc/get_effective_chromity()
+	var/effective_chromity = chromity
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_owner = src
 		if(carbon_owner.dna)
-			return chromity * carbon_owner.dna.get_humanoidity_chromity_multiplier()
-	return chromity
+			effective_chromity *= carbon_owner.dna.get_humanoidity_chromity_multiplier()
+	effective_chromity -= get_neural_ice_chromity_penalty()
+	return max(0, effective_chromity)
 
 /mob/living/proc/adjust_chromity_overheat(amount, respect_floor = TRUE)
 	var/old_value = chromity_overheat

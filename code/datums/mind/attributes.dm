@@ -1,3 +1,28 @@
+/datum/mind/var/list/cyberdemon_attribute_modifiers = list()
+
+/datum/mind/proc/get_cyberdemon_attribute_modifier(attribute_id)
+	var/total_modifier = 0
+	for(var/modifier_key in cyberdemon_attribute_modifiers)
+		var/list/modifier_data = cyberdemon_attribute_modifiers[modifier_key]
+		if(!modifier_data || modifier_data["attribute"] != attribute_id)
+			continue
+		total_modifier += modifier_data["amount"] || 0
+	return total_modifier
+
+/datum/mind/proc/add_cyberdemon_attribute_modifier(attribute_id, amount, duration, source_name = "demon")
+	if(!attribute_id || !amount || duration <= 0)
+		return null
+	var/modifier_key = "[source_name]-[attribute_id]-[world.time]-[rand(1, 99999)]"
+	cyberdemon_attribute_modifiers[modifier_key] = list(
+		"attribute" = attribute_id,
+		"amount" = amount,
+	)
+	addtimer(CALLBACK(src, PROC_REF(remove_cyberdemon_attribute_modifier), modifier_key), duration)
+	return modifier_key
+
+/datum/mind/proc/remove_cyberdemon_attribute_modifier(modifier_key)
+	cyberdemon_attribute_modifiers -= modifier_key
+
 /datum/mind/proc/init_character_attributes()
 	for(var/attribute_type in GLOB.attribute_types)
 		var/datum/attribute/attribute = new attribute_type(ATTRIBUTE_DEFAULT)
@@ -8,7 +33,7 @@
 
 /datum/mind/proc/get_attribute_value(attribute_id)
 	var/datum/attribute/attribute = get_attribute(attribute_id)
-	return attribute?.value || ATTRIBUTE_DEFAULT
+	return (attribute?.value || ATTRIBUTE_DEFAULT) + get_cyberdemon_attribute_modifier(attribute_id)
 
 /datum/mind/proc/set_attribute_value(attribute_id, new_value)
 	var/datum/attribute/attribute = get_attribute(attribute_id)

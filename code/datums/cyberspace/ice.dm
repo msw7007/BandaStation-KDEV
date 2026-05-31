@@ -112,6 +112,9 @@
 		to_chat(source, span_warning("ICE alarm triggered: [reason]."))
 	if(target)
 		target.visible_message(span_warning("[target] reports: intrusion detected."))
+	if(source && target)
+		source.visible_message(span_danger("A red intrusion ping links [source] to [target]."), span_danger("A red intrusion ping exposes your connection to [target]."))
+		source.Beam(target, icon_state = "rped_upgrade", time = 2 SECONDS, beam_color = "#ff334a")
 	return TRUE
 
 /datum/cyber_ice/proc/get_attack_timer(hacking_skill = 0, is_node = FALSE, object_count = 0, infinite_timer = FALSE)
@@ -128,6 +131,95 @@
 	if(is_node)
 		return get_node_sequence_length(object_count, hacking_skill)
 	return get_sequence_length(hacking_skill, grid_size)
+
+/datum/cyber_ice_configurator
+	/// Neural interface being configured.
+	var/datum/weakref/interface_ref
+	/// Patient body that owns the interface.
+	var/datum/weakref/patient_ref
+
+/datum/cyber_ice_configurator/New(obj/item/organ/cyberimp/brain/neural_interface/interface, mob/living/patient)
+	. = ..()
+	if(interface)
+		interface_ref = WEAKREF(interface)
+	if(patient)
+		patient_ref = WEAKREF(patient)
+
+/datum/cyber_ice_configurator/proc/get_interface() as /obj/item/organ/cyberimp/brain/neural_interface
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = interface_ref?.resolve()
+	return istype(interface) ? interface : null
+
+/datum/cyber_ice_configurator/proc/get_patient() as /mob/living
+	var/mob/living/patient = patient_ref?.resolve()
+	return istype(patient) ? patient : null
+
+/datum/cyber_ice_configurator/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyber_ice_configurator/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberIceConfig", "Neural ICE tuning")
+		ui.open()
+
+/datum/cyber_ice_configurator/ui_close(mob/user)
+	qdel(src)
+
+/datum/cyber_ice_configurator/ui_data(mob/user)
+	var/list/data = list()
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = get_interface()
+	var/mob/living/patient = get_patient()
+	if(!interface)
+		data["missing"] = TRUE
+		return data
+	var/datum/cyber_ice/ice = interface.get_ice()
+	data["patient_name"] = patient?.real_name || patient?.name || "unknown"
+	data["timer"] = ice.timer_points
+	data["size"] = ice.size_points
+	data["sequence"] = ice.sequence_points
+	data["reserve"] = ice.reserve_points
+	data["total"] = ice.get_total_points()
+	data["level"] = ice.get_level()
+	data["chromity_penalty"] = ice.get_chromity_penalty()
+	data["effective_chromity"] = patient?.get_effective_chromity() || 0
+	data["max_reserve"] = ice.get_max_reserve()
+	data["current_reserve"] = ice.current_reserve
+	data["timer_seconds"] = ice.get_timer_duration(0) / 10
+	data["grid_size"] = ice.get_grid_size(0)
+	data["sequence_length"] = ice.get_sequence_length(0, ice.get_grid_size(0))
+	return data
+
+/datum/cyber_ice_configurator/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(!.)
+		return
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = get_interface()
+	if(!interface)
+		return FALSE
+	var/datum/cyber_ice/ice = interface.get_ice()
+	switch(action)
+		if("set_distribution")
+			var/timer = text2num("[params["timer"]]")
+			var/size = text2num("[params["size"]]")
+			var/sequence = text2num("[params["sequence"]]")
+			var/reserve = text2num("[params["reserve"]]")
+			var/total_points = ice.get_total_points()
+			if(round(timer) + round(size) + round(sequence) + round(reserve) != total_points)
+				to_chat(ui.user, span_warning("ICE configuration rejected: point total must remain [total_points]."))
+				return TRUE
+			if(!interface.set_ice_distribution(timer, size, sequence, reserve))
+				to_chat(ui.user, span_warning("ICE configuration rejected."))
+				return TRUE
+			to_chat(ui.user, span_notice("Neural ICE redistributed. Effective chromity is now [round(get_patient()?.get_effective_chromity() || 0, 0.1)]."))
+			SStgui.update_uis(src)
+			return TRUE
+		if("restore")
+			ice.restore_reserve(ice.get_max_reserve())
+			ice.reset_alarm()
+			to_chat(ui.user, span_notice("Neural ICE reserve restored and alarm state cleared."))
+			SStgui.update_uis(src)
+			return TRUE
+	return FALSE
 
 /datum/cyber_ice/proc/generate_hex_pool()
 	var/list/pool = list()
