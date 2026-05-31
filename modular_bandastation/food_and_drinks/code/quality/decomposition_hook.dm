@@ -3,7 +3,7 @@
 	if(. == COMPONENT_INCOMPATIBLE)
 		return
 	if(ismovable(parent))
-		parent.AddComponent(/datum/component/perishable)
+		parent.AddComponent(/datum/component/perishable, src) // pass ourselves; we aren't in the parent's component list yet
 
 /obj/item/food/Initialize(mapload)
 	. = ..()

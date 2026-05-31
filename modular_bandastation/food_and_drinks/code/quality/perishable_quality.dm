@@ -2,12 +2,13 @@
 	dupe_mode = COMPONENT_DUPE_UNIQUE
 	var/datum/weakref/decomp_weakref
 	var/in_cold_zone = FALSE
+	/// TRUE only while WE hold the decomposition timer paused, so we never start a timer we didn't pause.
+	var/paused_by_cold = FALSE
 
-/datum/component/perishable/Initialize()
+/datum/component/perishable/Initialize(datum/component/decomposition/decomp)
 	if(!ismovable(parent))
 		return COMPONENT_INCOMPATIBLE
-	var/datum/component/decomposition/decomp = parent.GetComponent(/datum/component/decomposition)
-	if(!decomp)
+	if(!istype(decomp)) // passed in by the decomposition component; GetComponent would miss it (not joined yet)
 		return COMPONENT_INCOMPATIBLE
 	decomp_weakref = WEAKREF(decomp)
 
@@ -34,8 +35,10 @@
 	in_cold_zone = now_cold
 	if(in_cold_zone)
 		decomp.remove_timer()
-	else if(decomp.handled)
+		paused_by_cold = TRUE
+	else if(paused_by_cold && decomp.handled) // only resume the timer if cold is what paused it
 		decomp.start_timer()
+		paused_by_cold = FALSE
 
 /datum/component/perishable/proc/get_penalty()
 	var/datum/component/decomposition/decomp = decomp_weakref?.resolve()
