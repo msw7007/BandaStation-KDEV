@@ -670,13 +670,15 @@
 
 /atom/proc/StartProcessingAtom(mob/living/user, obj/item/process_item, list/chosen_option)
 	var/processing_time = chosen_option[TOOL_PROCESSING_TIME]
+	var/atom/atom_to_create = chosen_option[TOOL_PROCESSING_RESULT]
+	if(istype(src, /obj/item/food) || ispath(atom_to_create, /obj/item/food))
+		processing_time *= user.get_cyberpunk_cooking_manual_time_multiplier()
 	var/sound_to_play = chosen_option[TOOL_PROCESSING_SOUND]
 	to_chat(user, span_notice("You start working on [src]."))
 	if(sound_to_play)
 		playsound(src, sound_to_play, 50, TRUE)
 	if(!process_item.use_tool(src, user, processing_time, volume=50))
 		return
-	var/atom/atom_to_create = chosen_option[TOOL_PROCESSING_RESULT]
 	var/list/atom/created_atoms = list()
 	var/amount_to_create = chosen_option[TOOL_PROCESSING_AMOUNT]
 	for(var/i = 1 to amount_to_create)
@@ -699,6 +701,8 @@
 	UsedforProcessing(user, process_item, chosen_option, created_atoms)
 
 /atom/proc/UsedforProcessing(mob/living/user, obj/item/used_item, list/chosen_option, list/created_atoms)
+	if((istype(src, /obj/item/food) || ispath(chosen_option[TOOL_PROCESSING_RESULT], /obj/item/food)) && prob(user.get_cyberpunk_cooking_resource_save_chance()))
+		return
 	qdel(src)
 	return
 

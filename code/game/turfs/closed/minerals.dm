@@ -237,13 +237,18 @@
 	if(TIMER_COOLDOWN_RUNNING(src, REF(user))) //prevents mining turfs in progress
 		return
 
-	TIMER_COOLDOWN_START(src, REF(user), tool_mine_speed)
-	if(!I.use_tool(src, user, tool_mine_speed, volume=50))
+	var/mining_speed = tool_mine_speed
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(living_user)
+		mining_speed *= living_user.get_cyberpunk_mining_time_multiplier()
+
+	TIMER_COOLDOWN_START(src, REF(user), mining_speed)
+	if(!I.use_tool(src, user, mining_speed, volume=50))
 		TIMER_COOLDOWN_END(src, REF(user)) //if we fail we can start again immediately
 		return
 
 	if(ismineralturf(src))
-		gets_drilled(user, exp_multiplier)
+		gets_drilled(user, exp_multiplier, istype(I, /obj/item/pickaxe/drill))
 		SSblackbox.record_feedback("tally", "pick_used_mining", 1, I.type)
 
 /turf/closed/mineral/attack_hand(mob/user)
@@ -256,6 +261,9 @@
 	if(TIMER_COOLDOWN_RUNNING(src, REF(user))) //prevents mining turfs in progress
 		return
 	var/mining_speed = mining_arms ? tool_mine_speed : hand_mine_speed
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(living_user)
+		mining_speed *= living_user.get_cyberpunk_mining_time_multiplier()
 	TIMER_COOLDOWN_START(src, REF(user), mining_speed)
 	var/skill_modifier = user.mind?.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER) || 1
 	balloon_alert(user, "pulling out pieces...")
@@ -269,12 +277,17 @@
 	if(user.Adjacent(src))
 		attack_hand(user)
 
-/turf/closed/mineral/proc/gets_drilled(mob/user, exp_multiplier = 0)
+/turf/closed/mineral/proc/gets_drilled(mob/user, exp_multiplier = 0, drill = FALSE)
 	if(istype(user))
 		SEND_SIGNAL(user, COMSIG_MOB_MINED, src, exp_multiplier)
+	var/mob/living/living_user = isliving(user) ? user : null
 	if(mineral_type && (mineral_amt > 0))
-		new mineral_type(src, mineral_amt)
-		SSblackbox.record_feedback("tally", "ore_mined", mineral_amt, mineral_type)
+		var/ore_amount = living_user ? living_user.get_cyberpunk_mining_ore_amount(mineral_amt, drill) : mineral_amt
+		new mineral_type(src, ore_amount)
+		SSblackbox.record_feedback("tally", "ore_mined", ore_amount, mineral_type)
+	else if(living_user && prob(living_user.get_cyberpunk_mining_hidden_resource_chance()))
+		new /obj/item/stack/ore/iron(src, 1)
+		SSblackbox.record_feedback("tally", "ore_mined", 1, /obj/item/stack/ore/iron)
 	if(spawned_boulder)
 		var/obj/item/boulder/wall_boulder = new spawned_boulder(src)
 		wall_boulder.platform_lifespan = PLATFORM_LIFE_GULAG
@@ -1144,7 +1157,7 @@
 	if(defuser)
 		SEND_SIGNAL(defuser, COMSIG_LIVING_DEFUSED_GIBTONITE, det_time)
 
-/turf/closed/mineral/gibtonite/gets_drilled(mob/user, exp_multiplier = 0, triggered_by_explosion = FALSE)
+/turf/closed/mineral/gibtonite/gets_drilled(mob/user, exp_multiplier = 0, drill = FALSE, triggered_by_explosion = FALSE)
 	if(istype(user))
 		SEND_SIGNAL(user, COMSIG_MOB_MINED, src, exp_multiplier)
 
@@ -1165,6 +1178,14 @@
 		if(det_time >= 1 && det_time <= 2)
 			ore.quality = GIBTONITE_QUALITY_MEDIUM
 			ore.icon_state = "gibtonite_2"
+		var/mob/living/living_user = isliving(user) ? user : null
+		if(living_user)
+			if(prob(living_user.get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_3")))
+				ore.quality = GIBTONITE_QUALITY_HIGH
+				ore.icon_state = "gibtonite_3"
+			else if(prob(living_user.get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_2")) && ore.quality < GIBTONITE_QUALITY_MEDIUM)
+				ore.quality = GIBTONITE_QUALITY_MEDIUM
+				ore.icon_state = "gibtonite_2"
 
 	var/flags = NONE
 	var/old_type = type
@@ -1246,7 +1267,7 @@
 		to_chat(usr, span_warning("The rock seems to be too strong to destroy. Maybe I can break it once I become a master miner."))
 
 
-/turf/closed/mineral/strong/gets_drilled(mob/user, exp_multiplier = 0)
+/turf/closed/mineral/strong/gets_drilled(mob/user, exp_multiplier = 0, drill = FALSE)
 	if(istype(user))
 		SEND_SIGNAL(user, COMSIG_MOB_MINED, src, exp_multiplier)
 

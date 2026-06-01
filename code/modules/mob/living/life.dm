@@ -418,6 +418,7 @@
 /mob/living/proc/spend_stamina(amount, source, allow_negative = FALSE)
 	if(amount <= 0)
 		return TRUE
+	amount *= get_cyberpunk_stamina_cost_multiplier(source)
 	if(!allow_negative && stamina < amount)
 		return FALSE
 	var/spent = -adjust_stamina(-amount, TRUE)

@@ -174,6 +174,7 @@
 		extra_wound = 20
 	pushed_mob.apply_damage(30, BRUTE, banged_limb, wound_bonus = extra_wound)
 	pushed_mob.apply_damage(60, STAMINA)
+	user.apply_cyberpunk_grapple_limb_impact_effect(pushed_mob, banged_limb?.body_zone || user.zone_selected)
 	playsound(pushed_mob, 'sound/effects/bang.ogg', 90, TRUE)
 	pushed_mob.visible_message(span_danger("[user] smashes [pushed_mob]'s [banged_limb.plaintext_zone] against \the [table]!"),
 		span_userdanger("[user] smashes your [banged_limb.plaintext_zone] against \the [table]"))

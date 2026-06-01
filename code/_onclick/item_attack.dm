@@ -204,7 +204,7 @@
 /mob/living/attackby(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(..())
 		return TRUE
-	user.changeNext_move(attacking_item.attack_speed)
+	user.changeNext_move(attacking_item.attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(attacking_item))
 	return attacking_item.attack(src, user, modifiers, attack_modifiers)
 
 /mob/living/attackby_secondary(obj/item/weapon, mob/living/user, list/modifiers, list/attack_modifiers)
@@ -213,9 +213,9 @@
 	// Normal attackby updates click cooldown, so we have to make up for it
 	if (result != SECONDARY_ATTACK_CALL_NORMAL)
 		if(weapon.secondary_attack_speed)
-			user.changeNext_move(weapon.secondary_attack_speed)
+			user.changeNext_move(weapon.secondary_attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(weapon))
 		else
-			user.changeNext_move(weapon.attack_speed)
+			user.changeNext_move(weapon.attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(weapon))
 
 	return result
 
@@ -289,7 +289,7 @@
 		return FALSE
 	if(item_flags & NOBLUDGEON)
 		return FALSE
-	user.changeNext_move(attack_speed)
+	user.changeNext_move(attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(src))
 	if(get(src, /mob/living) == user) // telekinesis.
 		user.do_attack_animation(attacked_atom)
 	if(attacked_atom.attacked_by(src, user, modifiers, attack_modifiers) == ATTACK_FAILED)
@@ -306,6 +306,7 @@
 		return ATTACK_FAILED
 
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
+	final_force *= user.get_cyberpunk_weapon_damage_multiplier(attacking_item)
 	if(final_force <= 0)
 		return 0
 
@@ -343,6 +344,7 @@
 		), ARMOR_MAX_BLOCK)
 
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
+	final_force *= user.get_cyberpunk_weapon_damage_multiplier(attacking_item)
 	if(mob_biotypes & (MOB_ROBOTIC|MOB_MINERAL|MOB_SKELETAL)) // this should probably check hit bodypart for humanoids
 		final_force *= attacking_item.get_demolition_modifier(src)
 	if(user != src)

@@ -189,6 +189,12 @@
 
 /obj/item/food/OnCreatedFromProcessing(mob/living/user, obj/item/work_tool, list/chosen_option, atom/original_atom)
 	. = ..()
+	var/quality_bonus = user?.get_cyberpunk_cooking_quality_bonus() || 0
+	if(quality_bonus > 0)
+		AddElement(/datum/element/quality_food_ingredient, quality_bonus)
+	var/compatibility_bonus = user?.get_cyberpunk_cooking_compatibility_bonus(src) || 0
+	if(compatibility_bonus)
+		AddElement(/datum/element/quality_food_ingredient, compatibility_bonus)
 	if(!istype(original_atom, /obj/item/food))
 		return
 	var/obj/item/food/original_food = original_atom

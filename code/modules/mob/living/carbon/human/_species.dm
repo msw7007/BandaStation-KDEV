@@ -825,8 +825,10 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
+	damage *= user.get_cyberpunk_unarmed_damage_multiplier()
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
+	limb_accuracy *= user.get_cyberpunk_unarmed_damage_multiplier()
 	// Limb sharpness determines the type of wounds this unarmed strike could possibly roll. By default, most limbs are blunt and have no sharpness.
 	var/limb_sharpness = attacking_bodypart.unarmed_sharpness
 
@@ -929,6 +931,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		if(damage >= 9)
 			target.force_say()
 		log_combat(user, target, "punched")
+	user.apply_cyberpunk_unarmed_zone_effect(target, user.zone_selected)
 
 	if(user != target && biting && (target.mob_biotypes & MOB_ORGANIC)) //Good for you. You probably just ate someone alive.
 		var/datum/reagents/tasty_meal = new()

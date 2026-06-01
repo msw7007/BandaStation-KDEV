@@ -51,6 +51,8 @@
 	var/recent_bee_visit = FALSE
 	///The last user to add a reagent to the tray, mostly for logging purposes.
 	var/datum/weakref/lastuser
+	///The gardener who planted or recently cared for this tray.
+	var/datum/weakref/cyberpunk_gardener
 	///If the tray generates nutrients and water on its own
 	var/self_sustaining = FALSE
 	///The icon state for the overlay used to represent that this tray is self-sustaining.
@@ -295,7 +297,11 @@
 		if(myseed && plant_status != HYDROTRAY_PLANT_DEAD)
 			var/is_fungus = myseed.get_gene(/datum/plant_gene/trait/plant_type/fungal_metabolism)
 			// Advance age, if planted in mushroom friendly soil and we are a mushroom we mature 40% faster.
-			age +=  1 * (is_fungus && (tray_flags & FAST_MUSHROOMS)) ? FAST_MUSH_MODIFIER : 1
+			var/age_gain = (is_fungus && (tray_flags & FAST_MUSHROOMS)) ? FAST_MUSH_MODIFIER : 1
+			var/mob/living/gardener = cyberpunk_gardener?.resolve()
+			if(gardener)
+				age_gain *= gardener.get_cyberpunk_gardening_growth_multiplier()
+			age += age_gain
 			if(age < myseed.maturation)
 				lastproduce = age
 			needs_update = TRUE
@@ -688,6 +694,9 @@
 
 /// Mutates the stats of the current seed
 /obj/machinery/hydroponics/proc/mutate(lifemut = 2, endmut = 5, productmut = 1, yieldmut = 2, potmut = 25, wrmut = 2, wcmut = 5, traitmut = 0, stabmut = 3) // Mutates the current seed
+	var/mob/living/gardener = cyberpunk_gardener?.resolve()
+	if(gardener && prob(gardener.get_cyberpunk_gardening_safe_mutation_chance()))
+		stabmut = 0
 	myseed?.mutate(
 		lifemut = lifemut,
 		endmut = endmut,
@@ -702,6 +711,9 @@
 
 /// Mutate but with higher default values
 /obj/machinery/hydroponics/proc/hardmutate(lifemut = 4, endmut = 10, productmut = 2, yieldmut = 4, potmut = 50, wrmut = 4, wcmut = 10, traitmut = 0, stabmut = 4)
+	var/mob/living/gardener = cyberpunk_gardener?.resolve()
+	if(gardener && prob(gardener.get_cyberpunk_gardening_safe_mutation_chance()))
+		stabmut = 0
 	myseed?.mutate(
 		lifemut = lifemut,
 		endmut = endmut,
@@ -735,9 +747,11 @@
 
 	var/oldPlantName = myseed.plantname
 	var/mutantseed = pick(myseed.mutatelist)
+	var/mob/living/gardener = cyberpunk_gardener?.resolve()
 	set_seed(new mutantseed(src))
 
-	hardmutate()
+	if(!gardener || !prob(gardener.get_cyberpunk_gardening_safe_mutation_chance()))
+		hardmutate()
 	set_plant_health(myseed.endurance, update_icon = FALSE)
 	lastcycle = world.time
 	set_weedlevel(0, update_icon = FALSE)
@@ -916,6 +930,13 @@
 			else
 				reagent_source.reagents.trans_to(H.reagents, transfer_amount, transferred_by = user)
 			lastuser = WEAKREF(user)
+			cyberpunk_gardener = WEAKREF(user)
+			var/mob/living/living_user = isliving(user) ? user : null
+			var/care_multiplier = living_user?.get_cyberpunk_gardening_care_multiplier() || 1
+			if(care_multiplier > 1 && H.myseed && H.plant_status != HYDROTRAY_PLANT_DEAD)
+				H.adjust_plant_health(round(care_multiplier - 1))
+				H.adjust_weedlevel(-(care_multiplier - 1))
+				H.adjust_pestlevel(-(care_multiplier - 1))
 			if(IS_EDIBLE(reagent_source) || istype(reagent_source, /obj/item/reagent_containers/applicator/pill))
 				qdel(reagent_source)
 				H.update_appearance()
@@ -1174,10 +1195,15 @@
 		return
 	if(istype(young_plant, /obj/item/seeds/kudzu))
 		investigate_log("had Kudzu planted in it by [key_name(user)] at [AREACOORD(src)].", INVESTIGATE_BOTANY)
+	if(prob(user.get_cyberpunk_gardening_plant_ruin_chance()))
+		user.visible_message(span_warning("[user] ruins [young_plant] while trying to plant it."), span_warning("You ruin [young_plant] while trying to plant it."))
+		qdel(young_plant)
+		return
 	if(!user.transferItemToLoc(young_plant, src))
 		return
 	SEND_SIGNAL(young_plant, COMSIG_SEED_ON_PLANTED, src)
 	to_chat(user, span_notice("You plant [young_plant]."))
+	cyberpunk_gardener = WEAKREF(user)
 	set_seed(young_plant)
 	set_plant_health(myseed.endurance)
 	lastcycle = world.time

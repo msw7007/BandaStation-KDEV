@@ -218,6 +218,9 @@
 	var/product_name
 	///The Number of products produced by the plant, typically the yield. Modified by certain traits.
 	var/product_count = getYield()
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(living_user && prob(living_user.get_cyberpunk_gardening_extra_harvest_chance()))
+		product_count++
 
 	while(t_amount < product_count)
 		var/obj/item/food/grown/t_prod

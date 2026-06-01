@@ -600,7 +600,11 @@
 		muck()
 		return
 
-	if(prob(max((5 / efficiency) - 5, dirty * 5))) //a clean unupgraded microwave has no risk of failure
+	var/fail_chance = max((5 / efficiency) - 5, dirty * 5)
+	var/mob/living/living_cooker = isliving(cooker) ? cooker : null
+	if(living_cooker)
+		fail_chance = max(0, fail_chance - living_cooker.get_cyberpunk_cooking_spoil_reduction())
+	if(prob(fail_chance)) //a clean unupgraded microwave has no risk of failure
 		muck()
 		return
 
@@ -619,7 +623,10 @@
 			)
 
 	// If we're cooking non-food items we can fail randomly
-	if(length(non_food_ingedients) && prob(min(dirty * 5, 100)))
+	var/non_food_fail_chance = min(dirty * 5, 100)
+	if(living_cooker)
+		non_food_fail_chance = max(0, non_food_fail_chance - living_cooker.get_cyberpunk_cooking_spoil_reduction())
+	if(length(non_food_ingedients) && prob(non_food_fail_chance))
 		start_can_fail(cooker)
 		return
 
@@ -674,7 +681,10 @@
  * * wait - deciseconds between loops
  * * cooker - The mob that initiated the cook cycle, can be null if no apparent mob triggered it (such as via emp)
  */
-/obj/machinery/microwave/proc/cook_loop(type, cycles, wait = max(12 - 2 * efficiency, 2), mob/cooker) // standard wait is 10
+/obj/machinery/microwave/proc/cook_loop(type, cycles, wait = max(12 - 2 * efficiency, 2), mob/cooker, skill_adjusted = FALSE) // standard wait is 10
+	var/mob/living/living_cooker = isliving(cooker) ? cooker : null
+	if(living_cooker && !skill_adjusted)
+		wait *= living_cooker.get_cyberpunk_cooking_machine_time_multiplier()
 	if((machine_stat & BROKEN) && type == MICROWAVE_PRE)
 		pre_fail()
 		return
@@ -711,7 +721,7 @@
 
 	cycles--
 	use_energy(active_power_usage)
-	addtimer(CALLBACK(src, PROC_REF(cook_loop), type, cycles, wait, cooker), wait)
+	addtimer(CALLBACK(src, PROC_REF(cook_loop), type, cycles, wait, cooker, TRUE), wait)
 
 /obj/machinery/microwave/power_change()
 	. = ..()
@@ -729,6 +739,12 @@
  */
 /obj/machinery/microwave/proc/loop_finish(mob/cooker)
 	operating = FALSE
+	var/mob/living/living_cooker = isliving(cooker) ? cooker : null
+	if(living_cooker && prob(living_cooker.get_cyberpunk_cooking_smell_chance()))
+		var/mood_bonus = living_cooker.get_cyberpunk_cooking_smell_mood_bonus()
+		for(var/mob/living/smeller in get_hearers_in_view(DEFAULT_MESSAGE_RANGE, src))
+			if(!HAS_TRAIT(smeller, TRAIT_ANOSMIA))
+				smeller.adjust_mood(mood_bonus)
 	if(pda_failure)
 		spark()
 		pda_failure = FALSE // in case they repair it after this, reset
