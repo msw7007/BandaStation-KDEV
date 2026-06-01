@@ -2109,6 +2109,23 @@
 /obj/item/cyberdemon_disk/proc/get_stored_cryptokey_count()
 	return length(stored_cryptokeys)
 
+/obj/item/cyberdemon_disk/proc/cryptokey_from_memory(memory_entry)
+	if(istype(memory_entry, /datum/cyberspace_cryptokey))
+		return memory_entry
+	if(!islist(memory_entry))
+		return null
+	var/key = memory_entry["key"]
+	if(!key)
+		return null
+	var/datum/cyberspace_cryptokey/cryptokey = new()
+	cryptokey.key = key
+	cryptokey.object_type = memory_entry["object_type"]
+	cryptokey.area_type = memory_entry["area_type"]
+	cryptokey.manufacturer = memory_entry["manufacturer"] || "independent"
+	var/list/rights = memory_entry["rights"]
+	cryptokey.rights = islist(rights) ? rights.Copy() : list("view", "use", "control", "settings")
+	return cryptokey
+
 /obj/item/cyberdemon_disk/proc/download_net_data(mob/living/user, amount)
 	if(!user?.mind)
 		return FALSE
@@ -2134,17 +2151,29 @@
 	return TRUE
 
 /obj/item/cyberdemon_disk/proc/download_cryptokeys(mob/living/user)
-	if(!user?.mind?.cyber_cryptokeys)
-		to_chat(user, span_warning("No cached cryptographic keys are available to write."))
+	if(!user)
+		return FALSE
+	if(!length(user?.mind?.cyber_cryptokeys) && !length(user.memory_holder))
+		to_chat(user, span_warning("No cached or remembered cryptographic keys are available to write."))
 		return FALSE
 	if(!stored_cryptokeys)
 		stored_cryptokeys = list()
 	var/copied = 0
-	for(var/key in user.mind.cyber_cryptokeys)
-		if(stored_cryptokeys[key])
-			continue
-		stored_cryptokeys[key] = user.mind.cyber_cryptokeys[key]
-		copied++
+	if(length(user?.mind?.cyber_cryptokeys))
+		for(var/key in user.mind.cyber_cryptokeys)
+			if(stored_cryptokeys[key])
+				continue
+			stored_cryptokeys[key] = user.mind.cyber_cryptokeys[key]
+			copied++
+	if(length(user.memory_holder))
+		for(var/memory_title in user.memory_holder)
+			if(!findtext(memory_title, "cryptokey:"))
+				continue
+			var/datum/cyberspace_cryptokey/cryptokey = cryptokey_from_memory(user.memory_holder[memory_title])
+			if(!cryptokey || stored_cryptokeys[cryptokey.key])
+				continue
+			stored_cryptokeys[cryptokey.key] = cryptokey
+			copied++
 	to_chat(user, span_notice("You write [copied] cryptographic key[copied == 1 ? "" : "s"] to [src]."))
 	return TRUE
 

@@ -1998,6 +1998,23 @@ GLOBAL_LIST_EMPTY(blended_hair_icons_cache)
 	icon_state = "lbelly"
 	gender_specific = TRUE
 
+/datum/sprite_accessory/human_tattoo
+	icon = 'icons/mob/human/species/lizard/lizard_markings.dmi'
+	color_src = TRUE
+	gender_specific = TRUE
+
+/datum/sprite_accessory/human_tattoo/circuit
+	name = "Circuit Tattoo"
+	icon_state = "dtiger"
+
+/datum/sprite_accessory/human_tattoo/tribal
+	name = "Tribal Tattoo"
+	icon_state = "ltiger"
+
+/datum/sprite_accessory/human_tattoo/torso
+	name = "Torso Tattoo"
+	icon_state = "lbelly"
+
 /datum/sprite_accessory/tails
 	em_block = TRUE
 	/// Describes which tail spine sprites to use, if any.

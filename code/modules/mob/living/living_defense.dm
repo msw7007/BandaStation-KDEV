@@ -459,6 +459,10 @@
 	if(user.attack_sound)
 		playsound(src, user.attack_sound, 50, TRUE, TRUE)
 
+	if(user != src)
+		damage *= get_rear_attack_multiplier(user)
+		damage *= user.get_stealth_damage_multiplier()
+
 	user.do_attack_animation(src)
 	visible_message(
 		span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(user.attack_verb_continuous)] [declent_ru(ACCUSATIVE)]!"),
@@ -486,6 +490,8 @@
 		attack_direction = get_dir(user, src),
 	)
 	log_combat(user, src, "attacked")
+	if(user != src)
+		user.reveal_from_stealth_attack()
 	return damage_done
 
 /mob/living/attack_hand(mob/living/carbon/human/user, list/modifiers)

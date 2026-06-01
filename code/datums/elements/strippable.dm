@@ -280,7 +280,12 @@
 	if (!.)
 		return
 
-	return start_unequip_mob(get_item(source), source, user)
+	var/hidden_strip = FALSE
+	var/mob/living/living_source = source
+	if(istype(living_source) && !living_source.in_code_fov(user, ignore_self = TRUE))
+		hidden_strip = TRUE
+
+	return start_unequip_mob(get_item(source), source, user, hidden = hidden_strip)
 
 /datum/strippable_item/mob_item_slot/finish_unequip(atom/source, mob/user)
 	var/obj/item/item = get_item(source)

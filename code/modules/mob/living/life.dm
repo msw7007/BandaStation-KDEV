@@ -87,6 +87,7 @@
 	recover_stamina(seconds_per_tick)
 	recover_energy_pool(seconds_per_tick)
 	recover_tireness(seconds_per_tick)
+	process_equipment_style(seconds_per_tick)
 	process_chromity_overheat(seconds_per_tick)
 	process_mood_state(seconds_per_tick)
 	apply_body_state_effects()
@@ -155,21 +156,21 @@
 	if(stamina >= max_stamina || is_exhausted_by_needs())
 		stamina_regen_accumulator = 0
 		return
-	if(world.time < last_stamina_spend + 10 SECONDS)
+	if(world.time < last_stamina_spend + STAMINA_REGEN_DELAY)
 		stamina_regen_accumulator = 0
 		return
 
 	stamina_regen_accumulator += seconds_per_tick
-	while(stamina_regen_accumulator >= 5)
-		stamina_regen_accumulator -= 5
-		var/recovery = 5
+	while(stamina_regen_accumulator >= STAMINA_REGEN_INTERVAL)
+		stamina_regen_accumulator -= STAMINA_REGEN_INTERVAL
+		var/recovery = STAMINA_REGEN_AMOUNT
 		if(buckled || resting)
 			recovery += 5
 		if(body_position == LYING_DOWN && (IsSleeping() || IsUnconscious()))
 			recovery += 10
-		if(stamina < max_stamina && energy_pool >= 2)
-			adjust_energy_pool(-2)
-			recovery += 15
+		if(stamina < max_stamina && energy_pool >= STAMINA_ENERGY_RESERVE_COST)
+			adjust_energy_pool(-STAMINA_ENERGY_RESERVE_COST)
+			recovery += STAMINA_ENERGY_RESERVE_RECOVERY
 		adjust_stamina(recovery, FALSE)
 
 /mob/living/proc/recover_energy_pool(seconds_per_tick)
@@ -182,9 +183,10 @@
 		energy_regen_accumulator = 0
 		return
 
+	var/recovery_interval = wall_hugging ? ENERGY_POOL_WALL_HUG_INTERVAL : ENERGY_POOL_RECOVERY_INTERVAL
 	energy_regen_accumulator += seconds_per_tick
-	while(energy_regen_accumulator >= 10)
-		energy_regen_accumulator -= 10
+	while(energy_regen_accumulator >= recovery_interval)
+		energy_regen_accumulator -= recovery_interval
 		adjust_energy_pool(recovery)
 
 /mob/living/proc/recover_tireness(seconds_per_tick)
@@ -219,6 +221,9 @@
 	if(is_comfortably_sleeping_for_experience())
 		mind?.convert_rest_experience()
 
+	if(mood <= CYBERPSYCHOSIS_MIN_MOOD && chromity_overheat > get_effective_chromity() * CYBERPSYCHOSIS_OVERHEAT_RATIO)
+		trigger_cyberpsychosis()
+
 /mob/living/proc/process_chromity_overheat(seconds_per_tick)
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_owner = src
@@ -248,6 +253,7 @@
 
 /mob/living/proc/get_effective_chromity()
 	var/effective_chromity = chromity
+	effective_chromity += max(0, get_attribute_value(ATTRIBUTE_SPIRIT) - ATTRIBUTE_DEFAULT) * 2
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_owner = src
 		if(carbon_owner.dna)
@@ -284,6 +290,46 @@
 			implant?.on_implant_erroneous_activation()
 		else
 			adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
+
+/mob/living/proc/trigger_cyberpsychosis()
+	if(world.time < last_cyberpsychosis_time + CYBERPSYCHOSIS_COOLDOWN)
+		return FALSE
+	last_cyberpsychosis_time = world.time
+	visible_message(span_warning("[src] spasms under chrome overload!"), span_userdanger("Your neural interface burns with static. You lose your grip on reality."))
+	apply_status_effect(/datum/status_effect/hallucination, 2 MINUTES)
+	adjust_jitter(30 SECONDS)
+	adjust_confusion_up_to(20 SECONDS, 40 SECONDS)
+	Stun(5 SECONDS)
+	return TRUE
+
+/mob/living/proc/process_equipment_style(seconds_per_tick)
+	style_update_accumulator += seconds_per_tick
+	if(style_update_accumulator < BODY_STYLE_UPDATE_INTERVAL)
+		return
+	style_update_accumulator = 0
+	recalculate_equipment_style()
+
+/mob/living/proc/recalculate_equipment_style()
+	var/style_score = 0
+	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_ACCESSORIES|INCLUDE_ABSTRACT))
+		if(!(item.slot_flags & (ITEM_SLOT_ICLOTHING|ITEM_SLOT_OCLOTHING|ITEM_SLOT_HEAD|ITEM_SLOT_MASK|ITEM_SLOT_NECK|ITEM_SLOT_FEET|ITEM_SLOT_GLOVES|ITEM_SLOT_EYES)))
+			continue
+		var/item_score = 0
+		var/lower_name = lowertext(item.name)
+		var/lower_desc = lowertext(item.desc)
+		if(findtext(lower_name, "style") || findtext(lower_name, "fashion") || findtext(lower_desc, "stylish") || findtext(lower_desc, "fashion"))
+			item_score += 2
+		if(findtext(lower_name, "costume") || findtext(lower_name, "dress") || findtext(lower_name, "suit") || findtext(lower_name, "jacket"))
+			item_score += 1
+		if(findtext(lower_name, "clown") || findtext(lower_name, "mime") || findtext(lower_name, "fedora") || findtext(lower_name, "hat"))
+			item_score += 1
+		item_score += clamp(round((item.custom_price || 0) / max(PAYCHECK_CREW, 1)), 0, 3)
+		item_score -= max(0, item.w_class - WEIGHT_CLASS_NORMAL)
+		if(istype(item, /obj/item/clothing/suit/armor) || istype(item, /obj/item/clothing/head/helmet))
+			item_score -= 1
+		style_score += item_score
+	style = clamp(style_score, -15, 15)
+	return style
 
 /mob/living/proc/get_working_chrome_implants()
 	. = list()
@@ -374,7 +420,9 @@
 		return TRUE
 	if(!allow_negative && stamina < amount)
 		return FALSE
-	adjust_stamina(-amount, TRUE)
+	var/spent = -adjust_stamina(-amount, TRUE)
+	if(spent > 0)
+		reward_stamina_spend_experience(spent, source)
 	return TRUE
 
 /mob/living/proc/adjust_stamina(amount, counts_as_spend = FALSE)
@@ -417,19 +465,24 @@
 	if(wall_hugging)
 		return WALL_HUG_ENERGY_RECOVERY
 	if(body_position == LYING_DOWN)
-		var/recovery = 2
+		var/recovery = 1
 		if(istype(buckled, /obj/structure/bed))
-			recovery += 2
+			recovery += 1
 			if(locate(/obj/item/pillow) in loc)
-				recovery += 2
+				recovery += 1
 			if(locate(/obj/item/bedsheet) in loc)
-				recovery += 2
+				recovery += 1
 			if(!has_hunger())
-				recovery += 2
+				recovery += 1
 		return recovery
 	if(resting || buckled)
-		return 2
+		return 1
 	return 0
+
+/mob/living/proc/reward_stamina_spend_experience(amount, source)
+	if(!mind || amount <= 0)
+		return 0
+	return mind.reward_character_check_experience(SKILL_ATHLETICS, amount * STAMINA_SPEND_XP_MULTIPLIER, FALSE, 1)
 
 /mob/living/proc/get_check_penalty()
 	if(stamina <= 0)

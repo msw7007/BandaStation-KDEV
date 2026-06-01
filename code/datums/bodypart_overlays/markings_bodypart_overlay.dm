@@ -56,3 +56,192 @@
 /datum/bodypart_overlay/simple/body_marking/lizard
 	dna_feature_key = FEATURE_LIZARD_MARKINGS
 	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo
+	dna_color_feature_key = FEATURE_HUMAN_TATTOO_COLOR
+	var/tattoo_layer = 1
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/get_image(layer, obj/item/bodypart/limb)
+	. = ..(layer, limb)
+	var/image/tattoo_image = .
+	tattoo_image.layer += tattoo_layer * 0.001
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/head_1
+	dna_feature_key = FEATURE_HUMAN_TATTOO_HEAD_1
+	tattoo_layer = 1
+	applies_to = list(/obj/item/bodypart/head)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/head_2
+	dna_feature_key = FEATURE_HUMAN_TATTOO_HEAD_2
+	tattoo_layer = 2
+	applies_to = list(/obj/item/bodypart/head)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/head_3
+	dna_feature_key = FEATURE_HUMAN_TATTOO_HEAD_3
+	tattoo_layer = 3
+	applies_to = list(/obj/item/bodypart/head)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/head_4
+	dna_feature_key = FEATURE_HUMAN_TATTOO_HEAD_4
+	tattoo_layer = 4
+	applies_to = list(/obj/item/bodypart/head)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/head_5
+	dna_feature_key = FEATURE_HUMAN_TATTOO_HEAD_5
+	tattoo_layer = 5
+	applies_to = list(/obj/item/bodypart/head)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/head_6
+	dna_feature_key = FEATURE_HUMAN_TATTOO_HEAD_6
+	tattoo_layer = 6
+	applies_to = list(/obj/item/bodypart/head)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_1
+	dna_feature_key = FEATURE_HUMAN_TATTOO_CHEST_1
+	tattoo_layer = 1
+	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_2
+	dna_feature_key = FEATURE_HUMAN_TATTOO_CHEST_2
+	tattoo_layer = 2
+	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_3
+	dna_feature_key = FEATURE_HUMAN_TATTOO_CHEST_3
+	tattoo_layer = 3
+	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_4
+	dna_feature_key = FEATURE_HUMAN_TATTOO_CHEST_4
+	tattoo_layer = 4
+	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_5
+	dna_feature_key = FEATURE_HUMAN_TATTOO_CHEST_5
+	tattoo_layer = 5
+	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_6
+	dna_feature_key = FEATURE_HUMAN_TATTOO_CHEST_6
+	tattoo_layer = 6
+	applies_to = list(/obj/item/bodypart/chest)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_1
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_ARM_1
+	tattoo_layer = 1
+	applies_to = list(/obj/item/bodypart/arm/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_2
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_ARM_2
+	tattoo_layer = 2
+	applies_to = list(/obj/item/bodypart/arm/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_3
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_ARM_3
+	tattoo_layer = 3
+	applies_to = list(/obj/item/bodypart/arm/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_4
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_ARM_4
+	tattoo_layer = 4
+	applies_to = list(/obj/item/bodypart/arm/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_5
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_ARM_5
+	tattoo_layer = 5
+	applies_to = list(/obj/item/bodypart/arm/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_6
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_ARM_6
+	tattoo_layer = 6
+	applies_to = list(/obj/item/bodypart/arm/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_1
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_ARM_1
+	tattoo_layer = 1
+	applies_to = list(/obj/item/bodypart/arm/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_2
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_ARM_2
+	tattoo_layer = 2
+	applies_to = list(/obj/item/bodypart/arm/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_3
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_ARM_3
+	tattoo_layer = 3
+	applies_to = list(/obj/item/bodypart/arm/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_4
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_ARM_4
+	tattoo_layer = 4
+	applies_to = list(/obj/item/bodypart/arm/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_5
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_ARM_5
+	tattoo_layer = 5
+	applies_to = list(/obj/item/bodypart/arm/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_6
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_ARM_6
+	tattoo_layer = 6
+	applies_to = list(/obj/item/bodypart/arm/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_1
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_LEG_1
+	tattoo_layer = 1
+	applies_to = list(/obj/item/bodypart/leg/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_2
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_LEG_2
+	tattoo_layer = 2
+	applies_to = list(/obj/item/bodypart/leg/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_3
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_LEG_3
+	tattoo_layer = 3
+	applies_to = list(/obj/item/bodypart/leg/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_4
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_LEG_4
+	tattoo_layer = 4
+	applies_to = list(/obj/item/bodypart/leg/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_5
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_LEG_5
+	tattoo_layer = 5
+	applies_to = list(/obj/item/bodypart/leg/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_6
+	dna_feature_key = FEATURE_HUMAN_TATTOO_L_LEG_6
+	tattoo_layer = 6
+	applies_to = list(/obj/item/bodypart/leg/left)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_1
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_LEG_1
+	tattoo_layer = 1
+	applies_to = list(/obj/item/bodypart/leg/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_2
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_LEG_2
+	tattoo_layer = 2
+	applies_to = list(/obj/item/bodypart/leg/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_3
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_LEG_3
+	tattoo_layer = 3
+	applies_to = list(/obj/item/bodypart/leg/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_4
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_LEG_4
+	tattoo_layer = 4
+	applies_to = list(/obj/item/bodypart/leg/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_5
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_LEG_5
+	tattoo_layer = 5
+	applies_to = list(/obj/item/bodypart/leg/right)
+
+/datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_6
+	dna_feature_key = FEATURE_HUMAN_TATTOO_R_LEG_6
+	tattoo_layer = 6
+	applies_to = list(/obj/item/bodypart/leg/right)

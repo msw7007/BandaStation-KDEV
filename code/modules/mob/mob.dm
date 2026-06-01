@@ -923,6 +923,19 @@
 	memory_holder[title] = information
 	return TRUE
 
+/mob/proc/read_memory_data(title)
+	if(!title || !memory_holder)
+		return null
+	return memory_holder[title]
+
+/mob/proc/forget_memory_data(title)
+	if(!title || !memory_holder)
+		return FALSE
+	if(isnull(memory_holder[title]))
+		return FALSE
+	memory_holder -= title
+	return TRUE
+
 /mob/proc/swap_hand(held_index, silent = FALSE)
 	SHOULD_NOT_OVERRIDE(TRUE) // Override perform_hand_swap instead
 

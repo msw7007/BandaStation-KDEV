@@ -345,6 +345,9 @@
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
 	if(mob_biotypes & (MOB_ROBOTIC|MOB_MINERAL|MOB_SKELETAL)) // this should probably check hit bodypart for humanoids
 		final_force *= attacking_item.get_demolition_modifier(src)
+	if(user != src)
+		final_force *= get_rear_attack_multiplier(user)
+		final_force *= user.get_stealth_damage_multiplier()
 
 	var/wounding = attacking_item.wound_bonus
 	if((attacking_item.item_flags & SURGICAL_TOOL) && !user.combat_mode && HAS_TRAIT(user, TRAIT_READY_TO_OPERATE))
@@ -378,6 +381,8 @@
 	)
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
+	if(user != src)
+		user.reveal_from_stealth_attack()
 
 	return damage_done
 

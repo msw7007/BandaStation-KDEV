@@ -7,6 +7,15 @@
 	if(!cyber_cryptokeys)
 		cyber_cryptokeys = list()
 	cyber_cryptokeys[cryptokey.key] = cryptokey
+	if(ismob(current))
+		var/mob/memory_owner = current
+		memory_owner.remember_data("cryptokey:[cryptokey.key]", list(
+			"key" = cryptokey.key,
+			"manufacturer" = cryptokey.manufacturer,
+			"object_type" = cryptokey.object_type,
+			"area_type" = cryptokey.area_type,
+			"rights" = cryptokey.rights?.Copy(),
+		))
 	return TRUE
 
 /datum/mind/proc/has_cyber_cryptokey(datum/cyberspace_cryptokey/cryptokey)

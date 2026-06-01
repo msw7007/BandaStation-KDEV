@@ -286,10 +286,12 @@
 	var/hydration_drain_accumulator = 0
 	var/tireness_drain_accumulator = 0
 	var/tireness_recovery_accumulator = 0
+	var/style_update_accumulator = 0
 	var/sleep_deprivation_energy_drain_accumulator = 0
 	var/tireness_sleep_grace_until = 0
 	var/time_at_min_mood = 0
 	var/last_control_loss = 0
+	var/last_cyberpsychosis_time = 0
 	var/last_combat_time = 0
 
 	/// Lazylists of pixel offsets this mob is currently using

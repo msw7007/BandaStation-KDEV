@@ -229,3 +229,227 @@
 	if (!..(preferences))
 		return FALSE
 	return preferences.read_preference(/datum/preference/choiced/hair_gradient) != /datum/sprite_accessory/gradient/none::name
+
+/datum/preference/choiced/species_feature/human_tattoo
+	abstract_type = /datum/preference/choiced/species_feature/human_tattoo
+	savefile_identifier = PREFERENCE_CHARACTER
+	category = PREFERENCE_CATEGORY_FEATURES
+	should_generate_icons = TRUE
+
+/datum/preference/choiced/species_feature/human_tattoo/icon_for(value)
+	var/datum/sprite_accessory/sprite_accessory = get_accessory_for_value(value)
+	var/datum/universal_icon/final_icon = uni_icon('icons/mob/human/bodyparts_greyscale.dmi', "human_chest_m")
+	final_icon.blend_color(skintone2hex("caucasian1"), ICON_MULTIPLY)
+
+	if(sprite_accessory?.icon_state != SPRITE_ACCESSORY_NONE)
+		var/datum/universal_icon/tattoo_icon = uni_icon(
+			sprite_accessory.icon,
+			"male_[sprite_accessory.icon_state]_chest",
+		)
+		tattoo_icon.blend_color(COLOR_ALMOST_BLACK, ICON_MULTIPLY)
+		final_icon.blend_icon(tattoo_icon, ICON_OVERLAY)
+
+	final_icon.crop(10, 8, 22, 23)
+	final_icon.scale(26, 32)
+	final_icon.crop(-2, 1, 29, 32)
+	return final_icon
+
+/datum/preference/choiced/species_feature/human_tattoo/compile_constant_data()
+	var/list/data = ..()
+	data[SUPPLEMENTAL_FEATURE_KEY] = /datum/preference/color/human_tattoo_color::savefile_key
+	return data
+
+/datum/preference/choiced/species_feature/human_tattoo/head_1
+	savefile_key = "feature_human_tattoo_head_1"
+	main_feature_name = "Tattoo: Head 1"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/head_1
+
+/datum/preference/choiced/species_feature/human_tattoo/head_2
+	savefile_key = "feature_human_tattoo_head_2"
+	main_feature_name = "Tattoo: Head 2"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/head_2
+
+/datum/preference/choiced/species_feature/human_tattoo/head_3
+	savefile_key = "feature_human_tattoo_head_3"
+	main_feature_name = "Tattoo: Head 3"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/head_3
+
+/datum/preference/choiced/species_feature/human_tattoo/head_4
+	savefile_key = "feature_human_tattoo_head_4"
+	main_feature_name = "Tattoo: Head 4"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/head_4
+
+/datum/preference/choiced/species_feature/human_tattoo/head_5
+	savefile_key = "feature_human_tattoo_head_5"
+	main_feature_name = "Tattoo: Head 5"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/head_5
+
+/datum/preference/choiced/species_feature/human_tattoo/head_6
+	savefile_key = "feature_human_tattoo_head_6"
+	main_feature_name = "Tattoo: Head 6"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/head_6
+
+/datum/preference/choiced/species_feature/human_tattoo/chest_1
+	savefile_key = "feature_human_tattoo_chest_1"
+	main_feature_name = "Tattoo: Torso 1"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_1
+
+/datum/preference/choiced/species_feature/human_tattoo/chest_2
+	savefile_key = "feature_human_tattoo_chest_2"
+	main_feature_name = "Tattoo: Torso 2"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_2
+
+/datum/preference/choiced/species_feature/human_tattoo/chest_3
+	savefile_key = "feature_human_tattoo_chest_3"
+	main_feature_name = "Tattoo: Torso 3"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_3
+
+/datum/preference/choiced/species_feature/human_tattoo/chest_4
+	savefile_key = "feature_human_tattoo_chest_4"
+	main_feature_name = "Tattoo: Torso 4"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_4
+
+/datum/preference/choiced/species_feature/human_tattoo/chest_5
+	savefile_key = "feature_human_tattoo_chest_5"
+	main_feature_name = "Tattoo: Torso 5"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_5
+
+/datum/preference/choiced/species_feature/human_tattoo/chest_6
+	savefile_key = "feature_human_tattoo_chest_6"
+	main_feature_name = "Tattoo: Torso 6"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_6
+
+/datum/preference/choiced/species_feature/human_tattoo/l_arm_1
+	savefile_key = "feature_human_tattoo_l_arm_1"
+	main_feature_name = "Tattoo: Left Arm 1"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_1
+
+/datum/preference/choiced/species_feature/human_tattoo/l_arm_2
+	savefile_key = "feature_human_tattoo_l_arm_2"
+	main_feature_name = "Tattoo: Left Arm 2"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_2
+
+/datum/preference/choiced/species_feature/human_tattoo/l_arm_3
+	savefile_key = "feature_human_tattoo_l_arm_3"
+	main_feature_name = "Tattoo: Left Arm 3"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_3
+
+/datum/preference/choiced/species_feature/human_tattoo/l_arm_4
+	savefile_key = "feature_human_tattoo_l_arm_4"
+	main_feature_name = "Tattoo: Left Arm 4"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_4
+
+/datum/preference/choiced/species_feature/human_tattoo/l_arm_5
+	savefile_key = "feature_human_tattoo_l_arm_5"
+	main_feature_name = "Tattoo: Left Arm 5"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_5
+
+/datum/preference/choiced/species_feature/human_tattoo/l_arm_6
+	savefile_key = "feature_human_tattoo_l_arm_6"
+	main_feature_name = "Tattoo: Left Arm 6"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_arm_6
+
+/datum/preference/choiced/species_feature/human_tattoo/r_arm_1
+	savefile_key = "feature_human_tattoo_r_arm_1"
+	main_feature_name = "Tattoo: Right Arm 1"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_1
+
+/datum/preference/choiced/species_feature/human_tattoo/r_arm_2
+	savefile_key = "feature_human_tattoo_r_arm_2"
+	main_feature_name = "Tattoo: Right Arm 2"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_2
+
+/datum/preference/choiced/species_feature/human_tattoo/r_arm_3
+	savefile_key = "feature_human_tattoo_r_arm_3"
+	main_feature_name = "Tattoo: Right Arm 3"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_3
+
+/datum/preference/choiced/species_feature/human_tattoo/r_arm_4
+	savefile_key = "feature_human_tattoo_r_arm_4"
+	main_feature_name = "Tattoo: Right Arm 4"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_4
+
+/datum/preference/choiced/species_feature/human_tattoo/r_arm_5
+	savefile_key = "feature_human_tattoo_r_arm_5"
+	main_feature_name = "Tattoo: Right Arm 5"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_5
+
+/datum/preference/choiced/species_feature/human_tattoo/r_arm_6
+	savefile_key = "feature_human_tattoo_r_arm_6"
+	main_feature_name = "Tattoo: Right Arm 6"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_arm_6
+
+/datum/preference/choiced/species_feature/human_tattoo/l_leg_1
+	savefile_key = "feature_human_tattoo_l_leg_1"
+	main_feature_name = "Tattoo: Left Leg 1"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_1
+
+/datum/preference/choiced/species_feature/human_tattoo/l_leg_2
+	savefile_key = "feature_human_tattoo_l_leg_2"
+	main_feature_name = "Tattoo: Left Leg 2"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_2
+
+/datum/preference/choiced/species_feature/human_tattoo/l_leg_3
+	savefile_key = "feature_human_tattoo_l_leg_3"
+	main_feature_name = "Tattoo: Left Leg 3"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_3
+
+/datum/preference/choiced/species_feature/human_tattoo/l_leg_4
+	savefile_key = "feature_human_tattoo_l_leg_4"
+	main_feature_name = "Tattoo: Left Leg 4"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_4
+
+/datum/preference/choiced/species_feature/human_tattoo/l_leg_5
+	savefile_key = "feature_human_tattoo_l_leg_5"
+	main_feature_name = "Tattoo: Left Leg 5"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_5
+
+/datum/preference/choiced/species_feature/human_tattoo/l_leg_6
+	savefile_key = "feature_human_tattoo_l_leg_6"
+	main_feature_name = "Tattoo: Left Leg 6"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/l_leg_6
+
+/datum/preference/choiced/species_feature/human_tattoo/r_leg_1
+	savefile_key = "feature_human_tattoo_r_leg_1"
+	main_feature_name = "Tattoo: Right Leg 1"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_1
+
+/datum/preference/choiced/species_feature/human_tattoo/r_leg_2
+	savefile_key = "feature_human_tattoo_r_leg_2"
+	main_feature_name = "Tattoo: Right Leg 2"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_2
+
+/datum/preference/choiced/species_feature/human_tattoo/r_leg_3
+	savefile_key = "feature_human_tattoo_r_leg_3"
+	main_feature_name = "Tattoo: Right Leg 3"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_3
+
+/datum/preference/choiced/species_feature/human_tattoo/r_leg_4
+	savefile_key = "feature_human_tattoo_r_leg_4"
+	main_feature_name = "Tattoo: Right Leg 4"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_4
+
+/datum/preference/choiced/species_feature/human_tattoo/r_leg_5
+	savefile_key = "feature_human_tattoo_r_leg_5"
+	main_feature_name = "Tattoo: Right Leg 5"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_5
+
+/datum/preference/choiced/species_feature/human_tattoo/r_leg_6
+	savefile_key = "feature_human_tattoo_r_leg_6"
+	main_feature_name = "Tattoo: Right Leg 6"
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/r_leg_6
+
+/datum/preference/color/human_tattoo_color
+	savefile_key = "human_tattoo_color"
+	savefile_identifier = PREFERENCE_CHARACTER
+	category = PREFERENCE_CATEGORY_SUPPLEMENTAL_FEATURES
+	relevant_body_markings = /datum/bodypart_overlay/simple/body_marking/human_tattoo/chest_1
+
+/datum/preference/color/human_tattoo_color/create_default_value()
+	return COLOR_ALMOST_BLACK
+
+/datum/preference/color/human_tattoo_color/apply_to_human(mob/living/carbon/human/target, value)
+	target.dna.features[FEATURE_HUMAN_TATTOO_COLOR] = value
+
+/datum/preference/color/human_tattoo_color/is_accessible(datum/preferences/preferences)
+	return ..()
