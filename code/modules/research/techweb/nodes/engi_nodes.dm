@@ -40,6 +40,12 @@
 		"adv_scanning",
 		"super_battery",
 		"super_cell",
+		"ryaznov_power_governor",
+		"ryaznov_wear_buffer",
+		"ryaznov_reinforced_frame",
+		"ryaznov_service_bus",
+		"ryaznov_salvage_router",
+		"ryaznov_corporate_vending_bus",
 	)
 	research_costs = list(TECHWEB_POINT_TYPE_GENERIC = TECHWEB_TIER_2_POINTS)
 	announce_channels = list(RADIO_CHANNEL_ENGINEERING)
@@ -57,6 +63,9 @@
 		"phasic_scanning",
 		"hyper_battery",
 		"hyper_cell",
+		"ryaznov_chem_reaction_accelerator",
+		"ryaznov_chem_yield_regulator",
+		"ryaznov_apc_efficiency_core",
 	)
 	research_costs = list(TECHWEB_POINT_TYPE_GENERIC = TECHWEB_TIER_3_POINTS)
 	discount_experiments = list(/datum/experiment/scanning/points/machinery_tiered_scan/tier2_any = TECHWEB_TIER_3_POINTS)

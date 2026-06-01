@@ -85,13 +85,19 @@
 	if(burning)
 		to_chat(user, span_warning("You need to extinguish [src] before removing the logs!"))
 		return
-	if(!has_buckled_mobs() && do_after(user, 5 SECONDS, target = src))
+	var/deconstruct_delay = 5 SECONDS
+	if(isliving(user))
+		var/mob/living/living_user = user
+		deconstruct_delay *= living_user.get_cyberpunk_structure_time_multiplier(src, "dismantle")
+	if(!has_buckled_mobs() && do_after(user, deconstruct_delay, target = src))
 		for(var/obj/item/grown/log/bonfire_log in contents)
 			bonfire_log.forceMove(drop_location())
 			bonfire_log.pixel_x += rand(1,4)
 			bonfire_log.pixel_y += rand(1,4)
 		if(can_buckle || grill)
-			new /obj/item/stack/rods(loc)
+			if(isliving(user))
+				cyberpunk_last_deconstructor = user
+			spawn_cyberpunk_salvage_stack(/obj/item/stack/rods, loc, 1)
 		qdel(src)
 		return
 

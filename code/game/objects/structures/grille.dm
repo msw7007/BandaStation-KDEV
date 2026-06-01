@@ -307,8 +307,9 @@
 
 
 /obj/structure/grille/atom_deconstruct(disassembled = TRUE)
-	var/obj/rods = new rods_type(drop_location(), rods_amount)
-	transfer_fingerprints_to(rods)
+	var/obj/rods = spawn_cyberpunk_salvage_stack(rods_type, drop_location(), rods_amount)
+	if(rods)
+		transfer_fingerprints_to(rods)
 
 /obj/structure/grille/atom_break()
 	. = ..()

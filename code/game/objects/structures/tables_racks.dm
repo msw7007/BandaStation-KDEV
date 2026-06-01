@@ -407,15 +407,15 @@
 /obj/structure/table/atom_deconstruct(disassembled = TRUE)
 	var/turf/target_turf = get_turf(src)
 	if(buildstack)
-		new buildstack(target_turf, buildstackamount)
+		spawn_cyberpunk_salvage_stack(buildstack, target_turf, buildstackamount)
 	else
 		for(var/datum/material/mat in custom_materials)
-			new mat.sheet_type(target_turf, FLOOR(custom_materials[mat] / SHEET_MATERIAL_AMOUNT, 1))
+			spawn_cyberpunk_salvage_stack(mat.sheet_type, target_turf, FLOOR(custom_materials[mat] / SHEET_MATERIAL_AMOUNT, 1))
 
 	if(frame)
 		new frame(target_turf)
 	else
-		new framestack(get_turf(src), framestackamount)
+		spawn_cyberpunk_salvage_stack(framestack, target_turf, framestackamount)
 
 /obj/structure/table/rcd_vals(mob/user, obj/item/construction/rcd/the_rcd)
 	if(the_rcd.mode == RCD_DECONSTRUCT)
@@ -1460,7 +1460,7 @@
 	return ITEM_INTERACT_SUCCESS
 
 /obj/item/rack_parts/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/iron(drop_location())
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, drop_location(), 1)
 
 /obj/item/rack_parts/attack_self(mob/user)
 	if(building)

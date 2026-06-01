@@ -39,7 +39,7 @@
 				I.forceMove(src)
 
 /obj/structure/filingcabinet/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/iron(loc, 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 2)
 	for(var/obj/item/obj in src)
 		obj.forceMove(loc)
 

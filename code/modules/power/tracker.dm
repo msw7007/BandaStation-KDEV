@@ -147,8 +147,7 @@
 				new material_type.shard_type(get_turf(src))
 				new material_type.shard_type(get_turf(src))
 			else
-				new material_type.sheet_type(get_turf(src))
-				new material_type.sheet_type(get_turf(src))
+				spawn_cyberpunk_salvage_stack(material_type.sheet_type, get_turf(src), 2)
 	else
 		//When smashed to bits
 		playsound(src, SFX_SHATTER, 70, TRUE)

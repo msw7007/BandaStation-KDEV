@@ -233,7 +233,7 @@
 	return .
 
 /obj/structure/plasticflaps/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/plastic/five(loc)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/plastic, loc, 5)
 
 /obj/structure/plasticflaps/Destroy()
 	var/atom/oldloc = loc

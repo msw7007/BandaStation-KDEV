@@ -293,13 +293,13 @@
 		var/material_count = FLOOR(custom_materials[material_datum] / SHEET_MATERIAL_AMOUNT, 1)
 		if(!disassembled)
 			material_count = rand(FLOOR(material_count/2, 1), material_count)
-		new material_datum.sheet_type(target_turf, material_count)
+		spawn_cyberpunk_salvage_stack(material_datum.sheet_type, target_turf, material_count)
 	if(glass)
 		if(disassembled)
 			if(heat_proof_finished)
-				new /obj/item/stack/sheet/rglass(target_turf)
+				spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/rglass, target_turf, 1)
 			else
-				new /obj/item/stack/sheet/glass(target_turf)
+				spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/glass, target_turf, 1)
 		else
 			new /obj/item/shard(target_turf)
 

@@ -83,7 +83,7 @@
 	balloon_alert(user, "deconstructing...")
 	if(!tool.use_tool(src, user, 30, volume=50))
 		return ITEM_INTERACT_BLOCKING
-	new /obj/item/stack/sheet/iron(loc, 5)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 5)
 	qdel(src)
 
 	return ITEM_INTERACT_SUCCESS
@@ -94,7 +94,7 @@
 
 	icon_state = "floodlight_c1"
 	state = FLOODLIGHT_NEEDS_WIRES
-	new /obj/item/stack/cable_coil(loc, 5)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/cable_coil, loc, 5)
 
 	return ITEM_INTERACT_SUCCESS
 

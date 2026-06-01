@@ -92,10 +92,10 @@
 /obj/structure/platform/atom_deconstruct(disassembled = TRUE)
 	var/turf/target_turf = drop_location()
 	if(sheet_type)
-		new sheet_type(target_turf, sheet_amount)
+		spawn_cyberpunk_salvage_stack(sheet_type, target_turf, sheet_amount)
 	else
 		for(var/datum/material/mat in custom_materials)
-			new mat.sheet_type(target_turf, FLOOR(custom_materials[mat] / SHEET_MATERIAL_AMOUNT, 1))
+			spawn_cyberpunk_salvage_stack(mat.sheet_type, target_turf, FLOOR(custom_materials[mat] / SHEET_MATERIAL_AMOUNT, 1))
 
 /obj/structure/platform/rusty
 	icon = 'icons/obj/smooth_structures/platform/window_frame_rusty.dmi'

@@ -396,7 +396,7 @@
 		new girder_type(loc)
 	for(var/material in custom_materials)
 		var/datum/material/material_datum = material
-		new material_datum.sheet_type(loc, FLOOR(custom_materials[material_datum] / SHEET_MATERIAL_AMOUNT, 1))
+		spawn_cyberpunk_salvage_stack(material_datum.sheet_type, loc, FLOOR(custom_materials[material_datum] / SHEET_MATERIAL_AMOUNT, 1))
 
 /obj/structure/falsewall/material/finalize_material_effects(list/materials)
 	. = ..()

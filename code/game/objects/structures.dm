@@ -29,6 +29,21 @@
 		QUEUE_SMOOTH_NEIGHBORS(src)
 	return ..()
 
+/obj/structure/can_be_pulled(user, force)
+	if(src == user || !isturf(loc))
+		return FALSE
+	if(SEND_SIGNAL(src, COMSIG_ATOM_CAN_BE_PULLED, user) & COMSIG_ATOM_CANT_PULL)
+		return FALSE
+	if(anchored || throwing)
+		return FALSE
+	var/effective_force = force
+	if(isliving(user))
+		var/mob/living/living_user = user
+		effective_force = living_user.get_cyberpunk_mobile_structure_pull_force(src, force)
+	if(effective_force < (move_resist * MOVE_FORCE_PULL_RATIO))
+		return FALSE
+	return TRUE
+
 /obj/structure/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	add_fingerprint(usr)
 	return ..()

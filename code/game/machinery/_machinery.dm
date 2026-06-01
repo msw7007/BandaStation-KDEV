@@ -84,6 +84,282 @@
  *     Called by the 'air subsystem' once per atmos tick for each machine that is listed in its 'atmos_machines' list.
  * Compiled by Aygar
  */
+/datum/cyberpunk_machine_module
+	var/name = "generic machinery module"
+	var/id = "generic"
+	var/description = "A generic machinery module."
+	var/manufacturer = "Рязнов"
+	var/corp_manufacturer = "Рязнов"
+	var/obj/item/module_item_type = /obj/item/cyberpunk_machine_module
+	var/power_usage_multiplier = 1
+	var/wear_multiplier = 1
+	var/tool_time_multiplier = 1
+	var/repair_multiplier = 1
+	var/salvage_multiplier = 1
+	var/integrity_bonus = 0
+	var/chem_speed_multiplier = 1
+	var/chem_cost_multiplier = 1
+	var/vending_stock_multiplier = 1
+	var/apc_efficiency_multiplier = 1
+
+/datum/cyberpunk_machine_module/proc/can_install(obj/machinery/machine, mob/living/user)
+	return TRUE
+
+/datum/cyberpunk_machine_module/proc/on_install(obj/machinery/machine, mob/living/user)
+	if(integrity_bonus > 0 && machine.uses_integrity)
+		machine.max_integrity += integrity_bonus
+		machine.update_integrity(min(machine.max_integrity, machine.get_integrity() + integrity_bonus))
+	machine.RefreshParts()
+	return
+
+/datum/cyberpunk_machine_module/proc/on_remove(obj/machinery/machine, mob/living/user)
+	if(integrity_bonus > 0 && machine.uses_integrity)
+		machine.max_integrity = max(1, machine.max_integrity - integrity_bonus)
+		machine.update_integrity(min(machine.get_integrity(), machine.max_integrity))
+	machine.RefreshParts()
+	return
+
+/datum/cyberpunk_machine_module/proc/get_diagnostic_line(obj/machinery/machine)
+	return "[name] ([manufacturer]): [description]"
+
+/datum/cyberpunk_machine_module/power_governor
+	name = "reserve power governor"
+	id = "power_governor"
+	description = "Lowers passive and active machine power draw."
+	module_item_type = /obj/item/cyberpunk_machine_module/power_governor
+	power_usage_multiplier = 0.8
+
+/datum/cyberpunk_machine_module/wear_buffer
+	name = "wear buffer"
+	id = "wear_buffer"
+	description = "Reduces component wear from machine use."
+	module_item_type = /obj/item/cyberpunk_machine_module/wear_buffer
+	wear_multiplier = 0.75
+
+/datum/cyberpunk_machine_module/reinforced_frame
+	name = "reinforced machine frame"
+	id = "reinforced_frame"
+	description = "Adds structural integrity to the machine housing."
+	module_item_type = /obj/item/cyberpunk_machine_module/reinforced_frame
+	integrity_bonus = 25
+
+/datum/cyberpunk_machine_module/service_bus
+	name = "service bus"
+	id = "service_bus"
+	description = "Improves maintenance and repair efficiency."
+	module_item_type = /obj/item/cyberpunk_machine_module/service_bus
+	tool_time_multiplier = 0.9
+	repair_multiplier = 1.25
+
+/datum/cyberpunk_machine_module/salvage_router
+	name = "salvage routing matrix"
+	id = "salvage_router"
+	description = "Improves recoverable component stack drops during clean deconstruction."
+	module_item_type = /obj/item/cyberpunk_machine_module/salvage_router
+	salvage_multiplier = 1.25
+
+/datum/cyberpunk_machine_module/chem_reaction_accelerator
+	name = "chem reaction accelerator"
+	id = "chem_reaction_accelerator"
+	description = "A general chemistry module that slightly improves reaction and handling speed."
+	module_item_type = /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
+	tool_time_multiplier = 0.85
+	chem_speed_multiplier = 0.85
+
+/datum/cyberpunk_machine_module/chem_yield_regulator
+	name = "chem yield regulator"
+	id = "chem_yield_regulator"
+	description = "A general chemistry module that trims reagent and energy waste."
+	module_item_type = /obj/item/cyberpunk_machine_module/chem_yield_regulator
+	power_usage_multiplier = 0.9
+	wear_multiplier = 0.9
+	chem_cost_multiplier = 0.9
+
+/datum/cyberpunk_machine_module/corporate_vending_bus
+	name = "corporate vending bus"
+	id = "corporate_vending_bus"
+	description = "A vending module for corporate stock routing and slightly cleaner service cycles."
+	module_item_type = /obj/item/cyberpunk_machine_module/corporate_vending_bus
+	power_usage_multiplier = 0.95
+	wear_multiplier = 0.9
+	vending_stock_multiplier = 1.1
+
+/datum/cyberpunk_machine_module/apc_efficiency_core
+	name = "APC efficiency core"
+	id = "apc_efficiency_core"
+	description = "An APC-focused module that reduces local control losses and passive draw."
+	module_item_type = /obj/item/cyberpunk_machine_module/apc_efficiency_core
+	power_usage_multiplier = 0.75
+	wear_multiplier = 0.9
+	apc_efficiency_multiplier = 0.85
+
+/datum/cyberpunk_machine_module/chem_reaction_accelerator/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
+
+/datum/cyberpunk_machine_module/chem_yield_regulator/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
+
+/datum/cyberpunk_machine_module/corporate_vending_bus/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/vending)
+
+/datum/cyberpunk_machine_module/apc_efficiency_core/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/power/apc)
+
+/proc/cyberpunk_machine_module_catalog()
+	return list(
+		/datum/cyberpunk_machine_module/power_governor,
+		/datum/cyberpunk_machine_module/wear_buffer,
+		/datum/cyberpunk_machine_module/reinforced_frame,
+		/datum/cyberpunk_machine_module/service_bus,
+		/datum/cyberpunk_machine_module/salvage_router,
+		/datum/cyberpunk_machine_module/chem_reaction_accelerator,
+		/datum/cyberpunk_machine_module/chem_yield_regulator,
+		/datum/cyberpunk_machine_module/corporate_vending_bus,
+		/datum/cyberpunk_machine_module/apc_efficiency_core,
+	)
+
+/obj/item/cyberpunk_machine_module
+	name = "machine module"
+	desc = "A Рязнов-produced Cyberpunk 13 machinery module shell."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "integrated_circuit"
+	w_class = WEIGHT_CLASS_SMALL
+	var/manufacturer = "Рязнов"
+	var/corp_manufacturer = "Рязнов"
+	var/module_datum_type = /datum/cyberpunk_machine_module
+
+/obj/item/cyberpunk_machine_module/proc/create_module_datum()
+	return new module_datum_type
+
+/obj/item/cyberpunk_machine_module/examine(mob/user)
+	. = ..()
+	. += span_notice("Manufacturer: [manufacturer].")
+
+/obj/item/cyberpunk_machine_module/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	var/obj/machinery/machine = interacting_with
+	if(!istype(machine))
+		return NONE
+	if(!machine.panel_open)
+		to_chat(user, span_warning("Open the maintenance panel before installing a machine module."))
+		return ITEM_INTERACT_BLOCKING
+	var/datum/cyberpunk_machine_module/module = create_module_datum()
+	if(machine.install_cyberpunk_module(module, user, TRUE))
+		to_chat(user, span_notice("You install [module.name] into [machine]."))
+		qdel(src)
+		return ITEM_INTERACT_SUCCESS
+	qdel(module)
+	to_chat(user, span_warning("This machine cannot accept that module."))
+	return ITEM_INTERACT_BLOCKING
+
+/obj/item/cyberpunk_machine_module/power_governor
+	name = "reserve power governor"
+	icon_state = "circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/power_governor
+
+/obj/item/cyberpunk_machine_module/wear_buffer
+	name = "wear buffer"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/wear_buffer
+
+/obj/item/cyberpunk_machine_module/reinforced_frame
+	name = "reinforced machine frame"
+	icon_state = "cell_condenser"
+	module_datum_type = /datum/cyberpunk_machine_module/reinforced_frame
+
+/obj/item/cyberpunk_machine_module/service_bus
+	name = "service bus"
+	icon_state = "electronic_module"
+	module_datum_type = /datum/cyberpunk_machine_module/service_bus
+
+/obj/item/cyberpunk_machine_module/salvage_router
+	name = "salvage routing matrix"
+	icon_state = "data_disk"
+	module_datum_type = /datum/cyberpunk_machine_module/salvage_router
+
+/obj/item/cyberpunk_machine_module/chem_reaction_accelerator
+	name = "chem reaction accelerator"
+	icon_state = "electronic_module"
+	module_datum_type = /datum/cyberpunk_machine_module/chem_reaction_accelerator
+
+/obj/item/cyberpunk_machine_module/chem_yield_regulator
+	name = "chem yield regulator"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/chem_yield_regulator
+
+/obj/item/cyberpunk_machine_module/corporate_vending_bus
+	name = "corporate vending bus"
+	icon_state = "data_disk"
+	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus
+
+/obj/item/cyberpunk_machine_module/apc_efficiency_core
+	name = "APC efficiency core"
+	icon_state = "circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/apc_efficiency_core
+
+/datum/design/cyberpunk_machine_module
+	name = "Рязнов Machine Module"
+	desc = "A Рязнов-certified maintenance module for Cyberpunk 13 machinery."
+	id = "ryaznov_machine_module"
+	build_type = PROTOLATHE | AWAY_LATHE
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_machine_module
+	category = list(RND_CATEGORY_EQUIPMENT + RND_SUBCATEGORY_EQUIPMENT_ENGINEERING)
+	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE
+
+/datum/design/cyberpunk_machine_module/power_governor
+	name = "Рязнов Reserve Power Governor"
+	id = "ryaznov_power_governor"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/power_governor
+
+/datum/design/cyberpunk_machine_module/wear_buffer
+	name = "Рязнов Wear Buffer"
+	id = "ryaznov_wear_buffer"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/wear_buffer
+
+/datum/design/cyberpunk_machine_module/reinforced_frame
+	name = "Рязнов Reinforced Machine Frame"
+	id = "ryaznov_reinforced_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_machine_module/reinforced_frame
+
+/datum/design/cyberpunk_machine_module/service_bus
+	name = "Рязнов Service Bus"
+	id = "ryaznov_service_bus"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/service_bus
+
+/datum/design/cyberpunk_machine_module/salvage_router
+	name = "Рязнов Salvage Routing Matrix"
+	id = "ryaznov_salvage_router"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/salvage_router
+
+/datum/design/cyberpunk_machine_module/chem_reaction_accelerator
+	name = "Р СЏР·РЅРѕРІ Chem Reaction Accelerator"
+	id = "ryaznov_chem_reaction_accelerator"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
+
+/datum/design/cyberpunk_machine_module/chem_yield_regulator
+	name = "Р СЏР·РЅРѕРІ Chem Yield Regulator"
+	id = "ryaznov_chem_yield_regulator"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/chem_yield_regulator
+
+/datum/design/cyberpunk_machine_module/corporate_vending_bus
+	name = "Р СЏР·РЅРѕРІ Corporate Vending Bus"
+	id = "ryaznov_corporate_vending_bus"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/corporate_vending_bus
+
+/datum/design/cyberpunk_machine_module/apc_efficiency_core
+	name = "Р СЏР·РЅРѕРІ APC Efficiency Core"
+	id = "ryaznov_apc_efficiency_core"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/apc_efficiency_core
+
 /obj/machinery
 	name = "machinery"
 	icon = 'icons/obj/machines/fax.dmi'
@@ -119,6 +395,32 @@
 	var/is_operational = TRUE
 	///list of all the parts used to build it, if made from certain kinds of frames.
 	var/list/component_parts = null
+	///Cyberpunk 13 machinery wear accumulated through active use.
+	var/cyberpunk_machine_wear = 0
+	///Wear value at which the machine is considered broken.
+	var/cyberpunk_machine_wear_limit = 100
+	///Wear value at which the machine starts taking integrity damage.
+	var/cyberpunk_machine_wear_damage_threshold = 50
+	///Default wear added by one active interaction.
+	var/cyberpunk_machine_wear_per_use = 1
+	///Global per-machine tuning knob for Cyberpunk 13 wear accumulation.
+	var/cyberpunk_machine_wear_rate_multiplier = 0.05
+	///Throttle for passive Cyberpunk 13 wear produced by powered work.
+	var/cyberpunk_last_power_wear_time = 0
+	///Current Cyberpunk 13 failure mode. Null means no wear-induced failure.
+	var/cyberpunk_machine_failure_state = null
+	///Chance that a shorted failure shocks a user on interaction before skill mitigation.
+	var/cyberpunk_machine_failure_shock_chance = 35
+	///Last mob that caused wear failure. Used for hack/alarm mitigation checks.
+	var/mob/living/cyberpunk_last_failure_actor = null
+	///Per-component Cyberpunk 13 wear. Keys are entries from component_parts.
+	var/list/cyberpunk_component_wear
+	///Installed Cyberpunk 13 machine modules.
+	var/list/datum/cyberpunk_machine_module/cyberpunk_machine_modules
+	///Generic module slots. Specific machines can override this later.
+	var/cyberpunk_machine_module_slots = 2
+	///Temporary CP13 module installation UI holder.
+	var/datum/cyberpunk_machine_module_interface/cyberpunk_module_ui
 	///Is the machines maintenance panel open.
 	var/panel_open = FALSE
 	///Is the machine open or closed
@@ -195,6 +497,22 @@
 
 	return INITIALIZE_HINT_LATELOAD
 
+/obj/machinery/get_cyberpunk_diagnostic_data(mob/living/user)
+	. = ..()
+	. += "Wear: [round(cyberpunk_machine_wear)]/[cyberpunk_machine_wear_limit]."
+	. += "Wear rate: x[round(cyberpunk_machine_wear_rate_multiplier, 0.01)]."
+	. += "Failure: [cyberpunk_machine_failure_state || "none"]."
+	. += "Modules: [length(cyberpunk_machine_modules)]/[cyberpunk_machine_module_slots]."
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		. += module.get_diagnostic_line(src)
+	. += "Питание: [powered() ? "есть" : "нет"]."
+	. += "Состояние: [machine_stat ? "[machine_stat]" : "штатное"]."
+	. += "Панель: [panel_open ? "открыта" : "закрыта"]."
+	. += "Компоненты: [length(component_parts)]."
+	if(user?.get_cyberpunk_machine_diagnostic_depth(src) > 0)
+		. += "Порог повреждения износом: [cyberpunk_machine_wear_damage_threshold]."
+		. += "Шанс короткого замыкания: [cyberpunk_machine_failure_shock_chance]%."
+
 /obj/machinery/LateInitialize()
 	SHOULD_NOT_OVERRIDE(TRUE)
 	post_machine_initialize()
@@ -222,6 +540,11 @@
 	SSmachines.unregister_machine(src)
 	end_processing()
 
+	QDEL_LIST(cyberpunk_machine_modules)
+	QDEL_NULL(cyberpunk_module_ui)
+	cyberpunk_component_wear = null
+	cyberpunk_last_deconstructor = null
+	cyberpunk_last_failure_actor = null
 	clear_components()
 	unset_static_power()
 
@@ -701,6 +1024,14 @@
 
 //Return a non FALSE value to interrupt attack_hand propagation to subtypes.
 /obj/machinery/interact(mob/user)
+	if(isliving(user) && handle_cyberpunk_machine_failure_interaction(user))
+		return TRUE
+	if(panel_open && istype(user, /mob/living))
+		var/mob/living/living_user = user
+		var/obj/item/held_item = living_user.get_active_held_item()
+		if(held_item?.tool_behaviour != TOOL_ANALYZER)
+			open_cyberpunk_module_interface(living_user)
+			return TRUE
 	update_last_used(user)
 	return ..()
 
@@ -839,6 +1170,9 @@
 
 	idle_power_usage = initial(idle_power_usage) * (1 + parts_energy_rating)
 	active_power_usage = initial(active_power_usage) * (1 + parts_energy_rating)
+	var/power_multiplier = get_cyberpunk_machine_power_multiplier()
+	idle_power_usage *= power_multiplier
+	active_power_usage *= power_multiplier
 	update_current_power_usage()
 	SEND_SIGNAL(src, COMSIG_MACHINERY_REFRESH_PARTS)
 
@@ -913,7 +1247,8 @@
 	if(!can_crowbar_deconstruct())
 		return ITEM_INTERACT_BLOCKING
 
-	crowbar.play_tool_sound(src, 50)
+	if(!crowbar.use_tool(src, user, 2 SECONDS, volume = 50))
+		return ITEM_INTERACT_BLOCKING
 	// user.visible_message(span_notice("[user] deconstructs [src]."), span_notice("You deconstruct [src]."))
 	deconstruct(TRUE)
 	return ITEM_INTERACT_SUCCESS
@@ -948,8 +1283,16 @@
 					if(!ispath(component, /obj/item/stack))
 						continue
 					var/obj/item/stack/stack_path = component
-					new stack_path(loc, board.req_components[component])
+					var/stack_amount = board.req_components[component]
+					if(disassembled && cyberpunk_last_deconstructor)
+						stack_amount = cyberpunk_last_deconstructor.get_cyberpunk_structure_salvage_amount(src, stack_amount)
+					if(disassembled)
+						stack_amount = get_cyberpunk_machine_salvage_amount(stack_amount)
+					new stack_path(loc, stack_amount)
 	LAZYCLEARLIST(component_parts)
+	cyberpunk_component_wear = null
+	recalculate_cyberpunk_machine_wear()
+	cyberpunk_last_deconstructor = null
 
 	//drop everything inside us. we do this last to give machines a chance
 	//to handle their contents before we dump them
@@ -983,6 +1326,478 @@
 		new_frame.update_integrity(new_frame.max_integrity * 0.5) //the frame is already half broken
 	transfer_fingerprints_to(new_frame)
 
+/obj/machinery/proc/get_cyberpunk_machine_wear_multiplier()
+	var/wear_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		wear_multiplier *= module.wear_multiplier
+	return max(0.1, wear_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_power_multiplier()
+	var/power_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		power_multiplier *= module.power_usage_multiplier
+	return max(0.1, power_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_repair_multiplier()
+	var/repair_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		repair_multiplier *= module.repair_multiplier
+	return max(0.1, repair_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_tool_time_multiplier()
+	var/tool_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		tool_multiplier *= module.tool_time_multiplier
+	return max(0.1, tool_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_salvage_multiplier()
+	var/salvage_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		salvage_multiplier *= module.salvage_multiplier
+	return max(0.1, salvage_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_chem_speed_multiplier()
+	var/chem_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		chem_multiplier *= module.chem_speed_multiplier
+	return max(0.1, chem_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_chem_cost_multiplier()
+	var/chem_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		chem_multiplier *= module.chem_cost_multiplier
+	return max(0.1, chem_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_vending_stock_multiplier()
+	var/vending_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		vending_multiplier *= module.vending_stock_multiplier
+	return max(0.1, vending_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_apc_efficiency_multiplier()
+	var/apc_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		apc_multiplier *= module.apc_efficiency_multiplier
+	return max(0.1, apc_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_salvage_amount(base_amount)
+	return max(1, round(base_amount * get_cyberpunk_machine_salvage_multiplier()))
+
+/obj/machinery/proc/get_cyberpunk_wearable_components()
+	var/list/wearable_components = list()
+	if(!component_parts)
+		return wearable_components
+	for(var/component in component_parts)
+		wearable_components += component
+	return wearable_components
+
+/obj/machinery/proc/get_cyberpunk_component_name(component)
+	if(istype(component, /datum/stock_part))
+		var/datum/stock_part/stock_part = component
+		return stock_part.name()
+	if(istype(component, /obj/item))
+		var/obj/item/item = component
+		return item.name
+	return "[component]"
+
+/obj/machinery/proc/get_cyberpunk_component_type(component)
+	if(istype(component, /datum/stock_part))
+		return "[component]"
+	if(istype(component, /obj/item))
+		var/obj/item/item = component
+		return "[item.type]"
+	return "[component]"
+
+/obj/machinery/proc/get_cyberpunk_component_wear(component)
+	if(!cyberpunk_component_wear)
+		return 0
+	return cyberpunk_component_wear[component] || 0
+
+/obj/machinery/proc/prune_cyberpunk_component_wear()
+	if(!cyberpunk_component_wear)
+		return
+	var/list/wearable_components = get_cyberpunk_wearable_components()
+	for(var/component in cyberpunk_component_wear)
+		if(!(component in wearable_components))
+			cyberpunk_component_wear -= component
+	if(!length(cyberpunk_component_wear))
+		cyberpunk_component_wear = null
+
+/obj/machinery/proc/recalculate_cyberpunk_machine_wear()
+	prune_cyberpunk_component_wear()
+	var/highest_wear = 0
+	if(!cyberpunk_component_wear)
+		cyberpunk_machine_wear = highest_wear
+		return highest_wear
+	for(var/component in cyberpunk_component_wear)
+		highest_wear = max(highest_wear, cyberpunk_component_wear[component])
+	cyberpunk_machine_wear = highest_wear
+	return highest_wear
+
+/obj/machinery/proc/get_most_worn_cyberpunk_component()
+	prune_cyberpunk_component_wear()
+	var/best_component
+	var/highest_wear = -1
+	for(var/component in get_cyberpunk_wearable_components())
+		var/component_wear = get_cyberpunk_component_wear(component)
+		if(component_wear <= highest_wear)
+			continue
+		highest_wear = component_wear
+		best_component = component
+	return best_component
+
+/obj/machinery/proc/get_least_worn_cyberpunk_component()
+	prune_cyberpunk_component_wear()
+	var/best_component
+	var/lowest_wear = INFINITY
+	for(var/component in get_cyberpunk_wearable_components())
+		var/component_wear = get_cyberpunk_component_wear(component)
+		if(component_wear >= lowest_wear)
+			continue
+		lowest_wear = component_wear
+		best_component = component
+	return best_component
+
+/obj/machinery/proc/get_cyberpunk_failure_name()
+	switch(cyberpunk_machine_failure_state)
+		if("offline")
+			return "offline"
+		if("short")
+			return "short circuit"
+		if("jammed")
+			return "jammed actuator"
+		if("network")
+			return "network loss"
+		if("unsafe")
+			return "unsafe mode"
+	return "none"
+
+/obj/machinery/proc/pick_cyberpunk_failure_state(source = null)
+	if(source == "emp")
+		return pick("offline", "short", "network")
+	if(source == "hack" || source == "sabotage")
+		return pick("network", "unsafe", "jammed")
+	return pick("offline", "short", "jammed", "network", "unsafe")
+
+/obj/machinery/proc/set_cyberpunk_failure_state(new_state, mob/living/user = null)
+	if(cyberpunk_machine_failure_state == new_state)
+		return FALSE
+	cyberpunk_machine_failure_state = new_state
+	cyberpunk_last_failure_actor = user
+	if(new_state in list("offline", "jammed", "unsafe"))
+		set_machine_stat(machine_stat | BROKEN)
+	update_appearance()
+	return TRUE
+
+/obj/machinery/proc/clear_cyberpunk_failure_state()
+	if(!cyberpunk_machine_failure_state)
+		return FALSE
+	cyberpunk_machine_failure_state = null
+	cyberpunk_last_failure_actor = null
+	if(cyberpunk_machine_wear < cyberpunk_machine_wear_limit)
+		set_machine_stat(machine_stat & ~BROKEN)
+	update_appearance()
+	return TRUE
+
+/obj/machinery/proc/trigger_cyberpunk_machine_failure(source = null, mob/living/user = null)
+	if(cyberpunk_machine_failure_state)
+		return FALSE
+	var/failure_state = pick_cyberpunk_failure_state(source)
+	if(!failure_state)
+		return FALSE
+	set_cyberpunk_failure_state(failure_state, user)
+	if(user && prob(user.get_cyberpunk_machine_failure_mask_chance(src)))
+		return TRUE
+	visible_message(span_warning("[src] malfunctions: [get_cyberpunk_failure_name()]."))
+	return TRUE
+
+/obj/machinery/proc/handle_cyberpunk_machine_failure_interaction(mob/living/user)
+	if(!cyberpunk_machine_failure_state)
+		return FALSE
+	switch(cyberpunk_machine_failure_state)
+		if("short", "unsafe")
+			var/shock_chance = round(cyberpunk_machine_failure_shock_chance * user.get_cyberpunk_machine_shock_multiplier(src))
+			if(powered() && prob(shock_chance))
+				shock(user, 100)
+				return TRUE
+		if("jammed")
+			balloon_alert(user, "jammed")
+			return TRUE
+		if("offline")
+			if(!panel_open)
+				balloon_alert(user, "offline")
+				return TRUE
+	return FALSE
+
+/obj/machinery/proc/apply_cyberpunk_machine_wear(amount = 1, source = null, mob/living/user = null)
+	if(amount <= 0 || (resistance_flags & INDESTRUCTIBLE))
+		return FALSE
+	var/adjusted_amount = max(0, amount * cyberpunk_machine_wear_rate_multiplier * get_cyberpunk_machine_wear_multiplier())
+	if(!adjusted_amount)
+		return FALSE
+	var/old_wear = recalculate_cyberpunk_machine_wear()
+	var/target_component = get_least_worn_cyberpunk_component()
+	if(target_component)
+		LAZYINITLIST(cyberpunk_component_wear)
+		cyberpunk_component_wear[target_component] = min(cyberpunk_machine_wear_limit, get_cyberpunk_component_wear(target_component) + adjusted_amount)
+	else
+		cyberpunk_machine_wear = min(cyberpunk_machine_wear_limit, cyberpunk_machine_wear + adjusted_amount)
+	var/new_wear = target_component ? recalculate_cyberpunk_machine_wear() : cyberpunk_machine_wear
+	if(uses_integrity && new_wear >= cyberpunk_machine_wear_damage_threshold && get_integrity() > 1)
+		take_damage(min(get_integrity() - 1, max(1, round(adjusted_amount))), BURN, ENERGY, FALSE)
+	if(new_wear >= cyberpunk_machine_wear_limit)
+		trigger_cyberpunk_machine_failure(source, user)
+	return new_wear != old_wear
+
+/obj/machinery/proc/repair_cyberpunk_machine_wear(amount = 1, mob/living/user = null)
+	if(amount <= 0)
+		return FALSE
+	var/old_wear = recalculate_cyberpunk_machine_wear()
+	if(old_wear <= 0)
+		return FALSE
+	var/adjusted_amount = amount * get_cyberpunk_machine_repair_multiplier()
+	var/target_component = get_most_worn_cyberpunk_component()
+	if(target_component)
+		cyberpunk_component_wear[target_component] = max(0, get_cyberpunk_component_wear(target_component) - adjusted_amount)
+		if(cyberpunk_component_wear[target_component] <= 0)
+			cyberpunk_component_wear -= target_component
+	else
+		cyberpunk_machine_wear = max(0, cyberpunk_machine_wear - adjusted_amount)
+	var/new_wear = target_component ? recalculate_cyberpunk_machine_wear() : cyberpunk_machine_wear
+	if(new_wear < cyberpunk_machine_wear_damage_threshold)
+		clear_cyberpunk_failure_state()
+	return new_wear != old_wear
+
+/obj/machinery/proc/can_service_cyberpunk_component_with(obj/item/tool)
+	return tool?.tool_behaviour in list(TOOL_WRENCH, TOOL_WELDER)
+
+/obj/machinery/proc/service_cyberpunk_component(component, mob/living/user, obj/item/tool)
+	if(!panel_open)
+		to_chat(user, span_warning("Open the maintenance panel before servicing machine components."))
+		return FALSE
+	if(!can_service_cyberpunk_component_with(tool))
+		to_chat(user, span_warning("Hold a wrench or welding tool to service machine components."))
+		return FALSE
+	if(!cyberpunk_component_wear || !cyberpunk_component_wear[component])
+		return FALSE
+
+	var/service_amount = user.get_cyberpunk_machine_service_amount(src, 10)
+	var/service_delay = 2 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "repair") * tool.toolspeed * get_cyberpunk_machine_tool_time_multiplier()
+	var/service_fuel_cost = tool.tool_behaviour == TOOL_WELDER ? 1 : 0
+	if(!tool.tool_start_check(user, amount = service_fuel_cost))
+		return FALSE
+	tool.play_tool_sound(src, 40)
+	if(service_delay && !do_after(user, service_delay, target = src))
+		return FALSE
+	if(service_fuel_cost && !tool.use(service_fuel_cost))
+		return FALSE
+	if(service_delay >= MIN_TOOL_SOUND_DELAY)
+		tool.play_tool_sound(src, 40)
+
+	cyberpunk_component_wear[component] = max(0, cyberpunk_component_wear[component] - (service_amount * get_cyberpunk_machine_repair_multiplier()))
+	if(cyberpunk_component_wear[component] <= 0)
+		cyberpunk_component_wear -= component
+	recalculate_cyberpunk_machine_wear()
+	if(cyberpunk_machine_wear < cyberpunk_machine_wear_damage_threshold)
+		clear_cyberpunk_failure_state()
+	to_chat(user, span_notice("You service [get_cyberpunk_component_name(component)] in [src]."))
+	return TRUE
+
+/obj/machinery/proc/can_install_cyberpunk_module(datum/cyberpunk_machine_module/module, mob/living/user)
+	if(!module || length(cyberpunk_machine_modules) >= cyberpunk_machine_module_slots)
+		return FALSE
+	for(var/datum/cyberpunk_machine_module/installed_module as anything in cyberpunk_machine_modules)
+		if(installed_module.id == module.id)
+			return FALSE
+	return module.can_install(src, user)
+
+/obj/machinery/proc/install_cyberpunk_module(datum/cyberpunk_machine_module/module, mob/living/user, use_delay = FALSE)
+	if(!can_install_cyberpunk_module(module, user))
+		return FALSE
+	if(use_delay)
+		var/install_delay = 2 SECONDS
+		if(user)
+			install_delay *= user.get_cyberpunk_machine_module_time_multiplier(src)
+		if(install_delay && !do_after(user, install_delay, target = src))
+			return FALSE
+	LAZYADD(cyberpunk_machine_modules, module)
+	module.on_install(src, user)
+	return TRUE
+
+/obj/machinery/proc/extract_cyberpunk_module(module_id, mob/living/user)
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		if(module.id != module_id)
+			continue
+		module.on_remove(src, user)
+		cyberpunk_machine_modules -= module
+		return module
+	return null
+
+/obj/machinery/proc/remove_cyberpunk_module(module_id, mob/living/user)
+	var/datum/cyberpunk_machine_module/module = extract_cyberpunk_module(module_id, user)
+	if(module)
+		qdel(module)
+		return TRUE
+	return FALSE
+
+/obj/machinery/proc/open_cyberpunk_module_interface(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(QDELETED(cyberpunk_module_ui))
+		cyberpunk_module_ui = null
+	if(!cyberpunk_module_ui)
+		cyberpunk_module_ui = new(src)
+	cyberpunk_module_ui.ui_interact(user)
+	return TRUE
+
+/datum/cyberpunk_machine_module_interface
+	var/obj/machinery/machine
+
+/datum/cyberpunk_machine_module_interface/New(obj/machinery/new_machine)
+	. = ..()
+	machine = new_machine
+
+/datum/cyberpunk_machine_module_interface/Destroy(force)
+	machine = null
+	return ..()
+
+/datum/cyberpunk_machine_module_interface/ui_state(mob/user)
+	return GLOB.physical_state
+
+/datum/cyberpunk_machine_module_interface/ui_interact(mob/user, datum/tgui/ui)
+	if(!machine || QDELETED(machine))
+		return
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkMachineModules", "Machine modules")
+		ui.open()
+
+/datum/cyberpunk_machine_module_interface/proc/module_ui_data(datum/cyberpunk_machine_module/module)
+	return list(
+		"id" = module.id,
+		"name" = module.name,
+		"description" = module.description,
+		"manufacturer" = module.manufacturer,
+		"type" = "[module.type]",
+		"power_usage_multiplier" = module.power_usage_multiplier,
+		"wear_multiplier" = module.wear_multiplier,
+		"tool_time_multiplier" = module.tool_time_multiplier,
+		"repair_multiplier" = module.repair_multiplier,
+		"salvage_multiplier" = module.salvage_multiplier,
+		"integrity_bonus" = module.integrity_bonus,
+		"chem_speed_multiplier" = module.chem_speed_multiplier,
+		"chem_cost_multiplier" = module.chem_cost_multiplier,
+		"vending_stock_multiplier" = module.vending_stock_multiplier,
+		"apc_efficiency_multiplier" = module.apc_efficiency_multiplier,
+	)
+
+/datum/cyberpunk_machine_module_interface/ui_data(mob/user)
+	var/list/data = list()
+	if(!machine || QDELETED(machine))
+		return data
+	machine.recalculate_cyberpunk_machine_wear()
+	data["machine"] = list(
+		"name" = machine.name,
+		"type" = "[machine.type]",
+		"panel_open" = machine.panel_open,
+		"wear" = round(machine.cyberpunk_machine_wear),
+		"wear_limit" = machine.cyberpunk_machine_wear_limit,
+		"wear_rate_multiplier" = machine.cyberpunk_machine_wear_rate_multiplier,
+		"failure_state" = machine.get_cyberpunk_failure_name(),
+		"module_slots" = machine.cyberpunk_machine_module_slots,
+		"module_count" = length(machine.cyberpunk_machine_modules),
+		"power_multiplier" = machine.get_cyberpunk_machine_power_multiplier(),
+		"wear_multiplier" = machine.get_cyberpunk_machine_wear_multiplier(),
+		"tool_time_multiplier" = machine.get_cyberpunk_machine_tool_time_multiplier(),
+		"repair_multiplier" = machine.get_cyberpunk_machine_repair_multiplier(),
+		"salvage_multiplier" = machine.get_cyberpunk_machine_salvage_multiplier(),
+		"chem_speed_multiplier" = machine.get_cyberpunk_machine_chem_speed_multiplier(),
+		"chem_cost_multiplier" = machine.get_cyberpunk_machine_chem_cost_multiplier(),
+		"vending_stock_multiplier" = machine.get_cyberpunk_machine_vending_stock_multiplier(),
+		"apc_efficiency_multiplier" = machine.get_cyberpunk_machine_apc_efficiency_multiplier(),
+	)
+	data["installed_modules"] = list()
+	for(var/datum/cyberpunk_machine_module/module as anything in machine.cyberpunk_machine_modules)
+		data["installed_modules"] += list(module_ui_data(module))
+	data["catalog"] = list()
+	for(var/module_type in cyberpunk_machine_module_catalog())
+		var/datum/cyberpunk_machine_module/module = new module_type
+		data["catalog"] += list(module_ui_data(module))
+		qdel(module)
+	data["components"] = list()
+	var/component_index = 1
+	for(var/component in machine.get_cyberpunk_wearable_components())
+		var/component_wear = machine.get_cyberpunk_component_wear(component)
+		data["components"] += list(list(
+			"index" = component_index,
+			"name" = machine.get_cyberpunk_component_name(component),
+			"type" = machine.get_cyberpunk_component_type(component),
+			"wear" = round(component_wear),
+			"wear_limit" = machine.cyberpunk_machine_wear_limit,
+		))
+		component_index++
+	var/mob/living/living_user = istype(user, /mob/living) ? user : null
+	var/obj/item/held_item = istype(living_user) ? living_user.get_active_held_item() : null
+	data["service_tool_ready"] = machine.panel_open && machine.can_service_cyberpunk_component_with(held_item)
+	if(istype(held_item, /obj/item/cyberpunk_machine_module))
+		var/obj/item/cyberpunk_machine_module/held_module_item = held_item
+		var/datum/cyberpunk_machine_module/held_module = held_module_item.create_module_datum()
+		data["held_module"] = module_ui_data(held_module)
+		qdel(held_module)
+	else
+		data["held_module"] = null
+	return data
+
+/datum/cyberpunk_machine_module_interface/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(!ui || ui.status != UI_INTERACTIVE)
+		return TRUE
+	if(!machine || QDELETED(machine))
+		return TRUE
+	var/mob/living/user = istype(ui.user, /mob/living) ? ui.user : null
+	if(!istype(user) || !in_range(machine, user))
+		return TRUE
+	switch(action)
+		if("install_held")
+			if(!machine.panel_open)
+				to_chat(user, span_warning("Open the maintenance panel before installing a machine module."))
+				return TRUE
+			var/obj/item/held_item = user.get_active_held_item()
+			var/obj/item/cyberpunk_machine_module/held_module_item = held_item
+			if(!istype(held_module_item))
+				return TRUE
+			var/datum/cyberpunk_machine_module/module = held_module_item.create_module_datum()
+			if(machine.install_cyberpunk_module(module, user, TRUE))
+				to_chat(user, span_notice("You install [module.name] into [machine]."))
+				qdel(held_module_item)
+			else
+				to_chat(user, span_warning("This machine cannot accept that module."))
+				qdel(module)
+			return TRUE
+		if("remove_module")
+			if(!machine.panel_open)
+				to_chat(user, span_warning("Open the maintenance panel before removing a machine module."))
+				return TRUE
+			var/datum/cyberpunk_machine_module/module = machine.extract_cyberpunk_module(params["module_id"], user)
+			if(!module)
+				return TRUE
+			var/item_type = module.module_item_type
+			var/obj/item/module_item = new item_type(machine.drop_location())
+			user.put_in_hands(module_item)
+			to_chat(user, span_notice("You remove [module.name] from [machine]."))
+			qdel(module)
+			return TRUE
+		if("repair_component")
+			var/component_index = text2num(params["component_index"])
+			var/list/components = machine.get_cyberpunk_wearable_components()
+			if(component_index < 1 || component_index > length(components))
+				return TRUE
+			var/component = components[component_index]
+			if(!machine.cyberpunk_component_wear || !machine.cyberpunk_component_wear[component])
+				return TRUE
+			machine.service_cyberpunk_component(component, user, user.get_active_held_item())
+			return TRUE
+	return TRUE
 
 /obj/machinery/atom_break(damage_flag)
 	. = ..()
@@ -1015,6 +1830,9 @@
 		circuit = null
 	if((gone in component_parts) && !QDELETED(src))
 		component_parts -= gone
+		if(cyberpunk_component_wear)
+			cyberpunk_component_wear -= gone
+			recalculate_cyberpunk_machine_wear()
 		// It would be unusual for a component_part to be qdel'd ordinarily.
 		deconstruct(FALSE)
 
@@ -1029,6 +1847,8 @@
 	var/list/old_components = component_parts
 	circuit = null
 	component_parts = null
+	cyberpunk_component_wear = null
+	recalculate_cyberpunk_machine_wear()
 	for(var/atom/atom_part in old_components)
 		qdel(atom_part)
 
@@ -1146,6 +1966,9 @@
 						part_list -= secondary_part //have to manually remove cause we are no longer refering replacer_tool.contents
 
 				component_parts -= primary_part_base
+				if(cyberpunk_component_wear)
+					cyberpunk_component_wear -= primary_part_base
+					recalculate_cyberpunk_machine_wear()
 
 				var/obj/physical_part
 				if (istype(primary_part_base, /datum/stock_part))
@@ -1305,6 +2128,9 @@
 
 /obj/machinery/proc/update_last_used(mob/user)
 	if(isliving(user))
+		var/mob/living/living_user = user
+		if(world.time > last_used_time)
+			living_user.apply_cyberpunk_machine_wear(src, cyberpunk_machine_wear_per_use, "use")
 		last_used_time = world.time
 		last_user_mobtype = user.type
 

@@ -644,7 +644,7 @@ GLOBAL_LIST_EMPTY(roundstart_station_closets)
 		return
 
 	if(ispath(material_drop) && material_drop_amount)
-		new material_drop(loc, material_drop_amount)
+		spawn_cyberpunk_salvage_stack(material_drop, loc, material_drop_amount)
 	if (secure)
 		var/obj/item/electronics/airlock/electronics = new(drop_location())
 		if(length(req_one_access))

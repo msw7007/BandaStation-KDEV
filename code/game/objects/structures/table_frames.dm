@@ -95,7 +95,7 @@
 	return our_stack.get_table_type()
 
 /obj/structure/table_frame/atom_deconstruct(disassembled = TRUE)
-	new framestack(get_turf(src), framestackamount)
+	spawn_cyberpunk_salvage_stack(framestack, get_turf(src), framestackamount)
 
 /obj/structure/table_frame/narsie_act()
 	new /obj/structure/table_frame/wood(src.loc)

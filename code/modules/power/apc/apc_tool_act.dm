@@ -377,7 +377,7 @@
 	if(!welder.use_tool(src, user, 50, volume=50))
 		return
 	if((machine_stat & BROKEN) || opened == APC_COVER_REMOVED)
-		new /obj/item/stack/sheet/iron(loc)
+		spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 1)
 		user.visible_message(span_notice("[user.name] разрезает на части [declent_ru(ACCUSATIVE)] с помощью [welder.declent_ru(GENITIVE)]."))
 		user.balloon_alert(user, "сломанная панель разобрана")
 	else

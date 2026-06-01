@@ -1235,6 +1235,17 @@
 				mineral_scan_pulse(get_turf(user), SKILL_LEVEL_JOURNEYMAN - 2, scanner = src) //SKILL_LEVEL_JOURNEYMAN = 3 So to get range of 1+ we have to subtract 2 from it,.
 
 	delay *= toolspeed * skill_modifier
+	var/cyberpunk_action = "work"
+	if(delay && target && istype(user) && target.is_cyberpunk_structure_target())
+		switch(tool_behaviour)
+			if(TOOL_WELDER)
+				cyberpunk_action = target.is_cyberpunk_repair_target() ? "repair" : "dismantle"
+			if(TOOL_CROWBAR, TOOL_SCREWDRIVER, TOOL_WRENCH, TOOL_WIRECUTTER)
+				cyberpunk_action = "dismantle"
+		delay *= user.get_cyberpunk_structure_time_multiplier(target, cyberpunk_action)
+		var/obj/machinery/target_machine = target
+		if(istype(target_machine))
+			delay *= target_machine.get_cyberpunk_machine_tool_time_multiplier()
 
 
 	// Play tool sound at the beginning of tool usage.
@@ -1262,6 +1273,11 @@
 	// but only if the delay between the beginning and the end is not too small
 	if(delay >= MIN_TOOL_SOUND_DELAY)
 		play_tool_sound(target, volume)
+
+	if(cyberpunk_action == "dismantle")
+		var/obj/target_object = target
+		if(istype(target_object))
+			target_object.cyberpunk_last_deconstructor = user
 
 	return TRUE
 

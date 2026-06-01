@@ -39,6 +39,8 @@
 	/// Map tag for something.  Tired of it being used on snowflake items.  Moved here for some semblance of a standard.
 	/// Next pr after the network fix will have me refactor door interactions, so help me god.
 	var/id_tag = null
+	/// Last living mob that completed a Cyberpunk 13 deconstruction tool action on this object.
+	var/mob/living/cyberpunk_last_deconstructor = null
 
 	/// The sound this obj makes when something is buckled to it
 	var/buckle_sound = null
@@ -74,7 +76,22 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 		SScameras.update_visibility(src)
 	SStgui.close_uis(src)
 	GLOB.objects_by_id_tag -= id_tag
+	cyberpunk_last_deconstructor = null
 	. = ..()
+
+/obj/proc/get_cyberpunk_deconstruction_stack_amount(base_amount)
+	if(!cyberpunk_last_deconstructor)
+		return base_amount
+	return cyberpunk_last_deconstructor.get_cyberpunk_structure_salvage_amount(src, base_amount)
+
+/obj/proc/spawn_cyberpunk_salvage_stack(stack_type, atom/drop_loc, base_amount)
+	if(!ispath(stack_type, /obj/item/stack) || !drop_loc || base_amount <= 0)
+		return null
+	var/stack_amount = get_cyberpunk_deconstruction_stack_amount(base_amount)
+	if(stack_amount <= 0)
+		return null
+	var/obj/item/stack/created_stack = new stack_type(drop_loc, stack_amount)
+	return created_stack
 
 /obj/attacked_by(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(!attacking_item.force)
@@ -231,9 +248,8 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 		.["проводящий"] = "Похоже, это является хорошим проводником электричества."
 
 /obj/analyzer_act(mob/living/user, obj/item/analyzer/tool)
-	if(atmos_scan(user=user, target=src, silent=FALSE))
-		return TRUE
-	return ..()
+	var/atmos_scanned = atmos_scan(user=user, target=src, silent=FALSE)
+	return ..() || atmos_scanned
 
 /obj/proc/plunger_act(obj/item/plunger/attacking_plunger, mob/living/user, reinforced)
 	return SEND_SIGNAL(src, COMSIG_PLUNGER_ACT, attacking_plunger, user, reinforced)

@@ -113,8 +113,9 @@
 
 /obj/structure/railing/atom_deconstruct(disassembled)
 	var/rods_to_make = istype(src,/obj/structure/railing/corner) ? 1 : 2
-	var/obj/rod = new item_deconstruct(drop_location(), rods_to_make)
-	transfer_fingerprints_to(rod)
+	var/obj/rod = spawn_cyberpunk_salvage_stack(item_deconstruct, drop_location(), rods_to_make)
+	if(rod)
+		transfer_fingerprints_to(rod)
 
 ///Implements behaviour that makes it possible to unanchor the railing.
 /obj/structure/railing/wrench_act(mob/living/user, obj/item/I)

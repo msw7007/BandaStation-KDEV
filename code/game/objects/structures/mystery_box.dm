@@ -290,7 +290,7 @@ GLOBAL_LIST_INIT(mystery_fishing, list(
 	anchored = FALSE
 
 /obj/structure/mystery_box/handle_deconstruct(disassembled)
-	new /obj/item/stack/sheet/mineral/wood(drop_location(), 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/mineral/wood, drop_location(), 2)
 	return ..()
 
 /obj/structure/mystery_box/fishing/generate_valid_types()

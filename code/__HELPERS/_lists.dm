@@ -495,9 +495,14 @@
 
 	var/total = 0
 	for(var/item in list_to_pick)
-		if(!list_to_pick[item])
+		var/item_weight = list_to_pick[item]
+		if(!isnum(item_weight) || item_weight <= 0)
 			list_to_pick[item] = 0
-		total += list_to_pick[item]
+			continue
+		total += item_weight
+
+	if(total <= 0)
+		return null
 
 	total = rand(1, total)
 	for(var/item in list_to_pick)

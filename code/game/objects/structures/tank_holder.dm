@@ -68,7 +68,7 @@
 
 /obj/structure/tank_holder/atom_deconstruct(disassembled = TRUE)
 	var/atom/Tsec = drop_location()
-	new /obj/item/stack/rods(Tsec, 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/rods, Tsec, 2)
 	if(tank)
 		tank.forceMove(Tsec)
 

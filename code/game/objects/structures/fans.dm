@@ -12,7 +12,7 @@
 
 /obj/structure/fans/atom_deconstruct(disassembled = TRUE)
 	if(buildstacktype)
-		new buildstacktype(loc,buildstackamount)
+		spawn_cyberpunk_salvage_stack(buildstacktype, loc, buildstackamount)
 
 /obj/structure/fans/wrench_act(mob/living/user, obj/item/I)
 	user.visible_message(span_warning("[user] disassembles [src]."),

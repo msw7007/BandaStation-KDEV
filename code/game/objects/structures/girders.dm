@@ -85,7 +85,7 @@
 /obj/structure/girder/wirecutter_act(mob/user, obj/item/tool)
 	. = ITEM_INTERACT_BLOCKING
 	if (try_construction_step(user, tool, 4 SECONDS, req_state = GIRDER_REINF_STRUTS, start_alert = "removing inner grille..."))
-		new /obj/item/stack/sheet/plasteel(get_turf(src))
+		spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/plasteel, get_turf(src), 1)
 		replace_girder(/obj/structure/girder)
 		return ITEM_INTERACT_SUCCESS
 
@@ -156,10 +156,10 @@
 
 /obj/structure/girder/atom_deconstruct(disassembled = TRUE)
 	if (disassembled || always_drop_stack)
-		new stack_type(drop_location(), stack_amount)
+		spawn_cyberpunk_salvage_stack(stack_type, drop_location(), stack_amount)
 	else
 		var/remains = pick(/obj/item/stack/rods, stack_type)
-		new remains(drop_location())
+		spawn_cyberpunk_salvage_stack(remains, drop_location(), 1)
 
 /obj/structure/girder/narsie_act()
 	replace_girder(/obj/structure/girder/cult)

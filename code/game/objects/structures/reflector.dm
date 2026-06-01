@@ -97,9 +97,9 @@
 	if(!tool.use_tool(src, user, 8 SECONDS, volume=50))
 		return ITEM_INTERACT_BLOCKING
 	to_chat(user, span_notice("You dismantle [src]."))
-	new framebuildstacktype(drop_location(), framebuildstackamount)
+	spawn_cyberpunk_salvage_stack(framebuildstacktype, drop_location(), framebuildstackamount)
 	if(buildstackamount)
-		new buildstacktype(drop_location(), buildstackamount)
+		spawn_cyberpunk_salvage_stack(buildstacktype, drop_location(), buildstackamount)
 	qdel(src)
 	return ITEM_INTERACT_SUCCESS
 

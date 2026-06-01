@@ -44,7 +44,7 @@
 	return ITEM_INTERACT_SUCCESS
 
 /obj/structure/steps/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/iron(drop_location(), 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, drop_location(), 2)
 
 /// Watch your ankles
 /obj/structure/steps/proc/on_enter(turf/our_turf, mob/living/arrived, turf/old_loc, list/atom/old_locs)

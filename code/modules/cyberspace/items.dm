@@ -381,9 +381,6 @@
 	if(cooldown > 0 && world.time < next_use)
 		to_chat(caster, span_warning("[demon_name] is cooling down for [DisplayTimeText(next_use - world.time)]."))
 		return FALSE
-	if(stamina_cost > 0 && !caster.spend_stamina(stamina_cost, "cyberdemon"))
-		to_chat(caster, span_warning("You do not have enough stamina to run [demon_name]."))
-		return FALSE
 	var/physical_world = !caster.is_projected_into_cyberspace()
 	var/current_power = get_effective_power(physical_world)
 	if(CYBER_DEMON_SPECIAL_STEALTH in special_effects)
@@ -1463,14 +1460,20 @@
 
 /obj/item/clothing/gloves/cyberdeck/dropped(mob/living/user)
 	. = ..()
-	clear_demon_actions()
+	clear_demon_actions(user)
 
-/obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions()
-	QDEL_LIST(demon_actions)
+/obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions(mob/living/user)
+	var/mob/action_owner = user
+	for(var/datum/action/action as anything in demon_actions)
+		if(!action_owner)
+			action_owner = action.owner
+		action.Remove(action.owner)
+		qdel(action)
 	demon_actions = list()
+	action_owner?.update_action_buttons(TRUE)
 
 /obj/item/clothing/gloves/cyberdeck/proc/sync_demon_actions(mob/living/user)
-	clear_demon_actions()
+	clear_demon_actions(user)
 	if(!istype(user) || !(src in user.contents))
 		return
 	for(var/datum/cyberspace_demon/demon as anything in demons)
@@ -1479,6 +1482,7 @@
 		var/datum/action/cooldown/cyberdemon/demon_action = new(demon, src)
 		demon_actions += demon_action
 		demon_action.Grant(user)
+	user.update_action_buttons(TRUE)
 
 /obj/item/clothing/gloves/cyberdeck/proc/get_used_memory()
 	var/used_memory = 0
@@ -1636,7 +1640,7 @@
 
 /obj/item/clothing/gloves/cyberdeck/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(.)
+	if(action == "change_ui_state")
 		return
 	return handle_cyberdemon_compiler_action(action, params, ui.user, src, find_accessible_cyberdemon_disk(ui.user, src, null), null)
 
@@ -1782,7 +1786,7 @@
 
 /obj/item/cyberdemon_disk/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(.)
+	if(action == "change_ui_state")
 		return
 	return handle_cyberdemon_compiler_action(action, params, ui.user, find_held_cyberdeck(ui.user), src, null)
 
@@ -1867,7 +1871,7 @@
 
 /obj/machinery/cyberdemon_terminal/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(.)
+	if(action == "change_ui_state")
 		return
 	var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(ui.user)
 	return handle_cyberdemon_compiler_action(action, params, ui.user, deck, find_accessible_cyberdemon_disk(ui.user, deck, src), src)
@@ -1901,7 +1905,7 @@
 
 /datum/cyberdemon_debug_compiler/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
-	if(.)
+	if(action == "change_ui_state")
 		return
 	var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(ui.user)
 	return handle_cyberdemon_compiler_action(action, params, ui.user, deck, find_accessible_cyberdemon_disk(ui.user, deck, null), null)

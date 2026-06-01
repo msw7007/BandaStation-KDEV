@@ -107,7 +107,7 @@ GLOBAL_LIST_EMPTY(bodycontainers) //Let them act as spawnpoints for revenants an
 	return attack_hand(user)
 
 /obj/structure/bodycontainer/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/iron(loc, 5)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 5)
 
 /obj/structure/bodycontainer/container_resist_act(mob/living/user)
 	if(!locked)
@@ -543,7 +543,7 @@ GLOBAL_LIST_EMPTY(crematoriums)
 	return ..()
 
 /obj/structure/tray/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/iron (loc, 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 2)
 
 /obj/structure/tray/attack_paw(mob/user, list/modifiers)
 	return attack_hand(user, modifiers)

@@ -41,11 +41,11 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/sink, (-14))
 
 /obj/structure/sink/atom_deconstruct(dissambled = TRUE)
 	if(buildstacktype)
-		new buildstacktype(loc,buildstackamount)
+		spawn_cyberpunk_salvage_stack(buildstacktype, loc, buildstackamount)
 	else
 		for(var/i in custom_materials)
 			var/datum/material/M = i
-			new M.sheet_type(loc, FLOOR(custom_materials[M] / SHEET_MATERIAL_AMOUNT, 1))
+			spawn_cyberpunk_salvage_stack(M.sheet_type, loc, FLOOR(custom_materials[M] / SHEET_MATERIAL_AMOUNT, 1))
 	if(has_water_reclaimer)
 		new /obj/item/stock_parts/water_recycler(drop_location())
 

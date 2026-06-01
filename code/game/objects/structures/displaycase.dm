@@ -266,7 +266,7 @@
 	tool.play_tool_sound(src)
 	if(tool.use_tool(src, user, 3 SECONDS))
 		playsound(loc, 'sound/items/deconstruct.ogg', 50, TRUE)
-		new /obj/item/stack/sheet/mineral/wood(drop_location(), 5)
+		spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/mineral/wood, drop_location(), 5)
 		if(electronics)
 			electronics.forceMove(drop_location())
 			electronics = null

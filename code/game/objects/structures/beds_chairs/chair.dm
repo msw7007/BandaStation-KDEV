@@ -82,10 +82,10 @@
 
 /obj/structure/chair/atom_deconstruct(disassembled)
 	if(buildstacktype)
-		new buildstacktype(loc,buildstackamount)
+		spawn_cyberpunk_salvage_stack(buildstacktype, loc, buildstackamount)
 	else
 		for(var/datum/material/mat as anything in custom_materials)
-			new mat.sheet_type(loc, FLOOR(custom_materials[mat] / SHEET_MATERIAL_AMOUNT, 1))
+			spawn_cyberpunk_salvage_stack(mat.sheet_type, loc, FLOOR(custom_materials[mat] / SHEET_MATERIAL_AMOUNT, 1))
 
 /obj/structure/chair/attack_paw(mob/user, list/modifiers)
 	return attack_hand(user, modifiers)

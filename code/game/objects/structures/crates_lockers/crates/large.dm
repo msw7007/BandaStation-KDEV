@@ -43,8 +43,9 @@
 		playsound(src.loc, 'sound/items/weapons/slashmiss.ogg', 75, TRUE)
 
 		var/turf/T = get_turf(src)
+		cyberpunk_last_deconstructor = user
 		for(var/i in 1 to material_drop_amount)
-			new material_drop(src)
+			spawn_cyberpunk_salvage_stack(material_drop, src, 1)
 		for(var/atom/movable/AM in contents)
 			AM.forceMove(T)
 		qdel(src)

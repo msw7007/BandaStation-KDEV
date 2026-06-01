@@ -136,7 +136,7 @@
 			if(tool.tool_behaviour == TOOL_WIRECUTTER)
 				stage = LIGHT_CONSTRUCT_EMPTY
 				icon_state = "[fixture_type]-construct-stage1"
-				new /obj/item/stack/cable_coil(drop_location(), 1, "red")
+				spawn_cyberpunk_salvage_stack(/obj/item/stack/cable_coil, drop_location(), 1)
 				user.visible_message(span_notice("[user.name] removes the wiring from [src]."), \
 					span_notice("You remove the wiring from [src]."), span_hear("You hear clicking."))
 				tool.play_tool_sound(src, 100)
@@ -169,9 +169,9 @@
 		deconstruct(FALSE)
 
 /obj/structure/light_construct/atom_deconstruct(disassembled)
-	new /obj/item/stack/sheet/iron(loc, sheets_refunded)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, sheets_refunded)
 	if(stage == LIGHT_CONSTRUCT_WIRED)
-		new /obj/item/stack/cable_coil(drop_location(), 1, "red")
+		spawn_cyberpunk_salvage_stack(/obj/item/stack/cable_coil, drop_location(), 1)
 
 /obj/structure/light_construct/small
 	name = "small light fixture frame"

@@ -121,7 +121,7 @@
 /obj/item/wallframe/atom_deconstruct(disassembled)
 	var/atom/drop = drop_location()
 	for(var/datum/material/mat as anything in custom_materials)
-		new mat.sheet_type(drop, round(custom_materials[mat] / SHEET_MATERIAL_AMOUNT))
+		spawn_cyberpunk_salvage_stack(mat.sheet_type, drop, round(custom_materials[mat] / SHEET_MATERIAL_AMOUNT))
 
 /obj/item/electronics
 	desc = "Looks like a circuit. Probably is."

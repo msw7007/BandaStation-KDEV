@@ -89,7 +89,7 @@
 	for(var/X in src)
 		var/obj/item/I = X
 		I.forceMove(loc)
-	new /obj/item/stack/sheet/iron (loc, 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 2)
 
 /obj/structure/tank_dispenser/examine(mob/user)
 	. = ..()

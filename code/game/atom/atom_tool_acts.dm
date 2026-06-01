@@ -101,6 +101,9 @@
 		return ITEM_INTERACT_SUCCESS // Safe-ish to assume that if we deleted our item something succeeded
 
 	var/act_result = NONE // or FALSE, or null, as some things may return
+	var/previous_integrity
+	if(is_left_clicking && tool_type == TOOL_WELDER && uses_integrity)
+		previous_integrity = get_integrity()
 
 	switch(tool_type)
 		if(TOOL_CROWBAR)
@@ -120,6 +123,24 @@
 
 	if(!act_result)
 		return NONE
+
+	if(is_left_clicking && tool_type == TOOL_SCREWDRIVER)
+		var/obj/machinery/opened_machine = src
+		if(istype(opened_machine) && opened_machine.panel_open)
+			opened_machine.open_cyberpunk_module_interface(user)
+
+	if(is_left_clicking && tool_type == TOOL_WELDER && uses_integrity && !isnull(previous_integrity))
+		var/current_integrity = get_integrity()
+		if(current_integrity > previous_integrity && current_integrity < max_integrity)
+			var/obj/machinery/repaired_machine = src
+			if(istype(repaired_machine))
+				repaired_machine.repair_cyberpunk_machine_wear(current_integrity - previous_integrity, user)
+			var/repair_bonus = user.get_cyberpunk_structure_repair_bonus(src)
+			var/extra_repair = round((current_integrity - previous_integrity) * repair_bonus * 0.01)
+			if(extra_repair > 0)
+				var/applied_repair = repair_damage(extra_repair)
+				if(applied_repair > 0)
+					to_chat(user, span_notice("Ваши строительные навыки улучшают ремонт на [applied_repair] прочности."))
 
 	// A tooltype_act has completed successfully
 	if(is_left_clicking)
@@ -318,8 +339,106 @@
 
 /// Called on an object when a tool with analyzer capabilities is used to left click an object
 /atom/proc/analyzer_act(mob/living/user, obj/item/tool)
-	return
+	if(!is_cyberpunk_structure_target())
+		return
+	tool.play_tool_sound(src)
+	for(var/diagnostic_line in user.get_cyberpunk_machine_diagnostic_data(src))
+		to_chat(user, span_notice("[diagnostic_line]"))
+	return TRUE
 
 /// Called on an object when a tool with analyzer capabilities is used to right click an object
 /atom/proc/analyzer_act_secondary(mob/living/user, obj/item/tool)
 	return
+
+/atom/proc/is_cyberpunk_structure_target()
+	return istype(src, /obj/structure) || istype(src, /obj/machinery) || istype(src, /turf/closed/wall)
+
+/atom/proc/is_cyberpunk_repair_target()
+	return uses_integrity && is_cyberpunk_structure_target()
+
+/atom/proc/mark_cyberpunk_analyzed(mob/living/user)
+	if(!is_cyberpunk_structure_target())
+		return FALSE
+	cyberpunk_analyzed_until = world.time + 1 MINUTES
+	return TRUE
+
+/atom/proc/is_cyberpunk_recently_analyzed()
+	return cyberpunk_analyzed_until > world.time
+
+/atom/proc/try_cyberpunk_reinforce(mob/living/user, obj/item/stack/sheet/reinforcing_sheet)
+	if(!user || !reinforcing_sheet || !uses_integrity || !is_cyberpunk_structure_target())
+		return FALSE
+	if(resistance_flags & INDESTRUCTIBLE)
+		return FALSE
+	var/reinforcement_bonus = user.get_cyberpunk_structure_reinforcement_bonus(src)
+	if(reinforcement_bonus <= 0)
+		return FALSE
+	var/reinforcement_cap = max(1, round(initial(max_integrity) * 0.5))
+	if(cyberpunk_reinforcement_bonus >= reinforcement_cap)
+		to_chat(user, span_warning("[src] is already fully reinforced."))
+		return TRUE
+	var/applied_bonus = min(reinforcement_bonus, reinforcement_cap - cyberpunk_reinforcement_bonus)
+	var/reinforcement_delay = 2 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "repair")
+	if(!do_after(user, reinforcement_delay, target = src))
+		return TRUE
+	if(!reinforcing_sheet.use(1))
+		return TRUE
+	cyberpunk_reinforcement_bonus += applied_bonus
+	modify_max_integrity(max_integrity + applied_bonus, FALSE)
+	repair_damage(applied_bonus)
+	to_chat(user, span_notice("You reinforce [src], adding [applied_bonus] maximum integrity."))
+	return TRUE
+
+/atom/proc/get_cyberpunk_structure_category()
+	if(istype(src, /obj/machinery))
+		return "nonmobile_mechanism"
+	if(istype(src, /turf/closed/wall))
+		return "nonmobile_structure"
+	if(istype(src, /obj/structure))
+		var/obj/structure/structure = src
+		if(!structure.anchored)
+			return "mobile_structure"
+		return "fixed_structure"
+	return "object"
+
+/atom/proc/get_cyberpunk_structure_category_name()
+	switch(get_cyberpunk_structure_category())
+		if("mobile_structure")
+			return "mobile structure"
+		if("foldable_structure")
+			return "foldable structure"
+		if("nonmobile_structure")
+			return "nonmobile structure"
+		if("nonmobile_mechanism")
+			return "mechanism"
+		if("fixed_structure")
+			return "fixed structure"
+	return "object"
+
+/atom/proc/get_cyberpunk_object_class()
+	if(istype(src, /obj/machinery))
+		return "механизм"
+	if(istype(src, /obj/structure))
+		return "структура"
+	if(istype(src, /turf/closed/wall))
+		return "стена"
+	return "объект"
+
+/atom/proc/get_cyberpunk_diagnostic_data(mob/living/user)
+	var/list/diagnostics = list()
+	diagnostics += "Category: [get_cyberpunk_structure_category_name()]."
+	diagnostics += "Цель: [src] ([get_cyberpunk_object_class()])."
+	if(uses_integrity)
+		diagnostics += "Прочность: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%)."
+	if(cyberpunk_reinforcement_bonus > 0)
+		diagnostics += "Reinforcement: +[cyberpunk_reinforcement_bonus] maximum integrity."
+	if(is_cyberpunk_recently_analyzed())
+		diagnostics += "Analysis mark: [round((cyberpunk_analyzed_until - world.time) / 10)] seconds remaining."
+	if(user)
+		diagnostics += "Скорость работ: x[round(user.get_cyberpunk_structure_work_speed_modifier(src), 0.01)]."
+		diagnostics += "Бонус ремонта: +[user.get_cyberpunk_structure_repair_bonus(src)]%."
+		diagnostics += "Бонус прочности постройки: +[user.get_cyberpunk_structure_integrity_bonus(src)]%."
+		diagnostics += "Бонус укрепления: +[user.get_cyberpunk_structure_reinforcement_bonus(src)]."
+		diagnostics += "Бонус урона по объекту: +[user.get_cyberpunk_structure_damage_bonus(src)]%."
+		diagnostics += "Бонус разбора/добычи: +[user.get_cyberpunk_structure_salvage_bonus(src)]%."
+	return diagnostics

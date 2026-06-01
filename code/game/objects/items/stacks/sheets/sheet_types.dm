@@ -240,6 +240,11 @@ GLOBAL_LIST_INIT(metal_recipes, list ( \
 		user.put_in_inactive_hand(new_item)
 		return ITEM_INTERACT_SUCCESS
 
+/obj/item/stack/sheet/iron/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(interacting_with.try_cyberpunk_reinforce(user, src))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
 /obj/item/stack/sheet/iron/interact_with_atom_secondary(atom/interacting_with, mob/living/user, list/modifiers)
 	if(!isopenturf(interacting_with))
 		return NONE

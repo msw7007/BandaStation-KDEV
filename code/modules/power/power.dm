@@ -159,6 +159,7 @@
 /obj/machinery/proc/use_energy(amount, channel = power_channel, ignore_apc = FALSE, force = TRUE)
 	if(amount <= 0) //just in case
 		return FALSE
+	amount *= get_cyberpunk_machine_power_multiplier()
 	var/area/home = get_area(src)
 
 	if(isnull(home))
@@ -184,6 +185,9 @@
 	amount = grid_used + apc_used
 	local_apc.add_load(grid_used JOULES)
 	home.use_energy(amount JOULES, channel)
+	if(world.time >= cyberpunk_last_power_wear_time + 10 SECONDS)
+		cyberpunk_last_power_wear_time = world.time
+		apply_cyberpunk_machine_wear(cyberpunk_machine_wear_per_use * 0.25, "power")
 	return amount
 
 /**
@@ -194,6 +198,7 @@
  * Returns: The amount of energy that got used by the cell.
  */
 /obj/machinery/proc/directly_use_energy(amount, force = FALSE)
+	amount *= get_cyberpunk_machine_power_multiplier()
 	var/area/my_area = get_area(src)
 	if(isnull(my_area))
 		stack_trace("machinery is somehow not in an area, nullspace?")
@@ -204,7 +209,11 @@
 	var/obj/machinery/power/apc/my_apc = my_area.apc
 	if(isnull(my_apc) || !my_apc.operating || QDELETED(my_apc.cell))
 		return FALSE
-	return my_apc.cell.use(amount, force = force)
+	var/used_amount = my_apc.cell.use(amount, force = force)
+	if(used_amount && world.time >= cyberpunk_last_power_wear_time + 10 SECONDS)
+		cyberpunk_last_power_wear_time = world.time
+		apply_cyberpunk_machine_wear(cyberpunk_machine_wear_per_use * 0.25, "direct_power")
+	return used_amount
 
 /**
  * Attempts to draw power directly from the APC's Powernet rather than the APC's battery. For high-draw machines, like the cell charger

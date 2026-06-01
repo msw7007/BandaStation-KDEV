@@ -57,6 +57,11 @@
 	///Last fingerprints to touch this atom
 	var/fingerprintslast
 
+	///Cyberpunk 13 analysis mark expiry. Timed bonuses check this instead of granting passive Analysis effects.
+	var/cyberpunk_analyzed_until = 0
+	///Cyberpunk 13 integrity added through field reinforcement.
+	var/cyberpunk_reinforcement_bonus = 0
+
 	/// Radiation insulation types
 	var/rad_insulation = RAD_NO_INSULATION
 
@@ -677,6 +682,10 @@
 	for(var/i = 1 to amount_to_create)
 		var/atom/created_atom = new atom_to_create(drop_location())
 		created_atom.OnCreatedFromProcessing(user, process_item, chosen_option, src)
+		if(created_atom.uses_integrity && created_atom.is_cyberpunk_structure_target())
+			var/integrity_bonus = user.get_cyberpunk_structure_integrity_bonus(created_atom)
+			if(integrity_bonus > 0)
+				created_atom.modify_max_integrity(round(created_atom.max_integrity * (1 + integrity_bonus * 0.01)), FALSE)
 		if(custom_materials)
 			created_atom.set_custom_materials(custom_materials, 1 / amount_to_create)
 		created_atom.pixel_x = pixel_x

@@ -75,9 +75,9 @@
 	toggle()
 
 /obj/structure/curtain/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/cloth (loc, 2)
-	new /obj/item/stack/sheet/plastic (loc, 2)
-	new /obj/item/stack/rods (loc)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/cloth, loc, 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/plastic, loc, 2)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/rods, loc, 1)
 
 /obj/structure/curtain/play_attack_sound(damage_amount, damage_type = BRUTE, damage_flag = 0)
 	switch(damage_type)
@@ -111,8 +111,8 @@
 	custom_materials = list(/datum/material/iron = HALF_SHEET_MATERIAL_AMOUNT)
 
 /obj/structure/curtain/cloth/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/cloth (loc, 4)
-	new /obj/item/stack/rods (loc)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/cloth, loc, 4)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/rods, loc, 1)
 
 /obj/structure/curtain/cloth/fancy
 	icon_type = "cur_fancy"

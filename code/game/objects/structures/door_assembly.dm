@@ -93,7 +93,7 @@
 			user.visible_message(span_notice("[user] welds the [mineral] plating off the airlock assembly."), span_notice("You start to weld the [mineral] plating off the airlock assembly..."))
 			if(tool.use_tool(src, user, 40, volume=50))
 				to_chat(user, span_notice("You weld the [mineral] plating off."))
-				new mineral_path(loc, 2)
+				spawn_cyberpunk_salvage_stack(mineral_path, loc, 2)
 				var/obj/structure/door_assembly/PA = new previous_assembly(loc)
 				transfer_assembly_vars(src, PA)
 
@@ -102,10 +102,10 @@
 			if(tool.use_tool(src, user, 40, volume=50))
 				to_chat(user, span_notice("You weld the glass panel out."))
 				if(heat_proof_finished)
-					new /obj/item/stack/sheet/rglass(get_turf(src))
+					spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/rglass, get_turf(src), 1)
 					heat_proof_finished = FALSE
 				else
-					new /obj/item/stack/sheet/glass(get_turf(src))
+					spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/glass, get_turf(src), 1)
 				glass = 0
 		else if(!anchored)
 			user.visible_message(span_warning("[user] disassembles the airlock assembly."), \
@@ -168,7 +168,7 @@
 			if(state != AIRLOCK_ASSEMBLY_NEEDS_ELECTRONICS)
 				return
 			to_chat(user, span_notice("You cut the wires from the airlock assembly."))
-			new/obj/item/stack/cable_coil(get_turf(user), 1)
+			spawn_cyberpunk_salvage_stack(/obj/item/stack/cable_coil, get_turf(user), 1)
 			state = AIRLOCK_ASSEMBLY_NEEDS_WIRES
 			name = "secured airlock assembly"
 
@@ -255,12 +255,13 @@
 			if(MA.noglass && glass) //in case the new door doesn't support glass. prevents the new one from reverting to a normal airlock after being constructed.
 				var/obj/item/stack/sheet/dropped_glass
 				if(heat_proof_finished)
-					dropped_glass = new /obj/item/stack/sheet/rglass(drop_location())
+					dropped_glass = spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/rglass, drop_location(), 1)
 					heat_proof_finished = FALSE
 				else
-					dropped_glass = new /obj/item/stack/sheet/glass(drop_location())
+					dropped_glass = spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/glass, drop_location(), 1)
 				glass = FALSE
-				to_chat(user, span_notice("As you finish, a [dropped_glass.singular_name] falls out of [MA]'s frame."))
+				if(dropped_glass)
+					to_chat(user, span_notice("As you finish, a [dropped_glass.singular_name] falls out of [MA]'s frame."))
 
 			transfer_assembly_vars(src, MA, TRUE)
 
@@ -359,18 +360,18 @@
 	var/turf/target_turf = get_turf(src)
 	if(!disassembled)
 		material_amt = rand(2,4)
-	new material_type(target_turf, material_amt)
+	spawn_cyberpunk_salvage_stack(material_type, target_turf, material_amt)
 	if(glass)
 		if(disassembled)
 			if(heat_proof_finished)
-				new /obj/item/stack/sheet/rglass(target_turf)
+				spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/rglass, target_turf, 1)
 			else
-				new /obj/item/stack/sheet/glass(target_turf)
+				spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/glass, target_turf, 1)
 		else
 			new /obj/item/shard(target_turf)
 	if(mineral)
 		var/obj/item/stack/sheet/mineral/mineral_path = text2path("/obj/item/stack/sheet/mineral/[mineral]")
-		new mineral_path(target_turf, 2)
+		spawn_cyberpunk_salvage_stack(mineral_path, target_turf, 2)
 
 /obj/structure/door_assembly/rcd_vals(mob/user, obj/item/construction/rcd/the_rcd)
 	if(the_rcd.mode == RCD_DECONSTRUCT)

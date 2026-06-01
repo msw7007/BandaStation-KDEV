@@ -644,7 +644,7 @@
 /obj/structure/closet/body_bag/environmental/stasis/handle_deconstruct(disassembled = TRUE)
 	if(!(obj_flags & NO_DEBRIS_AFTER_DECONSTRUCTION))
 		new /obj/effect/decal/cleanable/shreds(loc, name)
-		new /obj/item/stack/sheet/cloth(loc, 4)
+		spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/cloth, loc, 4)
 	loc.visible_message(span_warning("[src] unwinds into threads!"), vision_distance = COMBAT_MESSAGE_RANGE)
 	playsound(loc, 'sound/items/duct_tape/duct_tape_rip.ogg', 50, TRUE, frequency = 0.5)
 	for(var/mob/living/left_behind in src)

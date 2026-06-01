@@ -126,10 +126,12 @@
 		return FALSE
 	tool.play_tool_sound(src)
 	balloon_alert(user, "deconstructing...")
-	if (!do_after(user, 10 SECONDS, target = src))
+	var/deconstruct_delay = 10 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "dismantle")
+	if (!do_after(user, deconstruct_delay, target = src))
 		return FALSE
-	new /obj/item/stack/sheet/iron(get_turf(src), 5)
-	new /obj/item/stack/rods(get_turf(src), 2)
+	cyberpunk_last_deconstructor = user
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, get_turf(src), 5)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/rods, get_turf(src), 2)
 	new /obj/item/chair(get_turf(src))
 	qdel(src)
 	return TRUE

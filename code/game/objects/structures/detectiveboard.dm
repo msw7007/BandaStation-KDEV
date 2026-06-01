@@ -250,7 +250,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/detectiveboard, 32)
 
 /obj/structure/detectiveboard/atom_deconstruct(disassembled = TRUE)
 	if(!disassembled)
-		new /obj/item/stack/sheet/mineral/wood(loc)
+		spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/mineral/wood, loc, 1)
 	else
 		new /obj/item/wallframe/detectiveboard(loc)
 	for(var/obj/item/content in contents)

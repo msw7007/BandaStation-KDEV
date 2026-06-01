@@ -121,6 +121,11 @@
 /atom/proc/attack_generic(mob/user, damage_amount = 0, damage_type = BRUTE, damage_flag = 0, sound_effect = 1, armor_penetration = 0) //used by attack_alien, attack_animal
 	if(!uses_integrity)
 		CRASH("unimplemented /atom/proc/attack_generic()!")
+	if(isliving(user))
+		var/mob/living/living_user = user
+		var/structure_damage_bonus = living_user.get_cyberpunk_structure_damage_bonus(src)
+		if(structure_damage_bonus > 0)
+			damage_amount *= 1 + structure_damage_bonus * 0.01
 	user.do_attack_animation(src)
 	user.changeNext_move(CLICK_CD_MELEE)
 	return take_damage(damage_amount, damage_type, damage_flag, sound_effect, get_dir(src, user), armor_penetration)

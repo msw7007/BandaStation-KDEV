@@ -207,9 +207,9 @@
 /obj/structure/mineral_door/atom_deconstruct(disassembled = TRUE)
 	var/turf/T = get_turf(src)
 	if(disassembled)
-		new sheetType(T, sheetAmount)
+		spawn_cyberpunk_salvage_stack(sheetType, T, sheetAmount)
 	else
-		new sheetType(T, max(sheetAmount - 2, 1))
+		spawn_cyberpunk_salvage_stack(sheetType, T, max(sheetAmount - 2, 1))
 
 /obj/structure/mineral_door/iron
 	name = "iron door"

@@ -99,7 +99,7 @@
 
 /obj/structure/bed/atom_deconstruct(disassembled = TRUE)
 	if(build_stack_type)
-		new build_stack_type(loc, build_stack_amount)
+		spawn_cyberpunk_salvage_stack(build_stack_type, loc, build_stack_amount)
 
 /obj/structure/bed/attack_paw(mob/user, list/modifiers)
 	return attack_hand(user, modifiers)

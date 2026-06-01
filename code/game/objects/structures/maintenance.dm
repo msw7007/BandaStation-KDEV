@@ -314,7 +314,7 @@ at the cost of risking a vicious bite.**/
 		return TRUE
 
 /obj/structure/steam_vent/atom_deconstruct(disassembled = TRUE)
-	new /obj/item/stack/sheet/iron(loc)
+	spawn_cyberpunk_salvage_stack(/obj/item/stack/sheet/iron, loc, 1)
 	new /obj/item/stock_parts/water_recycler(loc, 1)
 
 /**
