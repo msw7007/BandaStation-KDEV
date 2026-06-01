@@ -222,6 +222,49 @@
 	session.ui_interact(hacker)
 	return session
 
+/obj/item/organ/cyberimp/utility
+	name = "utility implant"
+	desc = "A simple chrome frame reserved for a future specialized implant."
+	abstract_type = /obj/item/organ/cyberimp/utility
+	icon_state = "implant-toolkit"
+	chromity_overheat = 2
+
+/obj/item/organ/cyberimp/utility/jaw
+	name = "iron jaw"
+	desc = "A reinforced jaw assembly. Its current model is mostly structural chrome with limited active function."
+	slot = ORGAN_SLOT_JAW_AUG
+	zone = BODY_ZONE_PRECISE_MOUTH
+
+/obj/item/organ/cyberimp/utility/skull
+	name = "reinforced skull"
+	desc = "A cranial reinforcement shell. It provides a first-pass slot occupant for skull-grade chrome."
+	slot = ORGAN_SLOT_SKULL_AUG
+	zone = BODY_ZONE_HEAD
+
+/obj/item/organ/cyberimp/utility/eyelids
+	name = "eyelid HUD mount"
+	desc = "A low-power eyelid mount for future optics and HUD modules."
+	slot = ORGAN_SLOT_EYELID_AUG
+	zone = BODY_ZONE_HEAD
+
+/obj/item/organ/cyberimp/utility/neck
+	name = "neck relay"
+	desc = "A compact neck relay for future breathing, voice and signal chrome."
+	slot = ORGAN_SLOT_NECK_AUG
+	zone = BODY_ZONE_PRECISE_NECK
+
+/obj/item/organ/cyberimp/utility/chest
+	name = "chest hardpoint"
+	desc = "A reinforced chest hardpoint for future torso modules."
+	slot = ORGAN_SLOT_CHEST_AUG
+	zone = BODY_ZONE_CHEST
+
+/obj/item/organ/cyberimp/utility/belly
+	name = "abdominal hardpoint"
+	desc = "A reinforced abdominal hardpoint for future metabolism and storage modules."
+	slot = ORGAN_SLOT_BELLY_AUG
+	zone = BODY_ZONE_PRECISE_GROIN
+
 /obj/item/organ/cyberimp/brain/neural_interface/retune_implant()
 	. = ..()
 	if(. && !cryptographic_key)

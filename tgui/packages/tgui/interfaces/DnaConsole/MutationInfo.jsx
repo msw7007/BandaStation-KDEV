@@ -115,6 +115,11 @@ export const MutationInfo = (props) => {
     return (
       <LabeledList>
         <LabeledList.Item label="Name">{mutation.Alias}</LabeledList.Item>
+        {!!mutation.AnalysisHint && (
+          <LabeledList.Item label="Analysis">
+            {mutation.AnalysisHint}
+          </LabeledList.Item>
+        )}
       </LabeledList>
     );
   }
@@ -140,6 +145,11 @@ export const MutationInfo = (props) => {
         <LabeledList.Item label="Instability">
           {mutation.Instability}
         </LabeledList.Item>
+        {!!mutation.AnalysisHint && (
+          <LabeledList.Item label="Analysis">
+            {mutation.AnalysisHint}
+          </LabeledList.Item>
+        )}
       </LabeledList>
       <Divider />
       <Stack vertical>

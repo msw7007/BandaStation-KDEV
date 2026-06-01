@@ -132,6 +132,23 @@
 	. = ..()
 	affected_mob.adjust_chromity_overheat(-5 * metabolization_ratio * seconds_per_tick, respect_floor = TRUE)
 
+/datum/reagent/medicine/immunosuppressant
+	name = "Immunosuppressant"
+	description = "A controlled immunosuppressive stabilizer that temporarily raises genetic stability while it metabolizes."
+	ph = 7.1
+	color = "#A8D7B0"
+	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
+	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
+
+/datum/reagent/medicine/immunosuppressant/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
+	. = ..()
+	if(!affected_mob.dna)
+		return
+	var/missing_stability = HUMANOIDITY_DEFAULT - affected_mob.dna.get_effective_genetic_stability()
+	if(missing_stability <= 0)
+		return
+	affected_mob.dna.adjust_humanoidity_stabilized_bonus(min(missing_stability, metabolization_ratio * seconds_per_tick))
+
 /datum/reagent/medicine/sansufentanyl
 	name = "Sansufentanyl"
 	description = "Temporary side effects include - nausea, dizziness, impaired motor coordination."

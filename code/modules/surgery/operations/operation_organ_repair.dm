@@ -112,6 +112,41 @@
 	var/obj/item/organ/cyberimp/brain/neural_interface/interface = organ
 	interface.open_ice_configuration(surgeon)
 
+/datum/surgery_operation/organ/repair/nerve_severing
+	name = "Nerve severing"
+	desc = "Sever selected neural feedback paths to permanently raise chrome tolerance at the cost of brain trauma risk."
+	target_type = /obj/item/organ/brain
+	operation_flags = OPERATION_AFFECTS_MOOD | OPERATION_NOTABLE | OPERATION_MORBID | OPERATION_LOOPING
+	all_surgery_states_required = SURGERY_SKIN_OPEN|SURGERY_BONE_SAWED
+	required_organ_flag = ORGAN_ORGANIC
+	implements = list(
+		TOOL_SCALPEL = 1,
+		TOOL_HEMOSTAT = 1.2,
+	)
+	time = 8 SECONDS
+	repeatable = TRUE
+
+/datum/surgery_operation/organ/repair/nerve_severing/state_check(obj/item/organ/organ)
+	if(!istype(organ) || !organ.owner)
+		return FALSE
+	return organ.owner.chromity < (CHROMITY_DEFAULT * 2)
+
+/datum/surgery_operation/organ/repair/nerve_severing/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	organ.owner.chromity = min(CHROMITY_DEFAULT * 2, organ.owner.chromity + 10)
+	organ.apply_organ_damage(10)
+	organ.owner.dna?.update_humanoidity(FALSE)
+	display_results(
+		surgeon,
+		organ.owner,
+		span_notice("You sever selected neural feedback paths, raising chrome tolerance."),
+		span_notice("[surgeon] severs selected neural feedback paths in [organ.owner]."),
+		span_notice("[surgeon] completes a neural tolerance operation on [organ.owner]."),
+	)
+
+/datum/surgery_operation/organ/repair/nerve_severing/on_failure(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	organ.apply_organ_damage(30)
+	organ.owner?.gain_trauma_type(BRAIN_TRAUMA_MILD, TRAUMA_RESILIENCE_LOBOTOMY)
+
 /datum/surgery_operation/organ/repair/lobectomy
 	name = "Удаление поврежденной доли легкого"
 	rnd_name = "Лобэктомия (Восстановление лёгких)"

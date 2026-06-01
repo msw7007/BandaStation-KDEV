@@ -122,6 +122,10 @@ const DnaScannerContent = (props) => {
     isViableSubject,
     subjectHealth,
     subjectDamage,
+    subjectHumanoidity,
+    subjectGeneticStability,
+    subjectHumanoidityPenalty,
+    subjectHumanoidityStabilizedBonus,
     subjectStatus,
   } = data;
   if (!isScannerConnected) {
@@ -166,6 +170,25 @@ const DnaScannerContent = (props) => {
         >
           {subjectDamage}%
         </ProgressBar>
+      </LabeledList.Item>
+      <LabeledList.Item label="Genetic Stability">
+        <ProgressBar
+          value={subjectHumanoidity}
+          minValue={0}
+          maxValue={100}
+          ranges={{
+            good: [90, 101],
+            average: [40, 90],
+            bad: [-Infinity, 40],
+          }}
+        >
+          {subjectHumanoidity}%
+        </ProgressBar>
+      </LabeledList.Item>
+      <LabeledList.Item label="Stability Detail">
+        DNA {subjectGeneticStability}, penalty {subjectHumanoidityPenalty}
+        {!!subjectHumanoidityStabilizedBonus &&
+          `, stabilized +${subjectHumanoidityStabilizedBonus}`}
       </LabeledList.Item>
     </LabeledList>
   );

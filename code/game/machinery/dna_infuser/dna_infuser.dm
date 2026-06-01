@@ -47,6 +47,9 @@
 	. += span_notice("To operate: Obtain dead creature. Depending on size, drag or drop into the infuser slot.")
 	. += span_notice("Subject enters the chamber, someone activates the machine. Voila! One of your organs has... changed!")
 	. += span_notice("Alt-click to eject the infusion source, if one is inside.")
+	if(infusing_from && user?.mind?.get_character_skill_level(SKILL_ANALYSIS) >= CHARACTER_SKILL_LEVEL_SKILLED)
+		var/datum/infuser_entry/analyzed_entry = infusing_from.get_infusion_entry()
+		. += span_notice("Analysis: [analyzed_entry.infuse_mob_name], tier [analyzed_entry.tier], genetic stability cost [analyzed_entry.get_humanoidity_cost()].")
 	if(max_tier_allowed < DNA_INFUSER_MAX_TIER)
 		. += span_boldnotice("Right now, the DNA Infuser can only infuse Tier [max_tier_allowed] entries.")
 	else
@@ -70,11 +73,11 @@
 			playsound(src, 'sound/machines/scanner/scanbuzz.ogg', 35, vary = TRUE)
 			return
 		balloon_alert(user, "starting DNA infusion...")
-		start_infuse()
+		start_infuse(user)
 		return
 	toggle_open(user)
 
-/obj/machinery/dna_infuser/proc/start_infuse()
+/obj/machinery/dna_infuser/proc/start_infuse(mob/user)
 	var/mob/living/carbon/human/human_occupant = occupant
 	infusing = TRUE
 	visible_message(span_notice("[src] hums to life, beginning the infusion process!"))
@@ -93,16 +96,20 @@
 	to_chat(human_occupant, span_danger("Little needles repeatedly prick you!"))
 	human_occupant.take_overall_damage(10)
 	human_occupant.add_mob_memory(/datum/memory/dna_infusion, protagonist = human_occupant, deuteragonist = infusing_from, mutantlike = infusing_into.infusion_desc)
-	Shake(duration = INFUSING_TIME)
-	addtimer(CALLBACK(human_occupant, TYPE_PROC_REF(/mob, emote), "scream"), INFUSING_TIME - 1 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(end_infuse), fail_explanation, fail_title), INFUSING_TIME)
+	var/analysis_bonus = user?.mind?.get_character_skill_level(SKILL_ANALYSIS) || CHARACTER_SKILL_LEVEL_NONE
+	var/infusing_time = INFUSING_TIME / max(1, 1 + (analysis_bonus * 0.05))
+	Shake(duration = infusing_time)
+	addtimer(CALLBACK(human_occupant, TYPE_PROC_REF(/mob, emote), "scream"), max(1 SECONDS, infusing_time - 1 SECONDS))
+	addtimer(CALLBACK(src, PROC_REF(end_infuse), fail_explanation, fail_title, WEAKREF(user)), infusing_time)
 	update_appearance()
 
-/obj/machinery/dna_infuser/proc/end_infuse(fail_explanation, fail_title)
+/obj/machinery/dna_infuser/proc/end_infuse(fail_explanation, fail_title, datum/weakref/user_ref)
 	var/mob/living/carbon/human/human_occupant = occupant
 	if(human_occupant.infuse_organ(infusing_into, infusing_from))
 		check_tier_progression(human_occupant)
 		to_chat(occupant, span_danger("You feel yourself becoming more... [infusing_into.infusion_desc]?"))
+		var/mob/user = user_ref?.resolve()
+		user?.mind?.adjust_experience(SKILL_ANALYSIS, 3, TRUE)
 	infusing = FALSE
 	infusing_into = null
 	QDEL_NULL(infusing_from)

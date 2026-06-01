@@ -338,15 +338,32 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	update_humanoidity(alert)
 
 /datum/dna/proc/get_effective_humanoidity()
-	return clamp(humanoidity + humanoidity_stabilized_bonus, 0, HUMANOIDITY_DEFAULT)
+	return get_effective_genetic_stability()
+
+/datum/dna/proc/get_effective_genetic_stability()
+	return clamp(min(humanoidity, stability) + humanoidity_stabilized_bonus, 0, HUMANOIDITY_DEFAULT)
 
 /datum/dna/proc/get_humanoidity_chromity_multiplier()
-	var/effective_humanoidity = get_effective_humanoidity()
-	if(effective_humanoidity >= HUMANOIDITY_CHROMITY_START)
+	var/effective_stability = get_effective_genetic_stability()
+	if(effective_stability >= HUMANOIDITY_CHROMITY_START)
 		return 1
-	if(effective_humanoidity <= HUMANOIDITY_CHROMITY_ZERO)
+	if(effective_stability <= HUMANOIDITY_CHROMITY_ZERO)
 		return 0
-	return (effective_humanoidity - HUMANOIDITY_CHROMITY_ZERO) / (HUMANOIDITY_CHROMITY_START - HUMANOIDITY_CHROMITY_ZERO)
+	return (effective_stability - HUMANOIDITY_CHROMITY_ZERO) / (HUMANOIDITY_CHROMITY_START - HUMANOIDITY_CHROMITY_ZERO)
+
+/datum/dna/proc/adjust_humanoidity_stabilized_bonus(amount)
+	var/old_bonus = humanoidity_stabilized_bonus
+	humanoidity_stabilized_bonus = clamp(humanoidity_stabilized_bonus + amount, 0, HUMANOIDITY_DEFAULT)
+	if(holder && old_bonus != humanoidity_stabilized_bonus)
+		update_humanoidity(FALSE)
+	return humanoidity_stabilized_bonus - old_bonus
+
+/datum/dna/proc/process_humanoidity_stabilization(seconds_per_tick)
+	if(humanoidity_stabilized_bonus <= 0)
+		return
+	if(holder?.reagents?.has_reagent(/datum/reagent/medicine/immunosuppressant, needs_metabolizing = TRUE))
+		return
+	adjust_humanoidity_stabilized_bonus(-10 * seconds_per_tick)
 
 /datum/dna/proc/adjust_humanoidity_genetic_penalty(amount, alert = TRUE)
 	humanoidity_genetic_penalty = max(0, humanoidity_genetic_penalty + amount)
@@ -364,7 +381,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	humanoidity = clamp(HUMANOIDITY_DEFAULT - humanoidity_genetic_penalty - mutation_penalty, 0, HUMANOIDITY_DEFAULT)
 	if(holder && alert && humanoidity < old_humanoidity)
 		to_chat(holder, span_warning("Your body feels less human."))
-	if(holder && get_effective_humanoidity() <= HUMANOIDITY_COLLAPSE_THRESHOLD && !humanoidity_collapsed && ishuman(holder))
+	if(holder && get_effective_genetic_stability() <= HUMANOIDITY_COLLAPSE_THRESHOLD && !humanoidity_collapsed && ishuman(holder))
 		var/mob/living/carbon/human/human_holder = holder
 		humanoidity_collapsed = TRUE
 		human_holder.cy_check_humanoidity_collapse()

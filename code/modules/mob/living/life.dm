@@ -105,7 +105,7 @@
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_source = src
 		if(carbon_source.dna)
-			. += "Humanoidity: [round(carbon_source.dna.get_effective_humanoidity(), 0.1)]/[HUMANOIDITY_DEFAULT]"
+			. += "Genetic Stability: [round(carbon_source.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT]"
 	. += "Style: [round(style, 0.1)]/15"
 	. += "Mood: [round(mood, 0.1)]/20"
 	. += "Corp Align: [corp_align || "None"]"
@@ -220,6 +220,10 @@
 		mind?.convert_rest_experience()
 
 /mob/living/proc/process_chromity_overheat(seconds_per_tick)
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_owner = src
+		carbon_owner.dna?.process_humanoidity_stabilization(seconds_per_tick)
+
 	var/overheat_floor = get_chromity_overheat_floor()
 	if(chromity_overheat > overheat_floor)
 		chromity_overheat = max(overheat_floor, chromity_overheat - CHROMITY_OVERHEAT_DECAY * seconds_per_tick)

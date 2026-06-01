@@ -88,6 +88,11 @@
 	required_reagents = list(/datum/reagent/consumable/sugar = 1, /datum/reagent/lithium = 1, /datum/reagent/water = 1)
 	reaction_tags = REACTION_TAG_EASY | REACTION_TAG_HEALING | REACTION_TAG_OTHER
 
+/datum/chemical_reaction/medicine/immunosuppressant
+	results = list(/datum/reagent/medicine/immunosuppressant = 3)
+	required_reagents = list(/datum/reagent/medicine/synaptizine = 1, /datum/reagent/medicine/c2/multiver = 1, /datum/reagent/toxin/mutagen = 1)
+	reaction_tags = REACTION_TAG_EASY | REACTION_TAG_HEALING | REACTION_TAG_OTHER
+
 /datum/chemical_reaction/medicine/salglu_solution
 	results = list(/datum/reagent/medicine/salglu_solution = 3)
 	required_reagents = list(/datum/reagent/water/salt = 2, /datum/reagent/consumable/sugar = 1)
