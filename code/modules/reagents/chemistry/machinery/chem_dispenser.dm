@@ -305,6 +305,8 @@
 						say("Not enough energy to complete operation!")
 						return
 					beaker.add_hiddenprint(ui.user)
+					if(isliving(ui.user))
+						holder.last_reaction_user = WEAKREF(ui.user)
 					holder.add_reagent(reagent, to_dispense, reagtemp = dispensed_temperature, added_purity = base_reagent_purity)
 
 					work_animation()
@@ -355,6 +357,8 @@
 						say("Not enough energy to complete operation!")
 						return
 					beaker.add_hiddenprint(ui.user)
+					if(isliving(ui.user))
+						holder.last_reaction_user = WEAKREF(ui.user)
 					holder.add_reagent(reagent, to_dispense, reagtemp = dispensed_temperature, added_purity = base_reagent_purity)
 					work_animation()
 				else

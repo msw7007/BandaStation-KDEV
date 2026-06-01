@@ -40,6 +40,10 @@
 
 	/// The movement intent of the mob (run/wal)
 	var/move_intent = MOVE_INTENT_RUN
+	/// Last player-input sprint direction, used to break sprinting on sharp reversals.
+	var/last_sprint_dir = NONE
+	/// Prevents overlapping manual jumps.
+	var/currently_jumping = FALSE
 
 	/// Rate at which fire stacks should decay from this mob
 	var/fire_stack_decay_rate = -0.05
@@ -243,6 +247,10 @@
 	var/atom/movable/looking_holder/looking_holder
 	/// Whether stealth mode is active for this mob.
 	var/stealth_mode = FALSE
+	/// Whether this mob is hugging nearby solid cover.
+	var/wall_hugging = FALSE
+	/// Whether wall-hug enabled stealth and should disable it when wall-hug ends.
+	var/wall_hug_started_stealth = FALSE
 	/// Current chameleon strength from stealth, 0-100.
 	var/chameleon = 0
 	/// Upper chameleon cap while hidden under furniture.

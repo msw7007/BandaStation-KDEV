@@ -365,8 +365,9 @@
  * * datum/reagent/path - the reagent typepath we are transfering
  * * amount - volume to transfer
  * * do_transfer - transfer the reagents else destroy them
+ * * user - player performing the transfer, used for chemistry perks
  */
-/obj/machinery/chem_master/proc/transfer_reagent(datum/reagents/source, datum/reagents/target, datum/reagent/path, amount, do_transfer)
+/obj/machinery/chem_master/proc/transfer_reagent(datum/reagents/source, datum/reagents/target, datum/reagent/path, amount, do_transfer, mob/user)
 	PRIVATE_PROC(TRUE)
 
 	//sanity checks for transfer amount
@@ -386,6 +387,9 @@
 	if(do_transfer)
 		if(target.is_reacting)
 			return FALSE
+		if(isliving(user))
+			source.last_reaction_user = WEAKREF(user)
+			target.last_reaction_user = WEAKREF(user)
 		if(source.trans_to(target, amount, target_id = reagent))
 			. = TRUE
 	else if(source.remove_reagent(reagent, amount))
@@ -443,7 +447,7 @@
 				reagents_from = reagents // buffer
 				if(should_transfer)
 					reagents_to = beaker.reagents
-			return transfer_reagent(reagents_from, reagents_to, reagent_ref, amount, should_transfer)
+			return transfer_reagent(reagents_from, reagents_to, reagent_ref, amount, should_transfer, ui.user)
 
 		if("toggleTransferMode")
 			is_transfering = !is_transfering

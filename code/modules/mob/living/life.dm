@@ -414,6 +414,8 @@
 	return mood - old_value
 
 /mob/living/proc/get_energy_pool_recovery()
+	if(wall_hugging)
+		return WALL_HUG_ENERGY_RECOVERY
 	if(body_position == LYING_DOWN)
 		var/recovery = 2
 		if(istype(buckled, /obj/structure/bed))
@@ -451,7 +453,7 @@
 	return stamina > max_stamina * 0.1 && stamina >= STAMINA_COST_JUMP
 
 /mob/living/proc/can_run()
-	return stamina > max_stamina * 0.1 && stamina >= STAMINA_COST_RUN_TILE
+	return stamina > 0 && stamina >= STAMINA_COST_RUN_TILE
 
 /mob/living/proc/is_exhausted_by_needs()
 	return has_starvation_exhaustion() || has_dehydration()

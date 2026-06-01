@@ -1051,13 +1051,21 @@
 	if(pulling)
 		update_pull_movespeed()
 
+	if(wall_hugging && move_intent == MOVE_INTENT_RUN)
+		stop_sprinting(silent = TRUE)
+
 	if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING) && !can_run())
-		move_intent = MOVE_INTENT_WALK
-		hud_used?.screen_objects[HUD_MOB_MOVE_INTENT]?.update_appearance()
-		update_move_intent_slowdown()
-		SEND_SIGNAL(src, COMSIG_MOVE_INTENT_TOGGLED)
+		stop_sprinting(silent = TRUE)
+
+	if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING) && last_sprint_dir && direct == REVERSE_DIR(last_sprint_dir))
+		stop_sprinting("momentum lost")
 
 	. = ..()
+
+	if(!. && move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
+		handle_sprint_collision(newloc)
+	else if(. && wall_hugging)
+		validate_wall_hug()
 
 	if(moving_diagonally != FIRST_DIAG_STEP && isliving(pulledby))
 		var/mob/living/puller = pulledby
@@ -1071,7 +1079,10 @@
 
 	if(!buckled && !moving_diagonally && loc != old_loc)
 		if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
-			spend_stamina(STAMINA_COST_RUN_TILE, "run")
+			if(spend_stamina(STAMINA_COST_RUN_TILE, "run"))
+				handle_sprint_step(direct)
+			else
+				stop_sprinting("too tired")
 		var/blood_flow = get_bleed_rate()
 		var/health_check = body_position == LYING_DOWN && prob(get_brute_loss() * 200 / maxHealth)
 		var/bleeding_check = blood_flow > 3 && prob(blood_flow * 16)

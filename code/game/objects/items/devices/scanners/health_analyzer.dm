@@ -3,6 +3,10 @@
 #define SCANMODE_WOUND 1
 #define SCANMODE_COUNT 2 // Update this to be the number of scan modes if you add more
 
+#define HEALTHSCAN_DEPTH_BASIC 0
+#define HEALTHSCAN_DEPTH_ADVANCED 1
+#define HEALTHSCAN_DEPTH_BIOSCANNER 2
+
 /obj/item/healthanalyzer
 	name = "health analyzer"
 	icon = 'icons/obj/devices/scanner.dmi'
@@ -101,7 +105,7 @@
 		balloon_alert(user, "busy")
 		return
 	scanner_busy = TRUE
-	if(!do_after(user, 10 SECONDS, target = M))
+	if(!do_after(user, 10 SECONDS * user.get_cyberpunk_medical_scan_time_multiplier(M), target = M))
 		scanner_busy = FALSE
 		return
 	scanner_busy = FALSE
@@ -148,6 +152,94 @@
 
 	return CONTEXTUAL_SCREENTIP_SET
 
+/proc/cyberpunk_healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE, scan_depth = null)
+	if(user?.incapacitated)
+		return
+	if(isnull(scan_depth))
+		scan_depth = advanced ? HEALTHSCAN_DEPTH_ADVANCED : HEALTHSCAN_DEPTH_BASIC
+	if(isliving(user))
+		var/mob/living/living_user = user
+		scan_depth = living_user.get_cyberpunk_medical_scan_depth(target, scan_depth)
+
+	var/list/render_list = list()
+	var/health_percent = target.maxHealth ? round((target.health / target.maxHealth) * 100, 0.1) : 0
+	var/status = target.appears_alive() ? "[health_percent]% health" : "DEAD"
+	render_list += "[span_info("Medical report for <b>[target]</b> ([round_timestamp()]):")]<br>"
+	render_list += "<span class='info ml-1'>Status: <b>[status]</b>. Health: [round(target.health, 0.1)]/[target.maxHealth].</span><br>"
+	render_list += "<span class='info ml-1'>Damage: brute [ceil(target.get_brute_loss())], burn [ceil(target.get_fire_loss())], toxin [ceil(target.get_tox_loss())], oxygen [ceil(target.get_oxy_loss())].</span><br>"
+
+	if(iscarbon(target) && !target.get_organ_slot(ORGAN_SLOT_BRAIN))
+		render_list += "<span class='alert ml-1'>Brain signal absent.</span><br>"
+	if(target.get_stamina_loss())
+		render_list += "<span class='alert ml-1'>Stamina stress detected.</span><br>"
+
+	if(iscarbon(target))
+		var/mob/living/carbon/carbon_target = target
+		var/total_blunt = 0
+		var/total_pierce = 0
+		var/total_slash = 0
+		var/total_heat = 0
+		var/total_cold = 0
+		var/total_acid = 0
+		var/total_infection = 0
+		for(var/obj/item/bodypart/part as anything in carbon_target.get_bodyparts())
+			total_blunt += part.blunt_dam
+			total_pierce += part.pierce_dam
+			total_slash += part.slash_dam
+			total_heat += part.heat_dam
+			total_cold += part.cold_dam
+			total_acid += part.acid_dam
+			total_infection += part.infection
+		render_list += "<span class='info ml-1'>Physical: BLUNT [ceil(total_blunt)], PIERCE [ceil(total_pierce)], SLASH [ceil(total_slash)].</span><br>"
+		render_list += "<span class='info ml-1'>Thermal: HEAT [ceil(total_heat)], COLD [ceil(total_cold)], ACID [ceil(total_acid)].</span><br>"
+		render_list += "<span class='info ml-1'>Oxygenation [round(carbon_target.oxygenation, 0.1)]%, blood pressure [round(carbon_target.blood_pressure * 100, 1)]%, pain [round(carbon_target.get_total_pain(), 0.1)], infection [round(total_infection, 0.1)]%.</span><br>"
+
+		if(scan_depth >= HEALTHSCAN_DEPTH_ADVANCED)
+			render_list += "<hr><span class='info ml-1'><b>Body zones</b></span><br>"
+			for(var/zone in carbon_target.get_all_limbs())
+				var/obj/item/bodypart/limb = carbon_target.get_bodypart(zone)
+				if(isnull(limb))
+					render_list += "<span class='alert ml-2'>[capitalize(parse_zone(zone))]: missing.</span><br>"
+					continue
+				if(!limb.get_damage() && !limb.pain && !limb.infection && !length(limb.wounds) && !length(limb.embedded_objects))
+					continue
+				render_list += "<span class='notice ml-2'>[capitalize(limb.plaintext_zone)]: blunt [ceil(limb.blunt_dam)], pierce [ceil(limb.pierce_dam)], slash [ceil(limb.slash_dam)], heat [ceil(limb.heat_dam)], cold [ceil(limb.cold_dam)], acid [ceil(limb.acid_dam)].</span><br>"
+				if(scan_depth >= HEALTHSCAN_DEPTH_ADVANCED)
+					render_list += "<span class='info ml-3'>Pain [ceil(limb.pain)], infection [ceil(limb.infection)]%, trauma B/P/S [limb.blunt_trauma]/[limb.pierce_trauma]/[limb.slash_trauma], thermal H/C/A [limb.heat_trauma]/[limb.cold_trauma]/[limb.acid_trauma].</span><br>"
+				if(scan_depth >= HEALTHSCAN_DEPTH_BIOSCANNER && length(limb.wounds))
+					var/list/wound_names = list()
+					for(var/datum/wound/wound as anything in limb.wounds)
+						wound_names += wound.name
+					render_list += "<span class='warning ml-3'>Wounds: [english_list(wound_names)].</span><br>"
+
+		if(scan_depth >= HEALTHSCAN_DEPTH_ADVANCED)
+			render_list += "<hr><span class='info ml-1'><b>Organs</b></span><br>"
+			for(var/obj/item/organ/organ as anything in carbon_target.organs)
+				var/organ_health = organ.maxHealth ? round(((organ.maxHealth - organ.damage) / organ.maxHealth) * 100, 0.1) : 0
+				var/organ_line = "[capitalize(organ.name)]: [organ_health]% integrity, efficiency [round(organ.get_efficiency() * 100, 0.1)]%"
+				if(scan_depth >= HEALTHSCAN_DEPTH_BIOSCANNER)
+					organ_line += ", pain [round(organ.pain, 0.1)], damage [round(organ.damage, 0.1)]/[organ.maxHealth]"
+				if(organ.organ_flags & ORGAN_FAILING)
+					organ_line += ", FAILING"
+				render_list += "<span class='[organ.organ_flags & ORGAN_FAILING ? "alert" : "info"] ml-2'>[organ_line].</span><br>"
+
+			var/lung_punctures = carbon_target.get_lung_puncture_count()
+			if(lung_punctures)
+				render_list += "<span class='alert ml-2'>Lung punctures detected: [lung_punctures].</span><br>"
+
+		if(scan_depth >= HEALTHSCAN_DEPTH_BIOSCANNER)
+			var/reagent_report = chemscan(user, target, tochat = FALSE)
+			if(reagent_report)
+				render_list += "<hr>[reagent_report]"
+
+	if(HAS_TRAIT(target, TRAIT_HUSK))
+		render_list += "<span class='alert ml-1'>Husk transformation detected.</span><br>"
+
+	var/report = jointext(render_list, "")
+	if(tochat)
+		to_chat(user, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
+	return report
+
 /**
  * healthscan
  * returns a list of everything a health scan should give to a player.
@@ -159,9 +251,10 @@
  * advanced - Whether it will give more advanced details, such as husk source.
  * tochat - Whether to immediately post the result into the chat of the user, otherwise it will return the results.
  */
-/proc/healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE)
+/proc/healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE, scan_depth = null)
 	if(user?.incapacitated)
 		return
+	return cyberpunk_healthscan(user, target, mode, advanced, tochat, scan_depth)
 
 	// the final list of strings to render
 	var/list/render_list = list()
@@ -547,7 +640,7 @@
 	return TRUE
 
 /proc/chemscan(mob/living/user, mob/living/target, reagent_types_to_check = null, tochat = TRUE)
-	if(user.incapacitated)
+	if(user?.incapacitated)
 		return
 
 	if(istype(target) && target.reagents)
@@ -853,6 +946,10 @@
 #undef SCANMODE_HEALTH
 #undef SCANMODE_WOUND
 #undef SCANMODE_COUNT
+
+#undef HEALTHSCAN_DEPTH_BASIC
+#undef HEALTHSCAN_DEPTH_ADVANCED
+#undef HEALTHSCAN_DEPTH_BIOSCANNER
 
 #undef AID_EMOTION_NEUTRAL
 #undef AID_EMOTION_HAPPY

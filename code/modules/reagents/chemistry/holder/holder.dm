@@ -31,6 +31,8 @@
 	var/ui_reaction_index = 1
 	///If we're syncing with the beaker - so return reactions that are actively happening
 	var/ui_beaker_sync = FALSE
+	/// Last living mob that directly changed this holder; used for Cyberpunk chemistry perks.
+	var/datum/weakref/last_reaction_user
 
 /datum/reagents/New(maximum = 100, new_flags = 0)
 	maximum_volume = maximum
@@ -47,6 +49,7 @@
 	if(my_atom && my_atom.reagents == src)
 		my_atom.reagents = null
 	my_atom = null
+	last_reaction_user = null
 	return ..()
 
 
@@ -97,6 +100,8 @@
 	if(!IS_FINITE(amount))
 		stack_trace("non finite amount passed to add reagent [amount] [reagent_type]")
 		return FALSE
+	if(isliving(usr))
+		last_reaction_user = WEAKREF(usr)
 
 	var/datum/reagent/glob_reagent = GLOB.chemical_reagents_list[reagent_type]
 	if(!glob_reagent)
@@ -475,6 +480,9 @@
 	amount = round(min(amount, total_volume, target_holder.maximum_volume - target_holder.total_volume), CHEMICAL_QUANTISATION_LEVEL)
 	if(amount <= 0)
 		return FALSE
+	if(isliving(transferred_by))
+		last_reaction_user = WEAKREF(transferred_by)
+		target_holder.last_reaction_user = WEAKREF(transferred_by)
 
 	var/trans_data = null
 	var/list/r_to_send = methods ? list() : null // Validated list of reagents to be exposed
@@ -522,6 +530,7 @@
 
 	//combat log
 	if(transferred_by && target_atom)
+		target_holder.last_reaction_user = WEAKREF(transferred_by)
 		//logging mob holder
 		var/atom/log_target = target_atom
 		if(isorgan(target_atom))

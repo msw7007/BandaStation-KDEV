@@ -568,6 +568,12 @@
 	else
 		move_intent = MOVE_INTENT_RUN
 
+	if(move_intent != MOVE_INTENT_RUN)
+		last_sprint_dir = NONE
+		remove_movespeed_modifier(/datum/movespeed_modifier/sprint_low_stamina)
+	else
+		update_sprint_stamina_slowdown()
+
 	hud_used?.screen_objects[HUD_MOB_MOVE_INTENT]?.update_appearance()
 	update_move_intent_slowdown()
 	SEND_SIGNAL(src, COMSIG_MOVE_INTENT_TOGGLED)

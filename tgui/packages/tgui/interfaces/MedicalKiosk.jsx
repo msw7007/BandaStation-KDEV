@@ -19,7 +19,7 @@ export const MedicalKiosk = (props) => {
   const { active_status_1, active_status_2, active_status_3, active_status_4 } =
     data;
   return (
-    <Window width={575} height={420}>
+    <Window width={660} height={560}>
       <Window.Content scrollable>
         <Flex mb={1}>
           <Flex.Item mr={1}>
@@ -138,6 +138,7 @@ const MedicalKioskInstructions = (props) => {
 const MedicalKioskScanResults1 = (props) => {
   const { data } = useBackend();
   const {
+    body_scan = [],
     patient_health,
     brute_health,
     burn_health,
@@ -154,66 +155,139 @@ const MedicalKioskScanResults1 = (props) => {
     heat_damage,
     cold_damage,
     acid_damage,
+    organ_scan = [],
   } = data;
   return (
     <Section title="Patient Health">
-      <LabeledList>
-        <LabeledList.Item label="Total Health">
-          <ProgressBar value={patient_health / 100}>
-            <AnimatedNumber value={patient_health} />%
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Divider />
-        <LabeledList.Item label="Brute Damage">
-          <ProgressBar value={brute_health / 100} color="bad">
-            <AnimatedNumber value={brute_health} />
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Item label="Burn Damage">
-          <ProgressBar value={burn_health / 100} color="bad">
-            <AnimatedNumber value={burn_health} />
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Item label="Oxygen Damage">
-          <ProgressBar value={suffocation_health / 100} color="bad">
-            <AnimatedNumber value={suffocation_health} />
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Item label="Toxin Damage">
-          <ProgressBar value={toxin_health / 100} color="bad">
-            <AnimatedNumber value={toxin_health} />
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Item label="Chemical Damage">
-          <ProgressBar value={chemical_health / 100} color="bad">
-            <AnimatedNumber value={chemical_health} />
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Divider />
-        <LabeledList.Item label="Physical Damage">
-          BLUNT <AnimatedNumber value={blunt_damage} />, PIERCE{' '}
-          <AnimatedNumber value={pierce_damage} />, SLASH{' '}
-          <AnimatedNumber value={slash_damage} />
-        </LabeledList.Item>
-        <LabeledList.Item label="Thermal Damage">
-          HEAT <AnimatedNumber value={heat_damage} />, COLD{' '}
-          <AnimatedNumber value={cold_damage} />, ACID{' '}
-          <AnimatedNumber value={acid_damage} />
-        </LabeledList.Item>
-        <LabeledList.Item label="Oxygenation">
-          <ProgressBar value={oxygenation / 100} color="good">
-            <AnimatedNumber value={oxygenation} />%
-          </ProgressBar>
-        </LabeledList.Item>
-        <LabeledList.Item label="Blood Pressure">
-          <AnimatedNumber value={blood_pressure} />%
-        </LabeledList.Item>
-        <LabeledList.Item label="Pain / Infection">
-          Pain <AnimatedNumber value={pain_total} />, infection{' '}
-          <AnimatedNumber value={infection_total} />%
-        </LabeledList.Item>
-      </LabeledList>
+      <Flex>
+        <Flex.Item grow basis={0} mr={1}>
+          <LabeledList>
+            <LabeledList.Item label="Total Health">
+              <ProgressBar value={patient_health / 100}>
+                <AnimatedNumber value={patient_health} />%
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Divider />
+            <LabeledList.Item label="Brute Damage">
+              <ProgressBar value={brute_health / 100} color="bad">
+                <AnimatedNumber value={brute_health} />
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Item label="Burn Damage">
+              <ProgressBar value={burn_health / 100} color="bad">
+                <AnimatedNumber value={burn_health} />
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Item label="Oxygen Damage">
+              <ProgressBar value={suffocation_health / 100} color="bad">
+                <AnimatedNumber value={suffocation_health} />
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Item label="Toxin Damage">
+              <ProgressBar value={toxin_health / 100} color="bad">
+                <AnimatedNumber value={toxin_health} />
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Item label="Chemical Damage">
+              <ProgressBar value={chemical_health / 100} color="bad">
+                <AnimatedNumber value={chemical_health} />
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Divider />
+            <LabeledList.Item label="Physical Damage">
+              BLUNT <AnimatedNumber value={blunt_damage} />, PIERCE{' '}
+              <AnimatedNumber value={pierce_damage} />, SLASH{' '}
+              <AnimatedNumber value={slash_damage} />
+            </LabeledList.Item>
+            <LabeledList.Item label="Thermal Damage">
+              HEAT <AnimatedNumber value={heat_damage} />, COLD{' '}
+              <AnimatedNumber value={cold_damage} />, ACID{' '}
+              <AnimatedNumber value={acid_damage} />
+            </LabeledList.Item>
+            <LabeledList.Item label="Oxygenation">
+              <ProgressBar value={oxygenation / 100} color="good">
+                <AnimatedNumber value={oxygenation} />%
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Item label="Blood Pressure">
+              <AnimatedNumber value={blood_pressure} />%
+            </LabeledList.Item>
+            <LabeledList.Item label="Pain / Infection">
+              Pain <AnimatedNumber value={pain_total} />, infection{' '}
+              <AnimatedNumber value={infection_total} />%
+            </LabeledList.Item>
+          </LabeledList>
+        </Flex.Item>
+        <Flex.Item width="270px">
+          <MedicalBodyMap bodyScan={body_scan} organScan={organ_scan} />
+        </Flex.Item>
+      </Flex>
     </Section>
+  );
+};
+
+const bodyPriority = {
+  Head: 1,
+  Chest: 2,
+  'Left Arm': 3,
+  'Right Arm': 4,
+  'Left Leg': 5,
+  'Right Leg': 6,
+};
+
+const getBodyPartColor = (part) => {
+  if (part.missing || part.integrity <= 25) {
+    return 'bad';
+  }
+  if (part.integrity <= 60 || part.wounds || part.infection) {
+    return 'average';
+  }
+  return 'good';
+};
+
+const MedicalBodyMap = (props) => {
+  const { bodyScan = [], organScan = [] } = props;
+  const sortedBody = [...bodyScan].sort(
+    (a, b) => (bodyPriority[a.name] || 99) - (bodyPriority[b.name] || 99),
+  );
+  return (
+    <>
+      <Box mb={1} color="label">
+        Tissue map
+      </Box>
+      {sortedBody.map((part) => (
+        <Box key={part.zone} mb={0.5}>
+          <Box>
+            {part.name}
+            {!!part.wounds && (
+              <Box inline ml={1} color="average">
+                {part.wounds} wound{part.wounds === 1 ? '' : 's'}
+              </Box>
+            )}
+          </Box>
+          <ProgressBar
+            value={part.integrity / 100}
+            color={getBodyPartColor(part)}
+          >
+            {part.missing ? 'Missing' : `${part.integrity}%`}
+          </ProgressBar>
+        </Box>
+      ))}
+      <Box mt={1} mb={1} color="label">
+        Organ function
+      </Box>
+      {organScan.slice(0, 6).map((organ) => (
+        <Box key={organ.name} mb={0.5}>
+          <Box>{organ.name}</Box>
+          <ProgressBar
+            value={organ.efficiency / 100}
+            color={organ.failing || organ.efficiency <= 30 ? 'bad' : 'good'}
+          >
+            {organ.failing ? 'Failing' : `${organ.efficiency}%`}
+          </ProgressBar>
+        </Box>
+      ))}
+    </>
   );
 };
 

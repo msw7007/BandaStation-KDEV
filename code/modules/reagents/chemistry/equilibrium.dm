@@ -62,8 +62,22 @@
 	if(!check_inital_conditions()) //If we're outside of the scope of the reaction vars
 		to_delete = TRUE
 		return
+	apply_cyberpunk_chemistry_modifiers()
 	LAZYADD(holder.reaction_list, src)
 	SSblackbox.record_feedback("tally", "chemical_reaction", 1, "[reaction.type] attempts")
+
+/datum/equilibrium/proc/get_cyberpunk_reaction_operator()
+	var/mob/living/operator = holder?.last_reaction_user?.resolve()
+	if(istype(operator))
+		return operator
+	return null
+
+/datum/equilibrium/proc/apply_cyberpunk_chemistry_modifiers()
+	var/mob/living/operator = get_cyberpunk_reaction_operator()
+	if(!operator)
+		return
+	speed_mod *= operator.get_cyberpunk_chemistry_speed_multiplier()
+	h_ion_mod *= operator.get_cyberpunk_chemistry_ph_drift_multiplier()
 
 /datum/equilibrium/Destroy()
 	LAZYREMOVE(holder.reaction_list, src)
@@ -99,7 +113,10 @@
 		return FALSE
 
 	//To prevent reactions outside of the pH window from starting.
-	if(holder.ph < (reaction.optimal_ph_min - reaction.determin_ph_range) || holder.ph > (reaction.optimal_ph_max + reaction.determin_ph_range))
+	var/mob/living/operator = get_cyberpunk_reaction_operator()
+	var/ph_range_bonus = operator?.get_cyberpunk_chemistry_purity_range_bonus() || 0
+	var/effective_ph_range = reaction.determin_ph_range * (1 + ph_range_bonus * 0.01)
+	if(holder.ph < (reaction.optimal_ph_min - effective_ph_range) || holder.ph > (reaction.optimal_ph_max + effective_ph_range))
 		return FALSE
 
 	//All checks pass. cache the product ratio
@@ -187,12 +204,20 @@
 	PRIVATE_PROC(TRUE)
 
 	//Are we overheated?
+	var/overheat_temp = reaction.overheat_temp
+	var/mob/living/operator = get_cyberpunk_reaction_operator()
+	if(operator && overheat_temp != NO_OVERHEAT)
+		var/overheat_bonus = operator.get_cyberpunk_chemistry_overheat_bonus() * 0.01
+		if(reaction.is_cold_recipe)
+			overheat_temp *= max(0, 1 - overheat_bonus)
+		else
+			overheat_temp *= 1 + overheat_bonus
 	if(reaction.is_cold_recipe)
-		if(holder.chem_temp < reaction.overheat_temp && reaction.overheat_temp != NO_OVERHEAT) //This is before the process - this is here so that overly_impure and overheated() share the same code location (and therefore vars) for calls.
+		if(holder.chem_temp < overheat_temp && overheat_temp != NO_OVERHEAT) //This is before the process - this is here so that overly_impure and overheated() share the same code location (and therefore vars) for calls.
 			SSblackbox.record_feedback("tally", "chemical_reaction", 1, "[reaction.type] overheated reaction steps")
 			reaction.overheated(holder, src, step_volume_added)
 	else
-		if(holder.chem_temp > reaction.overheat_temp)
+		if(holder.chem_temp > overheat_temp)
 			SSblackbox.record_feedback("tally", "chemical_reaction", 1, "[reaction.type] overheated reaction steps")
 			reaction.overheated(holder, src, step_volume_added)
 
@@ -258,6 +283,10 @@
 	var/cached_ph = holder.ph
 	var/cached_temp = holder.chem_temp
 	var/purity = 1 //purity of the current step
+	var/mob/living/operator = get_cyberpunk_reaction_operator()
+	var/ph_range_bonus = operator?.get_cyberpunk_chemistry_purity_range_bonus() || 0
+	var/effective_ph_range = reaction.determin_ph_range * (1 + ph_range_bonus * 0.01)
+	var/yield_multiplier = operator?.get_cyberpunk_chemistry_yield_multiplier() || 1
 
 	//Begin checks
 	//Calculate DeltapH (Deviation of pH from optimal)
@@ -267,18 +296,18 @@
 		delta_ph = 1 //100% purity for this step
 	//Lower range
 	else if (cached_ph < reaction.optimal_ph_min) //If we're outside of the optimal lower bound
-		acceptable_ph = reaction.optimal_ph_min - reaction.determin_ph_range
+		acceptable_ph = reaction.optimal_ph_min - effective_ph_range
 		if (cached_ph < acceptable_ph) //If we're outside of the deterministic bound
 			delta_ph = 0 //0% purity
 		else //We're in the deterministic phase
-			delta_ph = ((cached_ph - acceptable_ph) / reaction.determin_ph_range) ** reaction.ph_exponent_factor
+			delta_ph = ((cached_ph - acceptable_ph) / max(effective_ph_range, 0.01)) ** reaction.ph_exponent_factor
 	//Upper range
 	else if (cached_ph > reaction.optimal_ph_max) //If we're above of the optimal lower bound
-		acceptable_ph = reaction.optimal_ph_max + reaction.determin_ph_range
+		acceptable_ph = reaction.optimal_ph_max + effective_ph_range
 		if (cached_ph > acceptable_ph)  //If we're outside of the deterministic bound
 			delta_ph = 0 //0% purity
 		else  //We're in the deterministic phase
-			delta_ph = ((acceptable_ph - cached_ph) / reaction.determin_ph_range) ** reaction.ph_exponent_factor
+			delta_ph = ((acceptable_ph - cached_ph) / max(effective_ph_range, 0.01)) ** reaction.ph_exponent_factor
 
 	//Calculate DeltaT (Deviation of T from optimal)
 	if(!reaction.is_cold_recipe)
@@ -350,7 +379,7 @@
 	var/total_step_added = 0
 	for(var/datum/reagent/product as anything in reaction.results)
 		//create the products
-		step_add = holder.add_reagent(product, delta_chem_factor * reaction.results[product], null, cached_temp, purity, override_base_ph = TRUE)
+		step_add = holder.add_reagent(product, delta_chem_factor * reaction.results[product] * yield_multiplier, null, cached_temp, purity, override_base_ph = TRUE)
 		if(!step_add)
 			to_delete = TRUE
 			return

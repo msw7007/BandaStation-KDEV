@@ -216,6 +216,16 @@
 					),
 				)
 
+	if(istype(src, /obj/machinery/sleeper/bioscanner))
+		var/obj/machinery/sleeper/bioscanner/bioscanner = src
+		data["bioscanner"] = TRUE
+		data["nextBioscan"] = max(0, round((bioscanner.next_bioscan - world.time) / 10, 0.1))
+		data["lastBioscan"] = bioscanner.last_bioscan_report
+		if(iscarbon(occupant))
+			var/mob/living/carbon/carbon_occupant = occupant
+			data["bodyScan"] = carbon_occupant.get_cyberpunk_medical_body_scan_data()
+			data["organScan"] = carbon_occupant.get_cyberpunk_medical_organ_scan_data()
+
 	return data
 
 /obj/machinery/sleeper/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -366,13 +376,27 @@
 	controls_inside = TRUE
 	circuit = null
 	var/next_bioscan = 0
+	var/last_bioscan_report
+	var/datum/weakref/last_operator
 
 /obj/machinery/sleeper/bioscanner/process()
 	use_energy(idle_power_usage)
 	if(!occupant || state_open || world.time < next_bioscan)
 		return
-	next_bioscan = world.time + 10 SECONDS
+	var/mob/living/operator = last_operator?.resolve()
+	next_bioscan = world.time + 10 SECONDS * (operator?.get_cyberpunk_medical_scan_time_multiplier(occupant) || 1)
 	var/mob/living/patient = occupant
-	var/report = healthscan(null, patient, SCANNER_VERBOSE, TRUE, FALSE)
+	var/report = healthscan(operator, patient, SCANNER_VERBOSE, TRUE, FALSE, 2)
 	if(report)
+		last_bioscan_report = report
 		to_chat(patient, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
+		for(var/mob/viewer in viewers(1, src))
+			if(viewer == patient)
+				continue
+			to_chat(viewer, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
+		SStgui.update_uis(src)
+
+/obj/machinery/sleeper/bioscanner/ui_interact(mob/user, datum/tgui/ui)
+	if(isliving(user))
+		last_operator = WEAKREF(user)
+	return ..()

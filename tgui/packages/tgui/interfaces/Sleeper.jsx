@@ -30,7 +30,16 @@ const damageTypes = [
 
 export const Sleeper = (props) => {
   const { act, data } = useBackend();
-  const { open, occupant = {}, occupied } = data;
+  const {
+    bioscanner,
+    bodyScan = [],
+    lastBioscan,
+    nextBioscan,
+    open,
+    organScan = [],
+    occupant = {},
+    occupied,
+  } = data;
   const preSortChems = data.chems || [];
   const chems = preSortChems.sort((a, b) => {
     const descA = a.name.toLowerCase();
@@ -44,8 +53,8 @@ export const Sleeper = (props) => {
     return 0;
   });
   return (
-    <Window width={310} height={465}>
-      <Window.Content>
+    <Window width={bioscanner ? 560 : 310} height={bioscanner ? 620 : 465}>
+      <Window.Content scrollable={bioscanner}>
         <Section
           title={occupant.name ? occupant.name : 'No Occupant'}
           minHeight="210px"
@@ -91,33 +100,144 @@ export const Sleeper = (props) => {
             </>
           )}
         </Section>
-        <Section
-          title="Medicines"
-          minHeight="205px"
-          buttons={
-            <Button
-              icon={open ? 'door-open' : 'door-closed'}
-              content={open ? 'Open' : 'Closed'}
-              onClick={() => act('door')}
-            />
-          }
-        >
-          {chems.map((chem) => (
-            <Button
-              key={chem.name}
-              icon="flask"
-              content={chem.name}
-              disabled={!occupied || !chem.allowed}
-              width="140px"
-              onClick={() =>
-                act('inject', {
-                  chem: chem.id,
-                })
+        {bioscanner ? (
+          <>
+            <Section
+              title="Bio-scan dossier"
+              minHeight="255px"
+              buttons={
+                <>
+                  <Box inline mr={1}>
+                    Next: {nextBioscan}s
+                  </Box>
+                  <Button
+                    icon={open ? 'door-open' : 'door-closed'}
+                    content={open ? 'Open' : 'Closed'}
+                    onClick={() => act('door')}
+                  />
+                </>
               }
-            />
-          ))}
-        </Section>
+            >
+              <BodyScanPanel bodyScan={bodyScan} organScan={organScan} />
+            </Section>
+            <Section title="Bio-scan report" minHeight="210px">
+              {lastBioscan ? (
+                <Box dangerouslySetInnerHTML={{ __html: lastBioscan }} />
+              ) : (
+                <Box color="label">No report yet.</Box>
+              )}
+            </Section>
+          </>
+        ) : (
+          <Section
+            title="Medicines"
+            minHeight="205px"
+            buttons={
+              <Button
+                icon={open ? 'door-open' : 'door-closed'}
+                content={open ? 'Open' : 'Closed'}
+                onClick={() => act('door')}
+              />
+            }
+          >
+            {chems.map((chem) => (
+              <Button
+                key={chem.name}
+                icon="flask"
+                content={chem.name}
+                disabled={!occupied || !chem.allowed}
+                width="140px"
+                onClick={() =>
+                  act('inject', {
+                    chem: chem.id,
+                  })
+                }
+              />
+            ))}
+          </Section>
+        )}
       </Window.Content>
     </Window>
+  );
+};
+
+const bodyPriority = {
+  Head: 1,
+  Chest: 2,
+  'Left Arm': 3,
+  'Right Arm': 4,
+  'Left Leg': 5,
+  'Right Leg': 6,
+};
+
+const getBodyPartColor = (part) => {
+  if (part.missing || part.integrity <= 25) {
+    return 'bad';
+  }
+  if (part.integrity <= 60 || part.wounds || part.infection) {
+    return 'average';
+  }
+  return 'good';
+};
+
+const BodyScanPanel = (props) => {
+  const { bodyScan = [], organScan = [] } = props;
+  const sortedBody = [...bodyScan].sort(
+    (a, b) => (bodyPriority[a.name] || 99) - (bodyPriority[b.name] || 99),
+  );
+  return (
+    <>
+      <Box mb={1} color="label">
+        Tissue map
+      </Box>
+      <Box
+        style={{
+          display: 'grid',
+          gap: '4px',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        }}
+      >
+        {sortedBody.map((part) => (
+          <Box key={part.zone}>
+            <Box mb={0.5}>
+              {part.name}
+              {!!part.wounds && (
+                <Box inline ml={1} color="average">
+                  {part.wounds} wound{part.wounds === 1 ? '' : 's'}
+                </Box>
+              )}
+            </Box>
+            <ProgressBar
+              value={part.integrity / 100}
+              color={getBodyPartColor(part)}
+            >
+              {part.missing ? 'Missing' : `${part.integrity}%`}
+            </ProgressBar>
+          </Box>
+        ))}
+      </Box>
+      <Box mt={1} mb={1} color="label">
+        Organ function
+      </Box>
+      <Box
+        style={{
+          display: 'grid',
+          gap: '4px',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        }}
+      >
+        {organScan.map((organ) => (
+          <Box key={organ.name}>
+            <Box mb={0.5}>{organ.name}</Box>
+            <ProgressBar
+              value={organ.efficiency / 100}
+              color={organ.failing || organ.efficiency <= 30 ? 'bad' : 'good'}
+            >
+              {organ.failing ? 'Failing' : `${organ.efficiency}%`}
+            </ProgressBar>
+          </Box>
+        ))}
+      </Box>
+    </>
   );
 };

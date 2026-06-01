@@ -160,6 +160,77 @@
 		return list()
 	return target.get_cyberpunk_diagnostic_data(src)
 
+/mob/living/proc/get_cyberpunk_medical_scan_time_multiplier(atom/target, base_time = 10 SECONDS)
+	var/highest_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 1),
+		get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2),
+	)
+	return 1 / max(0.1, 1 + highest_bonus * 0.01)
+
+/mob/living/proc/get_cyberpunk_medical_scan_depth(atom/target, base_depth = 0)
+	var/analysis_depth = 0
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2) > 0)
+		analysis_depth = max(analysis_depth, 1)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3) > 0)
+		analysis_depth = max(analysis_depth, 2)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 4) > 0)
+		analysis_depth = max(analysis_depth, 3)
+	return max(base_depth, analysis_depth)
+
+/mob/living/proc/get_cyberpunk_surgery_time_multiplier()
+	var/speed_bonus = get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 3)
+	return 1 / max(0.1, 1 + speed_bonus * 0.01)
+
+/mob/living/proc/get_cyberpunk_surgery_failure_reduction(datum/surgery_operation/operation)
+	var/tier = 1
+	if(operation)
+		if(operation.time >= 10 SECONDS || (operation.operation_flags & OPERATION_LOCKED))
+			tier = 3
+		else if(operation.time >= 4 SECONDS || (operation.operation_flags & OPERATION_NOTABLE))
+			tier = 2
+	switch(tier)
+		if(1)
+			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_1")
+		if(2)
+			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_2")
+		if(3)
+			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_3")
+	return 0
+
+/mob/living/proc/get_cyberpunk_surgery_sterility_chance()
+	return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 4)
+
+/mob/living/proc/get_cyberpunk_self_surgery_success_chance(datum/surgery_operation/operation)
+	var/tier = 1
+	if(operation)
+		if(operation.time >= 10 SECONDS || (operation.operation_flags & OPERATION_LOCKED))
+			tier = 3
+		else if(operation.time >= 4 SECONDS || (operation.operation_flags & OPERATION_NOTABLE))
+			tier = 2
+	switch(tier)
+		if(1)
+			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 5, "value_1")
+		if(2)
+			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 5, "value_2")
+		if(3)
+			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 5, "value_3")
+	return 0
+
+/mob/living/proc/get_cyberpunk_chemistry_ph_drift_multiplier()
+	return max(0, 1 - get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 1) * 0.01)
+
+/mob/living/proc/get_cyberpunk_chemistry_overheat_bonus()
+	return get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 2)
+
+/mob/living/proc/get_cyberpunk_chemistry_speed_multiplier()
+	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 3) * 0.01)
+
+/mob/living/proc/get_cyberpunk_chemistry_yield_multiplier()
+	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 4) * 0.01)
+
+/mob/living/proc/get_cyberpunk_chemistry_purity_range_bonus()
+	return get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 5)
+
 /mob/living/proc/apply_cyberpunk_machine_wear(obj/machinery/machine, amount = 1, source = null)
 	if(!machine || amount <= 0)
 		return FALSE

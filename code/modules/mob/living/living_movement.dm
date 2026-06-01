@@ -66,6 +66,8 @@
 	. = ..()
 	if(.)
 		return
+	if(wall_hugging && ismob(mover))
+		return TRUE
 	if(mover.throwing)
 		var/mob/thrower = mover.throwing.get_thrower()
 		return (!density || (body_position == LYING_DOWN) || (thrower == src && !ismob(mover)))
@@ -86,6 +88,210 @@
 	if(move_intent == MOVE_INTENT_WALK)
 		return /datum/movespeed_modifier/config_walk_run/walk
 	return /datum/movespeed_modifier/config_walk_run/run
+
+/mob/living/verb/jump_forward()
+	set name = "Jump Forward"
+	set category = "IC"
+	try_jump_forward()
+
+/mob/living/verb/toggle_wall_hug()
+	set name = "Wall Hug"
+	set category = "IC"
+	toggle_wall_hug_state()
+
+/mob/living/proc/stop_sprinting(message, silent = FALSE)
+	if(move_intent != MOVE_INTENT_RUN && !has_movespeed_modifier(/datum/movespeed_modifier/sprint_low_stamina))
+		last_sprint_dir = NONE
+		return
+	move_intent = MOVE_INTENT_WALK
+	last_sprint_dir = NONE
+	remove_movespeed_modifier(/datum/movespeed_modifier/sprint_low_stamina)
+	hud_used?.screen_objects[HUD_MOB_MOVE_INTENT]?.update_appearance()
+	update_move_intent_slowdown()
+	SEND_SIGNAL(src, COMSIG_MOVE_INTENT_TOGGLED)
+	if(message && !silent)
+		balloon_alert(src, message)
+
+/mob/living/proc/update_sprint_stamina_slowdown()
+	if(move_intent == MOVE_INTENT_RUN && stamina <= max_stamina * STAMINA_LOW_RUN_THRESHOLD && stamina > 0)
+		add_movespeed_modifier(/datum/movespeed_modifier/sprint_low_stamina)
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/sprint_low_stamina)
+
+/mob/living/proc/handle_sprint_step(direct)
+	last_sprint_dir = direct
+	update_sprint_stamina_slowdown()
+	if(stamina > 0)
+		return
+	stop_sprinting("breathless")
+	if(energy_pool <= 0 || is_exhausted_by_needs())
+		Knockdown(STAMINA_SPRINT_RESERVE_KNOCKDOWN, ignore_canstun = TRUE)
+		return
+	Immobilize(STAMINA_SPRINT_BREATHLESS_TIME, ignore_canstun = TRUE)
+
+/mob/living/proc/handle_sprint_collision(atom/target)
+	var/turf/target_turf = get_turf(target)
+	if(!target_turf || !target_turf.is_blocked_turf(source_atom = src))
+		return
+	stop_sprinting("crashed")
+	Knockdown(STAMINA_SPRINT_COLLISION_KNOCKDOWN, ignore_canstun = TRUE)
+	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] crashes and falls!"), span_userdanger("You crash and fall!"))
+
+/mob/living/proc/try_jump_forward()
+	if(currently_jumping)
+		return FALSE
+	if(!(mobility_flags & MOBILITY_MOVE) || body_position != STANDING_UP || buckled || incapacitated)
+		balloon_alert(src, "can't jump")
+		return FALSE
+	if(!can_jump() || !spend_stamina(STAMINA_COST_JUMP, "jump"))
+		balloon_alert(src, "too tired")
+		return FALSE
+
+	var/long_jump = move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING)
+	INVOKE_ASYNC(src, PROC_REF(perform_jump_sequence), dir, long_jump)
+	return TRUE
+
+/mob/living/proc/perform_jump_sequence(jump_dir, long_jump = FALSE)
+	currently_jumping = TRUE
+	var/original_pixel_z = pixel_z
+	setDir(jump_dir)
+	var/air_steps = long_jump ? 2 : 1
+	var/success = FALSE
+	for(var/i in 1 to air_steps)
+		var/turf/current_turf = get_turf(src)
+		var/turf/next_turf = get_step(current_turf, jump_dir)
+		if(!next_turf)
+			pixel_z = original_pixel_z
+			handle_jump_collision(jump_dir)
+			currently_jumping = FALSE
+			return FALSE
+
+		var/atom/jumpable_obstacle
+		if(next_turf.is_blocked_turf(source_atom = src))
+			jumpable_obstacle = get_jumpable_obstacle(next_turf)
+			if(!jumpable_obstacle)
+				pixel_z = original_pixel_z
+				handle_jump_collision(jump_dir)
+				currently_jumping = FALSE
+				return FALSE
+			var/turf/landing_turf = get_step(next_turf, jump_dir)
+			if(!landing_turf || landing_turf.is_blocked_turf(source_atom = src))
+				pixel_z = original_pixel_z
+				handle_jump_collision(jump_dir)
+				currently_jumping = FALSE
+				return FALSE
+			next_turf = landing_turf
+			i = air_steps
+
+		animate_jump_arc(i, air_steps, original_pixel_z)
+		sleep(world.tick_lag)
+		forceMove(next_turf)
+		setDir(jump_dir)
+		if(jumpable_obstacle)
+			visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] vaults over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."), span_notice("You vault over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."))
+		else
+			visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] jumps forward."), span_notice("You jump forward."))
+		success = TRUE
+		animate(src, pixel_z = original_pixel_z, time = world.tick_lag, easing = SINE_EASING|EASE_IN)
+		sleep(world.tick_lag)
+
+	if(success && long_jump)
+		continue_long_jump(jump_dir)
+	pixel_z = original_pixel_z
+	currently_jumping = FALSE
+	return TRUE
+
+/mob/living/proc/animate_jump_arc(step_index, total_steps, original_pixel_z)
+	var/arc_peak = total_steps > 1 ? 14 : 10
+	if(step_index == total_steps)
+		arc_peak = max(8, arc_peak - 4)
+	animate(src, pixel_z = original_pixel_z + arc_peak, time = world.tick_lag, easing = SINE_EASING|EASE_OUT)
+
+/mob/living/proc/continue_long_jump(jump_dir)
+	var/turf/next_turf = get_step(src, jump_dir)
+	if(!next_turf)
+		return FALSE
+	if(next_turf.is_blocked_turf(source_atom = src))
+		handle_jump_collision(jump_dir)
+		return FALSE
+	Move(next_turf, jump_dir)
+	return TRUE
+
+/mob/living/proc/get_jumpable_obstacle(turf/target_turf)
+	if(!target_turf)
+		return null
+	if(HAS_TRAIT(target_turf, TRAIT_CLIMBABLE))
+		return target_turf
+	for(var/atom/movable/content as anything in target_turf.contents)
+		if(HAS_TRAIT(content, TRAIT_CLIMBABLE))
+			return content
+	return null
+
+/mob/living/proc/handle_jump_collision(jump_dir = NONE)
+	if(!jump_dir)
+		jump_dir = dir
+	var/turf/rebound_turf = get_step(src, REVERSE_DIR(jump_dir))
+	if(rebound_turf && !rebound_turf.is_blocked_turf(source_atom = src))
+		step(src, REVERSE_DIR(jump_dir))
+	Knockdown(STAMINA_JUMP_COLLISION_KNOCKDOWN, ignore_canstun = TRUE)
+	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] clips the obstacle and falls!"), span_userdanger("You clip the obstacle and fall!"))
+
+/mob/living/proc/near_wall_hug_cover()
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return FALSE
+	for(var/check_dir in GLOB.cardinals)
+		var/turf/check_turf = get_step(current_turf, check_dir)
+		if(check_turf?.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+			return TRUE
+	return FALSE
+
+/mob/living/proc/start_wall_hug()
+	if(wall_hugging)
+		return TRUE
+	if(body_position != STANDING_UP || buckled || incapacitated)
+		balloon_alert(src, "can't hug cover")
+		return FALSE
+	if(!near_wall_hug_cover())
+		balloon_alert(src, "no cover")
+		return FALSE
+	wall_hugging = TRUE
+	if(!stealth_mode)
+		start_stealth()
+		wall_hug_started_stealth = TRUE
+	chameleon_bonus += WALL_HUG_CHAMELEON_BONUS
+	add_movespeed_modifier(/datum/movespeed_modifier/wall_hug)
+	if(move_intent == MOVE_INTENT_RUN)
+		stop_sprinting(silent = TRUE)
+	update_stealth_chameleon()
+	balloon_alert(src, "hugging cover")
+	return TRUE
+
+/mob/living/proc/stop_wall_hug(silent = FALSE)
+	if(!wall_hugging)
+		return
+	wall_hugging = FALSE
+	chameleon_bonus = max(0, chameleon_bonus - WALL_HUG_CHAMELEON_BONUS)
+	remove_movespeed_modifier(/datum/movespeed_modifier/wall_hug)
+	if(wall_hug_started_stealth)
+		wall_hug_started_stealth = FALSE
+		end_stealth()
+	else
+		update_stealth_chameleon()
+	if(!silent)
+		balloon_alert(src, "left cover")
+
+/mob/living/proc/toggle_wall_hug_state()
+	if(wall_hugging)
+		stop_wall_hug()
+		return FALSE
+	return start_wall_hug()
+
+/mob/living/proc/validate_wall_hug()
+	if(!wall_hugging)
+		return
+	if(body_position != STANDING_UP || buckled || incapacitated || !near_wall_hug_cover())
+		stop_wall_hug()
 
 /mob/living/proc/update_turf_movespeed(turf/open/turf)
 	if(isopenturf(turf) && !HAS_TRAIT(turf, TRAIT_TURF_IGNORE_SLOWDOWN))

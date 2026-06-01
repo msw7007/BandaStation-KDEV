@@ -106,6 +106,8 @@
 	var/temporary_pain_disabled = FALSE
 	/// Infection progress on this limb, 0 to 100.
 	var/infection = 0
+	/// Temporary surgical sterility window from skilled surgery.
+	var/sterile_until = 0
 	/// Internal blood pooled by aorta damage or comparable deep trauma.
 	var/internal_blood_volume = 0
 	/// Lung punctures transferred from this bodypart. Capped at 4 on chest.
@@ -847,6 +849,8 @@
 
 /obj/item/bodypart/proc/get_infection_weight()
 	var/weight = 0
+	if(world.time < sterile_until)
+		return weight
 	if(HAS_ANY_SURGERY_STATE(surgery_state, SURGERY_SKIN_CUT|SURGERY_SKIN_OPEN))
 		weight = max(weight, 1)
 	if(pierce_trauma == TRAUMA_MINOR)
@@ -953,6 +957,55 @@
 		burn_wound.infection = min(burn_wound.infection, new_infection)
 		burn_wound.sanitization = max(burn_wound.sanitization, 1)
 	return reduced
+
+/mob/living/carbon/proc/get_cyberpunk_medical_body_scan_data()
+	var/list/body_parts = list()
+	for(var/zone in get_all_limbs())
+		var/obj/item/bodypart/limb = get_bodypart(zone)
+		if(isnull(limb))
+			body_parts += list(list(
+				"zone" = zone,
+				"name" = capitalize(parse_zone(zone)),
+				"missing" = TRUE,
+				"integrity" = 0,
+				"damage" = 100,
+				"pain" = 0,
+				"infection" = 0,
+			))
+			continue
+		var/max_damage = max(limb.max_damage, 1)
+		body_parts += list(list(
+			"zone" = zone,
+			"name" = capitalize(limb.plaintext_zone),
+			"missing" = FALSE,
+			"integrity" = round(max(0, 100 - (limb.get_damage() / max_damage) * 100), 0.1),
+			"damage" = round(limb.get_damage(), 0.1),
+			"blunt" = round(limb.blunt_dam, 0.1),
+			"pierce" = round(limb.pierce_dam, 0.1),
+			"slash" = round(limb.slash_dam, 0.1),
+			"heat" = round(limb.heat_dam, 0.1),
+			"cold" = round(limb.cold_dam, 0.1),
+			"acid" = round(limb.acid_dam, 0.1),
+			"pain" = round(limb.pain, 0.1),
+			"infection" = round(limb.infection, 0.1),
+			"wounds" = length(limb.wounds),
+			"embedded" = length(limb.embedded_objects),
+		))
+	return body_parts
+
+/mob/living/carbon/proc/get_cyberpunk_medical_organ_scan_data()
+	var/list/organ_data = list()
+	for(var/obj/item/organ/organ as anything in organs)
+		organ_data += list(list(
+			"name" = capitalize(organ.name),
+			"integrity" = organ.maxHealth ? round(max(0, ((organ.maxHealth - organ.damage) / organ.maxHealth) * 100), 0.1) : 0,
+			"efficiency" = round(organ.get_efficiency() * 100, 0.1),
+			"damage" = round(organ.damage, 0.1),
+			"maxDamage" = organ.maxHealth,
+			"pain" = round(organ.pain, 0.1),
+			"failing" = !!(organ.organ_flags & ORGAN_FAILING),
+		))
+	return organ_data
 
 /obj/item/bodypart/proc/handle_bodypart_trauma(seconds_per_tick)
 	if(!owner)

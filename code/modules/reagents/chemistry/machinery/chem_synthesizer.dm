@@ -49,6 +49,8 @@
 				return FALSE
 
 			beaker.add_hiddenprint(ui.user)
+			if(isliving(ui.user))
+				beaker.reagents.last_reaction_user = WEAKREF(ui.user)
 			beaker.reagents.add_reagent(input_reagent, amount, reagtemp = temperature, added_purity = (purity / 100))
 			return TRUE
 

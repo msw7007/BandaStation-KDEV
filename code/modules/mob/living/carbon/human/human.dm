@@ -939,6 +939,76 @@
 
 	return buckle_mob(target, TRUE, TRUE, CARRIER_NEEDS_ARM)
 
+/mob/living/carbon/human/verb/carry_pulled_body()
+	set name = "Carry Pulled Body"
+	set category = "IC"
+
+	if(!pulling || !iscarbon(pulling))
+		balloon_alert(src, "no body pulled")
+		return
+	var/mob/living/carbon/target = pulling
+	if(!Adjacent(target))
+		balloon_alert(src, "too far")
+		return
+	if(!can_be_firemanned(target))
+		balloon_alert(src, "lay them down")
+		return
+	fireman_carry(target)
+
+/mob/living/carbon/human/verb/place_carried_body()
+	set name = "Place Carried Body"
+	set category = "IC"
+
+	if(!length(buckled_mobs))
+		balloon_alert(src, "no body carried")
+		return
+	var/mob/living/carried = buckled_mobs[1]
+	if(!istype(carried))
+		return
+	var/list/placement = get_body_placement_target(carried)
+	var/turf/drop_turf = placement["turf"]
+	var/atom/movable/surface = placement["surface"]
+	unbuckle_mob(carried, force = TRUE)
+	carried.forceMove(drop_turf)
+	if(surface?.buckle_mob(carried, force = TRUE, check_loc = TRUE))
+		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] lowers [carried.declent_ru(ACCUSATIVE)] onto [surface.declent_ru(ACCUSATIVE)]."), span_notice("You lower [carried.declent_ru(ACCUSATIVE)] onto [surface.declent_ru(ACCUSATIVE)]."))
+		return
+	carried.set_lying_down(get_body_placement_angle(placement["dir"]))
+	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] lowers [carried.declent_ru(ACCUSATIVE)] down."), span_notice("You lower [carried.declent_ru(ACCUSATIVE)] down."))
+
+/mob/living/carbon/human/proc/get_body_placement_target(mob/living/carried)
+	var/list/placement_dirs = list(dir, turn(dir, 45), turn(dir, -45), turn(dir, 90), turn(dir, -90), NONE)
+	for(var/place_dir in placement_dirs)
+		var/turf/place_turf = place_dir ? get_step(src, place_dir) : get_turf(src)
+		if(!place_turf)
+			continue
+		var/atom/movable/surface = find_body_placement_surface(place_turf, carried)
+		if(surface)
+			return list("turf" = place_turf, "surface" = surface, "dir" = place_dir)
+	for(var/place_dir in placement_dirs)
+		var/turf/place_turf = place_dir ? get_step(src, place_dir) : get_turf(src)
+		if(place_turf && !place_turf.is_blocked_turf(source_atom = carried))
+			return list("turf" = place_turf, "surface" = null, "dir" = place_dir)
+	return list("turf" = get_turf(src), "surface" = null, "dir" = NONE)
+
+/mob/living/carbon/human/proc/find_body_placement_surface(turf/place_turf, mob/living/carried)
+	for(var/atom/movable/movable_content as anything in place_turf.contents)
+		if(movable_content == src || movable_content == carried)
+			continue
+		if(!movable_content.can_buckle || movable_content.buckle_lying == NO_BUCKLE_LYING)
+			continue
+		if(length(movable_content.buckled_mobs))
+			continue
+		if(!movable_content.is_buckle_possible(carried, force = TRUE, check_loc = TRUE))
+			continue
+		return movable_content
+	return null
+
+/mob/living/carbon/human/proc/get_body_placement_angle(place_dir)
+	if(place_dir & (EAST|WEST))
+		return LYING_ANGLE_EAST
+	return LYING_ANGLE_WEST
+
 /mob/living/carbon/human/proc/piggyback(mob/living/carbon/target)
 	if(!can_piggyback(target))
 		to_chat(target, span_warning("Вы не можете сейчас прокатиться на [declent_ru(PREPOSITIONAL)]!"))

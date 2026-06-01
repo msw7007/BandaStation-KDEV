@@ -31,6 +31,14 @@
 	variable = TRUE
 	blacklisted_movetypes = FLOATING
 
+/datum/movespeed_modifier/sprint_low_stamina
+	multiplicative_slowdown = STAMINA_LOW_RUN_SLOWDOWN
+	blacklisted_movetypes = FLOATING
+
+/datum/movespeed_modifier/wall_hug
+	multiplicative_slowdown = WALL_HUG_SLOWDOWN
+	blacklisted_movetypes = FLOATING
+
 /datum/movespeed_modifier/damage_slowdown
 	blacklisted_movetypes = FLOATING
 	variable = TRUE

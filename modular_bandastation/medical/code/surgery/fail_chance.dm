@@ -41,6 +41,8 @@
 	if(istype(worn_gloves) && locate(/obj/item/clothing/accessory/gloves_accessory/ring) in worn_gloves.attached_accessories)
 		fail_chance += SURGERY_RING_FAIL_MOD - 5
 
+	fail_chance -= surgeon.get_cyberpunk_surgery_failure_reduction(src)
+
 	return fail_chance
 
 #undef SURGERY_TOOL_MOD_GHETTO

@@ -489,7 +489,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	if(!(operation_flags & OPERATION_STANDING_ALLOWED) && !IS_LYING_OR_CANNOT_LIE(patient))
 		return FALSE
 
-	if(!(operation_flags & OPERATION_SELF_OPERABLE) && patient == surgeon && !HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
+	if(!(operation_flags & OPERATION_SELF_OPERABLE) && patient == surgeon && !HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY) && !surgeon.get_cyberpunk_self_surgery_success_chance(src))
 		return FALSE
 
 	return snowflake_check_availability(operating_on, surgeon, tool, operated_zone)
@@ -778,6 +778,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		basemod *= 0.8
 	else
 		basemod *= 1 + round((drunkness ** 1.5) / 90, 0.1)
+	basemod *= surgeon.get_cyberpunk_surgery_time_multiplier()
 
 	return basemod
 
@@ -889,8 +890,14 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 		// Using TRAIT_SELF_SURGERY on a surgery which doesn't normally allow self surgery imparts a flat penalty
 		// (On top of the 1.5x real time surgery modifier, an effective time modifier of 3x under standard conditions)
-		if(patient == surgeon && HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY) && !(operation_flags & OPERATION_SELF_OPERABLE))
-			operation_args[OPERATION_SPEED] += 1.5
+		if(patient == surgeon && !(operation_flags & OPERATION_SELF_OPERABLE))
+			if(HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
+				operation_args[OPERATION_SPEED] += 1.5
+			else
+				var/self_surgery_chance = surgeon.get_cyberpunk_self_surgery_success_chance(src)
+				if(!prob(self_surgery_chance))
+					operation_args[OPERATION_FORCE_FAIL] = TRUE
+				operation_args[OPERATION_SPEED] += 1.5
 
 		// Otherwise if we have TRAIT_IGNORE_SURGERY_MODIFIERS we cannot possibly fail, unless we specifically allow failure
 		if(HAS_TRAIT(surgeon, TRAIT_IGNORE_SURGERY_MODIFIERS) && !(operation_flags & OPERATION_ALWAYS_FAILABLE))
@@ -1151,8 +1158,29 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		surgeon.add_mob_memory(/datum/memory/surgery, deuteragonist = get_patient(operating_on) || operating_on, surgery_type = name)
 
 	SEND_SIGNAL(surgeon, COMSIG_ATOM_SURGERY_SUCCESS, src, operating_on, tool)
+	apply_surgery_sterility(operating_on, surgeon)
 	play_operation_sound(operating_on, surgeon, tool, success_sound)
 	on_success(operating_on, surgeon, tool, operation_args)
+
+/datum/surgery_operation/proc/apply_surgery_sterility(atom/movable/operating_on, mob/living/surgeon)
+	PROTECTED_PROC(TRUE)
+	if(!surgeon?.get_cyberpunk_surgery_sterility_chance())
+		return
+	if(!prob(surgeon.get_cyberpunk_surgery_sterility_chance()))
+		return
+	var/obj/item/bodypart/limb
+	if(isbodypart(operating_on))
+		limb = operating_on
+	else if(isorgan(operating_on))
+		var/obj/item/organ/organ = operating_on
+		limb = organ.bodypart_owner
+	else
+		var/mob/living/patient = get_patient(operating_on)
+		if(iscarbon(patient))
+			var/mob/living/carbon/carbon_patient = patient
+			limb = carbon_patient.get_bodypart(BODY_ZONE_CHEST)
+	if(limb)
+		limb.sterile_until = max(limb.sterile_until, world.time + 5 MINUTES)
 
 /**
  * Used to customize behavior when the operation is successful
