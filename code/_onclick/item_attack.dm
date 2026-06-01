@@ -259,6 +259,8 @@
 		user.do_attack_animation(target_mob)
 	if(target_mob.attacked_by(src, user, modifiers, attack_modifiers) == ATTACK_FAILED)
 		return TRUE
+	if(final_force > 0)
+		apply_cyberpunk_active_wear(user, target_mob)
 
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, target_mob, user, modifiers, attack_modifiers)
 	SEND_SIGNAL(target_mob, COMSIG_ATOM_AFTER_ATTACKEDBY, src, user, modifiers, attack_modifiers)
@@ -294,6 +296,8 @@
 		user.do_attack_animation(attacked_atom)
 	if(attacked_atom.attacked_by(src, user, modifiers, attack_modifiers) == ATTACK_FAILED)
 		return TRUE
+	if(force > 0)
+		apply_cyberpunk_active_wear(user, attacked_atom)
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, attacked_atom, user, modifiers, attack_modifiers)
 	SEND_SIGNAL(attacked_atom, COMSIG_ATOM_AFTER_ATTACKEDBY, src, user, modifiers, attack_modifiers)
 	afterattack(attacked_atom, user, modifiers, attack_modifiers)
@@ -369,18 +373,47 @@
 		SSblackbox.record_feedback("nested tally", "item_used_for_combat", 1, list("[attacking_item.force]", "[attacking_item.type]"))
 		SSblackbox.record_feedback("tally", "zone_targeted", 1, user.zone_selected)
 
-	var/damage_done = apply_damage(
-		damage = final_force,
-		damagetype = attacking_item.damtype,
-		def_zone = targeting,
-		blocked = armor_block,
-		wound_bonus = wounding,
-		exposed_wound_bonus = attacking_item.exposed_wound_bonus,
-		sharpness = attacking_item.get_sharpness(),
-		attack_direction = get_dir(user, src),
-		attacking_item = attacking_item,
-		precise_zone = user.zone_selected,
-	)
+	var/damage_done = 0
+	var/list/cyberpunk_damage_entries = attacking_item.get_cyberpunk_damage_entries()
+	if(length(attacking_item.cyberpunk_damage_profile) || length(cyberpunk_damage_entries) > 1 || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_HEAT) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_COLD) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_ACID))
+		var/total_weight = 0
+		for(var/damage_key in cyberpunk_damage_entries)
+			total_weight += cyberpunk_damage_entries[damage_key]
+		for(var/damage_key in cyberpunk_damage_entries)
+			var/damage_weight = cyberpunk_damage_entries[damage_key]
+			if(damage_weight <= 0 || total_weight <= 0)
+				continue
+			var/partial_force = final_force * (damage_weight / total_weight)
+			var/partial_damage_type = attacking_item.get_cyberpunk_damage_type(damage_key)
+			var/partial_armor_flag = attacking_item.get_cyberpunk_damage_armor_flag(damage_key)
+			var/partial_armor_block = partial_armor_flag == MELEE ? armor_block : min(run_armor_check(def_zone = targeting, attack_flag = partial_armor_flag, armour_penetration = attacking_item.armour_penetration, silent = TRUE), ARMOR_MAX_BLOCK)
+			damage_done += apply_damage(
+				damage = partial_force,
+				damagetype = partial_damage_type,
+				def_zone = targeting,
+				blocked = partial_armor_block,
+				wound_bonus = wounding,
+				exposed_wound_bonus = attacking_item.exposed_wound_bonus,
+				sharpness = attacking_item.get_cyberpunk_damage_sharpness(damage_key),
+				attack_direction = get_dir(user, src),
+				attacking_item = attacking_item,
+				precise_zone = user.zone_selected,
+				brute_type = attacking_item.get_cyberpunk_damage_brute_type(damage_key),
+				burn_type = attacking_item.get_cyberpunk_damage_burn_type(damage_key),
+			)
+	else
+		damage_done = apply_damage(
+			damage = final_force,
+			damagetype = attacking_item.damtype,
+			def_zone = targeting,
+			blocked = armor_block,
+			wound_bonus = wounding,
+			exposed_wound_bonus = attacking_item.exposed_wound_bonus,
+			sharpness = attacking_item.get_sharpness(),
+			attack_direction = get_dir(user, src),
+			attacking_item = attacking_item,
+			precise_zone = user.zone_selected,
+		)
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
 	if(user != src)

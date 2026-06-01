@@ -111,6 +111,50 @@
 	var/custom_price
 	///Price of an item in a vending machine, overriding the premium vending machine price. Define in terms of paycheck defines as opposed to raw numbers.
 	var/custom_premium_price
+	/// Cyberpunk 13 item manufacturer. Existing subtypes that already expose corp_manufacturer are read through helper procs.
+	var/cyberpunk_manufacturer = "independent"
+	/// General execution quality. 100 is a normal factory-grade item.
+	var/cyberpunk_quality = 100
+	/// IC availability band used by shops, contracts, loot and black market systems.
+	var/cyberpunk_rarity = "common"
+	/// Legal status hook for future markets/security scans.
+	var/cyberpunk_legality = "legal"
+	/// Baseline economic price before vending overrides and local economy modifiers.
+	var/cyberpunk_base_price = 0
+	/// How much integrity this item loses when it is actively used.
+	var/cyberpunk_active_wear = 0
+	/// Passive wear applied by future storage/condition processors. Starts after five minutes from creation or repair.
+	var/cyberpunk_passive_wear = 0
+	/// Optional storage condition tags. A missing required condition lets passive wear systems tick this item down.
+	var/list/cyberpunk_storage_conditions
+	/// Integrity fraction needed before a broken item becomes functional again.
+	var/cyberpunk_repair_threshold = 0.4
+	/// What happens at zero integrity: "tg" keeps normal TG destruction, "broken" keeps the item, "delete" deletes, "emergency" lets subtypes provide behavior.
+	var/cyberpunk_spoil_behavior = "tg"
+	/// Runtime broken flag for Cyberpunk item effects. Existing TG subtype-specific broken flags still work independently.
+	var/cyberpunk_broken = FALSE
+	/// Last time the item was created or repaired, used by passive wear systems.
+	var/cyberpunk_last_repaired = 0
+	/// Optional explicit inventory grid footprint. Null means derive from w_class.
+	var/cyberpunk_grid_width
+	var/cyberpunk_grid_height
+	/// Current inventory-grid rotation metadata. Full 2D inventory will consume this later.
+	var/cyberpunk_grid_rotated = FALSE
+	/// Current 1-based position inside a Cyberpunk storage grid.
+	var/cyberpunk_grid_x
+	var/cyberpunk_grid_y
+	/// Optional explicit weapon skill path. Null falls back to TG gun/sharpness/weight heuristics.
+	var/cyberpunk_weapon_skill
+	/// Guard value used by parry/block math. Null means derive from block chance and weight.
+	var/cyberpunk_guard_value
+	/// Cyberpunk damage profile weights. Keys: blunt, pierce, slash, heat, cold, acid.
+	var/list/cyberpunk_damage_profile
+	/// Melee profile table for stab/pierce/slash/chop style attacks. Values are assoc lists with force/penetration/cooldown.
+	var/list/cyberpunk_melee_profiles
+	/// Armor profile aliases for Cyberpunk damage names over TG armor flags.
+	var/list/cyberpunk_armor_profile
+	/// Installed Cyberpunk item module datums.
+	var/list/datum/cyberpunk_item_module/cyberpunk_modules
 	///Whether spessmen with an ID with an age below AGE_MINOR (20 by default) can buy this item
 	var/age_restricted = FALSE
 
@@ -254,6 +298,7 @@
 		update_greyscale()
 
 	. = ..()
+	cyberpunk_last_repaired = world.time
 
 	// Handle adding item associated actions
 	for(var/path in actions_types)
@@ -442,8 +487,586 @@
 
 /obj/item/examine_more(mob/user)
 	. = ..()
+	var/list/cyberpunk_report = get_cyberpunk_item_report(user)
+	if(length(cyberpunk_report))
+		. += cyberpunk_report
 	if(HAS_TRAIT(user, TRAIT_RESEARCH_SCANNER))
 		. += research_scan(user)
+
+/obj/item/proc/get_cyberpunk_item_report(mob/user)
+	var/list/report = list()
+	var/mob/living/living_user = user
+	var/analysis_depth = istype(living_user) ? living_user.get_cyberpunk_item_analysis_depth(src) : 0
+	if(analysis_depth <= 0 && !is_cyberpunk_recently_analyzed())
+		return report
+
+	report += span_notice("Item condition: [get_cyberpunk_item_condition_name()].")
+	var/item_manufacturer = get_cyberpunk_manufacturer()
+	if(item_manufacturer && item_manufacturer != "independent")
+		report += span_notice("Manufacturer: [item_manufacturer].")
+	if(analysis_depth >= 1)
+		report += span_notice("Quality: [cyberpunk_quality]%. Rarity: [cyberpunk_rarity].")
+		var/list/footprint = get_cyberpunk_grid_footprint()
+		report += span_notice("Inventory footprint: [footprint[1]]x[footprint[2]][cyberpunk_grid_rotated ? " rotated" : ""].")
+	if(analysis_depth >= 2 && uses_integrity)
+		report += span_notice("Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%). Repair threshold: [round(cyberpunk_repair_threshold * 100)]%.")
+	if(analysis_depth >= 2 && (force || cyberpunk_guard_value || length(cyberpunk_damage_profile)))
+		report += span_notice("Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()].")
+	if(analysis_depth >= 3)
+		var/list/armor_report = get_cyberpunk_armor_report()
+		if(length(armor_report))
+			report += span_notice("Protection: [armor_report.Join(", ")].")
+		if(cyberpunk_active_wear || cyberpunk_passive_wear)
+			report += span_notice("Wear: active [cyberpunk_active_wear], passive [cyberpunk_passive_wear].")
+	return report
+
+/obj/item/get_cyberpunk_diagnostic_data(mob/living/user)
+	var/list/diagnostics = list()
+	diagnostics += "Category: item."
+	diagnostics += "Condition: [get_cyberpunk_item_condition_name()]."
+	var/item_manufacturer = get_cyberpunk_manufacturer()
+	if(item_manufacturer && item_manufacturer != "independent")
+		diagnostics += "Manufacturer: [item_manufacturer]."
+	diagnostics += "Quality: [cyberpunk_quality]%. Rarity: [cyberpunk_rarity]."
+	if(uses_integrity)
+		diagnostics += "Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%)."
+	var/list/footprint = get_cyberpunk_grid_footprint()
+	diagnostics += "Inventory footprint: [footprint[1]]x[footprint[2]][cyberpunk_grid_rotated ? " rotated" : ""]."
+	if(force || cyberpunk_guard_value || length(cyberpunk_damage_profile))
+		diagnostics += "Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()]."
+	var/list/armor_report = get_cyberpunk_armor_report()
+	if(length(armor_report))
+		diagnostics += "Protection: [armor_report.Join(", ")]."
+	return diagnostics
+
+/obj/item/proc/get_cyberpunk_item_condition_name()
+	if(cyberpunk_broken || (uses_integrity && get_integrity() <= max(1, max_integrity * cyberpunk_repair_threshold)))
+		return "broken"
+	if(uses_integrity && get_integrity() < max_integrity)
+		return "damaged"
+	return "intact"
+
+/obj/item/proc/get_cyberpunk_grid_footprint()
+	var/grid_width = cyberpunk_grid_width
+	var/grid_height = cyberpunk_grid_height
+	if(!grid_width || !grid_height)
+		switch(w_class)
+			if(WEIGHT_CLASS_TINY)
+				grid_width = 1
+				grid_height = 1
+			if(WEIGHT_CLASS_SMALL)
+				grid_width = 1
+				grid_height = 2
+			if(WEIGHT_CLASS_NORMAL)
+				grid_width = 2
+				grid_height = 2
+			if(WEIGHT_CLASS_BULKY)
+				grid_width = 3
+				grid_height = 4
+			else
+				grid_width = 4
+				grid_height = 4
+	if(cyberpunk_grid_rotated)
+		return list(grid_height, grid_width)
+	return list(grid_width, grid_height)
+
+/obj/item/proc/rotate_cyberpunk_grid_footprint()
+	cyberpunk_grid_rotated = !cyberpunk_grid_rotated
+	return cyberpunk_grid_rotated
+
+/obj/item/verb/rotate_cyberpunk_inventory_footprint()
+	set name = "Rotate inventory footprint"
+	set category = null
+	set src in usr
+
+	if(!(item_flags & IN_STORAGE))
+		return
+	rotate_cyberpunk_grid_footprint()
+	cyberpunk_grid_x = null
+	cyberpunk_grid_y = null
+	var/datum/storage/storage = loc?.atom_storage
+	if(storage)
+		storage.reflow_cyberpunk_grid()
+		storage.refresh_views()
+	to_chat(usr, span_notice("You rotate [src]'s storage footprint."))
+
+/obj/item/proc/set_cyberpunk_creator(mob/living/creator)
+	if(!istype(creator))
+		return
+	var/manufacturer = creator.get_neural_manufacturer()
+	if(manufacturer)
+		set_cyberpunk_manufacturer(manufacturer)
+
+/obj/item/proc/get_cyberpunk_manufacturer()
+	if("corp_manufacturer" in vars)
+		return vars["corp_manufacturer"] || "independent"
+	return cyberpunk_manufacturer
+
+/obj/item/proc/set_cyberpunk_manufacturer(manufacturer)
+	if("corp_manufacturer" in vars)
+		vars["corp_manufacturer"] = manufacturer
+	else
+		cyberpunk_manufacturer = manufacturer
+
+/obj/item/proc/get_cyberpunk_price(mob/living/buyer)
+	var/base_price = cyberpunk_base_price || custom_price || 0
+	if(base_price <= 0)
+		base_price = max(1, w_class) * 10
+	var/quality_multiplier = max(0.1, cyberpunk_quality * 0.01)
+	var/condition_multiplier = 1
+	if(cyberpunk_broken)
+		condition_multiplier = 0.15
+	else if(uses_integrity && max_integrity)
+		condition_multiplier = clamp(get_integrity() / max_integrity, 0.15, 1)
+	var/synergy_multiplier = istype(buyer) ? buyer.get_corporate_synergy_multiplier(get_cyberpunk_manufacturer()) : 1
+	return round(base_price * quality_multiplier * condition_multiplier * synergy_multiplier)
+
+/obj/item/proc/get_cyberpunk_guard_value()
+	if(!isnull(cyberpunk_guard_value))
+		return cyberpunk_guard_value
+	return max(0, block_chance + (w_class * 2))
+
+/obj/item/proc/get_cyberpunk_weapon_profile_name()
+	if(istype(src, /obj/item/gun))
+		return "ranged"
+	var/item_sharpness = get_sharpness()
+	if((item_sharpness & SHARP_POINTY) && (item_sharpness & SHARP_EDGED))
+		return "mixed blade"
+	if(item_sharpness & SHARP_POINTY)
+		return "pierce"
+	if(item_sharpness & SHARP_EDGED)
+		return "slash"
+	return "blunt"
+
+/obj/item/proc/get_cyberpunk_damage_entries()
+	if(length(cyberpunk_damage_profile))
+		return cyberpunk_damage_profile
+	var/item_sharpness = get_sharpness()
+	if(item_sharpness & SHARP_POINTY)
+		return list(BODYPART_DAMAGE_PIERCE = 1)
+	if(item_sharpness & SHARP_EDGED)
+		return list(BODYPART_DAMAGE_SLASH = 1)
+	if(damtype == BURN)
+		return list(BODYPART_DAMAGE_HEAT = 1)
+	return list(BODYPART_DAMAGE_BLUNT = 1)
+
+/obj/item/proc/get_cyberpunk_damage_type(type_key)
+	switch(type_key)
+		if("pierce", BODYPART_DAMAGE_PIERCE)
+			return BRUTE
+		if("slash", BODYPART_DAMAGE_SLASH)
+			return BRUTE
+		if("heat", BODYPART_DAMAGE_HEAT)
+			return BURN
+		if("cold", BODYPART_DAMAGE_COLD)
+			return BURN
+		if("acid", BODYPART_DAMAGE_ACID)
+			return BURN
+	return BRUTE
+
+/obj/item/proc/get_cyberpunk_damage_armor_flag(type_key)
+	switch(type_key)
+		if("pierce", BODYPART_DAMAGE_PIERCE)
+			return BULLET
+		if("slash", BODYPART_DAMAGE_SLASH)
+			return MELEE
+		if("heat", BODYPART_DAMAGE_HEAT)
+			return FIRE
+		if("cold", BODYPART_DAMAGE_COLD)
+			return FIRE
+		if("acid", BODYPART_DAMAGE_ACID)
+			return ACID
+	return MELEE
+
+/obj/item/proc/get_cyberpunk_damage_brute_type(type_key)
+	switch(type_key)
+		if("pierce", BODYPART_DAMAGE_PIERCE)
+			return BODYPART_DAMAGE_PIERCE
+		if("slash", BODYPART_DAMAGE_SLASH)
+			return BODYPART_DAMAGE_SLASH
+	return BODYPART_DAMAGE_BLUNT
+
+/obj/item/proc/get_cyberpunk_damage_burn_type(type_key)
+	switch(type_key)
+		if("cold", BODYPART_DAMAGE_COLD)
+			return BODYPART_DAMAGE_COLD
+		if("acid", BODYPART_DAMAGE_ACID)
+			return BODYPART_DAMAGE_ACID
+	return BODYPART_DAMAGE_HEAT
+
+/obj/item/proc/get_cyberpunk_damage_sharpness(type_key)
+	switch(type_key)
+		if("pierce", BODYPART_DAMAGE_PIERCE)
+			return SHARP_POINTY
+		if("slash", BODYPART_DAMAGE_SLASH)
+			return SHARP_EDGED
+	return get_sharpness()
+
+/obj/item/proc/get_cyberpunk_armor_report()
+	var/list/report = list()
+	if(cyberpunk_broken)
+		return report
+	var/list/armor_keys = list(MELEE, BULLET, LASER, ENERGY, FIRE, ACID)
+	for(var/armor_key in armor_keys)
+		var/rating = get_armor_rating(armor_key)
+		if(rating)
+			report += "[armor_key] [rating]"
+	return report
+
+/obj/item/proc/apply_cyberpunk_active_wear(mob/living/user, atom/target)
+	if(cyberpunk_active_wear <= 0 || !uses_integrity || (resistance_flags & INDESTRUCTIBLE) || cyberpunk_broken)
+		return FALSE
+	take_damage(cyberpunk_active_wear, BRUTE, CONSUME, FALSE)
+	return TRUE
+
+/obj/item/proc/repair_cyberpunk_item(amount, mob/living/user)
+	if(!uses_integrity)
+		return 0
+	. = repair_damage(amount)
+	if(. > 0)
+		cyberpunk_last_repaired = world.time
+		if(cyberpunk_broken && get_integrity() >= max(1, max_integrity * cyberpunk_repair_threshold))
+			cyberpunk_broken = FALSE
+	return .
+
+/obj/item/welder_act(mob/living/user, obj/item/tool)
+	if(!uses_integrity || get_integrity() >= max_integrity)
+		return ..()
+	var/repair_amount = user ? user.get_cyberpunk_item_repair_amount(src, 20) : 20
+	var/repair_delay = 2 SECONDS * (user ? user.get_cyberpunk_item_repair_time_multiplier(src) : 1)
+	if(!do_after(user, repair_delay, target = src))
+		return ITEM_INTERACT_BLOCKING
+	var/repaired = repair_cyberpunk_item(repair_amount, user)
+	if(repaired > 0)
+		to_chat(user, span_notice("You repair [src] by [repaired] integrity."))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/wrench_act(mob/living/user, obj/item/tool)
+	if(!length(cyberpunk_modules))
+		return ..()
+	var/datum/cyberpunk_item_module/module = cyberpunk_modules[length(cyberpunk_modules)]
+	if(!module)
+		return ..()
+	var/remove_delay = 2 SECONDS * (user ? user.get_cyberpunk_item_module_time_multiplier(src) : 1)
+	if(!do_after(user, remove_delay, target = src))
+		return ITEM_INTERACT_BLOCKING
+	var/module_name = module.name
+	if(remove_cyberpunk_module(module, user))
+		to_chat(user, span_notice("You remove [module_name] from [src]."))
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/atom_break(damage_flag)
+	. = ..()
+	cyberpunk_broken = TRUE
+
+/obj/item/atom_fix()
+	. = ..()
+	if(uses_integrity && get_integrity() >= max(1, max_integrity * cyberpunk_repair_threshold))
+		cyberpunk_broken = FALSE
+
+/obj/item/atom_destruction(damage_flag)
+	switch(cyberpunk_spoil_behavior)
+		if("broken")
+			cyberpunk_broken = TRUE
+			update_integrity(max(1, max_integrity * cyberpunk_repair_threshold * 0.5))
+			update_appearance()
+			return
+		if("delete")
+			qdel(src)
+			return
+		if("emergency")
+			if(cyberpunk_emergency_breakdown(damage_flag))
+				return
+	return ..()
+
+/obj/item/proc/cyberpunk_emergency_breakdown(damage_flag)
+	return FALSE
+
+/obj/item/get_armor_rating(damage_type)
+	if(cyberpunk_broken)
+		return 0
+	return ..()
+
+/obj/item/proc/install_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
+	if(!module || !module.can_install(src, user))
+		return FALSE
+	LAZYADD(cyberpunk_modules, module)
+	module.on_install(src, user)
+	return TRUE
+
+/obj/item/proc/remove_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
+	if(!(module in cyberpunk_modules))
+		return FALSE
+	LAZYREMOVE(cyberpunk_modules, module)
+	module.on_remove(src, user)
+	qdel(module)
+	return TRUE
+
+/obj/item/cyberpunk_item_module
+	name = "item module"
+	desc = "A modular Cyberpunk 13 item component. Use it on a weapon or protective item to install it."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "component"
+	w_class = WEIGHT_CLASS_SMALL
+	cyberpunk_manufacturer = "Starlight"
+	var/module_datum_type = /datum/cyberpunk_item_module
+
+/obj/item/cyberpunk_item_module/proc/create_module_datum()
+	return new module_datum_type
+
+/obj/item/cyberpunk_item_module/examine(mob/user)
+	. = ..()
+	. += span_notice("Manufacturer: [get_cyberpunk_manufacturer()].")
+
+/obj/item/cyberpunk_item_module/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	var/obj/item/target_item = interacting_with
+	if(!istype(target_item) || target_item == src)
+		return NONE
+	var/datum/cyberpunk_item_module/module = create_module_datum()
+	var/install_delay = 2 SECONDS * (user ? user.get_cyberpunk_item_module_time_multiplier(target_item) : 1)
+	if(!do_after(user, install_delay, target = target_item))
+		qdel(module)
+		return ITEM_INTERACT_BLOCKING
+	if(!target_item.install_cyberpunk_module(module, user))
+		qdel(module)
+		return NONE
+	to_chat(user, span_notice("You install [name] into [target_item]."))
+	qdel(src)
+	return ITEM_INTERACT_SUCCESS
+
+/obj/item/cyberpunk_item_module/melee_core
+	name = "melee core"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/melee_core
+
+/obj/item/cyberpunk_item_module/melee_blade
+	name = "blade element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_blade
+
+/obj/item/cyberpunk_item_module/melee_spike
+	name = "spike element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_spike
+
+/obj/item/cyberpunk_item_module/melee_head
+	name = "weighted head"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/melee_head
+
+/obj/item/cyberpunk_item_module/guard
+	name = "weapon guard"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_item_module/guard
+
+/obj/item/cyberpunk_item_module/balancer
+	name = "weapon balancer"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/balancer
+
+/obj/item/cyberpunk_item_module/armor_plate
+	name = "armor plate"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/armor_plate
+
+/obj/item/cyberpunk_item_module/armor_lining
+	name = "protective lining"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/armor_lining
+
+/datum/cyberpunk_item_module
+	var/name = "item module"
+	var/manufacturer = "independent"
+	var/quality = 100
+	var/weight_delta = 0
+	var/integrity_delta = 0
+	var/force_multiplier = 1
+	var/attack_speed_multiplier = 1
+	var/armour_penetration_delta = 0
+	var/guard_delta = 0
+	var/list/armor_delta
+	var/applied_weight_delta = 0
+	var/applied_integrity_delta = 0
+	var/applied_force_multiplier = 1
+	var/applied_attack_speed_multiplier = 1
+	var/applied_armour_penetration_delta = 0
+	var/applied_guard_delta = 0
+	var/list/previous_damage_profile
+
+/datum/cyberpunk_item_module/proc/can_install(obj/item/target, mob/living/user)
+	return istype(target)
+
+/datum/cyberpunk_item_module/proc/on_install(obj/item/target, mob/living/user)
+	if(!target)
+		return
+	if(manufacturer && manufacturer != "independent")
+		target.set_cyberpunk_manufacturer(manufacturer)
+	target.cyberpunk_quality = max(target.cyberpunk_quality, quality)
+	if(weight_delta)
+		target.w_class = clamp(target.w_class + weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
+		applied_weight_delta = weight_delta
+	if(integrity_delta && target.uses_integrity)
+		target.modify_max_integrity(max(1, target.max_integrity + integrity_delta), FALSE)
+		applied_integrity_delta = integrity_delta
+	if(force_multiplier != 1)
+		target.force *= force_multiplier
+		applied_force_multiplier = force_multiplier
+	if(attack_speed_multiplier != 1)
+		target.attack_speed *= attack_speed_multiplier
+		applied_attack_speed_multiplier = attack_speed_multiplier
+	if(armour_penetration_delta)
+		target.armour_penetration += armour_penetration_delta
+		applied_armour_penetration_delta = armour_penetration_delta
+	if(guard_delta)
+		target.cyberpunk_guard_value = target.get_cyberpunk_guard_value() + guard_delta
+		applied_guard_delta = guard_delta
+	if(length(armor_delta))
+		var/datum/armor/current_armor = target.get_armor()
+		target.set_armor(current_armor.generate_new_with_modifiers(armor_delta))
+
+/datum/cyberpunk_item_module/proc/on_remove(obj/item/target, mob/living/user)
+	if(!target)
+		return
+	if(applied_weight_delta)
+		target.w_class = clamp(target.w_class - applied_weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
+	if(applied_integrity_delta && target.uses_integrity)
+		target.modify_max_integrity(max(1, target.max_integrity - applied_integrity_delta), FALSE)
+	if(applied_force_multiplier != 1)
+		target.force /= applied_force_multiplier
+	if(applied_attack_speed_multiplier != 1)
+		target.attack_speed /= applied_attack_speed_multiplier
+	if(applied_armour_penetration_delta)
+		target.armour_penetration -= applied_armour_penetration_delta
+	if(applied_guard_delta)
+		target.cyberpunk_guard_value = max(0, target.get_cyberpunk_guard_value() - applied_guard_delta)
+	if(length(armor_delta))
+		var/datum/armor/current_armor = target.get_armor()
+		var/list/inverse_armor_delta = list()
+		for(var/armor_key in armor_delta)
+			inverse_armor_delta[armor_key] = -armor_delta[armor_key]
+		target.set_armor(current_armor.generate_new_with_modifiers(inverse_armor_delta))
+
+/datum/cyberpunk_item_module/melee_core
+	name = "melee core"
+	integrity_delta = 20
+
+/datum/cyberpunk_item_module/melee_blade
+	name = "blade element"
+	force_multiplier = 1.15
+	armour_penetration_delta = 5
+
+/datum/cyberpunk_item_module/melee_blade/on_install(obj/item/target, mob/living/user)
+	previous_damage_profile = target.cyberpunk_damage_profile?.Copy()
+	. = ..()
+	target.cyberpunk_damage_profile = list(BODYPART_DAMAGE_SLASH = 1)
+
+/datum/cyberpunk_item_module/melee_blade/on_remove(obj/item/target, mob/living/user)
+	. = ..()
+	target.cyberpunk_damage_profile = previous_damage_profile?.Copy()
+
+/datum/cyberpunk_item_module/melee_spike
+	name = "spike element"
+	force_multiplier = 1.05
+	armour_penetration_delta = 10
+
+/datum/cyberpunk_item_module/melee_spike/on_install(obj/item/target, mob/living/user)
+	previous_damage_profile = target.cyberpunk_damage_profile?.Copy()
+	. = ..()
+	target.cyberpunk_damage_profile = list(BODYPART_DAMAGE_PIERCE = 1)
+
+/datum/cyberpunk_item_module/melee_spike/on_remove(obj/item/target, mob/living/user)
+	. = ..()
+	target.cyberpunk_damage_profile = previous_damage_profile?.Copy()
+
+/datum/cyberpunk_item_module/melee_head
+	name = "weighted head"
+	weight_delta = 1
+	force_multiplier = 1.2
+	attack_speed_multiplier = 1.1
+
+/datum/cyberpunk_item_module/melee_head/on_install(obj/item/target, mob/living/user)
+	previous_damage_profile = target.cyberpunk_damage_profile?.Copy()
+	. = ..()
+	target.cyberpunk_damage_profile = list(BODYPART_DAMAGE_BLUNT = 1)
+
+/datum/cyberpunk_item_module/melee_head/on_remove(obj/item/target, mob/living/user)
+	. = ..()
+	target.cyberpunk_damage_profile = previous_damage_profile?.Copy()
+
+/datum/cyberpunk_item_module/guard
+	name = "guard"
+	guard_delta = 15
+	weight_delta = 1
+
+/datum/cyberpunk_item_module/balancer
+	name = "balancer"
+	attack_speed_multiplier = 0.9
+	guard_delta = 5
+
+/datum/cyberpunk_item_module/armor_plate
+	name = "armor plate"
+	weight_delta = 1
+	integrity_delta = 30
+	armor_delta = list(MELEE = 10, BULLET = 10)
+
+/datum/cyberpunk_item_module/armor_lining
+	name = "protective lining"
+	integrity_delta = 10
+	armor_delta = list(FIRE = 10, ACID = 5)
+
+/datum/design/cyberpunk_item_module
+	name = "Starlight Item Module"
+	desc = "A Starlight modular component shell for Cyberpunk 13 weapons and protective equipment."
+	id = "starlight_item_module"
+	build_type = PROTOLATHE | AUTOLATHE | AWAY_LATHE
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module
+	category = list(RND_CATEGORY_EQUIPMENT + RND_SUBCATEGORY_EQUIPMENT_ENGINEERING)
+	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE | DEPARTMENT_BITFLAG_SECURITY
+
+/datum/design/cyberpunk_item_module/melee_core
+	name = "Starlight Melee Core"
+	id = "starlight_melee_core"
+	build_path = /obj/item/cyberpunk_item_module/melee_core
+
+/datum/design/cyberpunk_item_module/melee_blade
+	name = "Starlight Blade Element"
+	id = "starlight_blade_element"
+	build_path = /obj/item/cyberpunk_item_module/melee_blade
+
+/datum/design/cyberpunk_item_module/melee_spike
+	name = "Starlight Spike Element"
+	id = "starlight_spike_element"
+	build_path = /obj/item/cyberpunk_item_module/melee_spike
+
+/datum/design/cyberpunk_item_module/melee_head
+	name = "Starlight Weighted Head"
+	id = "starlight_weighted_head"
+	build_path = /obj/item/cyberpunk_item_module/melee_head
+
+/datum/design/cyberpunk_item_module/guard
+	name = "Starlight Weapon Guard"
+	id = "starlight_weapon_guard"
+	build_path = /obj/item/cyberpunk_item_module/guard
+
+/datum/design/cyberpunk_item_module/balancer
+	name = "Starlight Weapon Balancer"
+	id = "starlight_weapon_balancer"
+	build_path = /obj/item/cyberpunk_item_module/balancer
+
+/datum/design/cyberpunk_item_module/armor_plate
+	name = "Starlight Armor Plate"
+	id = "starlight_armor_plate"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/armor_plate
+
+/datum/design/cyberpunk_item_module/armor_lining
+	name = "Starlight Protective Lining"
+	id = "starlight_protective_lining"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/armor_lining
 
 /obj/item/proc/research_scan(mob/user)
 	/// Research prospects, including boostable nodes and point values. Deliver to a console to know whether the boosts have already been used.

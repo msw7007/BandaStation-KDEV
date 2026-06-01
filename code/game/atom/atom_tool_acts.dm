@@ -353,11 +353,14 @@
 /atom/proc/is_cyberpunk_structure_target()
 	return istype(src, /obj/structure) || istype(src, /obj/machinery) || istype(src, /turf/closed/wall)
 
+/atom/proc/is_cyberpunk_analysis_target()
+	return is_cyberpunk_structure_target() || istype(src, /obj/item)
+
 /atom/proc/is_cyberpunk_repair_target()
 	return uses_integrity && is_cyberpunk_structure_target()
 
 /atom/proc/mark_cyberpunk_analyzed(mob/living/user)
-	if(!is_cyberpunk_structure_target())
+	if(!is_cyberpunk_analysis_target())
 		return FALSE
 	cyberpunk_analyzed_until = world.time + 1 MINUTES
 	return TRUE

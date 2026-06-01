@@ -254,7 +254,8 @@
 /proc/healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE, scan_depth = null)
 	if(user?.incapacitated)
 		return
-	return cyberpunk_healthscan(user, target, mode, advanced, tochat, scan_depth)
+	if(scan_depth != "tg_legacy_healthscan")
+		return cyberpunk_healthscan(user, target, mode, advanced, tochat, scan_depth)
 
 	// the final list of strings to render
 	var/list/render_list = list()

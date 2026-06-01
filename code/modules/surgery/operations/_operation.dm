@@ -106,6 +106,8 @@
 		var/atom/movable/operate_on = operation.get_operation_target(operating_on, operating_zone)
 		if(!operation.check_availability(isliving(operating_on) ? operating_on : null, operate_on, src, potential_tool, operating_zone))
 			continue
+		if(!operation.check_cyberpunk_availability(isliving(operating_on) ? operating_on : null, operate_on, src, potential_tool, operating_zone))
+			continue
 		var/potential_options = operation.get_radial_options(operate_on, potential_tool, operating_zone)
 		if(!islist(potential_options))
 			potential_options = list(potential_options)
@@ -489,10 +491,18 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	if(!(operation_flags & OPERATION_STANDING_ALLOWED) && !IS_LYING_OR_CANNOT_LIE(patient))
 		return FALSE
 
-	if(!(operation_flags & OPERATION_SELF_OPERABLE) && patient == surgeon && !HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY) && !surgeon.get_cyberpunk_self_surgery_success_chance(src))
-		return FALSE
-
 	return snowflake_check_availability(operating_on, surgeon, tool, operated_zone)
+
+/**
+ * Non-pure availability checks for cyberpunk skill gates.
+ */
+/datum/surgery_operation/proc/check_cyberpunk_availability(mob/living/patient, atom/movable/operating_on, mob/living/surgeon, tool, operated_zone)
+	SHOULD_NOT_SLEEP(TRUE)
+
+	if(!(operation_flags & OPERATION_SELF_OPERABLE) && patient == surgeon && !HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
+		return surgeon?.get_cyberpunk_self_surgery_success_chance(src) > 0
+
+	return TRUE
 
 /**
  * Snowflake checks for surgeries which need many interconnected conditions to be met
@@ -837,6 +847,8 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 	if(!check_availability(patient, operating_on, surgeon, tool, operation_args[OPERATION_TARGET_ZONE]))
 		return ITEM_INTERACT_BLOCKING
+	if(!check_cyberpunk_availability(patient, operating_on, surgeon, tool, operation_args[OPERATION_TARGET_ZONE]))
+		return ITEM_INTERACT_BLOCKING
 
 	if(isitem(tool))
 		var/obj/item/realtool = tool
@@ -960,6 +972,8 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		return FALSE
 
 	if(!check_availability(patient, operating_on, surgeon, tool, operation_args[OPERATION_TARGET_ZONE]))
+		return FALSE
+	if(!check_cyberpunk_availability(patient, operating_on, surgeon, tool, operation_args[OPERATION_TARGET_ZONE]))
 		return FALSE
 
 	return TRUE

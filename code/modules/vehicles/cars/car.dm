@@ -1658,7 +1658,7 @@
 		mechanism_data += list(list(
 			"name" = machine.name,
 			"index" = i,
-			"integrity" = machine.atom_integrity,
+			"integrity" = machine.get_integrity(),
 			"maxIntegrity" = machine.max_integrity,
 		))
 	data["name"] = name

@@ -104,9 +104,23 @@
 	)
 
 /mob/living/proc/can_cyberpunk_analyze_by_examine(atom/target)
-	if(!target?.is_cyberpunk_structure_target())
+	if(!target?.is_cyberpunk_analysis_target())
 		return FALSE
 	return get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2) > 0 || get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3) > 0
+
+/mob/living/proc/get_cyberpunk_item_analysis_depth(obj/item/target)
+	if(!istype(target))
+		return 0
+	var/depth = 0
+	if(target.is_cyberpunk_recently_analyzed())
+		depth = max(depth, 1)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2) > 0)
+		depth = max(depth, 1)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3) > 0)
+		depth = max(depth, 2)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 4) > 0)
+		depth = max(depth, 3)
+	return depth
 
 /mob/living/proc/get_cyberpunk_machine_failure_mask_chance(atom/target)
 	if(!istype(target, /obj/machinery))
@@ -185,6 +199,34 @@
 		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
 		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
 		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
+	)
+	return base_amount * (1 + highest_bonus * 0.01)
+
+/mob/living/proc/get_cyberpunk_item_module_time_multiplier(obj/item/target)
+	var/highest_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1),
+		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+	)
+	if(target?.is_cyberpunk_recently_analyzed())
+		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3))
+	return 1 / max(0.1, 1 + highest_bonus * 0.01)
+
+/mob/living/proc/get_cyberpunk_item_repair_time_multiplier(obj/item/target)
+	var/highest_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
+		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
+	)
+	if(target?.is_cyberpunk_recently_analyzed())
+		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3))
+	return 1 / max(0.1, 1 + highest_bonus * 0.01)
+
+/mob/living/proc/get_cyberpunk_item_repair_amount(obj/item/target, base_amount = 20)
+	var/highest_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
+		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
 	)
 	return base_amount * (1 + highest_bonus * 0.01)
 
@@ -347,6 +389,8 @@
 	return max(0.1, 1 - reduction * 0.01)
 
 /obj/item/proc/get_cyberpunk_weapon_skill()
+	if(cyberpunk_weapon_skill)
+		return cyberpunk_weapon_skill
 	if(istype(src, /obj/item/gun))
 		if(w_class >= WEIGHT_CLASS_BULKY)
 			return SKILL_HEAVY_RANGED
@@ -363,6 +407,8 @@
 /mob/living/proc/get_cyberpunk_weapon_damage_multiplier(obj/item/weapon)
 	if(!weapon || !mind)
 		return 1
+	if(weapon.cyberpunk_broken)
+		return 0
 	var/multiplier = 1
 	var/weapon_skill = weapon.get_cyberpunk_weapon_skill()
 	if(weapon_skill)
@@ -370,7 +416,8 @@
 	multiplier *= 1 + (max(get_attribute_value(ATTRIBUTE_STRENGTH), get_attribute_value(ATTRIBUTE_DEXTERITY), get_attribute_value(ATTRIBUTE_PERCEPTION)) - ATTRIBUTE_DEFAULT) * 0.01
 	var/heavy_bonus = weapon.w_class >= WEIGHT_CLASS_BULKY ? get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 2) : 0
 	var/precise_bonus = get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 2)
-	return multiplier * (1 + max(heavy_bonus, precise_bonus) * 0.01)
+	var/corporate_multiplier = get_corporate_synergy_multiplier(weapon.get_cyberpunk_manufacturer())
+	return multiplier * (1 + max(heavy_bonus, precise_bonus) * 0.01) * corporate_multiplier
 
 /mob/living/proc/get_cyberpunk_weapon_cooldown_multiplier(obj/item/weapon)
 	if(!weapon || !mind)

@@ -63,6 +63,14 @@
 	/// Determines the maximum amount of weight that can be inserted into this storage.
 	/// Weight is calculated by the sum of all of our content's weight classes.
 	var/max_total_storage = WEIGHT_CLASS_SMALL * 7
+	/// Cyberpunk 13 inventory grid width. Null means the legacy TG slot storage remains authoritative.
+	var/cyberpunk_grid_width
+	/// Cyberpunk 13 inventory grid height. Null means the legacy TG slot storage remains authoritative.
+	var/cyberpunk_grid_height
+	/// Whether this storage UI/backend should eventually allow rotating item footprints.
+	var/cyberpunk_allow_rotation = TRUE
+	/// Cyberpunk 13 hand-to-storage insertion delay. Zero keeps special storages instant.
+	var/cyberpunk_insert_delay = 2 SECONDS
 
 	/// Whether the storage is currently locked (inaccessible). See [code/__DEFINES/storage.dm]
 	var/locked = STORAGE_NOT_LOCKED
@@ -152,6 +160,98 @@
 	src.max_total_storage = max_total_storage
 	src.rustle_sound = rustle_sound
 	src.remove_rustle_sound = remove_rustle_sound
+	initialize_cyberpunk_grid()
+
+/datum/storage/proc/initialize_cyberpunk_grid()
+	if(cyberpunk_grid_width && cyberpunk_grid_height)
+		return
+	var/obj/item/item_parent = parent
+	if(!istype(item_parent))
+		return
+	if(istype(item_parent, /obj/item/storage/backpack/duffelbag))
+		cyberpunk_grid_width = 4
+		cyberpunk_grid_height = 8
+	else if(istype(item_parent, /obj/item/storage/backpack/satchel) || istype(item_parent, /obj/item/storage/backpack/messenger))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 4
+	else if(istype(item_parent, /obj/item/storage/backpack))
+		cyberpunk_grid_width = 5
+		cyberpunk_grid_height = 5
+	else if(istype(item_parent, /obj/item/storage/belt))
+		cyberpunk_grid_width = 2
+		cyberpunk_grid_height = 4
+	else if(istype(item_parent, /obj/item/storage/briefcase))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 4
+
+/datum/storage/proc/get_cyberpunk_grid_capacity()
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
+		return 0
+	return cyberpunk_grid_width * cyberpunk_grid_height
+
+/datum/storage/proc/get_cyberpunk_used_grid_capacity()
+	var/used_capacity = 0
+	for(var/obj/item/stored_item as anything in real_location)
+		var/list/footprint = stored_item.get_cyberpunk_grid_footprint()
+		used_capacity += footprint[1] * footprint[2]
+	return used_capacity
+
+/datum/storage/proc/get_cyberpunk_grid_occupied(obj/item/ignore_item)
+	var/list/occupied = list()
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
+		return occupied
+	for(var/obj/item/stored_item as anything in real_location)
+		if(stored_item == ignore_item)
+			continue
+		if(!stored_item.cyberpunk_grid_x || !stored_item.cyberpunk_grid_y)
+			continue
+		var/list/footprint = stored_item.get_cyberpunk_grid_footprint()
+		for(var/x_offset in 0 to footprint[1] - 1)
+			for(var/y_offset in 0 to footprint[2] - 1)
+				occupied["[stored_item.cyberpunk_grid_x + x_offset],[stored_item.cyberpunk_grid_y + y_offset]"] = TRUE
+	return occupied
+
+/datum/storage/proc/find_cyberpunk_grid_placement(obj/item/stored_item)
+	if(!istype(stored_item) || !cyberpunk_grid_width || !cyberpunk_grid_height)
+		return list(1, 1)
+	var/list/footprint = stored_item.get_cyberpunk_grid_footprint()
+	var/list/occupied = get_cyberpunk_grid_occupied(stored_item)
+	for(var/y in 1 to cyberpunk_grid_height)
+		for(var/x in 1 to cyberpunk_grid_width)
+			if(cyberpunk_grid_rect_free(x, y, footprint[1], footprint[2], occupied))
+				return list(x, y)
+	return null
+
+/datum/storage/proc/cyberpunk_grid_rect_free(grid_x, grid_y, footprint_width, footprint_height, list/occupied)
+	if(grid_x + footprint_width - 1 > cyberpunk_grid_width || grid_y + footprint_height - 1 > cyberpunk_grid_height)
+		return FALSE
+	for(var/x_offset in 0 to footprint_width - 1)
+		for(var/y_offset in 0 to footprint_height - 1)
+			if(occupied["[grid_x + x_offset],[grid_y + y_offset]"])
+				return FALSE
+	return TRUE
+
+/datum/storage/proc/can_fit_cyberpunk_grid_item(obj/item/stored_item)
+	if(!istype(stored_item) || !cyberpunk_grid_width || !cyberpunk_grid_height)
+		return TRUE
+	return !isnull(find_cyberpunk_grid_placement(stored_item))
+
+/datum/storage/proc/place_cyberpunk_grid_item(obj/item/stored_item)
+	var/list/placement = find_cyberpunk_grid_placement(stored_item)
+	if(!placement)
+		return FALSE
+	stored_item.cyberpunk_grid_x = placement[1]
+	stored_item.cyberpunk_grid_y = placement[2]
+	return TRUE
+
+/datum/storage/proc/reflow_cyberpunk_grid()
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
+		return
+	for(var/obj/item/stored_item as anything in real_location)
+		stored_item.cyberpunk_grid_x = null
+		stored_item.cyberpunk_grid_y = null
+	for(var/obj/item/stored_item as anything in real_location)
+		place_cyberpunk_grid_item(stored_item)
 
 /datum/storage/Destroy()
 
@@ -203,6 +303,8 @@
 		return
 
 	gone.item_flags &= ~IN_STORAGE
+	gone.cyberpunk_grid_x = null
+	gone.cyberpunk_grid_y = null
 	remove_and_refresh(gone)
 	gone.on_exit_storage(src)
 	UnregisterSignal(gone, COMSIG_MOUSEDROPPED_ONTO)
@@ -427,6 +529,11 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 			user.balloon_alert(user, "нет места!")
 		return FALSE
 
+	if(!can_fit_cyberpunk_grid_item(to_insert))
+		if(messages && user && !silent_for_user)
+			user.balloon_alert(user, "РЅРµС‚ РјРµСЃС‚Р°!")
+		return FALSE
+
 	var/can_hold_it = isnull(can_hold) || is_type_in_typecache(to_insert, can_hold) || is_type_in_typecache(to_insert, exception_hold)
 	var/cant_hold_it = is_type_in_typecache(to_insert, cant_hold)
 	var/trait_says_no = HAS_TRAIT(to_insert, TRAIT_NO_STORAGE_INSERT)
@@ -490,6 +597,10 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if(SEND_SIGNAL(parent, COMSIG_ATOM_PRE_STORED_ITEM, to_insert, user, force, messages) & BLOCK_STORAGE_INSERT)
 		return FALSE
 	if(SEND_SIGNAL(to_insert, COMSIG_ITEM_PRE_STORAGE_INSERTION, parent, user, force, messages) & BLOCK_STORAGE_INSERT)
+		return FALSE
+	if(!place_cyberpunk_grid_item(to_insert))
+		if(messages && user && !silent_for_user)
+			user.balloon_alert(user, "нет места!")
 		return FALSE
 
 	SEND_SIGNAL(parent, COMSIG_ATOM_STORED_ITEM, to_insert, user, force)
@@ -900,6 +1011,9 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 /// Called directly from the attack chain if [insert_on_attack] is TRUE.
 /// Handles inserting an item into the storage when clicked.
 /datum/storage/proc/item_interact_insert(mob/living/user, obj/item/thing)
+	if(cyberpunk_insert_delay > 0 && istype(user) && istype(thing) && user.is_holding(thing))
+		if(!do_after(user, cyberpunk_insert_delay, target = parent))
+			return ITEM_INTERACT_BLOCKING
 	attempt_insert(thing, user)
 	return ITEM_INTERACT_SUCCESS
 
@@ -1157,6 +1271,9 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 
 	var/columns = clamp(max_slots, 1, screen_max_columns)
 	var/rows = clamp(ceil(adjusted_contents / columns) + additional_row, 1, screen_max_rows)
+	if(cyberpunk_grid_width && cyberpunk_grid_height)
+		columns = cyberpunk_grid_width
+		rows = cyberpunk_grid_height
 
 	for (var/mob/ui_user as anything in storage_interfaces)
 		if (isnull(storage_interfaces[ui_user]))

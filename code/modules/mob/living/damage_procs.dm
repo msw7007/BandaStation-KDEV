@@ -42,6 +42,7 @@
 	if(!forced)
 		damage_amount *= ((100 - blocked) / 100)
 		damage_amount *= get_incoming_damage_modifier(damage_amount, damagetype, def_zone, sharpness, attack_direction, attacking_item)
+		damage_amount *= get_cyberpunk_incoming_damage_multiplier(damagetype)
 	if(damage_amount <= 0)
 		return 0
 
@@ -125,7 +126,6 @@
 	var/final_mod = 1
 	for(var/new_mod in damage_mods)
 		final_mod *= new_mod
-	final_mod *= get_cyberpunk_incoming_damage_multiplier(damagetype)
 	return final_mod
 
 /**

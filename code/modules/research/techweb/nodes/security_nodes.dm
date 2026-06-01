@@ -16,6 +16,15 @@
 		"sec_dart",
 		"sec_Islug",
 		"sec_rshot",
+		"starlight_item_module",
+		"starlight_melee_core",
+		"starlight_blade_element",
+		"starlight_spike_element",
+		"starlight_weighted_head",
+		"starlight_weapon_guard",
+		"starlight_weapon_balancer",
+		"starlight_armor_plate",
+		"starlight_protective_lining",
 	)
 
 /datum/techweb_node/sec_equip
