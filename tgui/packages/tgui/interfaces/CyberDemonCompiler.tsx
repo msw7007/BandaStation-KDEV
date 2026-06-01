@@ -40,12 +40,14 @@ type Storage = {
   memory_capacity: number;
   free_memory: number;
   cooldown?: number;
+  net_data?: number;
   cryptokeys?: number;
   demons: Demon[];
 };
 
 type CyberDemonCompilerData = {
   net_data: number;
+  compile_requirement_multiplier?: number;
   effects: Choice[];
   specials: Choice[];
   manufacturers: string[];
@@ -176,7 +178,7 @@ export const CyberDemonCompiler = () => {
   const attributeOptions = data.attributes?.map((choice) => choice.name) || [];
   const skillOptions = data.skills?.map((choice) => choice.name) || [];
   const memory = calcMemory(power, castTime, duration, activationDelay, frequency, specials, effect);
-  const netDataCost = Math.max(1, memory + specials.length);
+  const netDataCost = Math.max(0, Math.round(Math.max(1, memory + specials.length) * (data.compile_requirement_multiplier ?? 1)));
   const overCustomLimit = memory > (data.limits?.max_custom_memory || 8);
   const deckBusy = !!data.deck?.cooldown;
   const terminalBusy = !!data.terminal?.cooldown;
@@ -363,7 +365,21 @@ export const CyberDemonCompiler = () => {
                   <StorageHeader storage={data.disk} emptyText="No demon disk inserted." />
                   {data.disk?.present && (
                     <div style={{ color: cy.muted, fontSize: '11px', marginBottom: '5px' }}>
-                      Cryptokeys: {data.disk.cryptokeys || 0}
+                      Net-data: {data.disk.net_data || 0} | Cryptokeys: {data.disk.cryptokeys || 0}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                        <Button icon="download" disabled={(data.net_data || 0) <= 0} onClick={() => act('download_net_data')}>
+                          Write data
+                        </Button>
+                        <Button icon="upload" disabled={(data.disk.net_data || 0) <= 0} onClick={() => act('upload_net_data')}>
+                          Load data
+                        </Button>
+                        <Button icon="key" onClick={() => act('download_cryptokeys')}>
+                          Write keys
+                        </Button>
+                        <Button icon="unlock" disabled={(data.disk.cryptokeys || 0) <= 0} onClick={() => act('upload_cryptokeys')}>
+                          Load keys
+                        </Button>
+                      </div>
                     </div>
                   )}
                   <div style={{ maxHeight: '610px', overflowY: 'auto', paddingRight: '4px' }}>

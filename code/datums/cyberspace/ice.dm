@@ -2,6 +2,10 @@
 // Split from cyberimp internals; keep gameplay logic out of organ item definitions.
 
 /datum/cyber_ice
+	/// Firewall model. It fixes total ICE level; tuning only redistributes points.
+	var/model = CYBER_ICE_MODEL_BASIC
+	/// Human-readable firewall model label for UI.
+	var/model_name = "Basic ICE"
 	/// V ice: detection timer pressure.
 	var/timer_points = NEURAL_INTERFACE_DEFAULT_ICE_STAT
 	/// B ice: hacking grid size pressure.
@@ -18,6 +22,27 @@
 /datum/cyber_ice/New()
 	. = ..()
 	current_reserve = get_max_reserve()
+
+/datum/cyber_ice/proc/configure_model(new_model)
+	switch(new_model)
+		if(CYBER_ICE_MODEL_MK2)
+			model = CYBER_ICE_MODEL_MK2
+			model_name = "MK2 civilian ICE"
+			set_even_distribution(12)
+		if(CYBER_ICE_MODEL_CORPORATE)
+			model = CYBER_ICE_MODEL_CORPORATE
+			model_name = "Corporate reinforced ICE"
+			set_even_distribution(16)
+		if(CYBER_ICE_MODEL_IMPROVED)
+			model = CYBER_ICE_MODEL_IMPROVED
+			model_name = "Improved ICE"
+			set_even_distribution(20)
+		else
+			model = CYBER_ICE_MODEL_BASIC
+			model_name = "Basic ICE"
+			set_even_distribution(8)
+	current_reserve = get_max_reserve()
+	return TRUE
 
 /datum/cyber_ice/proc/get_total_points()
 	return max(0, timer_points + size_points + sequence_points + reserve_points)
@@ -174,6 +199,8 @@
 		return data
 	var/datum/cyber_ice/ice = interface.get_ice()
 	data["patient_name"] = patient?.real_name || patient?.name || "unknown"
+	data["model"] = ice.model
+	data["model_name"] = ice.model_name
 	data["timer"] = ice.timer_points
 	data["size"] = ice.size_points
 	data["sequence"] = ice.sequence_points
@@ -217,6 +244,14 @@
 			ice.restore_reserve(ice.get_max_reserve())
 			ice.reset_alarm()
 			to_chat(ui.user, span_notice("Neural ICE reserve restored and alarm state cleared."))
+			SStgui.update_uis(src)
+			return TRUE
+		if("set_model")
+			var/model = params["model"]
+			if(!(model in list(CYBER_ICE_MODEL_BASIC, CYBER_ICE_MODEL_MK2, CYBER_ICE_MODEL_CORPORATE, CYBER_ICE_MODEL_IMPROVED)))
+				return TRUE
+			interface.set_ice_model(model)
+			to_chat(ui.user, span_notice("Neural ICE model changed. Retune the distribution if needed."))
 			SStgui.update_uis(src)
 			return TRUE
 	return FALSE
@@ -297,6 +332,8 @@
 /datum/cyber_ice/proc/get_ui_summary(hacking_skill = 0, is_node = FALSE, object_count = 0)
 	var/grid_size = get_attack_grid_size(hacking_skill, is_node, object_count)
 	return list(
+		"model" = model,
+		"model_name" = model_name,
 		"timer" = get_attack_timer(hacking_skill, is_node, object_count),
 		"grid_size" = grid_size,
 		"sequence_length" = get_attack_sequence_length(hacking_skill, grid_size, is_node, object_count),
@@ -537,6 +574,9 @@
 		SStgui.update_uis(src)
 		return TRUE
 	var/damage = ice.get_sequence_damage(completed_sequences, hacking_skill)
+	var/damage_bonus = hacker?.mind?.get_character_perk_effectiveness(SKILL_HACKING, 2) || 0
+	if(damage_bonus > 0)
+		damage += round(damage * (damage_bonus / 100))
 	ice.apply_reserve_damage(damage)
 	if(hacker)
 		to_chat(hacker, span_notice("ICE reserve reduced by [damage]."))
@@ -625,9 +665,10 @@
 			return TRUE
 	return FALSE
 
-/proc/create_cyber_node_ice(object_count)
+/proc/create_cyber_node_ice(object_count, manufacturer_diversity_bonus = 0)
 	var/datum/cyber_ice/node_ice = new()
-	node_ice.set_even_distribution(max(4, round(max(1, object_count))))
+	var/base_points = max(4, round(max(1, object_count)))
+	node_ice.set_even_distribution(max(4, round(base_points * (1 + max(0, manufacturer_diversity_bonus)))))
 	return node_ice
 
 /datum/cyberspace_cryptokey

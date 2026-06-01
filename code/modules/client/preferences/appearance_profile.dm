@@ -70,6 +70,7 @@
 	return choices
 
 /proc/cyberpunk_major_corp_for_manufacturer(manufacturer)
+	manufacturer = cyberpunk_normalize_manufacturer_id(manufacturer)
 	switch(manufacturer)
 		if(CORP_ALIGN_SUN_YON, CORP_ALIGN_ISHIKAWA, CORP_ALIGN_HO_SHI)
 			return CORP_GROUP_BEN
@@ -79,7 +80,23 @@
 			return CORP_GROUP_STARLIGHT
 	return null
 
+/proc/cyberpunk_normalize_manufacturer_id(manufacturer)
+	if(!manufacturer)
+		return CORP_ALIGN_NONE
+	var/normalized = lowertext(trim("[manufacturer]"))
+	if(normalized == "independent")
+		return CORP_ALIGN_NONE
+	var/list/choices = corp_align_choices()
+	if(normalized in choices)
+		return normalized
+	for(var/manufacturer_id in choices)
+		if(lowertext(choices[manufacturer_id]) == normalized)
+			return manufacturer_id
+	return normalized
+
 /proc/cyberpunk_corporate_synergy_multiplier(neural_manufacturer, equipment_manufacturer)
+	neural_manufacturer = cyberpunk_normalize_manufacturer_id(neural_manufacturer)
+	equipment_manufacturer = cyberpunk_normalize_manufacturer_id(equipment_manufacturer)
 	if(!neural_manufacturer || !equipment_manufacturer || neural_manufacturer == CORP_ALIGN_NONE || equipment_manufacturer == CORP_ALIGN_NONE)
 		return 1
 	if(neural_manufacturer == equipment_manufacturer)
@@ -90,6 +107,7 @@
 	return 1
 
 /proc/cyberpunk_manufacturer_info(manufacturer)
+	manufacturer = cyberpunk_normalize_manufacturer_id(manufacturer)
 	var/list/choices = corp_align_choices()
 	var/list/info = list(
 		"id" = manufacturer,
@@ -367,6 +385,7 @@
 	var/obj/item/organ/cyberimp/brain/neural_interface/neural_interface = target.get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
 	if(istype(neural_interface))
 		neural_interface.corp_manufacturer = value == CORP_ALIGN_NONE ? initial(neural_interface.corp_manufacturer) : value
+		neural_interface.refresh_ice_model()
 
 #undef BODY_SHAPE_AVERAGE
 #undef BODY_SHAPE_LEAN

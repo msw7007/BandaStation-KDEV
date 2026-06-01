@@ -382,6 +382,12 @@
 		return
 	swap_hand()
 
+/mob/proc/MiddleMouseDownOn(atom/A, params)
+	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEDOWNON, A, params)
+
+/mob/proc/MiddleMouseUpOn(atom/A, params)
+	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEUPON, A, params)
+
 /**
  * Shift click
  * For most mobs, examine.

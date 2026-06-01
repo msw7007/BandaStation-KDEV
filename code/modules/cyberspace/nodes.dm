@@ -131,8 +131,20 @@
 
 /datum/cyberspace_node/proc/get_ice() as /datum/cyber_ice
 	if(!ice)
-		ice = create_cyber_node_ice(max(1, get_object_count()))
+		ice = create_cyber_node_ice(max(1, get_object_count()), get_manufacturer_diversity_bonus())
 	return ice
+
+/datum/cyberspace_node/proc/get_manufacturer_diversity_count()
+	var/list/seen_manufacturers = list()
+	for(var/datum/cyberspace_cryptokey/cryptokey as anything in cryptokeys)
+		var/manufacturer = cyberpunk_normalize_manufacturer_id(cryptokey.manufacturer)
+		if(!manufacturer || manufacturer == "none")
+			continue
+		seen_manufacturers[manufacturer] = TRUE
+	return length(seen_manufacturers)
+
+/datum/cyberspace_node/proc/get_manufacturer_diversity_bonus()
+	return max(0, get_manufacturer_diversity_count() - 1) * CYBERSPACE_NODE_MANUFACTURER_DIVERSITY_BONUS
 
 /datum/cyberspace_node/proc/can_open_ice_hack()
 	for(var/atom/movable/object as anything in get_live_objects())
@@ -210,7 +222,11 @@
 
 /datum/cyberspace_node/proc/get_cyber_connection_time(mob/living/user, stealth = TRUE)
 	var/base_time = stealth ? CYBERSPACE_STEALTH_CONNECTION_BASE_TIME : CYBERSPACE_OPEN_CONNECTION_BASE_TIME
-	return max(CYBERSPACE_CONNECTION_MIN_TIME, base_time - ((user?.get_cyber_hacking_skill() || 0) SECONDS))
+	var/connection_time = base_time - ((user?.get_cyber_hacking_skill() || 0) SECONDS)
+	var/connection_bonus = user?.mind?.get_character_perk_effectiveness(SKILL_HACKING, 3) || 0
+	if(connection_bonus > 0)
+		connection_time *= max(0, 1 - (connection_bonus / 100))
+	return max(CYBERSPACE_CONNECTION_MIN_TIME, round(connection_time))
 
 /datum/cyberspace_node/proc/get_stealth_alarm_chance(mob/living/user)
 	var/alarm_chance = CYBERSPACE_STEALTH_ALARM_CHANCE - ((user?.get_cyber_hacking_skill() || 0) * CYBERSPACE_HACKING_ALARM_REDUCTION_PER_LEVEL)
@@ -219,7 +235,8 @@
 
 /datum/cyberspace_node/proc/roll_connection_alarm(mob/living/user, atom/visual_anchor, stealth = TRUE)
 	if(!stealth)
-		get_ice().trigger_alarm(user, visual_anchor || anchor, "loud cyberspace connection")
+		if(!should_suppress_damage_alarm(user))
+			get_ice().trigger_alarm(user, visual_anchor || anchor, "loud cyberspace connection")
 		return TRUE
 	var/alarm_chance = get_stealth_alarm_chance(user)
 	if(alarm_chance > 0 && prob(alarm_chance))
@@ -238,6 +255,10 @@
 	else
 		to_chat(user, span_notice("You damage [visual_anchor || anchor] digital protection by [damage]. Reserve left: [get_ice().current_reserve]."))
 	return TRUE
+
+/datum/cyberspace_node/proc/should_suppress_damage_alarm(mob/living/user)
+	var/suppress_chance = user?.mind?.get_character_perk_effectiveness(SKILL_HACKING, 5) || 0
+	return suppress_chance > 0 && prob(suppress_chance)
 
 /datum/cyberspace_node/proc/start_cyberspace_attack(mob/living/user, atom/visual_anchor)
 	if(!user?.cyberspace_session || !visual_anchor)

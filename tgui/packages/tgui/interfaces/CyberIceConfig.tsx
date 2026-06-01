@@ -8,6 +8,8 @@ import { Window } from '../layouts';
 type CyberIceConfigData = {
   missing?: boolean;
   patient_name: string;
+  model: string;
+  model_name: string;
   timer: number;
   size: number;
   sequence: number;
@@ -78,6 +80,9 @@ export const CyberIceConfig = () => {
                 <LabeledList.Item label="Patient">
                   {data.patient_name || 'unknown'}
                 </LabeledList.Item>
+                <LabeledList.Item label="Model">
+                  {data.model_name || data.model}
+                </LabeledList.Item>
                 <LabeledList.Item label="Points">
                   <span style={{ color: valid ? cy.cyan : cy.red }}>
                     {total}/{data.total}
@@ -91,6 +96,36 @@ export const CyberIceConfig = () => {
                   {data.effective_chromity}
                 </LabeledList.Item>
               </LabeledList>
+            </Section>
+          </Stack.Item>
+
+          <Stack.Item>
+            <Section
+              title="MODEL"
+              style={{ background: cy.panel, border: `1px solid ${cy.redDark}` }}
+            >
+              <Stack>
+                <Stack.Item grow>
+                  <Button fluid selected={data.model === 'basic'} onClick={() => act('set_model', { model: 'basic' })}>
+                    Basic
+                  </Button>
+                </Stack.Item>
+                <Stack.Item grow>
+                  <Button fluid selected={data.model === 'mk2'} onClick={() => act('set_model', { model: 'mk2' })}>
+                    MK2
+                  </Button>
+                </Stack.Item>
+                <Stack.Item grow>
+                  <Button fluid selected={data.model === 'corporate'} onClick={() => act('set_model', { model: 'corporate' })}>
+                    Corporate
+                  </Button>
+                </Stack.Item>
+                <Stack.Item grow>
+                  <Button fluid selected={data.model === 'improved'} onClick={() => act('set_model', { model: 'improved' })}>
+                    Improved
+                  </Button>
+                </Stack.Item>
+              </Stack>
             </Section>
           </Stack.Item>
 

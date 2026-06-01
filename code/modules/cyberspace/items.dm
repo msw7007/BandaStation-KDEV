@@ -303,11 +303,60 @@
 	new_demon.cooldown = cooldown
 	return new_demon
 
-/datum/cyberspace_demon/proc/get_effective_power(physical_world = FALSE)
+/datum/cyberspace_demon/proc/get_effective_power(mob/living/caster, physical_world = FALSE)
 	var/power = effect_power
+	var/power_bonus = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 1) || 0
+	if(power_bonus > 0)
+		power *= 1 + (power_bonus / 100)
+	power *= caster?.cyberdemon_consume_next_power_multiplier() || 1
+	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
+	power *= synergy
 	if(physical_world)
 		power *= CYBER_DEMON_PHYSICAL_WORLD_MULTIPLIER
+	var/master_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 6, "value_1") || 0
+	var/master_multiplier = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 6, "value_2") || 0
+	if(master_chance > 0 && master_multiplier > 0 && prob(master_chance))
+		power *= master_multiplier
 	return round(power)
+
+/datum/cyberspace_demon/proc/get_effective_cast_time(mob/living/caster)
+	var/effective_cast_time = cast_time
+	var/prepare_bonus = caster?.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 1) || 0
+	if(prepare_bonus > 0)
+		effective_cast_time *= max(0, 1 - (prepare_bonus / 100))
+	effective_cast_time *= caster?.cyberdemon_consume_next_prepare_multiplier() || 1
+	var/instant_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 5) || 0
+	if(instant_chance > 0 && prob(instant_chance))
+		return 0
+	return max(0, round(effective_cast_time))
+
+/datum/cyberspace_demon/proc/get_effective_activation_delay(mob/living/caster)
+	var/effective_delay = activation_delay
+	if(caster?.cyberdemon_consume_next_instant_activation())
+		return 0
+	var/activation_bonus = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 2) || 0
+	if(activation_bonus > 0)
+		effective_delay *= max(0, 1 - (activation_bonus / 100))
+	var/instant_next_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 6) || 0
+	if(instant_next_chance > 0 && prob(instant_next_chance))
+		return 0
+	return max(0, round(effective_delay))
+
+/datum/cyberspace_demon/proc/get_effective_stamina_cost(mob/living/caster)
+	var/effective_cost = stamina_cost
+	var/stamina_modifier = caster?.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 2) || 0
+	if(stamina_modifier)
+		effective_cost *= 1 + (stamina_modifier / 100)
+	return max(0, round(effective_cost))
+
+/datum/cyberspace_demon/proc/get_compile_requirement_multiplier(mob/living/user)
+	return cyberdemon_compile_requirement_multiplier(user)
+
+/proc/cyberdemon_compile_requirement_multiplier(mob/living/user)
+	if(!user?.cyberdemon_has_botanist())
+		return 1
+	var/hacking_level = user.mind?.get_character_skill_level(SKILL_HACKING) || 0
+	return max(0, 1 - (hacking_level * 0.1))
 
 /datum/cyberspace_demon/proc/get_net_data_cost()
 	if(net_data_cost)
@@ -332,6 +381,7 @@
 	if(terminal && !terminal.can_compile(user))
 		return FALSE
 	var/cost = get_net_data_cost()
+	cost = round(cost * get_compile_requirement_multiplier(user))
 	if(cost > (user?.mind?.cyber_net_data || 0))
 		to_chat(user, span_warning("[demon_name] requires [cost] net-data."))
 		return FALSE
@@ -346,6 +396,7 @@
 	if(!can_compile(user, deck, terminal))
 		return FALSE
 	var/cost = get_net_data_cost()
+	cost = round(cost * get_compile_requirement_multiplier(user))
 	user.mind.cyber_net_data -= cost
 	deck.store_demon(copy(), user)
 	deck.start_compile_cooldown()
@@ -364,6 +415,7 @@
 	if(!disk.can_store_demon(src, user))
 		return FALSE
 	var/cost = get_net_data_cost()
+	cost = round(cost * get_compile_requirement_multiplier(user))
 	if(cost > user.mind.cyber_net_data)
 		to_chat(user, span_warning("[demon_name] requires [cost] net-data."))
 		return FALSE
@@ -382,19 +434,43 @@
 		to_chat(caster, span_warning("[demon_name] is cooling down for [DisplayTimeText(next_use - world.time)]."))
 		return FALSE
 	var/physical_world = !caster.is_projected_into_cyberspace()
-	var/current_power = get_effective_power(physical_world)
+	var/current_power = get_effective_power(caster, physical_world)
+	var/effective_cast_time = get_effective_cast_time(caster)
 	if(CYBER_DEMON_SPECIAL_STEALTH in special_effects)
 		to_chat(caster, span_notice("[demon_name] suppresses its network signature."))
 	to_chat(caster, span_notice("You start preparing [demon_name]."))
-	if(!do_after(caster, cast_time, target = target, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_TARGET_LOC_CHANGE|IGNORE_HELD_ITEM, hidden = TRUE))
+	if(effective_cast_time > 0 && !do_after(caster, effective_cast_time, target = target, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_TARGET_LOC_CHANGE|IGNORE_HELD_ITEM, hidden = TRUE))
 		to_chat(caster, span_warning("[demon_name] fizzles before activation."))
 		return FALSE
+	return release_prepared(caster, target, deck, current_power, physical_world)
+
+/datum/cyberspace_demon/proc/release_prepared(mob/living/caster, atom/target, obj/item/clothing/gloves/cyberdeck/deck, current_power, physical_world)
+	if(!caster || !target || !deck)
+		return FALSE
+	if(!deck.can_run_demons(caster))
+		return FALSE
+	var/mob/living/original_target = istype(target, /mob/living) ? target : null
+	if(original_target?.cyberdemon_should_reflect_directed_demon(caster, src))
+		to_chat(original_target, span_notice("You reflect [demon_name] back through the connection."))
+		to_chat(caster, span_warning("[demon_name] reflects back through [original_target]'s neural defense."))
+		target = caster
+	var/effective_activation_delay = get_effective_activation_delay(caster)
+	var/effective_stamina_cost = get_effective_stamina_cost(caster)
+	if(caster.cyberdemon_has_botanist())
+		var/free_chance = (caster.mind?.get_character_skill_level(SKILL_FAST_CODE) || 0) * 15
+		if(free_chance > 0 && prob(free_chance))
+			effective_stamina_cost = 0
+	if(effective_stamina_cost > 0)
+		caster.adjust_stamina_loss(effective_stamina_cost)
 	apply_psychic_damage(caster)
 	if(cooldown > 0)
-		next_use = world.time + cooldown
-	if(activation_delay > 0)
-		to_chat(caster, span_notice("[demon_name] is unpacking and will activate in [DisplayTimeText(activation_delay)]."))
-		addtimer(CALLBACK(src, PROC_REF(activate_deployment), WEAKREF(caster), WEAKREF(target), current_power, physical_world), activation_delay)
+		if((caster?.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 5) || 0) > 0 && prob(caster.mind.get_character_perk_effectiveness(SKILL_FAST_CODE, 5)))
+			next_use = 0
+		else
+			next_use = world.time + cooldown
+	if(effective_activation_delay > 0)
+		to_chat(caster, span_notice("[demon_name] is unpacking and will activate in [DisplayTimeText(effective_activation_delay)]."))
+		addtimer(CALLBACK(src, PROC_REF(activate_deployment), WEAKREF(caster), WEAKREF(target), current_power, physical_world), effective_activation_delay)
 		return TRUE
 	return activate_deployment(WEAKREF(caster), WEAKREF(target), current_power, physical_world)
 
@@ -407,7 +483,31 @@
 		return FALSE
 	if(caster)
 		to_chat(caster, span_notice("[demon_name] activates."))
-	return apply_effect(caster, target, current_power, physical_world)
+	var/success = apply_effect(caster, target, current_power, physical_world)
+	if(success)
+		apply_botanist_followups(caster, target, current_power, physical_world)
+	return success
+
+/datum/cyberspace_demon/proc/apply_botanist_followups(mob/living/caster, atom/target, current_power, physical_world)
+	if(!caster)
+		return
+	var/power_roll = caster.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 3, "value_1") || 0
+	var/power_bonus = caster.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 3, "value_2") || 0
+	if(power_roll > 0 && power_bonus > 0 && prob(power_roll))
+		caster.cyberdemon_next_power_multiplier = max(caster.cyberdemon_next_power_multiplier, 1 + (power_bonus / 100))
+	var/prepare_roll = caster.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 3, "value_1") || 0
+	var/prepare_bonus = caster.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 3, "value_2") || 0
+	if(prepare_roll > 0 && prepare_bonus > 0 && prob(prepare_roll))
+		caster.cyberdemon_next_prepare_multiplier = min(caster.cyberdemon_next_prepare_multiplier, max(0, 1 - (prepare_bonus / 100)))
+	var/next_instant_chance = caster.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 6) || 0
+	if(next_instant_chance > 0 && prob(next_instant_chance))
+		caster.cyberdemon_next_instant_activation = TRUE
+	if(!caster.cyberdemon_has_botanist())
+		return
+	var/repeat_chance = (caster.mind?.get_character_skill_level(SKILL_ENHANCED_CODE) || 0) * 15
+	if(repeat_chance > 0 && prob(repeat_chance))
+		to_chat(caster, span_notice("[demon_name] self-activates again on the same target."))
+		apply_effect(caster, target, current_power, physical_world)
 
 /datum/cyberspace_demon/proc/apply_psychic_damage(mob/living/caster)
 	var/damage = psychic_damage
@@ -433,6 +533,10 @@
 
 /mob/living/var/tmp/cyberdemon_block_demons_until = 0
 /mob/living/var/tmp/cyberdemon_block_implants_until = 0
+/mob/living/var/tmp/cyberdemon_neutralization_block_until = 0
+/mob/living/var/tmp/cyberdemon_next_power_multiplier = 1
+/mob/living/var/tmp/cyberdemon_next_prepare_multiplier = 1
+/mob/living/var/tmp/cyberdemon_next_instant_activation = FALSE
 
 /mob/living/proc/cyberdemon_block_demons(block_duration)
 	cyberdemon_block_demons_until = max(cyberdemon_block_demons_until, world.time + block_duration)
@@ -446,6 +550,33 @@
 /mob/living/proc/cyberdemon_implants_blocked()
 	return world.time < cyberdemon_block_implants_until
 
+/mob/living/proc/cyberdemon_is_hostile_target(mob/living/caster)
+	return caster && caster != src
+
+/mob/living/proc/cyberdemon_has_botanist()
+	return has_character_giga_perk(ATTRIBUTE_INTELLIGENCE)
+
+/mob/living/proc/cyberdemon_should_reflect_directed_demon(mob/living/caster, datum/cyberspace_demon/demon)
+	if(!cyberdemon_is_hostile_target(caster) || !cyberdemon_has_botanist())
+		return FALSE
+	var/reflect_chance = (mind?.get_character_skill_level(SKILL_ENDURANCE) || 0) * 15
+	return reflect_chance > 0 && prob(reflect_chance)
+
+/mob/living/proc/cyberdemon_consume_next_power_multiplier()
+	var/multiplier = max(0, cyberdemon_next_power_multiplier || 1)
+	cyberdemon_next_power_multiplier = 1
+	return multiplier
+
+/mob/living/proc/cyberdemon_consume_next_prepare_multiplier()
+	var/multiplier = max(0, cyberdemon_next_prepare_multiplier || 1)
+	cyberdemon_next_prepare_multiplier = 1
+	return multiplier
+
+/mob/living/proc/cyberdemon_consume_next_instant_activation()
+	var/instant = cyberdemon_next_instant_activation
+	cyberdemon_next_instant_activation = FALSE
+	return instant
+
 /proc/cyberdemon_remove_movespeed_modifier(datum/weakref/living_ref)
 	var/mob/living/living_target = living_ref?.resolve()
 	if(!living_target)
@@ -457,6 +588,63 @@
 	if(!living_target)
 		return
 	living_target.remove_actionspeed_modifier(/datum/actionspeed_modifier/cyberdemon)
+
+/datum/cyberspace_demon/proc/is_hostile_negative_effect(current_power)
+	if(current_power < 0)
+		return TRUE
+	return effect in list(
+		CYBER_DEMON_EFFECT_ATTRIBUTE,
+		CYBER_DEMON_EFFECT_SKILL,
+		CYBER_DEMON_EFFECT_MOVE_SPEED,
+		CYBER_DEMON_EFFECT_INTERACTION_SPEED,
+		CYBER_DEMON_EFFECT_BLIND,
+		CYBER_DEMON_EFFECT_DEAF,
+		CYBER_DEMON_EFFECT_SILENCE,
+		CYBER_DEMON_EFFECT_BLOCK_IMPLANTS,
+		CYBER_DEMON_EFFECT_BLOCK_DEMONS,
+		CYBER_DEMON_EFFECT_DEBUFF,
+	)
+
+/datum/cyberspace_demon/proc/apply_neutralization(mob/living/caster, mob/living/target, current_power, effect_duration)
+	var/list/result = list(
+		"blocked" = FALSE,
+		"power" = current_power,
+		"duration" = effect_duration,
+	)
+	if(!target?.cyberdemon_is_hostile_target(caster) || !is_hostile_negative_effect(current_power))
+		return result
+	var/block_cooldown_minutes = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 6) || 0
+	if(block_cooldown_minutes > 0 && world.time >= target.cyberdemon_neutralization_block_until)
+		target.cyberdemon_neutralization_block_until = world.time + (block_cooldown_minutes MINUTES)
+		result["blocked"] = TRUE
+		to_chat(target, span_notice("Your neuralization fully blocks [demon_name]."))
+		return result
+	var/pre_reduction = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 5) || 0
+	if(pre_reduction > 0)
+		current_power = round(current_power * max(0, 1 - (pre_reduction / 100)))
+	var/half_chance = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 1) || 0
+	if(half_chance > 0 && prob(half_chance))
+		current_power = round(current_power * 0.5)
+	var/duration_modifier = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 2) || 0
+	if(duration_modifier)
+		effect_duration = round(effect_duration * max(0, 1 + (duration_modifier / 100)))
+	var/post_power_reduction = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 3, "value_1") || 0
+	var/power_slow = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 3, "value_2") || 0
+	if(post_power_reduction > 0)
+		current_power = round(current_power * max(0, 1 - (post_power_reduction / 100)))
+		if(power_slow > 0 && effect_duration > 0)
+			target.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberdemon, multiplicative_slowdown = power_slow / 100)
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_movespeed_modifier), WEAKREF(target)), effect_duration)
+	var/post_duration_reduction = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 4, "value_1") || 0
+	var/duration_slow = target.mind?.get_character_perk_effectiveness(SKILL_NEUTRALIZATION, 4, "value_2") || 0
+	if(post_duration_reduction > 0)
+		effect_duration = round(effect_duration * max(0, 1 - (post_duration_reduction / 100)))
+		if(duration_slow > 0 && effect_duration > 0)
+			target.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberdemon, multiplicative_slowdown = duration_slow / 100)
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_movespeed_modifier), WEAKREF(target)), effect_duration)
+	result["power"] = current_power
+	result["duration"] = effect_duration
+	return result
 
 /datum/cyberspace_demon/proc/apply_effect(mob/living/caster, atom/target, current_power, physical_world)
 	var/success = apply_primary_effect(caster, target, current_power, physical_world)
@@ -495,6 +683,7 @@
 
 /datum/cyberspace_demon/proc/apply_primary_effect(mob/living/caster, atom/target, current_power, physical_world, announce = TRUE)
 	var/absolute_power = abs(current_power)
+	var/effect_duration = duration
 	var/datum/cyberspace_node/target_node = get_target_node(target)
 	var/target_node_name = target_node?.physical_area?.name || "node"
 	if(target_node && effect == CYBER_DEMON_EFFECT_PROTECTION)
@@ -514,6 +703,30 @@
 		if(announce)
 			to_chat(caster, span_notice("[demon_name] converts into network damage and lowers [target_node_name] protection by [max(1, absolute_power)]."))
 		return TRUE
+	if(target_node && (effect in list(CYBER_DEMON_EFFECT_BUFF, CYBER_DEMON_EFFECT_DEBUFF)))
+		var/datum/cyber_ice/network_ice = target_node.get_ice()
+		if(!network_ice)
+			return FALSE
+		var/network_delta = max(1, absolute_power * 2)
+		if(effect == CYBER_DEMON_EFFECT_DEBUFF || current_power < 0)
+			network_ice.apply_reserve_damage(network_delta)
+			if(announce)
+				to_chat(caster, span_notice("[demon_name] converts a debuff into [network_delta] network damage against [target_node_name]."))
+			return TRUE
+		var/restored = network_ice.restore_reserve(network_delta)
+		if(announce)
+			to_chat(caster, span_notice("[demon_name] converts a buff into [restored] restored network protection on [target_node_name]."))
+		return TRUE
+	var/mob/living/neutralized_target = istype(target, /mob/living) ? target : null
+	if(neutralized_target)
+		var/list/neutralized = apply_neutralization(caster, neutralized_target, current_power, effect_duration)
+		if(neutralized["blocked"])
+			if(announce && caster)
+				to_chat(caster, span_warning("[target] neutralizes [demon_name]."))
+			return TRUE
+		current_power = neutralized["power"]
+		effect_duration = neutralized["duration"]
+		absolute_power = abs(current_power)
 	switch(effect)
 		if(CYBER_DEMON_EFFECT_DAMAGE)
 			var/mob/living/living_target = target
@@ -600,17 +813,17 @@
 			return TRUE
 		if(CYBER_DEMON_EFFECT_ATTRIBUTE)
 			var/mob/living/living_target = target
-			if(istype(living_target) && living_target.mind && duration > 0)
-				living_target.mind.add_cyberdemon_attribute_modifier(target_attribute, current_power, duration, demon_name)
+			if(istype(living_target) && living_target.mind && effect_duration > 0)
+				living_target.mind.add_cyberdemon_attribute_modifier(target_attribute, current_power, effect_duration, demon_name)
 				if(announce)
-					to_chat(caster, span_notice("[demon_name] changes [target]'s [target_attribute] by [current_power] for [DisplayTimeText(duration)]."))
+					to_chat(caster, span_notice("[demon_name] changes [target]'s [target_attribute] by [current_power] for [DisplayTimeText(effect_duration)]."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_SKILL)
 			var/mob/living/living_target = target
-			if(istype(living_target) && living_target.mind && duration > 0)
-				living_target.mind.add_cyberdemon_skill_modifier(target_skill, current_power, duration, demon_name)
+			if(istype(living_target) && living_target.mind && effect_duration > 0)
+				living_target.mind.add_cyberdemon_skill_modifier(target_skill, current_power, effect_duration, demon_name)
 				if(announce)
-					to_chat(caster, span_notice("[demon_name] changes [target]'s skill routing by [current_power] for [DisplayTimeText(duration)]."))
+					to_chat(caster, span_notice("[demon_name] changes [target]'s skill routing by [current_power] for [DisplayTimeText(effect_duration)]."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_STAMINA)
 			var/mob/living/living_target = target
@@ -622,7 +835,7 @@
 		if(CYBER_DEMON_EFFECT_BLIND)
 			var/mob/living/living_target = target
 			if(istype(living_target))
-				living_target.set_temp_blindness_if_lower(max(1 SECONDS, duration || (absolute_power SECONDS)))
+				living_target.set_temp_blindness_if_lower(max(1 SECONDS, effect_duration || (absolute_power SECONDS)))
 				if(announce)
 					to_chat(caster, span_notice("[demon_name] blinds [target]."))
 				return TRUE
@@ -631,14 +844,14 @@
 			if(istype(living_target))
 				var/trait_source = "cyberdemon_deaf_[REF(src)]"
 				ADD_TRAIT(living_target, TRAIT_DEAF, trait_source)
-				addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_trait), WEAKREF(living_target), TRAIT_DEAF, trait_source), max(1 SECONDS, duration || (absolute_power SECONDS)))
+				addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_trait), WEAKREF(living_target), TRAIT_DEAF, trait_source), max(1 SECONDS, effect_duration || (absolute_power SECONDS)))
 				if(announce)
 					to_chat(caster, span_notice("[demon_name] suppresses [target]'s hearing."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_SILENCE, CYBER_DEMON_EFFECT_BLOCK_DEMONS)
 			var/mob/living/living_target = target
 			if(istype(living_target))
-				var/block_duration = max(1 SECONDS, duration || (absolute_power SECONDS))
+				var/block_duration = max(1 SECONDS, effect_duration || (absolute_power SECONDS))
 				if(effect == CYBER_DEMON_EFFECT_SILENCE)
 					var/trait_source = "cyberdemon_mute_[REF(src)]"
 					ADD_TRAIT(living_target, TRAIT_MUTE, trait_source)
@@ -659,31 +872,44 @@
 				return TRUE
 		if(CYBER_DEMON_EFFECT_MOVE_SPEED)
 			var/mob/living/living_target = target
-			if(istype(living_target) && duration > 0)
+			if(istype(living_target) && effect_duration > 0)
 				living_target.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberdemon, multiplicative_slowdown = -(current_power / 100))
-				addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_movespeed_modifier), WEAKREF(living_target)), duration)
+				addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_movespeed_modifier), WEAKREF(living_target)), effect_duration)
 				if(announce)
-					to_chat(caster, span_notice("[demon_name] changes [target]'s movement speed by [current_power]% for [DisplayTimeText(duration)]."))
+					to_chat(caster, span_notice("[demon_name] changes [target]'s movement speed by [current_power]% for [DisplayTimeText(effect_duration)]."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_INTERACTION_SPEED)
 			var/mob/living/living_target = target
-			if(istype(living_target) && duration > 0)
+			if(istype(living_target) && effect_duration > 0)
 				living_target.add_or_update_variable_actionspeed_modifier(/datum/actionspeed_modifier/cyberdemon, multiplicative_slowdown = -(current_power / 100))
-				addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_actionspeed_modifier), WEAKREF(living_target)), duration)
+				addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_remove_actionspeed_modifier), WEAKREF(living_target)), effect_duration)
 				if(announce)
-					to_chat(caster, span_notice("[demon_name] changes [target]'s interaction speed by [current_power]% for [DisplayTimeText(duration)]."))
+					to_chat(caster, span_notice("[demon_name] changes [target]'s interaction speed by [current_power]% for [DisplayTimeText(effect_duration)]."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_BLOCK_IMPLANTS)
 			var/mob/living/living_target = target
 			if(istype(living_target))
-				var/block_duration = max(1 SECONDS, duration || (absolute_power SECONDS))
+				var/block_duration = max(1 SECONDS, effect_duration || (absolute_power SECONDS))
 				living_target.cyberdemon_block_implants(block_duration)
 				if(announce)
 					to_chat(caster, span_notice("[demon_name] blocks [target]'s active implant channels for [DisplayTimeText(block_duration)]."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_BUFF, CYBER_DEMON_EFFECT_DEBUFF)
+			var/mob/living/living_target = target
+			if(istype(living_target))
+				var/network_delta = max(1, absolute_power * 2)
+				if(effect == CYBER_DEMON_EFFECT_DEBUFF || current_power < 0)
+					living_target.adjust_chromity_overheat(network_delta)
+				else
+					living_target.adjust_chromity_overheat(-network_delta)
+				if(living_target.mind && effect_duration > 0)
+					var/skill_delta = max(1, round(absolute_power / 10))
+					living_target.mind.add_cyberdemon_skill_modifier(target_skill || SKILL_HACKING, effect == CYBER_DEMON_EFFECT_DEBUFF ? -skill_delta : skill_delta, effect_duration, demon_name)
+				if(announce)
+					to_chat(caster, span_notice("[demon_name] applies a [effect] as [network_delta] neural protection pressure on [target]."))
+				return TRUE
 			if(announce)
-				to_chat(caster, span_notice("[demon_name] applies a temporary [effect] with power [current_power] for [round(duration / 10)] seconds."))
+				to_chat(caster, span_notice("[demon_name] applies a temporary [effect] with power [current_power] for [round(effect_duration / 10)] seconds."))
 			return TRUE
 	return FALSE
 
@@ -954,6 +1180,7 @@
 
 /proc/get_cyberdemon_effect_choices()
 	return list(
+		"Network strike" = CYBER_DEMON_EFFECT_DAMAGE,
 		"Нагрев электроники (HEAT)" = CYBER_DEMON_EFFECT_BURN,
 		"Кислотный сбой (ACID)" = CYBER_DEMON_EFFECT_ACID,
 		"Токсичный сбой имплантов" = CYBER_DEMON_EFFECT_TOX,
@@ -969,6 +1196,10 @@
 		"Блок демонов" = CYBER_DEMON_EFFECT_BLOCK_DEMONS,
 		"Изменить выносливость" = CYBER_DEMON_EFFECT_STAMINA,
 		"Изменить защиту" = CYBER_DEMON_EFFECT_PROTECTION,
+		"Buff" = CYBER_DEMON_EFFECT_BUFF,
+		"Debuff" = CYBER_DEMON_EFFECT_DEBUFF,
+		"Copy cryptokey" = CYBER_DEMON_EFFECT_CRYPTOKEY,
+		"EMP" = CYBER_DEMON_EFFECT_EMP,
 		"Стена" = CYBER_DEMON_EFFECT_WALL,
 		"Скачок" = CYBER_DEMON_EFFECT_MOVEMENT,
 	)
@@ -1237,6 +1468,7 @@
 
 	return list(
 		"net_data" = user?.mind?.cyber_net_data || 0,
+		"compile_requirement_multiplier" = cyberdemon_compile_requirement_multiplier(user),
 		"deck" = list(
 			"present" = !!deck,
 			"name" = deck?.name,
@@ -1252,7 +1484,8 @@
 			"used_memory" = disk?.get_used_memory() || 0,
 			"memory_capacity" = disk?.memory_capacity || 0,
 			"free_memory" = disk?.get_free_memory() || 0,
-			"cryptokeys" = 0,
+			"net_data" = disk?.stored_net_data || 0,
+			"cryptokeys" = disk?.get_stored_cryptokey_count() || 0,
 			"demons" = disk_demons,
 		),
 		"terminal" = list(
@@ -1325,7 +1558,10 @@
 			return TRUE
 		if("delete_deck")
 			if(deck)
-				if(delete_cyberdemon_from_list(deck.demons, params["index"], user, deck))
+				var/delete_index = cyberdemon_parse_ui_index(params["index"])
+				var/datum/cyberspace_demon/deleted_demon = (delete_index >= 1 && delete_index <= length(deck.demons)) ? deck.demons[delete_index] : null
+				if(delete_cyberdemon_from_list(deck.demons, delete_index, user, deck))
+					deck.forget_demon(deleted_demon)
 					deck.sync_demon_actions(user)
 			return TRUE
 		if("delete_disk")
@@ -1373,6 +1609,33 @@
 			else
 				qdel(demon_copy)
 			return TRUE
+		if("download_net_data")
+			if(!disk)
+				to_chat(user, span_warning("No demon disk is available."))
+				return TRUE
+			var/amount = cyberdemon_parse_ui_index(params["amount"])
+			if(amount <= 0)
+				amount = user.mind?.cyber_net_data || 0
+			disk.download_net_data(user, amount)
+			return TRUE
+		if("upload_net_data")
+			if(!disk)
+				to_chat(user, span_warning("No demon disk is available."))
+				return TRUE
+			disk.upload_net_data(user)
+			return TRUE
+		if("download_cryptokeys")
+			if(!disk)
+				to_chat(user, span_warning("No demon disk is available."))
+				return TRUE
+			disk.download_cryptokeys(user)
+			return TRUE
+		if("upload_cryptokeys")
+			if(!disk)
+				to_chat(user, span_warning("No demon disk is available."))
+				return TRUE
+			disk.upload_cryptokeys(user)
+			return TRUE
 	return FALSE
 
 /datum/action/cooldown/cyberdemon
@@ -1382,7 +1645,7 @@
 	button_icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	button_icon_state = "skillchip"
 	overlay_icon_state = "bg_spell_border"
-	click_to_activate = TRUE
+	click_to_activate = FALSE
 	unset_after_click = TRUE
 	check_flags = AB_CHECK_CONSCIOUS
 	var/obj/item/clothing/gloves/cyberdeck/deck
@@ -1429,13 +1692,11 @@
 
 /datum/action/cooldown/cyberdemon/Activate(atom/target)
 	var/mob/living/user = owner
-	if(!istype(user) || !target || target == deck || QDELETED(deck) || QDELETED(demon))
+	if(!istype(user) || QDELETED(deck) || QDELETED(demon))
 		return FALSE
-	if(demon.apply(user, target, deck))
-		if(demon.cooldown > 0)
-			StartCooldown(demon.cooldown)
-		return TRUE
-	return FALSE
+	if(target && target != user && target != deck)
+		return deck.release_or_prepare_demon(user, target, demon)
+	return deck.select_demon(demon, user)
 
 /obj/item/clothing/gloves/cyberdeck
 	name = "cyberdeck gloves"
@@ -1446,9 +1707,17 @@
 	var/compile_cooldown_until = 0
 	var/obj/item/cyberdemon_disk/inserted_disk
 	var/list/demon_actions = list()
+	var/datum/cyberspace_demon/selected_demon
+	var/datum/cyberspace_demon/preparing_demon
+	var/datum/cyberspace_demon/ready_demon
+	var/prepared_power = 0
+	var/prepared_physical_world = FALSE
+	var/prepare_token = 0
+	var/datum/weakref/middleclick_owner_ref
 
 /obj/item/clothing/gloves/cyberdeck/Destroy(force)
 	clear_demon_actions()
+	unregister_middleclick_owner()
 	QDEL_LIST(demons)
 	QDEL_NULL(inserted_disk)
 	return ..()
@@ -1456,11 +1725,122 @@
 /obj/item/clothing/gloves/cyberdeck/equipped(mob/living/user, slot)
 	. = ..()
 	if(istype(user))
+		register_middleclick_owner(user)
 		sync_demon_actions(user)
 
 /obj/item/clothing/gloves/cyberdeck/dropped(mob/living/user)
 	. = ..()
+	unregister_middleclick_owner(user)
 	clear_demon_actions(user)
+
+/obj/item/clothing/gloves/cyberdeck/proc/register_middleclick_owner(mob/living/user)
+	if(!istype(user))
+		return
+	unregister_middleclick_owner()
+	middleclick_owner_ref = WEAKREF(user)
+	RegisterSignal(user, COMSIG_MOB_MIDDLECLICKON, PROC_REF(on_owner_middleclick))
+	RegisterSignal(user, COMSIG_MOB_MIDDLEMOUSEDOWNON, PROC_REF(on_owner_middle_mouse_down))
+	RegisterSignal(user, COMSIG_MOB_MIDDLEMOUSEUPON, PROC_REF(on_owner_middle_mouse_up))
+
+/obj/item/clothing/gloves/cyberdeck/proc/unregister_middleclick_owner(mob/living/user)
+	var/mob/living/old_owner = user || middleclick_owner_ref?.resolve()
+	if(old_owner)
+		UnregisterSignal(old_owner, list(COMSIG_MOB_MIDDLECLICKON, COMSIG_MOB_MIDDLEMOUSEDOWNON, COMSIG_MOB_MIDDLEMOUSEUPON))
+	middleclick_owner_ref = null
+
+/obj/item/clothing/gloves/cyberdeck/proc/on_owner_middleclick(mob/living/user, atom/target, params)
+	SIGNAL_HANDLER
+	if(!istype(user) || !(src in user.contents))
+		return
+	if(!selected_demon && !ready_demon && !preparing_demon)
+		return
+	return COMSIG_MOB_CANCEL_CLICKON
+
+/obj/item/clothing/gloves/cyberdeck/proc/on_owner_middle_mouse_down(mob/living/user, atom/target, params)
+	SIGNAL_HANDLER
+	if(!istype(user) || !(src in user.contents) || !selected_demon || ready_demon || preparing_demon)
+		return
+	prepare_selected_demon(user, selected_demon)
+	return COMSIG_MOB_CANCEL_CLICKON
+
+/obj/item/clothing/gloves/cyberdeck/proc/on_owner_middle_mouse_up(mob/living/user, atom/target, params)
+	SIGNAL_HANDLER
+	if(!istype(user) || !(src in user.contents))
+		return
+	if(ready_demon)
+		release_ready_demon(user, target)
+		return COMSIG_MOB_CANCEL_CLICKON
+	if(preparing_demon)
+		to_chat(user, span_warning("[preparing_demon.demon_name] preparation is released before completion."))
+		clear_prepared_demon()
+		return COMSIG_MOB_CANCEL_CLICKON
+
+/obj/item/clothing/gloves/cyberdeck/proc/select_demon(datum/cyberspace_demon/demon, mob/living/user)
+	if(!demon || !(demon in demons))
+		return FALSE
+	selected_demon = demon
+	to_chat(user, span_notice("[demon.demon_name] selected. Middle-click to prepare; middle-click a target when ready to release it."))
+	return TRUE
+
+/obj/item/clothing/gloves/cyberdeck/proc/release_or_prepare_demon(mob/living/user, atom/target, datum/cyberspace_demon/demon)
+	if(ready_demon)
+		return release_ready_demon(user, target)
+	if(preparing_demon)
+		to_chat(user, span_warning("[preparing_demon.demon_name] is still preparing."))
+		return TRUE
+	return prepare_selected_demon(user, demon || selected_demon)
+
+/obj/item/clothing/gloves/cyberdeck/proc/prepare_selected_demon(mob/living/user, datum/cyberspace_demon/demon)
+	if(!istype(user) || !demon || !(demon in demons))
+		return FALSE
+	if(!can_run_demons(user))
+		return FALSE
+	if(demon.cooldown > 0 && world.time < demon.next_use)
+		to_chat(user, span_warning("[demon.demon_name] is cooling down for [DisplayTimeText(demon.next_use - world.time)]."))
+		return TRUE
+	preparing_demon = demon
+	ready_demon = null
+	prepare_token++
+	var/current_token = prepare_token
+	prepared_physical_world = !user.is_projected_into_cyberspace()
+	prepared_power = demon.get_effective_power(user, prepared_physical_world)
+	var/prepare_time = demon.get_effective_cast_time(user)
+	to_chat(user, span_notice("You start preparing [demon.demon_name]."))
+	INVOKE_ASYNC(src, PROC_REF(finish_demon_preparation), WEAKREF(user), WEAKREF(demon), current_token, prepare_time)
+	return TRUE
+
+/obj/item/clothing/gloves/cyberdeck/proc/finish_demon_preparation(datum/weakref/user_ref, datum/weakref/demon_ref, current_token, prepare_time)
+	var/mob/living/user = user_ref?.resolve()
+	var/datum/cyberspace_demon/demon = demon_ref?.resolve()
+	if(prepare_time > 0 && (!user || !do_after(user, prepare_time, target = src, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_HELD_ITEM, hidden = TRUE)))
+		if(prepare_token == current_token)
+			clear_prepared_demon()
+		if(user && demon)
+			to_chat(user, span_warning("[demon.demon_name] preparation collapses."))
+		return TRUE
+	if(prepare_token != current_token || preparing_demon != demon)
+		return TRUE
+	preparing_demon = null
+	ready_demon = demon
+	to_chat(user, span_notice("[demon.demon_name] is ready. Middle-click a target to release it."))
+	return TRUE
+
+/obj/item/clothing/gloves/cyberdeck/proc/release_ready_demon(mob/living/user, atom/target)
+	if(!istype(user) || !target || !ready_demon)
+		clear_prepared_demon()
+		return FALSE
+	var/datum/cyberspace_demon/demon = ready_demon
+	var/current_power = prepared_power
+	var/physical_world = prepared_physical_world
+	clear_prepared_demon()
+	return demon.release_prepared(user, target, src, current_power, physical_world)
+
+/obj/item/clothing/gloves/cyberdeck/proc/clear_prepared_demon()
+	preparing_demon = null
+	ready_demon = null
+	prepared_power = 0
+	prepared_physical_world = FALSE
+	prepare_token++
 
 /obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions(mob/living/user)
 	var/mob/action_owner = user
@@ -1513,6 +1893,12 @@
 		sync_demon_actions(living_user)
 	return TRUE
 
+/obj/item/clothing/gloves/cyberdeck/proc/forget_demon(datum/cyberspace_demon/demon)
+	if(selected_demon == demon)
+		selected_demon = null
+	if(preparing_demon == demon || ready_demon == demon)
+		clear_prepared_demon()
+
 /obj/item/clothing/gloves/cyberdeck/proc/can_compile(mob/user)
 	if(world.time < compile_cooldown_until)
 		to_chat(user, span_warning("[src] is cooling down for [DisplayTimeText(compile_cooldown_until - world.time)]."))
@@ -1556,6 +1942,7 @@
 		to_chat(user, span_warning("Prebuilt demons cannot be deleted from [src]."))
 		return FALSE
 	demons -= demon
+	forget_demon(demon)
 	to_chat(user, span_notice("You delete [demon.demon_name] from [src]."))
 	qdel(demon)
 	var/mob/living/living_user = user
@@ -1688,9 +2075,12 @@
 	w_class = WEIGHT_CLASS_SMALL
 	var/memory_capacity = CYBER_DEMON_DISK_MEMORY
 	var/list/demons = list()
+	var/stored_net_data = 0
+	var/list/stored_cryptokeys = list()
 
 /obj/item/cyberdemon_disk/Destroy(force)
 	QDEL_LIST(demons)
+	stored_cryptokeys = null
 	return ..()
 
 /obj/item/cyberdemon_disk/proc/get_used_memory()
@@ -1714,6 +2104,64 @@
 	if(!can_store_demon(demon, user))
 		return FALSE
 	demons += demon
+	return TRUE
+
+/obj/item/cyberdemon_disk/proc/get_stored_cryptokey_count()
+	return length(stored_cryptokeys)
+
+/obj/item/cyberdemon_disk/proc/download_net_data(mob/living/user, amount)
+	if(!user?.mind)
+		return FALSE
+	amount = min(max(0, round(amount)), user.mind.cyber_net_data)
+	if(amount <= 0)
+		to_chat(user, span_warning("No net-data is available to write."))
+		return FALSE
+	user.mind.cyber_net_data -= amount
+	stored_net_data += amount
+	to_chat(user, span_notice("You write [amount] net-data to [src]. Disk net-data: [stored_net_data]."))
+	return TRUE
+
+/obj/item/cyberdemon_disk/proc/upload_net_data(mob/living/user)
+	if(!user?.mind)
+		return FALSE
+	if(stored_net_data <= 0)
+		to_chat(user, span_warning("[src] has no stored net-data."))
+		return FALSE
+	var/amount = stored_net_data
+	stored_net_data = 0
+	user.mind.add_cyber_net_data(amount)
+	to_chat(user, span_notice("You load [amount] net-data from [src]. Total net-data: [user.mind.cyber_net_data]."))
+	return TRUE
+
+/obj/item/cyberdemon_disk/proc/download_cryptokeys(mob/living/user)
+	if(!user?.mind?.cyber_cryptokeys)
+		to_chat(user, span_warning("No cached cryptographic keys are available to write."))
+		return FALSE
+	if(!stored_cryptokeys)
+		stored_cryptokeys = list()
+	var/copied = 0
+	for(var/key in user.mind.cyber_cryptokeys)
+		if(stored_cryptokeys[key])
+			continue
+		stored_cryptokeys[key] = user.mind.cyber_cryptokeys[key]
+		copied++
+	to_chat(user, span_notice("You write [copied] cryptographic key[copied == 1 ? "" : "s"] to [src]."))
+	return TRUE
+
+/obj/item/cyberdemon_disk/proc/upload_cryptokeys(mob/living/user)
+	if(!user?.mind)
+		return FALSE
+	if(!length(stored_cryptokeys))
+		to_chat(user, span_warning("[src] has no stored cryptographic keys."))
+		return FALSE
+	var/loaded = 0
+	for(var/key in stored_cryptokeys)
+		var/datum/cyberspace_cryptokey/cryptokey = stored_cryptokeys[key]
+		if(user.mind.has_cyber_cryptokey(cryptokey))
+			continue
+		if(user.mind.remember_cyber_cryptokey(cryptokey))
+			loaded++
+	to_chat(user, span_notice("You load [loaded] cryptographic key[loaded == 1 ? "" : "s"] from [src]."))
 	return TRUE
 
 /obj/item/cyberdemon_disk/prebuilt

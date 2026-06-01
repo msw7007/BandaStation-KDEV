@@ -108,7 +108,12 @@
 	var/turf/target_turf = get_turf(target)
 	if(!actor_turf || !target_turf || actor_turf.z != target_turf.z)
 		return FALSE
-	return get_dist(actor_turf, target_turf) <= 1
+	var/max_distance = 1
+	var/mob/living/body = get_cyberspace_user_body(user)
+	var/remote_range = body?.mind?.get_character_perk_effectiveness(SKILL_HACKING, 4) || 0
+	if(remote_range > 0)
+		max_distance = max(max_distance, round(remote_range))
+	return get_dist(actor_turf, target_turf) <= max_distance
 
 /proc/cyberspace_node_requires_adjacent(mob/user, atom/target)
 	if(cyberspace_node_is_adjacent(user, target))
@@ -145,10 +150,14 @@
 		"settings" = node.can_use_control_function(body, "settings"),
 	)
 	data["protection"] = list(
+		"model" = ice.model,
+		"model_name" = ice.model_name,
 		"reserve" = ice.current_reserve,
 		"max_reserve" = ice.get_max_reserve(),
 		"breached" = ice.is_breached(),
 		"alarm" = ice.alarm_triggered,
+		"manufacturer_diversity" = node.get_manufacturer_diversity_count(),
+		"manufacturer_diversity_bonus" = round(node.get_manufacturer_diversity_bonus() * 100),
 	)
 
 	var/list/live_objects = node.get_live_objects()

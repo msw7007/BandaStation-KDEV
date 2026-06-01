@@ -119,6 +119,7 @@
 	if(!cryptographic_key)
 		cryptographic_key = generate_neural_cryptokey()
 	neural_ice = new()
+	refresh_ice_model()
 
 /obj/item/organ/cyberimp/brain/neural_interface/Destroy()
 	QDEL_NULL(neural_ice)
@@ -147,6 +148,7 @@
 	if(!cryptographic_key)
 		cryptographic_key = generate_neural_cryptokey()
 	receiver.corp_align = corp_manufacturer == "independent" ? null : corp_manufacturer
+	refresh_ice_model()
 
 /obj/item/organ/cyberimp/brain/neural_interface/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
@@ -164,6 +166,15 @@
 	if(!neural_ice)
 		neural_ice = new()
 	return neural_ice
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/refresh_ice_model()
+	var/datum/cyber_ice/ice = get_ice()
+	if(corp_manufacturer && corp_manufacturer != "independent")
+		return ice.configure_model(CYBER_ICE_MODEL_CORPORATE)
+	return ice.configure_model(CYBER_ICE_MODEL_BASIC)
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/set_ice_model(model)
+	return get_ice().configure_model(model)
 
 /obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_chromity_penalty()
 	return get_ice().get_chromity_penalty()
