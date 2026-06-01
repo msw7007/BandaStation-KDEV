@@ -59,6 +59,7 @@
 
 /datum/bodypart_overlay/simple/body_marking/human_tattoo
 	dna_color_feature_key = FEATURE_HUMAN_TATTOO_COLOR
+	blocks_emissive = EMISSIVE_BLOCK_NONE
 	var/tattoo_layer = 1
 
 /datum/bodypart_overlay/simple/body_marking/human_tattoo/get_image(layer, obj/item/bodypart/limb)

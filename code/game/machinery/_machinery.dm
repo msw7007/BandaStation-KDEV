@@ -253,7 +253,7 @@
 
 /obj/item/cyberpunk_machine_module/power_governor
 	name = "reserve power governor"
-	icon_state = "circuit"
+	icon_state = "circuit_board"
 	module_datum_type = /datum/cyberpunk_machine_module/power_governor
 
 /obj/item/cyberpunk_machine_module/wear_buffer
@@ -263,22 +263,22 @@
 
 /obj/item/cyberpunk_machine_module/reinforced_frame
 	name = "reinforced machine frame"
-	icon_state = "cell_condenser"
+	icon_state = "cell_con"
 	module_datum_type = /datum/cyberpunk_machine_module/reinforced_frame
 
 /obj/item/cyberpunk_machine_module/service_bus
 	name = "service bus"
-	icon_state = "electronic_module"
+	icon_state = "component"
 	module_datum_type = /datum/cyberpunk_machine_module/service_bus
 
 /obj/item/cyberpunk_machine_module/salvage_router
 	name = "salvage routing matrix"
-	icon_state = "data_disk"
+	icon_state = "harddisk"
 	module_datum_type = /datum/cyberpunk_machine_module/salvage_router
 
 /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
 	name = "chem reaction accelerator"
-	icon_state = "electronic_module"
+	icon_state = "component"
 	module_datum_type = /datum/cyberpunk_machine_module/chem_reaction_accelerator
 
 /obj/item/cyberpunk_machine_module/chem_yield_regulator
@@ -288,12 +288,12 @@
 
 /obj/item/cyberpunk_machine_module/corporate_vending_bus
 	name = "corporate vending bus"
-	icon_state = "data_disk"
+	icon_state = "harddisk"
 	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus
 
 /obj/item/cyberpunk_machine_module/apc_efficiency_core
 	name = "APC efficiency core"
-	icon_state = "circuit"
+	icon_state = "circuit_board"
 	module_datum_type = /datum/cyberpunk_machine_module/apc_efficiency_core
 
 /datum/design/cyberpunk_machine_module

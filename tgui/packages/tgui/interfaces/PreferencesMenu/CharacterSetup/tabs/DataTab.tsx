@@ -176,7 +176,7 @@ const appearanceCategories: AppearanceCategory[] = [
   },
   {
     id: 'marks',
-    label: 'Татуировки / марки',
+    label: 'Метки вида',
     icon: 'stamp',
     controls: markControls,
   },

@@ -312,6 +312,8 @@
 /mob/living/proc/recalculate_equipment_style()
 	var/style_score = 0
 	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_ACCESSORIES|INCLUDE_ABSTRACT))
+		if(isnull(item))
+			continue
 		if(!(item.slot_flags & (ITEM_SLOT_ICLOTHING|ITEM_SLOT_OCLOTHING|ITEM_SLOT_HEAD|ITEM_SLOT_MASK|ITEM_SLOT_NECK|ITEM_SLOT_FEET|ITEM_SLOT_GLOVES|ITEM_SLOT_EYES)))
 			continue
 		var/item_score = 0

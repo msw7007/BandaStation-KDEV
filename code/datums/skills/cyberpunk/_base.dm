@@ -155,6 +155,39 @@
 		whole_amount++
 	return max(base_amount, whole_amount)
 
+/mob/living/proc/get_cyberpunk_driving_fuel_multiplier()
+	return max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_DRIVING, 1) * 0.01)
+
+/mob/living/proc/get_cyberpunk_driving_speed_multiplier()
+	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_DRIVING, 2) * 0.01)
+
+/mob/living/proc/get_cyberpunk_driving_reaction_multiplier()
+	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_DRIVING, 3) * 0.01)
+
+/mob/living/proc/get_cyberpunk_driving_maneuver_multiplier()
+	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_DRIVING, 4) * 0.01)
+
+/mob/living/proc/get_cyberpunk_driving_brake_multiplier()
+	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_DRIVING, 5) * 0.01)
+
+/mob/living/proc/get_cyberpunk_vehicle_repair_time_multiplier(atom/target)
+	var/highest_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
+	)
+	if(target?.is_cyberpunk_recently_analyzed())
+		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3))
+	return 1 / max(0.1, 1 + highest_bonus * 0.01)
+
+/mob/living/proc/get_cyberpunk_vehicle_repair_amount(atom/target, base_amount = 15)
+	var/highest_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
+		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
+	)
+	return base_amount * (1 + highest_bonus * 0.01)
+
 /mob/living/proc/get_cyberpunk_machine_diagnostic_data(atom/target)
 	if(!target)
 		return list()
