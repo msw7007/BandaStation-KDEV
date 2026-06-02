@@ -370,6 +370,30 @@
 		"reason" = reason,
 	)))
 
+//CYBERPUNK BUILD - rebuild and delete before release
+/datum/bank_account/cyberpunk_corporation
+	add_to_accounts = FALSE
+
+/datum/bank_account/cyberpunk_corporation/New(newname)
+	account_holder = newname
+	payday_modifier = 1
+	setup_cyberpunk_account_id()
+	pay_token = uppertext("[copytext_char(newname, 1, 2)][copytext_char(newname, -1)]-[random_capital_letter()]-[rand(1111,9999)]")
+
+/datum/bank_account/cyberpunk_corporation/Destroy()
+	SSeconomy.bank_accounts_by_id -= "[account_id]"
+	return ..()
+
+/datum/bank_account/cyberpunk_corporation/proc/setup_cyberpunk_account_id()
+	for(var/i in 1 to 1000)
+		account_id = rand(111111, 999999)
+		if(!SSeconomy.bank_accounts_by_id["[account_id]"])
+			break
+	if(SSeconomy.bank_accounts_by_id["[account_id]"])
+		stack_trace("Unable to find a unique cyberpunk corporation account ID, substituting currently existing account of id [account_id].")
+	SSeconomy.bank_accounts_by_id["[account_id]"] = src
+//CYBERPUNK BUILD - rebuild and delete before release
+
 #define CYBERPUNK_CONTRACT_CREATED "created"
 #define CYBERPUNK_CONTRACT_OFFERED "offered"
 #define CYBERPUNK_CONTRACT_ACCEPTED "accepted"
@@ -388,6 +412,842 @@
 #define CYBERPUNK_CONTRACT_TAX_RATE 0.05
 
 //CYBERPUNK BUILD - rebuild and delete before release
+#define CYBERPUNK_CORP_BENN "benn"
+#define CYBERPUNK_CORP_RYAZNOV "ryaznov"
+#define CYBERPUNK_CORP_STARLIGHT "starlight"
+#define CYBERPUNK_CORP_GOVERNMENT "government"
+#define CYBERPUNK_CORP_STARTING_BUDGET 15000
+#define CYBERPUNK_CORP_RESEARCH_TO_CREDITS 50
+#define CYBERPUNK_CORP_LEVEL_STEP 100
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_corporation(corporation_id)
+	ensure_cyberpunk_corporations_seeded()
+	return cyberpunk_corporations[cyberpunk_normalize_corporation_id(corporation_id)]
+
+/datum/controller/subsystem/economy/proc/cyberpunk_normalize_corporation_id(corporation_id)
+	var/corp_id = lowertext(trim("[corporation_id]"))
+	switch(corp_id)
+		if("benn", "ben", "bэн", "бэнь")
+			return CYBERPUNK_CORP_BENN
+		if("ryaznov", "riaznov", "рязнов")
+			return CYBERPUNK_CORP_RYAZNOV
+		if("starlight", "старлайт")
+			return CYBERPUNK_CORP_STARLIGHT
+		if("government", "gov", "nanotrasen", "правительство")
+			return CYBERPUNK_CORP_GOVERNMENT
+	return corp_id
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_public_corporation_names(include_government = FALSE)
+	ensure_cyberpunk_corporations_seeded()
+	var/list/names = list()
+	for(var/corporation_id in cyberpunk_corporations)
+		var/datum/cyberpunk_corporation/corporation = cyberpunk_corporations[corporation_id]
+		if(corporation.hidden && !include_government)
+			continue
+		names += corporation.name
+	return names
+
+/datum/controller/subsystem/economy/proc/ensure_cyberpunk_corporations_seeded()
+	if(cyberpunk_corporations_seeded)
+		return
+	cyberpunk_corporations_seeded = TRUE
+	create_cyberpunk_corporation(CYBERPUNK_CORP_BENN)
+	create_cyberpunk_corporation(CYBERPUNK_CORP_RYAZNOV)
+	create_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
+	create_cyberpunk_corporation(CYBERPUNK_CORP_GOVERNMENT)
+
+/datum/controller/subsystem/economy/proc/create_cyberpunk_corporation(corporation_id)
+	corporation_id = cyberpunk_normalize_corporation_id(corporation_id)
+	if(cyberpunk_corporations[corporation_id])
+		return cyberpunk_corporations[corporation_id]
+	var/datum/cyberpunk_corporation/corporation = new(corporation_id)
+	corporation.ensure_account()
+	cyberpunk_corporations[corporation_id] = corporation
+	return corporation
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_corporate_activity(corporation_id, data_type = "general", data_amount = 0, credit_amount = 0, source = "activity")
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(corporation_id)
+	if(!corporation)
+		return FALSE
+	if(data_amount)
+		corporation.add_data(data_type, data_amount, source)
+	if(credit_amount)
+		corporation.add_funds(credit_amount, source)
+	return TRUE
+
+/datum/controller/subsystem/economy/proc/cyberpunk_corporation_id_from_manufacturer(manufacturer)
+	var/manufacturer_id = cyberpunk_normalize_corporation_id(manufacturer)
+	if(cyberpunk_corporations[manufacturer_id])
+		return manufacturer_id
+	var/manufacturer_text = lowertext(trim("[manufacturer]"))
+	if(findtext(manufacturer_text, "benn") || findtext(manufacturer_text, "ben"))
+		return CYBERPUNK_CORP_BENN
+	if(findtext(manufacturer_text, "ryaznov") || findtext(manufacturer_text, "riaznov"))
+		return CYBERPUNK_CORP_RYAZNOV
+	if(findtext(manufacturer_text, "starlight"))
+		return CYBERPUNK_CORP_STARLIGHT
+	if(findtext(manufacturer_text, "government") || findtext(manufacturer_text, "nanotrasen"))
+		return CYBERPUNK_CORP_GOVERNMENT
+	return null
+
+/datum/controller/subsystem/economy/proc/cyberpunk_corporation_has_edict(corporation_id, edict_id)
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(corporation_id)
+	return corporation?.has_edict(edict_id)
+
+/datum/controller/subsystem/economy/proc/cyberpunk_manufacturer_has_edict(manufacturer, edict_id)
+	return cyberpunk_corporation_has_edict(cyberpunk_corporation_id_from_manufacturer(manufacturer), edict_id)
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_manufacturer_activity(manufacturer, data_type = "general", data_amount = 0, credit_amount = 0, source = "activity")
+	return record_cyberpunk_corporate_activity(cyberpunk_corporation_id_from_manufacturer(manufacturer), data_type, data_amount, credit_amount, source)
+
+/datum/controller/subsystem/economy/proc/cyberpunk_corporate_edict_multiplier(manufacturer, list/edict_ids, default_multiplier = 1, active_multiplier = 1.1)
+	var/corporation_id = cyberpunk_corporation_id_from_manufacturer(manufacturer)
+	if(!corporation_id)
+		return default_multiplier
+	for(var/edict_id in edict_ids)
+		if(cyberpunk_corporation_has_edict(corporation_id, edict_id))
+			return active_multiplier
+	return default_multiplier
+
+/datum/cyberpunk_corporation
+	var/id = ""
+	var/name = "Corporation"
+	var/group = ""
+	var/direction = ""
+	var/combat_doctrine = ""
+	var/hidden = FALSE
+	var/account_id
+	var/level = 1
+	var/experience = 0
+	var/research_points = 0
+	var/influence = 0
+	var/list/subsidiaries = list()
+	var/list/research_data = list()
+	var/list/unlocked_technologies = list()
+	var/list/active_edicts = list()
+	var/list/subscribers = list()
+	var/list/stolen_technology_progress = list()
+	var/list/stolen_technologies = list()
+	var/list/technologies = list()
+	var/list/edicts = list()
+	var/list/history = list()
+
+/datum/cyberpunk_corporation/New(corporation_id)
+	. = ..()
+	id = corporation_id
+	setup_profile()
+	add_history("corporation initialized")
+
+/datum/cyberpunk_corporation/proc/setup_profile()
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			name = "Benn Conglomerate"
+			group = "Asian medical and genetic group"
+			direction = "Medicine, genetics, chemistry, stealth, precision, speed."
+			combat_doctrine = "Hidden and precise strikes, blade damage, poison, acceleration, stealth."
+			subsidiaries = list("Benn Bio", "Benn Clinic", "Benn Shadow")
+			technologies = list(
+				list("id" = "benn_medtech", "name" = "Medical service lattice", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Medical kiosks, analyzers, insurance goods, and treatment automation."),
+				list("id" = "benn_genetics", "name" = "Genetic stabilization", "tier" = 2, "cost" = 45, "prereq" = "benn_medtech", "description" = "Genetic consoles, infusers, stabilizers, and mutation rollback support."),
+				list("id" = "benn_chemistry", "name" = "Combat chemistry", "tier" = 3, "cost" = 65, "prereq" = "benn_genetics", "description" = "Composite reagents, toxins, acid mixtures, and chemical demon payloads."),
+				list("id" = "benn_stealthware", "name" = "Stealthware implants", "tier" = 4, "cost" = 85, "prereq" = "benn_chemistry", "description" = "Stealth, speed, precision and surgical implant branches."),
+				list("id" = "benn_bioarchive", "name" = "DNA archive", "tier" = 5, "cost" = 110, "prereq" = "benn_stealthware", "description" = "Bio-data storage, foreign technology scanning, and recovery research.")
+			)
+			edicts = cyberpunk_benn_edicts()
+		if(CYBERPUNK_CORP_RYAZNOV)
+			name = "Ryaznov Union"
+			group = "European infrastructure and industry group"
+			direction = "Construction, repair, robotics, energy, heavy machinery, industrial production."
+			combat_doctrine = "Open force, reliability, armor, area damage, impact and thermal weapons."
+			subsidiaries = list("Ryaznov Works", "Ryaznov Energy", "Ryaznov Defense")
+			technologies = list(
+				list("id" = "ryaznov_tools", "name" = "Industrial toolchain", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Engineering tools, analyzers, repair stations, and construction gear."),
+				list("id" = "ryaznov_fortification", "name" = "Fortification grid", "tier" = 2, "cost" = 45, "prereq" = "ryaznov_tools", "description" = "Barriers, shields, barricades, plating, and reinforced structures."),
+				list("id" = "ryaznov_power", "name" = "Power and shield systems", "tier" = 3, "cost" = 65, "prereq" = "ryaznov_fortification", "description" = "Generators, shield emitters, chargers, and emergency energy modules."),
+				list("id" = "ryaznov_robotics", "name" = "Robotic industry", "tier" = 4, "cost" = 85, "prereq" = "ryaznov_power", "description" = "Drones, turrets, mech docks, exoskeletons, and mobile workshops."),
+				list("id" = "ryaznov_blueprints", "name" = "Blueprint archive", "tier" = 5, "cost" = 110, "prereq" = "ryaznov_robotics", "description" = "Engineering data archive and foreign technology reverse engineering.")
+			)
+			edicts = cyberpunk_ryaznov_edicts()
+		if(CYBERPUNK_CORP_STARLIGHT)
+			name = "Starlight Combine"
+			group = "North American logistics and mass production group"
+			direction = "Goods, transport, delivery, contracts, vending, teleport nodes, social influence."
+			combat_doctrine = "Control, mass pressure, speed, buffs, debuffs, teleportation, positional manipulation."
+			subsidiaries = list("Starlight Logistics", "Starlight Transit", "Starlight Market")
+			technologies = list(
+				list("id" = "starlight_market", "name" = "Market routing", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Contracts, vending, subscriptions, and stock telemetry."),
+				list("id" = "starlight_delivery", "name" = "Delivery network", "tier" = 2, "cost" = 45, "prereq" = "starlight_market", "description" = "Cargo drones, delivery beacons, route data, and business logistics."),
+				list("id" = "starlight_vehicle", "name" = "Transport platforms", "tier" = 3, "cost" = 65, "prereq" = "starlight_delivery", "description" = "Ground and air vehicles, route registration, and cargo movement."),
+				list("id" = "starlight_phase", "name" = "Phase logistics", "tier" = 4, "cost" = 85, "prereq" = "starlight_vehicle", "description" = "Teleportation, recall, phase suits, and blink delivery."),
+				list("id" = "starlight_route_archive", "name" = "Route archive", "tier" = 5, "cost" = 110, "prereq" = "starlight_phase", "description" = "Market intelligence, foreign tech scanning, and route optimization.")
+			)
+			edicts = cyberpunk_starlight_edicts()
+		if(CYBERPUNK_CORP_GOVERNMENT)
+			name = "City Government"
+			group = "Hidden council corporation"
+			direction = "Taxes, city stability, laws, emergency modes, police support."
+			combat_doctrine = "Police operations, cameras, emergency armories, council voting keys."
+			hidden = TRUE
+			subsidiaries = list("Council", "Police", "City Treasury")
+			technologies = list(
+				list("id" = "gov_tax", "name" = "Tax registry", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Legal transaction tracking, tax records, and debt oversight."),
+				list("id" = "gov_cameras", "name" = "City surveillance", "tier" = 2, "cost" = 45, "prereq" = "gov_tax", "description" = "Camera monitoring, evidence routing, and public order data."),
+				list("id" = "gov_council", "name" = "Council voting keys", "tier" = 3, "cost" = 65, "prereq" = "gov_cameras", "description" = "Council votes, emergency state confirmation, and formal decrees."),
+				list("id" = "gov_armory", "name" = "Emergency armory", "tier" = 4, "cost" = 85, "prereq" = "gov_council", "description" = "Special police warehouse and emergency combat kit authorization."),
+				list("id" = "gov_city_directive", "name" = "City directive", "tier" = 5, "cost" = 110, "prereq" = "gov_armory", "description" = "City-wide corporate action approval and suppression hooks.")
+			)
+			edicts = list()
+
+/datum/cyberpunk_corporation/proc/ensure_account()
+	if(account_id && SSeconomy.bank_accounts_by_id["[account_id]"])
+		return SSeconomy.bank_accounts_by_id["[account_id]"]
+	var/datum/bank_account/account = new /datum/bank_account/cyberpunk_corporation("[name] corporate account")
+	account.adjust_money(CYBERPUNK_CORP_STARTING_BUDGET, "Corporate starting budget")
+	account_id = account.account_id
+	return account
+
+/datum/cyberpunk_corporation/proc/get_account()
+	return SSeconomy.bank_accounts_by_id["[account_id]"]
+
+/datum/cyberpunk_corporation/proc/add_history(message)
+	LAZYADD(history, "[round_timestamp()] - [message]")
+
+/datum/cyberpunk_corporation/proc/add_data(data_type, amount, source = "activity")
+	data_type = lowertext(trim("[data_type]")) || "general"
+	amount = max(0, round(amount))
+	if(!amount)
+		return FALSE
+	research_data[data_type] = (research_data[data_type] || 0) + amount
+	research_points += amount
+	experience += amount
+	update_level()
+	add_history("[source]: +[amount] [data_type] data, +[amount] RP")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/add_funds(amount, source = "activity")
+	amount = round(amount)
+	if(!amount)
+		return FALSE
+	var/datum/bank_account/account = ensure_account()
+	account.adjust_money(amount, "Corporate funds: [source]")
+	var/amount_prefix = amount >= 0 ? "+" : ""
+	add_history("[source]: [amount_prefix][amount][MONEY_SYMBOL]")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/update_level()
+	level = clamp(1 + FLOOR(experience / CYBERPUNK_CORP_LEVEL_STEP, 1), 1, 5)
+
+/datum/cyberpunk_corporation/proc/exchange_data_to_research(data_type, amount)
+	data_type = lowertext(trim("[data_type]")) || "general"
+	amount = clamp(round(amount), 0, research_data[data_type] || 0)
+	if(!amount)
+		return FALSE
+	research_data[data_type] -= amount
+	if(research_data[data_type] <= 0)
+		research_data -= data_type
+	research_points += amount
+	experience += amount
+	update_level()
+	add_history("converted [amount] [data_type] data to research")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/exchange_research_to_funds(points)
+	points = clamp(round(points), 0, research_points)
+	if(!points)
+		return FALSE
+	research_points -= points
+	add_funds(points * CYBERPUNK_CORP_RESEARCH_TO_CREDITS, "research exchange")
+	add_history("converted [points] RP to [points * CYBERPUNK_CORP_RESEARCH_TO_CREDITS][MONEY_SYMBOL]")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/get_technology(technology_id)
+	for(var/list/technology as anything in technologies)
+		if(technology["id"] == technology_id)
+			return technology
+	return null
+
+/datum/cyberpunk_corporation/proc/get_foreign_technology_bonus()
+	return min(0.25, length(stolen_technologies) * 0.05)
+
+/datum/cyberpunk_corporation/proc/unlock_technology(technology_id)
+	var/list/technology = get_technology(technology_id)
+	if(!technology || unlocked_technologies[technology_id])
+		return FALSE
+	var/prereq = technology["prereq"]
+	if(prereq && !unlocked_technologies[prereq])
+		return FALSE
+	var/cost = round((technology["cost"] || 0) * (1 - get_foreign_technology_bonus()))
+	if(research_points < cost)
+		return FALSE
+	research_points -= cost
+	unlocked_technologies[technology_id] = TRUE
+	var/technology_name = technology["name"]
+	add_history("unlocked technology: [technology_name]")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/choose_edict(edict_id)
+	for(var/list/edict as anything in edicts)
+		if(edict["id"] != edict_id)
+			continue
+		var/edict_level = edict["level"] || 1
+		if(level < edict_level || active_edicts["[edict_level]"])
+			return FALSE
+		active_edicts["[edict_level]"] = edict_id
+		var/edict_name = edict["name"]
+		add_history("activated level [edict_level] edict: [edict_name]")
+		return TRUE
+	return FALSE
+
+/datum/cyberpunk_corporation/proc/has_edict(edict_id)
+	for(var/level_key in active_edicts)
+		if(active_edicts[level_key] == edict_id)
+			return TRUE
+	return FALSE
+
+/datum/cyberpunk_corporation/proc/has_technology(technology_id)
+	return !!unlocked_technologies[technology_id]
+
+/datum/cyberpunk_corporation/proc/subscribe(mob/living/user)
+	if(!user)
+		return FALSE
+	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(user, user.get_bank_account())
+	if(!character_key)
+		return FALSE
+	if(subscribers[character_key])
+		return TRUE
+	var/cost = get_subscription_cost()
+	var/datum/bank_account/user_account = user.get_bank_account()
+	if(cost && (!user_account || !user_account.adjust_money(-cost, "[name] subscription")))
+		return FALSE
+	subscribers[character_key] = user.real_name || user.name
+	add_funds(cost, "subscription: [user.real_name || user.name]")
+	add_data(get_primary_data_type(), 2, "subscription")
+	add_history("[user.real_name || user.name] subscribed")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/is_subscribed(mob/living/user)
+	if(!user)
+		return FALSE
+	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(user, user.get_bank_account())
+	return !!subscribers[character_key]
+
+/datum/cyberpunk_corporation/proc/get_subscription_cost()
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			return 150
+		if(CYBERPUNK_CORP_RYAZNOV)
+			return 125
+		if(CYBERPUNK_CORP_STARLIGHT)
+			return 100
+	return 0
+
+/datum/cyberpunk_corporation/proc/get_primary_data_type()
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			return "bio"
+		if(CYBERPUNK_CORP_RYAZNOV)
+			return "engineering"
+		if(CYBERPUNK_CORP_STARLIGHT)
+			return "market"
+		if(CYBERPUNK_CORP_GOVERNMENT)
+			return "civic"
+	return "general"
+
+/datum/cyberpunk_corporation/proc/get_service_cost(service_id, mob/living/user)
+	var/subscribed = is_subscribed(user)
+	switch(service_id)
+		if("medical")
+			return subscribed ? 75 : 150
+		if("body")
+			return subscribed ? 90 : 180
+		if("stealth")
+			return subscribed ? 60 : 130
+		if("chemistry")
+			return subscribed ? 70 : 140
+		if("technical")
+			return subscribed ? 60 : 125
+		if("salvage")
+			return subscribed ? 45 : 95
+		if("fortify")
+			return subscribed ? 80 : 160
+		if("power")
+			return subscribed ? 70 : 145
+		if("delivery")
+			return subscribed ? 40 : 100
+		if("return")
+			return 0
+		if("transport")
+			return subscribed ? 85 : 170
+		if("influence")
+			return subscribed ? 50 : 110
+	return 0
+
+/datum/cyberpunk_corporation/proc/can_request_service(service_id)
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			if(service_id == "medical")
+				return has_edict("benn_med_help") || has_edict("benn_med_observation") || has_edict("benn_med_insurance")
+			if(service_id == "body")
+				return has_edict("benn_gene_combo") || has_edict("benn_dna_storage")
+			if(service_id == "stealth")
+				return has_edict("benn_chem_recycling")
+			if(service_id == "chemistry")
+				return has_edict("benn_chem_synthesis") || has_edict("benn_chem_tuning")
+		if(CYBERPUNK_CORP_RYAZNOV)
+			if(service_id == "technical")
+				return has_edict("ryaznov_field_support") || has_edict("ryaznov_tech_observation") || has_edict("ryaznov_tech_contract")
+			if(service_id == "salvage")
+				return has_edict("ryaznov_salvage_program") || has_edict("ryaznov_blueprint_archive")
+			if(service_id == "fortify")
+				return has_edict("ryaznov_mass_repair") || has_edict("ryaznov_blueprint_tuning")
+			if(service_id == "power")
+				return has_edict("ryaznov_power_tuning") || has_edict("ryaznov_field_support")
+		if(CYBERPUNK_CORP_STARLIGHT)
+			if(service_id == "delivery")
+				return has_edict("starlight_log_help") || has_edict("starlight_cargo_tracking") || has_edict("starlight_trade_subscription")
+			if(service_id == "return")
+				return has_edict("starlight_return_program")
+			if(service_id == "transport")
+				return has_edict("starlight_trade_analysis") || has_edict("starlight_log_help")
+			if(service_id == "influence")
+				return has_edict("starlight_aggressive_ads")
+	return FALSE
+
+/datum/cyberpunk_corporation/proc/get_available_services_ui()
+	var/list/services = list()
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			services += cyberpunk_service_ui_entry("medical", "Medical aid", "Remote treatment and medical telemetry.", "truck-medical", can_request_service("medical"))
+			services += cyberpunk_service_ui_entry("body", "Body stabilization", "Genetic stability and body retuning support.", "dna", can_request_service("body"))
+			services += cyberpunk_service_ui_entry("stealth", "Stealth conditioning", "Short tactical stamina and signature support.", "user-ninja", can_request_service("stealth"))
+			services += cyberpunk_service_ui_entry("chemistry", "Chemistry kit", "Combat chemistry starter delivery.", "flask", can_request_service("chemistry"))
+		if(CYBERPUNK_CORP_RYAZNOV)
+			services += cyberpunk_service_ui_entry("technical", "Technical support", "Nearby machine and structure repair.", "screwdriver-wrench", can_request_service("technical"))
+			services += cyberpunk_service_ui_entry("salvage", "Salvage pack", "Industrial material and salvage delivery.", "recycle", can_request_service("salvage"))
+			services += cyberpunk_service_ui_entry("fortify", "Field fortify", "Broad nearby integrity patch.", "shield", can_request_service("fortify"))
+			services += cyberpunk_service_ui_entry("power", "Power tune", "Nearby machinery wear and power tuning.", "bolt", can_request_service("power"))
+		if(CYBERPUNK_CORP_STARLIGHT)
+			services += cyberpunk_service_ui_entry("delivery", "Delivery pack", "Courier pack to hands or turf.", "box", can_request_service("delivery"))
+			services += cyberpunk_service_ui_entry("return", "Return program", "Sell a held non-Starlight item back into logistics.", "rotate-left", can_request_service("return"))
+			services += cyberpunk_service_ui_entry("transport", "Transport ping", "Short tactical relocation request.", "location-arrow", can_request_service("transport"))
+			services += cyberpunk_service_ui_entry("influence", "Influence pulse", "Mood and market telemetry pulse.", "bullhorn", can_request_service("influence"))
+	return services
+
+/proc/cyberpunk_service_ui_entry(service_id, label, description, icon, enabled = FALSE)
+	return list(list(
+		"id" = service_id,
+		"label" = label,
+		"description" = description,
+		"icon" = icon,
+		"enabled" = enabled,
+	))
+
+/datum/cyberpunk_corporation/proc/request_service(mob/living/user, service_id)
+	if(!can_request_service(service_id) || !user)
+		return FALSE
+	var/cost = get_service_cost(service_id, user)
+	var/datum/bank_account/user_account = user.get_bank_account()
+	if(cost && (!user_account || !user_account.adjust_money(-cost, "[name] service: [service_id]")))
+		return FALSE
+	add_funds(cost, "service: [service_id]")
+	add_data(get_primary_data_type(), is_subscribed(user) ? 4 : 2, "service request")
+	add_history("[user.real_name || user.name] requested [service_id] service")
+	switch(service_id)
+		if("medical")
+			to_chat(user, span_notice("Benn medical support has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_benn_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("body")
+			to_chat(user, span_notice("Benn body stabilization has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_benn_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("stealth")
+			to_chat(user, span_notice("Benn stealth conditioning has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_benn_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("chemistry")
+			to_chat(user, span_notice("Benn chemistry kit has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_benn_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("technical")
+			to_chat(user, span_notice("Ryaznov technical support has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_ryaznov_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("salvage")
+			to_chat(user, span_notice("Ryaznov salvage support has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_ryaznov_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("fortify")
+			to_chat(user, span_notice("Ryaznov fortification support has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_ryaznov_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("power")
+			to_chat(user, span_notice("Ryaznov power tuning has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_ryaznov_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("delivery")
+			to_chat(user, span_notice("Starlight delivery has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_starlight_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("return")
+			to_chat(user, span_notice("Starlight return program has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_starlight_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("transport")
+			to_chat(user, span_notice("Starlight transport ping has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_starlight_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+		if("influence")
+			to_chat(user, span_notice("Starlight influence pulse has accepted your request. ETA 30 seconds."))
+			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_starlight_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/steal_technology_from(datum/cyberpunk_corporation/victim, amount = 10, source = "technology theft")
+	if(!victim || victim == src)
+		return FALSE
+	amount = max(1, round(amount))
+	var/list/candidate
+	for(var/list/technology as anything in victim.technologies)
+		var/technology_id = technology["id"]
+		if(victim.unlocked_technologies[technology_id] && !stolen_technologies[technology_id])
+			candidate = technology
+			break
+	if(!candidate)
+		return FALSE
+	var/technology_id = candidate["id"]
+	var/technology_name = candidate["name"]
+	var/technology_cost = candidate["cost"] || 50
+	stolen_technology_progress[technology_id] = (stolen_technology_progress[technology_id] || 0) + amount
+	add_history("[source]: scanned [amount] points of [victim.name] technology [technology_name]")
+	if(stolen_technology_progress[technology_id] >= technology_cost)
+		stolen_technologies[technology_id] = victim.id
+		stolen_technology_progress -= technology_id
+		add_history("stole foreign technology: [technology_name] from [victim.name]")
+		return TRUE
+	return FALSE
+
+/datum/cyberpunk_corporation/proc/to_ui_data(include_hidden = FALSE)
+	if(hidden && !include_hidden)
+		return null
+	var/datum/bank_account/account = ensure_account()
+	var/list/data_records = list()
+	for(var/data_type in research_data)
+		data_records += list(list("type" = data_type, "amount" = research_data[data_type]))
+	var/list/technology_records = list()
+	for(var/list/technology as anything in technologies)
+		var/technology_id = technology["id"]
+		var/prereq = technology["prereq"]
+		technology_records += list(list(
+			"id" = technology_id,
+			"name" = technology["name"],
+			"tier" = technology["tier"],
+			"cost" = technology["cost"],
+			"prereq" = prereq,
+			"description" = technology["description"],
+			"unlocked" = !!unlocked_technologies[technology_id],
+			"canUnlock" = !unlocked_technologies[technology_id] && (!prereq || unlocked_technologies[prereq]) && research_points >= (technology["cost"] || 0),
+		))
+	var/list/edict_records = list()
+	for(var/list/edict as anything in edicts)
+		var/edict_level = edict["level"] || 1
+		var/edict_id = edict["id"]
+		edict_records += list(list(
+			"id" = edict_id,
+			"name" = edict["name"],
+			"level" = edict_level,
+			"description" = edict["description"],
+			"active" = active_edicts["[edict_level]"] == edict_id,
+			"locked" = level < edict_level || (active_edicts["[edict_level]"] && active_edicts["[edict_level]"] != edict_id),
+		))
+	var/list/stolen_records = list()
+	for(var/technology_id in stolen_technologies)
+		var/victim_id = stolen_technologies[technology_id]
+		stolen_records += list(list("id" = technology_id, "source" = victim_id))
+	var/list/stolen_progress_records = list()
+	for(var/technology_id in stolen_technology_progress)
+		stolen_progress_records += list(list("id" = technology_id, "progress" = stolen_technology_progress[technology_id]))
+	return list(
+		"id" = id,
+		"name" = name,
+		"group" = group,
+		"direction" = direction,
+		"combatDoctrine" = combat_doctrine,
+		"hidden" = hidden,
+		"subsidiaries" = subsidiaries,
+		"level" = level,
+		"experience" = experience,
+		"nextLevelAt" = level < 5 ? level * CYBERPUNK_CORP_LEVEL_STEP : null,
+		"researchPoints" = research_points,
+		"influence" = influence,
+		"accountId" = account.account_id,
+		"balance" = account.account_balance,
+		"debt" = account.account_debt,
+		"researchData" = data_records,
+		"technologies" = technology_records,
+		"edicts" = edict_records,
+		"activeEdicts" = active_edicts,
+		"subscribers" = length(subscribers),
+		"subscriptionCost" = get_subscription_cost(),
+		"serviceMedical" = can_request_service("medical"),
+		"serviceTechnical" = can_request_service("technical"),
+		"serviceDelivery" = can_request_service("delivery"),
+		"services" = get_available_services_ui(),
+		"foreignTechBonus" = round(get_foreign_technology_bonus() * 100),
+		"stolenTechnologies" = stolen_records,
+		"stolenProgress" = stolen_progress_records,
+		"history" = history,
+	)
+
+/proc/cyberpunk_benn_edicts()
+	return list(
+		list("id" = "benn_med_insurance", "name" = "Med-Insurance", "level" = 1, "description" = "Citizens may buy Benn medical insurance; insured users get broader medical vending access."),
+		list("id" = "benn_self_analysis", "name" = "Self-Analysis", "level" = 1, "description" = "Analysis, treatment, surgery, and Benn medical purchases generate bio-data."),
+		list("id" = "benn_supply_cert", "name" = "Supply Certification", "level" = 1, "description" = "Benn medical vendors use larger and higher-quality stock profiles."),
+		list("id" = "benn_med_report", "name" = "Medical Analysis", "level" = 2, "description" = "Benn vendors may provide health summaries; insured users get full reports."),
+		list("id" = "benn_gene_registry", "name" = "Gene Registry", "level" = 2, "description" = "Benn services collect genetic data for research and profit."),
+		list("id" = "benn_chem_synthesis", "name" = "Chem Synthesis", "level" = 2, "description" = "Benn vendors may sell compound reagent components."),
+		list("id" = "benn_med_tracking", "name" = "Medical Tracking", "level" = 3, "description" = "Severe body damage can trigger Benn response tracking and insured stasis support."),
+		list("id" = "benn_donor_program", "name" = "Donor Program", "level" = 3, "description" = "Organ and bodypart recycling yields research data."),
+		list("id" = "benn_chem_recycling", "name" = "Chemical Recycling", "level" = 3, "description" = "Benn offensive demons may add toxin or acid pressure; hostile medical network protection is reduced."),
+		list("id" = "benn_med_help", "name" = "Medical Help", "level" = 4, "description" = "Benn vendors may provide direct paid autodoctor and drone aid."),
+		list("id" = "benn_gene_combo", "name" = "Gene Combinatorics", "level" = 4, "description" = "Gene unlock and retuning costs and times are reduced."),
+		list("id" = "benn_chem_tuning", "name" = "Chemical Tuning", "level" = 4, "description" = "Benn chemical plants work faster on Benn property."),
+		list("id" = "benn_med_observation", "name" = "Medical Observation", "level" = 5, "description" = "Benn vendors can dispatch paid treatment drones to wounded citizens."),
+		list("id" = "benn_dna_storage", "name" = "DNA Storage", "level" = 5, "description" = "Benn services provide extra research and slow foreign tech scanning."),
+		list("id" = "benn_chem_guardians", "name" = "Chemical Guardians", "level" = 5, "description" = "Threats near Benn infrastructure can trigger acidic defensive drones.")
+	)
+
+/proc/cyberpunk_ryaznov_edicts()
+	return list(
+		list("id" = "ryaznov_tech_contract", "name" = "Tech Contract", "level" = 1, "description" = "Citizens and businesses may sign Ryaznov service contracts."),
+		list("id" = "ryaznov_self_diagnostics", "name" = "Self-Diagnostics", "level" = 1, "description" = "Repairs, construction, and Ryaznov purchases generate engineering data."),
+		list("id" = "ryaznov_supply_cert", "name" = "Supply Certification", "level" = 1, "description" = "Ryaznov vending and service terminals use larger industrial stocks."),
+		list("id" = "ryaznov_industrial_analysis", "name" = "Industrial Analysis", "level" = 2, "description" = "Ryaznov terminals can report structural, machine, and power state."),
+		list("id" = "ryaznov_route_registry", "name" = "Infrastructure Registry", "level" = 2, "description" = "Serviced machines and structures produce infrastructure research data."),
+		list("id" = "ryaznov_mass_repair", "name" = "Mass Repair", "level" = 2, "description" = "Field repair kits and stations receive broader support hooks."),
+		list("id" = "ryaznov_tech_tracking", "name" = "Tech Tracking", "level" = 3, "description" = "Ryaznov infrastructure can track damaged structures and machines."),
+		list("id" = "ryaznov_salvage_program", "name" = "Salvage Program", "level" = 3, "description" = "Machine recycling and heavy wreck analysis yield research data."),
+		list("id" = "ryaznov_overload_loop", "name" = "Overload Loop", "level" = 3, "description" = "Ryaznov offensive demons can add heat, impact, or shield pressure."),
+		list("id" = "ryaznov_field_support", "name" = "Field Support", "level" = 4, "description" = "Ryaznov terminals may provide paid field repair support."),
+		list("id" = "ryaznov_blueprint_tuning", "name" = "Blueprint Tuning", "level" = 4, "description" = "Construction and reinforcement work faster on Ryaznov property."),
+		list("id" = "ryaznov_power_tuning", "name" = "Power Tuning", "level" = 4, "description" = "Power and shield infrastructure works better on Ryaznov property."),
+		list("id" = "ryaznov_tech_observation", "name" = "Tech Observation", "level" = 5, "description" = "Ryaznov terminals can dispatch paid repair drones."),
+		list("id" = "ryaznov_blueprint_archive", "name" = "Blueprint Archive", "level" = 5, "description" = "Repair, recycling, and heavy tech work scan foreign technologies."),
+		list("id" = "ryaznov_shield_guardians", "name" = "Shield Guardians", "level" = 5, "description" = "Threats near Ryaznov infrastructure can trigger shield and turret drones.")
+	)
+
+/proc/cyberpunk_starlight_edicts()
+	return list(
+		list("id" = "starlight_trade_subscription", "name" = "Trade Subscription", "level" = 1, "description" = "Citizens and businesses may subscribe for faster Starlight delivery and direct pool hand-ins."),
+		list("id" = "starlight_self_statistics", "name" = "Self-Statistics", "level" = 1, "description" = "Purchases, deliveries, contracts, sales, and Starlight vending generate market data."),
+		list("id" = "starlight_supply_cert", "name" = "Supply Certification", "level" = 1, "description" = "Starlight vendors use larger and more frequent stock support."),
+		list("id" = "starlight_trade_analysis", "name" = "Trade Analysis", "level" = 2, "description" = "Citizens may order goods to coordinates or beacons."),
+		list("id" = "starlight_route_registry", "name" = "Route Registry", "level" = 2, "description" = "Starlight vehicles generate exploitation route data."),
+		list("id" = "starlight_return_program", "name" = "Return Program", "level" = 2, "description" = "Non-Starlight goods may be returned for credits."),
+		list("id" = "starlight_cargo_tracking", "name" = "Cargo Tracking", "level" = 3, "description" = "Starlight orders can be routed to drone beacons."),
+		list("id" = "starlight_aggressive_ads", "name" = "Aggressive Advertising", "level" = 3, "description" = "Starlight infrastructure emits mood influence and market data collection waves."),
+		list("id" = "starlight_suppression_loop", "name" = "Suppression Circuit", "level" = 3, "description" = "Starlight offensive systems can add control, psychic, or slowing effects."),
+		list("id" = "starlight_log_help", "name" = "Logistics Help", "level" = 4, "description" = "Citizens may use cargo drones for coordinate movement and item delivery."),
+		list("id" = "starlight_mass_production", "name" = "Mass Production", "level" = 4, "description" = "Assembly and production are faster on Starlight property, with copy chances."),
+		list("id" = "starlight_phase_tuning", "name" = "Phase Tuning", "level" = 4, "description" = "Teleport and shimmer equipment works better on Starlight property."),
+		list("id" = "starlight_log_observation", "name" = "Log Observation", "level" = 5, "description" = "Starlight cargo receives tracking beacons visible to buyers."),
+		list("id" = "starlight_route_archive", "name" = "Route Archive", "level" = 5, "description" = "Transport and drone hauling provide research and foreign tech scanning."),
+		list("id" = "starlight_phase_guardians", "name" = "Phase Guardians", "level" = 5, "description" = "Threats near Starlight infrastructure can trigger phase defense drones.")
+	)
+
+/proc/cyberpunk_corporations_ui_data(mob/user, selected_corporation_id = null, locked_corporation_id = null)
+	SSeconomy.ensure_cyberpunk_corporations_seeded()
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/list/corporations = list()
+	var/locked_id = SSeconomy.cyberpunk_normalize_corporation_id(locked_corporation_id)
+	var/selected_id = SSeconomy.cyberpunk_normalize_corporation_id(selected_corporation_id)
+	if(locked_id && selected_id != locked_id)
+		selected_id = locked_id
+	var/datum/cyberpunk_corporation/selected_corporation
+	for(var/corporation_id in SSeconomy.cyberpunk_corporations)
+		if(locked_id && corporation_id != locked_id)
+			continue
+		var/datum/cyberpunk_corporation/corporation = SSeconomy.cyberpunk_corporations[corporation_id]
+		var/list/corporation_data = corporation.to_ui_data(TRUE)
+		if(!corporation_data)
+			continue
+		corporations += list(corporation_data)
+		if(corporation.id == selected_id)
+			selected_corporation = corporation
+	if(!selected_corporation && length(corporations))
+		var/list/first_corporation = corporations[1]
+		selected_corporation = SSeconomy.cyberpunk_corporations[first_corporation["id"]]
+	var/datum/bank_account/user_account = living_user?.get_bank_account()
+	return list(
+		"accountName" = user_account?.account_holder,
+		"accountBalance" = user_account?.account_balance || 0,
+		"corporations" = corporations,
+		"selected" = selected_corporation?.to_ui_data(TRUE),
+	)
+
+/proc/cyberpunk_corporations_ui_act(action, list/params, mob/user)
+	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(params && params["corporation_id"])
+	if(!corporation)
+		return FALSE
+	var/mob/living/living_user = isliving(user) ? user : null
+	switch(action)
+		if("select")
+			return TRUE
+		if("unlock_technology")
+			if(corporation.unlock_technology(params["technology_id"]))
+				to_chat(user, span_notice("[corporation.name] unlocked a technology."))
+			else
+				to_chat(user, span_warning("Unable to unlock this technology."))
+			return TRUE
+		if("choose_edict")
+			if(corporation.choose_edict(params["edict_id"]))
+				to_chat(user, span_notice("[corporation.name] activated a corporate decision."))
+			else
+				to_chat(user, span_warning("Unable to activate this corporate decision."))
+			return TRUE
+		if("convert_data")
+			if(corporation.exchange_data_to_research(params["data_type"], text2num(params["amount"])))
+				to_chat(user, span_notice("[corporation.name] converted data to research."))
+			else
+				to_chat(user, span_warning("Unable to convert this data."))
+			return TRUE
+		if("exchange_research")
+			if(corporation.exchange_research_to_funds(text2num(params["amount"])))
+				to_chat(user, span_notice("[corporation.name] exchanged research for funds."))
+			else
+				to_chat(user, span_warning("Unable to exchange research."))
+			return TRUE
+		if("subscribe")
+			if(corporation.subscribe(living_user))
+				to_chat(user, span_notice("Subscription registered with [corporation.name]."))
+			else
+				to_chat(user, span_warning("Unable to register subscription."))
+			return TRUE
+		if("request_service")
+			if(corporation.request_service(living_user, params["service_id"]))
+				to_chat(user, span_notice("Service request sent to [corporation.name]."))
+			else
+				to_chat(user, span_warning("Unable to request this service."))
+			return TRUE
+		if("steal_technology")
+			var/datum/cyberpunk_corporation/victim = SSeconomy.get_cyberpunk_corporation(params["target_corporation_id"])
+			var/theft_amount = clamp(round(text2num(params["amount"]) || 10), 1, 100)
+			var/source_name = user?.name || "system"
+			if(corporation.steal_technology_from(victim, theft_amount, "[source_name] tech theft"))
+				to_chat(user, span_notice("[corporation.name] copied a foreign technology."))
+			else
+				to_chat(user, span_warning("Technology theft made progress or found no unlocked target."))
+			return TRUE
+		if("test_activity")
+			var/data_type = reject_bad_text(params["data_type"], max_length = 32, ascii_only = TRUE) || "general"
+			var/amount = clamp(round(text2num(params["amount"]) || 10), 1, 1000)
+			var/test_source_name = user?.name || "system"
+			corporation.add_data(data_type, amount, "[test_source_name] test activity")
+			return TRUE
+	return FALSE
+
+/proc/cyberpunk_complete_benn_service(datum/weakref/user_ref, corporation_id, service_id)
+	var/mob/living/user = user_ref?.resolve()
+	if(!user || QDELETED(user))
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(corporation_id)
+	switch(service_id)
+		if("medical")
+			var/heal_amount = corporation?.is_subscribed(user) ? 60 : 35
+			user.heal_ordered_damage(heal_amount, list(BRUTE, BURN, TOX, OXY))
+			to_chat(user, span_notice("Benn remote medical service completes treatment protocol."))
+		if("body")
+			var/mob/living/carbon/carbon_user = user
+			if(istype(carbon_user) && carbon_user.dna)
+				carbon_user.dna.adjust_humanoidity_stabilized_bonus(corporation?.is_subscribed(user) ? 12 : 7)
+			user.adjust_stamina_loss(-25)
+			to_chat(user, span_notice("Benn body stabilization raises your genetic stability buffer."))
+		if("stealth")
+			user.adjust_stamina_loss(-45)
+			to_chat(user, span_notice("Benn stealth conditioning clears fatigue and dampens your network profile."))
+		if("chemistry")
+			var/obj/item/storage/box/package = new(get_turf(user))
+			package.name = "Benn chemistry kit"
+			if(hascall(package, "set_cyberpunk_manufacturer"))
+				call(package, "set_cyberpunk_manufacturer")("Benn")
+			if(!user.put_in_hands(package))
+				package.forceMove(get_turf(user))
+			to_chat(user, span_notice("Benn chemical support delivers a compact chemistry kit."))
+	SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "bio", 2, 0, "Benn service completed: [service_id]")
+	return TRUE
+
+/proc/cyberpunk_complete_ryaznov_service(datum/weakref/user_ref, corporation_id, service_id)
+	var/mob/living/user = user_ref?.resolve()
+	if(!user || QDELETED(user))
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(corporation_id)
+	var/repair_amount = corporation?.is_subscribed(user) ? 80 : 45
+	if(service_id == "fortify")
+		repair_amount *= 0.5
+	var/atom/repair_target
+	for(var/atom/candidate as anything in range(1, user))
+		if(candidate == user || candidate.max_integrity <= 0 || candidate.get_integrity() >= candidate.max_integrity)
+			continue
+		repair_target = candidate
+		break
+	if(service_id == "salvage")
+		var/obj/item/storage/box/package = new(get_turf(user))
+		package.name = "Ryaznov salvage pack"
+		if(hascall(package, "set_cyberpunk_manufacturer"))
+			call(package, "set_cyberpunk_manufacturer")("Ryaznov")
+		if(!user.put_in_hands(package))
+			package.forceMove(get_turf(user))
+		SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", 2, 0, "Ryaznov salvage service completed")
+		to_chat(user, span_notice("Ryaznov salvage service delivers an industrial pack."))
+		return TRUE
+	if(service_id == "power")
+		for(var/obj/machinery/nearby_machine in range(1, user))
+			nearby_machine.repair_cyberpunk_machine_wear(repair_amount, user)
+		SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", 2, 0, "Ryaznov power service completed")
+		to_chat(user, span_notice("Ryaznov power tuning refreshes nearby machinery components."))
+		return TRUE
+	if(!repair_target)
+		to_chat(user, span_warning("Ryaznov field service finds no damaged nearby object."))
+		return FALSE
+	var/applied_repair = repair_target.repair_damage(repair_amount)
+	var/obj/machinery/repaired_machine = repair_target
+	if(istype(repaired_machine))
+		repaired_machine.repair_cyberpunk_machine_wear(repair_amount, user)
+	SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", max(1, round(applied_repair / 10)), 0, "Ryaznov service completed: [service_id]")
+	to_chat(user, span_notice("Ryaznov field service repairs [repair_target] by [applied_repair] integrity."))
+	return TRUE
+
+/proc/cyberpunk_complete_starlight_service(datum/weakref/user_ref, corporation_id, service_id)
+	var/mob/living/user = user_ref?.resolve()
+	if(!user || QDELETED(user))
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(corporation_id)
+	switch(service_id)
+		if("delivery")
+			var/obj/item/storage/box/package = new(get_turf(user))
+			package.name = "Starlight delivery pack"
+			if(hascall(package, "set_cyberpunk_manufacturer"))
+				call(package, "set_cyberpunk_manufacturer")("Starlight")
+			if(!user.put_in_hands(package))
+				package.forceMove(get_turf(user))
+			to_chat(user, span_notice("Starlight drone delivery arrives."))
+		if("return")
+			var/obj/item/held_item = user.get_active_held_item()
+			if(!held_item)
+				to_chat(user, span_warning("Starlight return program needs an active held item."))
+				return FALSE
+			var/return_value = max(1, round(held_item.get_cyberpunk_price(user) * (corporation?.is_subscribed(user) ? 0.6 : 0.4)))
+			var/datum/bank_account/user_account = user.get_bank_account()
+			user_account?.adjust_money(return_value, "Starlight return program")
+			qdel(held_item)
+			to_chat(user, span_notice("Starlight return program credits [return_value][MONEY_SYMBOL]."))
+		if("transport")
+			var/turf/destination = get_step(get_turf(user), user.dir || SOUTH)
+			if(destination && !destination.is_blocked_turf(source_atom = user))
+				user.forceMove(destination)
+			user.adjust_stamina_loss(-20)
+			to_chat(user, span_notice("Starlight transport ping shifts your position."))
+		if("influence")
+			user.adjust_stamina_loss(-35)
+			user.add_mood_event("starlight_influence", /datum/mood_event/starlight_influence)
+			to_chat(user, span_notice("Starlight influence pulse stabilizes your tempo."))
+	SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "market", 2, 0, "Starlight service completed: [service_id]")
+	return TRUE
+
+/datum/mood_event/starlight_influence
+	description = "Starlight's feed is keeping my pace tuned."
+	mood_change = 2
+	timeout = 3 MINUTES
+
 /datum/controller/subsystem/economy/proc/get_cyberpunk_contract(contract_id)
 	return cyberpunk_contracts["[contract_id]"]
 
@@ -420,12 +1280,7 @@
 	if(cyberpunk_contract_pool_seeded)
 		return
 	cyberpunk_contract_pool_seeded = TRUE
-	var/static/list/corporations = list(
-		"Benn",
-		"Ryaznov",
-		"Starlight",
-		"Nanotrasen",
-	)
+	var/list/corporations = get_cyberpunk_public_corporation_names()
 	for(var/corporation in corporations)
 		var/contract_count = rand(3, 4)
 		for(var/i in 1 to contract_count)
@@ -825,6 +1680,9 @@
 		escrow_deposit = 0
 	status = CYBERPUNK_CONTRACT_COMPLETED
 	add_history("completed: [reason]")
+	if(pool_corporation)
+		var/data_type = contract_type == CYBERPUNK_CONTRACT_DELIVERY ? "market" : contract_type
+		SSeconomy.record_cyberpunk_corporate_activity(pool_corporation, data_type, max(1, round(payment / 100)), max(1, round(payment * 0.02)), "contract completed #[id]")
 	clear_delivery_tracking()
 	SSeconomy.adjust_cyberpunk_contract_stat(contractor_character_key, "completed")
 	return TRUE
@@ -1131,6 +1989,11 @@
 	cyberpunk_business_deliveries["[delivery.id]"] = delivery
 	business.deliveries += delivery
 	business.add_history("delivery #[delivery.id] requested: [amount]x [item_label] from [delivery.source_label]; cost [total_cost][MONEY_SYMBOL]")
+	record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "market", max(1, round(amount / 2)), max(0, round(total_cost * 0.03)), "business delivery #[delivery.id]")
+	if(cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_cargo_tracking"))
+		record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "cargo tracking: delivery #[delivery.id]")
+	if(cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_log_observation"))
+		record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", max(1, round(amount / 4)), 0, "log observation: delivery #[delivery.id]")
 	addtimer(CALLBACK(delivery, TYPE_PROC_REF(/datum/cyberpunk_business_delivery, complete_delivery)), 2 MINUTES, TIMER_STOPPABLE)
 	return delivery
 

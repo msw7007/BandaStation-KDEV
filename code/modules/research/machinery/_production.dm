@@ -219,6 +219,20 @@
 	else
 		return efficiency_coeff
 
+/obj/machinery/rnd/production/proc/get_cyberpunk_fabrication_synergy(mob/user)
+	var/mob/living/living_user = user
+	if(!istype(living_user))
+		return 1
+	return living_user.get_corporate_synergy_multiplier(get_cyberspace_manufacturer(src))
+
+/obj/machinery/rnd/production/proc/get_cyberpunk_fabrication_edict_multiplier()
+	var/manufacturer = get_cyberspace_manufacturer(src)
+	var/multiplier = 1
+	multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_gene_combo", "benn_chem_tuning"), 1, 1.08)
+	multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("ryaznov_blueprint_tuning", "ryaznov_power_tuning"), 1, 1.08)
+	multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("starlight_mass_production", "starlight_phase_tuning"), 1, 1.08)
+	return multiplier
+
 /obj/machinery/rnd/production/ui_assets(mob/user)
 	return list(
 		get_asset_datum(/datum/asset/spritesheet_batched/sheetmaterials),
@@ -331,7 +345,8 @@
 			print_quantity = clamp(print_quantity, 1, 50)
 
 			//efficiency for this design, stacks use exact materials
-			var/coefficient = build_efficiency(design.build_path)
+			var/synergy = get_cyberpunk_fabrication_synergy(ui.user) * get_cyberpunk_fabrication_edict_multiplier()
+			var/coefficient = build_efficiency(design.build_path) / synergy
 
 			//check for materials
 			if(!materials.can_use_resource(user_data = ID_DATA(usr)))
@@ -345,7 +360,7 @@
 			for(var/material, amount in design.materials)
 				charge_per_item += amount
 			charge_per_item = ROUND_UP((charge_per_item / (MAX_STACK_SIZE * SHEET_MATERIAL_AMOUNT)) * coefficient * active_power_usage)
-			var/build_time_per_item = (design.construction_time * design.lathe_time_factor * efficiency_coeff) ** 0.8
+			var/build_time_per_item = ((design.construction_time * design.lathe_time_factor * efficiency_coeff) / synergy) ** 0.8
 
 			//start production
 			busy = TRUE
@@ -438,8 +453,20 @@
 		split_materials_uniformly(design_materials, material_cost_coefficient, created)
 
 	if(isitem(created))
+		var/obj/item/created_item = created
+		var/manufacturer = get_cyberspace_manufacturer(src)
+		created_item.set_cyberpunk_manufacturer(manufacturer)
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
 		created.pixel_y = created.base_pixel_y + rand(-6, 6)
+		SSeconomy.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "fabricated [design.name]")
+		if(!is_stack && SSeconomy.cyberpunk_manufacturer_has_edict(manufacturer, "starlight_mass_production") && prob(10))
+			var/atom/movable/bonus_created = design.create_result(target, design_materials)
+			if(isitem(bonus_created))
+				var/obj/item/bonus_item = bonus_created
+				bonus_item.set_cyberpunk_manufacturer(manufacturer)
+				bonus_item.pixel_x = bonus_item.base_pixel_x + rand(-6, 6)
+				bonus_item.pixel_y = bonus_item.base_pixel_y + rand(-6, 6)
+				SSeconomy.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "mass-production copy: [design.name]")
 	SSblackbox.record_feedback("nested tally", "lathe_printed_items", 1, list("[type]", "[created.type]"))
 
 	if(is_stack)

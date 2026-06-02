@@ -202,9 +202,11 @@
 	var/rough_grip = 0.75
 	var/bad_grip = 0.45
 	var/space_grip = 0.1
+	var/manufacturer = "Starlight"
 
 /obj/item/cyberpunk_vehicle_part/proc/build_part_datum()
 	var/datum/cyberpunk_vehicle_part/part = new(part_name, part_category, part_health, part_effect)
+	part.manufacturer = manufacturer
 	part.speed_multiplier = speed_multiplier
 	part.acceleration_multiplier = acceleration_multiplier
 	part.maneuver_multiplier = maneuver_multiplier
@@ -881,17 +883,18 @@
 	var/maneuver_multiplier = driver?.get_cyberpunk_driving_maneuver_multiplier() || 1
 	var/brake_multiplier = driver?.get_cyberpunk_driving_brake_multiplier() || 1
 	var/fuel_multiplier = driver?.get_cyberpunk_driving_fuel_multiplier() || 1
+	var/corporate_vehicle_multiplier = get_vehicle_corporate_synergy_multiplier(driver)
 
 	var/hull_health = get_part_health_fraction("hull")
 	var/drivetrain_health = get_part_health_fraction("drivetrain")
 	var/engine_health = get_part_health_fraction("engine")
 	var/turf_grip = get_current_turf_grip_multiplier()
-	var/max_speed = base_max_speed * speed_multiplier * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
-	var/acceleration = base_acceleration * get_vehicle_stat_multiplier("acceleration") * (0.25 + engine_health * 0.75)
-	var/maneuver = base_maneuver * maneuver_multiplier * get_vehicle_stat_multiplier("maneuver") * (0.35 + drivetrain_health * 0.65)
-	var/traction = base_traction * reaction_multiplier * get_vehicle_stat_multiplier("traction") * turf_grip * (0.3 + drivetrain_health * 0.7)
-	var/grip_switch = base_grip_switch * get_vehicle_stat_multiplier("grip_switch") * (0.35 + drivetrain_health * 0.65)
-	var/brake = base_brake * brake_multiplier * get_vehicle_stat_multiplier("brake") * (0.3 + drivetrain_health * 0.7)
+	var/max_speed = base_max_speed * speed_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
+	var/acceleration = base_acceleration * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("acceleration") * (0.25 + engine_health * 0.75)
+	var/maneuver = base_maneuver * maneuver_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("maneuver") * (0.35 + drivetrain_health * 0.65)
+	var/traction = base_traction * reaction_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("traction") * turf_grip * (0.3 + drivetrain_health * 0.7)
+	var/grip_switch = base_grip_switch * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("grip_switch") * (0.35 + drivetrain_health * 0.65)
+	var/brake = base_brake * brake_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("brake") * (0.3 + drivetrain_health * 0.7)
 	var/pre_input_speed = cy_get_speed()
 	var/parking_factor = clamp(pre_input_speed / max(parking_speed_threshold, 1), 0, 1)
 	var/low_speed_acceleration_factor = parking_acceleration_multiplier + (1 - parking_acceleration_multiplier) * parking_factor
@@ -1443,6 +1446,21 @@
 			if("fuel")
 				result *= part.fuel_multiplier
 	return max(0.05, result)
+
+/obj/vehicle/sealed/car/cyberpunk_test/proc/get_vehicle_corporate_synergy_multiplier(mob/living/driver)
+	if(!driver)
+		return 1
+	var/base_manufacturer = "Starlight"
+	var/total_multiplier = driver.get_corporate_synergy_multiplier(base_manufacturer) * SSeconomy.cyberpunk_corporate_edict_multiplier(base_manufacturer, list("starlight_route_registry", "starlight_phase_tuning"), 1, 1.05)
+	var/counted_parts = 1
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		if(!part?.manufacturer)
+			continue
+		var/part_multiplier = driver.get_corporate_synergy_multiplier(part.manufacturer)
+		part_multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(part.manufacturer, list("starlight_route_registry", "starlight_phase_tuning", "ryaznov_power_tuning", "benn_self_analysis"), 1, 1.05)
+		total_multiplier += part_multiplier
+		counted_parts++
+	return total_multiplier / max(1, counted_parts)
 
 /obj/vehicle/sealed/car/cyberpunk_test/proc/get_current_turf_grip_multiplier()
 	var/turf/current_turf = get_turf(src)

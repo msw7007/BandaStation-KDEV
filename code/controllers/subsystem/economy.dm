@@ -64,6 +64,10 @@ SUBSYSTEM_DEF(economy)
 	var/list/cyberpunk_business_deliveries = list()
 	/// Next id for round-local business delivery jobs.
 	var/next_cyberpunk_business_delivery_id = 1
+	/// Round-local corporate registry. Keyed by corporation id.
+	var/list/cyberpunk_corporations = list()
+	/// Whether round-local corporate datums and accounts were created.
+	var/cyberpunk_corporations_seeded = FALSE
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Number of mail items generated.
@@ -91,6 +95,7 @@ SUBSYSTEM_DEF(economy)
 			new /datum/bank_account/department(dep_id, 0, player_account = FALSE)
 			continue
 		new /datum/bank_account/department(dep_id, budget_to_hand_out, player_account = FALSE)
+	ensure_cyberpunk_corporations_seeded()
 	return SS_INIT_SUCCESS
 
 /datum/controller/subsystem/economy/Recover()
@@ -106,6 +111,8 @@ SUBSYSTEM_DEF(economy)
 	next_cyberpunk_business_id = SSeconomy.next_cyberpunk_business_id
 	cyberpunk_business_deliveries = SSeconomy.cyberpunk_business_deliveries
 	next_cyberpunk_business_delivery_id = SSeconomy.next_cyberpunk_business_delivery_id
+	cyberpunk_corporations = SSeconomy.cyberpunk_corporations
+	cyberpunk_corporations_seeded = SSeconomy.cyberpunk_corporations_seeded
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Processing step defines, to track what we've done so far
@@ -181,7 +188,8 @@ SUBSYSTEM_DEF(economy)
 		if(bank_account?.account_job && !ispath(bank_account.account_job))
 			temporary_total += (bank_account.account_job.paycheck * STARTING_PAYCHECKS)
 		bank_account.payday(1, skippable = TRUE)
-		station_total += bank_account.account_balance
+		if(!istype(bank_account, /datum/bank_account/cyberpunk_corporation))
+			station_total += bank_account.account_balance
 		if(MC_TICK_CHECK)
 			cached_processing.Cut(1, i + 1)
 			return FALSE
@@ -200,7 +208,7 @@ SUBSYSTEM_DEF(economy)
 	var/update_alerts = FALSE
 	if(HAS_TRAIT(SSstation, STATION_TRAIT_ECONOMY_ALERTS) && (living_player_count() > 1))
 		var/datum/bank_account/moneybags
-		var/static/list/typecache_bank = typecacheof(list(/datum/bank_account/department, /datum/bank_account/remote))
+		var/static/list/typecache_bank = typecacheof(list(/datum/bank_account/department, /datum/bank_account/remote, /datum/bank_account/cyberpunk_corporation))
 		for(var/i in bank_accounts_by_id)
 			var/datum/bank_account/current_acc = bank_accounts_by_id[i]
 			if(typecache_bank[current_acc.type])

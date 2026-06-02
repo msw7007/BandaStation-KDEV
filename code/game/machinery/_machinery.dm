@@ -214,15 +214,38 @@
 			return TRUE
 	return FALSE
 
+/atom/movable/proc/add_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum)
+		return FALSE
+	LAZYINITLIST(cyberpunk_crypto_keys)
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
+		if(stored_key.matches(key_datum))
+			return TRUE
+	cyberpunk_crypto_keys += key_datum
+	return TRUE
+
+/atom/movable/proc/remove_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum || !length(cyberpunk_crypto_keys))
+		return FALSE
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
+		if(stored_key.matches(key_datum))
+			cyberpunk_crypto_keys -= stored_key
+			return TRUE
+	return FALSE
+
+/atom/movable/proc/create_and_add_cyberpunk_crypto_key(key_name = null, key_owner = null)
+	var/datum/cyberpunk_crypto_key/key_datum = new(key_name || "[name] service key", key_owner || get_cyberspace_manufacturer(src))
+	add_cyberpunk_crypto_key(key_datum)
+	return key_datum
+
 /obj/machinery
-	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_keys
 	var/list/cyberpunk_crypto_bypass_until
 
 /obj/machinery/proc/get_or_create_cyberpunk_crypto_key()
 	LAZYINITLIST(cyberpunk_crypto_keys)
 	if(!length(cyberpunk_crypto_keys))
 		var/manufacturer = get_cyberspace_manufacturer(src)
-		cyberpunk_crypto_keys += new /datum/cyberpunk_crypto_key("[name] service key", manufacturer)
+		create_and_add_cyberpunk_crypto_key("[name] service key", manufacturer)
 	return cyberpunk_crypto_keys[1]
 
 /obj/machinery/proc/has_cyberpunk_crypto_access(mob/living/user)

@@ -158,8 +158,6 @@
 	var/list/datum/cyberpunk_item_module/cyberpunk_modules
 	/// Round-local contract id attached to this item as cargo evidence.
 	var/cyberpunk_contract_id
-	/// Runtime cryptokeys stored on this card/disk/device. Persistence and card UI can consume this directly later.
-	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_keys
 	//CYBERPUNK BUILD - rebuild and delete before release
 	///Whether spessmen with an ID with an age below AGE_MINOR (20 by default) can buy this item
 	var/age_restricted = FALSE
@@ -794,7 +792,11 @@
 /obj/item/get_armor_rating(damage_type)
 	if(cyberpunk_broken)
 		return 0
-	return ..()
+	var/rating = ..()
+	var/mob/living/wearer = loc
+	if(istype(wearer))
+		rating = round(rating * wearer.get_corporate_synergy_multiplier(get_cyberpunk_manufacturer()))
+	return rating
 
 /obj/item/proc/install_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
 	if(!module || !module.can_install(src, user))

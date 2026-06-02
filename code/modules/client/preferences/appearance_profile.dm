@@ -4,6 +4,9 @@
 #define BODY_SHAPE_SOFT "soft"
 #define BODY_SHAPE_ANGULAR "angular"
 #define CORP_ALIGN_NONE "none"
+#define CORP_ALIGN_BENN "benn"
+#define CORP_ALIGN_RYAZNOV "ryaznov"
+#define CORP_ALIGN_STARLIGHT "starlight"
 #define CORP_ALIGN_SUN_YON "sun_yon"
 #define CORP_ALIGN_ISHIKAWA "ishikawa"
 #define CORP_ALIGN_HO_SHI "ho_shi"
@@ -48,6 +51,9 @@
 
 /proc/corp_align_choices()
 	return list(
+		CORP_ALIGN_BENN = "Benn Conglomerate",
+		CORP_ALIGN_RYAZNOV = "Ryaznov Union",
+		CORP_ALIGN_STARLIGHT = "Starlight Combine",
 		CORP_ALIGN_NONE = "Независимый",
 		CORP_ALIGN_SUN_YON = "Сан Йон Корпорейшн",
 		CORP_ALIGN_ISHIKAWA = "Ишикава Индастриз",
@@ -72,6 +78,18 @@
 /proc/cyberpunk_major_corp_for_manufacturer(manufacturer)
 	manufacturer = cyberpunk_normalize_manufacturer_id(manufacturer)
 	switch(manufacturer)
+		if(CORP_ALIGN_BENN)
+			return CORP_GROUP_BEN
+		if(CORP_ALIGN_RYAZNOV)
+			return CORP_GROUP_RYAZNOV
+		if(CORP_ALIGN_STARLIGHT)
+			return CORP_GROUP_STARLIGHT
+		if("benn_bio", "benn_clinic", "benn_shadow")
+			return CORP_GROUP_BEN
+		if("ryaznov_works", "ryaznov_energy", "ryaznov_defense")
+			return CORP_GROUP_RYAZNOV
+		if("starlight_logistics", "starlight_transit", "starlight_market")
+			return CORP_GROUP_STARLIGHT
 		if(CORP_ALIGN_SUN_YON, CORP_ALIGN_ISHIKAWA, CORP_ALIGN_HO_SHI)
 			return CORP_GROUP_BEN
 		if(CORP_ALIGN_KOWALSKI, CORP_ALIGN_TYAZHMARSH, CORP_ALIGN_TESLA_SCIENCE)
@@ -86,6 +104,31 @@
 	var/normalized = lowertext(trim("[manufacturer]"))
 	if(normalized == "independent")
 		return CORP_ALIGN_NONE
+	switch(normalized)
+		if("benn", "ben", "benn conglomerate", "бэнь")
+			return CORP_ALIGN_BENN
+		if("benn bio")
+			return "benn_bio"
+		if("benn clinic")
+			return "benn_clinic"
+		if("benn shadow")
+			return "benn_shadow"
+		if("ryaznov", "riaznov", "ryaznov union", "рязнов")
+			return CORP_ALIGN_RYAZNOV
+		if("ryaznov works")
+			return "ryaznov_works"
+		if("ryaznov energy")
+			return "ryaznov_energy"
+		if("ryaznov defense")
+			return "ryaznov_defense"
+		if("starlight", "starlight combine", "старлайт")
+			return CORP_ALIGN_STARLIGHT
+		if("starlight logistics")
+			return "starlight_logistics"
+		if("starlight transit")
+			return "starlight_transit"
+		if("starlight market")
+			return "starlight_market"
 	var/list/choices = corp_align_choices()
 	if(normalized in choices)
 		return normalized

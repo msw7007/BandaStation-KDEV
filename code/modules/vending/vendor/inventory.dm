@@ -288,5 +288,13 @@
 	credits_contained += round(price_to_use * VENDING_CREDITS_COLLECTION_AMOUNT)
 	//CYBERPUNK BUILD - rebuild and delete before release
 	cyberpunk_business_record_sale(price_to_use, product_to_vend.name)
+	SSeconomy.record_cyberpunk_corporate_activity("starlight", "market", 1, max(0, round(price_to_use * 0.02)), "vending purchase: [product_to_vend.name]")
+	var/vendor_corporation_id = SSeconomy.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(src))
+	if(vendor_corporation_id && vendor_corporation_id != "starlight")
+		SSeconomy.record_cyberpunk_corporate_activity(vendor_corporation_id, "sales", 1, max(0, round(price_to_use * 0.01)), "corporate vending purchase: [product_to_vend.name]")
+	if(SSeconomy.cyberpunk_corporation_has_edict("starlight", "starlight_self_statistics"))
+		SSeconomy.record_cyberpunk_corporate_activity("starlight", "market", 1, 0, "purchase telemetry: [product_to_vend.name]")
+	if(vendor_corporation_id && SSeconomy.cyberpunk_corporation_has_edict(vendor_corporation_id, "[vendor_corporation_id]_supply_cert"))
+		SSeconomy.record_cyberpunk_corporate_activity(vendor_corporation_id, "supply", 1, max(0, round(price_to_use * 0.01)), "certified vending supply: [product_to_vend.name]")
 	//CYBERPUNK BUILD - rebuild and delete before release
 	return TRUE

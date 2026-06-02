@@ -25,6 +25,8 @@ Nothing else in the console has ID requirements.
 	req_access = list(ACCESS_RESEARCH) // Locking and unlocking the console requires research access
 	/// Reference to global science techweb
 	var/datum/techweb/stored_research
+	/// Cyberpunk 13 corporate research channel. Non-independent consoles only connect to matching techwebs.
+	var/corp_manufacturer = "independent"
 	/// The stored technology disk, if present
 	var/obj/item/disk/tech_disk/t_disk
 	/// The stored design disk, if present
@@ -106,8 +108,35 @@ Nothing else in the console has ID requirements.
 /obj/machinery/computer/rdconsole/multitool_act(mob/living/user, obj/item/multitool/tool)
 	. = ..()
 	if(!QDELETED(tool.buffer) && istype(tool.buffer, /datum/techweb))
-		stored_research = tool.buffer
+		var/datum/techweb/new_techweb = tool.buffer
+		if(!can_connect_cyberpunk_techweb(new_techweb))
+			var/web_organization = new_techweb?.organization || "unknown"
+			say("Corporate cryptokey mismatch: [get_cyberspace_manufacturer(src)] console cannot mount [web_organization] techweb.")
+			return TRUE
+		stored_research = new_techweb
 	return TRUE
+
+/obj/machinery/computer/rdconsole/proc/can_connect_cyberpunk_techweb(datum/techweb/new_techweb)
+	var/device_manufacturer = cyberpunk_normalize_manufacturer_id(get_cyberspace_manufacturer(src))
+	if(!device_manufacturer || device_manufacturer == "none")
+		return TRUE
+	var/web_manufacturer = cyberpunk_normalize_manufacturer_id(new_techweb?.organization)
+	return web_manufacturer == device_manufacturer
+
+/obj/machinery/computer/rdconsole/benn
+	name = "Benn R&D Console"
+	icon_screen = "rdcomp"
+	corp_manufacturer = "Benn"
+
+/obj/machinery/computer/rdconsole/ryaznov
+	name = "Ryaznov R&D Console"
+	icon_screen = "rdcomp"
+	corp_manufacturer = "Ryaznov"
+
+/obj/machinery/computer/rdconsole/starlight
+	name = "Starlight R&D Console"
+	icon_screen = "rdcomp"
+	corp_manufacturer = "Starlight"
 
 /obj/machinery/computer/rdconsole/proc/enqueue_node(id, mob/user)
 	if(!stored_research || !stored_research.available_nodes[id] || stored_research.researched_nodes[id])
@@ -138,6 +167,10 @@ Nothing else in the console has ID requirements.
 			SSblackbox.record_feedback("associative", "science_techweb_unlock", 1, list("id" = "[id]", "name" = TN.display_name, "price" = "[json_encode(price)]", "time" = ISOtime()))
 		if(stored_research.research_node_id(id, research_source = src))
 			say("Успешно исследовано «[TN.display_name]».")
+			var/corporation_id = SSeconomy.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(src))
+			if(corporation_id)
+				var/research_value = max(1, round((price[TECHWEB_POINT_TYPE_GENERIC] || 0) / 500))
+				SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "research", research_value, 0, "R&D node researched: [TN.display_name]")
 			var/logname = "Unknown"
 			if(HAS_AI_ACCESS(user))
 				logname = "AI [user.name]"

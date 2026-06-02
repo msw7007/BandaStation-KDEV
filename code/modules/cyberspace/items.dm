@@ -311,6 +311,7 @@
 	power *= caster?.cyberdemon_consume_next_power_multiplier() || 1
 	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
 	power *= synergy
+	power *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_recycling", "ryaznov_overload_loop", "starlight_suppression_loop"), 1, 1.1)
 	if(physical_world)
 		power *= CYBER_DEMON_PHYSICAL_WORLD_MULTIPLIER
 	var/master_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 6, "value_1") || 0
@@ -325,10 +326,20 @@
 	if(prepare_bonus > 0)
 		effective_cast_time *= max(0, 1 - (prepare_bonus / 100))
 	effective_cast_time *= caster?.cyberdemon_consume_next_prepare_multiplier() || 1
+	effective_cast_time /= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_tuning", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.1)
 	var/instant_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 5) || 0
 	if(instant_chance > 0 && prob(instant_chance))
 		return 0
 	return max(0, round(effective_cast_time))
+
+/datum/cyberspace_demon/proc/get_effective_cooldown(mob/living/caster)
+	var/effective_cooldown = cooldown
+	if(effective_cooldown <= 0)
+		return 0
+	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
+	effective_cooldown /= synergy
+	effective_cooldown /= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_tuning", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.05)
+	return max(0, round(effective_cooldown))
 
 /datum/cyberspace_demon/proc/get_effective_activation_delay(mob/living/caster)
 	var/effective_delay = activation_delay
@@ -463,11 +474,12 @@
 	if(effective_stamina_cost > 0)
 		caster.adjust_stamina_loss(effective_stamina_cost)
 	apply_psychic_damage(caster)
-	if(cooldown > 0)
+	var/effective_cooldown = get_effective_cooldown(caster)
+	if(effective_cooldown > 0)
 		if((caster?.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 5) || 0) > 0 && prob(caster.mind.get_character_perk_effectiveness(SKILL_FAST_CODE, 5)))
 			next_use = 0
 		else
-			next_use = world.time + cooldown
+			next_use = world.time + effective_cooldown
 	if(effective_activation_delay > 0)
 		to_chat(caster, span_notice("[demon_name] is unpacking and will activate in [DisplayTimeText(effective_activation_delay)]."))
 		addtimer(CALLBACK(src, PROC_REF(activate_deployment), WEAKREF(caster), WEAKREF(target), current_power, physical_world), effective_activation_delay)
@@ -649,9 +661,56 @@
 /datum/cyberspace_demon/proc/apply_effect(mob/living/caster, atom/target, current_power, physical_world)
 	var/success = apply_primary_effect(caster, target, current_power, physical_world)
 	if(success)
+		apply_corporate_edict_effects(caster, target, current_power, physical_world)
 		schedule_periodic_effects(caster, target, current_power, physical_world)
 		apply_special_effects(caster, target, current_power, physical_world)
 	return success
+
+/datum/cyberspace_demon/proc/apply_corporate_edict_effects(mob/living/caster, atom/target, current_power, physical_world)
+	if(!target || !SSeconomy)
+		return FALSE
+	var/corporation_id = SSeconomy.cyberpunk_corporation_id_from_manufacturer(manufacturer)
+	if(!corporation_id)
+		return FALSE
+	var/bonus_power = max(1, round(abs(current_power) * 0.25))
+	var/datum/cyberspace_node/target_node = get_target_node(target)
+	if(corporation_id == "benn" && SSeconomy.cyberpunk_corporation_has_edict(corporation_id, "benn_chem_recycling"))
+		if(target_node)
+			var/datum/cyber_ice/benn_ice = target_node.get_ice()
+			if(benn_ice)
+				benn_ice.apply_reserve_damage(bonus_power)
+				SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "bio", 1, 0, "chemical demon pressure")
+				return TRUE
+		var/mob/living/benn_living_target = target
+		if(istype(benn_living_target) && physical_world && !benn_living_target.is_projected_into_cyberspace())
+			benn_living_target.apply_damage(bonus_power, TOX)
+			SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "bio", 1, 0, "chemical demon pressure")
+			return TRUE
+	if(corporation_id == "ryaznov" && SSeconomy.cyberpunk_corporation_has_edict(corporation_id, "ryaznov_overload_loop"))
+		if(target_node)
+			var/datum/cyber_ice/ryaznov_ice = target_node.get_ice()
+			if(ryaznov_ice)
+				ryaznov_ice.apply_reserve_damage(bonus_power)
+				SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", 1, 0, "overload demon loop")
+				return TRUE
+		var/mob/living/ryaznov_living_target = target
+		if(istype(ryaznov_living_target) && physical_world && !ryaznov_living_target.is_projected_into_cyberspace())
+			ryaznov_living_target.apply_damage(bonus_power, BURN)
+			SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", 1, 0, "overload demon loop")
+			return TRUE
+	if(corporation_id == "starlight" && SSeconomy.cyberpunk_corporation_has_edict(corporation_id, "starlight_suppression_loop"))
+		if(target_node)
+			var/datum/cyber_ice/starlight_ice = target_node.get_ice()
+			if(starlight_ice)
+				starlight_ice.apply_reserve_damage(bonus_power)
+				SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "market", 1, 0, "suppression demon loop")
+				return TRUE
+		var/mob/living/starlight_living_target = target
+		if(istype(starlight_living_target))
+			starlight_living_target.adjust_stamina_loss(bonus_power * 2)
+			SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "market", 1, 0, "suppression demon loop")
+			return TRUE
+	return FALSE
 
 /datum/cyberspace_demon/proc/is_periodic_effect()
 	return effect in list(
@@ -1218,6 +1277,18 @@
 /proc/get_cyberdemon_manufacturer_choices()
 	return list(
 		"Independent",
+		"Benn",
+		"Benn Bio",
+		"Benn Clinic",
+		"Benn Shadow",
+		"Ryaznov",
+		"Ryaznov Works",
+		"Ryaznov Energy",
+		"Ryaznov Defense",
+		"Starlight",
+		"Starlight Logistics",
+		"Starlight Transit",
+		"Starlight Market",
 		"Сан Йон Корпорейшн",
 		"Ишикава Индастриз",
 		"Хо Ши Текнолоджис",

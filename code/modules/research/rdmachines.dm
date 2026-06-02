@@ -16,6 +16,8 @@
 	var/disabled = FALSE
 	///Ref to global science techweb.
 	var/datum/techweb/stored_research
+	/// Cyberpunk 13 corporate research channel. Non-independent devices only connect to matching techwebs.
+	var/corp_manufacturer = "independent"
 	///The item loaded inside the machine, used by experimentors and destructive analyzers only.
 	var/obj/item/loaded_item
 
@@ -79,11 +81,23 @@
 
 ///Called when attempting to connect the machine to a techweb, forgetting the old.
 /obj/machinery/rnd/proc/connect_techweb(datum/techweb/new_techweb)
+	if(!can_connect_cyberpunk_techweb(new_techweb))
+		var/web_organization = new_techweb?.organization || "unknown"
+		say("Corporate cryptokey mismatch: [get_cyberspace_manufacturer(src)] device cannot mount [web_organization] techweb.")
+		return FALSE
 	if(stored_research)
 		log_research("[src] disconnected from techweb [stored_research] when connected to [new_techweb].")
 	stored_research = new_techweb
 	if(!isnull(stored_research))
 		on_connected_techweb()
+	return TRUE
+
+/obj/machinery/rnd/proc/can_connect_cyberpunk_techweb(datum/techweb/new_techweb)
+	var/device_manufacturer = cyberpunk_normalize_manufacturer_id(get_cyberspace_manufacturer(src))
+	if(!device_manufacturer || device_manufacturer == "none")
+		return TRUE
+	var/web_manufacturer = cyberpunk_normalize_manufacturer_id(new_techweb?.organization)
+	return web_manufacturer == device_manufacturer
 
 ///Called post-connection to a new techweb.
 /obj/machinery/rnd/proc/on_connected_techweb()

@@ -430,6 +430,9 @@
 		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 4, "value_2") * 0.01)
 	else
 		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 2) * 0.01)
+	var/corporate_multiplier = get_corporate_synergy_multiplier(weapon.get_cyberpunk_manufacturer())
+	if(corporate_multiplier > 1)
+		multiplier /= corporate_multiplier
 	return max(0.1, multiplier)
 
 /mob/living/proc/get_cyberpunk_unarmed_damage_multiplier()

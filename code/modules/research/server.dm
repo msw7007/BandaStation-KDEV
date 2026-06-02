@@ -30,7 +30,10 @@
 	//servers handle techwebs differently as we are expected to be there to connect
 	//every other machinery on-station.
 	if(!stored_research)
-		if(CONFIG_GET(flag/no_default_techweb_link))
+		if(cyberpunk_normalize_manufacturer_id(get_cyberspace_manufacturer(src)) != "none")
+			stored_research = new /datum/techweb
+			stored_research.organization = get_cyberspace_manufacturer(src)
+		else if(CONFIG_GET(flag/no_default_techweb_link))
 			stored_research = new /datum/techweb
 		else
 			var/datum/techweb/science_web = locate(/datum/techweb/science) in SSresearch.techwebs
@@ -113,6 +116,21 @@
 	tool.set_buffer(stored_research)
 	balloon_alert(user, "saved to multitool buffer")
 	return TRUE
+
+/obj/machinery/rnd/server/benn
+	name = "Benn R&D Server"
+	corp_manufacturer = "Benn"
+	req_access = null
+
+/obj/machinery/rnd/server/ryaznov
+	name = "Ryaznov R&D Server"
+	corp_manufacturer = "Ryaznov"
+	req_access = null
+
+/obj/machinery/rnd/server/starlight
+	name = "Starlight R&D Server"
+	corp_manufacturer = "Starlight"
+	req_access = null
 
 /// Master R&D server. As long as this still exists and still holds the HDD for the theft objective, research points generate at normal speed. Destroy it or an antag steals the HDD? Half research speed.
 /obj/machinery/rnd/server/master

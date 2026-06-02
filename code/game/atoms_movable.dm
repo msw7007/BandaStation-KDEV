@@ -131,6 +131,8 @@
 	/// List of accesses needed to use this object: The user must possess at least one access in this list in order to use the object.
 	/// Example: If req_one_access = list(ACCESS_ENGINE, ACCESS_CE)- then the user must have either ACCESS_ENGINE or ACCESS_CE in order to use the object.
 	var/list/req_one_access
+	/// Cyberpunk 13 direct cryptokeys. Legacy req_access is still mirrored to card keys; this list is for object-local keys.
+	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_keys
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /mutable_appearance/emissive_blocker
