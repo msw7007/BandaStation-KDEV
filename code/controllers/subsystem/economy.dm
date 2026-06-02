@@ -56,6 +56,14 @@ SUBSYSTEM_DEF(economy)
 	var/list/cyberpunk_contract_stats = list()
 	/// Whether the round-local corporate pool was filled with starter contracts.
 	var/cyberpunk_contract_pool_seeded = FALSE
+	/// Round-local business registry. Keyed by business id.
+	var/list/cyberpunk_businesses = list()
+	/// Next id for round-local businesses.
+	var/next_cyberpunk_business_id = 1
+	/// Round-local business delivery jobs.
+	var/list/cyberpunk_business_deliveries = list()
+	/// Next id for round-local business delivery jobs.
+	var/next_cyberpunk_business_delivery_id = 1
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Number of mail items generated.
@@ -94,6 +102,10 @@ SUBSYSTEM_DEF(economy)
 	next_cyberpunk_contract_id = SSeconomy.next_cyberpunk_contract_id
 	cyberpunk_contract_stats = SSeconomy.cyberpunk_contract_stats
 	cyberpunk_contract_pool_seeded = SSeconomy.cyberpunk_contract_pool_seeded
+	cyberpunk_businesses = SSeconomy.cyberpunk_businesses
+	next_cyberpunk_business_id = SSeconomy.next_cyberpunk_business_id
+	cyberpunk_business_deliveries = SSeconomy.cyberpunk_business_deliveries
+	next_cyberpunk_business_delivery_id = SSeconomy.next_cyberpunk_business_delivery_id
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Processing step defines, to track what we've done so far

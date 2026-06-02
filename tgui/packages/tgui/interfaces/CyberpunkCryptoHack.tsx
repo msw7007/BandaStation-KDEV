@@ -9,15 +9,14 @@ import { Window } from '../layouts';
 type CryptoOption = {
   index: number;
   text: string;
-  active: BooleanLike;
+  selected: BooleanLike;
   wrongHint: BooleanLike;
+  result?: string;
 };
 
 type CryptoColumn = {
   index: number;
-  direction: string;
-  current: string;
-  correctIndex: number;
+  selectedIndex: number;
   options: CryptoOption[];
 };
 
@@ -27,11 +26,15 @@ type CryptoHackData = {
   owner: string;
   testKey: string;
   maskedKey: string;
+  selectedCode: string;
   hackingSkill: number;
   intelligence: number;
   columns: CryptoColumn[];
   aligned: BooleanLike;
-  nextRotation: number;
+  revealTimer: number;
+  revealDelay: number;
+  revealedCount: number;
+  lastErrorCount: number;
 };
 
 export const CyberpunkCryptoHack = () => {
@@ -42,13 +45,48 @@ export const CyberpunkCryptoHack = () => {
     owner,
     testKey,
     maskedKey,
+    selectedCode,
     hackingSkill,
     intelligence,
     columns = [],
     aligned,
-    nextRotation,
+    revealTimer,
+    revealDelay,
+    revealedCount,
+    lastErrorCount,
   } = data;
   const [code, setCode] = useState('');
+
+  const getSegmentColor = (option: CryptoOption) => {
+    if (option.result === 'correct') {
+      return 'green';
+    }
+    if (option.result === 'wrong') {
+      return 'red';
+    }
+    if (option.selected) {
+      return 'cyan';
+    }
+    if (option.wrongHint) {
+      return 'red';
+    }
+    return undefined;
+  };
+
+  const getSegmentClass = (option: CryptoOption) =>
+    'CyberpunkPanel__CryptoSegment' +
+    (option.result === 'correct'
+      ? ' CyberpunkPanel__CryptoSegment--correct'
+      : '') +
+    (option.result === 'wrong'
+      ? ' CyberpunkPanel__CryptoSegment--wrong'
+      : '') +
+    (!option.result && option.selected
+      ? ' CyberpunkPanel__CryptoSegment--selected'
+      : '') +
+    (!option.result && !option.selected && option.wrongHint
+      ? ' CyberpunkPanel__CryptoSegment--wrong'
+      : '');
 
   return (
     <Window width={760} height={640}>
@@ -70,7 +108,12 @@ export const CyberpunkCryptoHack = () => {
             </Stack.Item>
             <Stack.Item>
               <Box className="CyberpunkPanel__Metric">
-                Shift in {nextRotation}s
+                Reveal in {revealTimer}s
+              </Box>
+            </Stack.Item>
+            <Stack.Item>
+              <Box className="CyberpunkPanel__Metric">
+                {revealedCount}/20 / {revealDelay}s
               </Box>
             </Stack.Item>
           </Stack>
@@ -83,6 +126,10 @@ export const CyberpunkCryptoHack = () => {
               <Box className="CyberpunkPanel__CryptoKey">{maskedKey}</Box>
             </Stack.Item>
             {/* CYBERPUNK BUILD - rebuild and delete before release */}
+            <Stack.Item>
+              <Box className="CyberpunkPanel__Muted">Selected output</Box>
+              <Box className="CyberpunkPanel__CryptoKey">{selectedCode}</Box>
+            </Stack.Item>
             <Stack.Item>
               <Box className="CyberpunkPanel__Muted">Test output</Box>
               <Box className="CyberpunkPanel__CryptoKey">{testKey}</Box>
@@ -98,46 +145,41 @@ export const CyberpunkCryptoHack = () => {
               color={aligned ? 'green' : undefined}
               onClick={() => act('attempt_alignment')}
             >
-              Commit alignment
+              Confirm key
             </Button>
           }
         >
+          {!!lastErrorCount && (
+            <Box className="CyberpunkPanel__Muted" mb={1}>
+              Last check rejected {lastErrorCount} segment
+              {lastErrorCount === 1 ? '' : 's'}.
+            </Box>
+          )}
           <Box className="CyberpunkPanel__CryptoGrid">
             {columns.map((column) => (
               <Box key={column.index} className="CyberpunkPanel__CryptoColumn">
                 <Stack vertical>
                   <Stack.Item>
-                    <Button
-                      fluid
-                      icon={column.direction === 'down' ? 'arrow-down' : 'arrow-up'}
-                      onClick={() =>
-                        act('flip_column', { column: column.index })
-                      }
-                    >
-                      {column.direction}
-                    </Button>
-                  </Stack.Item>
-                  <Stack.Item>
                     <Box className="CyberpunkPanel__Title" textAlign="center">
-                      {column.current}
+                      Column {column.index}
                     </Box>
                   </Stack.Item>
                   <Stack.Item>
                     {column.options.map((option) => (
-                      <Box
+                      <Button
+                        fluid
                         key={option.index}
-                        className={
-                          'CyberpunkPanel__CryptoSegment' +
-                          (option.active
-                            ? ' CyberpunkPanel__CryptoSegment--active'
-                            : '') +
-                          (option.wrongHint
-                            ? ' CyberpunkPanel__CryptoSegment--wrong'
-                            : '')
+                        color={getSegmentColor(option)}
+                        className={getSegmentClass(option)}
+                        onClick={() =>
+                          act('select_segment', {
+                            column: column.index,
+                            option: option.index,
+                          })
                         }
                       >
                         {option.text}
-                      </Box>
+                      </Button>
                     ))}
                   </Stack.Item>
                 </Stack>
@@ -146,7 +188,7 @@ export const CyberpunkCryptoHack = () => {
           </Box>
         </Section>
 
-        <Section title="One-use manual input">
+        <Section title="Manual key input">
           <Stack>
             <Stack.Item grow>
               <Input

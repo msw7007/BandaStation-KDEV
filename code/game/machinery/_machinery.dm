@@ -89,7 +89,8 @@
 #define CYBERPUNK_CRYPTO_COLUMNS 5
 #define CYBERPUNK_CRYPTO_SEGMENT_LENGTH 4
 #define CYBERPUNK_CRYPTO_OPTIONS 9
-#define CYBERPUNK_CRYPTO_ROTATION_DELAY (2 SECONDS)
+#define CYBERPUNK_CRYPTO_REVEAL_DELAY (10 SECONDS)
+#define CYBERPUNK_CRYPTO_MIN_REVEAL_DELAY (3 SECONDS)
 #define CYBERPUNK_CRYPTO_BYPASS_DURATION (30 SECONDS)
 #define CYBERPUNK_CRYPTO_CHARSET "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
 
@@ -276,9 +277,12 @@
 	var/obj/machinery/target
 	var/datum/cyberpunk_crypto_key/key_datum
 	var/list/columns = list()
-	var/list/positions = list()
-	var/list/directions = list()
-	var/next_rotation = 0
+	var/list/selections = list()
+	var/list/revealed_positions = list()
+	var/list/column_results = list()
+	var/next_reveal = 0
+	var/reveal_delay = CYBERPUNK_CRYPTO_REVEAL_DELAY
+	var/last_error_count = 0
 	var/closed = FALSE
 
 /datum/cyberpunk_crypto_hack_session/New(mob/living/new_user, obj/machinery/new_target, datum/cyberpunk_crypto_key/new_key)
@@ -286,20 +290,23 @@
 	user = new_user
 	target = new_target
 	key_datum = new_key || new /datum/cyberpunk_crypto_key()
+	reveal_delay = get_reveal_delay()
 	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
 		var/correct_segment = get_cyberpunk_crypto_segment(key_datum.code, column_index)
 		columns += list(generate_column_options(correct_segment))
-		positions += rand(1, CYBERPUNK_CRYPTO_OPTIONS)
-		directions += (column_index <= 2 ? 1 : -1)
-	next_rotation = world.time + CYBERPUNK_CRYPTO_ROTATION_DELAY
+		selections += rand(1, CYBERPUNK_CRYPTO_OPTIONS)
+		column_results["[column_index]"] = null
+	initialize_revealed_positions()
+	next_reveal = world.time + reveal_delay
 
 /datum/cyberpunk_crypto_hack_session/Destroy(force)
 	user = null
 	target = null
 	key_datum = null
 	columns = null
-	positions = null
-	directions = null
+	selections = null
+	revealed_positions = null
+	column_results = null
 	return ..()
 
 /datum/cyberpunk_crypto_hack_session/proc/generate_column_options(correct_segment)
@@ -311,50 +318,65 @@
 		options += candidate
 	return shuffle(options)
 
-/datum/cyberpunk_crypto_hack_session/proc/rotate_columns()
-	if(closed || world.time < next_rotation)
-		return
-	while(world.time >= next_rotation)
-		for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
-			var/new_position = positions[column_index] + directions[column_index]
-			if(new_position < 1)
-				new_position = CYBERPUNK_CRYPTO_OPTIONS
-			else if(new_position > CYBERPUNK_CRYPTO_OPTIONS)
-				new_position = 1
-			positions[column_index] = new_position
-		next_rotation += CYBERPUNK_CRYPTO_ROTATION_DELAY
+/datum/cyberpunk_crypto_hack_session/proc/get_reveal_delay()
+	var/hacking_skill = user?.get_character_skill_level(SKILL_HACKING) || 0
+	return max(CYBERPUNK_CRYPTO_MIN_REVEAL_DELAY, CYBERPUNK_CRYPTO_REVEAL_DELAY - (hacking_skill * 1 SECONDS))
 
-/datum/cyberpunk_crypto_hack_session/proc/current_segment(column_index)
+/datum/cyberpunk_crypto_hack_session/proc/initialize_revealed_positions()
+	revealed_positions = list()
+	var/reveal_count = clamp(round((user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0) / 3), 0, CYBERPUNK_CRYPTO_KEY_LENGTH)
+	for(var/reveal_index in 1 to reveal_count)
+		var/position = clamp(round((CYBERPUNK_CRYPTO_KEY_LENGTH / (reveal_count + 1)) * reveal_index), 1, CYBERPUNK_CRYPTO_KEY_LENGTH)
+		revealed_positions["[position]"] = TRUE
+
+/datum/cyberpunk_crypto_hack_session/proc/reveal_random_position()
+	var/list/hidden_positions = list()
+	for(var/char_index in 1 to CYBERPUNK_CRYPTO_KEY_LENGTH)
+		if(!revealed_positions["[char_index]"])
+			hidden_positions += char_index
+	if(!length(hidden_positions))
+		return FALSE
+	revealed_positions["[pick(hidden_positions)]"] = TRUE
+	return TRUE
+
+/datum/cyberpunk_crypto_hack_session/proc/update_timed_reveals()
+	if(closed || world.time < next_reveal)
+		return
+	while(world.time >= next_reveal)
+		if(!reveal_random_position())
+			next_reveal = world.time
+			return
+		next_reveal += reveal_delay
+
+/datum/cyberpunk_crypto_hack_session/proc/selected_segment(column_index)
 	var/list/options = columns[column_index]
-	return options[positions[column_index]]
+	return options[selections[column_index]]
 
 /datum/cyberpunk_crypto_hack_session/proc/is_aligned()
-	rotate_columns()
 	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
-		if(current_segment(column_index) != get_cyberpunk_crypto_segment(key_datum.code, column_index))
+		if(selected_segment(column_index) != get_cyberpunk_crypto_segment(key_datum.code, column_index))
 			return FALSE
 	return TRUE
 
 /datum/cyberpunk_crypto_hack_session/proc/get_masked_key()
-	var/reveal_count = clamp(round((user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0) / 3), 0, CYBERPUNK_CRYPTO_KEY_LENGTH)
-	if(reveal_count <= 0)
-		. = ""
-		for(var/char_index in 1 to CYBERPUNK_CRYPTO_KEY_LENGTH)
-			. += "*"
-		return
-	var/list/revealed = list()
-	for(var/reveal_index in 1 to reveal_count)
-		revealed["[clamp(round((CYBERPUNK_CRYPTO_KEY_LENGTH / (reveal_count + 1)) * reveal_index), 1, CYBERPUNK_CRYPTO_KEY_LENGTH)]"] = TRUE
+	update_timed_reveals()
 	. = ""
 	for(var/char_index in 1 to CYBERPUNK_CRYPTO_KEY_LENGTH)
-		if(revealed["[char_index]"])
+		if(revealed_positions["[char_index]"])
 			. += copytext_char(key_datum.code, char_index, char_index + 1)
 		else
 			. += "*"
 
+/datum/cyberpunk_crypto_hack_session/proc/get_selected_code()
+	. = ""
+	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
+		. += selected_segment(column_index)
+
 /datum/cyberpunk_crypto_hack_session/proc/get_column_ui_data(column_index)
 	var/list/options = columns[column_index]
 	var/correct_segment = get_cyberpunk_crypto_segment(key_datum.code, column_index)
+	var/selected_index = selections[column_index]
+	var/check_result = column_results["[column_index]"]
 	var/hacking_skill = user?.get_character_skill_level(SKILL_HACKING) || 0
 	var/wrong_hint_budget = clamp(hacking_skill, 0, CYBERPUNK_CRYPTO_OPTIONS - 1)
 	var/wrong_hints_used = 0
@@ -369,20 +391,31 @@
 		option_data += list(list(
 			"index" = option_index,
 			"text" = option,
-			"active" = option_index == positions[column_index],
+			"selected" = option_index == selected_index,
 			"wrongHint" = hinted_wrong,
+			"result" = (option_index == selected_index) ? check_result : null,
 		))
 	return list(
 		"index" = column_index,
-		"direction" = directions[column_index] > 0 ? "down" : "up",
-		"current" = current_segment(column_index),
-		"correctIndex" = options.Find(correct_segment),
+		"selectedIndex" = selected_index,
 		"options" = option_data,
 	)
 
 /datum/cyberpunk_crypto_hack_session/proc/complete_alignment()
-	if(!is_aligned())
-		to_chat(user, span_warning("The columns are not aligned to the cryptokey."))
+	var/error_count = 0
+	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
+		if(selected_segment(column_index) == get_cyberpunk_crypto_segment(key_datum.code, column_index))
+			column_results["[column_index]"] = "correct"
+		else
+			column_results["[column_index]"] = "wrong"
+			error_count++
+	last_error_count = error_count
+	if(error_count)
+		var/alarm_chance = min(90, error_count * 15)
+		to_chat(user, span_warning("[error_count] cryptokey segment[error_count == 1 ? "" : "s"] rejected. Correct picks stay marked; wrong picks are flagged for brute-force correction."))
+		if(prob(alarm_chance))
+			to_chat(user, span_danger("The target access controller raises an alarm."))
+			target?.visible_message(span_warning("[target] emits a sharp access alarm."))
 		return TRUE
 	user?.remember_cyberpunk_crypto_key(key_datum)
 	target?.grant_cyberpunk_crypto_bypass(user)
@@ -419,10 +452,11 @@
 	qdel(src)
 
 /datum/cyberpunk_crypto_hack_session/ui_data(mob/user)
-	rotate_columns()
+	update_timed_reveals()
 	var/list/column_data = list()
 	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
 		column_data += list(get_column_ui_data(column_index))
+	var/hidden_count = CYBERPUNK_CRYPTO_KEY_LENGTH - length(revealed_positions)
 	return list(
 		"targetName" = target?.name || "test harness",
 		"keyName" = key_datum.name,
@@ -431,11 +465,15 @@
 		"testKey" = key_datum.code,
 		//CYBERPUNK BUILD - rebuild and delete before release
 		"maskedKey" = get_masked_key(),
+		"selectedCode" = get_selected_code(),
 		"hackingSkill" = src.user?.get_character_skill_level(SKILL_HACKING) || 0,
 		"intelligence" = src.user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0,
 		"columns" = column_data,
 		"aligned" = is_aligned(),
-		"nextRotation" = max(0, round((next_rotation - world.time) / 10, 0.1)),
+		"revealTimer" = hidden_count > 0 ? max(0, round((next_reveal - world.time) / 10, 0.1)) : 0,
+		"revealDelay" = round(reveal_delay / 10, 0.1),
+		"revealedCount" = length(revealed_positions),
+		"lastErrorCount" = last_error_count,
 	)
 
 /datum/cyberpunk_crypto_hack_session/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -443,9 +481,11 @@
 	if(.)
 		return .
 	switch(action)
-		if("flip_column")
+		if("select_segment")
 			var/column_index = clamp(text2num(params["column"]), 1, CYBERPUNK_CRYPTO_COLUMNS)
-			directions[column_index] *= -1
+			var/option_index = clamp(text2num(params["option"]), 1, CYBERPUNK_CRYPTO_OPTIONS)
+			selections[column_index] = option_index
+			column_results["[column_index]"] = null
 			return TRUE
 		if("attempt_alignment")
 			return complete_alignment()
@@ -457,7 +497,8 @@
 #undef CYBERPUNK_CRYPTO_COLUMNS
 #undef CYBERPUNK_CRYPTO_SEGMENT_LENGTH
 #undef CYBERPUNK_CRYPTO_OPTIONS
-#undef CYBERPUNK_CRYPTO_ROTATION_DELAY
+#undef CYBERPUNK_CRYPTO_REVEAL_DELAY
+#undef CYBERPUNK_CRYPTO_MIN_REVEAL_DELAY
 #undef CYBERPUNK_CRYPTO_BYPASS_DURATION
 #undef CYBERPUNK_CRYPTO_CHARSET
 //CYBERPUNK BUILD - rebuild and delete before release

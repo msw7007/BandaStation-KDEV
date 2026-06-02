@@ -143,22 +143,36 @@
 .CyberpunkPanel__CryptoSegment {
   margin-bottom: 0.2rem;
   padding: 0.22rem 0.25rem;
-  border: 1px solid rgba(24, 216, 255, 0.16);
+  border: 1px solid transparent;
   color: var(--cy-muted);
   font-family: monospace;
   text-align: center;
 }
 
-.CyberpunkPanel__CryptoSegment--active {
+.CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment {
+  background: transparent;
+  border-color: transparent;
+  color: var(--cy-muted);
+  font-family: monospace;
+}
+
+.CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment--selected {
   border-color: var(--cy-cyan);
   color: var(--cy-cyan);
   background: rgba(24, 216, 255, 0.16);
 }
 
-.CyberpunkPanel__CryptoSegment--wrong {
+.CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment--correct {
+  border-color: rgba(66, 215, 125, 0.7);
+  color: var(--cy-green);
+  background: rgba(66, 215, 125, 0.18);
+}
+
+.CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment--wrong {
   border-color: rgba(255, 51, 74, 0.45);
   color: var(--cy-red);
-  opacity: 0.55;
+  background: rgba(255, 51, 74, 0.18);
+  opacity: 0.85;
 }
 
 .CyberpunkPanel__CryptoKey {

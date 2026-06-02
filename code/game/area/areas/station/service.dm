@@ -191,6 +191,17 @@
 	name = "\improper Boutique"
 	icon_state = "boutique"
 
+/area/station/service/business
+	name = "\improper Business Lot"
+	icon_state = "shop"
+	sound_environment = SOUND_AREA_STANDARD_STATION
+
+/area/station/service/business/small
+	name = "\improper Small Business Lot"
+
+/area/station/service/business/medium
+	name = "\improper Medium Business Lot"
+
 /*
 * Abandoned Rooms
 */
