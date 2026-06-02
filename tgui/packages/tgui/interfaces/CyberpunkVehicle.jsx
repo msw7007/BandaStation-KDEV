@@ -35,7 +35,7 @@ export const CyberpunkVehicle = () => {
 
   return (
     <Window width={560} height={520}>
-      <Window.Content scrollable>
+      <Window.Content scrollable className="CyberpunkPanel">
         <Stack vertical>
           <Stack.Item>
             <Section title={name}>
@@ -106,7 +106,7 @@ export const CyberpunkVehicle = () => {
           <Stack.Item>
             <Section title="Starlight parts">
               {parts.map((part) => (
-                <Box key={part.category} mb={1}>
+                <Box key={part.category} className="CyberpunkPanel__Card">
                   <LabeledList>
                     <LabeledList.Item label={part.name}>
                       <ProgressBar
@@ -137,7 +137,7 @@ export const CyberpunkVehicle = () => {
           <Stack.Item>
             <Section title="Mounted mechanisms">
               {!mechanismData.length && (
-                <Box color="label">No mechanisms mounted.</Box>
+                <Box className="CyberpunkPanel__Muted">No mechanisms mounted.</Box>
               )}
               {!!mechanismData.length && (
                 <Table>

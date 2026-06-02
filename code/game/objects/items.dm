@@ -155,6 +155,8 @@
 	var/list/cyberpunk_armor_profile
 	/// Installed Cyberpunk item module datums.
 	var/list/datum/cyberpunk_item_module/cyberpunk_modules
+	/// Round-local contract id attached to this item as cargo evidence.
+	var/cyberpunk_contract_id
 	///Whether spessmen with an ID with an age below AGE_MINOR (20 by default) can buy this item
 	var/age_restricted = FALSE
 

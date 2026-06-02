@@ -370,5 +370,526 @@
 		"reason" = reason,
 	)))
 
+#define CYBERPUNK_CONTRACT_CREATED "created"
+#define CYBERPUNK_CONTRACT_ACCEPTED "accepted"
+#define CYBERPUNK_CONTRACT_COMPLETED "completed"
+#define CYBERPUNK_CONTRACT_FAILED "failed"
+#define CYBERPUNK_CONTRACT_CANCELLED "cancelled"
+
+#define CYBERPUNK_CONTRACT_DELIVERY "delivery"
+#define CYBERPUNK_CONTRACT_REPAIR "repair"
+#define CYBERPUNK_CONTRACT_BUILD "build"
+#define CYBERPUNK_CONTRACT_GUARD "guard"
+#define CYBERPUNK_CONTRACT_MINING "mining"
+#define CYBERPUNK_CONTRACT_SABOTAGE "sabotage"
+#define CYBERPUNK_CONTRACT_ELIMINATION "elimination"
+
+#define CYBERPUNK_CONTRACT_TAX_RATE 0.05
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_contract(contract_id)
+	return cyberpunk_contracts["[contract_id]"]
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_contract_character_key(mob/living/person, datum/bank_account/account)
+	var/name = account?.account_holder || person?.real_name || person?.name
+	return ckey(name)
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_contract_stats(ckey)
+	ckey = ckey(ckey)
+	if(!ckey)
+		return list("created" = 0, "accepted" = 0, "completed" = 0, "failed" = 0, "cancelled" = 0)
+	if(!cyberpunk_contract_stats[ckey])
+		cyberpunk_contract_stats[ckey] = list("created" = 0, "accepted" = 0, "completed" = 0, "failed" = 0, "cancelled" = 0)
+	return cyberpunk_contract_stats[ckey]
+
+/datum/controller/subsystem/economy/proc/adjust_cyberpunk_contract_stat(ckey, stat_key, amount = 1)
+	var/list/stats = get_cyberpunk_contract_stats(ckey)
+	stats[stat_key] = (stats[stat_key] || 0) + amount
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_contract_repair(mob/living/user, atom/target)
+	if(!user || !target || target.max_integrity <= 0)
+		return FALSE
+	for(var/contract_id in cyberpunk_contracts)
+		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
+		if(!contract?.can_act_as_contractor(user) || contract.status != CYBERPUNK_CONTRACT_ACCEPTED || contract.contract_type != CYBERPUNK_CONTRACT_REPAIR)
+			continue
+		if(!contract.matches_target(target))
+			continue
+		if(target.get_integrity_percentage() * 100 < contract.required_percent)
+			continue
+		contract.add_history("[user.real_name || user.name] repaired [target] to contract threshold")
+		if(!contract.creator_confirm_required)
+			contract.complete("repair threshold reached")
+		return TRUE
+	return FALSE
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_contract_sabotage(mob/living/user, atom/target)
+	if(!user || !target || target.max_integrity <= 0)
+		return FALSE
+	for(var/contract_id in cyberpunk_contracts)
+		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
+		if(!contract?.can_act_as_contractor(user) || contract.status != CYBERPUNK_CONTRACT_ACCEPTED || contract.contract_type != CYBERPUNK_CONTRACT_SABOTAGE)
+			continue
+		if(!contract.matches_target(target))
+			continue
+		if(target.get_integrity_percentage() * 100 > contract.required_percent)
+			continue
+		contract.add_history("[user.real_name || user.name] sabotaged [target] to contract threshold")
+		if(!contract.creator_confirm_required)
+			contract.complete("sabotage threshold reached")
+		return TRUE
+	return FALSE
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_contract_construction(mob/living/user, atom/target)
+	if(!user || !target)
+		return FALSE
+	for(var/contract_id in cyberpunk_contracts)
+		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
+		if(!contract?.can_act_as_contractor(user) || contract.status != CYBERPUNK_CONTRACT_ACCEPTED || contract.contract_type != CYBERPUNK_CONTRACT_BUILD)
+			continue
+		if(!contract.matches_target(target))
+			continue
+		contract.add_history("[user.real_name || user.name] constructed [target]")
+		if(!contract.creator_confirm_required)
+			contract.complete("construction target built")
+		return TRUE
+	return FALSE
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_contract_elimination(mob/living/target)
+	if(!target)
+		return FALSE
+	for(var/contract_id in cyberpunk_contracts)
+		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
+		if(!contract || contract.status != CYBERPUNK_CONTRACT_ACCEPTED || contract.contract_type != CYBERPUNK_CONTRACT_ELIMINATION)
+			continue
+		if(contract.contractor_ckey != target.lastattackerckey)
+			continue
+		if(contract.target_text && !findtext(lowertext(target.real_name || target.name), lowertext(contract.target_text)))
+			continue
+		if(target.stat != DEAD && target.health > HEALTH_THRESHOLD_CRIT)
+			continue
+		contract.add_history("[target.real_name || target.name] was eliminated by [contract.contractor_name]")
+		if(!contract.creator_confirm_required)
+			contract.complete("target incapacitated")
+		return TRUE
+	return FALSE
+
+/datum/controller/subsystem/economy/proc/record_cyberpunk_contract_item_in_hands(mob/living/holder, obj/item/item)
+	if(!holder || !item?.cyberpunk_contract_id)
+		return FALSE
+	var/datum/cyberpunk_contract/contract = get_cyberpunk_contract(item.cyberpunk_contract_id)
+	return contract?.record_delivery_contact(item, holder)
+
+/datum/controller/subsystem/economy/proc/create_cyberpunk_contract(mob/living/creator, list/params)
+	var/datum/bank_account/creator_account = creator?.get_bank_account()
+	if(!creator_account)
+		return null
+
+	var/payment = max(0, round(text2num(params["payment"])))
+	var/deposit = max(0, round(text2num(params["deposit"])))
+	var/penalty = max(0, round(text2num(params["penalty"])))
+	var/is_legal = text2num(params["legal"]) ? TRUE : FALSE
+	if(payment <= 0 || !creator_account.has_money(payment))
+		return null
+
+	var/contract_type = params["contract_type"] || CYBERPUNK_CONTRACT_DELIVERY
+	var/static/list/valid_contract_types = list(
+		CYBERPUNK_CONTRACT_DELIVERY,
+		CYBERPUNK_CONTRACT_REPAIR,
+		CYBERPUNK_CONTRACT_BUILD,
+		CYBERPUNK_CONTRACT_GUARD,
+		CYBERPUNK_CONTRACT_MINING,
+		CYBERPUNK_CONTRACT_SABOTAGE,
+		CYBERPUNK_CONTRACT_ELIMINATION,
+	)
+	if(!(contract_type in valid_contract_types))
+		contract_type = CYBERPUNK_CONTRACT_DELIVERY
+
+	var/title = reject_bad_text(params["title"], max_length = 48, ascii_only = FALSE)
+	var/target = reject_bad_text(params["target"], max_length = 64, ascii_only = FALSE)
+	var/description = reject_bad_text(params["description"], max_length = 240, ascii_only = FALSE)
+	var/assigned_contractor = reject_bad_text(params["assigned_contractor"], max_length = 64, ascii_only = FALSE)
+	if(!title)
+		title = "Contract #[next_cyberpunk_contract_id]"
+	if(!target)
+		target = "unspecified target"
+
+	var/escrow_reason = is_legal ? "Legal contract escrow: [title]" : "Off-ledger contract escrow: [title]"
+	if(!creator_account.adjust_money(-payment, escrow_reason))
+		return null
+
+	var/datum/cyberpunk_contract/contract = new
+	contract.id = next_cyberpunk_contract_id++
+	contract.title = title
+	contract.description = description
+	contract.contract_type = contract_type
+	contract.target_text = target
+	contract.creator_ckey = creator.ckey
+	contract.creator_name = creator.real_name || creator.name
+	contract.creator_account_id = creator_account.account_id
+	contract.creator_character_key = get_cyberpunk_contract_character_key(creator, creator_account)
+	contract.assigned_contractor_name = assigned_contractor
+	contract.assigned_contractor_key = ckey(assigned_contractor)
+	contract.payment = payment
+	contract.deposit = deposit
+	contract.penalty = penalty
+	contract.escrow_payment = payment
+	contract.legal = is_legal
+	contract.public_contract = text2num(params["public_contract"]) ? TRUE : FALSE
+	contract.creator_confirm_required = text2num(params["creator_confirm_required"]) ? TRUE : FALSE
+	contract.required_amount = max(1, round(text2num(params["required_amount"]) || 1))
+	contract.required_percent = clamp(round(text2num(params["required_percent"]) || 75), 0, 100)
+	contract.due_time = world.time + clamp(round(text2num(params["duration_minutes"]) || 30), 1, 180) MINUTES
+	contract.created_at = world.time
+	contract.add_history("created by [contract.creator_name]; [payment][MONEY_SYMBOL] reserved")
+	if(assigned_contractor)
+		contract.add_history("assigned contractor: [assigned_contractor]")
+	cyberpunk_contracts["[contract.id]"] = contract
+	adjust_cyberpunk_contract_stat(contract.creator_character_key, "created")
+	addtimer(CALLBACK(contract, TYPE_PROC_REF(/datum/cyberpunk_contract, timeout_check)), contract.due_time - world.time, TIMER_STOPPABLE)
+	return contract
+
+/datum/cyberpunk_contract
+	var/id = 0
+	var/title = "Contract"
+	var/description = ""
+	var/contract_type = CYBERPUNK_CONTRACT_DELIVERY
+	var/target_text = ""
+	var/status = CYBERPUNK_CONTRACT_CREATED
+	var/creator_ckey
+	var/creator_name
+	var/creator_character_key
+	var/creator_account_id
+	var/contractor_ckey
+	var/contractor_name
+	var/contractor_character_key
+	var/contractor_account_id
+	var/assigned_contractor_name
+	var/assigned_contractor_key
+	var/payment = 0
+	var/deposit = 0
+	var/penalty = 0
+	var/escrow_payment = 0
+	var/escrow_deposit = 0
+	var/legal = TRUE
+	var/public_contract = TRUE
+	var/creator_confirm_required = FALSE
+	var/created_at = 0
+	var/accepted_at = 0
+	var/due_time = 0
+	var/required_amount = 1
+	var/delivered_amount = 0
+	var/required_percent = 75
+	var/tax_paid = 0
+	var/list/history = list()
+	var/list/obj/item/delivery_items = list()
+	var/mob/living/tracked_creator
+
+/datum/cyberpunk_contract/proc/get_creator_account()
+	return SSeconomy.bank_accounts_by_id["[creator_account_id]"]
+
+/datum/cyberpunk_contract/proc/get_contractor_account()
+	return SSeconomy.bank_accounts_by_id["[contractor_account_id]"]
+
+/datum/cyberpunk_contract/proc/add_history(message)
+	LAZYADD(history, "[round_timestamp()] - [message]")
+
+/datum/cyberpunk_contract/proc/user_character_key(mob/living/user)
+	return SSeconomy.get_cyberpunk_contract_character_key(user, user?.get_bank_account())
+
+/datum/cyberpunk_contract/proc/can_view(mob/living/user)
+	if(public_contract && legal)
+		return TRUE
+	var/character_key = user_character_key(user)
+	if(character_key == creator_character_key || character_key == contractor_character_key)
+		return TRUE
+	return FALSE
+
+/datum/cyberpunk_contract/proc/can_manage(mob/living/user)
+	return user_character_key(user) == creator_character_key
+
+/datum/cyberpunk_contract/proc/can_act_as_contractor(mob/living/user)
+	return user_character_key(user) == contractor_character_key
+
+/datum/cyberpunk_contract/proc/can_accept(mob/living/user)
+	if(status != CYBERPUNK_CONTRACT_CREATED || !user || can_manage(user))
+		return FALSE
+	if(!assigned_contractor_key)
+		return TRUE
+	return user_character_key(user) == assigned_contractor_key
+
+/datum/cyberpunk_contract/proc/matches_target(atom/target)
+	if(!target)
+		return FALSE
+	if(!target_text)
+		return TRUE
+	var/normalized_target = lowertext(target_text)
+	return findtext(lowertext(target.name), normalized_target) || findtext(lowertext("[target.type]"), normalized_target)
+
+/datum/cyberpunk_contract/proc/accept(mob/living/user)
+	if(!can_accept(user))
+		return FALSE
+	var/datum/bank_account/account = user.get_bank_account()
+	if(!account)
+		return FALSE
+	if(deposit > 0 && !account.adjust_money(-deposit, "Contract deposit: [title]"))
+		return FALSE
+	contractor_ckey = user.ckey
+	contractor_name = user.real_name || user.name
+	contractor_character_key = SSeconomy.get_cyberpunk_contract_character_key(user, account)
+	contractor_account_id = account.account_id
+	escrow_deposit = deposit
+	status = CYBERPUNK_CONTRACT_ACCEPTED
+	accepted_at = world.time
+	add_history("accepted by [contractor_name]; deposit [deposit][MONEY_SYMBOL]")
+	SSeconomy.adjust_cyberpunk_contract_stat(contractor_character_key, "accepted")
+	return TRUE
+
+/datum/cyberpunk_contract/proc/cancel(mob/living/user)
+	if(!can_manage(user) || !(status in list(CYBERPUNK_CONTRACT_CREATED, CYBERPUNK_CONTRACT_ACCEPTED)))
+		return FALSE
+	var/datum/bank_account/creator_account = get_creator_account()
+	var/datum/bank_account/contractor_account = get_contractor_account()
+	if(escrow_payment > 0)
+		creator_account?.adjust_money(escrow_payment, "Contract cancelled: [title]")
+		escrow_payment = 0
+	if(escrow_deposit > 0)
+		contractor_account?.adjust_money(escrow_deposit, "Contract deposit returned: [title]")
+		escrow_deposit = 0
+	if(status == CYBERPUNK_CONTRACT_ACCEPTED && penalty > 0 && creator_account?.adjust_money(-penalty, "Contract cancellation penalty: [title]"))
+		contractor_account?.adjust_money(penalty, "Contract cancellation penalty: [title]")
+	status = CYBERPUNK_CONTRACT_CANCELLED
+	add_history("cancelled by [user.real_name || user.name]")
+	clear_delivery_tracking()
+	SSeconomy.adjust_cyberpunk_contract_stat(creator_character_key, "cancelled")
+	return TRUE
+
+/datum/cyberpunk_contract/proc/fail(reason = "failure")
+	if(!(status in list(CYBERPUNK_CONTRACT_CREATED, CYBERPUNK_CONTRACT_ACCEPTED)))
+		return FALSE
+	var/datum/bank_account/creator_account = get_creator_account()
+	if(escrow_payment > 0)
+		creator_account?.adjust_money(escrow_payment, "Contract failed: [title]")
+		escrow_payment = 0
+	if(escrow_deposit > 0)
+		creator_account?.adjust_money(escrow_deposit, "Contract failed deposit: [title]")
+		escrow_deposit = 0
+	var/datum/bank_account/contractor_account = get_contractor_account()
+	if(penalty > 0 && contractor_account?.adjust_money(-penalty, "Contract failure penalty: [title]"))
+		creator_account?.adjust_money(penalty, "Contract failure penalty: [title]")
+	status = CYBERPUNK_CONTRACT_FAILED
+	add_history("failed: [reason]")
+	clear_delivery_tracking()
+	SSeconomy.adjust_cyberpunk_contract_stat(contractor_character_key, "failed")
+	return TRUE
+
+/datum/cyberpunk_contract/proc/complete(reason = "completion")
+	if(status != CYBERPUNK_CONTRACT_ACCEPTED)
+		return FALSE
+	var/datum/bank_account/contractor_account = get_contractor_account()
+	if(!contractor_account)
+		return FALSE
+	var/payout = escrow_payment
+	if(legal)
+		var/tax = round(payout * CYBERPUNK_CONTRACT_TAX_RATE)
+		if(tax > 0)
+			SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(tax, "Contract tax: [title]")
+			tax_paid += tax
+			payout -= tax
+	var/payout_reason = legal ? "Legal contract payout #[id]: [title]; tax [tax_paid][MONEY_SYMBOL]" : "Off-ledger contract payout #[id]: [title]; no tax"
+	contractor_account.adjust_money(payout, payout_reason)
+	log_econ("Contract #[id] [legal ? "legal" : "off-ledger"] payout [payout][MONEY_NAME] to [contractor_account.account_holder]; tax [tax_paid][MONEY_NAME].")
+	escrow_payment = 0
+	if(escrow_deposit > 0)
+		contractor_account.adjust_money(escrow_deposit, "Contract deposit returned: [title]")
+		escrow_deposit = 0
+	status = CYBERPUNK_CONTRACT_COMPLETED
+	add_history("completed: [reason]")
+	clear_delivery_tracking()
+	SSeconomy.adjust_cyberpunk_contract_stat(contractor_character_key, "completed")
+	return TRUE
+
+/datum/cyberpunk_contract/proc/timeout_check()
+	if(status in list(CYBERPUNK_CONTRACT_CREATED, CYBERPUNK_CONTRACT_ACCEPTED))
+		fail("deadline expired")
+
+/datum/cyberpunk_contract/proc/submit_held_item(mob/living/user)
+	if(!can_act_as_contractor(user) || !(contract_type in list(CYBERPUNK_CONTRACT_DELIVERY, CYBERPUNK_CONTRACT_MINING)))
+		return FALSE
+	var/obj/item/held = user.get_active_held_item()
+	if(!held)
+		return FALSE
+	if(held.cyberpunk_contract_id != id && target_text && !findtext(lowertext(held.name), lowertext(target_text)) && !findtext(lowertext("[held.type]"), lowertext(target_text)))
+		return FALSE
+	if(contract_type == CYBERPUNK_CONTRACT_DELIVERY)
+		return record_delivery_contact(held, user)
+	var/submitted_name = held.name
+	var/amount = 1
+	if(isstack(held))
+		var/obj/item/stack/stack = held
+		amount = min(stack.amount, required_amount - delivered_amount)
+		stack.use(amount)
+	else
+		qdel(held)
+	delivered_amount += amount
+	add_history("[user.real_name || user.name] submitted [amount]x [submitted_name]")
+	if(delivered_amount >= required_amount && !creator_confirm_required)
+		return complete("submitted required cargo")
+	return TRUE
+
+/datum/cyberpunk_contract/proc/mark_held_item(mob/living/user)
+	if(!can_act_as_contractor(user) || !(contract_type in list(CYBERPUNK_CONTRACT_DELIVERY, CYBERPUNK_CONTRACT_MINING)))
+		return FALSE
+	var/obj/item/held = user.get_active_held_item()
+	if(!held)
+		return FALSE
+	held.cyberpunk_contract_id = id
+	add_history("[user.real_name || user.name] marked [held.name] as contract cargo")
+	track_delivery_item(held)
+	record_delivery_contact(held, user)
+	return TRUE
+
+/datum/cyberpunk_contract/proc/track_delivery_item(obj/item/item)
+	if(!item || !(contract_type in list(CYBERPUNK_CONTRACT_DELIVERY)))
+		return
+	if(!(item in delivery_items))
+		delivery_items += item
+		RegisterSignal(item, COMSIG_MOVABLE_MOVED, PROC_REF(on_delivery_item_moved))
+		RegisterSignal(item, COMSIG_QDELETING, PROC_REF(on_delivery_item_deleted))
+	var/mob/living/creator = find_creator_mob()
+	if(creator && creator != tracked_creator)
+		if(tracked_creator)
+			UnregisterSignal(tracked_creator, COMSIG_MOVABLE_MOVED)
+		tracked_creator = creator
+		RegisterSignal(tracked_creator, COMSIG_MOVABLE_MOVED, PROC_REF(on_delivery_creator_moved))
+
+/datum/cyberpunk_contract/proc/clear_delivery_tracking()
+	for(var/obj/item/item as anything in delivery_items)
+		UnregisterSignal(item, list(COMSIG_MOVABLE_MOVED, COMSIG_QDELETING))
+	delivery_items.Cut()
+	if(tracked_creator)
+		UnregisterSignal(tracked_creator, COMSIG_MOVABLE_MOVED)
+		tracked_creator = null
+
+/datum/cyberpunk_contract/proc/find_creator_mob()
+	for(var/mob/living/person as anything in GLOB.player_list)
+		if(user_character_key(person) == creator_character_key)
+			return person
+	return null
+
+/datum/cyberpunk_contract/proc/record_delivery_contact(obj/item/item, mob/living/holder)
+	if(status != CYBERPUNK_CONTRACT_ACCEPTED || contract_type != CYBERPUNK_CONTRACT_DELIVERY || !item || item.cyberpunk_contract_id != id)
+		return FALSE
+	var/mob/living/creator = holder && user_character_key(holder) == creator_character_key ? holder : find_creator_mob()
+	if(!creator)
+		return FALSE
+	if(get_dist(get_turf(creator), get_turf(item)) > 1)
+		return FALSE
+	delivered_amount = max(delivered_amount, required_amount)
+	add_history("[item.name] reached creator [creator.real_name || creator.name]")
+	if(!creator_confirm_required)
+		return complete("cargo delivered to creator")
+	return TRUE
+
+/datum/cyberpunk_contract/proc/on_delivery_item_moved(obj/item/source, atom/old_loc, dir, forced, list/old_locs)
+	SIGNAL_HANDLER
+	record_delivery_contact(source)
+
+/datum/cyberpunk_contract/proc/on_delivery_creator_moved(mob/living/source, atom/old_loc, dir, forced, list/old_locs)
+	SIGNAL_HANDLER
+	for(var/obj/item/item as anything in delivery_items)
+		record_delivery_contact(item, source)
+
+/datum/cyberpunk_contract/proc/on_delivery_item_deleted(obj/item/source)
+	SIGNAL_HANDLER
+	delivery_items -= source
+
+/datum/cyberpunk_contract/proc/check_nearby_target(mob/living/user)
+	if(!can_act_as_contractor(user))
+		return FALSE
+	switch(contract_type)
+		if(CYBERPUNK_CONTRACT_REPAIR)
+			for(var/atom/target in view(1, user))
+				if(!matches_target(target))
+					continue
+				if(target.max_integrity <= 0)
+					continue
+				if(target.get_integrity_percentage() * 100 >= required_percent)
+					add_history("[user.real_name || user.name] verified repair on [target]")
+					if(!creator_confirm_required)
+						return complete("repair threshold reached")
+					return TRUE
+		if(CYBERPUNK_CONTRACT_SABOTAGE)
+			for(var/atom/target in view(1, user))
+				if(!matches_target(target))
+					continue
+				if(target.max_integrity <= 0)
+					continue
+				if(target.get_integrity_percentage() * 100 <= required_percent)
+					add_history("[user.real_name || user.name] verified sabotage on [target]")
+					if(!creator_confirm_required)
+						return complete("sabotage threshold reached")
+					return TRUE
+		if(CYBERPUNK_CONTRACT_BUILD)
+			for(var/atom/target in view(1, user))
+				if(!matches_target(target))
+					continue
+				add_history("[user.real_name || user.name] verified construction of [target]")
+				if(!creator_confirm_required)
+					return complete("construction target present")
+				return TRUE
+		if(CYBERPUNK_CONTRACT_ELIMINATION)
+			for(var/mob/living/target in GLOB.player_list)
+				if(target_text && !findtext(lowertext(target.real_name || target.name), lowertext(target_text)))
+					continue
+				if(target.stat == DEAD || target.health <= HEALTH_THRESHOLD_CRIT)
+					add_history("[user.real_name || user.name] verified elimination of [target.real_name || target.name]")
+					if(!creator_confirm_required)
+						return complete("target incapacitated")
+					return TRUE
+	return FALSE
+
+/datum/cyberpunk_contract/proc/to_ui_data(mob/living/user, include_history = FALSE)
+	var/list/stats = contractor_character_key ? SSeconomy.get_cyberpunk_contract_stats(contractor_character_key) : null
+	return list(
+		"id" = id,
+		"title" = title,
+		"description" = description,
+		"type" = contract_type,
+		"target" = target_text,
+		"status" = status,
+		"creator" = creator_name,
+		"contractor" = contractor_name,
+		"assignedContractor" = assigned_contractor_name,
+		"payment" = payment,
+		"deposit" = deposit,
+		"penalty" = penalty,
+		"legal" = legal,
+		"public" = public_contract,
+		"taxPaid" = tax_paid,
+		"creatorConfirmRequired" = creator_confirm_required,
+		"requiredAmount" = required_amount,
+		"deliveredAmount" = delivered_amount,
+		"requiredPercent" = required_percent,
+		"deadline" = due_time > world.time ? DisplayTimeText(due_time - world.time) : "expired",
+		"canAccept" = can_accept(user),
+		"canManage" = can_manage(user),
+		"canAct" = can_act_as_contractor(user),
+		"contractorStats" = stats,
+		"history" = include_history ? history : null,
+	)
+
+#undef CYBERPUNK_CONTRACT_TAX_RATE
+#undef CYBERPUNK_CONTRACT_ELIMINATION
+#undef CYBERPUNK_CONTRACT_SABOTAGE
+#undef CYBERPUNK_CONTRACT_MINING
+#undef CYBERPUNK_CONTRACT_GUARD
+#undef CYBERPUNK_CONTRACT_BUILD
+#undef CYBERPUNK_CONTRACT_REPAIR
+#undef CYBERPUNK_CONTRACT_DELIVERY
+#undef CYBERPUNK_CONTRACT_CANCELLED
+#undef CYBERPUNK_CONTRACT_FAILED
+#undef CYBERPUNK_CONTRACT_COMPLETED
+#undef CYBERPUNK_CONTRACT_ACCEPTED
+#undef CYBERPUNK_CONTRACT_CREATED
 #undef DUMPTIME
 #undef NO_MY_MONEY

@@ -251,6 +251,7 @@
 						return TRUE
 
 	if(put_in_active_hand(I, forced, ignore_animation, visuals_only))
+		SSeconomy.record_cyberpunk_contract_item_in_hands(src, I)
 		return TRUE
 
 	var/hand = get_empty_held_index_for_side(LEFT_HANDS)
@@ -258,6 +259,7 @@
 		hand = get_empty_held_index_for_side(RIGHT_HANDS)
 	if(hand)
 		if(put_in_hand(I, hand, forced, ignore_animation, visuals_only))
+			SSeconomy.record_cyberpunk_contract_item_in_hands(src, I)
 			return TRUE
 	if(del_on_fail)
 		qdel(I)

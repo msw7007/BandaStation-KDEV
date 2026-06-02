@@ -286,9 +286,11 @@ GLOBAL_LIST_INIT(metal_recipes, list ( \
 	if(frame_path)
 		var/obj/structure/frame/constructed_frame = new frame_path(build_on)
 		constructed_frame.setDir(REVERSE_DIR(user.dir)) //to align computer frame with player direction
+		SSeconomy.record_cyberpunk_contract_construction(user, constructed_frame)
 		user.balloon_alert(user, "frame created")
 	else
-		new/obj/structure/girder/displaced(build_on)
+		var/obj/structure/girder/displaced/constructed_girder = new(build_on)
+		SSeconomy.record_cyberpunk_contract_construction(user, constructed_girder)
 		user.balloon_alert(user, "girder created")
 	return ITEM_INTERACT_SUCCESS
 

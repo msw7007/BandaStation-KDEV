@@ -60,26 +60,12 @@ type CyberpunkMachineModulesData = {
 };
 
 const cy = {
-  bg: '#05080d',
-  panel: '#0b141a',
-  panelSoft: '#101b22',
   red: '#ff334a',
   redDark: '#4a0b13',
   cyan: '#18d8ff',
   text: '#d7e7ee',
   muted: '#78909a',
   green: '#42d77d',
-};
-
-const panelStyle = {
-  background: cy.panel,
-  border: `1px solid ${cy.redDark}`,
-};
-
-const metricStyle = {
-  padding: '7px 8px',
-  border: `1px solid rgba(24, 216, 255, 0.35)`,
-  background: 'rgba(11, 95, 115, 0.14)',
 };
 
 const ModuleStats = (props: { module: MachineModule }) => {
@@ -116,7 +102,7 @@ const ModuleStats = (props: { module: MachineModule }) => {
     stats.push(`APC efficiency x${module.apc_efficiency_multiplier}`);
   }
   return (
-    <div style={{ color: cy.cyan, fontSize: '11px', marginTop: '4px' }}>
+    <div className="CyberpunkPanel__Title CyberpunkPanel__Small">
       {stats.length ? stats.join(' | ') : 'no modifiers'}
     </div>
   );
@@ -127,18 +113,11 @@ const WearBar = (props: { value: number; max: number }) => {
     ? Math.min(100, Math.round((props.value / props.max) * 100))
     : 0;
   return (
-    <div
-      style={{
-        height: '7px',
-        border: `1px solid ${cy.cyan}`,
-        background: '#030609',
-        marginTop: '5px',
-      }}
-    >
+    <div className="CyberpunkPanel__WearBar">
       <div
+        className="CyberpunkPanel__WearBarFill"
         style={{
           width: `${pct}%`,
-          height: '100%',
           background: pct >= 75 ? cy.red : pct >= 40 ? '#d7b22e' : cy.cyan,
         }}
       />
@@ -177,25 +156,23 @@ export const CyberpunkMachineModules = () => {
 
   return (
     <Window title="Machine modules" width={920} height={620}>
-      <Window.Content style={{ background: cy.bg, color: cy.text }}>
+      <Window.Content className="CyberpunkPanel">
         <Stack fill>
           <Stack.Item width="34%">
-            <Section title="MACHINE" style={panelStyle}>
-              <div style={{ color: cy.cyan, fontWeight: 700 }}>
-                {machine.name}
-              </div>
-              <div style={{ color: cy.muted, fontSize: '11px' }}>
+            <Section title="MACHINE">
+              <div className="CyberpunkPanel__Title">{machine.name}</div>
+              <div className="CyberpunkPanel__Muted CyberpunkPanel__Small">
                 {machine.type}
               </div>
               <Stack mt={1}>
-                <Stack.Item grow style={metricStyle}>
+                <Stack.Item grow className="CyberpunkPanel__Metric">
                   PANEL
                   <br />
                   <b style={{ color: machine.panel_open ? cy.green : cy.red }}>
                     {machine.panel_open ? 'open' : 'closed'}
                   </b>
                 </Stack.Item>
-                <Stack.Item grow style={metricStyle}>
+                <Stack.Item grow className="CyberpunkPanel__Metric">
                   MODULES
                   <br />
                   <b style={{ color: cy.cyan }}>
@@ -204,21 +181,21 @@ export const CyberpunkMachineModules = () => {
                 </Stack.Item>
               </Stack>
               <Stack mt={1}>
-                <Stack.Item grow style={metricStyle}>
+                <Stack.Item grow className="CyberpunkPanel__Metric">
                   WEAR
                   <br />
                   <b style={{ color: cy.cyan }}>
                     {machine.wear}/{machine.wear_limit}
                   </b>
                 </Stack.Item>
-                <Stack.Item grow style={metricStyle}>
+                <Stack.Item grow className="CyberpunkPanel__Metric">
                   POWER
                   <br />
                   <b style={{ color: cy.cyan }}>x{machine.power_multiplier}</b>
                 </Stack.Item>
               </Stack>
               <Stack mt={1}>
-                <Stack.Item grow style={metricStyle}>
+                <Stack.Item grow className="CyberpunkPanel__Metric">
                   FAILURE
                   <br />
                   <b
@@ -230,7 +207,7 @@ export const CyberpunkMachineModules = () => {
                     {machine.failure_state}
                   </b>
                 </Stack.Item>
-                <Stack.Item grow style={metricStyle}>
+                <Stack.Item grow className="CyberpunkPanel__Metric">
                   WEAR RATE
                   <br />
                   <b style={{ color: cy.cyan }}>
@@ -238,35 +215,30 @@ export const CyberpunkMachineModules = () => {
                   </b>
                 </Stack.Item>
               </Stack>
-              <div style={{ marginTop: '8px', color: cy.muted }}>
+              <div className="CyberpunkPanel__Muted">
                 Work x{machine.tool_time_multiplier} | wear x
                 {machine.wear_multiplier} | repair x{machine.repair_multiplier}{' '}
                 | salvage x{machine.salvage_multiplier}
               </div>
             </Section>
-            <Section title="INSTALLED MODULES" style={panelStyle}>
+            <Section title="INSTALLED MODULES">
               {!installed.length && (
-                <div style={{ color: cy.muted, fontStyle: 'italic' }}>
+                <div className="CyberpunkPanel__Muted">
                   No modules installed.
                 </div>
               )}
               {installed.map((module) => (
                 <div
                   key={module.id}
-                  style={{
-                    marginBottom: '8px',
-                    padding: '8px',
-                    border: `1px solid ${cy.cyan}`,
-                    background: cy.panelSoft,
-                  }}
+                  className="CyberpunkPanel__Card"
                 >
                   <Stack align="center">
                     <Stack.Item grow>
-                      <b style={{ color: cy.cyan }}>{module.name}</b>
-                      <div style={{ color: cy.muted }}>
+                      <b className="CyberpunkPanel__Title">{module.name}</b>
+                      <div className="CyberpunkPanel__Muted">
                         {module.description}
                       </div>
-                      <div style={{ color: cy.muted, fontSize: '11px' }}>
+                      <div className="CyberpunkPanel__Muted CyberpunkPanel__Small">
                         Produced by {module.manufacturer}
                       </div>
                       <ModuleStats module={module} />
@@ -286,15 +258,15 @@ export const CyberpunkMachineModules = () => {
                 </div>
               ))}
             </Section>
-            <Section title="HELD MODULE" style={panelStyle}>
+            <Section title="HELD MODULE">
               {heldModule ? (
                 <Stack align="center">
                   <Stack.Item grow>
-                    <b style={{ color: cy.cyan }}>{heldModule.name}</b>
-                    <div style={{ color: cy.muted }}>
+                    <b className="CyberpunkPanel__Title">{heldModule.name}</b>
+                    <div className="CyberpunkPanel__Muted">
                       {heldModule.description}
                     </div>
-                    <div style={{ color: cy.muted, fontSize: '11px' }}>
+                    <div className="CyberpunkPanel__Muted CyberpunkPanel__Small">
                       Produced by {heldModule.manufacturer}
                     </div>
                     <ModuleStats module={heldModule} />
@@ -310,34 +282,25 @@ export const CyberpunkMachineModules = () => {
                   </Stack.Item>
                 </Stack>
               ) : (
-                <div style={{ color: cy.muted, fontStyle: 'italic' }}>
+                <div className="CyberpunkPanel__Muted">
                   Hold a Рязнов module produced on an engineering protolathe.
                 </div>
               )}
             </Section>
           </Stack.Item>
           <Stack.Item width="33%">
-            <Section title="RYAZNOV MODULE CATALOG" style={panelStyle} fill>
-              <div
-                style={{
-                  maxHeight: '535px',
-                  overflowY: 'auto',
-                  paddingRight: '4px',
-                }}
-              >
+            <Section title="RYAZNOV MODULE CATALOG" fill>
+              <div className="CyberpunkPanel__Scroll">
                 {catalog.map((module) => (
                   <div
                     key={module.id}
-                    style={{
-                      marginBottom: '8px',
-                      padding: '8px',
-                      border: `1px solid ${cy.redDark}`,
-                      background: cy.panelSoft,
-                    }}
+                    className="CyberpunkPanel__Card CyberpunkPanel__Card--red"
                   >
-                    <b style={{ color: cy.cyan }}>{module.name}</b>
-                    <div style={{ color: cy.muted }}>{module.description}</div>
-                    <div style={{ color: cy.muted, fontSize: '11px' }}>
+                    <b className="CyberpunkPanel__Title">{module.name}</b>
+                    <div className="CyberpunkPanel__Muted">
+                      {module.description}
+                    </div>
+                    <div className="CyberpunkPanel__Muted CyberpunkPanel__Small">
                       Produced by {module.manufacturer}
                     </div>
                     <ModuleStats module={module} />
@@ -347,40 +310,33 @@ export const CyberpunkMachineModules = () => {
             </Section>
           </Stack.Item>
           <Stack.Item width="33%">
-            <Section title="COMPONENT WEAR" style={panelStyle} fill>
-              <div
-                style={{
-                  maxHeight: '535px',
-                  overflowY: 'auto',
-                  paddingRight: '4px',
-                }}
-              >
+            <Section title="COMPONENT WEAR" fill>
+              <div className="CyberpunkPanel__Scroll">
                 {!components.length && (
-                  <div style={{ color: cy.muted, fontStyle: 'italic' }}>
+                  <div className="CyberpunkPanel__Muted">
                     This machine has no exposed component list.
                   </div>
                 )}
                 {components.map((component) => (
                   <div
                     key={component.index}
-                    style={{
-                      marginBottom: '8px',
-                      padding: '8px',
-                      border: `1px solid ${component.wear ? cy.cyan : cy.redDark}`,
-                      background: cy.panelSoft,
-                    }}
+                    className={`CyberpunkPanel__Card ${
+                      component.wear ? '' : 'CyberpunkPanel__Card--red'
+                    }`}
                   >
                     <Stack align="center">
                       <Stack.Item grow>
-                        <b style={{ color: cy.cyan }}>{component.name}</b>
-                        <div style={{ color: cy.muted, fontSize: '11px' }}>
+                        <b className="CyberpunkPanel__Title">
+                          {component.name}
+                        </b>
+                        <div className="CyberpunkPanel__Muted CyberpunkPanel__Small">
                           {component.type}
                         </div>
                         <WearBar
                           value={component.wear}
                           max={component.wear_limit}
                         />
-                        <div style={{ color: cy.text, marginTop: '3px' }}>
+                        <div>
                           Wear: {component.wear}/{component.wear_limit}
                         </div>
                       </Stack.Item>

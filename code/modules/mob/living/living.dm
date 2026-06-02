@@ -2440,6 +2440,8 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	. = ..()
 	if(isnull(.))
 		return
+	if(stat in list(SOFT_CRIT, HARD_CRIT, UNCONSCIOUS, DEAD))
+		SSeconomy.record_cyberpunk_contract_elimination(src)
 
 	if(. <= UNCONSCIOUS || new_stat >= UNCONSCIOUS)
 		update_eyes()

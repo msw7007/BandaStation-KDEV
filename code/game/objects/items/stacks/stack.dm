@@ -457,6 +457,7 @@
 	if(ismovable(created))
 		created.setDir(builder.dir)
 	created.on_craft_completion(list(used_stack), null, builder)
+	SSeconomy.record_cyberpunk_contract_construction(builder, created)
 
 	builder.investigate_log("crafted [recipe.title]", INVESTIGATE_CRAFTING)
 

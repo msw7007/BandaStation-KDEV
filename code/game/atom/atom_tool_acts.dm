@@ -142,6 +142,8 @@
 				if(applied_repair > 0)
 					to_chat(user, span_notice("Ваши строительные навыки улучшают ремонт на [applied_repair] прочности."))
 
+			SSeconomy.record_cyberpunk_contract_repair(user, src)
+
 	// A tooltype_act has completed successfully
 	if(is_left_clicking)
 		log_tool("[key_name(user)] used [tool] on [src] at [AREACOORD(src)]")

@@ -128,7 +128,10 @@
 			damage_amount *= 1 + structure_damage_bonus * 0.01
 	user.do_attack_animation(src)
 	user.changeNext_move(CLICK_CD_MELEE)
-	return take_damage(damage_amount, damage_type, damage_flag, sound_effect, get_dir(src, user), armor_penetration)
+	. = take_damage(damage_amount, damage_type, damage_flag, sound_effect, get_dir(src, user), armor_penetration)
+	if(. && isliving(user))
+		SSeconomy.record_cyberpunk_contract_sabotage(user, src)
+	return .
 
 /// Called after the atom takes damage and integrity is below integrity_failure level
 /atom/proc/atom_break(damage_flag)
