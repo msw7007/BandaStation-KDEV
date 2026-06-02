@@ -122,6 +122,7 @@
 
 /mob/living
 	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_memory
+	var/list/cyberpunk_memory_notes
 
 /mob/living/proc/get_cyberpunk_crypto_identity()
 	return ckey("[mind?.name || real_name || key || name]")
@@ -149,17 +150,14 @@
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /mob/living/verb/test_cyberpunk_crypto_hack()
-	set name = "Тест криптоключа"
+	set name = "Test cryptokey"
 	set category = "IC"
 
 	var/datum/cyberpunk_crypto_key/test_key = new("test service key", "independent")
 	var/datum/cyberpunk_crypto_hack_session/session = new(src, null, test_key)
 	session.ui_interact(src)
 
-/mob/living/verb/show_cyberpunk_crypto_memory()
-	set name = "Память криптоключей"
-	set category = "IC"
-
+/mob/living/proc/show_cyberpunk_crypto_memory()
 	if(!length(cyberpunk_crypto_memory))
 		to_chat(src, span_notice("No cryptokeys stored in memory."))
 		return
@@ -168,7 +166,7 @@
 		to_chat(src, span_notice("- [key_datum.name] / [key_datum.owner]: [key_datum.code]"))
 
 /mob/living/verb/write_cyberpunk_crypto_key_to_held_item()
-	set name = "Записать криптоключ на предмет"
+	set name = "Р—Р°РїРёСЃР°С‚СЊ РєСЂРёРїС‚РѕРєР»СЋС‡ РЅР° РїСЂРµРґРјРµС‚"
 	set category = "IC"
 
 	var/obj/item/held_item = get_active_held_item()
@@ -294,7 +292,7 @@
 	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
 		var/correct_segment = get_cyberpunk_crypto_segment(key_datum.code, column_index)
 		columns += list(generate_column_options(correct_segment))
-		selections += rand(1, CYBERPUNK_CRYPTO_OPTIONS)
+		selections += 0
 		column_results["[column_index]"] = null
 	initialize_revealed_positions()
 	next_reveal = world.time + reveal_delay
@@ -324,7 +322,7 @@
 
 /datum/cyberpunk_crypto_hack_session/proc/initialize_revealed_positions()
 	revealed_positions = list()
-	var/reveal_count = clamp(round((user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0) / 3), 0, CYBERPUNK_CRYPTO_KEY_LENGTH)
+	var/reveal_count = clamp(round(user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0), 0, CYBERPUNK_CRYPTO_KEY_LENGTH)
 	for(var/reveal_index in 1 to reveal_count)
 		var/position = clamp(round((CYBERPUNK_CRYPTO_KEY_LENGTH / (reveal_count + 1)) * reveal_index), 1, CYBERPUNK_CRYPTO_KEY_LENGTH)
 		revealed_positions["[position]"] = TRUE
@@ -350,6 +348,8 @@
 
 /datum/cyberpunk_crypto_hack_session/proc/selected_segment(column_index)
 	var/list/options = columns[column_index]
+	if(selections[column_index] < 1)
+		return "****"
 	return options[selections[column_index]]
 
 /datum/cyberpunk_crypto_hack_session/proc/is_aligned()
@@ -508,8 +508,8 @@
 	var/name = "generic machinery module"
 	var/id = "generic"
 	var/description = "A generic machinery module."
-	var/manufacturer = "Рязнов"
-	var/corp_manufacturer = "Рязнов"
+	var/manufacturer = "Р СЏР·РЅРѕРІ"
+	var/corp_manufacturer = "Р СЏР·РЅРѕРІ"
 	var/obj/item/module_item_type = /obj/item/cyberpunk_machine_module
 	var/power_usage_multiplier = 1
 	var/wear_multiplier = 1
@@ -640,12 +640,12 @@
 
 /obj/item/cyberpunk_machine_module
 	name = "machine module"
-	desc = "A Рязнов-produced Cyberpunk 13 machinery module shell."
+	desc = "A Р СЏР·РЅРѕРІ-produced Cyberpunk 13 machinery module shell."
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "integrated_circuit"
 	w_class = WEIGHT_CLASS_SMALL
-	var/manufacturer = "Рязнов"
-	var/corp_manufacturer = "Рязнов"
+	var/manufacturer = "Р СЏР·РЅРѕРІ"
+	var/corp_manufacturer = "Р СЏР·РЅРѕРІ"
 	var/module_datum_type = /datum/cyberpunk_machine_module
 
 /obj/item/cyberpunk_machine_module/proc/create_module_datum()
@@ -717,8 +717,8 @@
 	module_datum_type = /datum/cyberpunk_machine_module/apc_efficiency_core
 
 /datum/design/cyberpunk_machine_module
-	name = "Рязнов Machine Module"
-	desc = "A Рязнов-certified maintenance module for Cyberpunk 13 machinery."
+	name = "Р СЏР·РЅРѕРІ Machine Module"
+	desc = "A Р СЏР·РЅРѕРІ-certified maintenance module for Cyberpunk 13 machinery."
 	id = "ryaznov_machine_module"
 	build_type = PROTOLATHE | AWAY_LATHE
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
@@ -727,55 +727,55 @@
 	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE
 
 /datum/design/cyberpunk_machine_module/power_governor
-	name = "Рязнов Reserve Power Governor"
+	name = "Р СЏР·РЅРѕРІ Reserve Power Governor"
 	id = "ryaznov_power_governor"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/power_governor
 
 /datum/design/cyberpunk_machine_module/wear_buffer
-	name = "Рязнов Wear Buffer"
+	name = "Р СЏР·РЅРѕРІ Wear Buffer"
 	id = "ryaznov_wear_buffer"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/wear_buffer
 
 /datum/design/cyberpunk_machine_module/reinforced_frame
-	name = "Рязнов Reinforced Machine Frame"
+	name = "Р СЏР·РЅРѕРІ Reinforced Machine Frame"
 	id = "ryaznov_reinforced_frame"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
 	build_path = /obj/item/cyberpunk_machine_module/reinforced_frame
 
 /datum/design/cyberpunk_machine_module/service_bus
-	name = "Рязнов Service Bus"
+	name = "Р СЏР·РЅРѕРІ Service Bus"
 	id = "ryaznov_service_bus"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/service_bus
 
 /datum/design/cyberpunk_machine_module/salvage_router
-	name = "Рязнов Salvage Routing Matrix"
+	name = "Р СЏР·РЅРѕРІ Salvage Routing Matrix"
 	id = "ryaznov_salvage_router"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/salvage_router
 
 /datum/design/cyberpunk_machine_module/chem_reaction_accelerator
-	name = "Р СЏР·РЅРѕРІ Chem Reaction Accelerator"
+	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† Chem Reaction Accelerator"
 	id = "ryaznov_chem_reaction_accelerator"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
 
 /datum/design/cyberpunk_machine_module/chem_yield_regulator
-	name = "Р СЏР·РЅРѕРІ Chem Yield Regulator"
+	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† Chem Yield Regulator"
 	id = "ryaznov_chem_yield_regulator"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/chem_yield_regulator
 
 /datum/design/cyberpunk_machine_module/corporate_vending_bus
-	name = "Р СЏР·РЅРѕРІ Corporate Vending Bus"
+	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† Corporate Vending Bus"
 	id = "ryaznov_corporate_vending_bus"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/corporate_vending_bus
 
 /datum/design/cyberpunk_machine_module/apc_efficiency_core
-	name = "Р СЏР·РЅРѕРІ APC Efficiency Core"
+	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† APC Efficiency Core"
 	id = "ryaznov_apc_efficiency_core"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/apc_efficiency_core
@@ -929,13 +929,13 @@
 	. += "Modules: [length(cyberpunk_machine_modules)]/[cyberpunk_machine_module_slots]."
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		. += module.get_diagnostic_line(src)
-	. += "Питание: [powered() ? "есть" : "нет"]."
-	. += "Состояние: [machine_stat ? "[machine_stat]" : "штатное"]."
-	. += "Панель: [panel_open ? "открыта" : "закрыта"]."
-	. += "Компоненты: [length(component_parts)]."
+	. += "РџРёС‚Р°РЅРёРµ: [powered() ? "РµСЃС‚СЊ" : "РЅРµС‚"]."
+	. += "РЎРѕСЃС‚РѕСЏРЅРёРµ: [machine_stat ? "[machine_stat]" : "С€С‚Р°С‚РЅРѕРµ"]."
+	. += "РџР°РЅРµР»СЊ: [panel_open ? "РѕС‚РєСЂС‹С‚Р°" : "Р·Р°РєСЂС‹С‚Р°"]."
+	. += "РљРѕРјРїРѕРЅРµРЅС‚С‹: [length(component_parts)]."
 	if(user?.get_cyberpunk_machine_diagnostic_depth(src) > 0)
-		. += "Порог повреждения износом: [cyberpunk_machine_wear_damage_threshold]."
-		. += "Шанс короткого замыкания: [cyberpunk_machine_failure_shock_chance]%."
+		. += "РџРѕСЂРѕРі РїРѕРІСЂРµР¶РґРµРЅРёСЏ РёР·РЅРѕСЃРѕРј: [cyberpunk_machine_wear_damage_threshold]."
+		. += "РЁР°РЅСЃ РєРѕСЂРѕС‚РєРѕРіРѕ Р·Р°РјС‹РєР°РЅРёСЏ: [cyberpunk_machine_failure_shock_chance]%."
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/LateInitialize()
@@ -1425,7 +1425,7 @@
 		return FALSE
 
 	if((interaction_flags_machine & INTERACT_MACHINE_REQUIRES_SIGHT) && user.is_blind())
-		to_chat(user, span_warning("Чтобы воспользоваться этой машиной, нужно иметь зрение."))
+		to_chat(user, span_warning("Р§С‚РѕР±С‹ РІРѕСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЌС‚РѕР№ РјР°С€РёРЅРѕР№, РЅСѓР¶РЅРѕ РёРјРµС‚СЊ Р·СЂРµРЅРёРµ."))
 		return FALSE
 
 	// machines have their own lit up display screens and LED buttons so we don't need to check for light
@@ -1465,7 +1465,7 @@
 	add_fingerprint(user)
 	update_last_used(user)
 	if(isAI(user) && !SScameras.is_visible_by_cameras(get_turf(src))) //We check if they're an AI specifically here, so borgs/adminghosts/human wand can still access off-camera stuff.
-		to_chat(user, span_warning("Вы больше не можете взаимодействовать с этим устройством!"))
+		to_chat(user, span_warning("Р’С‹ Р±РѕР»СЊС€Рµ РЅРµ РјРѕР¶РµС‚Рµ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРѕРІР°С‚СЊ СЃ СЌС‚РёРј СѓСЃС‚СЂРѕР№СЃС‚РІРѕРј!"))
 		return FALSE
 	return ..()
 
@@ -1522,7 +1522,7 @@
 		if(user_unbuckle_mob(buckled_mobs[1],user))
 			return TRUE
 
-	var/unbuckled = tgui_input_list(user, "Кого вы хотите отстегнуть?", "Отстегивание", sort_names(buckled_mobs))
+	var/unbuckled = tgui_input_list(user, "РљРѕРіРѕ РІС‹ С…РѕС‚РёС‚Рµ РѕС‚СЃС‚РµРіРЅСѓС‚СЊ?", "РћС‚СЃС‚РµРіРёРІР°РЅРёРµ", sort_names(buckled_mobs))
 	if(isnull(unbuckled))
 		return FALSE
 	if(user_unbuckle_mob(unbuckled,user))
@@ -1640,7 +1640,7 @@
 		return deconstruct_on_fail ? default_deconstruction_crowbar(user, crowbar) : ITEM_INTERACT_BLOCKING
 
 	crowbar.play_tool_sound(src, 50)
-	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] вскрывает [declent_ru(ACCUSATIVE)]."), span_notice("Вы вскрываете [declent_ru(ACCUSATIVE)]."))
+	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] РІСЃРєСЂС‹РІР°РµС‚ [declent_ru(ACCUSATIVE)]."), span_notice("Р’С‹ РІСЃРєСЂС‹РІР°РµС‚Рµ [declent_ru(ACCUSATIVE)]."))
 	open_machine(density_to_set = open_density)
 	if (close_after_pry) //Should it immediately close after prying? (If not, it must be closed elsewhere)
 		close_machine(density_to_set = closed_density)
@@ -2295,7 +2295,7 @@
 
 	screwdriver.play_tool_sound(src, 50)
 	toggle_panel_open()
-	balloon_alert(user, "панель обслуживания [panel_open ? "открыта" : "закрыта"]")
+	balloon_alert(user, "РїР°РЅРµР»СЊ РѕР±СЃР»СѓР¶РёРІР°РЅРёСЏ [panel_open ? "РѕС‚РєСЂС‹С‚Р°" : "Р·Р°РєСЂС‹С‚Р°"]")
 	return ITEM_INTERACT_SUCCESS
 
 /**
@@ -2315,7 +2315,7 @@
 
 	wrench.play_tool_sound(src, 50)
 	setDir(turn(dir,-90))
-	to_chat(user, span_notice("Вы поворачиваете [declent_ru(ACCUSATIVE)]."))
+	to_chat(user, span_notice("Р’С‹ РїРѕРІРѕСЂР°С‡РёРІР°РµС‚Рµ [declent_ru(ACCUSATIVE)]."))
 	SEND_SIGNAL(src, COMSIG_MACHINERY_DEFAULT_ROTATE_WRENCH, user, wrench)
 	return ITEM_INTERACT_SUCCESS
 
@@ -2406,7 +2406,7 @@
 					physical_part = primary_part_base
 
 				replacer_tool.atom_storage.attempt_insert(physical_part, user, TRUE, force = STORAGE_SOFT_LOCKED)
-				to_chat(user, span_notice("[capitalize(physical_part.declent_ru(NOMINATIVE))] заменяется на [secondary_part_name]."))
+				to_chat(user, span_notice("[capitalize(physical_part.declent_ru(NOMINATIVE))] Р·Р°РјРµРЅСЏРµС‚СЃСЏ РЅР° [secondary_part_name]."))
 				shouldplaysound = TRUE //Only play the sound when parts are actually replaced!
 				break
 
@@ -2451,7 +2451,7 @@
 				part_count[component] = board.req_components[component]
 
 
-	var/text = span_notice("Внутри имеются следующие компоненты:")
+	var/text = span_notice("Р’РЅСѓС‚СЂРё РёРјРµСЋС‚СЃСЏ СЃР»РµРґСѓСЋС‰РёРµ РєРѕРјРїРѕРЅРµРЅС‚С‹:")
 	for(var/component_part in part_count)
 		var/part_name
 		var/icon/html_icon
@@ -2475,19 +2475,19 @@
 /obj/machinery/examine(mob/user)
 	. = ..()
 	if(machine_stat & BROKEN)
-		. += span_notice("Выглядит сломано и нефункционально.")
+		. += span_notice("Р’С‹РіР»СЏРґРёС‚ СЃР»РѕРјР°РЅРѕ Рё РЅРµС„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕ.")
 	if(!(resistance_flags & INDESTRUCTIBLE))
 		var/healthpercent = (atom_integrity/max_integrity) * 100
 		switch(healthpercent)
 			if(50 to 99)
-				. += "Имеет незначительные повреждения."
+				. += "РРјРµРµС‚ РЅРµР·РЅР°С‡РёС‚РµР»СЊРЅС‹Рµ РїРѕРІСЂРµР¶РґРµРЅРёСЏ."
 			if(25 to 50)
-				. += "Имеет значительные повреждения."
+				. += "РРјРµРµС‚ Р·РЅР°С‡РёС‚РµР»СЊРЅС‹Рµ РїРѕРІСЂРµР¶РґРµРЅРёСЏ."
 			if(0 to 25)
-				. += span_warning("Разваливается на части!")
+				. += span_warning("Р Р°Р·РІР°Р»РёРІР°РµС‚СЃСЏ РЅР° С‡Р°СЃС‚Рё!")
 
 /obj/machinery/examine_descriptor(mob/user)
-	return "машина"
+	return "РјР°С€РёРЅР°"
 
 /obj/machinery/examine_more(mob/user)
 	. = ..()
@@ -2549,7 +2549,7 @@
  * However, the proc may also be used elsewhere.
  */
 /obj/machinery/proc/AI_notify_hack()
-	var/alertstr = span_userdanger("Сетевая тревога: Обнаружена попытка взлома[get_area(src)?" в [get_area_name(src, TRUE)]":". Невозможно определить местоположение"].")
+	var/alertstr = span_userdanger("РЎРµС‚РµРІР°СЏ С‚СЂРµРІРѕРіР°: РћР±РЅР°СЂСѓР¶РµРЅР° РїРѕРїС‹С‚РєР° РІР·Р»РѕРјР°[get_area(src)?" РІ [get_area_name(src, TRUE)]":". РќРµРІРѕР·РјРѕР¶РЅРѕ РѕРїСЂРµРґРµР»РёС‚СЊ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёРµ"].")
 	for(var/mob/living/silicon/ai/AI in GLOB.player_list)
 		to_chat(AI, alertstr)
 

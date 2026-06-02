@@ -111,6 +111,10 @@
   font-size: 0.75rem;
 }
 
+.CyberpunkPanel__Mono {
+  font-family: monospace;
+}
+
 .CyberpunkPanel__Scroll {
   max-height: 535px;
   overflow-y: auto;
@@ -150,28 +154,28 @@
 }
 
 .CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment {
-  background: transparent;
-  border-color: transparent;
-  color: var(--cy-muted);
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--cy-cyan) !important;
   font-family: monospace;
 }
 
 .CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment--selected {
-  border-color: var(--cy-cyan);
-  color: var(--cy-cyan);
-  background: rgba(24, 216, 255, 0.16);
+  border-color: var(--cy-cyan) !important;
+  color: var(--cy-cyan) !important;
+  background: rgba(24, 216, 255, 0.16) !important;
 }
 
 .CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment--correct {
-  border-color: rgba(66, 215, 125, 0.7);
-  color: var(--cy-green);
-  background: rgba(66, 215, 125, 0.18);
+  border-color: rgba(66, 215, 125, 0.7) !important;
+  color: var(--cy-green) !important;
+  background: rgba(66, 215, 125, 0.18) !important;
 }
 
 .CyberpunkPanel .Button.CyberpunkPanel__CryptoSegment--wrong {
-  border-color: rgba(255, 51, 74, 0.45);
-  color: var(--cy-red);
-  background: rgba(255, 51, 74, 0.18);
+  border-color: rgba(255, 51, 74, 0.45) !important;
+  color: var(--cy-red) !important;
+  background: rgba(255, 51, 74, 0.18) !important;
   opacity: 0.85;
 }
 

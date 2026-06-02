@@ -1179,6 +1179,7 @@
 	LAZYADD(history, "[round_timestamp()] - [message]")
 
 /datum/cyberpunk_business/proc/get_business_area()
+	RETURN_TYPE(/area)
 	var/area/current_area = terminal ? get_area(terminal) : null
 	if(istype(current_area, /area/station/service/business))
 		return current_area

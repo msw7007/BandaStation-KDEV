@@ -1,173 +1,202 @@
-import { Button, Dimmer, Section, Stack } from 'tgui-core/components';
+// CYBERPUNK BUILD - rebuild and delete before release
+import { useState } from 'react';
+import {
+  Box,
+  Button,
+  Dropdown,
+  Input,
+  Section,
+  Stack,
+  Table,
+  TextArea,
+} from 'tgui-core/components';
 
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
 
 const STORY_VALUE_KEY = -1;
-const STORY_VALUE_SHIT = 0;
-const STORY_VALUE_NONE = 1;
-const STORY_VALUE_MEH = 2;
-const STORY_VALUE_OKAY = 3;
-const STORY_VALUE_AMAZING = 4;
-const STORY_VALUE_LEGENDARY = 5;
+
+const entryTypes = [
+  { value: 'note', displayText: 'Note' },
+  { value: 'key', displayText: 'Cryptokey' },
+];
 
 const MemoryQuality = (props) => {
-  const { act } = useBackend();
   const { quality } = props;
-
   if (quality === STORY_VALUE_KEY) {
-    return (
-      <Button
-        icon="key"
-        color="transparent"
-        tooltipPosition="right"
-        tooltip={`
-          This is a key memory. It contains important information
-          you may want to double-check in the future.
-        `}
-      />
-    );
+    return <Button icon="key" color="transparent" tooltip="Key memory" />;
   }
-  if (quality === STORY_VALUE_SHIT) {
-    return (
-      <Button
-        icon="poop"
-        color="transparent"
-        tooltipPosition="right"
-        tooltip={`
-          This memory is not interesting at all! It does not make for
-          good art and is unlikely to pass to future generations.
-        `}
-      />
-    );
-  }
-  if (quality === STORY_VALUE_NONE) {
-    return (
-      <Button
-        icon="star"
-        color="transparent"
-        tooltipPosition="right"
-        tooltip={`
-          This memory pretty bland. It would make for some pretty
-          mediocre art and is not likely to pass to future generations.
-  `}
-      />
-    );
-  }
-  if (quality === STORY_VALUE_MEH) {
-    return (
-      <Button
-        icon="star"
-        style={{
-          background:
-            'linear-gradient(to right, #964B30, #D68B60, #B66B30, #D68B60, #964B30);',
-        }}
-        tooltipPosition="right"
-        tooltip={`
-          This memory is not super interesting. It could turn into
-          an okay story but don't bet on it.
-    `}
-      />
-    );
-  }
-  if (quality === STORY_VALUE_OKAY) {
-    return (
-      <Button
-        icon="star"
-        style={{
-          background:
-            'linear-gradient(to right, #636363, #a3a3a3, #6e6e6e, #a3a3a3, #636363);',
-        }}
-        tooltipPosition="right"
-        tooltip={`
-          This memory is pretty okay! Some good stories could be told
-          from this and it might even come back in future generations.
-      `}
-      />
-    );
-  }
-  if (quality === STORY_VALUE_AMAZING) {
-    return (
-      <Button
-        icon="star"
-        style={{
-          background:
-            'linear-gradient(to right, #AA771C, #BCB68A, #B38728, #BCB68A, #AA771C);',
-        }}
-        tooltipPosition="right"
-        tooltip={`
-          This memory is great! You could tell a great story from it,
-          and it would have a good chanced pass to future generations!
-      `}
-      />
-    );
-  }
-  if (quality === STORY_VALUE_LEGENDARY) {
-    return (
-      <Button
-        icon="crown"
-        style={{
-          background:
-            'linear-gradient(to right, #56A5B3, #75D4E2, #56A5B3, #75D4E2, #56A5B3)',
-        }}
-        tooltipPosition="right"
-        tooltip={`
-          This memory is the stuff of legends! It would make for
-          legendary art and is likely to pass to future generations.
-        `}
-      />
-    );
-  }
-  // Default return / error
-  return (
-    <Button
-      icon="question"
-      tooltipPosition="right"
-      tooltip={`
-        This memory has no valid quality assigned. We have no idea how good
-        or bad it may be. This is a bug, and should be reported!
-      `}
-    />
-  );
+  return <Button icon="brain" color="transparent" tooltip="Memory" />;
 };
 
-export const MemoryPanel = (props) => {
+export const MemoryPanel = () => {
   const { act, data } = useBackend();
   const memories = data.memories || [];
+  const notes = data.notes || [];
+  const cryptokeys = data.cryptokeys || [];
+  const [entryType, setEntryType] = useState('note');
+  const [noteText, setNoteText] = useState('');
+  const [keyName, setKeyName] = useState('');
+  const [keyOwner, setKeyOwner] = useState('');
+  const [keyCode, setKeyCode] = useState('');
+
   return (
-    <Window title="Memory Panel" width={400} height={500}>
-      <Window.Content>
-        <Section
-          maxHeight="32px"
-          title="Memories"
-          buttons={
-            <Button
-              color="transparent"
-              tooltip={`
-                These are your memories. You gain them from doing notable things
-                and you can use them in art!
-              `}
-              tooltipPosition="bottom-start"
-              icon="info"
-            />
-          }
-        />
-        {(!memories && (
-          <Dimmer fontSize="28px" align="center">
-            You have no memories!
-          </Dimmer>
-        )) || (
+    <Window title="Memory" width={700} height={620}>
+      <Window.Content scrollable className="CyberpunkPanel">
+        <Section title="Add information">
           <Stack vertical>
-            {memories.map((memory) => (
-              <Stack.Item key={memory.name}>
-                <Section>
-                  <MemoryQuality quality={memory.quality} /> {memory.name}
-                </Section>
-              </Stack.Item>
-            ))}
+            <Stack.Item>
+              <Stack>
+                <Stack.Item width="160px">
+                  <Dropdown
+                    selected={entryType}
+                    options={entryTypes}
+                    onSelected={setEntryType}
+                  />
+                </Stack.Item>
+                <Stack.Item grow>
+                  <Box className="CyberpunkPanel__Muted">
+                    Store character-known information in this body memory.
+                  </Box>
+                </Stack.Item>
+              </Stack>
+            </Stack.Item>
+            {entryType === 'note' ? (
+              <>
+                <Stack.Item>
+                  <TextArea
+                    height="70px"
+                    fluid
+                    placeholder="Memory note"
+                    value={noteText}
+                    onChange={setNoteText}
+                  />
+                </Stack.Item>
+                <Stack.Item>
+                  <Button
+                    icon="plus"
+                    disabled={!noteText}
+                    onClick={() => {
+                      act('add_note', { text: noteText });
+                      setNoteText('');
+                    }}
+                  >
+                    Add note
+                  </Button>
+                </Stack.Item>
+              </>
+            ) : (
+              <>
+                <Stack.Item>
+                  <Stack>
+                    <Stack.Item grow>
+                      <Input
+                        fluid
+                        placeholder="Key name"
+                        value={keyName}
+                        onChange={setKeyName}
+                      />
+                    </Stack.Item>
+                    <Stack.Item grow>
+                      <Input
+                        fluid
+                        placeholder="Owner"
+                        value={keyOwner}
+                        onChange={setKeyOwner}
+                      />
+                    </Stack.Item>
+                  </Stack>
+                </Stack.Item>
+                <Stack.Item>
+                  <Input
+                    fluid
+                    placeholder="20-character cryptokey"
+                    value={keyCode}
+                    onChange={setKeyCode}
+                  />
+                </Stack.Item>
+                <Stack.Item>
+                  <Button
+                    icon="key"
+                    disabled={keyCode.length !== 20}
+                    onClick={() => {
+                      act('add_key', {
+                        name: keyName,
+                        owner: keyOwner,
+                        code: keyCode,
+                      });
+                      setKeyName('');
+                      setKeyOwner('');
+                      setKeyCode('');
+                    }}
+                  >
+                    Add cryptokey
+                  </Button>
+                </Stack.Item>
+              </>
+            )}
           </Stack>
-        )}
+        </Section>
+
+        <Section title={`Notes (${notes.length})`}>
+          {!notes.length ? (
+            <Box className="CyberpunkPanel__Muted">No manual notes.</Box>
+          ) : (
+            <Stack vertical>
+              {notes.map((note, index) => (
+                <Stack.Item key={index}>
+                  <Box className="CyberpunkPanel__Card">{note.text}</Box>
+                </Stack.Item>
+              ))}
+            </Stack>
+          )}
+        </Section>
+
+        <Section title={`Cryptokeys (${cryptokeys.length})`}>
+          {!cryptokeys.length ? (
+            <Box className="CyberpunkPanel__Muted">No cryptokeys in memory.</Box>
+          ) : (
+            <Table>
+              <Table.Row header>
+                <Table.Cell>Name</Table.Cell>
+                <Table.Cell>Owner</Table.Cell>
+                <Table.Cell>Code</Table.Cell>
+              </Table.Row>
+              {cryptokeys.map((key, index) => (
+                <Table.Row key={`${key.code}-${index}`}>
+                  <Table.Cell>{key.name}</Table.Cell>
+                  <Table.Cell>{key.owner}</Table.Cell>
+                  <Table.Cell className="CyberpunkPanel__Mono">
+                    {key.code}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table>
+          )}
+        </Section>
+
+        <Section title={`Memories (${memories.length})`}>
+          {!memories.length ? (
+            <Box className="CyberpunkPanel__Muted">No notable memories.</Box>
+          ) : (
+            <Table>
+              <Table.Row header>
+                <Table.Cell collapsing>Kind</Table.Cell>
+                <Table.Cell>Name</Table.Cell>
+              </Table.Row>
+              {memories.map((memory) => (
+                <Table.Row key={memory.name}>
+                  <Table.Cell collapsing>
+                    <MemoryQuality quality={memory.quality} />
+                  </Table.Cell>
+                  <Table.Cell>{memory.name}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table>
+          )}
+        </Section>
       </Window.Content>
     </Window>
   );
 };
+// CYBERPUNK BUILD - rebuild and delete before release

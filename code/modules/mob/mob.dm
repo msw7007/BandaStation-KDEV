@@ -1669,13 +1669,55 @@
 /datum/memory_panel/ui_data(mob/user)
 	var/list/data = list()
 	var/list/memories = list()
+	var/list/notes = list()
+	var/list/cryptokeys = list()
 
 	for(var/memory_key in user?.mind.memories)
 		var/datum/memory/memory = user.mind.memories[memory_key]
 		memories += list(list("name" = memory.name, "quality" = memory.story_value))
 
+	var/mob/living/living_holder = isliving(mind_reference?.current) ? mind_reference.current : null
+	if(length(living_holder?.cyberpunk_memory_notes))
+		for(var/note in living_holder.cyberpunk_memory_notes)
+			notes += list(list("text" = note))
+	if(length(living_holder?.cyberpunk_crypto_memory))
+		for(var/datum/cyberpunk_crypto_key/key_datum as anything in living_holder.cyberpunk_crypto_memory)
+			cryptokeys += list(list(
+				"name" = key_datum.name,
+				"owner" = key_datum.owner,
+				"code" = key_datum.code,
+			))
+
 	data["memories"] = memories
+	data["notes"] = notes
+	data["cryptokeys"] = cryptokeys
 	return data
+
+/datum/memory_panel/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return .
+	var/mob/living/living_holder = isliving(mind_reference?.current) ? mind_reference.current : null
+	if(!living_holder)
+		return FALSE
+	switch(action)
+		if("add_note")
+			var/text = trim(params["text"], MAX_MESSAGE_LEN)
+			if(!text)
+				return TRUE
+			LAZYINITLIST(living_holder.cyberpunk_memory_notes)
+			living_holder.cyberpunk_memory_notes += text
+			return TRUE
+		if("add_key")
+			var/key_name = trim(params["name"], MAX_NAME_LEN)
+			var/key_owner = trim(params["owner"], MAX_NAME_LEN)
+			var/key_code = trim(params["code"], 20)
+			if(length_char(key_code) != 20)
+				to_chat(living_holder, span_warning("Cryptokey code must be 20 characters long."))
+				return TRUE
+			living_holder.remember_cyberpunk_crypto_key(new /datum/cyberpunk_crypto_key(key_name || "manual key", key_owner || "manual", key_code))
+			return TRUE
+	return FALSE
 
 /mob/verb/view_skills()
 	set category = "IC"

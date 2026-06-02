@@ -1,6 +1,8 @@
 // CYBERPUNK BUILD - rebuild and delete before release
+import { useState } from 'react';
 import {
   Box,
+  Button,
   Collapsible,
   LabeledList,
   Section,
@@ -47,22 +49,30 @@ export const NtosContractRegistry = () => {
     failedCount = 0,
     taxRate = 0,
   } = data;
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selectedContract =
+    contracts.find((contract) => contract.id === selectedId) || contracts[0];
 
   return (
     <NtosWindow width={780} height={620}>
       <NtosWindow.Content scrollable className="CyberpunkPanel">
         <Section title="Legal contract registry">
-          <LabeledList>
-            <LabeledList.Item label="Indexed contracts">
-              {contracts.length}
-            </LabeledList.Item>
-            <LabeledList.Item label="Active">{activeCount}</LabeledList.Item>
-            <LabeledList.Item label="Completed">
-              {completedCount}
-            </LabeledList.Item>
-            <LabeledList.Item label="Failed">{failedCount}</LabeledList.Item>
-            <LabeledList.Item label="Legal tax">{taxRate}%</LabeledList.Item>
-          </LabeledList>
+          <Table>
+            <Table.Row header>
+              <Table.Cell>Indexed</Table.Cell>
+              <Table.Cell>Active</Table.Cell>
+              <Table.Cell>Completed</Table.Cell>
+              <Table.Cell>Failed</Table.Cell>
+              <Table.Cell>Legal tax</Table.Cell>
+            </Table.Row>
+            <Table.Row>
+              <Table.Cell>{contracts.length}</Table.Cell>
+              <Table.Cell>{activeCount}</Table.Cell>
+              <Table.Cell>{completedCount}</Table.Cell>
+              <Table.Cell>{failedCount}</Table.Cell>
+              <Table.Cell>{taxRate}%</Table.Cell>
+            </Table.Row>
+          </Table>
         </Section>
         <Section title="Records">
           {!contracts.length ? (
@@ -81,38 +91,12 @@ export const NtosContractRegistry = () => {
                 <Table.Cell collapsing>Payment</Table.Cell>
               </Table.Row>
               {contracts.map((contract) => (
-                <Table.Row key={contract.id}>
+                <Table.Row key={contract.id} className={selectedContract?.id === contract.id ? 'Table__row--selected' : undefined}>
                   <Table.Cell>#{contract.id}</Table.Cell>
                   <Table.Cell>
-                    <Collapsible title={contract.title}>
-                      <LabeledList>
-                        <LabeledList.Item label="Deadline">
-                          {contract.deadline}
-                        </LabeledList.Item>
-                        <LabeledList.Item label="Public">
-                          {contract.public ? 'yes' : 'no'}
-                        </LabeledList.Item>
-                        <LabeledList.Item label="Deposit">
-                          {formatMoney(contract.deposit)} cr
-                        </LabeledList.Item>
-                        <LabeledList.Item label="Penalty">
-                          {formatMoney(contract.penalty)} cr
-                        </LabeledList.Item>
-                        <LabeledList.Item label="Tax paid">
-                          {formatMoney(contract.taxPaid || 0)} cr
-                        </LabeledList.Item>
-                        <LabeledList.Item label="Assigned">
-                          {contract.assignedContractor || 'open'}
-                        </LabeledList.Item>
-                      </LabeledList>
-                      <Collapsible title="History">
-                        {(contract.history || []).map((entry, index) => (
-                          <Box key={index} className="CyberpunkPanel__Muted">
-                            {entry}
-                          </Box>
-                        ))}
-                      </Collapsible>
-                    </Collapsible>
+                    <Button fluid onClick={() => setSelectedId(contract.id)}>
+                      {contract.title}
+                    </Button>
                   </Table.Cell>
                   <Table.Cell>{contract.type}</Table.Cell>
                   <Table.Cell>{contract.status}</Table.Cell>
@@ -127,6 +111,37 @@ export const NtosContractRegistry = () => {
             </Table>
           )}
         </Section>
+        {!!selectedContract && (
+          <Section title={`Record #${selectedContract.id}: ${selectedContract.title}`}>
+            <LabeledList>
+              <LabeledList.Item label="Deadline">
+                {selectedContract.deadline}
+              </LabeledList.Item>
+              <LabeledList.Item label="Public">
+                {selectedContract.public ? 'yes' : 'no'}
+              </LabeledList.Item>
+              <LabeledList.Item label="Deposit">
+                {formatMoney(selectedContract.deposit)} cr
+              </LabeledList.Item>
+              <LabeledList.Item label="Penalty">
+                {formatMoney(selectedContract.penalty)} cr
+              </LabeledList.Item>
+              <LabeledList.Item label="Tax paid">
+                {formatMoney(selectedContract.taxPaid || 0)} cr
+              </LabeledList.Item>
+              <LabeledList.Item label="Assigned">
+                {selectedContract.assignedContractor || 'open'}
+              </LabeledList.Item>
+            </LabeledList>
+            <Collapsible title="History">
+              {(selectedContract.history || []).map((entry, index) => (
+                <Box key={index} className="CyberpunkPanel__Muted">
+                  {entry}
+                </Box>
+              ))}
+            </Collapsible>
+          </Section>
+        )}
       </NtosWindow.Content>
     </NtosWindow>
   );

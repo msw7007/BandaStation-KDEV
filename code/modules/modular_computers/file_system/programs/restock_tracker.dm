@@ -199,6 +199,32 @@
 		return
 	return cyberpunk_contract_offer_ui_act(action, params, ui.user, contract_id)
 
+/datum/cyberpunk_temporary_interface_verb_ui
+	var/interface_mode = "generic"
+	var/interface_title = "Temporary Interface"
+
+/datum/cyberpunk_temporary_interface_verb_ui/New(new_mode, new_title)
+	. = ..()
+	interface_mode = new_mode || interface_mode
+	interface_title = new_title || interface_title
+
+/datum/cyberpunk_temporary_interface_verb_ui/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyberpunk_temporary_interface_verb_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkTemporaryInterface", interface_title)
+		ui.open()
+
+/datum/cyberpunk_temporary_interface_verb_ui/ui_data(mob/user)
+	return list(
+		"mode" = interface_mode,
+		"title" = interface_title,
+		"userName" = user?.name || "unknown",
+		"status" = "temporary development entrypoint",
+	)
+
 /mob/living/verb/open_cyberpunk_contracts()
 	set name = "Контракты"
 	set desc = "Временно открыть приложение контрактов без КПК."
@@ -221,6 +247,22 @@
 	set category = "IC"
 
 	var/datum/cyberpunk_contract_pool_verb_ui/interface = new
+	interface.ui_interact(src)
+
+/mob/living/verb/open_cyberpunk_neurolink_interface()
+	set name = "Neurolink Interface"
+	set desc = "Temporarily open the neurolink interface shell."
+	set category = "IC"
+
+	var/datum/cyberpunk_temporary_interface_verb_ui/interface = new("neurolink", "Neurolink Interface")
+	interface.ui_interact(src)
+
+/mob/living/verb/open_cyberpunk_pc_interface()
+	set name = "PC Interface"
+	set desc = "Temporarily open the personal computer interface shell."
+	set category = "IC"
+
+	var/datum/cyberpunk_temporary_interface_verb_ui/interface = new("pc", "PC Interface")
 	interface.ui_interact(src)
 
 /obj/machinery/computer/business_terminal
@@ -248,6 +290,7 @@
 	return TRUE
 
 /obj/machinery/computer/business_terminal/ui_interact(mob/user, datum/tgui/ui)
+	. = ..()
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "NtosBusinessTerminal", name)

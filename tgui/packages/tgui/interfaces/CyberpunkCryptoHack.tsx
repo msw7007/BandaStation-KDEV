@@ -57,22 +57,6 @@ export const CyberpunkCryptoHack = () => {
   } = data;
   const [code, setCode] = useState('');
 
-  const getSegmentColor = (option: CryptoOption) => {
-    if (option.result === 'correct') {
-      return 'green';
-    }
-    if (option.result === 'wrong') {
-      return 'red';
-    }
-    if (option.selected) {
-      return 'cyan';
-    }
-    if (option.wrongHint) {
-      return 'red';
-    }
-    return undefined;
-  };
-
   const getSegmentClass = (option: CryptoOption) =>
     'CyberpunkPanel__CryptoSegment' +
     (option.result === 'correct'
@@ -169,7 +153,6 @@ export const CyberpunkCryptoHack = () => {
                       <Button
                         fluid
                         key={option.index}
-                        color={getSegmentColor(option)}
                         className={getSegmentClass(option)}
                         onClick={() =>
                           act('select_segment', {

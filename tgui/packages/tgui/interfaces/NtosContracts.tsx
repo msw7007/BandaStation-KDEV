@@ -10,6 +10,7 @@ import {
   NumberInput,
   Section,
   Stack,
+  Table,
   TextArea,
 } from 'tgui-core/components';
 import { formatMoney } from 'tgui-core/format';
@@ -91,31 +92,67 @@ export const NtosContracts = () => {
     acceptedContracts = [],
     directContract,
   } = data;
+  const [tab, setTab] = useState('accepted');
 
   return (
-    <NtosWindow width={720} height={760}>
+    <NtosWindow width={820} height={760}>
       <NtosWindow.Content scrollable className="CyberpunkPanel">
         <Section title="Account">
-          <LabeledList>
-            <LabeledList.Item label="ID account">
-              {accountName || 'No ID account'}
-            </LabeledList.Item>
-            <LabeledList.Item label="Balance">
-              {formatMoney(accountBalance)} cr
-            </LabeledList.Item>
-            <LabeledList.Item label="Stats">
-              Created {userStats?.created || 0}, accepted{' '}
-              {userStats?.accepted || 0}, completed{' '}
-              {userStats?.completed || 0}, failed {userStats?.failed || 0}
-            </LabeledList.Item>
-          </LabeledList>
+          <Stack>
+            <Stack.Item grow className="CyberpunkPanel__Metric">
+              <Box className="CyberpunkPanel__Muted">ID account</Box>
+              <Box className="CyberpunkPanel__Title">
+                {accountName || 'No ID account'}
+              </Box>
+            </Stack.Item>
+            <Stack.Item grow className="CyberpunkPanel__Metric">
+              <Box className="CyberpunkPanel__Muted">Balance</Box>
+              <Box className="CyberpunkPanel__Title">
+                {formatMoney(accountBalance)} cr
+              </Box>
+            </Stack.Item>
+            <Stack.Item grow className="CyberpunkPanel__Metric">
+              <Box className="CyberpunkPanel__Muted">Stats</Box>
+              <Box>
+                C {userStats?.created || 0} / A {userStats?.accepted || 0} / D{' '}
+                {userStats?.completed || 0} / F {userStats?.failed || 0}
+              </Box>
+            </Stack.Item>
+          </Stack>
         </Section>
-        <ContractCreation disabled={!accountName} />
-        <DirectContract contract={directContract} />
-        <ContractList title="Incoming offers" contracts={offeredContracts} />
-        <ContractList title="Public contracts" contracts={contracts} />
-        <ContractList title="Accepted contracts" contracts={acceptedContracts} />
-        <ContractList title="My contracts" contracts={ownedContracts} />
+        <Section title="Contracts">
+          <Stack>
+            <Stack.Item>
+              <Button selected={tab === 'accepted'} onClick={() => setTab('accepted')}>
+                Accepted
+              </Button>
+            </Stack.Item>
+            <Stack.Item>
+              <Button selected={tab === 'board'} onClick={() => setTab('board')}>
+                Board
+              </Button>
+            </Stack.Item>
+            <Stack.Item>
+              <Button selected={tab === 'create'} onClick={() => setTab('create')}>
+                Create
+              </Button>
+            </Stack.Item>
+          </Stack>
+        </Section>
+        {tab === 'accepted' && (
+          <>
+            <ContractList title="Incoming offers" contracts={offeredContracts} />
+            <ContractList title="Accepted contracts" contracts={acceptedContracts} />
+            <ContractList title="My contracts" contracts={ownedContracts} />
+          </>
+        )}
+        {tab === 'board' && (
+          <>
+            <DirectContract contract={directContract} />
+            <ContractList title="Public contracts" contracts={contracts} />
+          </>
+        )}
+        {tab === 'create' && <ContractCreation disabled={!accountName} />}
       </NtosWindow.Content>
     </NtosWindow>
   );
@@ -147,7 +184,11 @@ const DirectContract = (props: { contract?: Contract }) => {
           </Button>
         </Stack.Item>
       </Stack>
-      {!!props.contract && <ContractCard contract={props.contract} />}
+      {!!props.contract && (
+        <Section title={`#${props.contract.id} ${props.contract.title}`}>
+          <ContractDetails contract={props.contract} />
+        </Section>
+      )}
     </Section>
   );
 };
@@ -172,147 +213,118 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const [creatorConfirm, setCreatorConfirm] = useState(false);
 
   return (
-    <Collapsible title="Create contract">
+    <Section title="Create contract">
       <Stack vertical>
         <Stack.Item>
-          <Stack>
-            <Stack.Item grow>
-              <Input
-                fluid
-                placeholder="Title"
-                value={title}
-                onChange={setTitle}
-              />
-            </Stack.Item>
-            <Stack.Item width="180px">
-              <Dropdown
-                selected={contractType}
-                options={contractTypes}
-                onSelected={setContractType}
-              />
-            </Stack.Item>
-          </Stack>
+          <Section title="Core">
+            <Stack vertical>
+              <Stack.Item>
+                <Stack>
+                  <Stack.Item grow>
+                    <Input
+                      fluid
+                      placeholder="Title"
+                      value={title}
+                      onChange={setTitle}
+                    />
+                  </Stack.Item>
+                  <Stack.Item width="190px">
+                    <Dropdown
+                      selected={contractType}
+                      options={contractTypes}
+                      onSelected={setContractType}
+                    />
+                  </Stack.Item>
+                </Stack>
+              </Stack.Item>
+              <Stack.Item>
+                <Input
+                  fluid
+                  placeholder="Target name, item name, object name, or type hint"
+                  value={target}
+                  onChange={setTarget}
+                />
+              </Stack.Item>
+              <Stack.Item>
+                <Input
+                  fluid
+                  placeholder="Assigned contractor name (optional)"
+                  value={assignedContractor}
+                  onChange={setAssignedContractor}
+                />
+              </Stack.Item>
+              <Stack.Item>
+                <TextArea
+                  height="70px"
+                  placeholder="Description"
+                  value={description}
+                  onChange={setDescription}
+                />
+              </Stack.Item>
+            </Stack>
+          </Section>
         </Stack.Item>
         <Stack.Item>
-          <Input
-            fluid
-            placeholder="Target name, item name, object name, or type hint"
-            value={target}
-            onChange={setTarget}
-          />
+          <Section title="Terms">
+            <Table>
+              <Table.Row>
+                <Table.Cell>Payment</Table.Cell>
+                <Table.Cell>
+                  <NumberInput value={payment} minValue={1} maxValue={100000} step={10} onChange={setPayment} />
+                </Table.Cell>
+                <Table.Cell>Deposit</Table.Cell>
+                <Table.Cell>
+                  <NumberInput value={deposit} minValue={0} maxValue={100000} step={10} onChange={setDeposit} />
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell>Penalty</Table.Cell>
+                <Table.Cell>
+                  <NumberInput value={penalty} minValue={0} maxValue={100000} step={10} onChange={setPenalty} />
+                </Table.Cell>
+                <Table.Cell>Minutes</Table.Cell>
+                <Table.Cell>
+                  <NumberInput value={duration} minValue={1} maxValue={180} step={5} onChange={setDuration} />
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell>Amount</Table.Cell>
+                <Table.Cell>
+                  <NumberInput value={requiredAmount} minValue={1} maxValue={1000} step={1} onChange={setRequiredAmount} />
+                </Table.Cell>
+                <Table.Cell>Percent</Table.Cell>
+                <Table.Cell>
+                  <NumberInput value={requiredPercent} minValue={0} maxValue={100} step={5} onChange={setRequiredPercent} />
+                </Table.Cell>
+              </Table.Row>
+            </Table>
+          </Section>
         </Stack.Item>
         <Stack.Item>
-          <Input
-            fluid
-            placeholder="Assigned contractor name (optional)"
-            value={assignedContractor}
-            onChange={setAssignedContractor}
-          />
-        </Stack.Item>
-        <Stack.Item>
-          <TextArea
-            height="60px"
-            placeholder="Description"
-            value={description}
-            onChange={setDescription}
-          />
-        </Stack.Item>
-        <Stack.Item>
-          <Stack>
-            <Stack.Item>
-              Pay{' '}
-              <NumberInput
-                value={payment}
-                minValue={1}
-                maxValue={100000}
-                step={10}
-                onChange={setPayment}
-              />
-            </Stack.Item>
-            <Stack.Item>
-              Deposit{' '}
-              <NumberInput
-                value={deposit}
-                minValue={0}
-                maxValue={100000}
-                step={10}
-                onChange={setDeposit}
-              />
-            </Stack.Item>
-            <Stack.Item>
-              Penalty{' '}
-              <NumberInput
-                value={penalty}
-                minValue={0}
-                maxValue={100000}
-                step={10}
-                onChange={setPenalty}
-              />
-            </Stack.Item>
-            <Stack.Item>
-              Minutes{' '}
-              <NumberInput
-                value={duration}
-                minValue={1}
-                maxValue={180}
-                step={5}
-                onChange={setDuration}
-              />
-            </Stack.Item>
-          </Stack>
-        </Stack.Item>
-        <Stack.Item>
-          <Stack>
-            <Stack.Item>
-              Amount{' '}
-              <NumberInput
-                value={requiredAmount}
-                minValue={1}
-                maxValue={1000}
-                step={1}
-                onChange={setRequiredAmount}
-              />
-            </Stack.Item>
-            <Stack.Item>
-              Percent{' '}
-              <NumberInput
-                value={requiredPercent}
-                minValue={0}
-                maxValue={100}
-                step={5}
-                onChange={setRequiredPercent}
-              />
-            </Stack.Item>
-            <Stack.Item>
-              <Button.Checkbox checked={legal} onClick={() => setLegal(!legal)}>
-                Legal
-              </Button.Checkbox>
-            </Stack.Item>
-            <Stack.Item>
-              <Button.Checkbox
-                checked={isPublic}
-                onClick={() => setPublic(!isPublic)}
-              >
-                Public
-              </Button.Checkbox>
-            </Stack.Item>
-            <Stack.Item>
-              <Button.Checkbox
-                checked={poolContract}
-                onClick={() => setPoolContract(!poolContract)}
-              >
-                Pool
-              </Button.Checkbox>
-            </Stack.Item>
-            <Stack.Item>
-              <Button.Checkbox
-                checked={creatorConfirm}
-                onClick={() => setCreatorConfirm(!creatorConfirm)}
-              >
-                Manual confirm
-              </Button.Checkbox>
-            </Stack.Item>
-          </Stack>
+          <Section title="Visibility">
+            <Stack wrap>
+              <Stack.Item>
+                <Button.Checkbox checked={legal} onClick={() => setLegal(!legal)}>
+                  Legal
+                </Button.Checkbox>
+              </Stack.Item>
+              <Stack.Item>
+                <Button.Checkbox checked={isPublic} onClick={() => setPublic(!isPublic)}>
+                  Public
+                </Button.Checkbox>
+              </Stack.Item>
+              <Stack.Item>
+                <Button.Checkbox checked={poolContract} onClick={() => setPoolContract(!poolContract)}>
+                  Pool
+                </Button.Checkbox>
+              </Stack.Item>
+              <Stack.Item>
+                <Button.Checkbox checked={creatorConfirm} onClick={() => setCreatorConfirm(!creatorConfirm)}>
+                  Manual confirm
+                </Button.Checkbox>
+              </Stack.Item>
+            </Stack>
+          </Section>
         </Stack.Item>
         {!!poolContract && (
           <Stack.Item>
@@ -354,7 +366,7 @@ const ContractCreation = (props: { disabled: boolean }) => {
           </Button>
         </Stack.Item>
       </Stack>
-    </Collapsible>
+    </Section>
   );
 };
 
@@ -365,86 +377,46 @@ const ContractList = (props: { title: string; contracts: Contract[] }) => {
       {!contracts.length ? (
         <Box className="CyberpunkPanel__Muted">No contracts.</Box>
       ) : (
-        contracts.map((contract) => (
-          <ContractCard key={contract.id} contract={contract} />
-        ))
+        <Table>
+          <Table.Row header>
+            <Table.Cell collapsing>ID</Table.Cell>
+            <Table.Cell>Title</Table.Cell>
+            <Table.Cell>Type</Table.Cell>
+            <Table.Cell>Status</Table.Cell>
+            <Table.Cell>Target</Table.Cell>
+            <Table.Cell>Contractor</Table.Cell>
+            <Table.Cell collapsing>Pay</Table.Cell>
+          </Table.Row>
+          {contracts.map((contract) => (
+            <Table.Row key={contract.id}>
+              <Table.Cell collapsing>#{contract.id}</Table.Cell>
+              <Table.Cell>
+                <Collapsible title={contract.title}>
+                  <ContractDetails contract={contract} />
+                </Collapsible>
+              </Table.Cell>
+              <Table.Cell>{contract.type}</Table.Cell>
+              <Table.Cell>{contract.status}</Table.Cell>
+              <Table.Cell>{contract.target}</Table.Cell>
+              <Table.Cell>
+                {contract.contractor || contract.assignedContractor || 'open'}
+              </Table.Cell>
+              <Table.Cell collapsing>
+                {formatMoney(contract.payment)} cr
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table>
       )}
     </Section>
   );
 };
 
-const ContractCard = (props: { contract: Contract }) => {
-  const { act } = useBackend<Data>();
+const ContractDetails = (props: { contract: Contract }) => {
   const { contract } = props;
   return (
-    <Section
-      title={`#${contract.id} ${contract.title}`}
-      buttons={
-        <>
-          {!!contract.canAccept && (
-            <Button
-              icon="handshake"
-              onClick={() => act('accept', { id: contract.id })}
-            >
-              Accept
-            </Button>
-          )}
-          {!!contract.canRefuse && (
-            <Button
-              icon="times"
-              color="bad"
-              onClick={() => act('refuse_offer', { id: contract.id })}
-            >
-              Refuse
-            </Button>
-          )}
-          {!!contract.canAct && (
-            <>
-              <Button
-                icon="tag"
-                onClick={() => act('mark_held', { id: contract.id })}
-              >
-                Mark held
-              </Button>
-              <Button
-                icon="box"
-                onClick={() => act('submit_held', { id: contract.id })}
-              >
-                Submit held
-              </Button>
-              <Button
-                icon="search"
-                onClick={() => act('check_target', { id: contract.id })}
-              >
-                Check target
-              </Button>
-              <Button.Confirm
-                icon="ban"
-                onClick={() => act('abandon', { id: contract.id })}
-              >
-                Abandon
-              </Button.Confirm>
-            </>
-          )}
-          {!!contract.canManage && (
-            <>
-              <Button
-                icon="check"
-                onClick={() => act('creator_complete', { id: contract.id })}
-              >
-                Confirm
-              </Button>
-              <Button.Confirm
-                icon="times"
-                onClick={() => act('cancel', { id: contract.id })}
-              >
-                Cancel
-              </Button.Confirm>
-            </>
-          )}
-        </>
-      }
-    >
+    <>
+      <ContractActions contract={contract} />
       <LabeledList>
         <LabeledList.Item label="Status">{contract.status}</LabeledList.Item>
         <LabeledList.Item label="Type">{contract.type}</LabeledList.Item>
@@ -489,6 +461,67 @@ const ContractCard = (props: { contract: Contract }) => {
           </Box>
         ))}
       </Collapsible>
-    </Section>
+    </>
+  );
+};
+
+const ContractActions = (props: { contract: Contract }) => {
+  const { act } = useBackend<Data>();
+  const { contract } = props;
+  return (
+    <Stack wrap>
+      {!!contract.canAccept && (
+        <Stack.Item>
+          <Button icon="handshake" onClick={() => act('accept', { id: contract.id })}>
+            Accept
+          </Button>
+        </Stack.Item>
+      )}
+      {!!contract.canRefuse && (
+        <Stack.Item>
+          <Button icon="times" color="bad" onClick={() => act('refuse_offer', { id: contract.id })}>
+            Refuse
+          </Button>
+        </Stack.Item>
+      )}
+      {!!contract.canAct && (
+        <>
+          <Stack.Item>
+            <Button icon="tag" onClick={() => act('mark_held', { id: contract.id })}>
+              Mark held
+            </Button>
+          </Stack.Item>
+          <Stack.Item>
+            <Button icon="box" onClick={() => act('submit_held', { id: contract.id })}>
+              Submit held
+            </Button>
+          </Stack.Item>
+          <Stack.Item>
+            <Button icon="search" onClick={() => act('check_target', { id: contract.id })}>
+              Check target
+            </Button>
+          </Stack.Item>
+          <Stack.Item>
+            <Button.Confirm icon="ban" onClick={() => act('abandon', { id: contract.id })}>
+              Abandon
+            </Button.Confirm>
+          </Stack.Item>
+        </>
+      )}
+      {!!contract.canManage && (
+        <>
+          <Stack.Item>
+            <Button icon="check" onClick={() => act('creator_complete', { id: contract.id })}>
+              Confirm
+            </Button>
+          </Stack.Item>
+          <Stack.Item>
+            <Button.Confirm icon="times" onClick={() => act('cancel', { id: contract.id })}>
+              Cancel
+            </Button.Confirm>
+          </Stack.Item>
+        </>
+      )}
+    </Stack>
   );
 };
