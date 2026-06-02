@@ -54,6 +54,8 @@ SUBSYSTEM_DEF(economy)
 	var/next_cyberpunk_contract_id = 1
 	/// Lightweight reputation stats keyed by round character name/account, not client ckey.
 	var/list/cyberpunk_contract_stats = list()
+	/// Whether the round-local corporate pool was filled with starter contracts.
+	var/cyberpunk_contract_pool_seeded = FALSE
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Number of mail items generated.
@@ -91,6 +93,7 @@ SUBSYSTEM_DEF(economy)
 	cyberpunk_contracts = SSeconomy.cyberpunk_contracts
 	next_cyberpunk_contract_id = SSeconomy.next_cyberpunk_contract_id
 	cyberpunk_contract_stats = SSeconomy.cyberpunk_contract_stats
+	cyberpunk_contract_pool_seeded = SSeconomy.cyberpunk_contract_pool_seeded
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Processing step defines, to track what we've done so far

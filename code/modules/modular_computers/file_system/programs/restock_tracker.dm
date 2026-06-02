@@ -73,6 +73,27 @@
 /datum/computer_file/program/contract_registry/ui_data(mob/user)
 	return cyberpunk_contract_registry_ui_data(user)
 
+/datum/computer_file/program/contract_pool
+	filename = "contractpool"
+	filedesc = "Contract Pool"
+	downloader_category = PROGRAM_CATEGORY_SUPPLY
+	program_open_overlay = "generic"
+	extended_desc = "Corporate pool contracts. These jobs are public offers and can be taken by any contractor."
+	program_flags = PROGRAM_ON_NTNET_STORE | PROGRAM_REQUIRES_NTNET
+	can_run_on_flags = PROGRAM_ALL
+	size = 4
+	program_icon = FA_ICON_FILE_CONTRACT
+	tgui_id = "NtosContractPool"
+
+/datum/computer_file/program/contract_pool/ui_data(mob/user)
+	return cyberpunk_contract_pool_ui_data(user)
+
+/datum/computer_file/program/contract_pool/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	return cyberpunk_contract_pool_ui_act(action, params, ui.user)
+
 //CYBERPUNK BUILD - rebuild and delete before release
 /datum/cyberpunk_contracts_verb_ui
 	var/direct_contract_id
@@ -104,6 +125,43 @@
 /datum/cyberpunk_contract_registry_verb_ui/ui_data(mob/user)
 	return cyberpunk_contract_registry_ui_data(user)
 
+/datum/cyberpunk_contract_pool_verb_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "NtosContractPool", "Contract Pool")
+		ui.open()
+
+/datum/cyberpunk_contract_pool_verb_ui/ui_data(mob/user)
+	return cyberpunk_contract_pool_ui_data(user)
+
+/datum/cyberpunk_contract_pool_verb_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	return cyberpunk_contract_pool_ui_act(action, params, ui.user)
+
+/datum/cyberpunk_contract_offer_verb_ui
+	var/contract_id
+
+/datum/cyberpunk_contract_offer_verb_ui/New(new_contract_id)
+	. = ..()
+	contract_id = new_contract_id
+
+/datum/cyberpunk_contract_offer_verb_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "NtosContractOffer", "Contract Offer")
+		ui.open()
+
+/datum/cyberpunk_contract_offer_verb_ui/ui_data(mob/user)
+	return cyberpunk_contract_offer_ui_data(user, contract_id)
+
+/datum/cyberpunk_contract_offer_verb_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	return cyberpunk_contract_offer_ui_act(action, params, ui.user, contract_id)
+
 /mob/living/verb/open_cyberpunk_contracts()
 	set name = "Контракты"
 	set desc = "Временно открыть приложение контрактов без КПК."
@@ -119,9 +177,18 @@
 
 	var/datum/cyberpunk_contract_registry_verb_ui/interface = new
 	interface.ui_interact(src)
+
+/mob/living/verb/open_cyberpunk_contract_pool()
+	set name = "Contract Pool"
+	set desc = "Temporarily open corporate pool contracts without a PDA."
+	set category = "IC"
+
+	var/datum/cyberpunk_contract_pool_verb_ui/interface = new
+	interface.ui_interact(src)
 //CYBERPUNK BUILD - rebuild and delete before release
 
 /proc/cyberpunk_contracts_ui_data(mob/user, direct_contract_id = null)
+	SSeconomy.ensure_cyberpunk_contract_pool_seeded()
 	var/list/data = list()
 	var/mob/living/living_user = isliving(user) ? user : null
 	var/datum/bank_account/account = living_user?.get_bank_account()
@@ -130,6 +197,7 @@
 	data["accountBalance"] = account?.account_balance || 0
 	data["userStats"] = SSeconomy.get_cyberpunk_contract_stats(user_character_key)
 	data["contracts"] = list()
+	data["offeredContracts"] = list()
 	data["ownedContracts"] = list()
 	data["acceptedContracts"] = list()
 	data["directContract"] = null
@@ -142,11 +210,33 @@
 			data["ownedContracts"] += list(contract_data)
 		if(contract.contractor_character_key == user_character_key)
 			data["acceptedContracts"] += list(contract_data)
+		if(contract.assigned_contractor_key == user_character_key && contract.status == "offered")
+			data["offeredContracts"] += list(contract_data)
 		if(contract.public_contract && contract.legal && contract.status == "created")
 			data["contracts"] += list(contract_data)
 	var/datum/cyberpunk_contract/direct_contract = SSeconomy.get_cyberpunk_contract(direct_contract_id)
 	if(direct_contract)
 		data["directContract"] = direct_contract.to_ui_data(living_user, TRUE)
+	return data
+
+/proc/cyberpunk_contract_pool_ui_data(mob/user)
+	var/list/data = list()
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/datum/bank_account/account = living_user?.get_bank_account()
+	data["accountName"] = account?.account_holder
+	data["accountBalance"] = account?.account_balance || 0
+	data["contracts"] = list()
+	for(var/datum/cyberpunk_contract/contract as anything in SSeconomy.get_cyberpunk_contract_pool())
+		if(!contract || !contract.can_view(living_user))
+			continue
+		data["contracts"] += list(contract.to_ui_data(living_user, TRUE))
+	return data
+
+/proc/cyberpunk_contract_offer_ui_data(mob/user, contract_id)
+	var/list/data = list()
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/datum/cyberpunk_contract/contract = SSeconomy.get_cyberpunk_contract(contract_id)
+	data["contract"] = contract?.can_view(living_user) ? contract.to_ui_data(living_user, TRUE) : null
 	return data
 
 /proc/cyberpunk_contract_registry_ui_data(mob/user)
@@ -192,6 +282,12 @@
 			else
 				to_chat(living_user, span_warning("Unable to accept this contract."))
 			return TRUE
+		if("refuse_offer")
+			if(contract?.refuse_offer(living_user))
+				to_chat(living_user, span_notice("Contract offer refused."))
+			else
+				to_chat(living_user, span_warning("Unable to refuse this contract offer."))
+			return TRUE
 		if("cancel")
 			if(contract?.cancel(living_user))
 				to_chat(living_user, span_notice("Contract cancelled."))
@@ -227,6 +323,40 @@
 				to_chat(living_user, span_notice("Contract target check recorded."))
 			else
 				to_chat(living_user, span_warning("No nearby target satisfies this contract."))
+			return TRUE
+	return FALSE
+
+/proc/cyberpunk_contract_pool_ui_act(action, list/params, mob/user)
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!living_user)
+		return FALSE
+	var/datum/cyberpunk_contract/contract = params && params["id"] ? SSeconomy.get_cyberpunk_contract(params["id"]) : null
+	switch(action)
+		if("accept")
+			if(contract?.pool_contract && contract.accept(living_user))
+				to_chat(living_user, span_notice("Pool contract accepted."))
+			else
+				to_chat(living_user, span_warning("Unable to accept this pool contract."))
+			return TRUE
+	return FALSE
+
+/proc/cyberpunk_contract_offer_ui_act(action, list/params, mob/user, contract_id)
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!living_user)
+		return FALSE
+	var/datum/cyberpunk_contract/contract = SSeconomy.get_cyberpunk_contract(contract_id)
+	switch(action)
+		if("accept")
+			if(contract?.accept(living_user))
+				to_chat(living_user, span_notice("Contract accepted."))
+			else
+				to_chat(living_user, span_warning("Unable to accept this contract offer."))
+			return TRUE
+		if("refuse_offer")
+			if(contract?.refuse_offer(living_user))
+				to_chat(living_user, span_notice("Contract offer refused."))
+			else
+				to_chat(living_user, span_warning("Unable to refuse this contract offer."))
 			return TRUE
 	return FALSE
 //CYBERPUNK BUILD - rebuild and delete before release

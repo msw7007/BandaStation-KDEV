@@ -42,12 +42,16 @@ type Contract = {
   taxPaid: number;
   legal: BooleanLike;
   public: BooleanLike;
+  pool: BooleanLike;
+  corporation?: string;
+  generated: BooleanLike;
   creatorConfirmRequired: BooleanLike;
   requiredAmount: number;
   deliveredAmount: number;
   requiredPercent: number;
   deadline: string;
   canAccept: BooleanLike;
+  canRefuse: BooleanLike;
   canManage: BooleanLike;
   canAct: BooleanLike;
   contractorStats?: ContractStats;
@@ -59,6 +63,7 @@ type Data = {
   accountBalance: number;
   userStats: ContractStats;
   contracts: Contract[];
+  offeredContracts: Contract[];
   ownedContracts: Contract[];
   acceptedContracts: Contract[];
   directContract?: Contract;
@@ -81,6 +86,7 @@ export const NtosContracts = () => {
     accountBalance,
     userStats,
     contracts = [],
+    offeredContracts = [],
     ownedContracts = [],
     acceptedContracts = [],
     directContract,
@@ -106,6 +112,7 @@ export const NtosContracts = () => {
         </Section>
         <ContractCreation disabled={!accountName} />
         <DirectContract contract={directContract} />
+        <ContractList title="Incoming offers" contracts={offeredContracts} />
         <ContractList title="Public contracts" contracts={contracts} />
         <ContractList title="Accepted contracts" contracts={acceptedContracts} />
         <ContractList title="My contracts" contracts={ownedContracts} />
@@ -160,6 +167,8 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const [requiredPercent, setRequiredPercent] = useState(75);
   const [legal, setLegal] = useState(true);
   const [isPublic, setPublic] = useState(true);
+  const [poolContract, setPoolContract] = useState(false);
+  const [poolCorporation, setPoolCorporation] = useState('');
   const [creatorConfirm, setCreatorConfirm] = useState(false);
 
   return (
@@ -289,6 +298,14 @@ const ContractCreation = (props: { disabled: boolean }) => {
             </Stack.Item>
             <Stack.Item>
               <Button.Checkbox
+                checked={poolContract}
+                onClick={() => setPoolContract(!poolContract)}
+              >
+                Pool
+              </Button.Checkbox>
+            </Stack.Item>
+            <Stack.Item>
+              <Button.Checkbox
                 checked={creatorConfirm}
                 onClick={() => setCreatorConfirm(!creatorConfirm)}
               >
@@ -297,6 +314,16 @@ const ContractCreation = (props: { disabled: boolean }) => {
             </Stack.Item>
           </Stack>
         </Stack.Item>
+        {!!poolContract && (
+          <Stack.Item>
+            <Input
+              fluid
+              placeholder="Pool corporation/source label"
+              value={poolCorporation}
+              onChange={setPoolCorporation}
+            />
+          </Stack.Item>
+        )}
         <Stack.Item>
           <Button
             fluid
@@ -317,6 +344,8 @@ const ContractCreation = (props: { disabled: boolean }) => {
                 required_percent: requiredPercent,
                 legal: legal ? 1 : 0,
                 public_contract: isPublic ? 1 : 0,
+                pool_contract: poolContract ? 1 : 0,
+                pool_corporation: poolCorporation,
                 creator_confirm_required: creatorConfirm ? 1 : 0,
               })
             }
@@ -358,6 +387,15 @@ const ContractCard = (props: { contract: Contract }) => {
               onClick={() => act('accept', { id: contract.id })}
             >
               Accept
+            </Button>
+          )}
+          {!!contract.canRefuse && (
+            <Button
+              icon="times"
+              color="bad"
+              onClick={() => act('refuse_offer', { id: contract.id })}
+            >
+              Refuse
             </Button>
           )}
           {!!contract.canAct && (
@@ -412,6 +450,13 @@ const ContractCard = (props: { contract: Contract }) => {
         <LabeledList.Item label="Type">{contract.type}</LabeledList.Item>
         <LabeledList.Item label="Target">{contract.target}</LabeledList.Item>
         <LabeledList.Item label="Creator">{contract.creator}</LabeledList.Item>
+        <LabeledList.Item label="Source">
+          {contract.pool
+            ? `pool${contract.corporation ? ` / ${contract.corporation}` : ''}`
+            : contract.legal
+              ? 'legal'
+              : 'off-ledger'}
+        </LabeledList.Item>
         <LabeledList.Item label="Assigned">
           {contract.assignedContractor || 'any contractor'}
         </LabeledList.Item>
