@@ -197,15 +197,6 @@
 	cyberpunk_crypto_keys += key_datum
 	return TRUE
 
-/obj/item/proc/remove_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
-	if(!key_datum || !length(cyberpunk_crypto_keys))
-		return FALSE
-	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
-		if(stored_key.matches(key_datum))
-			cyberpunk_crypto_keys -= stored_key
-			return TRUE
-	return FALSE
-
 /obj/item/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
 	if(!key_datum)
 		return TRUE
