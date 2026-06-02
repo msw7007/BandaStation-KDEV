@@ -204,7 +204,9 @@
 /mob/living/attackby(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(..())
 		return TRUE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	user.changeNext_move(attacking_item.attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(attacking_item))
+	//CYBERPUNK BUILD - rebuild and delete before release
 	return attacking_item.attack(src, user, modifiers, attack_modifiers)
 
 /mob/living/attackby_secondary(obj/item/weapon, mob/living/user, list/modifiers, list/attack_modifiers)
@@ -212,10 +214,12 @@
 
 	// Normal attackby updates click cooldown, so we have to make up for it
 	if (result != SECONDARY_ATTACK_CALL_NORMAL)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		if(weapon.secondary_attack_speed)
 			user.changeNext_move(weapon.secondary_attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(weapon))
 		else
 			user.changeNext_move(weapon.attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(weapon))
+		//CYBERPUNK BUILD - rebuild and delete before release
 
 	return result
 
@@ -259,8 +263,10 @@
 		user.do_attack_animation(target_mob)
 	if(target_mob.attacked_by(src, user, modifiers, attack_modifiers) == ATTACK_FAILED)
 		return TRUE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(final_force > 0)
 		apply_cyberpunk_active_wear(user, target_mob)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, target_mob, user, modifiers, attack_modifiers)
 	SEND_SIGNAL(target_mob, COMSIG_ATOM_AFTER_ATTACKEDBY, src, user, modifiers, attack_modifiers)
@@ -291,13 +297,17 @@
 		return FALSE
 	if(item_flags & NOBLUDGEON)
 		return FALSE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	user.changeNext_move(attack_speed * user.get_cyberpunk_weapon_cooldown_multiplier(src))
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(get(src, /mob/living) == user) // telekinesis.
 		user.do_attack_animation(attacked_atom)
 	if(attacked_atom.attacked_by(src, user, modifiers, attack_modifiers) == ATTACK_FAILED)
 		return TRUE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(force > 0)
 		apply_cyberpunk_active_wear(user, attacked_atom)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, attacked_atom, user, modifiers, attack_modifiers)
 	SEND_SIGNAL(attacked_atom, COMSIG_ATOM_AFTER_ATTACKEDBY, src, user, modifiers, attack_modifiers)
 	afterattack(attacked_atom, user, modifiers, attack_modifiers)
@@ -310,7 +320,9 @@
 		return ATTACK_FAILED
 
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	final_force *= user.get_cyberpunk_weapon_damage_multiplier(attacking_item)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(final_force <= 0)
 		return 0
 
@@ -374,6 +386,7 @@
 		SSblackbox.record_feedback("tally", "zone_targeted", 1, user.zone_selected)
 
 	var/damage_done = 0
+	//CYBERPUNK BUILD - rebuild and delete before release
 	var/list/cyberpunk_damage_entries = attacking_item.get_cyberpunk_damage_entries()
 	if(length(attacking_item.cyberpunk_damage_profile) || length(cyberpunk_damage_entries) > 1 || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_HEAT) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_COLD) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_ACID))
 		var/total_weight = 0
@@ -400,7 +413,7 @@
 				precise_zone = user.zone_selected,
 				brute_type = attacking_item.get_cyberpunk_damage_brute_type(damage_key),
 				burn_type = attacking_item.get_cyberpunk_damage_burn_type(damage_key),
-			)
+		)
 	else
 		damage_done = apply_damage(
 			damage = final_force,
@@ -414,6 +427,7 @@
 			attacking_item = attacking_item,
 			precise_zone = user.zone_selected,
 		)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
 	if(user != src)

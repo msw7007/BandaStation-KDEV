@@ -39,8 +39,10 @@
 	/// Map tag for something.  Tired of it being used on snowflake items.  Moved here for some semblance of a standard.
 	/// Next pr after the network fix will have me refactor door interactions, so help me god.
 	var/id_tag = null
+	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Last living mob that completed a Cyberpunk 13 deconstruction tool action on this object.
 	var/mob/living/cyberpunk_last_deconstructor = null
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// The sound this obj makes when something is buckled to it
 	var/buckle_sound = null
@@ -76,9 +78,12 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 		SScameras.update_visibility(src)
 	SStgui.close_uis(src)
 	GLOB.objects_by_id_tag -= id_tag
+	//CYBERPUNK BUILD - rebuild and delete before release
 	cyberpunk_last_deconstructor = null
+	//CYBERPUNK BUILD - rebuild and delete before release
 	. = ..()
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/proc/get_cyberpunk_deconstruction_stack_amount(base_amount)
 	if(!cyberpunk_last_deconstructor)
 		return base_amount
@@ -92,6 +97,7 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 		return null
 	var/obj/item/stack/created_stack = new stack_type(drop_loc, stack_amount)
 	return created_stack
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /obj/attacked_by(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 	if(!attacking_item.force)
@@ -101,7 +107,9 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 	var/total_force = CALCULATE_FORCE(attacking_item, attack_modifiers) * demo_mod
 	var/damage = take_damage(total_force, attacking_item.damtype, MELEE, TRUE, get_dir(src, user), attacking_item.armour_penetration)
 	if(damage)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		SSeconomy.record_cyberpunk_contract_sabotage(user, src)
+		//CYBERPUNK BUILD - rebuild and delete before release
 
 	if(!LAZYACCESS(attack_modifiers, SILENCE_DEFAULT_MESSAGES))
 		// Sanity in case one is null for some reason

@@ -386,8 +386,10 @@
 	data["heat_damage"] = round(total_heat, 0.1)
 	data["cold_damage"] = round(total_cold, 0.1)
 	data["acid_damage"] = round(total_acid, 0.1)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	data["body_scan"] = patient.get_cyberpunk_medical_body_scan_data()
 	data["organ_scan"] = patient.get_cyberpunk_medical_organ_scan_data()
+	//CYBERPUNK BUILD - rebuild and delete before release
 	data["brain_health"] = brain_status
 	data["brain_damage"] = brain_loss+(chaos_modifier * (rand(1,30)))
 	data["patient_status"] = patient_status

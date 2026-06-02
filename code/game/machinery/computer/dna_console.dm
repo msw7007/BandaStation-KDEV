@@ -315,6 +315,7 @@
 	. = ..() || list()
 	. += get_asset_datum(/datum/asset/simple/genetics)
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/computer/dna_console/proc/get_analysis_level(mob/user)
 	return user?.mind?.get_character_skill_level(SKILL_ANALYSIS) || CHARACTER_SKILL_LEVEL_NONE
 
@@ -357,14 +358,17 @@
 	if(level >= CHARACTER_SKILL_LEVEL_EXPERT || info_bonus >= 60)
 		hints += "quality signature: [mutation.quality]"
 	return english_list(hints)
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /obj/machinery/computer/dna_console/ui_data(mob/user)
 	var/list/data = list()
 
 	data["view"] = tgui_view_state
 	data["storage"] = list()
+	//CYBERPUNK BUILD - rebuild and delete before release
 	data["analysisLevel"] = get_analysis_level(user)
 	data["analysisDecodeBonus"] = get_analysis_decode_bonus(user)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	// This block of code generates the huge data structure passed to the tgui
 	// interface for displaying all the various bits of console/scanner data
@@ -509,7 +513,9 @@
 
 			scanner_occupant.dna.remove_all_mutations()
 			scanner_occupant.dna.generate_dna_blocks()
+			//CYBERPUNK BUILD - rebuild and delete before release
 			scramble_ready = world.time + (SCRAMBLE_TIMEOUT * get_analysis_speed_multiplier(usr))
+			//CYBERPUNK BUILD - rebuild and delete before release
 			to_chat(usr,span_notice("DNA scrambled."))
 			scanner_occupant.apply_status_effect(/datum/status_effect/genetic_damage, GENETIC_DAMAGE_STRENGTH_MULTIPLIER*50/(connected_scanner.damage_coeff ** 2))
 			if(connected_scanner)
@@ -637,9 +643,11 @@
 			// Copy genome to scanner occupant and do some basic mutation checks as
 			//  we've increased the occupant genetic damage
 			scanner_occupant.dna.mutation_index[path] = copytext(sequence, 1, genepos) + newgene + copytext(sequence, genepos + 1)
+			//CYBERPUNK BUILD - rebuild and delete before release
 			scanner_occupant.apply_status_effect(/datum/status_effect/genetic_damage, (GENETIC_DAMAGE_STRENGTH_MULTIPLIER * get_analysis_damage_multiplier(usr)) / connected_scanner.damage_coeff)
 			scanner_occupant.domutcheck()
 			usr?.mind?.adjust_experience(SKILL_ANALYSIS, 1, TRUE)
+			//CYBERPUNK BUILD - rebuild and delete before release
 
 			// GUARD CHECK - Modifying genetics can lead to edge cases where the
 			//  scanner occupant is qdel'd and replaced with a different entity.
@@ -1994,7 +2002,9 @@
 			mutation_data["DefaultSeq"] = default_sequence
 			mutation_data["Discovered"] = discovered
 			mutation_data["Source"] = "occupant"
+			//CYBERPUNK BUILD - rebuild and delete before release
 			mutation_data["AnalysisHint"] = get_analysis_hint(user, mutation, text_sequence)
+			//CYBERPUNK BUILD - rebuild and delete before release
 
 			// We only want to pass this information along to the tgui interface if
 			//  the mutation has been discovered. Prevents people being able to cheese

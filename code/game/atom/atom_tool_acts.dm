@@ -124,6 +124,7 @@
 	if(!act_result)
 		return NONE
 
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(is_left_clicking && tool_type == TOOL_SCREWDRIVER)
 		var/obj/machinery/opened_machine = src
 		if(istype(opened_machine) && opened_machine.panel_open)
@@ -143,6 +144,7 @@
 					to_chat(user, span_notice("Ваши строительные навыки улучшают ремонт на [applied_repair] прочности."))
 
 			SSeconomy.record_cyberpunk_contract_repair(user, src)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	// A tooltype_act has completed successfully
 	if(is_left_clicking)
@@ -340,6 +342,7 @@
 	return
 
 /// Called on an object when a tool with analyzer capabilities is used to left click an object
+//CYBERPUNK BUILD - rebuild and delete before release
 /atom/proc/analyzer_act(mob/living/user, obj/item/tool)
 	if(!is_cyberpunk_structure_target())
 		return
@@ -447,3 +450,4 @@
 		diagnostics += "Бонус урона по объекту: +[user.get_cyberpunk_structure_damage_bonus(src)]%."
 		diagnostics += "Бонус разбора/добычи: +[user.get_cyberpunk_structure_salvage_bonus(src)]%."
 	return diagnostics
+//CYBERPUNK BUILD - rebuild and delete before release

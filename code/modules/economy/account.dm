@@ -386,6 +386,7 @@
 
 #define CYBERPUNK_CONTRACT_TAX_RATE 0.05
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /datum/controller/subsystem/economy/proc/get_cyberpunk_contract(contract_id)
 	return cyberpunk_contracts["[contract_id]"]
 
@@ -877,6 +878,7 @@
 		"contractorStats" = stats,
 		"history" = include_history ? history : null,
 	)
+//CYBERPUNK BUILD - rebuild and delete before release
 
 #undef CYBERPUNK_CONTRACT_TAX_RATE
 #undef CYBERPUNK_CONTRACT_ELIMINATION

@@ -223,8 +223,10 @@
 		data["lastBioscan"] = bioscanner.last_bioscan_report
 		if(iscarbon(occupant))
 			var/mob/living/carbon/carbon_occupant = occupant
+			//CYBERPUNK BUILD - rebuild and delete before release
 			data["bodyScan"] = carbon_occupant.get_cyberpunk_medical_body_scan_data()
 			data["organScan"] = carbon_occupant.get_cyberpunk_medical_organ_scan_data()
+			//CYBERPUNK BUILD - rebuild and delete before release
 
 	return data
 
@@ -384,9 +386,11 @@
 	if(!occupant || state_open || world.time < next_bioscan)
 		return
 	var/mob/living/operator = last_operator?.resolve()
+	//CYBERPUNK BUILD - rebuild and delete before release
 	next_bioscan = world.time + 10 SECONDS * (operator?.get_cyberpunk_medical_scan_time_multiplier(occupant) || 1)
 	var/mob/living/patient = occupant
 	var/report = healthscan(operator, patient, SCANNER_VERBOSE, TRUE, FALSE, 2)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(report)
 		last_bioscan_report = report
 		to_chat(patient, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)

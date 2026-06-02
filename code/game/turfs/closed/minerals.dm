@@ -239,8 +239,10 @@
 
 	var/mining_speed = tool_mine_speed
 	var/mob/living/living_user = isliving(user) ? user : null
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(living_user)
 		mining_speed *= living_user.get_cyberpunk_mining_time_multiplier()
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	TIMER_COOLDOWN_START(src, REF(user), mining_speed)
 	if(!I.use_tool(src, user, mining_speed, volume=50))
@@ -262,8 +264,10 @@
 		return
 	var/mining_speed = mining_arms ? tool_mine_speed : hand_mine_speed
 	var/mob/living/living_user = isliving(user) ? user : null
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(living_user)
 		mining_speed *= living_user.get_cyberpunk_mining_time_multiplier()
+	//CYBERPUNK BUILD - rebuild and delete before release
 	TIMER_COOLDOWN_START(src, REF(user), mining_speed)
 	var/skill_modifier = user.mind?.get_skill_modifier(/datum/skill/mining, SKILL_SPEED_MODIFIER) || 1
 	balloon_alert(user, "pulling out pieces...")
@@ -282,12 +286,15 @@
 		SEND_SIGNAL(user, COMSIG_MOB_MINED, src, exp_multiplier)
 	var/mob/living/living_user = isliving(user) ? user : null
 	if(mineral_type && (mineral_amt > 0))
+		//CYBERPUNK BUILD - rebuild and delete before release
 		var/ore_amount = living_user ? living_user.get_cyberpunk_mining_ore_amount(mineral_amt, drill) : mineral_amt
+		//CYBERPUNK BUILD - rebuild and delete before release
 		new mineral_type(src, ore_amount)
 		SSblackbox.record_feedback("tally", "ore_mined", ore_amount, mineral_type)
 	else if(living_user && prob(living_user.get_cyberpunk_mining_hidden_resource_chance()))
 		new /obj/item/stack/ore/iron(src, 1)
 		SSblackbox.record_feedback("tally", "ore_mined", 1, /obj/item/stack/ore/iron)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(spawned_boulder)
 		var/obj/item/boulder/wall_boulder = new spawned_boulder(src)
 		wall_boulder.platform_lifespan = PLATFORM_LIFE_GULAG
@@ -1179,6 +1186,7 @@
 			ore.quality = GIBTONITE_QUALITY_MEDIUM
 			ore.icon_state = "gibtonite_2"
 		var/mob/living/living_user = isliving(user) ? user : null
+		//CYBERPUNK BUILD - rebuild and delete before release
 		if(living_user)
 			if(prob(living_user.get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_3")))
 				ore.quality = GIBTONITE_QUALITY_HIGH
@@ -1186,6 +1194,7 @@
 			else if(prob(living_user.get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_2")) && ore.quality < GIBTONITE_QUALITY_MEDIUM)
 				ore.quality = GIBTONITE_QUALITY_MEDIUM
 				ore.icon_state = "gibtonite_2"
+		//CYBERPUNK BUILD - rebuild and delete before release
 
 	var/flags = NONE
 	var/old_type = type

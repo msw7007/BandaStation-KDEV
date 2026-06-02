@@ -241,8 +241,10 @@ GLOBAL_LIST_INIT(metal_recipes, list ( \
 		return ITEM_INTERACT_SUCCESS
 
 /obj/item/stack/sheet/iron/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(interacting_with.try_cyberpunk_reinforce(user, src))
 		return ITEM_INTERACT_SUCCESS
+	//CYBERPUNK BUILD - rebuild and delete before release
 	return ..()
 
 /obj/item/stack/sheet/iron/interact_with_atom_secondary(atom/interacting_with, mob/living/user, list/modifiers)
@@ -286,11 +288,15 @@ GLOBAL_LIST_INIT(metal_recipes, list ( \
 	if(frame_path)
 		var/obj/structure/frame/constructed_frame = new frame_path(build_on)
 		constructed_frame.setDir(REVERSE_DIR(user.dir)) //to align computer frame with player direction
+		//CYBERPUNK BUILD - rebuild and delete before release
 		SSeconomy.record_cyberpunk_contract_construction(user, constructed_frame)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		user.balloon_alert(user, "frame created")
 	else
 		var/obj/structure/girder/displaced/constructed_girder = new(build_on)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		SSeconomy.record_cyberpunk_contract_construction(user, constructed_girder)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		user.balloon_alert(user, "girder created")
 	return ITEM_INTERACT_SUCCESS
 

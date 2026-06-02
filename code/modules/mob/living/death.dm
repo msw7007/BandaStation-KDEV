@@ -224,7 +224,9 @@
 /mob/living/proc/death(gibbed)
 	if(stat == DEAD)
 		return FALSE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	SSeconomy.record_cyberpunk_contract_elimination(src)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	if(!gibbed)
 		if(death_sound || death_message || (living_flags & ALWAYS_DEATHGASP))

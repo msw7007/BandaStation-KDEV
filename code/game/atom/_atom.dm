@@ -57,10 +57,12 @@
 	///Last fingerprints to touch this atom
 	var/fingerprintslast
 
+	//CYBERPUNK BUILD - rebuild and delete before release
 	///Cyberpunk 13 analysis mark expiry. Timed bonuses check this instead of granting passive Analysis effects.
 	var/cyberpunk_analyzed_until = 0
 	///Cyberpunk 13 integrity added through field reinforcement.
 	var/cyberpunk_reinforcement_bonus = 0
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Radiation insulation types
 	var/rad_insulation = RAD_NO_INSULATION
@@ -671,8 +673,10 @@
 /atom/proc/StartProcessingAtom(mob/living/user, obj/item/process_item, list/chosen_option)
 	var/processing_time = chosen_option[TOOL_PROCESSING_TIME]
 	var/atom/atom_to_create = chosen_option[TOOL_PROCESSING_RESULT]
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(istype(src, /obj/item/food) || ispath(atom_to_create, /obj/item/food))
 		processing_time *= user.get_cyberpunk_cooking_manual_time_multiplier()
+	//CYBERPUNK BUILD - rebuild and delete before release
 	var/sound_to_play = chosen_option[TOOL_PROCESSING_SOUND]
 	to_chat(user, span_notice("You start working on [src]."))
 	if(sound_to_play)
@@ -684,10 +688,12 @@
 	for(var/i = 1 to amount_to_create)
 		var/atom/created_atom = new atom_to_create(drop_location())
 		created_atom.OnCreatedFromProcessing(user, process_item, chosen_option, src)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		if(created_atom.uses_integrity && created_atom.is_cyberpunk_structure_target())
 			var/integrity_bonus = user.get_cyberpunk_structure_integrity_bonus(created_atom)
 			if(integrity_bonus > 0)
 				created_atom.modify_max_integrity(round(created_atom.max_integrity * (1 + integrity_bonus * 0.01)), FALSE)
+		//CYBERPUNK BUILD - rebuild and delete before release
 		if(custom_materials)
 			created_atom.set_custom_materials(custom_materials, 1 / amount_to_create)
 		created_atom.pixel_x = pixel_x
@@ -701,8 +707,10 @@
 	UsedforProcessing(user, process_item, chosen_option, created_atoms)
 
 /atom/proc/UsedforProcessing(mob/living/user, obj/item/used_item, list/chosen_option, list/created_atoms)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if((istype(src, /obj/item/food) || ispath(chosen_option[TOOL_PROCESSING_RESULT], /obj/item/food)) && prob(user.get_cyberpunk_cooking_resource_save_chance()))
 		return
+	//CYBERPUNK BUILD - rebuild and delete before release
 	qdel(src)
 	return
 

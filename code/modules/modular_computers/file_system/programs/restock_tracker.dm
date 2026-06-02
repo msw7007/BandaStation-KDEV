@@ -31,6 +31,7 @@
 	data["vending_list"] = vending_list
 	return data
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /datum/computer_file/program/contracts
 	filename = "contracts"
 	filedesc = "Contracts"
@@ -72,6 +73,7 @@
 /datum/computer_file/program/contract_registry/ui_data(mob/user)
 	return cyberpunk_contract_registry_ui_data(user)
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /datum/cyberpunk_contracts_verb_ui
 	var/direct_contract_id
 
@@ -117,6 +119,7 @@
 
 	var/datum/cyberpunk_contract_registry_verb_ui/interface = new
 	interface.ui_interact(src)
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /proc/cyberpunk_contracts_ui_data(mob/user, direct_contract_id = null)
 	var/list/data = list()
@@ -226,3 +229,4 @@
 				to_chat(living_user, span_warning("No nearby target satisfies this contract."))
 			return TRUE
 	return FALSE
+//CYBERPUNK BUILD - rebuild and delete before release

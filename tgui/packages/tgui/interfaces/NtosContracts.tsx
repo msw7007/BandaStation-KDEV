@@ -1,3 +1,4 @@
+// CYBERPUNK BUILD - rebuild and delete before release
 import { useState } from 'react';
 import {
   Box,
@@ -112,6 +113,7 @@ export const NtosContracts = () => {
     </NtosWindow>
   );
 };
+// CYBERPUNK BUILD - rebuild and delete before release
 
 const DirectContract = (props: { contract?: Contract }) => {
   const { act } = useBackend<Data>();

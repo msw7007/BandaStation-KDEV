@@ -457,7 +457,9 @@
 	if(ismovable(created))
 		created.setDir(builder.dir)
 	created.on_craft_completion(list(used_stack), null, builder)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	SSeconomy.record_cyberpunk_contract_construction(builder, created)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	builder.investigate_log("crafted [recipe.title]", INVESTIGATE_CRAFTING)
 

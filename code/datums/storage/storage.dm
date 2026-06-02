@@ -63,6 +63,7 @@
 	/// Determines the maximum amount of weight that can be inserted into this storage.
 	/// Weight is calculated by the sum of all of our content's weight classes.
 	var/max_total_storage = WEIGHT_CLASS_SMALL * 7
+	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Cyberpunk 13 inventory grid width. Null means the legacy TG slot storage remains authoritative.
 	var/cyberpunk_grid_width
 	/// Cyberpunk 13 inventory grid height. Null means the legacy TG slot storage remains authoritative.
@@ -71,6 +72,7 @@
 	var/cyberpunk_allow_rotation = TRUE
 	/// Cyberpunk 13 hand-to-storage insertion delay. Zero keeps special storages instant.
 	var/cyberpunk_insert_delay = 2 SECONDS
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Whether the storage is currently locked (inaccessible). See [code/__DEFINES/storage.dm]
 	var/locked = STORAGE_NOT_LOCKED
@@ -160,8 +162,11 @@
 	src.max_total_storage = max_total_storage
 	src.rustle_sound = rustle_sound
 	src.remove_rustle_sound = remove_rustle_sound
+	//CYBERPUNK BUILD - rebuild and delete before release
 	initialize_cyberpunk_grid()
+	//CYBERPUNK BUILD - rebuild and delete before release
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /datum/storage/proc/initialize_cyberpunk_grid()
 	if(cyberpunk_grid_width && cyberpunk_grid_height)
 		return
@@ -252,6 +257,7 @@
 		stored_item.cyberpunk_grid_y = null
 	for(var/obj/item/stored_item as anything in real_location)
 		place_cyberpunk_grid_item(stored_item)
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /datum/storage/Destroy()
 
@@ -529,11 +535,13 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 			user.balloon_alert(user, "нет места!")
 		return FALSE
 
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(!can_fit_cyberpunk_grid_item(to_insert))
 		if(messages && user && !silent_for_user)
 			user.balloon_alert(user, "РЅРµС‚ РјРµСЃС‚Р°!")
 		return FALSE
 
+	//CYBERPUNK BUILD - rebuild and delete before release
 	var/can_hold_it = isnull(can_hold) || is_type_in_typecache(to_insert, can_hold) || is_type_in_typecache(to_insert, exception_hold)
 	var/cant_hold_it = is_type_in_typecache(to_insert, cant_hold)
 	var/trait_says_no = HAS_TRAIT(to_insert, TRAIT_NO_STORAGE_INSERT)
@@ -598,11 +606,13 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 		return FALSE
 	if(SEND_SIGNAL(to_insert, COMSIG_ITEM_PRE_STORAGE_INSERTION, parent, user, force, messages) & BLOCK_STORAGE_INSERT)
 		return FALSE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(!place_cyberpunk_grid_item(to_insert))
 		if(messages && user && !silent_for_user)
 			user.balloon_alert(user, "нет места!")
 		return FALSE
 
+	//CYBERPUNK BUILD - rebuild and delete before release
 	SEND_SIGNAL(parent, COMSIG_ATOM_STORED_ITEM, to_insert, user, force)
 	SEND_SIGNAL(src, COMSIG_STORAGE_STORED_ITEM, to_insert, user, force)
 	if(ismob(to_insert.loc))
@@ -1011,9 +1021,11 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 /// Called directly from the attack chain if [insert_on_attack] is TRUE.
 /// Handles inserting an item into the storage when clicked.
 /datum/storage/proc/item_interact_insert(mob/living/user, obj/item/thing)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(cyberpunk_insert_delay > 0 && istype(user) && istype(thing) && user.is_holding(thing))
 		if(!do_after(user, cyberpunk_insert_delay, target = parent))
 			return ITEM_INTERACT_BLOCKING
+	//CYBERPUNK BUILD - rebuild and delete before release
 	attempt_insert(thing, user)
 	return ITEM_INTERACT_SUCCESS
 
@@ -1271,9 +1283,11 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 
 	var/columns = clamp(max_slots, 1, screen_max_columns)
 	var/rows = clamp(ceil(adjusted_contents / columns) + additional_row, 1, screen_max_rows)
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(cyberpunk_grid_width && cyberpunk_grid_height)
 		columns = cyberpunk_grid_width
 		rows = cyberpunk_grid_height
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	for (var/mob/ui_user as anything in storage_interfaces)
 		if (isnull(storage_interfaces[ui_user]))

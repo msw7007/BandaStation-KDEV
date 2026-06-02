@@ -1220,8 +1220,10 @@
 			damage_on_resist_fail += (rand(grabbing_bodypart.unarmed_damage_low, grabbing_bodypart.unarmed_damage_high)) + grabbing_bodypart.unarmed_grab_damage_bonus
 			effective_grab_state += grabbing_bodypart.unarmed_grab_state_bonus
 			escape_chance += grabbing_bodypart.unarmed_grab_escape_chance_bonus
+			//CYBERPUNK BUILD - rebuild and delete before release
 			damage_on_resist_fail *= human_puller.get_cyberpunk_unarmed_damage_multiplier()
 			escape_chance -= human_puller.get_cyberpunk_grapple_control_bonus()
+			//CYBERPUNK BUILD - rebuild and delete before release
 
 		//If our puller is a drunken brawler, they add more damage based on their own damage taken so long as they're drunk and treat the grab state as one higher
 		var/puller_drunkenness = human_puller.get_drunk_amount()
@@ -2441,7 +2443,9 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	if(isnull(.))
 		return
 	if(stat in list(SOFT_CRIT, HARD_CRIT, UNCONSCIOUS, DEAD))
+		//CYBERPUNK BUILD - rebuild and delete before release
 		SSeconomy.record_cyberpunk_contract_elimination(src)
+		//CYBERPUNK BUILD - rebuild and delete before release
 
 	if(. <= UNCONSCIOUS || new_stat >= UNCONSCIOUS)
 		update_eyes()

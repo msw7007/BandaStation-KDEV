@@ -39,7 +39,9 @@
 	var/effective_force = force
 	if(isliving(user))
 		var/mob/living/living_user = user
+		//CYBERPUNK BUILD - rebuild and delete before release
 		effective_force = living_user.get_cyberpunk_mobile_structure_pull_force(src, force)
+		//CYBERPUNK BUILD - rebuild and delete before release
 	if(effective_force < (move_resist * MOVE_FORCE_PULL_RATIO))
 		return FALSE
 	return TRUE

@@ -123,14 +123,18 @@
 		CRASH("unimplemented /atom/proc/attack_generic()!")
 	if(isliving(user))
 		var/mob/living/living_user = user
+		//CYBERPUNK BUILD - rebuild and delete before release
 		var/structure_damage_bonus = living_user.get_cyberpunk_structure_damage_bonus(src)
 		if(structure_damage_bonus > 0)
 			damage_amount *= 1 + structure_damage_bonus * 0.01
+		//CYBERPUNK BUILD - rebuild and delete before release
 	user.do_attack_animation(src)
 	user.changeNext_move(CLICK_CD_MELEE)
 	. = take_damage(damage_amount, damage_type, damage_flag, sound_effect, get_dir(src, user), armor_penetration)
 	if(. && isliving(user))
+		//CYBERPUNK BUILD - rebuild and delete before release
 		SSeconomy.record_cyberpunk_contract_sabotage(user, src)
+		//CYBERPUNK BUILD - rebuild and delete before release
 	return .
 
 /// Called after the atom takes damage and integrity is below integrity_failure level

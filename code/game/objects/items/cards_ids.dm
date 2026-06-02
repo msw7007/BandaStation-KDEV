@@ -423,6 +423,7 @@
  * * try_wildcard - If not null, will attempt to add all accesses that require wildcard slots to this wildcard slot only.
  * * mode - The method to use when adding accesses. See define for ERROR_ON_FAIL
  */
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/item/card/id/proc/add_access(list/add_accesses, try_wildcard = null, mode = ERROR_ON_FAIL)
 	var/list/wildcard_access = list()
 	var/list/normal_access = list()
@@ -438,6 +439,7 @@
 	access |= normal_access
 	if(mode != TRY_ADD_ALL_NO_WILDCARD)
 		add_wildcards(wildcard_access, try_wildcard, mode = mode)
+	sync_cyberpunk_crypto_access_keys()
 
 	return TRUE
 
@@ -456,6 +458,7 @@
 
 	access -= normal_access
 	remove_wildcards(wildcard_access)
+	sync_cyberpunk_crypto_access_keys()
 
 /**
  * Attempts to set the card's accesses to the given accesses, clearing all accesses not in the given list.
@@ -483,6 +486,7 @@
 
 	if(mode != TRY_ADD_ALL_NO_WILDCARD)
 		add_wildcards(wildcard_access, mode = mode)
+	sync_cyberpunk_crypto_access_keys()
 
 	return TRUE
 
@@ -496,6 +500,13 @@
 
 	// Hard reset access
 	access.Cut()
+	sync_cyberpunk_crypto_access_keys()
+//CYBERPUNK BUILD - rebuild and delete before release
+
+/obj/item/card/id/proc/sync_cyberpunk_crypto_access_keys()
+	clear_cyberpunk_crypto_access_keys()
+	for(var/access_id in access)
+		store_cyberpunk_crypto_access(access_id)
 
 /// Sets the bank account for the ID card.
 /obj/item/card/id/proc/set_account(datum/bank_account/account, transfer_funds = FALSE)
@@ -948,6 +959,7 @@
 
 	return .
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/item/card/id/GetAccess()
 	var/list/total_access = access.Copy()
 
@@ -957,6 +969,7 @@
 			total_access |= reta_temp_access[dept]
 
 	return total_access
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /obj/item/card/id/GetID()
 	return src

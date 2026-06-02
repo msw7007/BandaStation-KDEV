@@ -47,12 +47,14 @@ SUBSYSTEM_DEF(economy)
 	 * Added to any time when player accounts purchase something.
 	 */
 	var/list/audit_log = list()
+	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Round-local player contract registry. Keyed by contract id.
 	var/list/cyberpunk_contracts = list()
 	/// Next id for round-local contracts.
 	var/next_cyberpunk_contract_id = 1
 	/// Lightweight reputation stats keyed by round character name/account, not client ckey.
 	var/list/cyberpunk_contract_stats = list()
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Number of mail items generated.
 	var/mail_waiting = 0
@@ -85,9 +87,11 @@ SUBSYSTEM_DEF(economy)
 	departmental_accounts = SSeconomy.departmental_accounts
 	bank_accounts_by_id = SSeconomy.bank_accounts_by_id
 	dep_cards = SSeconomy.dep_cards
+	//CYBERPUNK BUILD - rebuild and delete before release
 	cyberpunk_contracts = SSeconomy.cyberpunk_contracts
 	next_cyberpunk_contract_id = SSeconomy.next_cyberpunk_contract_id
 	cyberpunk_contract_stats = SSeconomy.cyberpunk_contract_stats
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Processing step defines, to track what we've done so far
 #define ECON_DEPARTMENT_STEP "econ_dpt_stp"

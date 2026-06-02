@@ -84,6 +84,385 @@
  *     Called by the 'air subsystem' once per atmos tick for each machine that is listed in its 'atmos_machines' list.
  * Compiled by Aygar
  */
+//CYBERPUNK BUILD - rebuild and delete before release
+#define CYBERPUNK_CRYPTO_KEY_LENGTH 20
+#define CYBERPUNK_CRYPTO_COLUMNS 5
+#define CYBERPUNK_CRYPTO_SEGMENT_LENGTH 4
+#define CYBERPUNK_CRYPTO_OPTIONS 9
+#define CYBERPUNK_CRYPTO_ROTATION_DELAY (2 SECONDS)
+#define CYBERPUNK_CRYPTO_BYPASS_DURATION (30 SECONDS)
+#define CYBERPUNK_CRYPTO_CHARSET "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
+
+/datum/cyberpunk_crypto_key
+	var/name = "access key"
+	var/owner = "independent"
+	var/code
+
+/datum/cyberpunk_crypto_key/New(key_name = null, key_owner = null, key_code = null)
+	. = ..()
+	if(key_name)
+		name = key_name
+	if(key_owner)
+		owner = key_owner
+	code = key_code || generate_cyberpunk_crypto_code()
+
+/datum/cyberpunk_crypto_key/proc/matches(datum/cyberpunk_crypto_key/other_key)
+	return !isnull(other_key) && code == other_key.code
+
+/proc/generate_cyberpunk_crypto_code(length = CYBERPUNK_CRYPTO_KEY_LENGTH)
+	. = ""
+	for(var/index in 1 to length)
+		var/char_index = rand(1, length(CYBERPUNK_CRYPTO_CHARSET))
+		. += copytext_char(CYBERPUNK_CRYPTO_CHARSET, char_index, char_index + 1)
+
+/proc/get_cyberpunk_crypto_segment(code, segment_index)
+	var/start_index = ((segment_index - 1) * CYBERPUNK_CRYPTO_SEGMENT_LENGTH) + 1
+	return copytext_char(code, start_index, start_index + CYBERPUNK_CRYPTO_SEGMENT_LENGTH)
+
+/mob/living
+	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_memory
+
+/mob/living/proc/get_cyberpunk_crypto_identity()
+	return ckey("[mind?.name || real_name || key || name]")
+
+/mob/living/proc/remember_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum)
+		return FALSE
+	LAZYINITLIST(cyberpunk_crypto_memory)
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_memory)
+		if(stored_key.matches(key_datum))
+			return TRUE
+	cyberpunk_crypto_memory += key_datum
+	return TRUE
+
+/mob/living/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum)
+		return TRUE
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_memory)
+		if(stored_key.matches(key_datum))
+			return TRUE
+	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_POCKETS | INCLUDE_ACCESSORIES | INCLUDE_HELD))
+		if(item.has_cyberpunk_crypto_key(key_datum))
+			return TRUE
+	return FALSE
+
+//CYBERPUNK BUILD - rebuild and delete before release
+/mob/living/verb/test_cyberpunk_crypto_hack()
+	set name = "Тест криптоключа"
+	set category = "IC"
+
+	var/datum/cyberpunk_crypto_key/test_key = new("test service key", "independent")
+	var/datum/cyberpunk_crypto_hack_session/session = new(src, null, test_key)
+	session.ui_interact(src)
+
+/mob/living/verb/show_cyberpunk_crypto_memory()
+	set name = "Память криптоключей"
+	set category = "IC"
+
+	if(!length(cyberpunk_crypto_memory))
+		to_chat(src, span_notice("No cryptokeys stored in memory."))
+		return
+	to_chat(src, span_notice("Stored cryptokeys:"))
+	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_memory)
+		to_chat(src, span_notice("- [key_datum.name] / [key_datum.owner]: [key_datum.code]"))
+
+/mob/living/verb/write_cyberpunk_crypto_key_to_held_item()
+	set name = "Записать криптоключ на предмет"
+	set category = "IC"
+
+	var/obj/item/held_item = get_active_held_item()
+	if(!held_item)
+		to_chat(src, span_warning("Hold a card, disk or device to write a cryptokey onto it."))
+		return
+	if(!length(cyberpunk_crypto_memory))
+		to_chat(src, span_warning("No cryptokeys stored in memory."))
+		return
+	var/list/key_choices = list()
+	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_memory)
+		key_choices["[key_datum.name] / [key_datum.owner]"] = key_datum
+	var/choice = tgui_input_list(src, "Select a cryptokey to write to [held_item].", "Cryptokey memory", key_choices)
+	if(!choice)
+		return
+	var/datum/cyberpunk_crypto_key/selected_key = key_choices[choice]
+	if(held_item.store_cyberpunk_crypto_key(selected_key))
+		to_chat(src, span_notice("You write [selected_key.name] to [held_item]."))
+//CYBERPUNK BUILD - rebuild and delete before release
+
+/obj/item/proc/store_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum)
+		return FALSE
+	LAZYINITLIST(cyberpunk_crypto_keys)
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
+		if(stored_key.matches(key_datum))
+			return TRUE
+	cyberpunk_crypto_keys += key_datum
+	return TRUE
+
+/obj/item/proc/remove_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum || !length(cyberpunk_crypto_keys))
+		return FALSE
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
+		if(stored_key.matches(key_datum))
+			cyberpunk_crypto_keys -= stored_key
+			return TRUE
+	return FALSE
+
+/obj/item/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum)
+		return TRUE
+	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
+		if(stored_key.matches(key_datum))
+			return TRUE
+	return FALSE
+
+/obj/machinery
+	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_keys
+	var/list/cyberpunk_crypto_bypass_until
+
+/obj/machinery/proc/get_or_create_cyberpunk_crypto_key()
+	LAZYINITLIST(cyberpunk_crypto_keys)
+	if(!length(cyberpunk_crypto_keys))
+		var/manufacturer = get_cyberspace_manufacturer(src)
+		cyberpunk_crypto_keys += new /datum/cyberpunk_crypto_key("[name] service key", manufacturer)
+	return cyberpunk_crypto_keys[1]
+
+/obj/machinery/proc/has_cyberpunk_crypto_access(mob/living/user)
+	if(!length(cyberpunk_crypto_keys))
+		return TRUE
+	if(!user)
+		return FALSE
+	if(has_cyberpunk_crypto_bypass(user))
+		return TRUE
+	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_keys)
+		if(user.has_cyberpunk_crypto_key(key_datum))
+			return TRUE
+	return FALSE
+
+/obj/machinery/proc/has_cyberpunk_crypto_bypass(mob/living/user)
+	if(!user || !cyberpunk_crypto_bypass_until)
+		return FALSE
+	var/identity = user.get_cyberpunk_crypto_identity()
+	return (cyberpunk_crypto_bypass_until[identity] || 0) > world.time
+
+/obj/machinery/proc/grant_cyberpunk_crypto_bypass(mob/living/user, duration = CYBERPUNK_CRYPTO_BYPASS_DURATION)
+	if(!user)
+		return FALSE
+	LAZYINITLIST(cyberpunk_crypto_bypass_until)
+	cyberpunk_crypto_bypass_until[user.get_cyberpunk_crypto_identity()] = world.time + duration
+	return TRUE
+
+/obj/machinery/proc/consume_cyberpunk_crypto_bypass(mob/living/user)
+	if(!has_cyberpunk_crypto_bypass(user))
+		return FALSE
+	cyberpunk_crypto_bypass_until -= user.get_cyberpunk_crypto_identity()
+	return TRUE
+
+/obj/machinery/proc/open_cyberpunk_crypto_hack(mob/living/user)
+	if(!user)
+		return FALSE
+	var/datum/cyberpunk_crypto_hack_session/session = new(user, src, get_or_create_cyberpunk_crypto_key())
+	session.ui_interact(user)
+	return TRUE
+
+/obj/machinery/multitool_act(mob/living/user, obj/item/tool)
+	if(panel_open)
+		tool?.play_tool_sound(src)
+		open_cyberpunk_crypto_hack(user)
+		return TRUE
+	return ..()
+
+/datum/cyberpunk_crypto_hack_session
+	var/mob/living/user
+	var/obj/machinery/target
+	var/datum/cyberpunk_crypto_key/key_datum
+	var/list/columns = list()
+	var/list/positions = list()
+	var/list/directions = list()
+	var/next_rotation = 0
+	var/closed = FALSE
+
+/datum/cyberpunk_crypto_hack_session/New(mob/living/new_user, obj/machinery/new_target, datum/cyberpunk_crypto_key/new_key)
+	. = ..()
+	user = new_user
+	target = new_target
+	key_datum = new_key || new /datum/cyberpunk_crypto_key()
+	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
+		var/correct_segment = get_cyberpunk_crypto_segment(key_datum.code, column_index)
+		columns += list(generate_column_options(correct_segment))
+		positions += rand(1, CYBERPUNK_CRYPTO_OPTIONS)
+		directions += (column_index <= 2 ? 1 : -1)
+	next_rotation = world.time + CYBERPUNK_CRYPTO_ROTATION_DELAY
+
+/datum/cyberpunk_crypto_hack_session/Destroy(force)
+	user = null
+	target = null
+	key_datum = null
+	columns = null
+	positions = null
+	directions = null
+	return ..()
+
+/datum/cyberpunk_crypto_hack_session/proc/generate_column_options(correct_segment)
+	var/list/options = list(correct_segment)
+	while(length(options) < CYBERPUNK_CRYPTO_OPTIONS)
+		var/candidate = generate_cyberpunk_crypto_code(CYBERPUNK_CRYPTO_SEGMENT_LENGTH)
+		if(candidate in options)
+			continue
+		options += candidate
+	return shuffle(options)
+
+/datum/cyberpunk_crypto_hack_session/proc/rotate_columns()
+	if(closed || world.time < next_rotation)
+		return
+	while(world.time >= next_rotation)
+		for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
+			var/new_position = positions[column_index] + directions[column_index]
+			if(new_position < 1)
+				new_position = CYBERPUNK_CRYPTO_OPTIONS
+			else if(new_position > CYBERPUNK_CRYPTO_OPTIONS)
+				new_position = 1
+			positions[column_index] = new_position
+		next_rotation += CYBERPUNK_CRYPTO_ROTATION_DELAY
+
+/datum/cyberpunk_crypto_hack_session/proc/current_segment(column_index)
+	var/list/options = columns[column_index]
+	return options[positions[column_index]]
+
+/datum/cyberpunk_crypto_hack_session/proc/is_aligned()
+	rotate_columns()
+	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
+		if(current_segment(column_index) != get_cyberpunk_crypto_segment(key_datum.code, column_index))
+			return FALSE
+	return TRUE
+
+/datum/cyberpunk_crypto_hack_session/proc/get_masked_key()
+	var/reveal_count = clamp(round((user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0) / 3), 0, CYBERPUNK_CRYPTO_KEY_LENGTH)
+	if(reveal_count <= 0)
+		. = ""
+		for(var/char_index in 1 to CYBERPUNK_CRYPTO_KEY_LENGTH)
+			. += "*"
+		return
+	var/list/revealed = list()
+	for(var/reveal_index in 1 to reveal_count)
+		revealed["[clamp(round((CYBERPUNK_CRYPTO_KEY_LENGTH / (reveal_count + 1)) * reveal_index), 1, CYBERPUNK_CRYPTO_KEY_LENGTH)]"] = TRUE
+	. = ""
+	for(var/char_index in 1 to CYBERPUNK_CRYPTO_KEY_LENGTH)
+		if(revealed["[char_index]"])
+			. += copytext_char(key_datum.code, char_index, char_index + 1)
+		else
+			. += "*"
+
+/datum/cyberpunk_crypto_hack_session/proc/get_column_ui_data(column_index)
+	var/list/options = columns[column_index]
+	var/correct_segment = get_cyberpunk_crypto_segment(key_datum.code, column_index)
+	var/hacking_skill = user?.get_character_skill_level(SKILL_HACKING) || 0
+	var/wrong_hint_budget = clamp(hacking_skill, 0, CYBERPUNK_CRYPTO_OPTIONS - 1)
+	var/wrong_hints_used = 0
+	var/list/option_data = list()
+	for(var/option_index in 1 to length(options))
+		var/option = options[option_index]
+		var/is_wrong = option != correct_segment
+		var/hinted_wrong = FALSE
+		if(is_wrong && wrong_hints_used < wrong_hint_budget)
+			hinted_wrong = TRUE
+			wrong_hints_used++
+		option_data += list(list(
+			"index" = option_index,
+			"text" = option,
+			"active" = option_index == positions[column_index],
+			"wrongHint" = hinted_wrong,
+		))
+	return list(
+		"index" = column_index,
+		"direction" = directions[column_index] > 0 ? "down" : "up",
+		"current" = current_segment(column_index),
+		"correctIndex" = options.Find(correct_segment),
+		"options" = option_data,
+	)
+
+/datum/cyberpunk_crypto_hack_session/proc/complete_alignment()
+	if(!is_aligned())
+		to_chat(user, span_warning("The columns are not aligned to the cryptokey."))
+		return TRUE
+	user?.remember_cyberpunk_crypto_key(key_datum)
+	target?.grant_cyberpunk_crypto_bypass(user)
+	to_chat(user, span_notice("Cryptokey reconstructed and stored in memory."))
+	closed = TRUE
+	SStgui.close_uis(src)
+	qdel(src)
+	return TRUE
+
+/datum/cyberpunk_crypto_hack_session/proc/submit_code(code)
+	if(code != key_datum.code)
+		to_chat(user, span_danger("Incorrect cryptokey. The target access controller raises an alarm."))
+		target?.visible_message(span_warning("[target] emits a sharp access alarm."))
+		return TRUE
+	target?.grant_cyberpunk_crypto_bypass(user)
+	to_chat(user, span_notice("Cryptokey accepted for one activation. It is not stored in memory."))
+	closed = TRUE
+	SStgui.close_uis(src)
+	qdel(src)
+	return TRUE
+
+/datum/cyberpunk_crypto_hack_session/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyberpunk_crypto_hack_session/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkCryptoHack", "Cryptokey breach")
+		ui.set_autoupdate(TRUE)
+		ui.open()
+
+/datum/cyberpunk_crypto_hack_session/ui_close(mob/user)
+	closed = TRUE
+	qdel(src)
+
+/datum/cyberpunk_crypto_hack_session/ui_data(mob/user)
+	rotate_columns()
+	var/list/column_data = list()
+	for(var/column_index in 1 to CYBERPUNK_CRYPTO_COLUMNS)
+		column_data += list(get_column_ui_data(column_index))
+	return list(
+		"targetName" = target?.name || "test harness",
+		"keyName" = key_datum.name,
+		"owner" = key_datum.owner,
+		//CYBERPUNK BUILD - rebuild and delete before release
+		"testKey" = key_datum.code,
+		//CYBERPUNK BUILD - rebuild and delete before release
+		"maskedKey" = get_masked_key(),
+		"hackingSkill" = src.user?.get_character_skill_level(SKILL_HACKING) || 0,
+		"intelligence" = src.user?.get_attribute_value(ATTRIBUTE_INTELLIGENCE) || 0,
+		"columns" = column_data,
+		"aligned" = is_aligned(),
+		"nextRotation" = max(0, round((next_rotation - world.time) / 10, 0.1)),
+	)
+
+/datum/cyberpunk_crypto_hack_session/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return .
+	switch(action)
+		if("flip_column")
+			var/column_index = clamp(text2num(params["column"]), 1, CYBERPUNK_CRYPTO_COLUMNS)
+			directions[column_index] *= -1
+			return TRUE
+		if("attempt_alignment")
+			return complete_alignment()
+		if("submit_code")
+			return submit_code(params["code"])
+	return FALSE
+
+#undef CYBERPUNK_CRYPTO_KEY_LENGTH
+#undef CYBERPUNK_CRYPTO_COLUMNS
+#undef CYBERPUNK_CRYPTO_SEGMENT_LENGTH
+#undef CYBERPUNK_CRYPTO_OPTIONS
+#undef CYBERPUNK_CRYPTO_ROTATION_DELAY
+#undef CYBERPUNK_CRYPTO_BYPASS_DURATION
+#undef CYBERPUNK_CRYPTO_CHARSET
+//CYBERPUNK BUILD - rebuild and delete before release
+
+//CYBERPUNK BUILD - rebuild and delete before release
 /datum/cyberpunk_machine_module
 	var/name = "generic machinery module"
 	var/id = "generic"
@@ -360,6 +739,7 @@
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/apc_efficiency_core
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery
 	name = "machinery"
 	icon = 'icons/obj/machines/fax.dmi'
@@ -401,6 +781,7 @@
 	var/cyberpunk_machine_wear_limit = 100
 	///Wear value at which the machine starts taking integrity damage.
 	var/cyberpunk_machine_wear_damage_threshold = 50
+	//CYBERPUNK BUILD - rebuild and delete before release
 	///Default wear added by one active interaction.
 	var/cyberpunk_machine_wear_per_use = 1
 	///Global per-machine tuning knob for Cyberpunk 13 wear accumulation.
@@ -421,6 +802,7 @@
 	var/cyberpunk_machine_module_slots = 2
 	///Temporary CP13 module installation UI holder.
 	var/datum/cyberpunk_machine_module_interface/cyberpunk_module_ui
+	//CYBERPUNK BUILD - rebuild and delete before release
 	///Is the machines maintenance panel open.
 	var/panel_open = FALSE
 	///Is the machine open or closed
@@ -497,6 +879,7 @@
 
 	return INITIALIZE_HINT_LATELOAD
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/get_cyberpunk_diagnostic_data(mob/living/user)
 	. = ..()
 	. += "Wear: [round(cyberpunk_machine_wear)]/[cyberpunk_machine_wear_limit]."
@@ -513,6 +896,7 @@
 		. += "Порог повреждения износом: [cyberpunk_machine_wear_damage_threshold]."
 		. += "Шанс короткого замыкания: [cyberpunk_machine_failure_shock_chance]%."
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/LateInitialize()
 	SHOULD_NOT_OVERRIDE(TRUE)
 	post_machine_initialize()
@@ -1326,6 +1710,7 @@
 		new_frame.update_integrity(new_frame.max_integrity * 0.5) //the frame is already half broken
 	transfer_fingerprints_to(new_frame)
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/proc/get_cyberpunk_machine_wear_multiplier()
 	var/wear_multiplier = 1
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
@@ -1799,6 +2184,7 @@
 			return TRUE
 	return TRUE
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/atom_break(damage_flag)
 	. = ..()
 	if(!(machine_stat & BROKEN))

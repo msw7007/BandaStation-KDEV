@@ -958,6 +958,7 @@
 		burn_wound.sanitization = max(burn_wound.sanitization, 1)
 	return reduced
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /mob/living/carbon/proc/get_cyberpunk_medical_body_scan_data()
 	var/list/body_parts = list()
 	for(var/zone in get_all_limbs())
@@ -1155,6 +1156,7 @@
 		apply_random_organ_damage(list(ORGAN_SLOT_STOMACH, ORGAN_SLOT_LIVER), amount)
 	else
 		apply_random_organ_damage(list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS), amount)
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /**
  * #receive_damage

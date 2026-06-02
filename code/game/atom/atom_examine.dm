@@ -60,11 +60,13 @@
 	SEND_SIGNAL(src, COMSIG_ATOM_EXAMINE, user, .)
 
 	var/mob/living/living_user = user
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(istype(living_user) && living_user.can_cyberpunk_analyze_by_examine(src))
 		mark_cyberpunk_analyzed(living_user)
 		. += span_notice("You analyze [src] and keep its weak points in mind for one minute.")
 		for(var/diagnostic_line in living_user.get_cyberpunk_machine_diagnostic_data(src))
 			. += span_notice("[diagnostic_line]")
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Returns an examine string describing what the contents of this atom smell like
 /atom/proc/get_sniff_examine(mob/living/carbon/sniffer)

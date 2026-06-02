@@ -105,9 +105,11 @@
 		balloon_alert(user, "busy")
 		return
 	scanner_busy = TRUE
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(!do_after(user, 10 SECONDS * user.get_cyberpunk_medical_scan_time_multiplier(M), target = M))
 		scanner_busy = FALSE
 		return
+	//CYBERPUNK BUILD - rebuild and delete before release
 	scanner_busy = FALSE
 
 	var/readability_check = user.can_read(src) && !user.is_blind()
@@ -152,6 +154,7 @@
 
 	return CONTEXTUAL_SCREENTIP_SET
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /proc/cyberpunk_healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE, scan_depth = null)
 	if(user?.incapacitated)
 		return
@@ -239,6 +242,7 @@
 	if(tochat)
 		to_chat(user, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
 	return report
+//CYBERPUNK BUILD - rebuild and delete before release
 
 /**
  * healthscan
@@ -254,8 +258,10 @@
 /proc/healthscan(mob/user, mob/living/target, mode = SCANNER_VERBOSE, advanced = FALSE, tochat = TRUE, scan_depth = null)
 	if(user?.incapacitated)
 		return
+	//CYBERPUNK BUILD - rebuild and delete before release
 	if(scan_depth != "tg_legacy_healthscan")
 		return cyberpunk_healthscan(user, target, mode, advanced, tochat, scan_depth)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	// the final list of strings to render
 	var/list/render_list = list()

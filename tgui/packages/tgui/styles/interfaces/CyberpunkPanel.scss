@@ -1,3 +1,4 @@
+// CYBERPUNK BUILD - rebuild and delete before release
 .CyberpunkPanel {
   --cy-bg: #05080d;
   --cy-panel: #071016;
@@ -78,6 +79,7 @@
     text-transform: uppercase;
   }
 }
+// CYBERPUNK BUILD - rebuild and delete before release
 
 .CyberpunkPanel__Metric {
   padding: 0.45rem 0.5rem;
@@ -124,4 +126,46 @@
 
 .CyberpunkPanel__WearBarFill {
   height: 100%;
+}
+
+.CyberpunkPanel__CryptoGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.CyberpunkPanel__CryptoColumn {
+  border: 1px solid rgba(24, 216, 255, 0.45);
+  background: rgba(11, 95, 115, 0.1);
+  padding: 0.35rem;
+}
+
+.CyberpunkPanel__CryptoSegment {
+  margin-bottom: 0.2rem;
+  padding: 0.22rem 0.25rem;
+  border: 1px solid rgba(24, 216, 255, 0.16);
+  color: var(--cy-muted);
+  font-family: monospace;
+  text-align: center;
+}
+
+.CyberpunkPanel__CryptoSegment--active {
+  border-color: var(--cy-cyan);
+  color: var(--cy-cyan);
+  background: rgba(24, 216, 255, 0.16);
+}
+
+.CyberpunkPanel__CryptoSegment--wrong {
+  border-color: rgba(255, 51, 74, 0.45);
+  color: var(--cy-red);
+  opacity: 0.55;
+}
+
+.CyberpunkPanel__CryptoKey {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(24, 216, 255, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--cy-cyan);
+  font-family: monospace;
+  word-break: break-all;
 }

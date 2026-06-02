@@ -131,6 +131,7 @@
 	var/cyberpunk_repair_threshold = 0.4
 	/// What happens at zero integrity: "tg" keeps normal TG destruction, "broken" keeps the item, "delete" deletes, "emergency" lets subtypes provide behavior.
 	var/cyberpunk_spoil_behavior = "tg"
+	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Runtime broken flag for Cyberpunk item effects. Existing TG subtype-specific broken flags still work independently.
 	var/cyberpunk_broken = FALSE
 	/// Last time the item was created or repaired, used by passive wear systems.
@@ -157,6 +158,9 @@
 	var/list/datum/cyberpunk_item_module/cyberpunk_modules
 	/// Round-local contract id attached to this item as cargo evidence.
 	var/cyberpunk_contract_id
+	/// Runtime cryptokeys stored on this card/disk/device. Persistence and card UI can consume this directly later.
+	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_keys
+	//CYBERPUNK BUILD - rebuild and delete before release
 	///Whether spessmen with an ID with an age below AGE_MINOR (20 by default) can buy this item
 	var/age_restricted = FALSE
 
@@ -731,6 +735,7 @@
 			cyberpunk_broken = FALSE
 	return .
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/item/welder_act(mob/living/user, obj/item/tool)
 	if(!uses_integrity || get_integrity() >= max_integrity)
 		return ..()
@@ -1026,6 +1031,7 @@
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_item_module
 	category = list(RND_CATEGORY_EQUIPMENT + RND_SUBCATEGORY_EQUIPMENT_ENGINEERING)
+//CYBERPUNK BUILD - rebuild and delete before release
 	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE | DEPARTMENT_BITFLAG_SECURITY
 
 /datum/design/cyberpunk_item_module/melee_core

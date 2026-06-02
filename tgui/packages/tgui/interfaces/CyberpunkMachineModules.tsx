@@ -1,3 +1,4 @@
+// CYBERPUNK BUILD - rebuild and delete before release
 import { Button, Section, Stack } from 'tgui-core/components';
 
 import { useBackend } from '../backend';
@@ -107,6 +108,7 @@ const ModuleStats = (props: { module: MachineModule }) => {
     </div>
   );
 };
+// CYBERPUNK BUILD - rebuild and delete before release
 
 const WearBar = (props: { value: number; max: number }) => {
   const pct = props.max

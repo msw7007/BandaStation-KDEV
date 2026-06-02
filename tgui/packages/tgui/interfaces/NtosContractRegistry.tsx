@@ -1,3 +1,4 @@
+// CYBERPUNK BUILD - rebuild and delete before release
 import {
   Box,
   Collapsible,
@@ -130,3 +131,4 @@ export const NtosContractRegistry = () => {
     </NtosWindow>
   );
 };
+// CYBERPUNK BUILD - rebuild and delete before release

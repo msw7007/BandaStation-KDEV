@@ -674,6 +674,7 @@
 		"starlight_vehicle_tank",
 	)
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/vehicle/sealed/car/cyberpunk_test
 	name = "Starlight prototype vehicle"
 	desc = "A temporary Starlight test platform using a clown car body shell."
@@ -1699,7 +1700,9 @@
 		if(!QDELETED(machine))
 			machine.forceMove(drop_location())
 		return TRUE
+//CYBERPUNK BUILD - rebuild and delete before release
 
+//CYBERPUNK BUILD - rebuild and delete before release
 /client/proc/spawn_cyberpunk_test_vehicle()
 	set name = "Create Cyberpunk Test Vehicle"
 	set category = "Debug"
@@ -1723,3 +1726,4 @@
 	var/choice = tgui_input_list(mob, "Choose temporary vehicle type.", "Starlight vehicle", options)
 	var/vehicle_type = options[choice] || /obj/vehicle/sealed/car/cyberpunk_test
 	new vehicle_type(spawn_turf)
+//CYBERPUNK BUILD - rebuild and delete before release
