@@ -460,6 +460,221 @@
 		return buckled.set_currently_z_moving(value)
 	return ..()
 
+/mob/living/proc/set_vertical_state(new_state, duration = 0, turf/anchor_turf = null)
+	if(vertical_state_timer != TIMER_ID_NULL)
+		deltimer(vertical_state_timer)
+		vertical_state_timer = TIMER_ID_NULL
+	if(vertical_stamina_timer != TIMER_ID_NULL)
+		deltimer(vertical_stamina_timer)
+		vertical_stamina_timer = TIMER_ID_NULL
+
+	vertical_state = new_state
+	vertical_state_until = duration > 0 ? world.time + duration : 0
+
+	if(vertical_state == VERTICAL_STATE_NONE)
+		clear_vertical_anchor()
+		REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, VERTICAL_STATE_TRAIT)
+		return TRUE
+
+	if(vertical_state == VERTICAL_STATE_HANGING || vertical_state == VERTICAL_STATE_CLIMBING)
+		if(!set_vertical_anchor(anchor_turf || find_vertical_anchor()))
+			vertical_state = VERTICAL_STATE_NONE
+			REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, VERTICAL_STATE_TRAIT)
+			return FALSE
+	else
+		clear_vertical_anchor()
+
+	if(vertical_state == VERTICAL_STATE_HANGING || vertical_state == VERTICAL_STATE_CLIMBING || vertical_state == VERTICAL_STATE_AIRBORNE)
+		ADD_TRAIT(src, TRAIT_IMMOBILIZED, VERTICAL_STATE_TRAIT)
+
+	if(duration > 0)
+		vertical_state_timer = addtimer(CALLBACK(src, PROC_REF(end_vertical_state), new_state), duration, TIMER_STOPPABLE)
+
+	if(vertical_state == VERTICAL_STATE_HANGING || vertical_state == VERTICAL_STATE_CLIMBING)
+		vertical_stamina_timer = addtimer(CALLBACK(src, PROC_REF(vertical_stamina_tick), new_state), VERTICAL_STAMINA_TICK, TIMER_STOPPABLE)
+	return TRUE
+
+/mob/living/proc/end_vertical_state(ending_state)
+	if(vertical_state != ending_state)
+		return
+	set_vertical_state(VERTICAL_STATE_NONE)
+	if(ending_state == VERTICAL_STATE_AIRBORNE)
+		var/turf/current_turf = get_turf(src)
+		current_turf?.zFall(src)
+
+/mob/living/proc/vertical_stamina_tick(ticking_state)
+	if(vertical_state != ticking_state)
+		return
+	var/stamina_cost = vertical_state == VERTICAL_STATE_CLIMBING ? VERTICAL_CLIMB_STAMINA_COST : VERTICAL_HANG_STAMINA_COST
+	if(!spend_stamina(stamina_cost, "vertical_movement"))
+		set_vertical_state(VERTICAL_STATE_NONE)
+		var/turf/current_turf = get_turf(src)
+		current_turf?.zFall(src)
+		return
+	vertical_stamina_timer = addtimer(CALLBACK(src, PROC_REF(vertical_stamina_tick), ticking_state), VERTICAL_STAMINA_TICK, TIMER_STOPPABLE)
+
+/mob/living/proc/reset_vertical_fall_chain()
+	vertical_fall_chain = 0
+	vertical_last_fall_time = 0
+	vertical_ignore_next_fall_delay = FALSE
+
+/mob/living/proc/clear_vertical_anchor()
+	if(vertical_anchor_pixel_x || vertical_anchor_pixel_y)
+		pixel_x -= vertical_anchor_pixel_x
+		pixel_y -= vertical_anchor_pixel_y
+		vertical_anchor_pixel_x = 0
+		vertical_anchor_pixel_y = 0
+	vertical_anchor_turf = null
+	vertical_anchor_dir = NONE
+
+/mob/living/proc/find_vertical_anchor(preferred_dir = NONE)
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return null
+	if(preferred_dir)
+		var/turf/preferred_turf = get_step(current_turf, preferred_dir)
+		if(is_valid_vertical_anchor(preferred_turf, current_turf))
+			return preferred_turf
+	for(var/check_dir in GLOB.cardinals)
+		var/turf/check_turf = get_step(current_turf, check_dir)
+		if(is_valid_vertical_anchor(check_turf, current_turf))
+			return check_turf
+	return null
+
+/mob/living/proc/is_valid_vertical_anchor(turf/anchor_turf, turf/from_turf = null)
+	if(!anchor_turf)
+		return FALSE
+	from_turf ||= get_turf(src)
+	if(!from_turf || get_dist(from_turf, anchor_turf) > 1)
+		return FALSE
+	var/anchor_dir = get_dir(from_turf, anchor_turf)
+	if(!anchor_dir || ISDIAGONALDIR(anchor_dir))
+		return FALSE
+	if(anchor_turf.density)
+		return TRUE
+	for(var/atom/movable/thing as anything in anchor_turf)
+		if(thing == src)
+			continue
+		if(thing.density && !(thing.flags_1 & ON_BORDER_1))
+			return TRUE
+	return FALSE
+
+/mob/living/proc/set_vertical_anchor(turf/anchor_turf)
+	var/turf/current_turf = get_turf(src)
+	if(!is_valid_vertical_anchor(anchor_turf, current_turf))
+		return FALSE
+	clear_vertical_anchor()
+	vertical_anchor_turf = anchor_turf
+	vertical_anchor_dir = get_dir(current_turf, anchor_turf)
+	apply_vertical_anchor_visual()
+	return TRUE
+
+/mob/living/proc/apply_vertical_anchor_visual()
+	if(!vertical_anchor_dir)
+		return
+	var/new_pixel_x = 0
+	var/new_pixel_y = 0
+	if(vertical_anchor_dir & EAST)
+		new_pixel_x = 8
+	else if(vertical_anchor_dir & WEST)
+		new_pixel_x = -8
+	if(vertical_anchor_dir & NORTH)
+		new_pixel_y = 8
+	else if(vertical_anchor_dir & SOUTH)
+		new_pixel_y = -8
+	vertical_anchor_pixel_x = new_pixel_x
+	vertical_anchor_pixel_y = new_pixel_y
+	pixel_x += vertical_anchor_pixel_x
+	pixel_y += vertical_anchor_pixel_y
+
+/mob/living/proc/can_vertical_anchor_move(direction)
+	if(vertical_state != VERTICAL_STATE_HANGING && vertical_state != VERTICAL_STATE_CLIMBING)
+		return FALSE
+	if(!vertical_anchor_turf || !vertical_anchor_dir)
+		return FALSE
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf || !is_valid_vertical_anchor(vertical_anchor_turf, current_turf))
+		return FALSE
+	if(!(direction in GLOB.cardinals) && direction != UP && direction != DOWN)
+		return FALSE
+	return TRUE
+
+/mob/living/proc/try_vertical_anchor_move(direction)
+	if(!can_vertical_anchor_move(direction))
+		return FALSE
+	var/turf/current_turf = get_turf(src)
+	var/turf/target_turf
+	var/turf/target_anchor
+	if(direction == UP || direction == DOWN)
+		target_turf = get_step_multiz(current_turf, direction)
+		target_anchor = get_step_multiz(vertical_anchor_turf, direction)
+	else
+		target_turf = get_step(current_turf, direction)
+		target_anchor = get_step(target_turf, vertical_anchor_dir)
+	if(!target_turf || !target_anchor)
+		return FALSE
+	if(target_turf.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+		return FALSE
+	if(!is_valid_vertical_anchor(target_anchor, target_turf))
+		return FALSE
+	var/old_anchor_dir = vertical_anchor_dir
+	clear_vertical_anchor()
+	forceMove(target_turf)
+	if(!set_vertical_anchor(target_anchor))
+		set_vertical_state(VERTICAL_STATE_NONE)
+		return FALSE
+	if(vertical_anchor_dir != old_anchor_dir)
+		setDir(REVERSE_DIR(vertical_anchor_dir))
+	return TRUE
+
+/mob/living/proc/try_delay_vertical_fall(turf/fall_from, levels = 1, force = FALSE, falling_from_move = FALSE)
+	if(vertical_state == VERTICAL_STATE_HANGING || vertical_state == VERTICAL_STATE_CLIMBING)
+		set_currently_z_moving(FALSE, TRUE)
+		return TRUE
+	if(vertical_state == VERTICAL_STATE_AIRBORNE && world.time < vertical_state_until)
+		set_currently_z_moving(FALSE, TRUE)
+		return TRUE
+	if(vertical_ignore_next_fall_delay)
+		vertical_ignore_next_fall_delay = FALSE
+		vertical_last_fall_time = world.time
+		return FALSE
+	if(vertical_state == VERTICAL_STATE_FALLING_RECOVER)
+		return TRUE
+	if(world.time > vertical_last_fall_time + VERTICAL_FALL_CHAIN_RESET_TIME)
+		vertical_fall_chain = 0
+	if(vertical_fall_chain <= 0)
+		vertical_fall_chain = 1
+		vertical_last_fall_time = world.time
+		return FALSE
+	set_vertical_state(VERTICAL_STATE_FALLING_RECOVER, VERTICAL_FALL_RECOVERY_TIME)
+	set_currently_z_moving(FALSE, TRUE)
+	addtimer(CALLBACK(src, PROC_REF(continue_delayed_vertical_fall), fall_from, levels, force, falling_from_move), VERTICAL_FALL_RECOVERY_TIME, TIMER_STOPPABLE)
+	return TRUE
+
+/mob/living/proc/continue_delayed_vertical_fall(turf/fall_from, levels = 1, force = FALSE, falling_from_move = FALSE)
+	if(QDELETED(src) || vertical_state != VERTICAL_STATE_FALLING_RECOVER || get_turf(src) != fall_from)
+		return
+	set_vertical_state(VERTICAL_STATE_NONE)
+	vertical_fall_chain++
+	vertical_ignore_next_fall_delay = TRUE
+	fall_from.zFall(src, levels, force, falling_from_move)
+
+/mob/living/proc/start_vertical_hanging(duration = VERTICAL_HANG_TIME, turf/anchor_turf = null)
+	if(!set_vertical_state(VERTICAL_STATE_HANGING, duration, anchor_turf))
+		return FALSE
+	balloon_alert(src, "hanging")
+	return TRUE
+
+/mob/living/proc/start_vertical_climbing(duration = VERTICAL_HANG_TIME, turf/anchor_turf = null)
+	if(!set_vertical_state(VERTICAL_STATE_CLIMBING, duration, anchor_turf))
+		return FALSE
+	balloon_alert(src, "climbing")
+	return TRUE
+
+/mob/living/proc/start_vertical_airborne(duration = VERTICAL_AIRBORNE_TIME)
+	set_vertical_state(VERTICAL_STATE_AIRBORNE, duration)
+	balloon_alert(src, "airborne")
+
 /mob/living/keybind_face_direction(direction)
 	if(stat > SOFT_CRIT)
 		return

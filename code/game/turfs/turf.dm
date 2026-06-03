@@ -351,7 +351,15 @@ GLOBAL_LIST_EMPTY(station_turfs)
 		return
 	if(!force && !falling.can_z_move(direction, src, target, ZMOVE_FALL_FLAGS))
 		falling.set_currently_z_moving(FALSE, TRUE)
+		if(isliving(falling))
+			var/mob/living/blocked_falling_living = falling
+			blocked_falling_living.reset_vertical_fall_chain()
 		return FALSE
+
+	if(isliving(falling))
+		var/mob/living/falling_living = falling
+		if(falling_living.try_delay_vertical_fall(src, levels, force, falling_from_move))
+			return TRUE
 
 	// So it doesn't trigger other zFall calls. Cleared on zMove.
 	falling.set_currently_z_moving(CURRENTLY_Z_FALLING)
@@ -381,6 +389,9 @@ GLOBAL_LIST_EMPTY(station_turfs)
 			falling_mov.stop_pulling()
 		if(!(flags & FALL_INTERCEPTED))
 			falling_mov.onZImpact(src, levels)
+		if(isliving(falling_mov))
+			var/mob/living/falling_living = falling_mov
+			falling_living.reset_vertical_fall_chain()
 		if(falling_mov.pulledby && (falling_mov.z != falling_mov.pulledby.z || get_dist(falling_mov, falling_mov.pulledby) > 1))
 			falling_mov.pulledby.stop_pulling()
 	return TRUE

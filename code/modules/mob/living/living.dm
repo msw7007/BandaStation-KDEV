@@ -27,6 +27,14 @@
 	med_hud_set_status()
 
 /mob/living/Destroy()
+	if(vertical_state_timer != TIMER_ID_NULL)
+		deltimer(vertical_state_timer)
+		vertical_state_timer = TIMER_ID_NULL
+	if(vertical_stamina_timer != TIMER_ID_NULL)
+		deltimer(vertical_stamina_timer)
+		vertical_stamina_timer = TIMER_ID_NULL
+	clear_vertical_anchor()
+
 	for(var/datum/status_effect/effect as anything in status_effects)
 		// The status effect calls on_remove when its mob is deleted
 		if(effect.on_remove_on_mob_delete)

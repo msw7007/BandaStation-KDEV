@@ -72,6 +72,23 @@ GLOBAL_VAR_INIT(glide_size_multiplier, 1.0)
 /// This one is for going upstairs.
 #define CURRENTLY_Z_ASCENDING 4
 
+// Cyberpunk vertical movement states. These are state plumbing only; input bindings
+// and wall-grab/jump activators are layered on top of these procs.
+#define VERTICAL_STATE_NONE 0
+#define VERTICAL_STATE_FALLING_RECOVER 1
+#define VERTICAL_STATE_HANGING 2
+#define VERTICAL_STATE_CLIMBING 3
+#define VERTICAL_STATE_AIRBORNE 4
+
+#define VERTICAL_STATE_TRAIT "vertical_state"
+#define VERTICAL_FALL_CHAIN_RESET_TIME (2 SECONDS)
+#define VERTICAL_FALL_RECOVERY_TIME (1 SECONDS)
+#define VERTICAL_HANG_TIME (4 SECONDS)
+#define VERTICAL_AIRBORNE_TIME (3 SECONDS)
+#define VERTICAL_STAMINA_TICK (1 SECONDS)
+#define VERTICAL_HANG_STAMINA_COST 4
+#define VERTICAL_CLIMB_STAMINA_COST 6
+
 /// possible bitflag return values of [atom/proc/intercept_zImpact] calls
 /// Stops the movable from falling further and crashing on the ground. Example: stairs.
 #define FALL_INTERCEPTED (1<<0)

@@ -44,6 +44,28 @@
 	var/last_sprint_dir = NONE
 	/// Prevents overlapping manual jumps.
 	var/currently_jumping = FALSE
+	/// Current cyberpunk vertical movement state.
+	var/vertical_state = VERTICAL_STATE_NONE
+	/// world.time when the current vertical state should expire.
+	var/vertical_state_until = 0
+	/// Stoppable timer for current vertical state expiration.
+	var/vertical_state_timer = TIMER_ID_NULL
+	/// Stoppable repeating timer for vertical state stamina drain.
+	var/vertical_stamina_timer = TIMER_ID_NULL
+	/// How many z-falls are chained in the current fall sequence.
+	var/vertical_fall_chain = 0
+	/// world.time of the last fall sequence update.
+	var/vertical_last_fall_time = 0
+	/// Lets a delayed recovery fall continue once without scheduling another recovery window.
+	var/vertical_ignore_next_fall_delay = FALSE
+	/// Turf the mob is currently holding/climbing against.
+	var/turf/vertical_anchor_turf
+	/// Direction from the mob turf to vertical_anchor_turf.
+	var/vertical_anchor_dir = NONE
+	/// Pixel offset currently applied to press the mob against vertical_anchor_turf.
+	var/vertical_anchor_pixel_x = 0
+	/// Pixel offset currently applied to press the mob against vertical_anchor_turf.
+	var/vertical_anchor_pixel_y = 0
 
 	/// Rate at which fire stacks should decay from this mob
 	var/fire_stack_decay_rate = -0.05
