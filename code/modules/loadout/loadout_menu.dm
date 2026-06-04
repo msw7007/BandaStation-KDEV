@@ -73,6 +73,10 @@
 	/// BANDASTATION ADDITION END - Loadout
 
 	var/list/loadout = preferences.read_preference(/datum/preference/loadout)
+	var/list/selected_details = loadout?[selected_item.item_path]
+	var/current_amount = (loadout && (selected_item.item_path in loadout)) ? loadout_item_amount(selected_details) : 0
+	if(!islist(selected_details))
+		selected_details = list()
 	var/list/datum/loadout_item/loadout_datums = loadout_list_to_datums(loadout)
 	for(var/datum/loadout_item/item as anything in loadout_datums)
 		if(item.category != selected_item.category)
@@ -80,13 +84,20 @@
 		if(!item.category.handle_duplicate_entires(src, item, selected_item, loadout_datums))
 			return
 
-	LAZYSET(loadout, selected_item.item_path, list())
+	selected_details[INFO_AMOUNT] = current_amount + 1
+	LAZYSET(loadout, selected_item.item_path, selected_details)
 	preferences.update_preference(GLOB.preference_entries[/datum/preference/loadout], loadout)
 
 /// Deselect [deselected_item].
 /datum/preference_middleware/loadout/proc/deselect_item(datum/loadout_item/deselected_item)
 	var/list/loadout = preferences.read_preference(/datum/preference/loadout)
-	LAZYREMOVE(loadout, deselected_item.item_path)
+	var/list/deselected_details = loadout?[deselected_item.item_path]
+	var/amount = loadout_item_amount(deselected_details)
+	if(amount > 1)
+		deselected_details[INFO_AMOUNT] = amount - 1
+		LAZYSET(loadout, deselected_item.item_path, deselected_details)
+	else
+		LAZYREMOVE(loadout, deselected_item.item_path)
 	preferences.update_preference(GLOB.preference_entries[/datum/preference/loadout], loadout)
 
 /datum/preference_middleware/loadout/proc/register_greyscale_menu(datum/greyscale_modify_menu/open_menu)

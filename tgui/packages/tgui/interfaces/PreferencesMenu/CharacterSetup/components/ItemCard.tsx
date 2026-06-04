@@ -7,6 +7,7 @@ type ItemCardProps = {
   iconState?: string | null;
   meta?: string;
   cost?: number;
+  amount?: number;
   selected?: boolean;
   disabled?: boolean;
   tags?: string[];
@@ -18,6 +19,7 @@ type ItemCardProps = {
 export function ItemCard(props: ItemCardProps) {
   const {
     actionIcon,
+    amount,
     cost,
     disabled,
     icon,
@@ -32,7 +34,7 @@ export function ItemCard(props: ItemCardProps) {
 
   return (
     <button
-      className={classes(['ItemCard', selected && 'selected'])}
+      className={classes(['ItemCard', selected && 'selected', disabled && 'disabled'])}
       disabled={disabled}
       onClick={onClick}
     >
@@ -54,7 +56,11 @@ export function ItemCard(props: ItemCardProps) {
           </span>
         )}
       </span>
-      {cost !== undefined && <span className="ItemCard__cost">{cost}</span>}
+      {amount !== undefined && amount > 1 ? (
+        <span className="ItemCard__amount">x{amount}</span>
+      ) : cost !== undefined ? (
+        <span className="ItemCard__cost">{cost}</span>
+      ) : null}
       {!!onAction && (
         <Button
           icon={actionIcon || 'plus'}
@@ -67,4 +73,3 @@ export function ItemCard(props: ItemCardProps) {
     </button>
   );
 }
-

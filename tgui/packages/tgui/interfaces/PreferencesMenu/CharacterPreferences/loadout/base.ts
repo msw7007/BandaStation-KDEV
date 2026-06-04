@@ -10,7 +10,7 @@ export type FAIcon = string;
 export type typePath = string;
 
 type LoadoutInfoKey = string;
-type LoadoutInfoValue = string;
+type LoadoutInfoValue = number | string;
 // Info about a loadout item (key to info, such as color, reskin, layer, etc)
 type LoadoutListInfo = Record<LoadoutInfoKey, LoadoutInfoValue> | [];
 // Typepath to info about the item
@@ -55,4 +55,5 @@ export type LoadoutManagerData = PreferencesMenuData & {
   job_clothes: BooleanLike;
   loadout_leftpoints: number;
   loadout_maxpoints: number;
+  donator_level: number;
 };

@@ -78,5 +78,4 @@
 	datum/loadout_item/added_item,
 	list/datum/loadout_item/all_loadout_items,
 )
-	manager.deselect_item(conflicting_item)
 	return TRUE

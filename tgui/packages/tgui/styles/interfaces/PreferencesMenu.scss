@@ -836,6 +836,26 @@ $department_map: (
     min-height: 0;
   }
 
+  &__equipmentTab {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    height: 100%;
+    min-height: 0;
+  }
+
+  &__modeTabs {
+    flex: 0 0 auto;
+  }
+
+  &__layout--loadout {
+    grid-template-columns: minmax(21rem, 0.65fr) minmax(42rem, 1.55fr);
+  }
+
+  &__layout--equipment {
+    grid-template-columns: minmax(22rem, 0.72fr) minmax(42rem, 1.45fr);
+  }
+
   &__centerPanel .CyberPanel__content {
     display: flex;
     flex-direction: column;
@@ -923,6 +943,122 @@ $department_map: (
   &__antagGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.5rem;
+  }
+
+  &__catalog--wide {
+    grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+    align-content: start;
+  }
+
+  &__storeTools {
+    display: grid;
+    gap: 0.55rem;
+    margin-bottom: 0.65rem;
+
+    .CyberSearch {
+      width: 100%;
+    }
+  }
+
+  &__loadoutPoints {
+    display: grid;
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+
+    span {
+      color: var(--cy-cyan);
+      font-weight: bold;
+    }
+
+    i {
+      display: block;
+      height: 0.55rem;
+      border: 1px solid var(--cy-border);
+      background-color: rgba(5, 8, 13, 0.9);
+    }
+
+    b {
+      display: block;
+      height: 100%;
+      background: var(--cy-cyan);
+      box-shadow: 0 0 0.65rem rgba(24, 216, 255, 0.38);
+    }
+  }
+
+  &__loadoutSearch {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: center;
+    width: 100%;
+  }
+
+  &__loadoutSearchLabel {
+    color: var(--cy-red);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+
+  &__loadoutSearchInput {
+    display: block;
+    width: 100%;
+    height: 2.75rem;
+    min-height: 2.75rem;
+    color: var(--cy-text);
+    font-size: 1.05rem;
+    padding: 0 0.8rem;
+    border: 1px solid var(--cy-cyan);
+    background-color: rgba(5, 8, 13, 0.96);
+    box-shadow: inset 0 0 0.6rem rgba(24, 216, 255, 0.08);
+
+    &::placeholder {
+      color: var(--cy-muted);
+      font-style: italic;
+    }
+  }
+
+  &__loadoutStorePanel .CyberPanel__content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  &__loadoutStorePanel .CharacterSetup__storeTools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    flex: 0 0 auto;
+    gap: 0.65rem;
+    align-items: stretch;
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.65rem;
+    border-bottom: 1px solid var(--cy-danger-border);
+  }
+
+  &__loadoutStorePanel .CharacterSetup__categoryTabs {
+    width: 100%;
+  }
+
+  &__loadoutStoreGrid {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: 0.45rem;
+    align-content: start;
+    padding-right: 0.25rem;
+  }
+
+  &__equipmentDollPanel .CharacterPaperdollHub {
+    justify-content: center;
+  }
+
+  &__equipmentSlotItems {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
     gap: 0.5rem;
   }
 
@@ -2045,6 +2181,7 @@ $department_map: (
     }
   }
 
+  &__amount,
   &__cost,
   &__value {
     color: var(--cy-cyan);
@@ -2062,6 +2199,74 @@ $department_map: (
       color: var(--cy-muted);
       font-style: normal;
       font-size: 0.72rem;
+    }
+  }
+}
+
+.LoadoutStoreTile {
+  position: relative;
+  display: grid;
+  grid-template-rows: 2.35rem minmax(3rem, 1fr) 1.45rem;
+  justify-items: center;
+  align-items: center;
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0.35rem;
+  color: var(--cy-text);
+  background-color: rgba(11, 20, 26, 0.88);
+  border: 1px solid var(--cy-danger-border);
+  cursor: pointer;
+
+  &.selected,
+  &:hover:not(.disabled) {
+    border-color: var(--cy-cyan);
+    box-shadow: inset 0 0 0.75rem rgba(24, 216, 255, 0.08);
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &__name {
+    width: 100%;
+    min-width: 0;
+    color: var(--cy-text);
+    font-weight: bold;
+    line-height: 1.05;
+    text-align: center;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    color: var(--cy-cyan);
+    min-height: 2.75rem;
+  }
+
+  &__footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+    width: 100%;
+    color: var(--cy-cyan);
+
+    b,
+    em {
+      font-style: normal;
+      font-weight: bold;
+    }
+
+    b {
+      justify-self: start;
+    }
+
+    em {
+      justify-self: end;
     }
   }
 }

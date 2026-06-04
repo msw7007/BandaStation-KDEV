@@ -176,6 +176,8 @@
 #define INFO_RESKIN "reskin"
 /// Handles which layer the item will be on, for accessories
 #define INFO_LAYER "layer"
+/// Amount of identical loadout items selected.
+#define INFO_AMOUNT "amount"
 
 // Lipstick styles
 #define UPPER_LIP "Upper"

@@ -50,16 +50,18 @@
 
 
 		var/datum/loadout_item/loadout_item = GLOB.all_loadout_datums[real_path] /// BANDASTATION ADDITION - Loadout
-		if(loadout_item.is_disabled())
-			continue
 		if(!istype(loadout_item, /datum/loadout_item))
 			to_chat(preferences.parent, span_boldnotice("The following invalid loadout item was found \
 				in your character loadout: [real_path || "null"]. \
 				It has been removed, renamed, or is otherwise missing - \
 				You may want to check your loadout settings."))
 			continue
+		if(loadout_item.is_disabled())
+			continue
 
 		/// BANDASTATION ADDITION START - Loadout
+		var/list/data = islist(passed_list[path]) ? LAZYLISTDUPLICATE(passed_list[path]) : list()
+		var/amount = loadout_item_amount(data)
 		if(loadout_item.donator_level > donator_level)
 			to_chat(
 				preferences.parent,
@@ -70,7 +72,9 @@
 			)
 			continue
 
-		if(loadout_item.cost + total_points_spent > points_cap)
+		if(loadout_item.cost > 0)
+			amount = min(amount, FLOOR((points_cap - total_points_spent) / loadout_item.cost, 1))
+		if(amount < 1)
 			to_chat(
 				preferences.parent,
 				span_boldnotice(\
@@ -80,12 +84,12 @@
 			)
 			continue
 
-		total_points_spent += loadout_item.cost
+		data[INFO_AMOUNT] = amount
+		total_points_spent += loadout_item.cost * amount
 		/// BANDASTATION ADDITION END - Loadout
 
 		// Set into sanitize list using converted path key
-		var/list/data = passed_list[path]
-		LAZYSET(sanitized_list, real_path, LAZYLISTDUPLICATE(data))
+		LAZYSET(sanitized_list, real_path, data)
 
 	preferences.loadout_points_spent = total_points_spent /// BANDASTATION ADDITION - Loadout
 
