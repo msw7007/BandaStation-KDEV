@@ -68,6 +68,8 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 
 	/// A preview of the current character
 	var/atom/movable/screen/map_view/char_preview/character_preview_view
+	/// Temporary loadout list used only by the setup paperdoll preview.
+	var/list/loadout_preview_override
 
 	/// A list of instantiated middleware
 	var/list/datum/preference_middleware/middleware = list()
@@ -326,6 +328,8 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 /datum/preferences/proc/create_character_preview_view(mob/user)
 	character_preview_view = new(null, null, src)
 	character_preview_view.generate_view("character_preview_[REF(character_preview_view)]")
+	if(isnull(loadout_preview_override))
+		loadout_preview_override = list()
 	character_preview_view.update_body()
 
 	return character_preview_view

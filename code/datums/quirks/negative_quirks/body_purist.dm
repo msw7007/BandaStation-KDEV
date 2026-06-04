@@ -67,3 +67,31 @@
 	if(IS_ROBOTIC_LIMB(old_limb))
 		cybernetics_level--
 		update_mood()
+
+/datum/quirk/no_neural_interface
+	name = "No Neural Interface"
+	desc = "You start without a neural interface. Corporate-grade neuralware and direct network convenience are unavailable until you install one in-game."
+	icon = FA_ICON_BAN
+	value = -1
+	quirk_flags = QUIRK_HUMAN_ONLY|QUIRK_CHANGES_APPEARANCE
+	gain_text = span_danger("Your skull feels quiet. There is no neural interface answering from inside.")
+	lose_text = span_notice("The familiar pressure of a neural interface returns.")
+	medical_record_text = "Patient has no installed neural interface."
+
+/datum/quirk/no_neural_interface/add(client/client_source)
+	remove_neural_interface()
+
+/datum/quirk/no_neural_interface/post_add()
+	remove_neural_interface()
+
+/datum/quirk/no_neural_interface/proc/remove_neural_interface()
+	var/mob/living/carbon/human/human_holder = quirk_holder
+	if(!istype(human_holder))
+		return
+	var/obj/item/organ/cyberimp/brain/neural_interface/neural_interface = human_holder.get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
+	if(!istype(neural_interface))
+		human_holder.corp_align = null
+		return
+	neural_interface.Remove(human_holder, special = TRUE)
+	qdel(neural_interface)
+	human_holder.corp_align = null

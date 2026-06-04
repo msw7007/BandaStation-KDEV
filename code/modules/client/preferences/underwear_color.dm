@@ -13,3 +13,6 @@
 
 /datum/preference/color/underwear_color/apply_to_human(mob/living/carbon/human/target, value)
 	target.underwear_color = value
+	if(target.wear_underwear)
+		target.wear_underwear.set_accessory(target.wear_underwear.accessory_name, value)
+		target.update_body()

@@ -161,6 +161,11 @@
 		"professional_skill_points" = user_mind?.professional_skill_points || 0,
 		"weapon_skill_points" = user_mind?.weapon_skill_points || 0,
 		"implant_metrics" = implant_metrics,
+		"persistent" = list(
+			"wardrobe" = preferences.read_preference(/datum/preference/cyberpunk_wardrobe_designs) || list(),
+			"business" = preferences.read_preference(/datum/preference/cyberpunk_business_records) || list(),
+			"apartments" = preferences.read_preference(/datum/preference/cyberpunk_apartment_records) || list(),
+		),
 	)
 
 	return data
@@ -375,6 +380,8 @@
 
 /datum/preference_middleware/character_setup/proc/get_neural_interface_manufacturer_definitions()
 	var/list/manufacturers = list()
-	for(var/manufacturer_id in cyberpunk_neural_interface_choices())
+	for(var/manufacturer_id in cyberpunk_player_neural_interface_choices())
+		if(manufacturer_id == "none")
+			continue
 		manufacturers += list(cyberpunk_manufacturer_info(manufacturer_id))
 	return manufacturers

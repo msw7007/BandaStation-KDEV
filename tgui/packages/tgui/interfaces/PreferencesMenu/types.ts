@@ -178,9 +178,37 @@ export type CharacterPreferencesData = {
     species: string;
     loadout_list: LoadoutList;
     job_clothes: BooleanLike;
+    cyberpunk_wardrobe_designs?: CyberpunkVisualDesign[];
+    cyberpunk_business_records?: CyberpunkPersistentAreaRecord[];
+    cyberpunk_apartment_records?: CyberpunkPersistentAreaRecord[];
   };
 
   randomization: Record<string, RandomSetting>;
+};
+
+export type CyberpunkVisualDesign = {
+  id: string;
+  name: string;
+  kind?: string;
+  base?: string;
+  type_path?: string;
+  material_signature?: string;
+  directions?: Record<string, string>;
+  item_icon?: string;
+};
+
+export type CyberpunkPersistentAreaRecord = {
+  id?: string;
+  name?: string;
+  area?: string;
+  area_name?: string;
+  area_type?: string;
+  tile_count?: number;
+  account_balance?: number;
+  legal?: BooleanLike;
+  direction?: string;
+  saved_at?: string;
+  snapshot?: unknown[];
 };
 
 export type CharacterSetupAttribute = {
@@ -280,6 +308,11 @@ export type CharacterSetupRuntimeData = {
   professional_skill_points: number;
   weapon_skill_points: number;
   implant_metrics: CharacterSetupImplantMetrics;
+  persistent?: {
+    wardrobe?: CyberpunkVisualDesign[];
+    business?: CyberpunkPersistentAreaRecord[];
+    apartments?: CyberpunkPersistentAreaRecord[];
+  };
 };
 
 export type PreferencesMenuData = {

@@ -69,6 +69,8 @@
 
 	/// Cyberpunk NPC dialog/trade/services profile. Null keeps normal mob interactions.
 	var/datum/cyberpunk_npc_profile/cyberpunk_npc_profile
+	/// Round-local loadout items that were bought but not assigned to an equip/bag slot.
+	var/list/cyberpunk_round_wardrobe_items
 
 	/// Rate at which fire stacks should decay from this mob
 	var/fire_stack_decay_rate = -0.05

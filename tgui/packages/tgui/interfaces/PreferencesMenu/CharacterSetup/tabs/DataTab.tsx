@@ -215,6 +215,13 @@ const appearanceCategories: AppearanceCategory[] = [
   },
 ];
 
+const hiddenAppearanceCategoryIds = new Set([
+  'undershirt',
+  'underwear',
+  'socks',
+  'genitals',
+]);
+
 function value(data: PreferencesMenuData, key: string) {
   return getPreferenceValue(data, key);
 }
@@ -419,9 +426,12 @@ export function DataTab() {
   const currentSpeciesKey = String(data.character_preferences.misc.species ?? '');
   const currentSpeciesName =
     serverData?.species?.[currentSpeciesKey]?.name || currentSpeciesKey || 'Не выбран';
+  const visibleAppearanceCategories = appearanceCategories.filter(
+    (category) => !hiddenAppearanceCategoryIds.has(category.id),
+  );
   const selectedAppearanceCategory =
-    appearanceCategories.find((category) => category.id === selectedCategory) ||
-    appearanceCategories[0];
+    visibleAppearanceCategories.find((category) => category.id === selectedCategory) ||
+    visibleAppearanceCategories[0];
   const descriptorKeys = [
     'appearance_descriptor_1',
     'appearance_descriptor_2',
@@ -468,6 +478,15 @@ export function DataTab() {
         options={getChoiceOptions(serverData, 'body_shape')}
         onSelected={(newValue) => setPreference(act, 'body_shape', newValue)}
       />
+      {!!getChoiceOptions(serverData, 'gender').length && (
+        <CyberSelect
+          icon="venus-mars"
+          label="Пол"
+          value={String(value(data, 'gender') ?? '')}
+          options={getChoiceOptions(serverData, 'gender')}
+          onSelected={(newValue) => setPreference(act, 'gender', newValue)}
+        />
+      )}
       <CyberSectionHeader>Кожа и особые части</CyberSectionHeader>
       {renderControls(bodyControls)}
     </>
@@ -645,7 +664,7 @@ export function DataTab() {
           key={`${data.character_preview_view}-${currentSpeciesKey}`}
           previewId={data.character_preview_view}
           selectedSlot={selectedCategory}
-          slots={appearanceCategories}
+          slots={visibleAppearanceCategories}
           onSelectSlot={setSelectedCategory}
         />
         <div className="CharacterSetup__appearanceEditor">

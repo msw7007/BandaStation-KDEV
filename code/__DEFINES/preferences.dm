@@ -178,6 +178,8 @@
 #define INFO_LAYER "layer"
 /// Amount of identical loadout items selected.
 #define INFO_AMOUNT "amount"
+/// Setup equipment slot selected for an item. Unassigned loadout stays in the wardrobe/persistent pool.
+#define INFO_EQUIP_SLOT "equip_slot"
 
 // Lipstick styles
 #define UPPER_LIP "Upper"

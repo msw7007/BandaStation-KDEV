@@ -41,6 +41,8 @@
 		update_pockets()
 	if(slot_flags & ITEM_SLOT_HANDS)
 		update_held_items()
+	if(slot_flags & (ITEM_SLOT_SHOULDERS|ITEM_SLOT_FINGER|ITEM_SLOT_BRACERS|ITEM_SLOT_PANTS|ITEM_SLOT_CHEST|ITEM_SLOT_UNDERSHIRT|ITEM_SLOT_UNDERWEAR|ITEM_SLOT_TIGHTS))
+		update_body()
 
 /// Recalculates the mob's obscured and covered slots based on currently equipped items
 /mob/proc/refresh_obscured()

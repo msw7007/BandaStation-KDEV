@@ -946,23 +946,35 @@ generate/load female uniform sprites matching all previously decided variables
 
 	// Underwear, Undershirts & Socks
 	var/active_bodyshapes = get_active_bodyshapes()
-	if(underwear)
+	if(wear_underwear)
+		var/mutable_appearance/worn_underwear_overlay = wear_underwear.make_underwear_appearance(src)
+		if(worn_underwear_overlay)
+			. += worn_underwear_overlay
+	else if(underwear)
 		var/datum/sprite_accessory/clothing/underwear/undie_accessory = SSaccessories.underwear_list[underwear]
-		var/mutable_appearance/underwear_overlay = undie_accessory?.make_appearance(underwear_color, physique, active_bodyshapes)
-		if(underwear_overlay)
-			. += underwear_overlay
+		var/mutable_appearance/pref_underwear_overlay = undie_accessory?.make_appearance(underwear_color, physique, active_bodyshapes)
+		if(pref_underwear_overlay)
+			. += pref_underwear_overlay
 
-	if(undershirt)
+	if(wear_undershirt)
+		var/mutable_appearance/worn_shirt_overlay = wear_undershirt.make_underwear_appearance(src)
+		if(worn_shirt_overlay)
+			. += worn_shirt_overlay
+	else if(undershirt)
 		var/datum/sprite_accessory/clothing/undershirt/shirt_accessory = SSaccessories.undershirt_list[undershirt]
-		var/mutable_appearance/shirt_overlay = shirt_accessory?.make_appearance(null, physique, active_bodyshapes)
-		if(shirt_overlay)
-			. += shirt_overlay
+		var/mutable_appearance/pref_shirt_overlay = shirt_accessory?.make_appearance(null, physique, active_bodyshapes)
+		if(pref_shirt_overlay)
+			. += pref_shirt_overlay
 
-	if(socks && num_legs >= 2 && !(bodyshape & BODYSHAPE_DIGITIGRADE))
+	if(wear_tights && num_legs >= 2 && !(bodyshape & BODYSHAPE_DIGITIGRADE))
+		var/mutable_appearance/worn_socks_overlay = wear_tights.make_underwear_appearance(src)
+		if(worn_socks_overlay)
+			. += worn_socks_overlay
+	else if(socks && num_legs >= 2 && !(bodyshape & BODYSHAPE_DIGITIGRADE))
 		var/datum/sprite_accessory/clothing/socks/sock_accessory = SSaccessories.socks_list[socks]
-		var/mutable_appearance/socks_overlay = sock_accessory?.make_appearance(null, physique, active_bodyshapes)
-		if(socks_overlay)
-			. += socks_overlay
+		var/mutable_appearance/pref_socks_overlay = sock_accessory?.make_appearance(null, physique, active_bodyshapes)
+		if(pref_socks_overlay)
+			. += pref_socks_overlay
 
 	return .
 

@@ -62,9 +62,27 @@
 #define ITEM_SLOT_HANDCUFFED (1<<17)
 /// Legcuff slot (bolas, beartraps)
 #define ITEM_SLOT_LEGCUFFED (1<<18)
+/// Upper underwear slot
+#define ITEM_SLOT_UNDERSHIRT (1<<19)
+/// Lower underwear slot
+#define ITEM_SLOT_UNDERWEAR (1<<20)
+/// Tights / socks slot
+#define ITEM_SLOT_TIGHTS (1<<21)
+/// Left shoulder carry slot
+#define ITEM_SLOT_SHOULDER_LEFT (1<<22)
+/// Right shoulder carry slot
+#define ITEM_SLOT_SHOULDER_RIGHT (1<<23)
+/// Finger slot
+#define ITEM_SLOT_FINGER (1<<24)
+/// Bracer / forearm slot
+#define ITEM_SLOT_BRACERS (1<<25)
+/// Pants slot
+#define ITEM_SLOT_PANTS (1<<26)
+/// Chest accessory slot
+#define ITEM_SLOT_CHEST (1<<27)
 
 /// Total amount of slots
-#define SLOTS_AMT 19 // Keep this up to date!
+#define SLOTS_AMT 28 // Keep this up to date!
 
 ///Inventory slots that can be blacklisted by a species from being equipped into
 DEFINE_BITFIELD(no_equip_flags, list(
@@ -78,13 +96,25 @@ DEFINE_BITFIELD(no_equip_flags, list(
 	"SHOES" = ITEM_SLOT_FEET,
 	"BACKPACKS" = ITEM_SLOT_BACK,
 	"TIES" = ITEM_SLOT_NECK,
+	"UNDERSHIRTS" = ITEM_SLOT_UNDERSHIRT,
+	"UNDERWEAR" = ITEM_SLOT_UNDERWEAR,
+	"TIGHTS" = ITEM_SLOT_TIGHTS,
+	"LEFT_SHOULDER" = ITEM_SLOT_SHOULDER_LEFT,
+	"RIGHT_SHOULDER" = ITEM_SLOT_SHOULDER_RIGHT,
+	"FINGER" = ITEM_SLOT_FINGER,
+	"BRACERS" = ITEM_SLOT_BRACERS,
+	"PANTS" = ITEM_SLOT_PANTS,
+	"CHEST" = ITEM_SLOT_CHEST,
 ))
 
 //SLOT GROUP HELPERS
 #define ITEM_SLOT_POCKETS (ITEM_SLOT_LPOCKET|ITEM_SLOT_RPOCKET)
+#define ITEM_SLOT_SHOULDERS (ITEM_SLOT_SHOULDER_LEFT|ITEM_SLOT_SHOULDER_RIGHT)
 /// Slots that are physically on you
 #define ITEM_SLOT_ON_BODY (ITEM_SLOT_ICLOTHING | ITEM_SLOT_OCLOTHING | ITEM_SLOT_GLOVES | ITEM_SLOT_EYES | ITEM_SLOT_EARS | \
-	ITEM_SLOT_MASK | ITEM_SLOT_HEAD | ITEM_SLOT_FEET | ITEM_SLOT_ID | ITEM_SLOT_BELT | ITEM_SLOT_BACK | ITEM_SLOT_NECK )
+	ITEM_SLOT_MASK | ITEM_SLOT_HEAD | ITEM_SLOT_FEET | ITEM_SLOT_ID | ITEM_SLOT_BELT | ITEM_SLOT_BACK | ITEM_SLOT_NECK | \
+	ITEM_SLOT_UNDERSHIRT | ITEM_SLOT_UNDERWEAR | ITEM_SLOT_TIGHTS | ITEM_SLOT_SHOULDERS | ITEM_SLOT_FINGER | \
+	ITEM_SLOT_BRACERS | ITEM_SLOT_PANTS | ITEM_SLOT_CHEST )
 
 //Bit flags for the flags_inv variable, which determine when a piece of clothing hides another. IE a helmet hiding glasses.
 //Make sure to update obscured_slots if you add more.

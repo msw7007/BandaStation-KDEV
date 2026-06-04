@@ -42,6 +42,24 @@
 			return wear_suit
 		if(ITEM_SLOT_ICLOTHING)
 			return w_uniform
+		if(ITEM_SLOT_UNDERSHIRT)
+			return wear_undershirt
+		if(ITEM_SLOT_UNDERWEAR)
+			return wear_underwear
+		if(ITEM_SLOT_TIGHTS)
+			return wear_tights
+		if(ITEM_SLOT_SHOULDER_LEFT)
+			return wear_shoulder_l
+		if(ITEM_SLOT_SHOULDER_RIGHT)
+			return wear_shoulder_r
+		if(ITEM_SLOT_FINGER)
+			return wear_finger
+		if(ITEM_SLOT_BRACERS)
+			return wear_bracers
+		if(ITEM_SLOT_PANTS)
+			return wear_pants
+		if(ITEM_SLOT_CHEST)
+			return wear_chest
 		if(ITEM_SLOT_LPOCKET)
 			return l_store
 		if(ITEM_SLOT_RPOCKET)
@@ -79,6 +97,33 @@
 	if(looking_for == w_uniform)
 		return ITEM_SLOT_ICLOTHING
 
+	if(looking_for == wear_undershirt)
+		return ITEM_SLOT_UNDERSHIRT
+
+	if(looking_for == wear_underwear)
+		return ITEM_SLOT_UNDERWEAR
+
+	if(looking_for == wear_tights)
+		return ITEM_SLOT_TIGHTS
+
+	if(looking_for == wear_shoulder_l)
+		return ITEM_SLOT_SHOULDER_LEFT
+
+	if(looking_for == wear_shoulder_r)
+		return ITEM_SLOT_SHOULDER_RIGHT
+
+	if(looking_for == wear_finger)
+		return ITEM_SLOT_FINGER
+
+	if(looking_for == wear_bracers)
+		return ITEM_SLOT_BRACERS
+
+	if(looking_for == wear_pants)
+		return ITEM_SLOT_PANTS
+
+	if(looking_for == wear_chest)
+		return ITEM_SLOT_CHEST
+
 	if(looking_for == r_store)
 		return ITEM_SLOT_RPOCKET
 
@@ -99,6 +144,15 @@
 		wear_suit,
 		gloves,
 		shoes,
+		wear_undershirt,
+		wear_underwear,
+		wear_tights,
+		wear_shoulder_l,
+		wear_shoulder_r,
+		wear_finger,
+		wear_bracers,
+		wear_pants,
+		wear_chest,
 		belt,
 		wear_id,
 		l_store,
@@ -186,6 +240,54 @@
 				return
 			w_uniform = equipping
 			update_worn_undersuit()
+		if(ITEM_SLOT_UNDERSHIRT)
+			if(wear_undershirt)
+				return
+			var/obj/item/clothing/cyberpunk_underwear/undershirt_item = equipping
+			wear_undershirt = undershirt_item
+			update_body()
+		if(ITEM_SLOT_UNDERWEAR)
+			if(wear_underwear)
+				return
+			var/obj/item/clothing/cyberpunk_underwear/underwear_item = equipping
+			wear_underwear = underwear_item
+			update_body()
+		if(ITEM_SLOT_TIGHTS)
+			if(wear_tights)
+				return
+			var/obj/item/clothing/cyberpunk_underwear/tights_item = equipping
+			wear_tights = tights_item
+			update_body()
+		if(ITEM_SLOT_SHOULDER_LEFT)
+			if(wear_shoulder_l)
+				return
+			wear_shoulder_l = equipping
+			update_body()
+		if(ITEM_SLOT_SHOULDER_RIGHT)
+			if(wear_shoulder_r)
+				return
+			wear_shoulder_r = equipping
+			update_body()
+		if(ITEM_SLOT_FINGER)
+			if(wear_finger)
+				return
+			wear_finger = equipping
+			update_body()
+		if(ITEM_SLOT_BRACERS)
+			if(wear_bracers)
+				return
+			wear_bracers = equipping
+			update_body()
+		if(ITEM_SLOT_PANTS)
+			if(wear_pants)
+				return
+			wear_pants = equipping
+			update_body()
+		if(ITEM_SLOT_CHEST)
+			if(wear_chest)
+				return
+			wear_chest = equipping
+			update_body()
 		if(ITEM_SLOT_LPOCKET)
 			l_store = equipping
 			update_pockets()
@@ -234,6 +336,42 @@
 				dropItemToGround(wear_id)
 			if(belt && !can_equip(belt, ITEM_SLOT_BELT, TRUE, ignore_equipped = TRUE))
 				dropItemToGround(belt)
+	else if(item_dropping == wear_undershirt)
+		wear_undershirt = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_underwear)
+		wear_underwear = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_tights)
+		wear_tights = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_shoulder_l)
+		wear_shoulder_l = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_shoulder_r)
+		wear_shoulder_r = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_finger)
+		wear_finger = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_bracers)
+		wear_bracers = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_pants)
+		wear_pants = null
+		if(!QDELETED(src))
+			update_body()
+	else if(item_dropping == wear_chest)
+		wear_chest = null
+		if(!QDELETED(src))
+			update_body()
 	else if(item_dropping == gloves)
 		gloves = null
 		if(!QDELETED(src))

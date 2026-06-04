@@ -81,6 +81,15 @@
 	//Equipment slots
 	var/obj/item/clothing/wear_suit = null
 	var/obj/item/clothing/w_uniform = null
+	var/obj/item/clothing/cyberpunk_underwear/wear_undershirt = null
+	var/obj/item/clothing/cyberpunk_underwear/wear_underwear = null
+	var/obj/item/clothing/cyberpunk_underwear/wear_tights = null
+	var/obj/item/wear_shoulder_l = null
+	var/obj/item/wear_shoulder_r = null
+	var/obj/item/wear_finger = null
+	var/obj/item/wear_bracers = null
+	var/obj/item/wear_pants = null
+	var/obj/item/wear_chest = null
 	var/obj/item/belt = null
 	var/obj/item/wear_id = null
 	var/obj/item/r_store = null

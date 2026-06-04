@@ -69,7 +69,7 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 /datum/loadout_item/New(category)
 	src.category = category
 
-	if(!(loadout_flags & LOADOUT_FLAG_BLOCK_GREYSCALING) && is_greyscale_item())
+	if(is_loadout_colorable())
 		loadout_flags |= LOADOUT_FLAG_GREYSCALING_ALLOWED
 
 	if(loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING)
@@ -105,6 +105,14 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 		return FALSE
 	return TRUE
 
+/// Checks if the item can be recolored from the loadout menu.
+/datum/loadout_item/proc/is_loadout_colorable()
+	if(ispath(item_path, /obj/item/clothing))
+		return TRUE
+	if(loadout_flags & LOADOUT_FLAG_BLOCK_GREYSCALING)
+		return FALSE
+	return is_greyscale_item()
+
 /**
  * Takes in an action from a loadout manager and applies it
  *
@@ -117,7 +125,7 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 
 	switch(action)
 		if("select_color")
-			if((loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED) && !(loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING))
+			if(loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED)
 				return set_item_color(manager, user)
 
 		if("set_name")
@@ -136,6 +144,25 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 		return FALSE
 
 	var/list/loadout = manager.preferences.read_preference(/datum/preference/loadout)
+	if(!is_greyscale_item())
+		var/old_color = loadout?[item_path]?[INFO_GREYSCALE]
+		if(!old_color && istext(initial(item_path.color)))
+			old_color = initial(item_path.color)
+		if(!old_color)
+			old_color = COLOR_WHITE
+
+		var/chosen_color = tgui_color_picker(user, "Pick a clothing color.", "[name] color", old_color)
+		if(QDELETED(src) || QDELETED(user) || QDELETED(manager) || QDELETED(manager.preferences))
+			return FALSE
+
+		loadout = manager.preferences.read_preference(/datum/preference/loadout)
+		if(!chosen_color || !loadout?[item_path])
+			return FALSE
+
+		loadout[item_path][INFO_GREYSCALE] = chosen_color
+		manager.preferences.update_preference(GLOB.preference_entries[/datum/preference/loadout], loadout)
+		return TRUE
+
 	var/list/allowed_configs = list()
 	if(initial(item_path.greyscale_config))
 		allowed_configs += "[initial(item_path.greyscale_config)]"
@@ -270,10 +297,16 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 
 	var/update_flag = NONE
 
-	if((loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED) && ((loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING) || item_details?[INFO_GREYSCALE]))
-		var/item_color = (loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING) ? get_job_color(outfit) : item_details?[INFO_GREYSCALE]
-		equipped_item.set_greyscale(item_color)
-		update_flag |= equipped_item.slot_flags
+	if(loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED)
+		var/item_color = item_details?[INFO_GREYSCALE]
+		if(!item_color && (loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING) && is_greyscale_item())
+			item_color = get_job_color(outfit)
+		if(item_color)
+			if(is_greyscale_item())
+				equipped_item.set_greyscale(item_color)
+			else
+				equipped_item.color = item_color
+			update_flag |= equipped_item.slot_flags
 
 	if((loadout_flags & LOADOUT_FLAG_ALLOW_NAMING) && item_details?[INFO_NAMED] && !visuals_only)
 		equipped_item.name = trim(item_details[INFO_NAMED], PREVENT_CHARACTER_TRIM_LOSS(MAX_NAME_LEN))
@@ -324,6 +357,7 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 	formatted_item["reskins"] = get_reskin_options()
 	formatted_item["icon"] = ui_icon
 	formatted_item["icon_state"] = ui_icon_state
+	formatted_item["slot_flags"] = initial(item_path.slot_flags)
 	return formatted_item
 
 /**
@@ -347,7 +381,7 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 
 	// Mothblocks is hellbent on recolorable and reskinnable being only tooltips for items for visual clarity, so ask her before changing these
 	var/list/displayed_text = list()
-	if((loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED) && !(loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING))
+	if(loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED)
 		displayed_text[FA_ICON_PALETTE] = "Смена цвета"
 
 	// BANDASTATION ADDITION - START
@@ -383,7 +417,7 @@ GLOBAL_LIST_INIT(all_loadout_categories, init_loadout_categories())
 
 	var/list/button_list = list()
 
-	if((loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED) && !(loadout_flags & LOADOUT_FLAG_JOB_GREYSCALING))
+	if(loadout_flags & LOADOUT_FLAG_GREYSCALING_ALLOWED)
 		UNTYPED_LIST_ADD(button_list, list(
 			"label" = "Перекрасить",
 			"act_key" = "select_color",

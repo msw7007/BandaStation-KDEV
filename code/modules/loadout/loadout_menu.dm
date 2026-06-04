@@ -4,6 +4,8 @@
 		"pass_to_loadout_item" = PROC_REF(action_pass_to_loadout_item),
 		"rotate_dummy" = PROC_REF(action_rotate_model_dir),
 		"select_item" = PROC_REF(action_select_item),
+		"set_loadout_slot" = PROC_REF(action_set_loadout_slot),
+		"set_loadout_preview_override" = PROC_REF(action_set_loadout_preview_override),
 		"toggle_job_clothes" = PROC_REF(action_toggle_job_outfit),
 		"close_greyscale_menu" = PROC_REF(force_close_greyscale_menu),
 	)
@@ -31,6 +33,53 @@
 /datum/preference_middleware/loadout/proc/action_clear_all(list/params, mob/user)
 	PRIVATE_PROC(TRUE)
 	preferences.update_preference(GLOB.preference_entries[/datum/preference/loadout], null)
+	preferences.loadout_preview_override = list()
+	preferences.character_preview_view?.update_body()
+	return TRUE
+
+/datum/preference_middleware/loadout/proc/action_set_loadout_preview_override(list/params, mob/user)
+	PRIVATE_PROC(TRUE)
+	if(!params["enabled"])
+		preferences.loadout_preview_override = list()
+		preferences.character_preview_view?.update_body()
+		return TRUE
+
+	var/list/source_loadout = preferences.read_preference(/datum/preference/loadout)
+	var/list/preview_loadout = list()
+	var/list/paths = params["paths"]
+	for(var/path in paths)
+		var/obj/item/path_to_use = istext(path) ? text2path(path) : path
+		if(!ispath(path_to_use, /obj/item))
+			continue
+		var/list/item_details = source_loadout?[path_to_use]
+		if(!item_details)
+			continue
+		preview_loadout[path_to_use] = islist(item_details) ? LAZYLISTDUPLICATE(item_details) : list()
+
+	preferences.loadout_preview_override = preview_loadout
+	preferences.character_preview_view?.update_body()
+	return TRUE
+
+/datum/preference_middleware/loadout/proc/action_set_loadout_slot(list/params, mob/user)
+	PRIVATE_PROC(TRUE)
+	var/obj/item/path_to_use = istext(params["path"]) ? text2path(params["path"]) : params["path"]
+	if(!ispath(path_to_use, /obj/item))
+		return TRUE
+
+	var/list/loadout = preferences.read_preference(/datum/preference/loadout)
+	var/list/item_details = loadout?[path_to_use]
+	if(!islist(item_details))
+		return TRUE
+
+	var/slot = params["slot"]
+	if(isnull(slot) || slot == "")
+		item_details -= INFO_EQUIP_SLOT
+	else
+		item_details[INFO_EQUIP_SLOT] = "[slot]"
+
+	LAZYSET(loadout, path_to_use, item_details)
+	preferences.update_preference(GLOB.preference_entries[/datum/preference/loadout], loadout)
+	preferences.character_preview_view?.update_body()
 	return TRUE
 
 /datum/preference_middleware/loadout/proc/action_toggle_job_outfit(list/params, mob/user)

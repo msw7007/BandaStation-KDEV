@@ -19,7 +19,20 @@
 		"Хо Ши Текнолоджис MK-3",
 	)
 
-	var/static/list/manufacturer_suffixes = list()
+	var/static/list/manufacturer_suffixes = list(
+		"Сан Йон Корпорейшн MK-2" = "bishop",
+		"Ишикава Индастриз MK-2" = "etamin_industry",
+		"Хо Ши Текнолоджис MK-2" = "zenghu",
+		"Ковальски и Ко MK-2" = "gromtech",
+		"ТяжМарш Продакшен MK-2" = "hephaestus",
+		"Тесла Саенс MK-2" = "xion",
+		"Блэкрок Инвестигейт MK-2" = "shellguard",
+		"Транс Трэвел MK-2" = "wardtakahashi",
+		"Самантас Кеир MK-2" = "morpheus",
+		"Сан Йон Корпорейшн MK-3" = "advanced/bishop",
+		"Ишикава Индастриз MK-3" = "advanced/etamin_industry",
+		"Хо Ши Текнолоджис MK-3" = "advanced/zenghu",
+	)
 
 /datum/body_modification/bodypart_prosthesis/New()
 	. = ..()

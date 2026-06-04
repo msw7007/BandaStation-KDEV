@@ -1692,6 +1692,53 @@
 		clothing.forceMove(get_turf(src))
 	return "Extracted [clothing.name]."
 
+/mob/living/proc/cyberpunk_store_loadout_item_type_in_round_wardrobe(item_type, amount = 1)
+	if(!ispath(item_type, /obj/item))
+		return FALSE
+	var/amount_number = text2num("[amount]")
+	if(isnull(amount_number) || amount_number < 1)
+		amount_number = 1
+	amount_number = FLOOR(amount_number, 1)
+	if(isnull(cyberpunk_round_wardrobe_items))
+		cyberpunk_round_wardrobe_items = list()
+	var/type_text = "[item_type]"
+	for(var/list/existing as anything in cyberpunk_round_wardrobe_items)
+		if(existing["type_path"] != type_text)
+			continue
+		existing["count"] = (text2num("[existing["count"]]") || 0) + amount_number
+		return TRUE
+	var/obj/item/preview_item = new item_type(null)
+	var/item_name = preview_item?.name || type_text
+	qdel(preview_item)
+	cyberpunk_round_wardrobe_items += list(list(
+		"id" = "loadout_[length(cyberpunk_round_wardrobe_items) + 1]_[world.time]_[rand(1000, 9999)]",
+		"name" = item_name,
+		"kind" = "loadout",
+		"type_path" = type_text,
+		"count" = amount_number,
+	))
+	return TRUE
+
+/mob/living/proc/cyberpunk_extract_round_wardrobe_item(record_id)
+	if(!record_id || !length(cyberpunk_round_wardrobe_items))
+		return "Loadout wardrobe record not found."
+	for(var/list/record as anything in cyberpunk_round_wardrobe_items)
+		if(record["id"] != record_id)
+			continue
+		var/item_type = text2path(record["type_path"])
+		if(!ispath(item_type, /obj/item))
+			return "Loadout wardrobe record has no valid item type."
+		var/obj/item/extracted = new item_type(get_turf(src))
+		if(!put_in_hands(extracted))
+			extracted.forceMove(get_turf(src))
+		var/count = text2num("[record["count"]]")
+		if(isnull(count) || count <= 1)
+			cyberpunk_round_wardrobe_items -= record
+		else
+			record["count"] = count - 1
+		return "Extracted [extracted.name]."
+	return "Loadout wardrobe record not found."
+
 /proc/cyberpunk_style_designer_directions_from_params(list/params)
 	var/list/directions = list()
 	for(var/key in list("north", "south", "east", "west"))
@@ -1721,6 +1768,7 @@
 	var/mob/living/living_user = user
 	var/list/hair_designs = istype(living_user) ? living_user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_custom_hair_designs) : list()
 	var/list/wardrobe_designs = istype(living_user) ? living_user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_wardrobe_designs) : list()
+	var/list/round_wardrobe_items = istype(living_user) ? (living_user.cyberpunk_round_wardrobe_items || list()) : list()
 	var/mob/living/carbon/human/human = user
 	var/list/current_hair_previews = list()
 	var/list/current_hair_payloads = list()
@@ -1747,6 +1795,7 @@
 		"lastMessage" = last_message,
 		"hairDesigns" = hair_designs,
 		"wardrobeDesigns" = wardrobe_designs,
+		"roundWardrobeItems" = round_wardrobe_items,
 		"wardrobeLimit" = istype(living_user) ? living_user.cyberpunk_wardrobe_limit() : 1,
 		"wardrobeCount" = length(wardrobe_designs),
 		"clothingItems" = istype(living_user) ? living_user.cyberpunk_get_designable_clothing_ui() : list(),
@@ -1803,6 +1852,8 @@
 			last_message = user.cyberpunk_store_active_clothing_in_wardrobe()
 		if("extract_wardrobe")
 			last_message = user.cyberpunk_extract_wardrobe_design(params["id"])
+		if("extract_round_wardrobe")
+			last_message = user.cyberpunk_extract_round_wardrobe_item(params["id"])
 		if("remove_wardrobe")
 			if(user.cyberpunk_remove_visual_design(/datum/preference/cyberpunk_wardrobe_designs, params["id"]))
 				last_message = "Wardrobe record removed."

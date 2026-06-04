@@ -41,6 +41,7 @@ export type LoadoutItem = {
   information: LoadoutTooltip[];
   cost: number;
   tier: number;
+  slot_flags?: number;
 };
 
 // Category of items in the loadout

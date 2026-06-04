@@ -78,6 +78,19 @@
 		choices[manufacturer_id] = all_choices[manufacturer_id]
 	return choices
 
+/proc/cyberpunk_restricted_player_neural_interface_choices()
+	return list(CORP_ALIGN_BENN, CORP_ALIGN_RYAZNOV, CORP_ALIGN_STARLIGHT)
+
+/proc/cyberpunk_player_neural_interface_choices()
+	var/list/choices = corp_align_choices()
+	for(var/restricted_manufacturer in cyberpunk_restricted_player_neural_interface_choices())
+		choices -= restricted_manufacturer
+	return choices
+
+/proc/cyberpunk_is_restricted_player_neural_interface(manufacturer)
+	manufacturer = cyberpunk_normalize_manufacturer_id(manufacturer)
+	return manufacturer in cyberpunk_restricted_player_neural_interface_choices()
+
 /proc/cyberpunk_sanitize_visual_design_record(list/record)
 	if(!islist(record))
 		return null
@@ -479,17 +492,19 @@
 	should_update_preview = FALSE
 
 /datum/preference/choiced/corp_align/init_possible_values()
-	return assoc_to_keys(corp_align_choices())
+	return assoc_to_keys(cyberpunk_player_neural_interface_choices())
 
 /datum/preference/choiced/corp_align/create_default_value()
 	return CORP_ALIGN_NONE
 
 /datum/preference/choiced/corp_align/compile_constant_data()
 	var/list/data = ..()
-	data[CHOICED_PREFERENCE_DISPLAY_NAMES] = corp_align_choices()
+	data[CHOICED_PREFERENCE_DISPLAY_NAMES] = cyberpunk_player_neural_interface_choices()
 	return data
 
 /datum/preference/choiced/corp_align/apply_to_human(mob/living/carbon/human/target, value)
+	if(cyberpunk_is_restricted_player_neural_interface(value) || target.has_quirk(/datum/quirk/no_neural_interface))
+		value = CORP_ALIGN_NONE
 	target.corp_align = value == CORP_ALIGN_NONE ? null : value
 	var/obj/item/organ/cyberimp/brain/neural_interface/neural_interface = target.get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
 	if(istype(neural_interface))
@@ -582,6 +597,9 @@
 #undef BODY_SHAPE_SOFT
 #undef BODY_SHAPE_ANGULAR
 #undef CORP_ALIGN_NONE
+#undef CORP_ALIGN_BENN
+#undef CORP_ALIGN_RYAZNOV
+#undef CORP_ALIGN_STARLIGHT
 #undef CORP_ALIGN_SUN_YON
 #undef CORP_ALIGN_ISHIKAWA
 #undef CORP_ALIGN_HO_SHI

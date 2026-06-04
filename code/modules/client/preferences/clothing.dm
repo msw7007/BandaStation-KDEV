@@ -12,6 +12,26 @@
 
 	return final_icon
 
+/mob/living/carbon/human/proc/cyberpunk_equip_underwear_preference(item_type, slot, value, color_value = null)
+	var/obj/item/clothing/cyberpunk_underwear/existing = get_item_by_slot(slot)
+	if(existing)
+		switch(slot)
+			if(ITEM_SLOT_UNDERSHIRT)
+				wear_undershirt = null
+			if(ITEM_SLOT_UNDERWEAR)
+				wear_underwear = null
+			if(ITEM_SLOT_TIGHTS)
+				wear_tights = null
+		qdel(existing)
+
+	if(!value || value == "Nude")
+		update_body()
+		return
+
+	var/obj/item/clothing/cyberpunk_underwear/new_underwear = new item_type(src)
+	new_underwear.set_accessory(value, color_value)
+	equip_to_slot_or_del(new_underwear, slot, initial = TRUE)
+
 /// Backpack preference
 /datum/preference/choiced/backpack
 	savefile_key = "backpack"
@@ -119,7 +139,8 @@
 	return generate_underwear_icon(SSaccessories.socks_list[value], lower_half)
 
 /datum/preference/choiced/socks/apply_to_human(mob/living/carbon/human/target, value)
-	target.socks = value
+	target.socks = "Nude"
+	target.cyberpunk_equip_underwear_preference(/obj/item/clothing/cyberpunk_underwear/tights, ITEM_SLOT_TIGHTS, value)
 
 /// Undershirt preference
 /datum/preference/choiced/undershirt
@@ -168,7 +189,8 @@
 	return icon_with_undershirt
 
 /datum/preference/choiced/undershirt/apply_to_human(mob/living/carbon/human/target, value)
-	target.undershirt = value
+	target.undershirt = "Nude"
+	target.cyberpunk_equip_underwear_preference(/obj/item/clothing/cyberpunk_underwear/undershirt, ITEM_SLOT_UNDERSHIRT, value)
 
 /// Underwear preference
 /datum/preference/choiced/underwear
@@ -197,7 +219,8 @@
 	return generate_underwear_icon(SSaccessories.underwear_list[value], lower_half, COLOR_ALMOST_BLACK)
 
 /datum/preference/choiced/underwear/apply_to_human(mob/living/carbon/human/target, value)
-	target.underwear = value
+	target.underwear = "Nude"
+	target.cyberpunk_equip_underwear_preference(/obj/item/clothing/cyberpunk_underwear/underwear, ITEM_SLOT_UNDERWEAR, value, target.underwear_color)
 
 /datum/preference/choiced/underwear/is_accessible(datum/preferences/preferences)
 	if (!..(preferences))

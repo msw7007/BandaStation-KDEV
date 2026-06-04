@@ -106,6 +106,33 @@
 		if(H.head)
 			H.head.screen_loc = ui_head
 			screenmob.client.screen += H.head
+		if(H.wear_undershirt)
+			H.wear_undershirt.screen_loc = ui_undershirt
+			screenmob.client.screen += H.wear_undershirt
+		if(H.wear_underwear)
+			H.wear_underwear.screen_loc = ui_underwear
+			screenmob.client.screen += H.wear_underwear
+		if(H.wear_tights)
+			H.wear_tights.screen_loc = ui_tights
+			screenmob.client.screen += H.wear_tights
+		if(H.wear_shoulder_l)
+			H.wear_shoulder_l.screen_loc = ui_shoulder_l
+			screenmob.client.screen += H.wear_shoulder_l
+		if(H.wear_shoulder_r)
+			H.wear_shoulder_r.screen_loc = ui_shoulder_r
+			screenmob.client.screen += H.wear_shoulder_r
+		if(H.wear_finger)
+			H.wear_finger.screen_loc = ui_finger
+			screenmob.client.screen += H.wear_finger
+		if(H.wear_bracers)
+			H.wear_bracers.screen_loc = ui_bracers
+			screenmob.client.screen += H.wear_bracers
+		if(H.wear_pants)
+			H.wear_pants.screen_loc = ui_pants
+			screenmob.client.screen += H.wear_pants
+		if(H.wear_chest)
+			H.wear_chest.screen_loc = ui_chest
+			screenmob.client.screen += H.wear_chest
 	else
 		if(H.shoes)
 			screenmob.client.screen -= H.shoes
@@ -125,6 +152,24 @@
 			screenmob.client.screen -= H.wear_neck
 		if(H.head)
 			screenmob.client.screen -= H.head
+		if(H.wear_undershirt)
+			screenmob.client.screen -= H.wear_undershirt
+		if(H.wear_underwear)
+			screenmob.client.screen -= H.wear_underwear
+		if(H.wear_tights)
+			screenmob.client.screen -= H.wear_tights
+		if(H.wear_shoulder_l)
+			screenmob.client.screen -= H.wear_shoulder_l
+		if(H.wear_shoulder_r)
+			screenmob.client.screen -= H.wear_shoulder_r
+		if(H.wear_finger)
+			screenmob.client.screen -= H.wear_finger
+		if(H.wear_bracers)
+			screenmob.client.screen -= H.wear_bracers
+		if(H.wear_pants)
+			screenmob.client.screen -= H.wear_pants
+		if(H.wear_chest)
+			screenmob.client.screen -= H.wear_chest
 
 /datum/hud/human/persistent_inventory_update(mob/viewer)
 	if(!mymob)
@@ -305,3 +350,75 @@
 	icon_full = "template_small"
 	screen_loc = ui_belt
 	slot_id = ITEM_SLOT_BELT
+
+/datum/inventory_slot/human/undershirt
+	name = "undershirt"
+	icon_state = "uniform"
+	icon_full = "template"
+	screen_loc = ui_undershirt
+	slot_id = ITEM_SLOT_UNDERSHIRT
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/underwear
+	name = "underwear"
+	icon_state = "uniform"
+	icon_full = "template"
+	screen_loc = ui_underwear
+	slot_id = ITEM_SLOT_UNDERWEAR
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/tights
+	name = "socks"
+	icon_state = "shoes"
+	icon_full = "template"
+	screen_loc = ui_tights
+	slot_id = ITEM_SLOT_TIGHTS
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/shoulder_left
+	name = "left shoulder"
+	icon_state = "back"
+	icon_full = "template_small"
+	screen_loc = ui_shoulder_l
+	slot_id = ITEM_SLOT_SHOULDER_LEFT
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/shoulder_right
+	name = "right shoulder"
+	icon_state = "back"
+	icon_full = "template_small"
+	screen_loc = ui_shoulder_r
+	slot_id = ITEM_SLOT_SHOULDER_RIGHT
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/finger
+	name = "finger"
+	icon_state = "gloves"
+	icon_full = "template"
+	screen_loc = ui_finger
+	slot_id = ITEM_SLOT_FINGER
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/bracers
+	name = "bracers"
+	icon_state = "gloves"
+	icon_full = "template"
+	screen_loc = ui_bracers
+	slot_id = ITEM_SLOT_BRACERS
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/pants
+	name = "pants"
+	icon_state = "uniform"
+	icon_full = "template"
+	screen_loc = ui_pants
+	slot_id = ITEM_SLOT_PANTS
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
+
+/datum/inventory_slot/human/chest
+	name = "chest"
+	icon_state = "id"
+	icon_full = "template_small"
+	screen_loc = ui_chest
+	slot_id = ITEM_SLOT_CHEST
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY

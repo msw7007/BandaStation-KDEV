@@ -13,6 +13,7 @@ type ItemCardProps = {
   tags?: string[];
   actionIcon?: string;
   onClick?: () => void;
+  onContextMenu?: () => void;
   onAction?: () => void;
 };
 
@@ -28,6 +29,7 @@ export function ItemCard(props: ItemCardProps) {
     name,
     onAction,
     onClick,
+    onContextMenu,
     selected,
     tags,
   } = props;
@@ -37,6 +39,20 @@ export function ItemCard(props: ItemCardProps) {
       className={classes(['ItemCard', selected && 'selected', disabled && 'disabled'])}
       disabled={disabled}
       onClick={onClick}
+      onMouseDown={(event) => {
+        if (event.button !== 2 || !onContextMenu) {
+          return;
+        }
+        event.preventDefault();
+        onContextMenu();
+      }}
+      onContextMenu={(event) => {
+        if (!onContextMenu) {
+          return;
+        }
+        event.preventDefault();
+        onContextMenu();
+      }}
     >
       <span className="ItemCard__icon">
         {!!icon && !!iconState ? (

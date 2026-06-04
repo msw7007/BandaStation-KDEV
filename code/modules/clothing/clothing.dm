@@ -86,6 +86,63 @@
 /obj/item/clothing/proc/cyberpunk_is_modular_clothing()
 	return cyberpunk_modular_clothing || greyscale_config || greyscale_config_worn || greyscale_colors
 
+/obj/item/clothing/cyberpunk_underwear
+	name = "underwear"
+	desc = "A lightweight wearable underlayer."
+	icon = 'icons/mob/clothing/underwear.dmi'
+	w_class = WEIGHT_CLASS_TINY
+	body_parts_covered = NONE
+	can_be_bloody = FALSE
+	cyberpunk_modular_clothing = TRUE
+	var/accessory_name = "Nude"
+	var/accessory_color
+
+/obj/item/clothing/cyberpunk_underwear/proc/get_accessory()
+	return null
+
+/obj/item/clothing/cyberpunk_underwear/proc/set_accessory(accessory_value, color_value)
+	accessory_name = accessory_value || "Nude"
+	accessory_color = color_value
+	var/datum/sprite_accessory/clothing/accessory = get_accessory()
+	if(accessory)
+		name = accessory.name
+		icon_state = accessory.icon_state
+		worn_icon_state = accessory.icon_state
+		color = accessory.use_static ? null : accessory_color
+	else
+		name = initial(name)
+		icon_state = null
+		worn_icon_state = null
+		color = null
+	update_appearance()
+
+/obj/item/clothing/cyberpunk_underwear/proc/make_underwear_appearance(mob/living/carbon/human/wearer)
+	var/datum/sprite_accessory/clothing/accessory = get_accessory()
+	if(!accessory)
+		return null
+	return accessory.make_appearance(accessory_color, wearer.physique, wearer.get_active_bodyshapes())
+
+/obj/item/clothing/cyberpunk_underwear/undershirt
+	name = "undershirt"
+	slot_flags = ITEM_SLOT_UNDERSHIRT
+
+/obj/item/clothing/cyberpunk_underwear/undershirt/get_accessory()
+	return SSaccessories.undershirt_list[accessory_name]
+
+/obj/item/clothing/cyberpunk_underwear/underwear
+	name = "underwear"
+	slot_flags = ITEM_SLOT_UNDERWEAR
+
+/obj/item/clothing/cyberpunk_underwear/underwear/get_accessory()
+	return SSaccessories.underwear_list[accessory_name]
+
+/obj/item/clothing/cyberpunk_underwear/tights
+	name = "tights"
+	slot_flags = ITEM_SLOT_TIGHTS
+
+/obj/item/clothing/cyberpunk_underwear/tights/get_accessory()
+	return SSaccessories.socks_list[accessory_name]
+
 /obj/item/clothing/proc/cyberpunk_capture_wardrobe_design()
 	var/list/design = list(
 		"id" = "[world.realtime]-[rand(1000, 9999)]",

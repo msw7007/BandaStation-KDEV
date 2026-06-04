@@ -533,6 +533,10 @@ GLOBAL_LIST_INIT(available_ui_styles, list(
 		if (!inv_slot)
 			stack_trace("[src] attempted to use an invalid inventory slot: [slot_type]")
 			continue
+		if (!inv_slot.slot_id)
+			continue
+		if (screen_objects[HUD_KEY_ITEM_SLOT(inv_slot.slot_id)])
+			continue
 		inv_slot.create_element(src)
 
 	update_inventory_slots()

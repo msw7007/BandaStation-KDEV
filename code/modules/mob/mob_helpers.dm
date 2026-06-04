@@ -482,6 +482,18 @@
 			return /obj/item
 		if(ITEM_SLOT_SUITSTORE)
 			return /obj/item
+		if(ITEM_SLOT_SHOULDER_LEFT)
+			return /obj/item
+		if(ITEM_SLOT_SHOULDER_RIGHT)
+			return /obj/item
+		if(ITEM_SLOT_FINGER)
+			return /obj/item
+		if(ITEM_SLOT_BRACERS)
+			return /obj/item
+		if(ITEM_SLOT_PANTS)
+			return /obj/item/clothing
+		if(ITEM_SLOT_CHEST)
+			return /obj/item/clothing
 	return null
 
 /// Returns a client from a mob, mind or client

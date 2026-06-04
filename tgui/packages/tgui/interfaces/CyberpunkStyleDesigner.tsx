@@ -24,6 +24,7 @@ type VisualDesign = {
   base?: string;
   type_path?: string;
   material_signature?: string;
+  count?: number;
   directions?: Record<string, string>;
   item_icon?: string;
 };
@@ -48,6 +49,7 @@ type DesignerData = {
   lastMessage?: string;
   hairDesigns: VisualDesign[];
   wardrobeDesigns: VisualDesign[];
+  roundWardrobeItems?: VisualDesign[];
   clothingItems: ClothingItem[];
   currentHair: string;
   currentHairColor: string;
@@ -234,7 +236,11 @@ export const CyberpunkStyleDesigner = () => {
     data.clothingItems?.[0];
   const availableLayers = data.mode === 'hair' ? hairLayers : clothingLayers;
   const records =
-    data.mode === 'hair' ? data.hairDesigns || [] : data.wardrobeDesigns || [];
+    data.mode === 'hair'
+      ? data.hairDesigns || []
+      : data.mode === 'wardrobe'
+        ? [...(data.wardrobeDesigns || []), ...(data.roundWardrobeItems || [])]
+        : data.wardrobeDesigns || [];
   const basePreview =
     data.mode === 'hair'
       ? directions[activeLayer]
@@ -618,6 +624,7 @@ export const CyberpunkStyleDesigner = () => {
                     <Box className="CyberpunkPanel__Title">{record.name}</Box>
                     <Box className="CyberpunkPanel__Muted">
                       {record.kind} {record.base ? `/ ${record.base}` : ''}
+                      {!!record.count && ` x${record.count}`}
                     </Box>
                     {!!record.type_path && (
                       <Box className="CyberpunkPanel__Small">
@@ -646,20 +653,27 @@ export const CyberpunkStyleDesigner = () => {
                           icon="shirt"
                           mr={0.5}
                           onClick={() =>
-                            act('extract_wardrobe', { id: record.id })
+                            act(
+                              record.kind === 'loadout'
+                                ? 'extract_round_wardrobe'
+                                : 'extract_wardrobe',
+                              { id: record.id },
+                            )
                           }
                         >
                           Extract
                         </Button>
-                        <Button
-                          icon="trash"
-                          color="bad"
-                          onClick={() =>
-                            act('remove_wardrobe', { id: record.id })
-                          }
-                        >
-                          Remove
-                        </Button>
+                        {record.kind !== 'loadout' && (
+                          <Button
+                            icon="trash"
+                            color="bad"
+                            onClick={() =>
+                              act('remove_wardrobe', { id: record.id })
+                            }
+                          >
+                            Remove
+                          </Button>
+                        )}
                       </>
                     ) : data.mode === 'clothing' ? (
                       <Button

@@ -259,6 +259,15 @@
 #define ui_ears "WEST+2:10,SOUTH+2:9"
 #define ui_neck "WEST:6,SOUTH+2:9"
 #define ui_head "WEST+1:8,SOUTH+3:11"
+#define ui_undershirt "WEST+3:12,SOUTH+1:7"
+#define ui_underwear "WEST+3:12,SOUTH+2:9"
+#define ui_tights "WEST+3:12,SOUTH+3:11"
+#define ui_shoulder_l "WEST+4:14,SOUTH+1:7"
+#define ui_shoulder_r "WEST+4:14,SOUTH+2:9"
+#define ui_finger "WEST+4:14,SOUTH+3:11"
+#define ui_bracers "WEST+5:16,SOUTH+1:7"
+#define ui_pants "WEST+5:16,SOUTH+2:9"
+#define ui_chest "WEST+5:16,SOUTH+3:11"
 
 //Generic living
 #define ui_living_pull "EAST-1:28,CENTER-3:15"
