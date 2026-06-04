@@ -1887,8 +1887,136 @@
 #define CYBERPUNK_BUSINESS_TAX_RATE 0.05
 
 //CYBERPUNK BUILD - rebuild and delete before release
+/proc/cyberpunk_area_turfs(area/target_area)
+	var/list/turfs = list()
+	if(!target_area)
+		return turfs
+	for(var/list/zlevel_turfs as anything in target_area.get_zlevel_turf_lists())
+		turfs += zlevel_turfs
+	return turfs
+
+/proc/cyberpunk_is_apartment_area(area/target_area)
+	return istype(target_area, /area/station/commons/dorms/persistent_apartment) || istype(target_area, /area/station/commons/dorms/apartment1) || istype(target_area, /area/station/commons/dorms/apartment2)
+
+/proc/cyberpunk_persistent_area_capture(area/target_area, obj/machinery/active_terminal)
+	var/list/snapshot = list(
+		"turfs" = list(),
+		"movables" = list(),
+	)
+	var/turf/center = get_turf(active_terminal)
+	if(!target_area || !center)
+		return snapshot
+	for(var/turf/area_turf as anything in cyberpunk_area_turfs(target_area))
+		snapshot["turfs"] += list(list(
+			"type" = "[area_turf.type]",
+			"x" = area_turf.x - center.x,
+			"y" = area_turf.y - center.y,
+			"z" = area_turf.z - center.z,
+		))
+		for(var/atom/movable/thing as anything in area_turf.contents)
+			if(thing == active_terminal || ismob(thing))
+				continue
+			if(!(isitem(thing) || istype(thing, /obj/machinery) || istype(thing, /obj/structure)))
+				continue
+			var/list/entry = list(
+				"type" = "[thing.type]",
+				"name" = thing.name,
+				"x" = area_turf.x - center.x,
+				"y" = area_turf.y - center.y,
+				"z" = area_turf.z - center.z,
+				"dir" = thing.dir,
+				"pixel_x" = thing.pixel_x,
+				"pixel_y" = thing.pixel_y,
+			)
+			var/obj/item/clothing/clothing = thing
+			if(istype(clothing) && islist(clothing.cyberpunk_custom_design_data))
+				entry["clothing_design"] = clothing.cyberpunk_custom_design_data.Copy()
+			snapshot["movables"] += list(entry)
+	return snapshot
+
+/proc/cyberpunk_persistent_area_restore(area/target_area, obj/machinery/active_terminal, list/snapshot)
+	if(!target_area || !active_terminal || !islist(snapshot))
+		return 0
+	var/turf/center = get_turf(active_terminal)
+	if(!center)
+		return 0
+	for(var/turf/area_turf as anything in cyberpunk_area_turfs(target_area))
+		for(var/atom/movable/thing as anything in area_turf.contents)
+			if(thing == active_terminal || ismob(thing))
+				continue
+			qdel(thing)
+	var/list/turf_entries = snapshot["turfs"]
+	if(islist(turf_entries))
+		for(var/list/entry as anything in turf_entries)
+			var/turf_path = text2path("[entry["type"]]")
+			if(!ispath(turf_path, /turf))
+				continue
+			var/turf/target = locate(clamp(center.x + (entry["x"] || 0), 1, world.maxx), clamp(center.y + (entry["y"] || 0), 1, world.maxy), clamp(center.z + (entry["z"] || 0), 1, world.maxz))
+			if(!target || get_area(target) != target_area)
+				continue
+			target.ChangeTurf(turf_path, null, CHANGETURF_INHERIT_AIR)
+	var/restored = 0
+	var/list/movable_entries = snapshot["movables"]
+	if(islist(movable_entries))
+		for(var/list/entry as anything in movable_entries)
+			var/movable_path = text2path("[entry["type"]]")
+			if(!ispath(movable_path, /atom/movable))
+				continue
+			var/turf/target = locate(clamp(center.x + (entry["x"] || 0), 1, world.maxx), clamp(center.y + (entry["y"] || 0), 1, world.maxy), clamp(center.z + (entry["z"] || 0), 1, world.maxz))
+			if(!target || get_area(target) != target_area)
+				continue
+			var/atom/movable/restored_atom = new movable_path(target)
+			restored_atom.name = entry["name"] || restored_atom.name
+			restored_atom.dir = entry["dir"] || SOUTH
+			restored_atom.pixel_x = entry["pixel_x"] || 0
+			restored_atom.pixel_y = entry["pixel_y"] || 0
+			var/obj/item/clothing/clothing = restored_atom
+			if(istype(clothing) && islist(entry["clothing_design"]))
+				clothing.cyberpunk_apply_design(entry["clothing_design"])
+			restored++
+	return restored
+
+/mob/living/proc/cyberpunk_read_persistent_area_records(preference_type)
+	var/datum/preferences/preferences = cyberpunk_prefs()
+	if(!preferences)
+		return list()
+	return preferences.read_preference(preference_type) || list()
+
+/mob/living/proc/cyberpunk_write_persistent_area_records(preference_type, list/records)
+	var/datum/preferences/preferences = cyberpunk_prefs()
+	if(!preferences)
+		return FALSE
+	if(!preferences.write_preference(GLOB.preference_entries[preference_type], records))
+		return FALSE
+	preferences.recently_updated_keys |= preference_type
+	preferences.save_character()
+	preferences.save_preferences()
+	return TRUE
+
+/mob/living/proc/cyberpunk_store_persistent_area_record(preference_type, list/record)
+	if(!islist(record) || !record["id"])
+		return FALSE
+	var/list/result = list()
+	for(var/list/existing as anything in cyberpunk_read_persistent_area_records(preference_type))
+		if(existing["id"] == record["id"])
+			continue
+		result += list(existing)
+	result = list(record) + result
+	return cyberpunk_write_persistent_area_records(preference_type, result)
+
+/mob/living/proc/cyberpunk_find_persistent_area_record(preference_type, record_id)
+	if(!record_id)
+		return null
+	for(var/list/record as anything in cyberpunk_read_persistent_area_records(preference_type))
+		if(record["id"] == record_id)
+			return record
+	return null
+
 /datum/controller/subsystem/economy/proc/get_cyberpunk_business(business_id)
 	return cyberpunk_businesses["[business_id]"]
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_apartment(apartment_id)
+	return cyberpunk_apartments["[apartment_id]"]
 
 /datum/controller/subsystem/economy/proc/get_cyberpunk_business_key(mob/living/person, datum/bank_account/account)
 	return get_cyberpunk_contract_character_key(person, account)
@@ -1900,6 +2028,14 @@
 		if(business?.can_view(user))
 			businesses += business
 	return businesses
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_apartments_for_user(mob/living/user)
+	var/list/apartments = list()
+	for(var/apartment_id in cyberpunk_apartments)
+		var/datum/cyberpunk_apartment/apartment = cyberpunk_apartments[apartment_id]
+		if(apartment?.can_view(user))
+			apartments += apartment
+	return apartments
 
 /datum/controller/subsystem/economy/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label)
 	item_label = reject_bad_text(item_label, max_length = 48, ascii_only = FALSE)
@@ -1946,17 +2082,48 @@
 	business.name = name
 	business.direction = reject_bad_text(params["direction"], max_length = 64, ascii_only = FALSE) || "general trade"
 	business.legal = text2num(params["legal"]) ? TRUE : FALSE
-	business.size_class = istype(business_area, /area/station/service/business/medium) ? "medium" : "small"
+	business.size_class = "17x17"
 	business.owner_ckey = owner.ckey
 	business.owner_name = owner.real_name || owner.name
 	business.owner_character_key = get_cyberpunk_business_key(owner, owner_account)
 	business.account_id = business_account.account_id
 	business.terminal = terminal
 	business.business_area_type = business_area.type
+	business.hydrate_from_persistent(owner)
 	business.add_history("created by [business.owner_name] at [business_area.name]")
 	cyberpunk_businesses["[business.id]"] = business
 	terminal.business_id = business.id
 	return business
+
+/datum/controller/subsystem/economy/proc/create_cyberpunk_apartment(mob/living/owner, obj/machinery/computer/apartment_terminal/terminal, list/params)
+	if(!owner || !terminal)
+		return null
+	if(!owner.has_neural_implant())
+		return null
+	var/area/apartment_area = get_area(terminal)
+	if(!cyberpunk_is_apartment_area(apartment_area))
+		return null
+	for(var/apartment_id in cyberpunk_apartments)
+		var/datum/cyberpunk_apartment/existing_apartment = cyberpunk_apartments[apartment_id]
+		if(existing_apartment?.get_apartment_area() == apartment_area)
+			return null
+	var/datum/bank_account/owner_account = owner.get_bank_account()
+	var/name = reject_bad_text(params["name"], max_length = 48, ascii_only = FALSE)
+	if(!name)
+		name = "[owner.real_name || owner.name]'s apartment"
+	var/datum/cyberpunk_apartment/apartment = new
+	apartment.id = next_cyberpunk_apartment_id++
+	apartment.name = name
+	apartment.owner_ckey = owner.ckey
+	apartment.owner_name = owner.real_name || owner.name
+	apartment.owner_character_key = get_cyberpunk_business_key(owner, owner_account)
+	apartment.terminal = terminal
+	apartment.apartment_area_type = apartment_area.type
+	apartment.hydrate_from_persistent(owner)
+	apartment.add_history("created by [apartment.owner_name] at [apartment_area.name]")
+	cyberpunk_apartments["[apartment.id]"] = apartment
+	terminal.apartment_id = apartment.id
+	return apartment
 
 /datum/controller/subsystem/economy/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
 	if(!business)
@@ -2056,10 +2223,68 @@
 	var/area/business_area = get_business_area()
 	if(!business_area)
 		return list()
-	var/list/turfs = list()
-	for(var/list/zlevel_turfs as anything in business_area.get_zlevel_turf_lists())
-		turfs += zlevel_turfs
-	return turfs
+	return cyberpunk_area_turfs(business_area)
+
+/datum/cyberpunk_business/proc/persistent_record_id()
+	return "[owner_character_key]:[business_area_type]"
+
+/datum/cyberpunk_business/proc/to_persistent_record()
+	var/datum/bank_account/account = get_account()
+	return list(
+		"id" = persistent_record_id(),
+		"name" = name,
+		"owner_key" = owner_character_key,
+		"area_type" = "[business_area_type]",
+		"saved_at" = world.realtime,
+		"snapshot" = saved_snapshot,
+		"meta" = list(
+			"direction" = direction,
+			"legal" = legal,
+			"registered_to" = registered_to,
+			"account_balance" = account?.account_balance || 0,
+			"tax_debt" = tax_debt,
+			"tax_paid" = tax_paid,
+			"warehouse_stock" = warehouse_stock.Copy(),
+			"warehouse_enabled" = warehouse_enabled,
+			"warehouse_auto_restock" = warehouse_auto_restock,
+			"warehouse_surplus_percent" = warehouse_surplus_percent,
+			"warehouse_markup_percent" = warehouse_markup_percent,
+			"warehouse_unload_zone" = warehouse_unload_zone,
+			"employees" = employees.Copy(),
+		),
+	)
+
+/datum/cyberpunk_business/proc/hydrate_from_persistent(mob/living/user)
+	var/list/record = user?.cyberpunk_find_persistent_area_record(/datum/preference/cyberpunk_business_records, persistent_record_id())
+	if(!islist(record))
+		return FALSE
+	var/list/meta = record["meta"]
+	name = record["name"] || name
+	if(islist(meta))
+		direction = meta["direction"] || direction
+		legal = !!meta["legal"]
+		registered_to = meta["registered_to"] || registered_to
+		tax_debt = max(0, round(meta["tax_debt"] || tax_debt))
+		tax_paid = max(0, round(meta["tax_paid"] || tax_paid))
+		var/list/persistent_stock = meta["warehouse_stock"]
+		if(islist(persistent_stock))
+			warehouse_stock = persistent_stock.Copy()
+		warehouse_enabled = !!meta["warehouse_enabled"]
+		warehouse_auto_restock = !!meta["warehouse_auto_restock"]
+		warehouse_surplus_percent = clamp(round(meta["warehouse_surplus_percent"] || 0), 0, 100)
+		warehouse_markup_percent = clamp(round(meta["warehouse_markup_percent"] || 0), -100, 500)
+		warehouse_unload_zone = meta["warehouse_unload_zone"] || warehouse_unload_zone
+		var/list/persistent_employees = meta["employees"]
+		if(islist(persistent_employees))
+			employees = persistent_employees.Copy()
+		var/datum/bank_account/account = get_account()
+		if(account && isnum(meta["account_balance"]))
+			account.account_balance = max(0, round(meta["account_balance"]))
+	if(islist(record["snapshot"]))
+		saved_snapshot = record["snapshot"]
+		saved_at = world.time
+	add_history("persistent business record loaded")
+	return TRUE
 
 /datum/cyberpunk_business/proc/contains_atom(atom/checked)
 	var/area/business_area = get_business_area()
@@ -2181,15 +2406,10 @@
 	if(!istype(business_area, /area/station/service/business))
 		premises_valid = FALSE
 		premises_validation = "failed: terminal is outside a business area"
-	else if(size_class == "medium" && !istype(business_area, /area/station/service/business/medium))
-		premises_valid = FALSE
-		premises_validation = "failed: medium business is not inside a medium business area"
-	else if(size_class == "small" && !istype(business_area, /area/station/service/business/small))
-		premises_valid = FALSE
-		premises_validation = "failed: small business is not inside a small business area"
 	else
-		premises_valid = TRUE
-		premises_validation = "ok: [business_area.name]"
+		var/turf_count = length(get_business_turfs())
+		premises_valid = turf_count <= 17 * 17
+		premises_validation = premises_valid ? "ok: [business_area.name], [turf_count]/289 tiles" : "failed: [business_area.name] is larger than 17x17 ([turf_count]/289 tiles)"
 	add_history("[user.real_name || user.name] validated premises: [premises_validation]")
 	return premises_valid
 
@@ -2340,52 +2560,24 @@
 /datum/cyberpunk_business/proc/save_business(mob/living/user)
 	if(!can_save_load(user) || !terminal)
 		return FALSE
-	saved_snapshot = list()
-	var/turf/center = get_turf(terminal)
-	if(!center)
+	var/area/business_area = get_business_area()
+	if(!business_area)
 		return FALSE
-	for(var/turf/business_turf as anything in get_business_turfs())
-		for(var/atom/movable/thing as anything in business_turf.contents)
-			if(thing == terminal || ismob(thing))
-				continue
-			if(!(isitem(thing) || istype(thing, /obj/machinery) || istype(thing, /obj/structure)))
-				continue
-			var/turf/thing_turf = get_turf(thing)
-			if(!thing_turf)
-				continue
-			saved_snapshot += list(list(
-				"type" = thing.type,
-				"name" = thing.name,
-				"x" = thing_turf.x - center.x,
-				"y" = thing_turf.y - center.y,
-				"dir" = thing.dir,
-			))
+	saved_snapshot = cyberpunk_persistent_area_capture(business_area, terminal)
 	saved_at = world.time
-	add_history("[user.real_name || user.name] saved [length(saved_snapshot)] object(s)")
+	user.cyberpunk_store_persistent_area_record(/datum/preference/cyberpunk_business_records, to_persistent_record())
+	add_history("[user.real_name || user.name] saved [length(saved_snapshot["movables"])] object(s) and [length(saved_snapshot["turfs"])] turf(s)")
 	return TRUE
 
 /datum/cyberpunk_business/proc/load_business(mob/living/user)
 	if(!can_save_load(user) || !terminal || loaded_this_round || !length(saved_snapshot))
 		return FALSE
-	var/turf/center = get_turf(terminal)
-	if(!center)
-		return FALSE
 	var/area/business_area = get_business_area()
 	if(!business_area)
 		return FALSE
-	var/restored = 0
-	for(var/list/entry as anything in saved_snapshot)
-		var/path = entry["type"]
-		if(!ispath(path))
-			continue
-		var/turf/target = locate(clamp(center.x + (entry["x"] || 0), 1, world.maxx), clamp(center.y + (entry["y"] || 0), 1, world.maxy), center.z)
-		if(!target || get_area(target) != business_area)
-			continue
-		var/atom/movable/restored_atom = new path(target)
-		restored_atom.dir = entry["dir"] || SOUTH
-		restored++
+	var/restored = cyberpunk_persistent_area_restore(business_area, terminal, saved_snapshot)
 	loaded_this_round = TRUE
-	add_history("[user.real_name || user.name] loaded [restored] object(s)")
+	add_history("[user.real_name || user.name] loaded [restored] object(s); area overwritten")
 	return TRUE
 
 /datum/cyberpunk_business/proc/request_delivery(mob/living/user, item_label, amount, source_label)
@@ -2470,7 +2662,7 @@
 		"employees" = employee_records,
 		"stock" = stock_records,
 		"deliveries" = delivery_records,
-		"savedObjects" = length(saved_snapshot),
+		"savedObjects" = islist(saved_snapshot) && islist(saved_snapshot["movables"]) ? length(saved_snapshot["movables"]) : 0,
 		"savedAt" = saved_at ? DisplayTimeText(world.time - saved_at) : null,
 		"loadedThisRound" = loaded_this_round,
 		"canSaveLoad" = can_save_load(user),
@@ -2478,6 +2670,110 @@
 		"canStock" = has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK),
 		"canStaff" = has_access(user, CYBERPUNK_BUSINESS_ACCESS_STAFF),
 		"canContracts" = has_access(user, CYBERPUNK_BUSINESS_ACCESS_CONTRACTS) && legal,
+		"history" = include_history ? history : null,
+	)
+
+/datum/cyberpunk_apartment
+	var/id = 0
+	var/name = "Apartment"
+	var/owner_ckey
+	var/owner_name
+	var/owner_character_key
+	var/obj/machinery/computer/apartment_terminal/terminal
+	var/apartment_area_type
+	var/list/saved_snapshot = list()
+	var/saved_at = 0
+	var/loaded_this_round = FALSE
+	var/list/history = list()
+
+/datum/cyberpunk_apartment/proc/user_key(mob/living/user)
+	return SSeconomy.get_cyberpunk_business_key(user, user?.get_bank_account())
+
+/datum/cyberpunk_apartment/proc/add_history(message)
+	LAZYADD(history, "[round_timestamp()] - [message]")
+
+/datum/cyberpunk_apartment/proc/get_apartment_area()
+	RETURN_TYPE(/area)
+	var/area/current_area = terminal ? get_area(terminal) : null
+	if(cyberpunk_is_apartment_area(current_area))
+		return current_area
+	if(apartment_area_type)
+		var/area/stored_area = GLOB.areas_by_type[apartment_area_type]
+		if(stored_area)
+			return stored_area
+	return null
+
+/datum/cyberpunk_apartment/proc/get_apartment_turfs()
+	var/area/apartment_area = get_apartment_area()
+	if(!apartment_area)
+		return list()
+	return cyberpunk_area_turfs(apartment_area)
+
+/datum/cyberpunk_apartment/proc/can_view(mob/living/user)
+	return user_key(user) == owner_character_key
+
+/datum/cyberpunk_apartment/proc/can_save_load(mob/living/user)
+	return can_view(user) && user.has_neural_implant()
+
+/datum/cyberpunk_apartment/proc/persistent_record_id()
+	return "[owner_character_key]:[apartment_area_type]"
+
+/datum/cyberpunk_apartment/proc/to_persistent_record()
+	return list(
+		"id" = persistent_record_id(),
+		"name" = name,
+		"owner_key" = owner_character_key,
+		"area_type" = "[apartment_area_type]",
+		"saved_at" = world.realtime,
+		"snapshot" = saved_snapshot,
+		"meta" = list(),
+	)
+
+/datum/cyberpunk_apartment/proc/hydrate_from_persistent(mob/living/user)
+	var/list/record = user?.cyberpunk_find_persistent_area_record(/datum/preference/cyberpunk_apartment_records, persistent_record_id())
+	if(!islist(record))
+		return FALSE
+	name = record["name"] || name
+	if(islist(record["snapshot"]))
+		saved_snapshot = record["snapshot"]
+		saved_at = world.time
+	add_history("persistent apartment record loaded")
+	return TRUE
+
+/datum/cyberpunk_apartment/proc/save_apartment(mob/living/user)
+	if(!can_save_load(user) || !terminal)
+		return FALSE
+	var/area/apartment_area = get_apartment_area()
+	if(!apartment_area)
+		return FALSE
+	saved_snapshot = cyberpunk_persistent_area_capture(apartment_area, terminal)
+	saved_at = world.time
+	user.cyberpunk_store_persistent_area_record(/datum/preference/cyberpunk_apartment_records, to_persistent_record())
+	add_history("[user.real_name || user.name] saved [length(saved_snapshot["movables"])] object(s) and [length(saved_snapshot["turfs"])] turf(s)")
+	return TRUE
+
+/datum/cyberpunk_apartment/proc/load_apartment(mob/living/user)
+	if(!can_save_load(user) || !terminal || loaded_this_round || !length(saved_snapshot))
+		return FALSE
+	var/area/apartment_area = get_apartment_area()
+	if(!apartment_area)
+		return FALSE
+	var/restored = cyberpunk_persistent_area_restore(apartment_area, terminal, saved_snapshot)
+	loaded_this_round = TRUE
+	add_history("[user.real_name || user.name] loaded [restored] object(s); area overwritten")
+	return TRUE
+
+/datum/cyberpunk_apartment/proc/to_ui_data(mob/living/user, include_history = FALSE)
+	return list(
+		"id" = id,
+		"name" = name,
+		"owner" = owner_name,
+		"apartmentArea" = get_apartment_area()?.name || "none",
+		"tileCount" = length(get_apartment_turfs()),
+		"savedObjects" = islist(saved_snapshot) && islist(saved_snapshot["movables"]) ? length(saved_snapshot["movables"]) : 0,
+		"savedAt" = saved_at ? DisplayTimeText(world.time - saved_at) : null,
+		"loadedThisRound" = loaded_this_round,
+		"canSaveLoad" = can_save_load(user),
 		"history" = include_history ? history : null,
 	)
 

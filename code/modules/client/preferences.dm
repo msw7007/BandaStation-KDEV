@@ -332,6 +332,7 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 
 /datum/preferences/proc/compile_character_preferences(mob/user)
 	var/list/preferences = list()
+	cyberpunk_register_custom_hair_designs(cyberpunk_read_custom_hair_designs())
 
 	for (var/datum/preference/preference as anything in get_preferences_in_priority_order())
 		if (!preference.is_accessible(src))
@@ -543,6 +544,7 @@ GLOBAL_LIST_EMPTY(preferences_datums)
  */
 /datum/preferences/proc/apply_prefs_to(mob/living/carbon/human/character, icon_updates = TRUE, list/do_not_apply)
 	character.dna.features = list()
+	cyberpunk_register_custom_hair_designs(cyberpunk_read_custom_hair_designs())
 
 	for (var/datum/preference/preference as anything in get_preferences_in_priority_order())
 		if (preference.savefile_identifier != PREFERENCE_CHARACTER)

@@ -67,6 +67,9 @@
 	/// Pixel offset currently applied to press the mob against vertical_anchor_turf.
 	var/vertical_anchor_pixel_y = 0
 
+	/// Cyberpunk NPC dialog/trade/services profile. Null keeps normal mob interactions.
+	var/datum/cyberpunk_npc_profile/cyberpunk_npc_profile
+
 	/// Rate at which fire stacks should decay from this mob
 	var/fire_stack_decay_rate = -0.05
 

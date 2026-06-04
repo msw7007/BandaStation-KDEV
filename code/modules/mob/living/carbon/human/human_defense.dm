@@ -127,6 +127,8 @@
 		return TRUE
 	if(ishuman(user))
 		var/mob/living/carbon/human/H = user
+		if(!H.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK) && cyberpunk_open_npc_dialog(H))
+			return TRUE
 		dna.species.spec_attack_hand(H, src, null, modifiers)
 
 /mob/living/carbon/human/proc/disarm_precollide(datum/source, mob/living/shover, mob/living/target, obj/item/weapon)

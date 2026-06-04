@@ -36,6 +36,10 @@
 	name = "\improper Dorms Apartment 2"
 	icon_state = "apartment2"
 
+/area/station/commons/dorms/persistent_apartment
+	name = "\improper Persistent Apartment"
+	icon_state = "apartment1"
+
 /area/station/commons/dorms/barracks
 	name = "\improper Sleep Barracks"
 

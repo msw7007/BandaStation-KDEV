@@ -96,3 +96,84 @@
 	if(controller.blackboard[BB_MONKEY_TAMED])
 		return FALSE
 	return prob(100 * ((NUTRITION_LEVEL_HUNGRY - monkey.nutrition) / NUTRITION_LEVEL_HUNGRY))
+
+/**
+ * Cyberpunk city task subtree.
+ *
+ * This is a thin task router over tg AI behaviors/movement. Task data stays in
+ * the controller blackboard, while physical actions remain behaviors.
+ */
+/datum/ai_planning_subtree/cyberpunk_city_task/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	var/task = controller.blackboard[BB_CP_CITY_TASK]
+	if(!task)
+		return
+
+	var/task_state = controller.blackboard[BB_CP_CITY_TASK_STATE]
+	switch(task_state)
+		if(CP_AI_TASK_ROUTE_TO_SOURCE)
+			var/atom/source = controller.blackboard[BB_CP_CARGO_SOURCE]
+			var/turf/source_turf = get_turf(source)
+			var/turf/source_route_pawn_turf = get_turf(controller.pawn)
+			if(QDELETED(source))
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_fail_task, "source missing")
+			else if(source_turf && source_route_pawn_turf && source_turf.z != source_route_pawn_turf.z && controller.cyberpunk_prepare_z_transition(CP_AI_TASK_ROUTE_TO_SOURCE))
+				return SUBTREE_RETURN_FINISH_PLANNING
+			else if(get_dist(controller.pawn, source) <= 1)
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_PICKUP)
+			else
+				controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, BB_CP_CARGO_SOURCE)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_PICKUP)
+			controller.queue_behavior(/datum/ai_behavior/cyberpunk_pickup_cargo)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_ROUTE_TO_TARGET)
+			var/atom/target = controller.blackboard[BB_CP_CARGO_RECEIVER]
+			if(!target)
+				target = controller.blackboard[BB_CP_ROUTE_TARGET]
+			var/turf/target_turf = get_turf(target)
+			var/turf/target_route_pawn_turf = get_turf(controller.pawn)
+			if(QDELETED(target))
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_fail_task, "target missing")
+			else if(target_turf && target_route_pawn_turf && target_turf.z != target_route_pawn_turf.z && controller.cyberpunk_prepare_z_transition(CP_AI_TASK_ROUTE_TO_TARGET))
+				return SUBTREE_RETURN_FINISH_PLANNING
+			else if(get_dist(controller.pawn, target) <= 1)
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_DROPOFF)
+			else
+				controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, controller.blackboard[BB_CP_CARGO_RECEIVER] ? BB_CP_CARGO_RECEIVER : BB_CP_ROUTE_TARGET)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_ROUTE_TO_Z_TRANSITION)
+			var/atom/transition = controller.blackboard[BB_CP_ROUTE_Z_TRANSITION]
+			if(QDELETED(transition))
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_fail_task, "z transition missing")
+			else if(get_dist(controller.pawn, transition) <= 1)
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_USE_Z_TRANSITION)
+			else
+				controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, BB_CP_ROUTE_Z_TRANSITION)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_USE_Z_TRANSITION)
+			controller.queue_behavior(/datum/ai_behavior/cyberpunk_use_z_transition)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_DROPOFF)
+			controller.queue_behavior(/datum/ai_behavior/cyberpunk_deliver_cargo)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_WORKING)
+			controller.queue_behavior(/datum/ai_behavior/cyberpunk_work_task)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_RETURNING)
+			var/atom/return_point = controller.blackboard[BB_CP_ROUTE_RETURN_POINT]
+			if(QDELETED(return_point) || get_dist(controller.pawn, return_point) <= 1)
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_complete_task, "returned")
+			else
+				controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, BB_CP_ROUTE_RETURN_POINT)
+			return SUBTREE_RETURN_FINISH_PLANNING
+
+		if(CP_AI_TASK_CREATED)
+			controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_WORKING)
+			return SUBTREE_RETURN_FINISH_PLANNING

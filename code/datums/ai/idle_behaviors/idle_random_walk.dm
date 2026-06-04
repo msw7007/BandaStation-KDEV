@@ -17,6 +17,31 @@
 		living_pawn.Move(destination_turf, move_dir)
 	return TRUE
 
+/// Processes Cyberpunk city tasks in compact mode while the tg controller is idle.
+/datum/idle_behavior/cyberpunk_phantom
+	///Chance that the mob random walks if no phantom task can run.
+	var/walk_chance = 5
+
+/datum/idle_behavior/cyberpunk_phantom/perform_idle_behavior(seconds_per_tick, datum/ai_controller/controller)
+	. = ..()
+	if(controller.cyberpunk_should_process_phantom())
+		return controller.cyberpunk_process_phantom(seconds_per_tick)
+
+	var/mob/living/living_pawn = controller.pawn
+	if(!istype(living_pawn) || LAZYLEN(living_pawn.do_afters))
+		return FALSE
+	if(!SPT_PROB(walk_chance, seconds_per_tick) || !(living_pawn.mobility_flags & MOBILITY_MOVE) || !isturf(living_pawn.loc) || living_pawn.pulledby)
+		return TRUE
+
+	var/move_dir = pick(GLOB.alldirs)
+	var/turf/destination_turf = get_step(living_pawn, move_dir)
+	if(destination_turf?.can_cross_safely(living_pawn))
+		living_pawn.Move(destination_turf, move_dir)
+	return TRUE
+
+/datum/idle_behavior/cyberpunk_phantom/runner
+	walk_chance = 25
+
 /datum/idle_behavior/idle_random_walk/less_walking
 	walk_chance = 10
 

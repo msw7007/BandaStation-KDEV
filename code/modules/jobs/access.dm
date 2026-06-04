@@ -116,6 +116,8 @@
 	if(!length(direct_keys))
 		return FALSE
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in direct_keys)
+		if(!accessor)
+			return FALSE
 		if(accessor.has_cyberpunk_crypto_key(key_datum))
 			return TRUE
 	return FALSE
@@ -127,6 +129,8 @@
 	if(!length(direct_keys))
 		return FALSE
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in direct_keys)
+		if(!item)
+			return FALSE
 		if(item.has_cyberpunk_crypto_key(key_datum))
 			return TRUE
 	return FALSE
@@ -140,6 +144,8 @@
 		return TRUE
 	qdel(access_key)
 	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_POCKETS | INCLUDE_ACCESSORIES | INCLUDE_HELD))
+		if(!item)
+			continue
 		if(item.has_cyberpunk_crypto_access(access_id))
 			return TRUE
 	return FALSE

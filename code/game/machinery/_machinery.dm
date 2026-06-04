@@ -144,6 +144,8 @@
 		if(stored_key.matches(key_datum))
 			return TRUE
 	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_POCKETS | INCLUDE_ACCESSORIES | INCLUDE_HELD))
+		if(!item)
+			continue
 		if(item.has_cyberpunk_crypto_key(key_datum))
 			return TRUE
 	return FALSE
@@ -2578,3 +2580,40 @@
 /// Called if this machine is supposed to be a sabotage machine objective.
 /obj/machinery/proc/add_as_sabotage_target()
 	return
+
+// CYBERPUNK BUILD - rebuild and delete before release
+/obj/machinery/cyberpunk_wardrobe
+	name = "wardrobe"
+	desc = "A city wardrobe terminal. It stores modular clothing visuals and material signatures for later extraction."
+	icon = 'icons/obj/machines/computer.dmi'
+	icon_state = "computer"
+	density = TRUE
+	anchored = TRUE
+
+/obj/machinery/cyberpunk_wardrobe/ui_interact(mob/user, datum/tgui/ui)
+	var/datum/cyberpunk_style_designer_ui/interface = new("wardrobe")
+	interface.ui_interact(user, ui)
+
+/obj/machinery/cyberpunk_wardrobe/attack_hand(mob/living/user, list/modifiers)
+	. = ..()
+	if(.)
+		return
+	ui_interact(user)
+	return TRUE
+
+/obj/machinery/cyberpunk_wardrobe/attackby(obj/item/weapon, mob/user, list/modifiers, list/attack_modifiers)
+	var/obj/item/clothing/clothing = weapon
+	if(!istype(clothing))
+		return ..()
+	var/mob/living/living_user = user
+	if(!istype(living_user))
+		return ..()
+	if(!clothing.cyberpunk_is_modular_clothing())
+		to_chat(user, span_warning("[src] refuses non-modular or unique clothing."))
+		return TRUE
+	if(weapon != living_user.get_active_held_item())
+		to_chat(user, span_warning("Hold [weapon] in your active hand before storing it."))
+		return TRUE
+	to_chat(user, span_notice(living_user.cyberpunk_store_active_clothing_in_wardrobe()))
+	return TRUE
+// CYBERPUNK BUILD - rebuild and delete before release

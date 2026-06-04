@@ -70,6 +70,72 @@
 /// Flags for passive mobs that are easy to push around
 #define PASSIVE_AI_FLAGS (PAUSE_DURING_DO_AFTER | STOP_MOVING_WHEN_PULLED)
 
+// Cyberpunk city AI role profiles.
+#define CP_AI_ROLE_WORKER "worker"
+#define CP_AI_ROLE_CIVILIAN "civilian"
+#define CP_AI_ROLE_POLICE "police"
+#define CP_AI_ROLE_CORPORATE "corporate"
+#define CP_AI_ROLE_CORP_SECURITY "corp_security"
+#define CP_AI_ROLE_BANDIT "bandit"
+#define CP_AI_ROLE_ANTAG "antag"
+#define CP_AI_ROLE_SERVICE "service"
+#define CP_AI_ROLE_CONTRACTOR "contractor"
+
+// Cyberpunk city AI capability bitfield.
+#define CP_AI_CAP_HANDS (1<<0)
+#define CP_AI_CAP_CARGO_SLOT (1<<1)
+#define CP_AI_CAP_USE_TERMINAL (1<<2)
+#define CP_AI_CAP_USE_CONTRACTS (1<<3)
+#define CP_AI_CAP_Z_MOVE (1<<4)
+#define CP_AI_CAP_CLIMB (1<<5)
+#define CP_AI_CAP_FLY (1<<6)
+#define CP_AI_CAP_COMBAT (1<<7)
+#define CP_AI_CAP_REPAIR (1<<8)
+
+// Cyberpunk city task types.
+#define CP_AI_TASK_IDLE "idle"
+#define CP_AI_TASK_PATROL "patrol"
+#define CP_AI_TASK_WORK "work"
+#define CP_AI_TASK_DELIVERY "delivery"
+#define CP_AI_TASK_CONTRACT "contract"
+#define CP_AI_TASK_CARGO "cargo"
+#define CP_AI_TASK_GUARD "guard"
+#define CP_AI_TASK_REPAIR "repair"
+#define CP_AI_TASK_RETURN "return"
+#define CP_AI_TASK_FLEE "flee"
+
+// Cyberpunk city task states / route phases.
+#define CP_AI_TASK_CREATED "created"
+#define CP_AI_TASK_ROUTE_TO_SOURCE "route_to_source"
+#define CP_AI_TASK_PICKUP "pickup"
+#define CP_AI_TASK_ROUTE_TO_TARGET "route_to_target"
+#define CP_AI_TASK_ROUTE_TO_Z_TRANSITION "route_to_z_transition"
+#define CP_AI_TASK_USE_Z_TRANSITION "use_z_transition"
+#define CP_AI_TASK_DROPOFF "dropoff"
+#define CP_AI_TASK_WORKING "working"
+#define CP_AI_TASK_RETURNING "returning"
+#define CP_AI_TASK_COMPLETED "completed"
+#define CP_AI_TASK_FAILED "failed"
+
+// Cyberpunk cargo states.
+#define CP_AI_CARGO_NONE "none"
+#define CP_AI_CARGO_WAITING "waiting"
+#define CP_AI_CARGO_CARRIED "carried"
+#define CP_AI_CARGO_DELIVERED "delivered"
+#define CP_AI_CARGO_LOST "lost"
+
+// Cyberpunk phantom states.
+#define CP_AI_PHANTOM_INACTIVE "inactive"
+#define CP_AI_PHANTOM_TRAVELING "traveling"
+#define CP_AI_PHANTOM_WORKING "working"
+#define CP_AI_PHANTOM_WAITING "waiting"
+#define CP_AI_PHANTOM_FAILED "failed"
+#define CP_AI_PHANTOM_COMPLETED "completed"
+
+// Cyberpunk phantom simulation profiles.
+#define CP_AI_PHANTOM_PROFILE_LIGHT "light"
+#define CP_AI_PHANTOM_PROFILE_HEAVY "heavy"
+
 //Base Subtree defines
 
 ///This subtree should cancel any further planning, (Including from other subtrees)

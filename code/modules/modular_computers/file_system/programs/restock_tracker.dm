@@ -434,10 +434,55 @@
 
 /mob/living/verb/create_cyberpunk_business_terminal()
 	set name = "Create Business Terminal"
-	set desc = "Temporarily create a small business terminal for testing."
+	set desc = "Temporarily create a business terminal for testing."
 	set category = "IC"
 
 	new /obj/machinery/computer/business_terminal(get_turf(src))
+
+/obj/machinery/computer/apartment_terminal
+	name = "apartment terminal"
+	desc = "A residential persistence terminal. It binds an apartment area to a neural interface owner."
+	icon_screen = "supply"
+	icon_keyboard = "tech_key"
+	light_color = LIGHT_COLOR_BLUE
+	circuit = null
+	var/apartment_id
+
+/obj/machinery/computer/apartment_terminal/Destroy()
+	var/datum/cyberpunk_apartment/apartment = SSeconomy.get_cyberpunk_apartment(apartment_id)
+	if(apartment?.terminal == src)
+		apartment.terminal = null
+	return ..()
+
+/obj/machinery/computer/apartment_terminal/attack_hand(mob/user, list/modifiers)
+	ui_interact(user)
+	return TRUE
+
+/obj/machinery/computer/apartment_terminal/ui_interact(mob/user, datum/tgui/ui)
+	. = ..()
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "NtosApartmentTerminal", name)
+		ui.open()
+
+/obj/machinery/computer/apartment_terminal/ui_data(mob/user)
+	return cyberpunk_apartment_terminal_ui_data(user, apartment_id, src)
+
+/obj/machinery/computer/apartment_terminal/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	if(action == "select")
+		apartment_id = params["id"]
+		return TRUE
+	return cyberpunk_apartment_terminal_ui_act(action, params, ui.user, src, apartment_id)
+
+/mob/living/verb/create_cyberpunk_apartment_terminal()
+	set name = "Create Apartment Terminal"
+	set desc = "Temporarily create an apartment persistence terminal for testing."
+	set category = "IC"
+
+	new /obj/machinery/computer/apartment_terminal(get_turf(src))
 
 /obj/machinery/vending
 	var/cyberpunk_business_id
@@ -552,6 +597,26 @@
 		var/list/first_business = data["businesses"][1]
 		selected = SSeconomy.get_cyberpunk_business(first_business["id"])
 	data["business"] = selected?.to_ui_data(living_user, TRUE)
+	return data
+
+/proc/cyberpunk_apartment_terminal_ui_data(mob/user, selected_apartment_id = null, obj/machinery/computer/apartment_terminal/terminal = null)
+	var/list/data = list()
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/datum/bank_account/account = living_user?.get_bank_account()
+	data["accountName"] = account?.account_holder
+	data["accountBalance"] = account?.account_balance || 0
+	data["hasNeural"] = living_user?.has_neural_implant() || FALSE
+	data["terminalAnchored"] = terminal?.anchored || FALSE
+	data["apartments"] = list()
+	for(var/datum/cyberpunk_apartment/apartment as anything in SSeconomy.get_cyberpunk_apartments_for_user(living_user))
+		data["apartments"] += list(apartment.to_ui_data(living_user, FALSE))
+	var/datum/cyberpunk_apartment/selected = SSeconomy.get_cyberpunk_apartment(selected_apartment_id)
+	if(!selected?.can_view(living_user))
+		selected = null
+	if(!selected && length(data["apartments"]))
+		var/list/first_apartment = data["apartments"][1]
+		selected = SSeconomy.get_cyberpunk_apartment(first_apartment["id"])
+	data["apartment"] = selected?.to_ui_data(living_user, TRUE)
 	return data
 
 /proc/cyberpunk_contract_registry_ui_data(mob/user)
@@ -784,6 +849,34 @@
 				to_chat(living_user, span_notice("Linked vendors restocked from warehouse."))
 			else
 				to_chat(living_user, span_warning("No linked vendors could be restocked."))
+			return TRUE
+	return FALSE
+
+/proc/cyberpunk_apartment_terminal_ui_act(action, list/params, mob/user, obj/machinery/computer/apartment_terminal/terminal = null, selected_apartment_id = null)
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!living_user)
+		return FALSE
+	var/requested_apartment_id = params && params["id"] ? params["id"] : selected_apartment_id
+	var/datum/cyberpunk_apartment/apartment = SSeconomy.get_cyberpunk_apartment(requested_apartment_id)
+	switch(action)
+		if("create")
+			var/datum/cyberpunk_apartment/new_apartment = SSeconomy.create_cyberpunk_apartment(living_user, terminal, params)
+			if(!new_apartment)
+				to_chat(living_user, span_warning("Apartment binding failed. A functional neural interface and a terminal inside dormitory apartment area are required."))
+			else
+				to_chat(living_user, span_notice("Apartment #[new_apartment.id] linked to your neural interface."))
+			return TRUE
+		if("save")
+			if(apartment?.save_apartment(living_user))
+				to_chat(living_user, span_notice("Apartment snapshot saved."))
+			else
+				to_chat(living_user, span_warning("Unable to save apartment. Only the neural owner can save."))
+			return TRUE
+		if("load")
+			if(apartment?.load_apartment(living_user))
+				to_chat(living_user, span_notice("Apartment snapshot loaded."))
+			else
+				to_chat(living_user, span_warning("Unable to load apartment. Only one owner load is allowed per round."))
 			return TRUE
 	return FALSE
 //CYBERPUNK BUILD - rebuild and delete before release

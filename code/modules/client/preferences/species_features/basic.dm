@@ -165,9 +165,20 @@
 	return ..() || (/datum/quirk/item_quirk/bald::name in preferences.all_quirks)
 
 /datum/preference/choiced/hairstyle/init_possible_values()
+	cyberpunk_ensure_custom_hair_accessory()
 	return assoc_to_keys_features(SSaccessories.hairstyles_list)
 
+/datum/preference/choiced/hairstyle/deserialize(input, datum/preferences/preferences)
+	cyberpunk_ensure_custom_hair_accessory()
+	if(preferences)
+		cyberpunk_register_custom_hair_designs(preferences.cyberpunk_read_custom_hair_designs())
+	if(istext(input) && findtext(input, "Custom:") == 1)
+		input = "Custom Hair"
+	return ..()
+
 /datum/preference/choiced/hairstyle/icon_for(value)
+	if(value == "Custom Hair")
+		return uni_icon('icons/obj/art/artstuff.dmi', "palette")
 	var/datum/sprite_accessory/hair/hairstyle = SSaccessories.hairstyles_list[value]
 	return generate_icon_with_head_accessory(hairstyle, hairstyle?.y_offset)
 

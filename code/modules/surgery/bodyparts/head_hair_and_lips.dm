@@ -132,7 +132,8 @@
 				all_hair_overlays += image(hair_sprite_accessory.icon, icon_state = appendage_icon_state, layer = -OUTER_HAIR_LAYER, dir = image_dir)
 
 	for(var/image/hair_overlay as anything in all_hair_overlays)
-		set_overlay_hair_color(hair_overlay, hair_color)
+		if(!istype(hair_sprite_accessory, /datum/sprite_accessory/hair/cyberpunk_custom))
+			set_overlay_hair_color(hair_overlay, hair_color)
 		hair_overlay.alpha = hair_alpha
 		hair_overlay.pixel_z = hair_sprite_accessory.y_offset
 		// Emissive blocker

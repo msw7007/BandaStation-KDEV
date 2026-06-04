@@ -60,6 +60,10 @@ SUBSYSTEM_DEF(economy)
 	var/list/cyberpunk_businesses = list()
 	/// Next id for round-local businesses.
 	var/next_cyberpunk_business_id = 1
+	/// Round-local apartment registry. Keyed by apartment id.
+	var/list/cyberpunk_apartments = list()
+	/// Next id for round-local apartments.
+	var/next_cyberpunk_apartment_id = 1
 	/// Round-local business delivery jobs.
 	var/list/cyberpunk_business_deliveries = list()
 	/// Next id for round-local business delivery jobs.
@@ -109,6 +113,8 @@ SUBSYSTEM_DEF(economy)
 	cyberpunk_contract_pool_seeded = SSeconomy.cyberpunk_contract_pool_seeded
 	cyberpunk_businesses = SSeconomy.cyberpunk_businesses
 	next_cyberpunk_business_id = SSeconomy.next_cyberpunk_business_id
+	cyberpunk_apartments = SSeconomy.cyberpunk_apartments
+	next_cyberpunk_apartment_id = SSeconomy.next_cyberpunk_apartment_id
 	cyberpunk_business_deliveries = SSeconomy.cyberpunk_business_deliveries
 	next_cyberpunk_business_delivery_id = SSeconomy.next_cyberpunk_business_delivery_id
 	cyberpunk_corporations = SSeconomy.cyberpunk_corporations

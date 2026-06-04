@@ -27,6 +27,7 @@
 	med_hud_set_status()
 
 /mob/living/Destroy()
+	QDEL_NULL(cyberpunk_npc_profile)
 	if(vertical_state_timer != TIMER_ID_NULL)
 		deltimer(vertical_state_timer)
 		vertical_state_timer = TIMER_ID_NULL
@@ -669,6 +670,1235 @@
 		account = I.registered_account
 		remember_data("bank_account", account.account_id)
 		return account
+
+// CYBERPUNK BUILD - rebuild and delete before release
+/// Assigns a reusable Cyberpunk NPC interaction profile to this mob.
+/mob/living/proc/cyberpunk_setup_npc_profile(
+	greeting = "Need something?",
+	title = "street contact",
+	faction = "independent",
+	list/dialog_options,
+	list/shop_items,
+	list/services,
+)
+	QDEL_NULL(cyberpunk_npc_profile)
+	cyberpunk_npc_profile = new(src, greeting, title, faction)
+	if(dialog_options)
+		for(var/datum/cyberpunk_npc_dialog_option/option as anything in dialog_options)
+			cyberpunk_npc_profile.dialog_options += option
+	if(shop_items)
+		for(var/datum/cyberpunk_npc_shop_item/item as anything in shop_items)
+			cyberpunk_npc_profile.shop_items += item
+	if(services)
+		for(var/datum/cyberpunk_npc_service/service as anything in services)
+			cyberpunk_npc_profile.services += service
+	return cyberpunk_npc_profile
+
+/// Minimal test setup for temporary city NPCs until map roles bind real profiles.
+/mob/living/proc/cyberpunk_setup_default_npc_vendor()
+	var/list/dialog = list(
+		new /datum/cyberpunk_npc_dialog_option("rumors", "Ask about the street", "Work moves through contracts, corps move through debt, and everyone else moves when credits do."),
+		new /datum/cyberpunk_npc_dialog_option("services", "Ask about services", "I can trade, patch you up, repair your gear, or route you to a stylist/designer booth."),
+	)
+	var/list/shop = list(
+		new /datum/cyberpunk_npc_shop_item("food_bread", "Ready food", "Cheap ready meal.", /obj/item/food/bread/plain, "food", 35, 10, 8),
+		new /datum/cyberpunk_npc_shop_item("water", "Water", "Sealed drinking water.", /obj/item/reagent_containers/cup/soda_cans/sodawater, "water", 20, 5, 12),
+		new /datum/cyberpunk_npc_shop_item("cigarettes", "Cigarettes", "A disposable pack of smokes.", /obj/item/storage/fancy/cigarettes, "cigarettes", 45, 8, 6),
+		new /datum/cyberpunk_npc_shop_item("toy_ball", "Toy", "Cheap distraction.", /obj/item/toy/basketball, "toys", 70, 15, 2),
+		new /datum/cyberpunk_npc_shop_item("jumpsuit", "Equipment", "Basic clothes.", /obj/item/clothing/under/color/grey, "equipment", 90, 20, 3),
+		new /datum/cyberpunk_npc_shop_item("interface", "Implant", "Basic neural interface.", /obj/item/organ/cyberimp/bci, "implants", 900, 180, 1),
+		new /datum/cyberpunk_npc_shop_item("parts", "Machine parts", "Generic stock part.", /obj/item/stock_parts/scanning_module, "parts", 120, 25, 4),
+	)
+	var/list/services = list(
+		new /datum/cyberpunk_npc_service/healing,
+		new /datum/cyberpunk_npc_service/repair,
+		new /datum/cyberpunk_npc_service/designer,
+		new /datum/cyberpunk_npc_service/stylist,
+	)
+	return cyberpunk_setup_npc_profile("What are you buying?", "street vendor", "independent", dialog, shop, services)
+
+/mob/living/proc/cyberpunk_can_talk_to_npc(mob/living/user)
+	if(!cyberpunk_npc_profile || QDELETED(cyberpunk_npc_profile))
+		return FALSE
+	if(stat != CONSCIOUS)
+		return FALSE
+	if(!istype(user) || user.stat != CONSCIOUS)
+		return FALSE
+	if(!Adjacent(user))
+		to_chat(user, span_warning("You need to be closer."))
+		return FALSE
+	return TRUE
+
+/mob/living/proc/cyberpunk_open_npc_dialog(mob/living/user)
+	if(!cyberpunk_can_talk_to_npc(user))
+		return FALSE
+	cyberpunk_npc_profile.open_dialog(user)
+	return TRUE
+
+/mob/living/proc/cyberpunk_open_npc_trade(mob/living/user)
+	if(!cyberpunk_can_talk_to_npc(user))
+		return FALSE
+	cyberpunk_npc_profile.open_trade(user)
+	return TRUE
+
+/mob/living/verb/cyberpunk_talk_to_npc()
+	set name = "Talk to NPC"
+	set category = "IC"
+	set src in oview(1)
+
+	var/mob/living/user = usr
+	cyberpunk_open_npc_dialog(user)
+
+/mob/living/verb/cyberpunk_trade_with_npc()
+	set name = "Trade with NPC"
+	set category = "IC"
+	set src in oview(1)
+
+	var/mob/living/user = usr
+	cyberpunk_open_npc_trade(user)
+
+/mob/living/verb/cyberpunk_make_test_vendor()
+	set name = "Make Test NPC Vendor"
+	set category = "IC"
+
+	var/turf/spawn_turf = get_step(src, dir) || get_turf(src)
+	var/mob/living/carbon/human/cyberpunk_npc/vendor/npc = new(spawn_turf)
+	to_chat(src, span_notice("Spawned [npc] with full temporary vendor, trade, treatment, repair, designer and stylist services."))
+	npc.cyberpunk_open_npc_dialog(src)
+
+/mob/living/verb/cyberpunk_apply_test_vendor_profile()
+	set name = "Apply Test Vendor Profile"
+	set category = "IC"
+	set src in oview(1)
+
+	cyberpunk_setup_default_npc_vendor()
+	to_chat(usr, span_notice("[src] now has a temporary NPC vendor profile."))
+
+/mob/living/verb/cyberpunk_spawn_test_npc()
+	set name = "Spawn Test Cyberpunk NPC"
+	set category = "IC"
+
+	var/list/choices = list(
+		"general vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor,
+		"food vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/food,
+		"water vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/water,
+		"smokes vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/smokes,
+		"gear vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/gear,
+		"implant vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/implants,
+		"parts vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/parts,
+		"bystander" = /mob/living/carbon/human/cyberpunk_npc/bystander,
+		"runner" = /mob/living/carbon/human/cyberpunk_npc/runner,
+		"worker" = /mob/living/carbon/human/cyberpunk_npc/worker,
+		"security test heavy" = /mob/living/carbon/human/cyberpunk_npc/security,
+	)
+	var/picked = tgui_input_list(src, "Spawn which temporary NPC?", "Cyberpunk NPC", choices)
+	if(!picked)
+		return
+	var/turf/spawn_turf = get_step(src, dir) || get_turf(src)
+	var/npc_type = choices[picked]
+	var/mob/living/carbon/human/cyberpunk_npc/npc = new npc_type(spawn_turf)
+	to_chat(src, span_notice("Spawned [npc] ([picked])."))
+
+/mob/living/verb/cyberpunk_create_test_wardrobe()
+	set name = "Create Test Wardrobe"
+	set category = "IC"
+
+	var/turf/spawn_turf = get_step(src, dir) || get_turf(src)
+	var/obj/machinery/cyberpunk_wardrobe/wardrobe = new(spawn_turf)
+	to_chat(src, span_notice("Created [wardrobe]."))
+
+/mob/living/carbon/human/cyberpunk_npc
+	real_name = "city local"
+	name = "city local"
+	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city
+	var/cyberpunk_stationary_npc = FALSE
+	var/cyberpunk_vendor_profile = "local"
+	var/list/cyberpunk_vendor_categories
+
+/mob/living/carbon/human/cyberpunk_npc/Initialize(mapload)
+	. = ..()
+	set_species(/datum/species/human)
+	equip_to_slot_or_del(new /obj/item/clothing/under/color/grey(src), ITEM_SLOT_ICLOTHING, initial = TRUE)
+	equip_to_slot_or_del(new /obj/item/clothing/shoes/sneakers/black(src), ITEM_SLOT_FEET, initial = TRUE)
+	if(cyberpunk_stationary_npc)
+		ADD_TRAIT(src, TRAIT_IMMOBILIZED, "cyberpunk_stationary_npc")
+		QDEL_NULL(ai_controller)
+	cyberpunk_setup_city_npc_profile()
+	update_body()
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_setup_city_npc_profile()
+	var/list/dialog = list(
+		new /datum/cyberpunk_npc_dialog_option("street", "Ask about the street", "The city never sleeps. It just changes who pays the electric bill."),
+		new /datum/cyberpunk_npc_dialog_option("work", "Ask about work", "Contracts are cleaner than favors. Favors always come back with interest."),
+	)
+	var/list/services = list()
+	if(cyberpunk_stationary_npc)
+		services = list(
+			new /datum/cyberpunk_npc_service/healing,
+			new /datum/cyberpunk_npc_service/repair,
+			new /datum/cyberpunk_npc_service/designer,
+			new /datum/cyberpunk_npc_service/stylist,
+		)
+	cyberpunk_setup_npc_profile("Need something?", cyberpunk_vendor_profile, "independent", dialog, cyberpunk_city_shop_items(cyberpunk_vendor_categories), services)
+
+/proc/cyberpunk_city_shop_items(list/categories)
+	var/list/items = list(
+		new /datum/cyberpunk_npc_shop_item("food_bread", "Ready food", "Cheap ready meal.", /obj/item/food/bread/plain, "food", 35, 10, 8),
+		new /datum/cyberpunk_npc_shop_item("water", "Water", "Sealed drinking water.", /obj/item/reagent_containers/cup/soda_cans/sodawater, "water", 20, 5, 12),
+		new /datum/cyberpunk_npc_shop_item("cigarettes", "Cigarettes", "A disposable pack of smokes.", /obj/item/storage/fancy/cigarettes, "cigarettes", 45, 8, 6),
+		new /datum/cyberpunk_npc_shop_item("toy_ball", "Toy", "Cheap distraction.", /obj/item/toy/basketball, "toys", 70, 15, 2),
+		new /datum/cyberpunk_npc_shop_item("jumpsuit", "Equipment", "Basic clothes.", /obj/item/clothing/under/color/grey, "equipment", 90, 20, 3),
+		new /datum/cyberpunk_npc_shop_item("interface", "Implant", "Basic neural interface.", /obj/item/organ/cyberimp/bci, "implants", 900, 180, 1),
+		new /datum/cyberpunk_npc_shop_item("parts", "Machine parts", "Generic stock part.", /obj/item/stock_parts/scanning_module, "parts", 120, 25, 4),
+	)
+	if(!length(categories))
+		return items
+	var/list/filtered = list()
+	for(var/datum/cyberpunk_npc_shop_item/item as anything in items)
+		if(item.category in categories)
+			filtered += item
+		else
+			qdel(item)
+	return filtered
+
+/mob/living/carbon/human/cyberpunk_npc/vendor
+	real_name = "street vendor"
+	name = "street vendor"
+	ai_controller = null
+	cyberpunk_stationary_npc = TRUE
+	cyberpunk_vendor_profile = "street vendor"
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/food
+	real_name = "food vendor"
+	name = "food vendor"
+	cyberpunk_vendor_profile = "food vendor"
+	cyberpunk_vendor_categories = list("food")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/water
+	real_name = "water vendor"
+	name = "water vendor"
+	cyberpunk_vendor_profile = "water vendor"
+	cyberpunk_vendor_categories = list("water")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/smokes
+	real_name = "smoke vendor"
+	name = "smoke vendor"
+	cyberpunk_vendor_profile = "smoke vendor"
+	cyberpunk_vendor_categories = list("cigarettes")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/gear
+	real_name = "gear vendor"
+	name = "gear vendor"
+	cyberpunk_vendor_profile = "gear vendor"
+	cyberpunk_vendor_categories = list("equipment", "toys")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/implants
+	real_name = "implant vendor"
+	name = "implant vendor"
+	cyberpunk_vendor_profile = "implant vendor"
+	cyberpunk_vendor_categories = list("implants")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/parts
+	real_name = "parts vendor"
+	name = "parts vendor"
+	cyberpunk_vendor_profile = "parts vendor"
+	cyberpunk_vendor_categories = list("parts")
+
+/mob/living/carbon/human/cyberpunk_npc/bystander
+	real_name = "bystander"
+	name = "bystander"
+	cyberpunk_vendor_profile = "bystander"
+	cyberpunk_vendor_categories = list()
+
+/mob/living/carbon/human/cyberpunk_npc/runner
+	real_name = "runner"
+	name = "runner"
+	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/runner
+	cyberpunk_vendor_profile = "runner"
+	cyberpunk_vendor_categories = list()
+
+/mob/living/carbon/human/cyberpunk_npc/worker
+	real_name = "worker"
+	name = "worker"
+	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/worker
+	cyberpunk_vendor_profile = "worker"
+	cyberpunk_vendor_categories = list("parts", "water")
+
+/mob/living/carbon/human/cyberpunk_npc/security
+	real_name = "security contractor"
+	name = "security contractor"
+	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/security
+	cyberpunk_vendor_profile = "security contractor"
+	cyberpunk_vendor_categories = list("equipment")
+
+/datum/cyberpunk_npc_profile
+	var/mob/living/owner
+	var/greeting = "Need something?"
+	var/title = "contact"
+	var/faction = "independent"
+	var/list/dialog_options = list()
+	var/list/shop_items = list()
+	var/list/services = list()
+	var/selected_dialog
+	var/last_message
+
+/datum/cyberpunk_npc_profile/New(mob/living/new_owner, new_greeting, new_title, new_faction)
+	owner = new_owner
+	if(!isnull(new_greeting))
+		greeting = new_greeting
+	if(!isnull(new_title))
+		title = new_title
+	if(!isnull(new_faction))
+		faction = new_faction
+
+/datum/cyberpunk_npc_profile/Destroy()
+	owner = null
+	QDEL_LIST(dialog_options)
+	QDEL_LIST(shop_items)
+	QDEL_LIST(services)
+	return ..()
+
+/datum/cyberpunk_npc_profile/proc/open_dialog(mob/living/user)
+	var/datum/cyberpunk_npc_dialog_ui/ui_datum = new(src)
+	ui_datum.ui_interact(user)
+
+/datum/cyberpunk_npc_profile/proc/open_trade(mob/living/user)
+	var/datum/cyberpunk_npc_trade_ui/ui_datum = new(src)
+	ui_datum.ui_interact(user)
+
+/datum/cyberpunk_npc_profile/proc/base_ui_data(mob/living/user)
+	var/datum/bank_account/account = user?.get_bank_account()
+	return list(
+		"npcName" = owner?.name || "unknown",
+		"title" = title,
+		"faction" = faction,
+		"greeting" = greeting,
+		"lastMessage" = last_message,
+		"balance" = account?.account_balance || 0,
+	)
+
+/datum/cyberpunk_npc_profile/proc/dialog_ui_data(mob/living/user)
+	var/list/data = base_ui_data(user)
+	var/list/options = list()
+	for(var/datum/cyberpunk_npc_dialog_option/option as anything in dialog_options)
+		options += list(option.to_ui_data())
+	var/list/service_data = list()
+	for(var/datum/cyberpunk_npc_service/service as anything in services)
+		service_data += list(service.to_ui_data(user, owner))
+	data["dialogOptions"] = options
+	data["services"] = service_data
+	data["canTrade"] = length(shop_items) > 0
+	var/datum/cyberpunk_npc_dialog_option/selected = get_dialog_option(selected_dialog)
+	data["selectedText"] = selected?.text || greeting
+	return data
+
+/datum/cyberpunk_npc_profile/proc/trade_ui_data(mob/living/user)
+	var/list/data = base_ui_data(user)
+	var/list/items = list()
+	for(var/datum/cyberpunk_npc_shop_item/item as anything in shop_items)
+		items += list(item.to_ui_data())
+	data["items"] = items
+	data["sellable"] = get_sellable_items(user)
+	return data
+
+/datum/cyberpunk_npc_profile/proc/get_dialog_option(option_id)
+	for(var/datum/cyberpunk_npc_dialog_option/option as anything in dialog_options)
+		if(option.id == option_id)
+			return option
+
+/datum/cyberpunk_npc_profile/proc/get_shop_item(item_id)
+	for(var/datum/cyberpunk_npc_shop_item/item as anything in shop_items)
+		if(item.id == item_id)
+			return item
+
+/datum/cyberpunk_npc_profile/proc/get_service(service_id)
+	for(var/datum/cyberpunk_npc_service/service as anything in services)
+		if(service.id == service_id)
+			return service
+
+/datum/cyberpunk_npc_profile/proc/get_sellable_items(mob/living/user)
+	var/list/sellable = list()
+	if(!istype(user))
+		return sellable
+	for(var/obj/item/held as anything in user.held_items)
+		if(!held)
+			continue
+		var/price = get_sell_price(held)
+		if(price <= 0)
+			continue
+		sellable += list(list(
+			"ref" = REF(held),
+			"name" = held.name,
+			"price" = price,
+		))
+	return sellable
+
+/datum/cyberpunk_npc_profile/proc/get_sell_price(obj/item/sold_item)
+	for(var/datum/cyberpunk_npc_shop_item/item as anything in shop_items)
+		if(istype(sold_item, item.item_path) && item.sell_price > 0)
+			return item.sell_price
+	return 0
+
+/datum/cyberpunk_npc_profile/proc/buy_item(mob/living/user, item_id)
+	var/datum/cyberpunk_npc_shop_item/item = get_shop_item(item_id)
+	if(!item)
+		return FALSE
+	var/result = item.buy(user, owner)
+	last_message = result
+	return TRUE
+
+/datum/cyberpunk_npc_profile/proc/sell_item(mob/living/user, item_ref)
+	var/obj/item/sold_item = locate(item_ref)
+	if(!sold_item || !(sold_item in user.held_items))
+		last_message = "Hold the item you want to sell."
+		return FALSE
+	var/price = get_sell_price(sold_item)
+	if(price <= 0)
+		last_message = "This trader is not buying that."
+		return FALSE
+	var/datum/bank_account/account = user.get_bank_account()
+	if(!account)
+		last_message = "No account found."
+		return FALSE
+	account.adjust_money(price, "NPC trade: [sold_item.name]")
+	qdel(sold_item)
+	last_message = "Sold for [price] credits."
+	return TRUE
+
+/datum/cyberpunk_npc_profile/proc/use_service(mob/living/user, service_id)
+	var/datum/cyberpunk_npc_service/service = get_service(service_id)
+	if(!service)
+		return FALSE
+	last_message = service.perform(user, owner)
+	return TRUE
+
+/datum/cyberpunk_npc_dialog_option
+	var/id
+	var/label
+	var/text
+
+/datum/cyberpunk_npc_dialog_option/New(new_id, new_label, new_text)
+	id = new_id
+	label = new_label
+	text = new_text
+
+/datum/cyberpunk_npc_dialog_option/proc/to_ui_data()
+	return list(
+		"id" = id,
+		"label" = label,
+		"text" = text,
+	)
+
+/datum/cyberpunk_npc_shop_item
+	var/id
+	var/name
+	var/description
+	var/item_path
+	var/category = "misc"
+	var/buy_price = 100
+	var/sell_price = 10
+	var/stock = -1
+
+/datum/cyberpunk_npc_shop_item/New(new_id, new_name, new_description, new_item_path, new_category, new_buy_price, new_sell_price, new_stock = -1)
+	id = new_id
+	name = new_name
+	description = new_description
+	item_path = new_item_path
+	category = new_category
+	buy_price = new_buy_price
+	sell_price = new_sell_price
+	stock = new_stock
+
+/datum/cyberpunk_npc_shop_item/proc/to_ui_data()
+	return list(
+		"id" = id,
+		"name" = name,
+		"description" = description,
+		"category" = category,
+		"buyPrice" = buy_price,
+		"sellPrice" = sell_price,
+		"stock" = stock,
+	)
+
+/datum/cyberpunk_npc_shop_item/proc/buy(mob/living/user, mob/living/vendor)
+	if(stock == 0)
+		return "Out of stock."
+	var/datum/bank_account/account = user.get_bank_account()
+	if(!account)
+		return "No account found."
+	if(!account.adjust_money(-buy_price, "NPC trade: [name]"))
+		return "Not enough credits."
+	var/obj/item/bought = new item_path(get_turf(user))
+	if(!user.put_in_hands(bought))
+		bought.forceMove(get_turf(user))
+	if(stock > 0)
+		stock--
+	return "Bought [bought.name] for [buy_price] credits."
+
+/datum/cyberpunk_npc_service
+	var/id = "service"
+	var/name = "Service"
+	var/description = "A city service."
+	var/base_price = 0
+
+/datum/cyberpunk_npc_service/proc/to_ui_data(mob/living/user, mob/living/vendor)
+	return list(
+		"id" = id,
+		"name" = name,
+		"description" = description,
+		"price" = get_price(user, vendor),
+		"available" = TRUE,
+	)
+
+/datum/cyberpunk_npc_service/proc/get_price(mob/living/user, mob/living/vendor)
+	return base_price
+
+/datum/cyberpunk_npc_service/proc/perform(mob/living/user, mob/living/vendor)
+	var/datum/bank_account/account = user.get_bank_account()
+	var/price = get_price(user, vendor)
+	if(price > 0 && (!account || !account.adjust_money(-price, "NPC service: [name]")))
+		return "Not enough credits."
+	return "Service queued."
+
+/datum/cyberpunk_npc_service/healing
+	id = "healing"
+	name = "Treatment"
+	description = "Heal damage. Body damage costs 5 credits per unit; organ damage costs 10."
+
+/datum/cyberpunk_npc_service/healing/get_price(mob/living/user, mob/living/vendor)
+	return round(user.get_total_damage() * 5 + user.get_organ_loss(ORGAN_SLOT_BRAIN) * 10)
+
+/datum/cyberpunk_npc_service/healing/perform(mob/living/user, mob/living/vendor)
+	var/datum/bank_account/account = user.get_bank_account()
+	if(!account)
+		return "No account found."
+	var/credits = account.account_balance
+	var/healed_body = 0
+	var/list/damage_types = list(BRUTE, BURN, TOX, OXY)
+	for(var/damage_type in damage_types)
+		var/damage = round(user.get_current_damage_of_type(damage_type))
+		var/can_heal = min(damage, FLOOR(credits / 5, 1))
+		if(can_heal <= 0)
+			continue
+		if(!account.adjust_money(-(can_heal * 5), "NPC treatment: body damage"))
+			break
+		user.heal_damage_type(can_heal, damage_type)
+		credits -= can_heal * 5
+		healed_body += can_heal
+	var/brain_damage = round(user.get_organ_loss(ORGAN_SLOT_BRAIN))
+	var/healed_organs = min(brain_damage, FLOOR(credits / 10, 1))
+	if(healed_organs > 0 && account.adjust_money(-(healed_organs * 10), "NPC treatment: organ damage"))
+		user.adjust_organ_loss(ORGAN_SLOT_BRAIN, -healed_organs)
+	user.updatehealth()
+	if(!healed_body && !healed_organs)
+		return "No treatable damage or not enough credits."
+	return "Treated [healed_body] body damage and [healed_organs] organ damage."
+
+/datum/cyberpunk_npc_service/repair
+	id = "repair"
+	name = "Gear repair"
+	description = "Repair held and worn gear. Costs 4 credits per integrity unit."
+
+/datum/cyberpunk_npc_service/repair/proc/get_repairable_items(mob/living/user)
+	var/list/items = list()
+	for(var/obj/item/item as anything in user.get_equipped_items(INCLUDE_HELD|INCLUDE_POCKETS|INCLUDE_PROSTHETICS))
+		if(item.max_integrity > 0 && item.get_integrity() < item.max_integrity)
+			items |= item
+	return items
+
+/datum/cyberpunk_npc_service/repair/get_price(mob/living/user, mob/living/vendor)
+	var/total = 0
+	for(var/obj/item/item as anything in get_repairable_items(user))
+		total += max(0, item.max_integrity - item.get_integrity()) * 4
+	return round(total)
+
+/datum/cyberpunk_npc_service/repair/to_ui_data(mob/living/user, mob/living/vendor)
+	var/list/data = ..()
+	var/list/items = list()
+	for(var/obj/item/item as anything in get_repairable_items(user))
+		items += list(list(
+			"name" = item.name,
+			"integrity" = round(item.get_integrity()),
+			"maxIntegrity" = item.max_integrity,
+		))
+	data["items"] = items
+	return data
+
+/datum/cyberpunk_npc_service/repair/perform(mob/living/user, mob/living/vendor)
+	var/datum/bank_account/account = user.get_bank_account()
+	if(!account)
+		return "No account found."
+	var/credits = account.account_balance
+	var/repaired = 0
+	for(var/obj/item/item as anything in get_repairable_items(user))
+		var/missing = max(0, item.max_integrity - item.get_integrity())
+		var/can_repair = min(missing, FLOOR(credits / 4, 1))
+		if(can_repair <= 0)
+			continue
+		if(!account.adjust_money(-(can_repair * 4), "NPC repair: [item.name]"))
+			break
+		item.repair_damage(can_repair)
+		credits -= can_repair * 4
+		repaired += can_repair
+	if(!repaired)
+		return "No damaged gear or not enough credits."
+	return "Repaired [repaired] integrity."
+
+/datum/cyberpunk_npc_service/designer
+	id = "designer"
+	name = "Designer"
+	description = "Open clothing design routing for modular clothes."
+	base_price = 700
+
+/datum/cyberpunk_npc_service/designer/perform(mob/living/user, mob/living/vendor)
+	. = ..()
+	if(. != "Service queued.")
+		return .
+	var/datum/cyberpunk_style_designer_ui/designer = new("clothing")
+	designer.ui_interact(user)
+	return "Designer routing paid. Clothing design module opened."
+
+/datum/cyberpunk_npc_service/stylist
+	id = "stylist"
+	name = "Stylist"
+	description = "Open hairstyle styling and persistent custom hair cache."
+	base_price = 500
+
+/datum/cyberpunk_npc_service/stylist/perform(mob/living/user, mob/living/vendor)
+	. = ..()
+	if(. != "Service queued.")
+		return .
+	var/datum/cyberpunk_style_designer_ui/stylist = new("hair")
+	stylist.ui_interact(user)
+	return "Stylist routing paid. Style module opened."
+
+#define CYBERPUNK_STYLE_DESIGNER_HAIR "hair"
+#define CYBERPUNK_STYLE_DESIGNER_CLOTHING "clothing"
+#define CYBERPUNK_STYLE_DESIGNER_WARDROBE "wardrobe"
+#define CYBERPUNK_CUSTOM_HAIR_NAME "Custom Hair"
+#define CYBERPUNK_CUSTOM_HAIR_ICON_STATE "custom_cyberpunk_hair"
+#define CYBERPUNK_ACTIVE_HAIR_DESIGN_ID "active_custom_hair"
+#define CYBERPUNK_STYLE_DESIGNER_MAX_PAYLOAD 65535
+#define CYBERPUNK_CUSTOM_HAIR_RAW_SAVE_KEY "cyberpunk_custom_hair_designs_raw"
+
+/mob/living/proc/cyberpunk_prefs()
+	return client?.prefs
+
+/datum/preferences/proc/cyberpunk_read_custom_hair_designs()
+	var/list/designs = read_preference(/datum/preference/cyberpunk_custom_hair_designs)
+	if(LAZYLEN(designs))
+		return designs
+	var/list/save_data = get_save_data_for_savefile_identifier(PREFERENCE_CHARACTER)
+	var/raw_designs = save_data?[CYBERPUNK_CUSTOM_HAIR_RAW_SAVE_KEY]
+	if(istext(raw_designs))
+		raw_designs = safe_json_decode(raw_designs)
+	var/list/sanitized_raw_designs = cyberpunk_sanitize_visual_design_records(raw_designs)
+	if(LAZYLEN(sanitized_raw_designs))
+		write_preference(GLOB.preference_entries[/datum/preference/cyberpunk_custom_hair_designs], sanitized_raw_designs)
+	return sanitized_raw_designs
+
+/mob/living/proc/cyberpunk_read_visual_designs(preference_type)
+	var/datum/preferences/preferences = cyberpunk_prefs()
+	if(!preferences)
+		return list()
+	if(preference_type == /datum/preference/cyberpunk_custom_hair_designs)
+		return preferences.cyberpunk_read_custom_hair_designs()
+	return preferences.read_preference(preference_type) || list()
+
+/mob/living/proc/cyberpunk_write_visual_designs(preference_type, list/designs)
+	var/datum/preferences/preferences = cyberpunk_prefs()
+	if(!preferences)
+		return FALSE
+	if(!preferences.write_preference(GLOB.preference_entries[preference_type], designs))
+		return FALSE
+	preferences.recently_updated_keys |= preference_type
+	preferences.save_character()
+	preferences.save_preferences()
+	return TRUE
+
+/mob/living/proc/cyberpunk_write_hair_design_and_selection(list/design, custom_hair_name)
+	var/datum/preferences/preferences = cyberpunk_prefs()
+	if(!preferences)
+		return FALSE
+	design = cyberpunk_sanitize_visual_design_record(design)
+	if(!design || !custom_hair_name)
+		return FALSE
+	var/list/designs = cyberpunk_read_visual_designs(/datum/preference/cyberpunk_custom_hair_designs)
+	var/list/result = list()
+	for(var/list/existing as anything in designs)
+		if(existing["id"] == design["id"])
+			continue
+		result += list(existing)
+	result = list(design) + result
+	if(!preferences.write_preference(GLOB.preference_entries[/datum/preference/cyberpunk_custom_hair_designs], result))
+		return FALSE
+	var/list/save_data = preferences.get_save_data_for_savefile_identifier(PREFERENCE_CHARACTER)
+	if(save_data)
+		save_data[CYBERPUNK_CUSTOM_HAIR_RAW_SAVE_KEY] = json_encode(result)
+	if(!preferences.write_preference(GLOB.preference_entries[/datum/preference/choiced/hairstyle], custom_hair_name))
+		return FALSE
+	if(!preferences.write_preference(GLOB.preference_entries[/datum/preference/color/hair_color], COLOR_WHITE))
+		return FALSE
+	preferences.recently_updated_keys |= /datum/preference/cyberpunk_custom_hair_designs
+	preferences.recently_updated_keys |= /datum/preference/choiced/hairstyle
+	preferences.recently_updated_keys |= /datum/preference/color/hair_color
+	preferences.character_preview_view?.update_body()
+	preferences.save_character()
+	preferences.save_preferences()
+	return TRUE
+
+/mob/living/proc/cyberpunk_store_visual_design(preference_type, list/design)
+	design = cyberpunk_sanitize_visual_design_record(design)
+	if(!design)
+		return FALSE
+	var/list/designs = cyberpunk_read_visual_designs(preference_type)
+	var/list/result = list()
+	for(var/list/existing as anything in designs)
+		if(existing["id"] == design["id"])
+			continue
+		result += list(existing)
+	result = list(design) + result
+	return cyberpunk_write_visual_designs(preference_type, result)
+
+/mob/living/proc/cyberpunk_remove_visual_design(preference_type, design_id)
+	if(!design_id)
+		return FALSE
+	var/list/designs = cyberpunk_read_visual_designs(preference_type)
+	var/list/result = list()
+	var/removed = FALSE
+	for(var/list/existing as anything in designs)
+		if(existing["id"] == design_id)
+			removed = TRUE
+			continue
+		result += list(existing)
+	if(!removed)
+		return FALSE
+	return cyberpunk_write_visual_designs(preference_type, result)
+
+/mob/living/proc/cyberpunk_wardrobe_limit()
+	var/donator_level = client?.get_donator_level() || BASIC_DONATOR_LEVEL
+	return 1 + max(0, donator_level)
+
+/datum/sprite_accessory/hair/cyberpunk_custom
+	name = CYBERPUNK_CUSTOM_HAIR_NAME
+	icon_state = CYBERPUNK_CUSTOM_HAIR_ICON_STATE
+	color_src = null
+	natural_spawn = FALSE
+	locked = FALSE
+	var/icon/runtime_icon
+
+/proc/cyberpunk_blank_custom_hair_icon()
+	RETURN_TYPE(/icon)
+	var/icon/result_icon = icon('icons/effects/effects.dmi', "nothing")
+	for(var/direction in list(NORTH, SOUTH, EAST, WEST))
+		result_icon.Insert(icon('icons/effects/effects.dmi', "nothing"), CYBERPUNK_CUSTOM_HAIR_ICON_STATE, direction, 1)
+	return icon(result_icon, CYBERPUNK_CUSTOM_HAIR_ICON_STATE)
+
+/datum/sprite_accessory/hair/cyberpunk_custom/getCachedIcon(list/hair_masks)
+	var/icon/cached_icon = runtime_icon ? icon(runtime_icon) : cyberpunk_blank_custom_hair_icon()
+	if(LAZYLEN(hair_masks))
+		for(var/datum/hair_mask/mask as anything in hair_masks)
+			var/icon/mask_icon = icon(mask.icon, mask.icon_state)
+			mask_icon.Shift(SOUTH, y_offset)
+			cached_icon.Blend(mask_icon, ICON_ADD)
+	return cached_icon
+
+/proc/cyberpunk_visual_design_has_pixel_payload(list/design)
+	if(!islist(design))
+		return FALSE
+	var/list/directions = design["directions"]
+	if(islist(directions))
+		for(var/key in list("north", "south", "east", "west"))
+			if(length("[directions[key] || ""]"))
+				return TRUE
+	return length("[design["item_icon"] || ""]")
+
+/proc/cyberpunk_bake_sparse_pixel_layer(payload)
+	RETURN_TYPE(/icon)
+	if(!istext(payload) || !length(payload))
+		return null
+	var/icon/layer_icon = icon('icons/effects/effects.dmi', "nothing")
+	var/drew_pixel = FALSE
+	for(var/pixel_entry in splittext(payload, ";"))
+		var/colon_position = findtext(pixel_entry, ":")
+		if(!colon_position)
+			continue
+		var/pixel_index = text2num(copytext(pixel_entry, 1, colon_position))
+		if(isnull(pixel_index) || pixel_index < 0 || pixel_index >= 1024)
+			continue
+		var/color = sanitize_hexcolor(copytext(pixel_entry, colon_position + 1), include_crunch = TRUE)
+		if(!color)
+			continue
+		var/draw_x = (pixel_index % 32) + 1
+		var/draw_y = 32 - round(pixel_index / 32)
+		DrawPixel(layer_icon, color, draw_x, draw_y)
+		drew_pixel = TRUE
+	return drew_pixel ? layer_icon : null
+
+/proc/cyberpunk_icon_to_sparse_pixel_payload(icon/source_icon)
+	if(!source_icon)
+		return ""
+	var/list/pixels = list()
+	var/width = min(source_icon.Width(), 32)
+	var/height = min(source_icon.Height(), 32)
+	for(var/y in 1 to height)
+		for(var/x in 1 to width)
+			var/color = source_icon.GetPixel(x, 33 - y)
+			if(!color || color == "#00000000")
+				continue
+			var/alpha = length(color) >= 9 ? copytext(color, 8, 10) : "ff"
+			if(alpha == "00")
+				continue
+			var/pixel_index = ((y - 1) * 32) + (x - 1)
+			pixels += "[pixel_index]:[copytext(color, 1, 8)]"
+	return pixels.Join(";")
+
+/proc/cyberpunk_bake_directional_pixel_icon(list/directions, icon/base_icon, target_icon_state = CYBERPUNK_CUSTOM_HAIR_ICON_STATE)
+	RETURN_TYPE(/icon)
+	if(!islist(directions) && !base_icon)
+		return null
+	var/icon/result_icon = icon('icons/effects/effects.dmi', "nothing")
+	var/has_content = FALSE
+	var/static/list/direction_map = list(
+		"north" = NORTH,
+		"south" = SOUTH,
+		"east" = EAST,
+		"west" = WEST,
+	)
+	for(var/key in direction_map)
+		var/icon/direction_icon = icon('icons/effects/effects.dmi', "nothing")
+		if(base_icon)
+			var/icon/base_direction_icon = icon(base_icon, target_icon_state, direction_map[key], 1)
+			if(base_direction_icon)
+				direction_icon.Blend(base_direction_icon, ICON_OVERLAY)
+				has_content = TRUE
+		var/icon/layer_icon = cyberpunk_bake_sparse_pixel_layer(islist(directions) ? directions[key] : null)
+		if(layer_icon)
+			direction_icon.Blend(layer_icon, ICON_OVERLAY)
+			has_content = TRUE
+		result_icon.Insert(direction_icon, target_icon_state, direction_map[key], 1)
+	return has_content ? result_icon : null
+
+/proc/cyberpunk_bake_item_pixel_icon(payload, icon/base_icon)
+	RETURN_TYPE(/icon)
+	var/icon/layer_icon = cyberpunk_bake_sparse_pixel_layer(payload)
+	if(!base_icon)
+		return layer_icon
+	var/icon/result_icon = icon(base_icon)
+	if(layer_icon)
+		result_icon.Blend(layer_icon, ICON_OVERLAY)
+	return result_icon
+
+/proc/cyberpunk_base_hair_icon(base_hair_name)
+	RETURN_TYPE(/icon)
+	if(!(base_hair_name in SSaccessories.hairstyles_list))
+		return null
+	var/datum/sprite_accessory/hair/base_hair = SSaccessories.hairstyles_list[base_hair_name]
+	if(!istype(base_hair))
+		return null
+	var/icon/base_icon = icon('icons/effects/effects.dmi', "nothing")
+	var/icon/raw_hair_icon
+	if(base_hair.icon_state != SPRITE_ACCESSORY_NONE)
+		raw_hair_icon = icon(base_hair.getCachedIcon(null))
+	for(var/direction in list(NORTH, SOUTH, EAST, WEST))
+		var/icon/base_direction_icon = icon('icons/effects/effects.dmi', "nothing")
+		if(raw_hair_icon)
+			base_direction_icon.Blend(icon(raw_hair_icon, "", direction, 1), ICON_OVERLAY)
+		base_icon.Insert(base_direction_icon, CYBERPUNK_CUSTOM_HAIR_ICON_STATE, direction, 1)
+	return base_icon
+
+/proc/cyberpunk_resolve_hair_base(base_hair_name, list/designs)
+	if(!(base_hair_name in SSaccessories.hairstyles_list) || !islist(designs))
+		return base_hair_name
+	for(var/list/design as anything in cyberpunk_sanitize_visual_design_records(designs))
+		if(design["id"] != CYBERPUNK_ACTIVE_HAIR_DESIGN_ID)
+			continue
+		var/record_base = design["base"]
+		if(record_base && record_base != base_hair_name)
+			return cyberpunk_resolve_hair_base(record_base, designs)
+	if(base_hair_name == CYBERPUNK_CUSTOM_HAIR_NAME)
+		return /datum/sprite_accessory/hair/bald::name
+	return base_hair_name
+
+/proc/cyberpunk_ensure_custom_hair_accessory()
+	RETURN_TYPE(/datum/sprite_accessory/hair/cyberpunk_custom)
+	var/datum/sprite_accessory/hair/cyberpunk_custom/accessory = SSaccessories.hairstyles_list[CYBERPUNK_CUSTOM_HAIR_NAME]
+	if(!istype(accessory))
+		accessory = new
+		accessory.name = CYBERPUNK_CUSTOM_HAIR_NAME
+		SSaccessories.hairstyles_list[CYBERPUNK_CUSTOM_HAIR_NAME] = accessory
+	accessory.locked = FALSE
+	accessory.natural_spawn = FALSE
+	if(!accessory.runtime_icon)
+		accessory.runtime_icon = cyberpunk_blank_custom_hair_icon()
+	return accessory
+
+/proc/cyberpunk_register_custom_hair_design(list/design)
+	design = cyberpunk_sanitize_visual_design_record(design)
+	if(!design)
+		return null
+	if(design["id"] != CYBERPUNK_ACTIVE_HAIR_DESIGN_ID)
+		return null
+	var/icon/base_hair_icon = cyberpunk_base_hair_icon(design["base"])
+	if(base_hair_icon && design["greyscale_colors"])
+		var/base_hair_color = sanitize_hexcolor(design["greyscale_colors"])
+		if(base_hair_color)
+			base_hair_icon.Blend(base_hair_color, ICON_MULTIPLY)
+	var/icon/hair_icon = cyberpunk_bake_directional_pixel_icon(design["directions"], base_hair_icon)
+	if(!hair_icon)
+		return null
+	var/datum/sprite_accessory/hair/cyberpunk_custom/accessory = cyberpunk_ensure_custom_hair_accessory()
+	accessory.runtime_icon = icon(hair_icon, CYBERPUNK_CUSTOM_HAIR_ICON_STATE)
+	return CYBERPUNK_CUSTOM_HAIR_NAME
+
+/datum/preference/choiced/hairstyle/proc/cyberpunk_add_runtime_hairstyle(hairstyle_name)
+	if(!hairstyle_name)
+		return
+	var/list/choices = get_choices()
+	if(!(hairstyle_name in choices))
+		choices += hairstyle_name
+
+/proc/cyberpunk_register_custom_hair_designs(list/designs)
+	var/last_hair_name
+	var/list/sanitized_designs = cyberpunk_sanitize_visual_design_records(designs)
+	for(var/list/design as anything in sanitized_designs)
+		design["base"] = cyberpunk_resolve_hair_base(design["base"], sanitized_designs)
+		last_hair_name = cyberpunk_register_custom_hair_design(design) || last_hair_name
+	return last_hair_name
+
+/mob/living/proc/cyberpunk_apply_hair_design(list/design)
+	var/mob/living/carbon/human/human = src
+	if(!istype(human))
+		return FALSE
+	design = cyberpunk_sanitize_visual_design_record(design)
+	if(!design)
+		return FALSE
+	var/custom_hair_name = cyberpunk_register_custom_hair_design(design)
+	if(custom_hair_name)
+		human.set_haircolor(COLOR_WHITE, update = FALSE)
+		human.set_hairstyle(custom_hair_name, update = FALSE)
+		human.update_hair()
+		human.update_body()
+		human.cyberpunk_write_hair_design_and_selection(design, custom_hair_name)
+		return TRUE
+	var/base = design["base"]
+	if(base && (base in SSaccessories.hairstyles_list))
+		human.set_hairstyle(base, update = FALSE)
+	if(design["greyscale_colors"])
+		human.set_haircolor(sanitize_hexcolor(design["greyscale_colors"]))
+	human.update_hair()
+	return TRUE
+
+/mob/living/proc/cyberpunk_apply_clothing_design(list/design)
+	var/obj/item/clothing/clothing = cyberpunk_find_designable_clothing(design?["target_ref"])
+	if(!istype(clothing))
+		return FALSE
+	return clothing.cyberpunk_apply_design(design)
+
+/mob/living/proc/cyberpunk_find_designable_clothing(item_ref)
+	RETURN_TYPE(/obj/item/clothing)
+	var/obj/item/clothing/fallback
+	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_HELD|INCLUDE_POCKETS))
+		var/obj/item/clothing/clothing = item
+		if(!istype(clothing))
+			continue
+		if(!fallback || clothing == get_active_held_item())
+			fallback = clothing
+		if(item_ref && REF(clothing) == item_ref)
+			return clothing
+	return fallback
+
+/mob/living/proc/cyberpunk_get_designable_clothing_ui()
+	var/list/items = list()
+	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_HELD|INCLUDE_POCKETS))
+		var/obj/item/clothing/clothing = item
+		if(!istype(clothing))
+			continue
+		var/icon/item_preview_icon = icon(clothing.icon, clothing.icon_state, frame = 1)
+		var/list/worn_previews = list()
+		var/list/worn_payloads = list()
+		var/static/list/direction_map = list(
+			"north" = NORTH,
+			"south" = SOUTH,
+			"east" = EAST,
+			"west" = WEST,
+		)
+		for(var/key in direction_map)
+			var/icon/worn_preview_icon
+			if(clothing.worn_icon && clothing.worn_icon_state)
+				worn_preview_icon = icon(clothing.worn_icon, clothing.worn_icon_state, direction_map[key], 1)
+			else
+				worn_preview_icon = icon(item_preview_icon, "", direction_map[key], 1)
+			worn_previews[key] = icon2base64(worn_preview_icon)
+			worn_payloads[key] = cyberpunk_icon_to_sparse_pixel_payload(worn_preview_icon)
+		items += list(list(
+			"ref" = REF(clothing),
+			"name" = clothing.name,
+			"typePath" = "[clothing.type]",
+			"active" = clothing == get_active_held_item(),
+			"modular" = clothing.cyberpunk_is_modular_clothing(),
+			"greyscaleColors" = clothing.greyscale_colors || "",
+			"iconState" = clothing.cyberpunk_base_icon_state || clothing.icon_state || "",
+			"wornIconState" = clothing.cyberpunk_base_worn_icon_state || clothing.worn_icon_state || "",
+			"itemPreview" = icon2base64(item_preview_icon),
+			"wornPreviews" = worn_previews,
+			"itemPayload" = cyberpunk_icon_to_sparse_pixel_payload(item_preview_icon),
+			"wornPayloads" = worn_payloads,
+		))
+	return items
+
+/mob/living/proc/cyberpunk_create_clothing_design_from_active(list/params)
+	var/obj/item/clothing/clothing = cyberpunk_find_designable_clothing(params["targetRef"])
+	if(!istype(clothing))
+		return null
+	var/list/design = clothing.cyberpunk_capture_wardrobe_design()
+	design["target_ref"] = REF(clothing)
+	design["id"] = params["id"] || design["id"]
+	design["name"] = copytext_char(trim("[params["name"] || clothing.name]"), 1, MAX_NAME_LEN)
+	design["kind"] = "clothing"
+	design["icon_state"] = copytext_char(trim("[params["iconState"] || clothing.icon_state]"), 1, 96)
+	design["worn_icon_state"] = copytext_char(trim("[params["wornIconState"] || clothing.worn_icon_state]"), 1, 96)
+	design["greyscale_colors"] = copytext_char(trim("[params["greyscaleColors"] || clothing.greyscale_colors || ""]"), 1, 256)
+	design["item_icon"] = copytext_char("[params["itemIcon"] || ""]", 1, CYBERPUNK_STYLE_DESIGNER_MAX_PAYLOAD)
+	design["directions"] = cyberpunk_style_designer_directions_from_params(params)
+	return cyberpunk_sanitize_visual_design_record(design)
+
+/mob/living/proc/cyberpunk_store_active_clothing_in_wardrobe()
+	var/obj/item/clothing/clothing = get_active_held_item()
+	if(!istype(clothing))
+		return "Hold modular clothing in your active hand."
+	if(!clothing.cyberpunk_is_modular_clothing())
+		return "This clothing is not modular enough for wardrobe storage."
+	var/list/designs = cyberpunk_read_visual_designs(/datum/preference/cyberpunk_wardrobe_designs)
+	var/limit = cyberpunk_wardrobe_limit()
+	if(length(designs) >= limit)
+		return "Wardrobe capacity reached ([length(designs)]/[limit]). Remove a saved item first."
+	var/list/design = clothing.cyberpunk_capture_wardrobe_design()
+	if(!cyberpunk_store_visual_design(/datum/preference/cyberpunk_wardrobe_designs, design))
+		return "Unable to write wardrobe data."
+	qdel(clothing)
+	return "Wardrobe design stored ([length(designs) + 1]/[limit]). Hardware modules and inserts were not preserved."
+
+/mob/living/proc/cyberpunk_extract_wardrobe_design(design_id)
+	var/list/design = cyberpunk_find_design_by_id(cyberpunk_read_visual_designs(/datum/preference/cyberpunk_wardrobe_designs), design_id)
+	if(!design)
+		return "Wardrobe record not found."
+	var/item_type = text2path(design["type_path"])
+	if(!ispath(item_type, /obj/item/clothing))
+		return "Wardrobe record has no valid clothing type."
+	var/obj/item/clothing/clothing = new item_type(get_turf(src))
+	clothing.cyberpunk_apply_design(design)
+	if(!put_in_hands(clothing))
+		clothing.forceMove(get_turf(src))
+	return "Extracted [clothing.name]."
+
+/proc/cyberpunk_style_designer_directions_from_params(list/params)
+	var/list/directions = list()
+	for(var/key in list("north", "south", "east", "west"))
+		directions[key] = copytext_char("[params[key] || ""]", 1, CYBERPUNK_STYLE_DESIGNER_MAX_PAYLOAD)
+	return directions
+
+/datum/cyberpunk_style_designer_ui
+	var/mode = CYBERPUNK_STYLE_DESIGNER_HAIR
+	var/last_message
+
+/datum/cyberpunk_style_designer_ui/New(new_mode)
+	mode = new_mode || CYBERPUNK_STYLE_DESIGNER_HAIR
+
+/datum/cyberpunk_style_designer_ui/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyberpunk_style_designer_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkStyleDesigner")
+		ui.open()
+
+/datum/cyberpunk_style_designer_ui/ui_close(mob/user)
+	qdel(src)
+
+/datum/cyberpunk_style_designer_ui/ui_data(mob/user)
+	var/mob/living/living_user = user
+	var/list/hair_designs = istype(living_user) ? living_user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_custom_hair_designs) : list()
+	var/list/wardrobe_designs = istype(living_user) ? living_user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_wardrobe_designs) : list()
+	var/mob/living/carbon/human/human = user
+	var/list/current_hair_previews = list()
+	var/list/current_hair_payloads = list()
+	if(istype(human))
+		var/datum/sprite_accessory/hair/hair_accessory = SSaccessories.hairstyles_list[human.hairstyle]
+		if(istype(hair_accessory))
+			if(istype(hair_accessory, /datum/sprite_accessory/hair/cyberpunk_custom))
+				cyberpunk_register_custom_hair_designs(hair_designs)
+			var/icon/full_hair_icon = icon(hair_accessory.getCachedIcon(null))
+			var/static/list/direction_map = list(
+				"north" = NORTH,
+				"south" = SOUTH,
+				"east" = EAST,
+				"west" = WEST,
+			)
+			for(var/key in direction_map)
+				var/icon/hair_icon = icon(full_hair_icon, "", direction_map[key], 1)
+				if(human.hair_color)
+					hair_icon.Blend(human.hair_color, ICON_MULTIPLY)
+				current_hair_previews[key] = icon2base64(hair_icon)
+				current_hair_payloads[key] = cyberpunk_icon_to_sparse_pixel_payload(hair_icon)
+	return list(
+		"mode" = mode,
+		"lastMessage" = last_message,
+		"hairDesigns" = hair_designs,
+		"wardrobeDesigns" = wardrobe_designs,
+		"wardrobeLimit" = istype(living_user) ? living_user.cyberpunk_wardrobe_limit() : 1,
+		"wardrobeCount" = length(wardrobe_designs),
+		"clothingItems" = istype(living_user) ? living_user.cyberpunk_get_designable_clothing_ui() : list(),
+		"currentHair" = istype(human) ? human.hairstyle : "",
+		"currentHairColor" = istype(human) ? human.hair_color : "",
+		"currentHairPreviews" = current_hair_previews,
+		"currentHairPayloads" = current_hair_payloads,
+		"editableHairBase" = /datum/sprite_accessory/hair/bald::name,
+	)
+
+/datum/cyberpunk_style_designer_ui/ui_act(action, list/params, datum/tgui/ui)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user = ui.user
+	if(!istype(user))
+		return TRUE
+	switch(action)
+		if("save_hair")
+			var/list/existing_hair_designs = user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_custom_hair_designs)
+			var/list/design = list(
+				"id" = params["id"] || CYBERPUNK_ACTIVE_HAIR_DESIGN_ID,
+				"name" = copytext_char(trim("[params["name"] || "custom hair"]"), 1, MAX_NAME_LEN),
+				"kind" = "hair",
+				"base" = copytext_char(trim("[cyberpunk_resolve_hair_base(params["base"], existing_hair_designs) || ""]"), 1, MAX_NAME_LEN),
+				"greyscale_colors" = copytext_char(trim("[params["greyscaleColors"] || ""]"), 1, 256),
+				"directions" = cyberpunk_style_designer_directions_from_params(params),
+				"item_icon" = copytext_char("[params["itemIcon"] || ""]", 1, CYBERPUNK_STYLE_DESIGNER_MAX_PAYLOAD),
+			)
+			if(user.cyberpunk_store_visual_design(/datum/preference/cyberpunk_custom_hair_designs, design))
+				user.cyberpunk_apply_hair_design(design)
+				last_message = "Hair design saved and applied."
+			else
+				last_message = "Unable to save hair design."
+		if("apply_hair")
+			var/list/design = cyberpunk_find_design_by_id(user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_custom_hair_designs), params["id"])
+			if(design && user.cyberpunk_apply_hair_design(design))
+				last_message = "Hair design applied."
+			else
+				last_message = "Unable to apply hair design."
+		if("save_clothing")
+			var/list/design = user.cyberpunk_create_clothing_design_from_active(params)
+			if(design && user.cyberpunk_apply_clothing_design(design))
+				last_message = "Clothing design applied to active item. Use a wardrobe terminal to persist it."
+			else
+				last_message = "Hold a clothing item in your active hand."
+		if("apply_clothing")
+			var/list/design = cyberpunk_find_design_by_id(user.cyberpunk_read_visual_designs(/datum/preference/cyberpunk_wardrobe_designs), params["id"])
+			if(design && user.cyberpunk_apply_clothing_design(design))
+				last_message = "Clothing design applied to active item."
+			else
+				last_message = "Hold clothing in your active hand."
+		if("store_wardrobe")
+			last_message = user.cyberpunk_store_active_clothing_in_wardrobe()
+		if("extract_wardrobe")
+			last_message = user.cyberpunk_extract_wardrobe_design(params["id"])
+		if("remove_wardrobe")
+			if(user.cyberpunk_remove_visual_design(/datum/preference/cyberpunk_wardrobe_designs, params["id"]))
+				last_message = "Wardrobe record removed."
+			else
+				last_message = "Wardrobe record not found."
+	return TRUE
+
+/proc/cyberpunk_find_design_by_id(list/designs, id)
+	for(var/list/design as anything in designs)
+		if(design["id"] == id)
+			return design
+	return null
+
+#undef CYBERPUNK_STYLE_DESIGNER_HAIR
+#undef CYBERPUNK_STYLE_DESIGNER_CLOTHING
+#undef CYBERPUNK_STYLE_DESIGNER_WARDROBE
+#undef CYBERPUNK_CUSTOM_HAIR_NAME
+#undef CYBERPUNK_CUSTOM_HAIR_ICON_STATE
+#undef CYBERPUNK_ACTIVE_HAIR_DESIGN_ID
+#undef CYBERPUNK_STYLE_DESIGNER_MAX_PAYLOAD
+#undef CYBERPUNK_CUSTOM_HAIR_RAW_SAVE_KEY
+
+/datum/cyberpunk_npc_dialog_ui
+	var/datum/cyberpunk_npc_profile/profile
+
+/datum/cyberpunk_npc_dialog_ui/New(datum/cyberpunk_npc_profile/new_profile)
+	profile = new_profile
+
+/datum/cyberpunk_npc_dialog_ui/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyberpunk_npc_dialog_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkNpcDialog")
+		ui.open()
+
+/datum/cyberpunk_npc_dialog_ui/ui_close(mob/user)
+	qdel(src)
+
+/datum/cyberpunk_npc_dialog_ui/ui_data(mob/user)
+	return profile?.dialog_ui_data(user) || list()
+
+/datum/cyberpunk_npc_dialog_ui/ui_act(action, list/params, datum/tgui/ui)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user = ui.user
+	if(!profile?.owner?.cyberpunk_can_talk_to_npc(user))
+		return TRUE
+	switch(action)
+		if("select_dialog")
+			profile.selected_dialog = params["id"]
+		if("service")
+			profile.use_service(user, params["id"])
+		if("trade")
+			profile.open_trade(user)
+	return TRUE
+
+/datum/cyberpunk_npc_trade_ui
+	var/datum/cyberpunk_npc_profile/profile
+
+/datum/cyberpunk_npc_trade_ui/New(datum/cyberpunk_npc_profile/new_profile)
+	profile = new_profile
+
+/datum/cyberpunk_npc_trade_ui/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyberpunk_npc_trade_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkNpcTrade")
+		ui.open()
+
+/datum/cyberpunk_npc_trade_ui/ui_close(mob/user)
+	qdel(src)
+
+/datum/cyberpunk_npc_trade_ui/ui_data(mob/user)
+	return profile?.trade_ui_data(user) || list()
+
+/datum/cyberpunk_npc_trade_ui/ui_act(action, list/params, datum/tgui/ui)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user = ui.user
+	if(!profile?.owner?.cyberpunk_can_talk_to_npc(user))
+		return TRUE
+	switch(action)
+		if("buy")
+			profile.buy_item(user, params["id"])
+		if("sell")
+			profile.sell_item(user, params["ref"])
+		if("dialog")
+			profile.open_dialog(user)
+	return TRUE
+// CYBERPUNK BUILD - rebuild and delete before release
 
 /mob/living/proc/toggle_resting()
 	set name = "Rest"

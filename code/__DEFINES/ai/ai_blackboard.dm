@@ -50,6 +50,90 @@
 ///Turf we want a mob to move to
 #define BB_TRAVEL_DESTINATION "BB_travel_destination"
 
+// Cyberpunk city AI blackboard keys
+/// Role profile for city AI weighting and permission checks.
+#define BB_CP_AI_ROLE_PROFILE "BB_cp_ai_role_profile"
+/// Bitfield of city AI capabilities.
+#define BB_CP_AI_CAPABILITIES "BB_cp_ai_capabilities"
+/// Abstract competence level for phantom task resolution.
+#define BB_CP_AI_LEVEL "BB_cp_ai_level"
+/// Faction/corporation/business owner context.
+#define BB_CP_AI_FACTION "BB_cp_ai_faction"
+
+/// Current city task type.
+#define BB_CP_CITY_TASK "BB_cp_city_task"
+/// Current city task state.
+#define BB_CP_CITY_TASK_STATE "BB_cp_city_task_state"
+/// Owner/employer datum or atom for the task.
+#define BB_CP_CITY_TASK_OWNER "BB_cp_city_task_owner"
+/// Reason a city task failed.
+#define BB_CP_CITY_TASK_FAILURE_REASON "BB_cp_city_task_failure_reason"
+/// Last task result text.
+#define BB_CP_CITY_TASK_RESULT "BB_cp_city_task_result"
+/// World time when a timed task can complete.
+#define BB_CP_CITY_TASK_FINISH_AT "BB_cp_city_task_finish_at"
+
+/// Numeric contract id for contract-backed tasks.
+#define BB_CP_CONTRACT_ID "BB_cp_contract_id"
+/// Contract datum reference when available.
+#define BB_CP_CONTRACT_REF "BB_cp_contract_ref"
+
+/// Cargo atom or abstract cargo holder.
+#define BB_CP_CARGO "BB_cp_cargo"
+/// Cargo type/name.
+#define BB_CP_CARGO_TYPE "BB_cp_cargo_type"
+/// Cargo amount.
+#define BB_CP_CARGO_AMOUNT "BB_cp_cargo_amount"
+/// Cargo source atom/turf.
+#define BB_CP_CARGO_SOURCE "BB_cp_cargo_source"
+/// Cargo receiver atom/turf.
+#define BB_CP_CARGO_RECEIVER "BB_cp_cargo_receiver"
+/// Cargo state.
+#define BB_CP_CARGO_STATUS "BB_cp_cargo_status"
+
+/// Route source atom/turf.
+#define BB_CP_ROUTE_SOURCE "BB_cp_route_source"
+/// Route target atom/turf.
+#define BB_CP_ROUTE_TARGET "BB_cp_route_target"
+/// Point to return to after a task.
+#define BB_CP_ROUTE_RETURN_POINT "BB_cp_route_return_point"
+/// Current route phase.
+#define BB_CP_ROUTE_PHASE "BB_cp_route_phase"
+/// Current route Z level.
+#define BB_CP_ROUTE_CURRENT_Z "BB_cp_route_current_z"
+/// Target route Z level.
+#define BB_CP_ROUTE_TARGET_Z "BB_cp_route_target_z"
+/// Z transition target/method.
+#define BB_CP_ROUTE_Z_TRANSITION "BB_cp_route_z_transition"
+/// Profiling visibility hint.
+#define BB_CP_ROUTE_VISIBLE "BB_cp_route_visible"
+
+/// Phantom mode enabled flag.
+#define BB_CP_PHANTOM_ENABLED "BB_cp_phantom_enabled"
+/// Current phantom state.
+#define BB_CP_PHANTOM_STATE "BB_cp_phantom_state"
+/// Phantom mode start time.
+#define BB_CP_PHANTOM_STARTED_AT "BB_cp_phantom_started_at"
+/// Phantom task finish time.
+#define BB_CP_PHANTOM_FINISH_AT "BB_cp_phantom_finish_at"
+/// Last phantom processing tick.
+#define BB_CP_PHANTOM_LAST_TICK "BB_cp_phantom_last_tick"
+/// Approximate turf while profiled.
+#define BB_CP_PHANTOM_APPROX_TURF "BB_cp_phantom_approx_turf"
+/// Compact health/damage state while profiled.
+#define BB_CP_PHANTOM_HEALTH_STATE "BB_cp_phantom_health_state"
+/// Light or heavy compact simulation profile.
+#define BB_CP_PHANTOM_PROFILE "BB_cp_phantom_profile"
+/// Next world.time when compact simulation may advance.
+#define BB_CP_PHANTOM_NEXT_TICK "BB_cp_phantom_next_tick"
+/// Accumulated hidden seconds since the last compact simulation advance.
+#define BB_CP_PHANTOM_ACCUMULATED_SECONDS "BB_cp_phantom_accumulated_seconds"
+
+/// Current threat target.
+#define BB_CP_THREAT_TARGET "BB_cp_threat_target"
+/// Current threat level.
+#define BB_CP_THREAT_LEVEL "BB_cp_threat_level"
+
 ///song instrument blackboard, set by instrument subtrees
 #define BB_SONG_INSTRUMENT "BB_SONG_INSTRUMENT"
 ///song lines blackboard, set by default on controllers

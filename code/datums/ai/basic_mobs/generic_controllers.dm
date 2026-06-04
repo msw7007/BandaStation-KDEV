@@ -114,6 +114,53 @@
 		/datum/ai_planning_subtree/flee_target,
 	)
 
+/// Cyberpunk generic city worker/controller shell.
+/datum/ai_controller/basic_controller/simple/cyberpunk_city
+	idle_behavior = /datum/idle_behavior/cyberpunk_phantom
+	planning_subtrees = list(
+		/datum/ai_planning_subtree/generic_resist,
+		/datum/ai_planning_subtree/cyberpunk_city_task,
+	)
+	blackboard = list(
+		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CIVILIAN,
+		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_USE_CONTRACTS,
+		BB_CP_AI_LEVEL = 1,
+		BB_CP_PHANTOM_ENABLED = TRUE,
+		BB_CP_PHANTOM_PROFILE = CP_AI_PHANTOM_PROFILE_LIGHT,
+		BB_CP_PHANTOM_STATE = CP_AI_PHANTOM_INACTIVE,
+	)
+
+/datum/ai_controller/basic_controller/simple/cyberpunk_city/worker
+	blackboard = list(
+		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_WORKER,
+		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_CARGO_SLOT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS,
+		BB_CP_AI_LEVEL = 2,
+		BB_CP_PHANTOM_ENABLED = TRUE,
+		BB_CP_PHANTOM_PROFILE = CP_AI_PHANTOM_PROFILE_LIGHT,
+		BB_CP_PHANTOM_STATE = CP_AI_PHANTOM_INACTIVE,
+	)
+
+/datum/ai_controller/basic_controller/simple/cyberpunk_city/runner
+	idle_behavior = /datum/idle_behavior/cyberpunk_phantom/runner
+	blackboard = list(
+		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CIVILIAN,
+		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS,
+		BB_CP_AI_LEVEL = 1,
+		BB_CP_PHANTOM_ENABLED = TRUE,
+		BB_CP_PHANTOM_PROFILE = CP_AI_PHANTOM_PROFILE_LIGHT,
+		BB_CP_PHANTOM_STATE = CP_AI_PHANTOM_INACTIVE,
+	)
+
+/datum/ai_controller/basic_controller/simple/cyberpunk_city/security
+	blackboard = list(
+		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CORP_SECURITY,
+		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_COMBAT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS,
+		BB_CP_AI_LEVEL = 3,
+		BB_CP_PHANTOM_ENABLED = TRUE,
+		BB_CP_PHANTOM_PROFILE = CP_AI_PHANTOM_PROFILE_HEAVY,
+		BB_CP_PHANTOM_STATE = CP_AI_PHANTOM_INACTIVE,
+	)
+
 /// Runs away when attacked
 /datum/ai_controller/basic_controller/simple/simple_skittish
 	ai_traits = PASSIVE_AI_FLAGS

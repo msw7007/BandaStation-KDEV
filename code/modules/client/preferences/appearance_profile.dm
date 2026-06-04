@@ -16,6 +16,9 @@
 #define CORP_ALIGN_BLACKROCK_INVESTIGATE "blackrock_investigate"
 #define CORP_ALIGN_TRANS_TRAVEL "trans_travel"
 #define CORP_ALIGN_SAMANTHAS_KEIR "samanthas_keir"
+#define CYBERPUNK_VISUAL_DESIGN_MAX_RECORDS 24
+#define CYBERPUNK_VISUAL_DESIGN_MAX_PAYLOAD 65535
+#define CYBERPUNK_PERSISTENT_AREA_MAX_RECORDS 8
 
 #define CORP_GROUP_BEN "ben"
 #define CORP_GROUP_RYAZNOV "ryaznov"
@@ -74,6 +77,69 @@
 			continue
 		choices[manufacturer_id] = all_choices[manufacturer_id]
 	return choices
+
+/proc/cyberpunk_sanitize_visual_design_record(list/record)
+	if(!islist(record))
+		return null
+
+	var/list/sanitized = list()
+	sanitized["id"] = copytext_char("[record["id"] || "[world.realtime]-[rand(1000, 9999)]"]", 1, 64)
+	sanitized["name"] = copytext_char(trim("[record["name"] || "custom design"]"), 1, MAX_NAME_LEN)
+	sanitized["kind"] = copytext_char(trim("[record["kind"] || "generic"]"), 1, 32)
+	sanitized["base"] = copytext_char(trim("[record["base"] || ""]"), 1, MAX_NAME_LEN)
+	sanitized["type_path"] = copytext_char(trim("[record["type_path"] || ""]"), 1, 180)
+	sanitized["target_ref"] = copytext_char(trim("[record["target_ref"] || ""]"), 1, 64)
+	sanitized["icon_state"] = copytext_char(trim("[record["icon_state"] || ""]"), 1, 96)
+	sanitized["worn_icon_state"] = copytext_char(trim("[record["worn_icon_state"] || ""]"), 1, 96)
+	sanitized["greyscale_colors"] = copytext_char(trim("[record["greyscale_colors"] || ""]"), 1, 256)
+	sanitized["material_signature"] = copytext_char(trim("[record["material_signature"] || ""]"), 1, 512)
+	sanitized["created_at"] = isnum(record["created_at"]) ? record["created_at"] : world.realtime
+
+	var/list/directions = list()
+	if(islist(record["directions"]))
+		for(var/direction_key in list("north", "south", "east", "west"))
+			directions[direction_key] = copytext_char("[record["directions"][direction_key] || ""]", 1, CYBERPUNK_VISUAL_DESIGN_MAX_PAYLOAD)
+	else
+		for(var/direction_key in list("north", "south", "east", "west"))
+			directions[direction_key] = ""
+	sanitized["directions"] = directions
+	sanitized["item_icon"] = copytext_char("[record["item_icon"] || ""]", 1, CYBERPUNK_VISUAL_DESIGN_MAX_PAYLOAD)
+	return sanitized
+
+/proc/cyberpunk_sanitize_visual_design_records(value, max_records = CYBERPUNK_VISUAL_DESIGN_MAX_RECORDS)
+	var/list/result = list()
+	if(!islist(value))
+		return result
+
+	for(var/entry in value)
+		var/list/sanitized = cyberpunk_sanitize_visual_design_record(entry)
+		if(!sanitized)
+			continue
+		result += list(sanitized)
+		if(length(result) >= max_records)
+			break
+	return result
+
+/proc/cyberpunk_sanitize_persistent_area_records(value, max_records = CYBERPUNK_PERSISTENT_AREA_MAX_RECORDS)
+	var/list/result = list()
+	if(!islist(value))
+		return result
+	for(var/entry in value)
+		if(!islist(entry))
+			continue
+		var/list/record = entry
+		var/list/sanitized = list()
+		sanitized["id"] = copytext_char("[record["id"] || "[world.realtime]-[rand(1000, 9999)]"]", 1, 96)
+		sanitized["name"] = copytext_char(trim("[record["name"] || "persistent area"]"), 1, MAX_NAME_LEN)
+		sanitized["owner_key"] = copytext_char(trim("[record["owner_key"] || ""]"), 1, 96)
+		sanitized["area_type"] = copytext_char(trim("[record["area_type"] || ""]"), 1, 180)
+		sanitized["saved_at"] = isnum(record["saved_at"]) ? record["saved_at"] : world.realtime
+		sanitized["snapshot"] = islist(record["snapshot"]) ? record["snapshot"] : list()
+		sanitized["meta"] = islist(record["meta"]) ? record["meta"] : list()
+		result += list(sanitized)
+		if(length(result) >= max_records)
+			break
+	return result
 
 /proc/cyberpunk_major_corp_for_manufacturer(manufacturer)
 	manufacturer = cyberpunk_normalize_manufacturer_id(manufacturer)
@@ -430,6 +496,86 @@
 		neural_interface.corp_manufacturer = value == CORP_ALIGN_NONE ? initial(neural_interface.corp_manufacturer) : value
 		neural_interface.refresh_ice_model()
 
+/datum/preference/cyberpunk_custom_hair_designs
+	savefile_key = "cyberpunk_custom_hair_designs"
+	savefile_identifier = PREFERENCE_CHARACTER
+	category = PREFERENCE_CATEGORY_MANUALLY_RENDERED
+	priority = PREFERENCE_PRIORITY_PRE_SPECIES
+	can_randomize = FALSE
+	should_update_preview = FALSE
+
+/datum/preference/cyberpunk_custom_hair_designs/deserialize(input, datum/preferences/preferences)
+	return cyberpunk_sanitize_visual_design_records(input)
+
+/datum/preference/cyberpunk_custom_hair_designs/create_default_value()
+	return list()
+
+/datum/preference/cyberpunk_custom_hair_designs/apply_to_human(mob/living/carbon/human/target, value)
+	cyberpunk_register_custom_hair_designs(value)
+
+/datum/preference/cyberpunk_custom_hair_designs/is_valid(value, datum/preferences/preferences)
+	return islist(value)
+
+/datum/preference/cyberpunk_wardrobe_designs
+	savefile_key = "cyberpunk_wardrobe_designs"
+	savefile_identifier = PREFERENCE_CHARACTER
+	category = PREFERENCE_CATEGORY_MANUALLY_RENDERED
+	priority = PREFERENCE_PRIORITY_LOADOUT
+	can_randomize = FALSE
+	should_update_preview = FALSE
+
+/datum/preference/cyberpunk_wardrobe_designs/deserialize(input, datum/preferences/preferences)
+	return cyberpunk_sanitize_visual_design_records(input)
+
+/datum/preference/cyberpunk_wardrobe_designs/create_default_value()
+	return list()
+
+/datum/preference/cyberpunk_wardrobe_designs/apply_to_human(mob/living/carbon/human/target, value)
+	return
+
+/datum/preference/cyberpunk_wardrobe_designs/is_valid(value, datum/preferences/preferences)
+	return islist(value)
+
+/datum/preference/cyberpunk_business_records
+	savefile_key = "cyberpunk_business_records"
+	savefile_identifier = PREFERENCE_CHARACTER
+	category = PREFERENCE_CATEGORY_MANUALLY_RENDERED
+	priority = PREFERENCE_PRIORITY_LOADOUT
+	can_randomize = FALSE
+	should_update_preview = FALSE
+
+/datum/preference/cyberpunk_business_records/deserialize(input, datum/preferences/preferences)
+	return cyberpunk_sanitize_persistent_area_records(input)
+
+/datum/preference/cyberpunk_business_records/create_default_value()
+	return list()
+
+/datum/preference/cyberpunk_business_records/apply_to_human(mob/living/carbon/human/target, value)
+	return
+
+/datum/preference/cyberpunk_business_records/is_valid(value, datum/preferences/preferences)
+	return islist(value)
+
+/datum/preference/cyberpunk_apartment_records
+	savefile_key = "cyberpunk_apartment_records"
+	savefile_identifier = PREFERENCE_CHARACTER
+	category = PREFERENCE_CATEGORY_MANUALLY_RENDERED
+	priority = PREFERENCE_PRIORITY_LOADOUT
+	can_randomize = FALSE
+	should_update_preview = FALSE
+
+/datum/preference/cyberpunk_apartment_records/deserialize(input, datum/preferences/preferences)
+	return cyberpunk_sanitize_persistent_area_records(input)
+
+/datum/preference/cyberpunk_apartment_records/create_default_value()
+	return list()
+
+/datum/preference/cyberpunk_apartment_records/apply_to_human(mob/living/carbon/human/target, value)
+	return
+
+/datum/preference/cyberpunk_apartment_records/is_valid(value, datum/preferences/preferences)
+	return islist(value)
+
 #undef BODY_SHAPE_AVERAGE
 #undef BODY_SHAPE_LEAN
 #undef BODY_SHAPE_STOCKY
@@ -445,6 +591,9 @@
 #undef CORP_ALIGN_BLACKROCK_INVESTIGATE
 #undef CORP_ALIGN_TRANS_TRAVEL
 #undef CORP_ALIGN_SAMANTHAS_KEIR
+#undef CYBERPUNK_PERSISTENT_AREA_MAX_RECORDS
+#undef CYBERPUNK_VISUAL_DESIGN_MAX_RECORDS
+#undef CYBERPUNK_VISUAL_DESIGN_MAX_PAYLOAD
 #undef CORP_GROUP_BEN
 #undef CORP_GROUP_RYAZNOV
 #undef CORP_GROUP_STARLIGHT

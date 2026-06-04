@@ -129,7 +129,7 @@ export const NtosBusinessTerminal = () => {
             <LabeledList.Item label="Premises">
               {terminalSize === 'program'
                 ? 'business area required'
-                : 'terminal area decides size'}
+                : '17x17 business area'}
             </LabeledList.Item>
           </LabeledList>
         </Section>
