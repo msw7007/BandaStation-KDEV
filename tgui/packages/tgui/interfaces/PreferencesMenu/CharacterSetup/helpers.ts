@@ -12,6 +12,7 @@ type ServerPreferenceData = {
 
 const preferenceBuckets: Array<keyof CharacterPreferencesData> = [
   'names',
+  'misc',
   'non_contextual',
   'secondary_features',
   'supplemental_features',
@@ -92,4 +93,3 @@ export const attributeOrder = [
   'spirit',
   'charisma',
 ];
-
