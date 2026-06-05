@@ -56,7 +56,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 /datum/computer_file/program/job_management/ui_act(action, params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
 	var/obj/item/card/id/user_id = computer.stored_id
-	if(!user_id || !(ACCESS_CHANGE_IDS in user_id.access))
+	if(!user_id || !user_id.has_cyberpunk_crypto_access(ACCESS_CHANGE_IDS))
 		return TRUE
 
 	switch(action)
@@ -108,7 +108,7 @@ GLOBAL_VAR_INIT(time_last_changed_position, 0)
 
 	var/authed = FALSE
 	var/obj/item/card/id/user_id = computer.stored_id
-	if(user_id && (ACCESS_CHANGE_IDS in user_id.access))
+	if(user_id && user_id.has_cyberpunk_crypto_access(ACCESS_CHANGE_IDS))
 		authed = TRUE
 
 	data["authed"] = authed

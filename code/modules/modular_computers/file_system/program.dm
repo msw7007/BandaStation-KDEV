@@ -183,6 +183,8 @@
 			if(loud && user)
 				to_chat(user, span_danger("\The [computer] flashes an \"RFID Error - Unable to scan ID\" warning."))
 			return FALSE
+		if(accesscard.has_any_cyberpunk_crypto_access(access_to_check))
+			return TRUE
 		access = accesscard.GetAccess()
 
 	for(var/singular_access in access_to_check)

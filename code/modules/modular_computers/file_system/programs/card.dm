@@ -54,7 +54,7 @@
 	job_templates.Cut()
 
 	// If the program isn't locked to a specific department or is_centcom and we have ACCESS_CHANGE_IDS in our auth card, we're not minor.
-	if((!target_dept || is_centcom) && (ACCESS_CHANGE_IDS in auth_card.access))
+	if((!target_dept || is_centcom) && auth_card.has_cyberpunk_crypto_access(ACCESS_CHANGE_IDS))
 		minor = FALSE
 		authenticated_card = "[auth_card.name]"
 		authenticated_user = auth_card.registered_name ? auth_card.registered_name : "Unknown"
@@ -68,7 +68,7 @@
 	for(var/access_as_text in managers)
 		var/list/info = managers[access_as_text]
 		var/access = access_as_text
-		if((access in auth_card.access) && ((target_dept in info["regions"]) || !target_dept))
+		if(auth_card.has_cyberpunk_crypto_access(access) && ((target_dept in info["regions"]) || !target_dept))
 			region_access |= info["regions"]
 			job_templates |= info["templates"]
 
@@ -222,7 +222,7 @@
 				stack_trace("[key_name(usr)] ([usr]) attempted to add invalid access \[[access_type]\] to [modified_id]")
 				return TRUE
 
-			if(access_type in modified_id.access)
+			if(modified_id.has_cyberpunk_crypto_access(access_type))
 				modified_id.remove_access(list(access_type))
 				LOG_ID_ACCESS_CHANGE(user, modified_id, "removed [SSid_access.get_access_desc(access_type)]")
 				return TRUE

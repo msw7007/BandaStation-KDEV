@@ -521,7 +521,7 @@ GLOBAL_LIST_EMPTY(req_console_ckey_departments)
 	var/obj/item/card/id/ID = attacking_item.GetID()
 	if(ID)
 		message_verified_by = "[ID.registered_name] ([ID.assignment])"
-		announcement_authenticated = (ACCESS_RC_ANNOUNCE in ID.access)
+		announcement_authenticated = ID.has_cyberpunk_crypto_access(ACCESS_RC_ANNOUNCE)
 		SStgui.update_uis(src)
 		return
 	if (istype(attacking_item, /obj/item/stamp))

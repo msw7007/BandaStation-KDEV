@@ -66,7 +66,7 @@
 	var/obj/item/card/id/id_card = computer.stored_id?.GetID()
 	if(id_card?.registered_account)
 		buyer = SSeconomy.get_dep_account(id_card?.registered_account.account_job.paycheck_department)
-		if((ACCESS_BUDGET in id_card.access))
+		if(id_card.has_cyberpunk_crypto_access(ACCESS_BUDGET))
 			requestonly = FALSE
 			can_approve_requests = TRUE
 			// If buyer is a departmental budget, replaces "Cargo" with that budget - we're not using the cargo budget here

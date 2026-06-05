@@ -86,7 +86,7 @@
 			return
 
 		var/obj/item/card/id/id_card = tool
-		if((ACCESS_SECURITY in id_card.GetAccess()))
+		if(id_card.has_cyberpunk_crypto_access(ACCESS_SECURITY))
 			locked = !locked
 			balloon_alert(user, "beacon [locked ? "locked" : "unlocked"]")
 		else

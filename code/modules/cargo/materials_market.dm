@@ -116,7 +116,7 @@
 	if(isliving(user))
 		var/mob/living/living_user = user
 		used_id_card = living_user.get_idcard(TRUE)
-		can_buy_via_budget = (ACCESS_CARGO in used_id_card?.GetAccess())
+		can_buy_via_budget = used_id_card?.has_cyberpunk_crypto_access(ACCESS_CARGO)
 
 	//if no cargo access then force private purchase
 	var/is_ordering_private = ordering_private || !can_buy_via_budget
@@ -228,7 +228,7 @@
 	if(isnull(used_id_card))
 		say("No ID Found")
 		return
-	var/can_buy_via_budget = (ACCESS_CARGO in used_id_card?.GetAccess())
+	var/can_buy_via_budget = used_id_card.has_cyberpunk_crypto_access(ACCESS_CARGO)
 
 	//if multiple users open the UI some of them may not have the required access so we recheck
 	var/is_ordering_private = ordering_private

@@ -195,7 +195,7 @@
 					to_chat(user, span_warning("You need to swipe your ID!"))
 					playsound(src, 'sound/machines/terminal/terminal_prompt_deny.ogg', 50, FALSE)
 					return
-				if (!(ACCESS_CAPTAIN in id_card.access))
+				if (!id_card.has_cyberpunk_crypto_access(ACCESS_CAPTAIN))
 					to_chat(user, span_warning("You are not authorized to do this!"))
 					playsound(src, 'sound/machines/terminal/terminal_prompt_deny.ogg', 50, FALSE)
 					return

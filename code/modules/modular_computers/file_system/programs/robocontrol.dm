@@ -130,7 +130,7 @@
 			if(isdrone(current_user))
 				to_chat(current_user, span_notice("You can't free yourself."))
 				return
-			if(!(ACCESS_CE in id_card.access))
+			if(!id_card.has_cyberpunk_crypto_access(ACCESS_CE))
 				to_chat(current_user, span_notice("Required access not found on ID."))
 				return
 			GLOB.drone_machine_blacklist_enabled = !GLOB.drone_machine_blacklist_enabled

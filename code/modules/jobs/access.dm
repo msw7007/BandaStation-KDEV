@@ -3,9 +3,11 @@
  *
  * * accessor - mob trying to access this object, !!CAN BE NULL!! because of telekiesis because we're in hell
  */
+/atom/movable/var/cyberpunk_public_access = FALSE
+
 /atom/movable/proc/allowed(mob/accessor)
 	//check if it doesn't require any access at all, or the user is an Adminghost
-	if(check_access(null) || isAdminGhostAI(accessor))
+	if(cyberpunk_public_access || check_access(null) || isAdminGhostAI(accessor))
 		return TRUE
 	if(isnull(accessor)) //likely a TK user, and we checked for free access above.
 		return FALSE
@@ -20,9 +22,9 @@
 	var/list/player_access = accessor.get_access()
 
 	//now let's check access we got from the signal.
-	if(check_access_list(player_access))
-		return TRUE
 	if(check_cyberpunk_crypto_access(accessor))
+		return TRUE
+	if(!isliving(accessor) && check_access_list(player_access))
 		return TRUE
 
 	if(HAS_SILICON_ACCESS(accessor))
@@ -36,12 +38,18 @@
 
 // Check if an item has access to this object
 /atom/movable/proc/check_access(obj/item/I)
-	if(check_access_list(I ? I.GetAccess() : null))
+	if(cyberpunk_public_access)
 		return TRUE
-	return check_cyberpunk_crypto_item_access(I)
+	if(has_cyberpunk_direct_crypto_requirements() && !I)
+		return FALSE
+	if(check_cyberpunk_crypto_item_access(I))
+		return TRUE
+	return check_access_list(I ? I.GetAccess() : null)
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /atom/movable/proc/check_access_list(list/access_list)
+	if(has_cyberpunk_direct_crypto_requirements())
+		return FALSE
 	if(!length(req_access) && !length(req_one_access))
 		return TRUE
 
@@ -68,14 +76,50 @@
 /proc/create_cyberpunk_crypto_access_key(access_id)
 	if(!access_id)
 		return null
+	if(SSid_access)
+		var/datum/cyberpunk_crypto_key/bank_key = SSid_access.get_cyberpunk_crypto_access_key(access_id)
+		if(bank_key)
+			return bank_key
 	return new /datum/cyberpunk_crypto_key("access: [access_id]", "station access", get_cyberpunk_crypto_access_code(access_id))
 
+/proc/cyberpunk_corporation_access_id(corporation_id)
+	switch(lowertext("[corporation_id]"))
+		if("benn")
+			return "corp:benn"
+		if("ryaznov")
+			return "corp:ryaznov"
+		if("starlight")
+			return "corp:starlight"
+	return null
+
+/proc/cyberpunk_is_corporate_access(access_id)
+	return access_id in list("corp:benn", "corp:ryaznov", "corp:starlight")
+
+/proc/cyberpunk_named_accesses()
+	return list(
+		"corp:benn" = list("Benn corporate access", "Benn"),
+		"corp:ryaznov" = list("Ryaznov corporate access", "Ryaznov"),
+		"corp:starlight" = list("Starlight corporate access", "Starlight"),
+		"city:council" = list("City Council access", "Council"),
+		"city:police" = list("Police access", "Police"),
+		"corp:heads" = list("Corporate heads access", "Corporate Heads"),
+		"government:all" = list("Government master access", "Government"),
+	)
+
+/atom/movable/proc/has_cyberpunk_direct_crypto_requirements()
+	if(!("cyberpunk_crypto_keys" in vars))
+		return FALSE
+	var/list/datum/cyberpunk_crypto_key/direct_keys = vars["cyberpunk_crypto_keys"]
+	return length(direct_keys) > 0
+
 /atom/movable/proc/check_cyberpunk_crypto_access(mob/accessor)
-	if(!length(req_access) && !length(req_one_access))
-		return TRUE
 	var/mob/living/living_accessor = accessor
 	if(!istype(living_accessor))
 		return FALSE
+	if(has_cyberpunk_direct_crypto_requirements())
+		return has_cyberpunk_direct_crypto_key(living_accessor)
+	if(!length(req_access) && !length(req_one_access))
+		return TRUE
 	if(has_cyberpunk_direct_crypto_key(living_accessor))
 		return TRUE
 
@@ -91,10 +135,12 @@
 	return TRUE
 
 /atom/movable/proc/check_cyberpunk_crypto_item_access(obj/item/item)
-	if(!length(req_access) && !length(req_one_access))
-		return TRUE
 	if(!item)
 		return FALSE
+	if(has_cyberpunk_direct_crypto_requirements())
+		return item_has_cyberpunk_direct_crypto_key(item)
+	if(!length(req_access) && !length(req_one_access))
+		return TRUE
 	if(item_has_cyberpunk_direct_crypto_key(item))
 		return TRUE
 
@@ -118,7 +164,7 @@
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in direct_keys)
 		if(!accessor)
 			return FALSE
-		if(accessor.has_cyberpunk_crypto_key(key_datum))
+		if(accessor.has_cyberpunk_crypto_key(key_datum) || accessor.held_or_neck_card_has_cyberpunk_crypto_key(key_datum))
 			return TRUE
 	return FALSE
 
@@ -138,26 +184,43 @@
 /mob/living/proc/has_cyberpunk_crypto_access(access_id)
 	if(!access_id)
 		return TRUE
+	if(access_id != "government:all" && has_cyberpunk_crypto_exact_access("government:all"))
+		return TRUE
+	if(access_id != "corp:heads" && cyberpunk_is_corporate_access(access_id) && has_cyberpunk_crypto_exact_access("corp:heads"))
+		return TRUE
+	return has_cyberpunk_crypto_exact_access(access_id)
+
+/mob/living/proc/has_cyberpunk_crypto_exact_access(access_id)
+	if(!access_id)
+		return TRUE
 	var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
 	if(has_cyberpunk_crypto_key(access_key))
-		qdel(access_key)
 		return TRUE
-	qdel(access_key)
-	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_POCKETS | INCLUDE_ACCESSORIES | INCLUDE_HELD))
-		if(!item)
+	for(var/obj/item/item as anything in held_items)
+		if(!istype(item, /obj/item/card/id))
 			continue
-		if(item.has_cyberpunk_crypto_access(access_id))
+		if(item.has_cyberpunk_crypto_exact_access(access_id))
 			return TRUE
+	var/obj/item/neck_item = get_item_by_slot(ITEM_SLOT_NECK)
+	if(istype(neck_item, /obj/item/card/id) && neck_item.has_cyberpunk_crypto_exact_access(access_id))
+		return TRUE
 	return FALSE
 
 /obj/item/proc/has_cyberpunk_crypto_access(access_id)
 	if(!access_id)
 		return TRUE
+	if(access_id != "government:all" && has_cyberpunk_crypto_exact_access("government:all"))
+		return TRUE
+	if(access_id != "corp:heads" && cyberpunk_is_corporate_access(access_id) && has_cyberpunk_crypto_exact_access("corp:heads"))
+		return TRUE
+	return has_cyberpunk_crypto_exact_access(access_id)
+
+/obj/item/proc/has_cyberpunk_crypto_exact_access(access_id)
+	if(!access_id)
+		return TRUE
 	var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
 	if(has_cyberpunk_crypto_key(access_key))
-		qdel(access_key)
 		return TRUE
-	qdel(access_key)
 	return access_id in GetAccess()
 
 /obj/item/proc/store_cyberpunk_crypto_access(access_id)
@@ -171,12 +234,27 @@
 	if(!access_key)
 		return FALSE
 	. = remove_cyberpunk_crypto_key(access_key)
-	qdel(access_key)
 
 /obj/item/proc/clear_cyberpunk_crypto_access_keys()
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_keys)
 		if(key_datum.owner == "station access" && findtext(key_datum.name, "access: ") == 1)
 			cyberpunk_crypto_keys -= key_datum
+
+/obj/item/proc/has_any_cyberpunk_crypto_access(list/accesses)
+	if(!length(accesses))
+		return TRUE
+	for(var/access_id in accesses)
+		if(has_cyberpunk_crypto_access(access_id))
+			return TRUE
+	return FALSE
+
+/mob/living/proc/has_any_cyberpunk_crypto_access(list/accesses)
+	if(!length(accesses))
+		return TRUE
+	for(var/access_id in accesses)
+		if(has_cyberpunk_crypto_access(access_id))
+			return TRUE
+	return FALSE
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/item/proc/GetAccess()

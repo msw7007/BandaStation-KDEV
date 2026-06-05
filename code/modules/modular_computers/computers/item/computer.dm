@@ -1081,7 +1081,7 @@
 		if(SEC_LEVEL_RED) // all-hands-on-deck situations, everyone is responsible for combatting a threat
 			return ALERT_RELEVANCY_PERTINENT
 		if(SEC_LEVEL_BLUE) // suspected threat. security needs to be alert and possibly preparing for it, no further concerns
-			if(ACCESS_SECURITY in stored_id?.access)
+			if(stored_id?.has_cyberpunk_crypto_access(ACCESS_SECURITY))
 				return ALERT_RELEVANCY_PERTINENT
 			else
 				return ALERT_RELEVANCY_WARN

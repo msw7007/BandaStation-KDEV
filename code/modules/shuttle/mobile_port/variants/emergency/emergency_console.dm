@@ -106,7 +106,7 @@
 		to_chat(user, span_warning("You don't have an ID."))
 		return .
 
-	if(!(ACCESS_COMMAND in ID.access))
+	if(!ID.has_cyberpunk_crypto_access(ACCESS_COMMAND))
 		to_chat(user, span_warning("The access level of your card is not high enough."))
 		return .
 

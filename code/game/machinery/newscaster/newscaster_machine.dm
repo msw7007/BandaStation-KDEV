@@ -168,8 +168,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/newscaster, 30)
 		data["user"]["job"] = "N/A"
 		data["user"]["department"] = "N/A"
 
-	data["admin_mode"] = (admin_access in card?.GetAccess())
-	data["security_mode"] = (security_access in card?.GetAccess())
+	data["admin_mode"] = card?.has_cyberpunk_crypto_access(admin_access)
+	data["security_mode"] = card?.has_cyberpunk_crypto_access(security_access)
 	data["photo_data"] = !isnull(current_image)
 	data["creating_channel"] = creating_channel
 	data["awaiting_approval"] = awaiting_approval
@@ -349,7 +349,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/newscaster, 30)
 			if(isliving(user))
 				var/mob/living/living_user = user
 				id_card = living_user.get_idcard(hand_first = TRUE)
-			if(!(admin_access in id_card?.GetAccess()))
+			if(!id_card?.has_cyberpunk_crypto_access(admin_access))
 				say("Clearance not found.")
 				return TRUE
 			var/questionable_message = params["messageID"]
@@ -363,7 +363,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/newscaster, 30)
 			if(isliving(user))
 				var/mob/living/living_user = user
 				id_card = living_user.get_idcard(hand_first = TRUE)
-			if(!(admin_access in id_card?.GetAccess()))
+			if(!id_card?.has_cyberpunk_crypto_access(admin_access))
 				say("Clearance not found.")
 				return TRUE
 			var/questionable_message = params["messageID"]
@@ -377,7 +377,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/newscaster, 30)
 			if(isliving(user))
 				var/mob/living/living_user = user
 				id_card = living_user.get_idcard(hand_first = TRUE)
-			if(!(admin_access in id_card?.GetAccess()))
+			if(!id_card?.has_cyberpunk_crypto_access(admin_access))
 				say("Clearance not found.")
 				return TRUE
 			var/selected_channel_id = (params["channel"])
@@ -815,7 +815,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/newscaster, 30)
 	if(isliving(user))
 		var/mob/living/living_user = user
 		id_card = living_user.get_idcard(hand_first = TRUE)
-	if(!(security_access in id_card?.GetAccess()))
+	if(!id_card?.has_cyberpunk_crypto_access(security_access))
 		say("Clearance not found.")
 		return TRUE
 	GLOB.news_network.wanted_issue.active = FALSE

@@ -443,7 +443,7 @@
 
 	//Check for weapons
 	if((judgement_criteria & JUDGE_WEAPONCHECK))
-		if(isnull(idcard) || !(ACCESS_WEAPONS in idcard.access))
+		if(isnull(idcard) || !idcard.has_cyberpunk_crypto_access(ACCESS_WEAPONS))
 			for(var/obj/item/toy_gun in held_items) //if they're holding a gun
 				if(CHECK_PERMIT(toy_gun))
 					threatcount += 4

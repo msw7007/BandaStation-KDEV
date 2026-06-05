@@ -727,8 +727,10 @@
 	if (!istype(idcard))
 		return .
 
-	// Ignores RETA access so we directly access access instead of using the wrapper
-	if (ACCESS_SYNDICATE in idcard.access)
+	var/list/permanent_id_access = idcard.access
+
+	// Ignores RETA access; this IFF mode should only read the permanent card mirror.
+	if (ACCESS_SYNDICATE in permanent_id_access)
 		if (hostile_faction == IFF_FACTION_SYNDICATE)
 			return IFF_HOSTILE
 		if (friendly_faction == IFF_FACTION_SYNDICATE)
@@ -741,13 +743,13 @@
 		if (friendly_faction == IFF_FACTION_CREW)
 			return IFF_FRIENDLY
 
-	if ((ACCESS_COMMAND in idcard.access) || (ACCESS_SECURITY in idcard.access))
+	if ((ACCESS_COMMAND in permanent_id_access) || (ACCESS_SECURITY in permanent_id_access))
 		if (hostile_faction == IFF_FACTION_SEC_COMMAND)
 			return IFF_HOSTILE
 		if (friendly_faction == IFF_FACTION_SEC_COMMAND)
 			return IFF_FRIENDLY
 
-	if (ACCESS_CENT_GENERAL in idcard.access)
+	if (ACCESS_CENT_GENERAL in permanent_id_access)
 		if (hostile_faction == IFF_FACTION_CENTCOM)
 			return IFF_HOSTILE
 		if (friendly_faction == IFF_FACTION_CENTCOM)

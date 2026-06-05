@@ -1,5 +1,5 @@
 // CYBERPUNK BUILD - rebuild and delete before release
-import { Box, LabeledList, Section, Stack } from 'tgui-core/components';
+import { Box, Button, LabeledList, Section, Stack } from 'tgui-core/components';
 
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
@@ -9,10 +9,13 @@ type TemporaryInterfaceData = {
   title?: string;
   userName?: string;
   status?: string;
+  hasNeuralInterface?: boolean;
+  accessCard?: string;
+  memoryKeys?: number;
 };
 
 export const CyberpunkTemporaryInterface = () => {
-  const { data } = useBackend<TemporaryInterfaceData>();
+  const { act, data } = useBackend<TemporaryInterfaceData>();
   const title = data.title || 'Temporary Interface';
   const isNeurolink = data.mode === 'neurolink';
 
@@ -33,6 +36,19 @@ export const CyberpunkTemporaryInterface = () => {
                   <LabeledList.Item label="Status">
                     {data.status || 'temporary development entrypoint'}
                   </LabeledList.Item>
+                  {isNeurolink && (
+                    <>
+                      <LabeledList.Item label="Neural link">
+                        {data.hasNeuralInterface ? 'online' : 'missing'}
+                      </LabeledList.Item>
+                      <LabeledList.Item label="Access card">
+                        {data.accessCard || 'not held / not on neck'}
+                      </LabeledList.Item>
+                      <LabeledList.Item label="Memory keys">
+                        {data.memoryKeys || 0}
+                      </LabeledList.Item>
+                    </>
+                  )}
                 </LabeledList>
               </Box>
             </Stack.Item>
@@ -50,6 +66,23 @@ export const CyberpunkTemporaryInterface = () => {
                 : 'Reserved IC entrypoint for computer-side apps before the PDA, laptop, and neurointerface split is finalized.'}
             </Box>
           </Box>
+          {isNeurolink && (
+            <Box className="CyberpunkPanel__Card">
+              <Box className="CyberpunkPanel__Title">Access synchronization</Box>
+              <Box mt={0.5} className="CyberpunkPanel__Muted">
+                Insert an ID card by holding it or wearing it on your neck. Its
+                cryptokeys are copied into neural memory.
+              </Box>
+              <Button
+                mt={1}
+                icon="id-card"
+                disabled={!data.hasNeuralInterface || !data.accessCard}
+                onClick={() => act('sync_card')}
+              >
+                Sync card to neurolink
+              </Button>
+            </Box>
+          )}
           <Box className="CyberpunkPanel__Card CyberpunkPanel__Card--red">
             <Box className="CyberpunkPanel__Title">Pending routing</Box>
             <Box mt={0.5} className="CyberpunkPanel__Muted">

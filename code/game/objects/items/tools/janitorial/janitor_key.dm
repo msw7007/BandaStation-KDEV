@@ -52,7 +52,7 @@
 	user.playsound_local(src, 'sound/items/rattling_keys.ogg', 25, TRUE)
 	if(!do_after(user, 3 SECONDS, airlock))
 		return FALSE
-	if(!department_access || !airlock.check_access_list(SSid_access.accesses_by_region[department_access]))
+	if(!department_access || !airlock.check_cyberpunk_crypto_item_access(src))
 		airlock.balloon_alert(user, "no access!")
 		return FALSE
 	return airlock.try_to_activate_door(user, access_bypass = TRUE)
@@ -67,6 +67,9 @@
 /obj/item/access_key/proc/department_access_given(obj/machinery/keycard_auth/source, list/region_access)
 	SIGNAL_HANDLER
 	department_access = region_access[1]
+	clear_cyberpunk_crypto_access_keys()
+	for(var/access_id in SSid_access.accesses_by_region[department_access])
+		store_cyberpunk_crypto_access(access_id)
 	say("Access granted to [department_access] area.")
 	playsound(src, 'sound/machines/ding.ogg', 25, TRUE)
 	addtimer(CALLBACK(src, PROC_REF(clear_access)), ACCESS_TIMER_LIMIT, TIMER_UNIQUE|TIMER_OVERRIDE)
@@ -80,6 +83,7 @@
 /obj/item/access_key/proc/clear_access()
 	log_game("Access to the [department_access] department on [src] has expired.")
 	investigate_log("Access to the [department_access] department on [src] has expired.]", INVESTIGATE_ACCESSCHANGES)
+	clear_cyberpunk_crypto_access_keys()
 	department_access = null
 	say("Access revoked, time ran out.")
 	playsound(src, 'sound/machines/scanner/scanbuzz.ogg', 25, TRUE)

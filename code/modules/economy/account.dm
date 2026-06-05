@@ -2012,6 +2012,18 @@
 			return record
 	return null
 
+/proc/cyberpunk_persistent_access_id(kind, owner_character_key, area_type)
+	return "persistent:[kind]:[owner_character_key]:[area_type]"
+
+/proc/cyberpunk_grant_persistent_access(mob/living/user, datum/cyberpunk_crypto_key/access_key)
+	if(!user || !access_key)
+		return FALSE
+	user.remember_cyberpunk_crypto_key(access_key)
+	var/obj/item/card/id/card = user.get_cyberpunk_access_card()
+	if(card)
+		card.store_cyberpunk_crypto_key(access_key)
+	return TRUE
+
 /datum/controller/subsystem/economy/proc/get_cyberpunk_business(business_id)
 	return cyberpunk_businesses["[business_id]"]
 
@@ -2093,6 +2105,7 @@
 	business.add_history("created by [business.owner_name] at [business_area.name]")
 	cyberpunk_businesses["[business.id]"] = business
 	terminal.business_id = business.id
+	business.apply_generated_access(owner)
 	return business
 
 /datum/controller/subsystem/economy/proc/create_cyberpunk_apartment(mob/living/owner, obj/machinery/computer/apartment_terminal/terminal, list/params)
@@ -2123,6 +2136,7 @@
 	apartment.add_history("created by [apartment.owner_name] at [apartment_area.name]")
 	cyberpunk_apartments["[apartment.id]"] = apartment
 	terminal.apartment_id = apartment.id
+	apartment.apply_generated_access(owner)
 	return apartment
 
 /datum/controller/subsystem/economy/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
@@ -2175,6 +2189,7 @@
 	var/owner_name
 	var/owner_character_key
 	var/account_id
+	var/access_id
 	var/obj/machinery/computer/business_terminal/terminal
 	var/business_area_type
 	var/list/employees = list()
@@ -2228,6 +2243,25 @@
 /datum/cyberpunk_business/proc/persistent_record_id()
 	return "[owner_character_key]:[business_area_type]"
 
+/datum/cyberpunk_business/proc/get_access_id()
+	if(!access_id)
+		access_id = cyberpunk_persistent_access_id("business", owner_character_key, business_area_type)
+	return access_id
+
+/datum/cyberpunk_business/proc/get_access_key()
+	if(!SSid_access)
+		return null
+	return SSid_access.register_cyberpunk_crypto_access_key(get_access_id(), "[name] business access", name)
+
+/datum/cyberpunk_business/proc/apply_generated_access(mob/living/owner)
+	var/datum/cyberpunk_crypto_key/access_key = get_access_key()
+	if(!access_key)
+		return FALSE
+	terminal?.add_cyberpunk_crypto_key(access_key)
+	cyberpunk_grant_persistent_access(owner, access_key)
+	add_history("business cryptokey access refreshed")
+	return TRUE
+
 /datum/cyberpunk_business/proc/to_persistent_record()
 	var/datum/bank_account/account = get_account()
 	return list(
@@ -2244,6 +2278,7 @@
 			"account_balance" = account?.account_balance || 0,
 			"tax_debt" = tax_debt,
 			"tax_paid" = tax_paid,
+			"access_id" = get_access_id(),
 			"warehouse_stock" = warehouse_stock.Copy(),
 			"warehouse_enabled" = warehouse_enabled,
 			"warehouse_auto_restock" = warehouse_auto_restock,
@@ -2264,6 +2299,7 @@
 		direction = meta["direction"] || direction
 		legal = !!meta["legal"]
 		registered_to = meta["registered_to"] || registered_to
+		access_id = meta["access_id"] || access_id
 		tax_debt = max(0, round(meta["tax_debt"] || tax_debt))
 		tax_paid = max(0, round(meta["tax_paid"] || tax_paid))
 		var/list/persistent_stock = meta["warehouse_stock"]
@@ -2577,6 +2613,7 @@
 		return FALSE
 	var/restored = cyberpunk_persistent_area_restore(business_area, terminal, saved_snapshot)
 	loaded_this_round = TRUE
+	apply_generated_access(user)
 	add_history("[user.real_name || user.name] loaded [restored] object(s); area overwritten")
 	return TRUE
 
@@ -2681,6 +2718,7 @@
 	var/owner_character_key
 	var/obj/machinery/computer/apartment_terminal/terminal
 	var/apartment_area_type
+	var/access_id
 	var/list/saved_snapshot = list()
 	var/saved_at = 0
 	var/loaded_this_round = FALSE
@@ -2718,6 +2756,28 @@
 /datum/cyberpunk_apartment/proc/persistent_record_id()
 	return "[owner_character_key]:[apartment_area_type]"
 
+/datum/cyberpunk_apartment/proc/get_access_id()
+	if(!access_id)
+		access_id = cyberpunk_persistent_access_id("apartment", owner_character_key, apartment_area_type)
+	return access_id
+
+/datum/cyberpunk_apartment/proc/get_access_key()
+	if(!SSid_access)
+		return null
+	return SSid_access.register_cyberpunk_crypto_access_key(get_access_id(), "[name] apartment access", name)
+
+/datum/cyberpunk_apartment/proc/apply_generated_access(mob/living/owner)
+	var/datum/cyberpunk_crypto_key/access_key = get_access_key()
+	if(!access_key)
+		return FALSE
+	terminal?.add_cyberpunk_crypto_key(access_key)
+	for(var/turf/apartment_turf as anything in get_apartment_turfs())
+		for(var/obj/machinery/door/door in apartment_turf.contents)
+			door.add_cyberpunk_crypto_key(access_key)
+	cyberpunk_grant_persistent_access(owner, access_key)
+	add_history("apartment cryptokey access refreshed")
+	return TRUE
+
 /datum/cyberpunk_apartment/proc/to_persistent_record()
 	return list(
 		"id" = persistent_record_id(),
@@ -2726,7 +2786,9 @@
 		"area_type" = "[apartment_area_type]",
 		"saved_at" = world.realtime,
 		"snapshot" = saved_snapshot,
-		"meta" = list(),
+		"meta" = list(
+			"access_id" = get_access_id(),
+		),
 	)
 
 /datum/cyberpunk_apartment/proc/hydrate_from_persistent(mob/living/user)
@@ -2734,6 +2796,9 @@
 	if(!islist(record))
 		return FALSE
 	name = record["name"] || name
+	var/list/meta = record["meta"]
+	if(islist(meta))
+		access_id = meta["access_id"] || access_id
 	if(islist(record["snapshot"]))
 		saved_snapshot = record["snapshot"]
 		saved_at = world.time
@@ -2760,6 +2825,7 @@
 		return FALSE
 	var/restored = cyberpunk_persistent_area_restore(apartment_area, terminal, saved_snapshot)
 	loaded_this_round = TRUE
+	apply_generated_access(user)
 	add_history("[user.real_name || user.name] loaded [restored] object(s); area overwritten")
 	return TRUE
 

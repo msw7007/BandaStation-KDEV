@@ -129,7 +129,17 @@
 	var/corporation_id = "benn"
 	var/corp_manufacturer = "Benn"
 
+/obj/machinery/computer/corporate_terminal/Initialize(mapload)
+	. = ..()
+	var/access_id = cyberpunk_corporation_access_id(corporation_id)
+	if(access_id)
+		add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key(access_id))
+
 /obj/machinery/computer/corporate_terminal/attack_hand(mob/user, list/modifiers)
+	var/mob/living/living_user = user
+	if(!istype(living_user) || !has_cyberpunk_crypto_access(living_user))
+		to_chat(user, span_warning("[src] rejects your cryptokey handshake."))
+		return TRUE
 	ui_interact(user)
 	return TRUE
 
@@ -334,12 +344,35 @@
 		ui.open()
 
 /datum/cyberpunk_temporary_interface_verb_ui/ui_data(mob/user)
+	var/mob/living/living_user = istype(user, /mob/living) ? user : null
+	var/obj/item/card/id/access_card
+	if(living_user)
+		access_card = living_user.get_cyberpunk_access_card()
 	return list(
 		"mode" = interface_mode,
 		"title" = interface_title,
 		"userName" = user?.name || "unknown",
 		"status" = "temporary development entrypoint",
+		"hasNeuralInterface" = istype(living_user) && living_user.has_neural_implant(),
+		"accessCard" = access_card?.name,
+		"memoryKeys" = length(living_user?.cyberpunk_crypto_memory),
 	)
+
+/datum/cyberpunk_temporary_interface_verb_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	if(interface_mode != "neurolink")
+		return FALSE
+	var/mob/living/living_user = istype(ui.user, /mob/living) ? ui.user : null
+	if(!living_user)
+		return FALSE
+	switch(action)
+		if("sync_card")
+			var/result = living_user.sync_cyberpunk_access_card_to_neural_interface()
+			to_chat(living_user, span_notice(result))
+			return TRUE
+	return FALSE
 
 /mob/living/verb/open_cyberpunk_contracts()
 	set name = "Контракты"
@@ -398,6 +431,7 @@
 	circuit = null
 	var/business_id
 	var/size_class = "small"
+	cyberpunk_public_access = TRUE
 
 /obj/machinery/computer/business_terminal/medium
 	name = "medium business terminal"
@@ -447,6 +481,7 @@
 	light_color = LIGHT_COLOR_BLUE
 	circuit = null
 	var/apartment_id
+	cyberpunk_public_access = TRUE
 
 /obj/machinery/computer/apartment_terminal/Destroy()
 	var/datum/cyberpunk_apartment/apartment = SSeconomy.get_cyberpunk_apartment(apartment_id)
@@ -489,6 +524,7 @@
 	var/cyberpunk_business_auto_restock = FALSE
 	var/cyberpunk_business_markup_percent = 0
 	var/cyberpunk_business_minimum_stock = 0
+	cyberpunk_public_access = TRUE
 
 /obj/machinery/vending/proc/cyberpunk_business_record_sale(amount, product_label)
 	var/datum/cyberpunk_business/business = SSeconomy.get_cyberpunk_business(cyberpunk_business_id)

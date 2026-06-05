@@ -103,7 +103,7 @@
 			if(computer.obj_flags & EMAGGED)
 				to_chat(usr, span_boldwarning("Ошибка протокола безопасности: не удается получить доступ к протоколам блокировки."))
 				return TRUE
-			if(lock_access in computer?.stored_id?.access)
+			if(computer?.stored_id?.has_cyberpunk_crypto_access(lock_access))
 				locked = !locked
 			else
 				to_chat(usr, span_boldwarning("Несанкционированный доступ. Пожалуйста, вставьте ID-карту научного отдела."))

@@ -206,7 +206,7 @@
 		return TRUE
 
 	var/obj/item/card/id/ID = user.get_idcard(FALSE)
-	if(ID && (ACCESS_CENT_BAR in ID.access))
+	if(ID?.has_cyberpunk_crypto_access(ACCESS_CENT_BAR))
 		return TRUE
 
 //Luxury Shuttle Blockers

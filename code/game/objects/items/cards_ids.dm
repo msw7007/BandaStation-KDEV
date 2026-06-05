@@ -1910,7 +1910,7 @@
 				LOG_ID_ACCESS_CHANGE(usr, src, "removed [SSid_access.get_access_desc(access_type)]")
 				return TRUE
 
-			if(!(access_type in target_card.access))
+			if(!target_card.has_cyberpunk_crypto_access(access_type))
 				to_chat(usr, span_notice("Ошибка ID: ID-карта отклонила вашу попытку изменить доступ."))
 				LOG_ID_ACCESS_CHANGE(usr, src, "failed to add [SSid_access.get_access_desc(access_type)][try_wildcard ? " with wildcard [try_wildcard]" : ""]")
 				return TRUE
@@ -2070,6 +2070,55 @@
 	name = "Green Team identification card"
 	desc = "A card used to identify members of the green team for CTF"
 	icon_state = "ctf_green"
+
+/obj/item/card/id/cyberpunk_access
+	name = "cryptokey access card"
+	desc = "A backup access card carrying cryptographic access keys."
+	icon_state = "data"
+	registered_name = "Backup Access"
+	assignment = "Cryptokey"
+	var/list/cyberpunk_initial_crypto_accesses = list()
+
+/obj/item/card/id/cyberpunk_access/Initialize(mapload)
+	. = ..()
+	for(var/access_id in cyberpunk_initial_crypto_accesses)
+		store_cyberpunk_crypto_access(access_id)
+	update_label()
+
+/obj/item/card/id/cyberpunk_access/benn
+	registered_name = "Benn Backup"
+	assignment = "Benn Access"
+	cyberpunk_initial_crypto_accesses = list("corp:benn")
+
+/obj/item/card/id/cyberpunk_access/ryaznov
+	registered_name = "Ryaznov Backup"
+	assignment = "Ryaznov Access"
+	cyberpunk_initial_crypto_accesses = list("corp:ryaznov")
+
+/obj/item/card/id/cyberpunk_access/starlight
+	registered_name = "Starlight Backup"
+	assignment = "Starlight Access"
+	cyberpunk_initial_crypto_accesses = list("corp:starlight")
+
+/obj/item/card/id/cyberpunk_access/council
+	registered_name = "Council Backup"
+	assignment = "Council Access"
+	cyberpunk_initial_crypto_accesses = list("city:council")
+
+/obj/item/card/id/cyberpunk_access/police
+	registered_name = "Police Backup"
+	assignment = "Police Access"
+	cyberpunk_initial_crypto_accesses = list("city:police")
+
+/obj/item/card/id/cyberpunk_access/corporate_heads
+	registered_name = "Corporate Heads Backup"
+	assignment = "Corporate Heads Access"
+	cyberpunk_initial_crypto_accesses = list("corp:heads")
+
+/obj/item/card/id/cyberpunk_access/government
+	registered_name = "Government Backup"
+	assignment = "Government Access"
+	cyberpunk_initial_crypto_accesses = list("government:all")
 
 #undef INTERN_THRESHOLD_FALLBACK_HOURS
 #undef HOLOPAY_PROJECTION_INTERVAL

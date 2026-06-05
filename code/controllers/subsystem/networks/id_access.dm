@@ -31,6 +31,8 @@ SUBSYSTEM_DEF(id_access)
 	var/list/station_pda_templates = list()
 	/// Helper list containing all station regions.
 	var/list/station_regions = list()
+	/// Round-local bank of station access cryptokeys. Keyed by legacy access id string for compatibility exports.
+	var/list/datum/cyberpunk_crypto_key/cyberpunk_crypto_access_bank = list()
 
 	/// The roundstart generated code for the spare ID safe. This is given to the Captain on shift start. If there's no Captain, it's given to the HoP. If there's no HoP
 	var/spare_id_safe_code = ""
@@ -42,11 +44,47 @@ SUBSYSTEM_DEF(id_access)
 	setup_trim_singletons()
 	setup_wildcard_dict()
 	setup_access_descriptions()
+	setup_cyberpunk_crypto_access_bank()
 	setup_tgui_lists()
 
 	spare_id_safe_code = "[rand(0,9)][rand(0,9)][rand(0,9)][rand(0,9)][rand(0,9)]"
 
 	return SS_INIT_SUCCESS
+
+/// Creates the round-local cryptokey bank used by ID cards, programs, machines, and manual key transfer.
+/datum/controller/subsystem/id_access/proc/setup_cyberpunk_crypto_access_bank()
+	cyberpunk_crypto_access_bank = list()
+	for(var/access_id in desc_by_access)
+		register_cyberpunk_crypto_access_key(access_id)
+	for(var/region in accesses_by_region)
+		for(var/access_id in accesses_by_region[region])
+			register_cyberpunk_crypto_access_key(access_id)
+	var/list/named_accesses = cyberpunk_named_accesses()
+	for(var/access_id in named_accesses)
+		var/list/access_data = named_accesses[access_id]
+		register_cyberpunk_crypto_access_key(access_id, access_data[1], access_data[2])
+
+/// Registers or returns a stable cryptokey for a station access id.
+/datum/controller/subsystem/id_access/proc/register_cyberpunk_crypto_access_key(access_id, key_name = null, key_owner = "station access")
+	if(!access_id)
+		return null
+	var/bank_id = "[access_id]"
+	var/datum/cyberpunk_crypto_key/existing_key = cyberpunk_crypto_access_bank[bank_id]
+	if(existing_key)
+		return existing_key
+	var/datum/cyberpunk_crypto_key/new_key = new(key_name || "access: [access_id]", key_owner, get_cyberpunk_crypto_access_code(access_id))
+	cyberpunk_crypto_access_bank[bank_id] = new_key
+	return new_key
+
+/// Returns the stable round-local cryptokey for a station access id.
+/datum/controller/subsystem/id_access/proc/get_cyberpunk_crypto_access_key(access_id)
+	if(!access_id)
+		return null
+	var/bank_id = "[access_id]"
+	var/datum/cyberpunk_crypto_key/access_key = cyberpunk_crypto_access_bank[bank_id]
+	if(access_key)
+		return access_key
+	return register_cyberpunk_crypto_access_key(access_id)
 
 /**
  * Called by [/datum/controller/subsystem/ticker/proc/setup]
@@ -424,6 +462,7 @@ SUBSYSTEM_DEF(id_access)
 	if(copy_access)
 		id_card.access = trim.access.Copy()
 		id_card.add_wildcards(trim.wildcard_access)
+		id_card.sync_cyberpunk_crypto_access_keys()
 
 
 	if(trim.assignment)
@@ -524,6 +563,7 @@ SUBSYSTEM_DEF(id_access)
 
 	id_card.add_access(trim.access, mode = TRY_ADD_ALL_NO_WILDCARD)
 	id_card.add_wildcards(trim.wildcard_access, mode = TRY_ADD_ALL)
+	id_card.sync_cyberpunk_crypto_access_keys()
 	if(istype(trim, /datum/id_trim/job))
 		var/datum/id_trim/job/job_trim = trim // Here is where we update a player's paycheck department for the purposes of discounts/paychecks.
 		id_card.registered_account.account_job = job_trim.job

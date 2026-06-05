@@ -140,7 +140,7 @@
 	// security personnel and nonhumans do not count towards this
 	for(var/mob/living/mob as anything in prisoners)
 		var/obj/item/card/id/card = mob.get_idcard(FALSE)
-		if(!ishuman(mob) || (ACCESS_BRIG in card?.GetAccess()))
+		if(!ishuman(mob) || card?.has_cyberpunk_crypto_access(ACCESS_BRIG))
 			prisoners -= mob
 
 	return prisoners

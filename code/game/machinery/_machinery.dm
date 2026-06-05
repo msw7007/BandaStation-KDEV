@@ -140,15 +140,51 @@
 /mob/living/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
 	if(!key_datum)
 		return TRUE
+	if(!has_neural_implant())
+		return FALSE
 	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_memory)
 		if(stored_key.matches(key_datum))
 			return TRUE
-	for(var/obj/item/item as anything in get_equipped_items(INCLUDE_POCKETS | INCLUDE_ACCESSORIES | INCLUDE_HELD))
-		if(!item)
+	return FALSE
+
+/mob/living/proc/get_cyberpunk_access_card()
+	var/obj/item/held_item = get_active_held_item()
+	if(istype(held_item, /obj/item/card/id))
+		return held_item
+	for(var/obj/item/item as anything in held_items)
+		if(istype(item, /obj/item/card/id))
+			return item
+	var/obj/item/neck_item = get_item_by_slot(ITEM_SLOT_NECK)
+	if(istype(neck_item, /obj/item/card/id))
+		return neck_item
+	return null
+
+/mob/living/proc/held_or_neck_card_has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+	if(!key_datum)
+		return TRUE
+	for(var/obj/item/item as anything in held_items)
+		if(!istype(item, /obj/item/card/id))
 			continue
 		if(item.has_cyberpunk_crypto_key(key_datum))
 			return TRUE
+	var/obj/item/neck_item = get_item_by_slot(ITEM_SLOT_NECK)
+	if(istype(neck_item, /obj/item/card/id) && neck_item.has_cyberpunk_crypto_key(key_datum))
+		return TRUE
 	return FALSE
+
+/mob/living/proc/sync_cyberpunk_access_card_to_neural_interface(obj/item/card/id/card)
+	if(!has_neural_implant())
+		return "Your body has no functional neural interface."
+	if(!card)
+		card = get_cyberpunk_access_card()
+	if(!card)
+		return "Hold an ID card or wear it on your neck to synchronize access keys."
+	card.sync_cyberpunk_crypto_access_keys()
+	var/synced_keys = 0
+	for(var/datum/cyberpunk_crypto_key/key_datum as anything in card.cyberpunk_crypto_keys)
+		if(remember_cyberpunk_crypto_key(key_datum))
+			synced_keys++
+	return "Synchronized [synced_keys] cryptokey[synced_keys == 1 ? "" : "s"] from [card]."
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /mob/living/verb/test_cyberpunk_crypto_hack()
@@ -158,6 +194,21 @@
 	var/datum/cyberpunk_crypto_key/test_key = new("test service key", "independent")
 	var/datum/cyberpunk_crypto_hack_session/session = new(src, null, test_key)
 	session.ui_interact(src)
+
+/mob/living/verb/create_cyberpunk_access_backup_cards()
+	set name = "Create Test Access Cards"
+	set category = "IC"
+
+	var/turf/drop_turf = get_turf(src)
+	if(!drop_turf)
+		return
+	new /obj/item/card/id/cyberpunk_access/benn(drop_turf)
+	new /obj/item/card/id/cyberpunk_access/ryaznov(drop_turf)
+	new /obj/item/card/id/cyberpunk_access/starlight(drop_turf)
+	new /obj/item/card/id/cyberpunk_access/council(drop_turf)
+	new /obj/item/card/id/cyberpunk_access/police(drop_turf)
+	new /obj/item/card/id/cyberpunk_access/corporate_heads(drop_turf)
+	new /obj/item/card/id/cyberpunk_access/government(drop_turf)
 
 /mob/living/proc/show_cyberpunk_crypto_memory()
 	if(!length(cyberpunk_crypto_memory))
@@ -249,7 +300,7 @@
 	if(has_cyberpunk_crypto_bypass(user))
 		return TRUE
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_keys)
-		if(user.has_cyberpunk_crypto_key(key_datum))
+		if(user.has_cyberpunk_crypto_key(key_datum) || user.held_or_neck_card_has_cyberpunk_crypto_key(key_datum))
 			return TRUE
 	return FALSE
 

@@ -287,7 +287,7 @@
 	if(!auth)
 		return FALSE
 
-	if(!(ACCESS_ARMORY in auth.GetAccess()))
+	if(!auth.has_cyberpunk_crypto_access(ACCESS_ARMORY))
 		return FALSE
 
 	return TRUE

@@ -220,7 +220,7 @@
 	if(!used_id)
 		return ..()
 
-	if(!(linked_venue.req_access in used_id.GetAccess()))
+	if(!used_id.has_cyberpunk_crypto_access(linked_venue.req_access))
 		to_chat(user, span_warning("This card lacks the access to change this venue's status."))
 		return
 

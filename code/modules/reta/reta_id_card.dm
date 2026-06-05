@@ -37,6 +37,7 @@
 
 	if(!LAZYLEN(new_access))
 		return FALSE // No new access granted
+	sync_cyberpunk_crypto_access_keys()
 
 	// Set timer for this specific department
 	reta_timers[dept] = addtimer(CALLBACK(src, PROC_REF(clear_reta_access_for_dept), dept), duration_ds, TIMER_UNIQUE|TIMER_OVERRIDE|TIMER_STOPPABLE)
@@ -84,6 +85,7 @@
 
 		if(!still_needed)
 			access -= flag
+	sync_cyberpunk_crypto_access_keys()
 
 	// Enhanced logging
 	var/access_names = list()
@@ -122,6 +124,7 @@
 	// Remove all temporary access from the main access list
 	for(var/flag in all_temp_access)
 		access -= flag
+	sync_cyberpunk_crypto_access_keys()
 
 	// Enhanced logging
 	var/access_names = list()

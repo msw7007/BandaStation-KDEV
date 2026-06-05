@@ -240,7 +240,7 @@
 				var/obj/item/card/id/idcard = scanned_human.get_idcard(hand_first = FALSE)
 				for(var/obj/item/scanned_item in scanned_human.get_all_contents_skipping_traits(TRAIT_CONTRABAND_BLOCKER))
 					if(isgun(scanned_item))
-						if((!HAS_TRAIT(scanned_human, TRAIT_MINDSHIELD)) && (isnull(idcard) || !(ACCESS_WEAPONS in idcard.access))) // mindshield or ID card with weapons access, like bartender
+						if((!HAS_TRAIT(scanned_human, TRAIT_MINDSHIELD)) && (isnull(idcard) || !idcard.has_cyberpunk_crypto_access(ACCESS_WEAPONS))) // mindshield or ID card with weapons access, like bartender
 							beep = TRUE
 							break
 						bypassed = TRUE
