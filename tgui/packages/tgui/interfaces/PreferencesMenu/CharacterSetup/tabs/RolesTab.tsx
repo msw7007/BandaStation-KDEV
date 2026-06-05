@@ -1,17 +1,16 @@
 import { binaryInsertWith } from 'common/collections';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useBackend } from 'tgui/backend';
-import { Button } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
 import { type Antagonist, Category } from '../../antagonists/base';
 import {
   JobPriority,
+  type Job,
   type PreferencesMenuData,
   type ServerData,
 } from '../../types';
 import { useServerPrefs } from '../../useServerPrefs';
-import { CyberButton } from '../components/CyberInput';
 import { CyberPanel, CyberSectionHeader } from '../components/CyberPanel';
 import { RoleCard } from '../components/RoleCard';
 import { RoleGearPreview } from '../components/RoleGearPreview';
@@ -23,6 +22,15 @@ const requireAntag = require.context(
 );
 
 const antagsByCategory = new Map<Category, Antagonist[]>();
+
+const roleFilters = [
+  ['all', 'Все'],
+  ['city', 'Городские'],
+  ['corporate', 'Корпорация'],
+  ['deletion', 'Удаление'],
+] as const;
+
+type RoleFilter = (typeof roleFilters)[number][0];
 
 function binaryInsertAntag(collection: Antagonist[], value: Antagonist) {
   return binaryInsertWith(collection, value, (antag) => {
@@ -45,137 +53,166 @@ for (const antagKey of requireAntag.keys()) {
   );
 }
 
-function getJobsByDepartment(serverData: ServerData | undefined) {
-  const jobs = serverData?.jobs.jobs || {};
-  const departments: Record<string, string[]> = {};
-  for (const [jobId, job] of Object.entries(jobs)) {
-    departments[job.department] ||= [];
-    departments[job.department].push(jobId);
-  }
-  return departments;
+function canShowJob(job: Job, data: PreferencesMenuData) {
+  return job.cyberpunk_role?.role_class !== 'government' || !!data.is_admin;
+}
+
+function getJobsForFilter(
+  serverData: ServerData | undefined,
+  filter: RoleFilter,
+  data: PreferencesMenuData,
+) {
+  const allJobs = serverData?.jobs.jobs || {};
+  return Object.fromEntries(
+    Object.entries(allJobs).filter(([, job]) => {
+      const standalone = !!job.cyberpunk_role?.standalone;
+      if (job.cyberpunk_role?.role_class === 'netrunner') {
+        return false;
+      }
+      if (!canShowJob(job, data)) {
+        return false;
+      }
+      if (filter === 'deletion') {
+        return !standalone;
+      }
+      if (!standalone) {
+        return false;
+      }
+      const group = job.cyberpunk_role?.group || 'city';
+      if (filter === 'all') {
+        return true;
+      }
+      if (filter === 'city') {
+        return group === 'city' || group === 'mercenary';
+      }
+      return group === filter;
+    }),
+  );
+}
+
+function firstJobId(jobs: Record<string, Job>) {
+  return Object.keys(jobs)[0];
 }
 
 export function RolesTab() {
   const { act, data } = useBackend<PreferencesMenuData>();
   const serverData = useServerPrefs();
-  const jobs = serverData?.jobs.jobs || {};
-  const departmentJobs = useMemo(() => getJobsByDepartment(serverData), [serverData]);
-  const firstJob = Object.keys(jobs)[0];
-  const [selectedRole, setSelectedRole] = useState(firstJob);
-  const [roleType, setRoleType] = useState<'city' | 'adventure'>('city');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
+  const jobs = useMemo(
+    () => getJobsForFilter(serverData, roleFilter, data),
+    [serverData, roleFilter, data],
+  );
+  const fallbackRole = firstJobId(jobs);
+  const [selectedRole, setSelectedRole] = useState(fallbackRole);
+  const [selectedAntags, setSelectedAntags] = useState(
+    () => new Set(data.selected_antags),
+  );
+  const visibleRole = selectedRole && jobs[selectedRole] ? selectedRole : fallbackRole;
   const antags = [
     ...(antagsByCategory.get(Category.Roundstart) || []),
     ...(antagsByCategory.get(Category.Midround) || []),
     ...(antagsByCategory.get(Category.Latejoin) || []),
   ];
 
-  function setDepartmentPriority(department: string, priority: JobPriority | null) {
-    for (const job of departmentJobs[department] || []) {
-      act('set_job_preference', {
-        job,
-        level: priority,
-      });
+  function selectRoleFilter(nextFilter: RoleFilter) {
+    setRoleFilter(nextFilter);
+    const nextRole = firstJobId(getJobsForFilter(serverData, nextFilter, data));
+    if (nextRole) {
+      setSelectedRole(nextRole);
     }
   }
 
+  useEffect(() => {
+    setSelectedAntags(new Set(data.selected_antags));
+  }, [data.selected_antags]);
+
+  useEffect(() => {
+    if (!visibleRole) {
+      return;
+    }
+    act('set_role_preview_job', {
+      job: visibleRole,
+    });
+  }, [act, visibleRole]);
+
+  useEffect(() => {
+    return () => {
+      act('set_role_preview_job', {
+        clear: true,
+      });
+    };
+  }, [act]);
+
   return (
     <div className="CharacterSetup__layout">
-      <CyberPanel title="A. Настройки предпочтений ролей" scrollable>
-        <CyberSectionHeader>Тип ролей</CyberSectionHeader>
+      <CyberPanel title="A. Предпочтения ролей" scrollable>
+        <CyberSectionHeader>Фильтр ролей</CyberSectionHeader>
         <div className="CharacterSetup__segmented">
-          <button
-            className={roleType === 'city' ? 'active' : ''}
-            onClick={() => setRoleType('city')}
-          >
-            Городские роли
-          </button>
-          <button
-            className={roleType === 'adventure' ? 'active' : ''}
-            onClick={() => setRoleType('adventure')}
-          >
-            Приключенческие роли
-          </button>
+          {roleFilters.map(([id, label]) => (
+            <button
+              key={id}
+              className={roleFilter === id ? 'active' : ''}
+              onClick={() => selectRoleFilter(id)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        <CyberSectionHeader>Предпочтение по отделам</CyberSectionHeader>
-        {Object.entries(departmentJobs).map(([department]) => (
-          <div key={department} className="CharacterSetup__roleGroup">
-            <b>{department}</b>
-            <span>
-              <Button onClick={() => setDepartmentPriority(department, JobPriority.Low)}>
-                Низкое
-              </Button>
-              <Button onClick={() => setDepartmentPriority(department, JobPriority.Medium)}>
-                Среднее
-              </Button>
-              <Button onClick={() => setDepartmentPriority(department, JobPriority.High)}>
-                Высокое
-              </Button>
-            </span>
-          </div>
-        ))}
-
-        <CyberSectionHeader>Настройки пулов ролей</CyberSectionHeader>
-        <CyberButton disabled icon="layer-group">
-          Пул ролей: TODO
-        </CyberButton>
-        <CyberButton disabled icon="arrow-down-short-wide">
-          Минимальный приоритет: TODO
-        </CyberButton>
-        <CyberButton disabled icon="check">
-          Учитывать предпочтения: TODO
-        </CyberButton>
-        <CyberButton disabled icon="shuffle">
-          Заполнять пустые места вне предпочтений: TODO
-        </CyberButton>
-        <CyberButton danger icon="rotate-left" onClick={() => act('reset_role_preferences')}>
-          Сбросить настройки ролей
-        </CyberButton>
+        <CyberSectionHeader>Профессии</CyberSectionHeader>
+        <div className="CharacterSetup__roleList">
+          {Object.entries(jobs).map(([jobId, job]) => (
+            <RoleCard
+              key={jobId}
+              id={jobId}
+              job={job}
+              selected={visibleRole === jobId}
+              priority={data.job_preferences[jobId]}
+              onSelect={() => {
+                setSelectedRole(jobId);
+                act('set_role_preview_job', {
+                  job: jobId,
+                });
+              }}
+              onPriority={(priority) =>
+                act('set_job_preference', {
+                  job: jobId,
+                  level: priority,
+                })
+              }
+            />
+          ))}
+        </div>
       </CyberPanel>
 
       <CyberPanel
         className="CharacterSetup__centerPanel"
         title="Превью выбранной роли"
-        scrollable
       >
-        <div className="CharacterSetup__roleBoard">
-          {Object.entries(departmentJobs).map(([department, jobIds]) => (
-            <div key={department} className="CharacterSetup__roleDepartment">
-              <b>{department}</b>
-              {jobIds.map((jobId) => (
-                <RoleCard
-                  key={jobId}
-                  id={jobId}
-                  job={jobs[jobId]}
-                  selected={selectedRole === jobId}
-                  priority={data.job_preferences[jobId]}
-                  onSelect={() => setSelectedRole(jobId)}
-                  onPriority={(priority) =>
-                    act('set_job_preference', {
-                      job: jobId,
-                      level: priority,
-                    })
-                  }
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-        <RoleGearPreview roleId={selectedRole} job={jobs[selectedRole]} />
+        <RoleGearPreview
+          previewId={data.character_preview_view}
+          roleId={visibleRole}
+          job={jobs[visibleRole]}
+        />
       </CyberPanel>
 
       <CyberPanel title="B. Антагонисты" scrollable>
         <div className="CharacterSetup__antagGrid">
           {antags.map((antag) => {
-            const selected = data.selected_antags.includes(antag.key);
+            const selected = selectedAntags.has(antag.key);
             const banned = data.antag_bans?.includes(antag.key);
             const daysLeft = data.antag_days_left?.[antag.key] || 0;
             const disabled = !!banned || daysLeft > 0;
             return (
               <button
                 key={antag.key}
-                className={classes(['CharacterSetup__antag', selected && 'selected'])}
-                disabled={disabled}
+                className={classes([
+                  'CharacterSetup__antag',
+                  selected && 'selected',
+                  disabled && 'disabled',
+                  !selected && !disabled && 'available',
+                ])}
+                aria-disabled={disabled}
                 title={
                   banned
                     ? `Бан на ${antag.name}`
@@ -183,26 +220,34 @@ export function RolesTab() {
                       ? `Доступно через ${daysLeft} дней`
                       : antag.description.join('\n')
                 }
-                onClick={() =>
+                onClick={() => {
+                  if (disabled) {
+                    return;
+                  }
+                  const nextAntags = new Set(selectedAntags);
+                  if (selected) {
+                    nextAntags.delete(antag.key);
+                  } else {
+                    nextAntags.add(antag.key);
+                  }
+                  setSelectedAntags(nextAntags);
                   act('set_antags', {
                     antags: [antag.key],
                     toggled: !selected,
-                  })
-                }
+                  });
+                }}
               >
                 <span className={classes(['antagonists96x96', antag.key])} />
                 <b>{antag.name}</b>
-                <em>{disabled ? 'нельзя' : selected ? 'можно' : 'нельзя'}</em>
               </button>
             );
           })}
         </div>
         <div className="CharacterSetup__localNote">
-          Эти настройки отражают только готовность игрока. Итоговый выбор
-          зависит от раунда, правил сервера и storyteller/event logic.
+          Эти настройки отражают готовность игрока. Итоговый выбор зависит от раунда,
+          правил сервера и storyteller/event logic.
         </div>
       </CyberPanel>
     </div>
   );
 }
-

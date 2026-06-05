@@ -864,6 +864,7 @@ $department_map: (
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-height: 0;
     background-color: #000;
   }
 
@@ -948,6 +949,11 @@ $department_map: (
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 0.5rem;
+  }
+
+  &__antagGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
   }
 
   &__catalog--wide {
@@ -1067,20 +1073,22 @@ $department_map: (
     position: relative;
     display: block;
     flex: 0 0 auto;
-    min-height: 34rem;
+    min-height: 33.5rem;
     padding-bottom: 0.65rem;
     margin-bottom: 0.65rem;
     border-bottom: 1px solid var(--cy-danger-border);
+    overflow: hidden;
   }
 
   &__equipmentPreview {
     position: absolute;
-    top: 6.2rem;
-    right: 12.25rem;
-    left: 12.25rem;
-    z-index: 1;
+    top: 5.55rem;
+    right: 15rem;
+    left: 15rem;
+    z-index: 0;
     display: flex;
-    min-height: 14.5rem;
+    height: 10rem;
+    min-height: 0;
     align-items: center;
     justify-content: center;
     overflow: hidden;
@@ -1092,6 +1100,11 @@ $department_map: (
     inset: 0;
     z-index: 2;
     min-width: 0;
+    pointer-events: none;
+  }
+
+  &__equipmentSlotGridWrap .SlotButton {
+    pointer-events: auto;
   }
 
   &__equipmentSlotItems {
@@ -1147,22 +1160,44 @@ $department_map: (
 
   &__antag {
     display: grid;
-    grid-template-rows: 5.5rem auto auto;
+    grid-template-rows: 3.2rem minmax(2rem, auto);
     align-items: center;
     justify-items: center;
     gap: 0.25rem;
     color: var(--cy-text);
-    padding: 0.5rem;
+    min-height: 5.75rem;
+    padding: 0.4rem;
     background-color: rgba(11, 20, 26, 0.85);
-    border: 1px solid var(--cy-danger-border);
+    border: 1px solid rgba(255, 84, 84, 0.68);
+
+    .antagonists96x96 {
+      width: 96px;
+      height: 96px;
+      transform: scale(0.46);
+      transform-origin: center;
+      margin: -1.6rem;
+    }
+
+    b {
+      text-align: center;
+      line-height: 1.05;
+    }
+
+    &.available {
+      color: #ff6a6a;
+      border-color: rgba(255, 84, 84, 0.68);
+    }
 
     &.selected {
       color: #8cff9b;
       border-color: rgba(140, 255, 155, 0.55);
     }
 
-    &:disabled {
-      opacity: 0.45;
+    &.disabled,
+    &[aria-disabled='true'] {
+      color: #ffdf7a;
+      opacity: 0.72;
+      border-color: rgba(255, 213, 92, 0.78);
     }
   }
 
@@ -2408,18 +2443,28 @@ $department_map: (
 
 .RoleCard {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.35rem;
-  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  background-color: rgba(5, 8, 13, 0.6);
+  border: 1px solid var(--cy-border);
 
   &__main {
     display: grid;
     gap: 0.15rem;
+    min-width: 0;
     color: var(--cy-text);
     text-align: left;
-    padding: 0.45rem;
-    background-color: rgba(5, 8, 13, 0.6);
-    border: 1px solid var(--cy-border);
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+
+    b,
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
     span,
     em {
@@ -2427,25 +2472,118 @@ $department_map: (
       font-size: 0.75rem;
       font-style: normal;
     }
+
+    em {
+      color: var(--cy-cyan);
+    }
   }
 
-  &.selected &__main {
+  &.selected {
     border-color: var(--cy-cyan);
+    box-shadow: inset 0 0 0.75rem rgba(24, 216, 255, 0.08);
   }
 
   &__priority {
     display: flex;
-    gap: 0.2rem;
+    gap: 0.3rem;
+  }
+
+  &__priorityButton {
+    min-width: 1.65rem;
+    height: 1.35rem;
+    padding: 0 0.35rem;
+    color: var(--cy-cyan);
+    font-weight: bold;
+    background-color: rgba(18, 50, 66, 0.9);
+    border: 1px solid var(--cy-border);
+    clip-path: polygon(0.35rem 0, 100% 0, calc(100% - 0.35rem) 100%, 0 100%);
+    cursor: pointer;
+
+    &:hover,
+    &.selected {
+      color: var(--cy-text);
+      background-color: rgba(24, 216, 255, 0.18);
+      border-color: var(--cy-cyan);
+    }
   }
 }
 
-.RoleGearPreview {
+.CharacterSetup__roleList {
   display: grid;
+  gap: 0.35rem;
+  align-content: start;
+}
+
+.RoleGearPreview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
   gap: 0.6rem;
 
   p {
     margin: 0;
     color: #b7cdd6;
+  }
+
+  &__doll {
+    flex: 0 0 auto;
+    display: grid;
+    justify-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--cy-border);
+    background: rgba(5, 8, 13, 0.7);
+    padding: 0.55rem;
+    min-height: 13.5rem;
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    display: grid;
+    gap: 0.6rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+
+  &__portraitTitle {
+    color: var(--cy-cyan);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  &__summaryStrip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 0.4rem;
+
+    > span {
+      display: grid;
+      gap: 0.15rem;
+      color: var(--cy-cyan);
+      border: 1px solid var(--cy-border);
+      background: rgba(0, 58, 70, 0.35);
+      padding: 0.4rem 0.5rem;
+
+      b {
+        color: var(--cy-red);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+      }
+    }
+  }
+
+  &__bonusList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.4rem;
+
+    span {
+      color: var(--cy-cyan);
+      border: 1px solid var(--cy-border);
+      background: rgba(0, 58, 70, 0.45);
+      padding: 0.4rem 0.55rem;
+    }
   }
 
   &__meta {
@@ -2679,9 +2817,9 @@ $department_map: (
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-rows: auto minmax(13rem, 1fr) auto auto;
+    grid-template-rows: auto minmax(15.5rem, 1fr) auto auto;
     grid-template-columns: 1fr;
-    gap: 0.45rem;
+    gap: 0.6rem;
     align-content: stretch;
   }
 
@@ -2692,7 +2830,7 @@ $department_map: (
 
   &__row--top {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    padding: 0 9rem;
+    padding: 0 10rem;
   }
 
   &__middle {
@@ -2700,7 +2838,7 @@ $department_map: (
     grid-template-columns: minmax(7.5rem, 10rem) minmax(11rem, 1fr) minmax(7.5rem, 10rem);
     gap: 0.55rem;
     align-items: center;
-    min-height: 13rem;
+    min-height: 15.5rem;
   }
 
   &__side {
@@ -2718,11 +2856,12 @@ $department_map: (
 
   &__row--bottom {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-top: 0.85rem;
   }
 
   &__row--underwear {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    padding: 0 13rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 0 12rem;
   }
 
   &--paperdoll .SlotButton {

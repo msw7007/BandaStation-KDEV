@@ -60,7 +60,8 @@
 			continue
 
 		/// BANDASTATION ADDITION START - Loadout
-		var/list/data = islist(passed_list[path]) ? LAZYLISTDUPLICATE(passed_list[path]) : list()
+		var/list/raw_data = passed_list[path]
+		var/list/data = islist(raw_data) ? raw_data.Copy() : list()
 		var/amount = loadout_item_amount(data)
 		if(loadout_item.donator_level > donator_level)
 			to_chat(
@@ -89,7 +90,7 @@
 		/// BANDASTATION ADDITION END - Loadout
 
 		// Set into sanitize list using converted path key
-		LAZYSET(sanitized_list, real_path, data)
+		LAZYSET(sanitized_list, real_path, data.Copy())
 
 	preferences.loadout_points_spent = total_points_spent /// BANDASTATION ADDITION - Loadout
 

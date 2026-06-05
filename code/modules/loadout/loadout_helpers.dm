@@ -166,6 +166,22 @@
 			return ITEM_SLOT_TIGHTS
 	return NONE
 
+/// Builds a visual-only loadout override with only items assigned to an equipment slot.
+/datum/preferences/proc/cyberpunk_build_assigned_loadout_preview_override() as /list
+	var/list/source_loadout = read_preference(/datum/preference/loadout)
+	var/list/preview_loadout = list()
+	for(var/obj/item/item_path as anything in source_loadout)
+		if(!ispath(item_path, /obj/item))
+			continue
+		var/list/item_details = source_loadout?[item_path]
+		if(!islist(item_details))
+			continue
+		var/equip_slot = item_details[INFO_EQUIP_SLOT]
+		if(isnull(equip_slot) || equip_slot == "")
+			continue
+		preview_loadout[item_path] = LAZYLISTDUPLICATE(item_details)
+	return preview_loadout
+
 /// Returns the selected amount for a loadout entry.
 /proc/loadout_item_amount(list/item_details)
 	if(!islist(item_details))

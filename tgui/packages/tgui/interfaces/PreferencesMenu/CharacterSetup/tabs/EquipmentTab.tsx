@@ -722,9 +722,10 @@ export function EquipmentTab() {
             <div className="CharacterSetup__equipmentFixed">
               <div className="CharacterSetup__equipmentPreview">
                 <CharacterPreview
-                  height="250px"
+                  height="170px"
                   id={data.character_preview_view}
                   transparent
+                  width="180px"
                 />
               </div>
               <div className="CharacterSetup__equipmentSlotGridWrap">

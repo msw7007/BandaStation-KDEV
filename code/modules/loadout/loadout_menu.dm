@@ -39,6 +39,8 @@
 
 /datum/preference_middleware/loadout/proc/action_set_loadout_preview_override(list/params, mob/user)
 	PRIVATE_PROC(TRUE)
+	if(!isnull(preferences.character_preview_view))
+		preferences.character_preview_view.preview_job_override = null
 	if(!params["enabled"])
 		preferences.loadout_preview_override = list()
 		preferences.character_preview_view?.update_body()
@@ -79,6 +81,7 @@
 
 	LAZYSET(loadout, path_to_use, item_details)
 	preferences.update_preference(GLOB.preference_entries[/datum/preference/loadout], loadout)
+	preferences.loadout_preview_override = preferences.cyberpunk_build_assigned_loadout_preview_override()
 	preferences.character_preview_view?.update_body()
 	return TRUE
 

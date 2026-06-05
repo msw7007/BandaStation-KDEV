@@ -90,6 +90,17 @@ export type RoleOutfitItem = {
   warning?: string | null;
 };
 
+export type CyberpunkRole = {
+  group?: 'city' | 'corporate' | 'mercenary' | 'antagonist' | string;
+  role_class?: string;
+  corporation?: string | null;
+  accesses?: string[];
+  tasks?: string[];
+  bonuses?: string[];
+  bonus_credits?: number;
+  standalone?: BooleanLike;
+};
+
 export type Job = {
   description: string;
   department: string;
@@ -98,6 +109,7 @@ export type Job = {
   paycheck_department?: string;
   total_positions?: number;
   spawn_positions?: number;
+  cyberpunk_role?: CyberpunkRole;
   outfit_items?: RoleOutfitItem[];
 };
 
@@ -333,6 +345,7 @@ export type PreferencesMenuData = {
       required_playtime: number;
     }
   >;
+  is_admin?: BooleanLike;
   job_preferences: Record<string, JobPriority>;
 
   keybindings: Record<string, string[]>;

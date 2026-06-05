@@ -2,7 +2,30 @@
 	action_delegations = list(
 		"reset_role_preferences" = PROC_REF(reset_role_preferences),
 		"set_job_preference" = PROC_REF(set_job_preference),
+		"set_role_preview_job" = PROC_REF(set_role_preview_job),
 	)
+
+/datum/preference_middleware/jobs/proc/set_role_preview_job(list/params, mob/user)
+	var/atom/movable/screen/map_view/char_preview/preview = preferences.character_preview_view
+	if(isnull(preview))
+		return FALSE
+
+	if(params["clear"])
+		preview.preview_job_override = null
+		preferences.loadout_preview_override = preferences.cyberpunk_build_assigned_loadout_preview_override()
+		preview.update_body()
+		return TRUE
+
+	var/job_title = params["job"]
+	var/datum/job/job = SSjob.get_job(job_title)
+	if(isnull(job))
+		return FALSE
+
+	preview.preview_job_override = job
+	preview.show_job_clothes = TRUE
+	preferences.loadout_preview_override = preferences.cyberpunk_build_assigned_loadout_preview_override()
+	preview.update_body()
+	return TRUE
 
 /datum/preference_middleware/jobs/proc/set_job_preference(list/params, mob/user)
 	var/job_title = params["job"]
@@ -65,6 +88,7 @@
 			"paycheck_department" = job.paycheck_department,
 			"total_positions" = job.total_positions,
 			"spawn_positions" = job.spawn_positions,
+			"cyberpunk_role" = job.cyberpunk_serialize_role_data(),
 			"outfit_items" = serialize_outfit_preview(job),
 		)
 
@@ -131,6 +155,7 @@
 /datum/preference_middleware/jobs/get_ui_data(mob/user)
 	var/list/data = list()
 
+	data["is_admin"] = is_admin(user.client)
 	data["job_preferences"] = preferences.job_preferences
 
 	return data

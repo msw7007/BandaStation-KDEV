@@ -381,6 +381,8 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 	var/datum/preferences/preferences
 	/// Whether we show current job clothes or nude/loadout only
 	var/show_job_clothes = TRUE
+	/// Job outfit forced by the role preferences preview.
+	var/datum/job/preview_job_override
 
 /atom/movable/screen/map_view/char_preview/Initialize(mapload, datum/hud/hud_owner, datum/preferences/preferences)
 	. = ..()
@@ -399,7 +401,7 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 	else
 		body.wipe_state()
 
-	appearance = preferences.render_new_preview_appearance(body, show_job_clothes)
+	appearance = preferences.render_new_preview_appearance(body, show_job_clothes, preview_job_override)
 
 /atom/movable/screen/map_view/char_preview/proc/create_body()
 	QDEL_NULL(body)

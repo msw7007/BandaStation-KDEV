@@ -93,9 +93,9 @@
 
 	return preview_job
 
-/datum/preferences/proc/render_new_preview_appearance(mob/living/carbon/human/dummy/mannequin, show_job_clothes = TRUE)
+/datum/preferences/proc/render_new_preview_appearance(mob/living/carbon/human/dummy/mannequin, show_job_clothes = TRUE, datum/job/preview_job_override)
 	var/datum/job/no_job = SSjob.get_job_type(/datum/job/unassigned)
-	var/datum/job/preview_job = get_highest_priority_job() || no_job
+	var/datum/job/preview_job = preview_job_override || get_highest_priority_job() || no_job
 	cyberpunk_register_custom_hair_designs(cyberpunk_read_custom_hair_designs())
 
 	if(preview_job)

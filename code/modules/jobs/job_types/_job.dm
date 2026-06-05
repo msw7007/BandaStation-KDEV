@@ -135,6 +135,16 @@
 	/// How desensitized this job is to seeing death as a base - applied with the job
 	var/desensitized_base = 1.0
 
+	/// Cyberpunk role block metadata. This is a gameplay/readability layer over the TG job.
+	var/cyberpunk_role_group
+	var/cyberpunk_role_class
+	var/cyberpunk_corporation_id
+	var/list/cyberpunk_role_accesses
+	var/list/cyberpunk_role_tasks
+	var/list/cyberpunk_role_bonuses
+	var/cyberpunk_bonus_credits = 0
+	var/cyberpunk_standalone_role = FALSE
+
 /datum/job/New()
 	. = ..()
 	var/new_spawn_positions = CHECK_MAP_JOB_CHANGE(title, "spawn_positions")
@@ -179,7 +189,469 @@
 		for(var/i in roundstart_experience)
 			spawned_human.mind.adjust_experience(i, roundstart_experience[i], TRUE)
 
+	apply_cyberpunk_role_grants(spawned_human)
+
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_JOB_AFTER_SPAWN, src, spawned, player_client)
+
+/datum/job/proc/cyberpunk_classification()
+	var/tag = config_tag || uppertext(replacetext(title, " ", "_"))
+	switch(tag)
+		if("CAPTAIN")
+			return list("city", "government", null, list("government:all"), 500)
+		if("HEAD_OF_PERSONNEL", "MAGISTRATE", "NANOTRASEN_REPRESENTATIVE", "LAWYER")
+			return list("city", "council", null, list("city:council"), 250)
+		if("HEAD_OF_SECURITY", "WARDEN", "DETECTIVE", "SECURITY_OFFICER", "BLUESHIELD")
+			return list("city", "officer", null, list("city:police"), 150)
+		if("CHIEF_MEDICAL_OFFICER")
+			return list("corporate", "representative", "benn", list("corp:benn", "corp:heads"), 300)
+		if("RESEARCH_DIRECTOR")
+			return list("corporate", "representative", "benn", list("corp:benn", "corp:heads"), 300)
+		if("MEDICAL_DOCTOR", "CHEMIST", "PARAMEDIC", "CORONER", "GENETICIST", "PSYCHOLOGIST", "SCIENTIST")
+			return list("corporate", "specialist-ripper", "benn", list("corp:benn"), 120)
+		if("CHIEF_ENGINEER")
+			return list("corporate", "representative", "ryaznov", list("corp:ryaznov", "corp:heads"), 300)
+		if("STATION_ENGINEER", "ATMOSPHERIC_TECHNICIAN", "ROBOTICIST", "SHAFT_MINER")
+			return list("corporate", "specialist-engineer", "ryaznov", list("corp:ryaznov"), 120)
+		if("QUARTERMASTER")
+			return list("corporate", "representative", "starlight", list("corp:starlight", "corp:heads"), 300)
+		if("CARGO_TECHNICIAN", "EXPLORER")
+			return list("corporate", "specialist-logist", "starlight", list("corp:starlight"), 120)
+		if("BITRUNNER")
+			return list("mercenary", "netrunner", null, list(), 80)
+		if("PRISONER")
+			return list("antagonist", "criminal", null, list(), 0)
+		if("AI", "CYBORG")
+			return list("city", "synthetic", null, list(), 0)
+	return list("city", "worker", null, list(), 60)
+
+/datum/job/proc/get_cyberpunk_role_group()
+	if(cyberpunk_role_group)
+		return cyberpunk_role_group
+	var/list/classification = cyberpunk_classification()
+	return classification[1]
+
+/datum/job/proc/get_cyberpunk_role_class()
+	if(cyberpunk_role_class)
+		return cyberpunk_role_class
+	var/list/classification = cyberpunk_classification()
+	return classification[2]
+
+/datum/job/proc/get_cyberpunk_corporation_id()
+	if(cyberpunk_corporation_id)
+		return cyberpunk_corporation_id
+	var/list/classification = cyberpunk_classification()
+	return classification[3]
+
+/datum/job/proc/get_cyberpunk_role_accesses()
+	if(cyberpunk_role_accesses)
+		return cyberpunk_role_accesses.Copy()
+	var/list/classification = cyberpunk_classification()
+	var/list/accesses = classification[4]
+	return islist(accesses) ? accesses.Copy() : list()
+
+/datum/job/proc/get_cyberpunk_bonus_credits()
+	if(cyberpunk_bonus_credits)
+		return cyberpunk_bonus_credits
+	var/list/classification = cyberpunk_classification()
+	return classification[5] || 0
+
+/datum/job/proc/get_cyberpunk_role_tasks()
+	if(cyberpunk_role_tasks)
+		return cyberpunk_role_tasks.Copy()
+	switch(get_cyberpunk_role_class())
+		if("worker")
+			return list("Free work", "Business setup", "City services", "Contract work")
+		if("council")
+			return list("City decisions", "Emergency funding", "Corporate negotiations", "Police direction")
+		if("officer")
+			return list("Patrol", "Illegal activity suppression", "Witness protection", "Government security")
+		if("intern")
+			return list("Learn corporate routines", "Request access from employees", "Low-risk assignments")
+		if("agent")
+			return list("Corporate security", "Sabotage", "Kidnapping", "Cargo interception")
+		if("specialist-ripper")
+			return list("Medicine", "Chemistry", "Implants", "Biotech services")
+		if("specialist-engineer")
+			return list("Construction", "Repairs", "Equipment production", "Exosuit and ore work")
+		if("specialist-logist")
+			return list("Logistics", "Vehicle work", "Cargo movement", "Wreck and foreign tech scans")
+		if("representative")
+			return list("Corporate development", "Profit routing", "Contracts", "Staff direction")
+		if("netrunner")
+			return list("Cyberspace contracts", "Data recovery", "Network support")
+		if("criminal")
+			return list("Illegal work", "Conflict generation", "Gray economy")
+		if("synthetic")
+			return list("Station support", "Remote monitoring", "Service automation")
+	return list("Contract work", "City support")
+
+/datum/job/proc/get_cyberpunk_role_bonuses()
+	if(cyberpunk_role_bonuses)
+		return cyberpunk_role_bonuses.Copy()
+	var/list/bonuses = list()
+	var/group = get_cyberpunk_role_group()
+	var/role_class = get_cyberpunk_role_class()
+	var/corp_id = get_cyberpunk_corporation_id()
+	if(corp_id)
+		bonuses += "Corporate comms and [corp_id] cryptokey access"
+	switch(group)
+		if("city")
+			bonuses += "City identity and service standing"
+		if("corporate")
+			bonuses += "Corporate task routing"
+		if("mercenary")
+			bonuses += "Flexible contract routing"
+		if("antagonist")
+			bonuses += "Criminal/hostile objective routing"
+	switch(role_class)
+		if("representative")
+			bonuses += "Corporate heads access"
+		if("government")
+			bonuses += "Government master access"
+		if("officer")
+			bonuses += "Police cryptokey access"
+	var/bonus_credits = get_cyberpunk_bonus_credits()
+	if(bonus_credits > 0)
+		bonuses += "[bonus_credits] credits starting role bonus"
+	return bonuses
+
+/datum/job/proc/apply_cyberpunk_role_grants(mob/living/spawned)
+	if(!istype(spawned))
+		return
+	var/list/accesses = get_cyberpunk_role_accesses()
+	if(length(accesses))
+		var/obj/item/card/id/id_card = spawned.get_idcard(FALSE)
+		for(var/access_id in accesses)
+			var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
+			if(!access_key)
+				continue
+			spawned.remember_cyberpunk_crypto_key(access_key)
+			id_card?.store_cyberpunk_crypto_access(access_id)
+	var/bonus_credits = get_cyberpunk_bonus_credits()
+	if(bonus_credits > 0)
+		var/datum/bank_account/account = spawned.get_bank_account()
+		account?.adjust_money(bonus_credits, "Role starting bonus: [title]")
+
+/datum/job/proc/cyberpunk_serialize_role_data()
+	return list(
+		"group" = get_cyberpunk_role_group(),
+		"role_class" = get_cyberpunk_role_class(),
+		"corporation" = get_cyberpunk_corporation_id(),
+		"accesses" = get_cyberpunk_role_accesses(),
+		"tasks" = get_cyberpunk_role_tasks(),
+		"bonuses" = get_cyberpunk_role_bonuses(),
+		"bonus_credits" = get_cyberpunk_bonus_credits(),
+		"standalone" = cyberpunk_standalone_role,
+	)
+
+/// Standalone cyberpunk role layer. These roles are not wrappers around TG jobs;
+/// old jobs can be removed later without removing this tree.
+/datum/job/cyberpunk
+	faction = FACTION_STATION
+	total_positions = 10
+	spawn_positions = 10
+	supervisors = "city and contract law"
+	exp_granted_type = EXP_TYPE_CREW
+	outfit = /datum/outfit/job/assistant
+	plasmaman_outfit = /datum/outfit/plasmaman
+	paycheck = PAYCHECK_LOWER
+	paycheck_department = ACCOUNT_CIV
+	display_order = 1000
+	department_for_prefs = /datum/job_department/assistant
+	job_flags = NONE
+	cyberpunk_role_group = "city"
+	cyberpunk_role_class = "worker"
+	cyberpunk_bonus_credits = 60
+	cyberpunk_standalone_role = TRUE
+	allow_bureaucratic_error = FALSE
+	random_spawns_possible = TRUE
+
+/datum/job/cyberpunk/city_worker
+	title = "City Worker"
+	description = "Free city labor: contracts, service work, business setup, and street jobs."
+	config_tag = "CYBERPUNK_CITY_WORKER"
+	total_positions = -1
+	spawn_positions = -1
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/assistant
+	cyberpunk_role_group = "city"
+	cyberpunk_role_class = "worker"
+	cyberpunk_bonus_credits = 60
+
+/datum/job/cyberpunk/councilor
+	title = "Council Member"
+	description = "City administration role: disputes, permits, funding, and public contracts."
+	config_tag = "CYBERPUNK_COUNCIL_MEMBER"
+	total_positions = 4
+	spawn_positions = 4
+	department_for_prefs = /datum/job_department/captain
+	departments_list = list(/datum/job_department/command)
+	outfit = /datum/outfit/job/hop
+	paycheck = PAYCHECK_COMMAND
+	cyberpunk_role_group = "city"
+	cyberpunk_role_class = "council"
+	cyberpunk_role_accesses = list("city:council")
+	cyberpunk_bonus_credits = 250
+	job_flags = STATION_JOB_FLAGS | JOB_BOLD_SELECT_TEXT | JOB_CANNOT_OPEN_SLOTS | JOB_ANTAG_PROTECTED
+
+/datum/job/cyberpunk/government
+	title = "Government Officer"
+	description = "Government authority with master city access and oversight over legal systems."
+	config_tag = "CYBERPUNK_GOVERNMENT_OFFICER"
+	total_positions = 1
+	spawn_positions = 1
+	department_for_prefs = /datum/job_department/captain
+	departments_list = list(/datum/job_department/command)
+	outfit = /datum/outfit/job/captain
+	paycheck = PAYCHECK_COMMAND
+	cyberpunk_role_group = "city"
+	cyberpunk_role_class = "government"
+	cyberpunk_role_accesses = list("government:all", "city:council", "city:police", "corp:heads")
+	cyberpunk_bonus_credits = 500
+	job_flags = STATION_JOB_FLAGS | HEAD_OF_STAFF_JOB_FLAGS | JOB_ANTAG_PROTECTED
+
+/datum/job/cyberpunk/police_officer
+	title = "Police Officer"
+	description = "Public enforcement role: patrols, illegal activity, arrests, and evidence handling."
+	config_tag = "CYBERPUNK_POLICE_OFFICER"
+	total_positions = 8
+	spawn_positions = 8
+	department_for_prefs = /datum/job_department/security
+	departments_list = list(/datum/job_department/security)
+	outfit = /datum/outfit/job/security
+	paycheck_department = ACCOUNT_SEC
+	cyberpunk_role_group = "city"
+	cyberpunk_role_class = "officer"
+	cyberpunk_role_accesses = list("city:police")
+	cyberpunk_bonus_credits = 150
+	job_flags = STATION_JOB_FLAGS | JOB_ANTAG_PROTECTED
+
+/datum/job/cyberpunk/corporate
+	job_flags = NONE
+	department_for_prefs = /datum/job_department/service
+	departments_list = list(/datum/job_department/service)
+	cyberpunk_role_group = "corporate"
+	cyberpunk_bonus_credits = 80
+	supervisors = "corporate chain of command"
+
+/datum/job/cyberpunk/corporate/intern
+	title = "Corporate Intern"
+	description = "Entry corporate role without starting keys. Learn the chain and request access from staff."
+	config_tag = "CYBERPUNK_CORPORATE_INTERN"
+	total_positions = 9
+	spawn_positions = 9
+	job_flags = NONE
+	cyberpunk_role_class = "intern"
+	cyberpunk_role_tasks = list("Learn corporate routines", "Request keys from employees", "Take low-risk work")
+
+/datum/job/cyberpunk/corporate/benn_intern
+	title = "Benn Intern"
+	description = "Benn entry role: biotech errands, clinic support, implant paperwork, and supervised corporate work."
+	config_tag = "CYBERPUNK_BENN_INTERN"
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/medical
+	departments_list = list(/datum/job_department/medical)
+	cyberpunk_corporation_id = "benn"
+
+/datum/job/cyberpunk/corporate/ryaznov_intern
+	title = "Ryaznov Intern"
+	description = "Ryaznov entry role: workshop support, construction errands, component hauling, and supervised repair work."
+	config_tag = "CYBERPUNK_RYAZNOV_INTERN"
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/engineering
+	departments_list = list(/datum/job_department/engineering)
+	cyberpunk_corporation_id = "ryaznov"
+
+/datum/job/cyberpunk/corporate/starlight_intern
+	title = "Starlight Intern"
+	description = "Starlight entry role: cargo paperwork, delivery support, garage errands, and supervised logistics work."
+	config_tag = "CYBERPUNK_STARLIGHT_INTERN"
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/cargo
+	departments_list = list(/datum/job_department/cargo)
+	cyberpunk_corporation_id = "starlight"
+
+/datum/job/cyberpunk/corporate/agent
+	title = "Corporate Agent"
+	description = "Corporate field role: security, sabotage, retrieval, intimidation, and sensitive contracts."
+	config_tag = "CYBERPUNK_CORPORATE_AGENT"
+	total_positions = 6
+	spawn_positions = 6
+	job_flags = NONE
+	outfit = /datum/outfit/job/security
+	cyberpunk_role_class = "agent"
+	cyberpunk_role_tasks = list("Corporate security", "Sabotage", "Retrieval", "Sensitive contracts")
+
+/datum/job/cyberpunk/corporate/benn_agent
+	title = "Benn Agent"
+	description = "Benn field role: protect medical assets, recover biotech property, and handle sensitive corporate contracts."
+	config_tag = "CYBERPUNK_BENN_AGENT"
+	job_flags = STATION_JOB_FLAGS | JOB_ANTAG_PROTECTED
+	department_for_prefs = /datum/job_department/medical
+	departments_list = list(/datum/job_department/medical)
+	cyberpunk_corporation_id = "benn"
+	cyberpunk_role_accesses = list("corp:benn")
+
+/datum/job/cyberpunk/corporate/ryaznov_agent
+	title = "Ryaznov Agent"
+	description = "Ryaznov field role: protect engineering assets, recover hardware, and handle sensitive corporate contracts."
+	config_tag = "CYBERPUNK_RYAZNOV_AGENT"
+	job_flags = STATION_JOB_FLAGS | JOB_ANTAG_PROTECTED
+	department_for_prefs = /datum/job_department/engineering
+	departments_list = list(/datum/job_department/engineering)
+	cyberpunk_corporation_id = "ryaznov"
+	cyberpunk_role_accesses = list("corp:ryaznov")
+
+/datum/job/cyberpunk/corporate/starlight_agent
+	title = "Starlight Agent"
+	description = "Starlight field role: protect shipments, recover vehicles and cargo, and handle sensitive corporate contracts."
+	config_tag = "CYBERPUNK_STARLIGHT_AGENT"
+	job_flags = STATION_JOB_FLAGS | JOB_ANTAG_PROTECTED
+	department_for_prefs = /datum/job_department/cargo
+	departments_list = list(/datum/job_department/cargo)
+	cyberpunk_corporation_id = "starlight"
+	cyberpunk_role_accesses = list("corp:starlight")
+
+/datum/job/cyberpunk/corporate/benn_ripper
+	title = "Benn Ripper Specialist"
+	description = "Benn specialist: medicine, chemistry, implants, biotech, and patient services."
+	config_tag = "CYBERPUNK_BENN_RIPPER_SPECIALIST"
+	total_positions = 6
+	spawn_positions = 6
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/medical
+	departments_list = list(/datum/job_department/medical)
+	outfit = /datum/outfit/job/doctor
+	paycheck_department = ACCOUNT_MED
+	cyberpunk_role_class = "specialist-ripper"
+	cyberpunk_corporation_id = "benn"
+	cyberpunk_role_accesses = list("corp:benn")
+	cyberpunk_bonus_credits = 120
+
+/datum/job/cyberpunk/corporate/ryaznov_engineer
+	title = "Ryaznov Engineering Specialist"
+	description = "Ryaznov specialist: construction, repairs, fabrication, power, and heavy equipment."
+	config_tag = "CYBERPUNK_RYAZNOV_ENGINEERING_SPECIALIST"
+	total_positions = 6
+	spawn_positions = 6
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/engineering
+	departments_list = list(/datum/job_department/engineering)
+	outfit = /datum/outfit/job/engineer
+	paycheck_department = ACCOUNT_ENG
+	cyberpunk_role_class = "specialist-engineer"
+	cyberpunk_corporation_id = "ryaznov"
+	cyberpunk_role_accesses = list("corp:ryaznov")
+	cyberpunk_bonus_credits = 120
+
+/datum/job/cyberpunk/corporate/starlight_logist
+	title = "Starlight Logistics Specialist"
+	description = "Starlight specialist: vehicles, delivery, cargo routing, wreck recovery, and scans."
+	config_tag = "CYBERPUNK_STARLIGHT_LOGISTICS_SPECIALIST"
+	total_positions = 6
+	spawn_positions = 6
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/cargo
+	departments_list = list(/datum/job_department/cargo)
+	outfit = /datum/outfit/job/cargo_tech
+	paycheck_department = ACCOUNT_CAR
+	cyberpunk_role_class = "specialist-logist"
+	cyberpunk_corporation_id = "starlight"
+	cyberpunk_role_accesses = list("corp:starlight")
+	cyberpunk_bonus_credits = 120
+
+/datum/job/cyberpunk/corporate/representative
+	title = "Corporate Representative"
+	description = "Corporate leadership role: contracts, staff direction, company profit, and negotiations."
+	config_tag = "CYBERPUNK_CORPORATE_REPRESENTATIVE"
+	total_positions = 1
+	spawn_positions = 1
+	paycheck = PAYCHECK_COMMAND
+	cyberpunk_role_class = "representative"
+	cyberpunk_bonus_credits = 300
+	job_flags = NONE
+
+/datum/job/cyberpunk/corporate/benn_representative
+	title = "Benn Representative"
+	description = "Benn leadership role: direct biotech staff, negotiate contracts, and manage corporate medical interests."
+	config_tag = "CYBERPUNK_BENN_REPRESENTATIVE"
+	job_flags = STATION_JOB_FLAGS | JOB_BOLD_SELECT_TEXT | JOB_CANNOT_OPEN_SLOTS | JOB_ANTAG_PROTECTED
+	department_for_prefs = /datum/job_department/medical
+	departments_list = list(/datum/job_department/medical, /datum/job_department/command)
+	outfit = /datum/outfit/job/cmo
+	paycheck_department = ACCOUNT_MED
+	cyberpunk_corporation_id = "benn"
+	cyberpunk_role_accesses = list("corp:benn", "corp:heads")
+
+/datum/job/cyberpunk/corporate/ryaznov_representative
+	title = "Ryaznov Representative"
+	description = "Ryaznov leadership role: direct engineering staff, negotiate contracts, and manage industrial interests."
+	config_tag = "CYBERPUNK_RYAZNOV_REPRESENTATIVE"
+	job_flags = STATION_JOB_FLAGS | JOB_BOLD_SELECT_TEXT | JOB_CANNOT_OPEN_SLOTS | JOB_ANTAG_PROTECTED
+	department_for_prefs = /datum/job_department/engineering
+	departments_list = list(/datum/job_department/engineering, /datum/job_department/command)
+	outfit = /datum/outfit/job/ce
+	paycheck_department = ACCOUNT_ENG
+	cyberpunk_corporation_id = "ryaznov"
+	cyberpunk_role_accesses = list("corp:ryaznov", "corp:heads")
+
+/datum/job/cyberpunk/corporate/starlight_representative
+	title = "Starlight Representative"
+	description = "Starlight leadership role: direct logistics staff, negotiate contracts, and manage delivery interests."
+	config_tag = "CYBERPUNK_STARLIGHT_REPRESENTATIVE"
+	job_flags = STATION_JOB_FLAGS | JOB_BOLD_SELECT_TEXT | JOB_CANNOT_OPEN_SLOTS | JOB_ANTAG_PROTECTED
+	department_for_prefs = /datum/job_department/cargo
+	departments_list = list(/datum/job_department/cargo, /datum/job_department/command)
+	outfit = /datum/outfit/job/quartermaster
+	paycheck_department = ACCOUNT_CAR
+	cyberpunk_corporation_id = "starlight"
+	cyberpunk_role_accesses = list("corp:starlight", "corp:heads")
+
+/datum/job/cyberpunk/mercenary
+	title = "Mercenary"
+	description = "Independent contractor for public, private, and gray work."
+	config_tag = "CYBERPUNK_MERCENARY"
+	total_positions = -1
+	spawn_positions = -1
+	job_flags = STATION_JOB_FLAGS
+	department_for_prefs = /datum/job_department/assistant
+	departments_list = list(/datum/job_department/assistant)
+	cyberpunk_role_group = "mercenary"
+	cyberpunk_role_class = "mercenary"
+	cyberpunk_bonus_credits = 80
+	supervisors = "active contracts"
+
+/datum/job/cyberpunk/netrunner
+	title = "Netrunner"
+	description = "Independent cyberspace specialist for data, demons, ICE and network contracts."
+	config_tag = "CYBERPUNK_NETRUNNER"
+	total_positions = 0
+	spawn_positions = 0
+	job_flags = NONE
+	department_for_prefs = /datum/job_department/science
+	departments_list = list(/datum/job_department/science)
+	outfit = /datum/outfit/job/bitrunner
+	paycheck_department = ACCOUNT_SCI
+	cyberpunk_role_group = "mercenary"
+	cyberpunk_role_class = "netrunner"
+	cyberpunk_bonus_credits = 80
+	cyberpunk_standalone_role = FALSE
+
+/datum/job/cyberpunk/criminal_contractor
+	title = "Criminal Contractor"
+	description = "Illegal economy role: gray contracts, theft, sabotage, and street violence."
+	config_tag = "CYBERPUNK_CRIMINAL_CONTRACTOR"
+	total_positions = 6
+	spawn_positions = 6
+	department_for_prefs = /datum/job_department/security
+	departments_list = list(/datum/job_department/security)
+	outfit = /datum/outfit/job/prisoner
+	paycheck = PAYCHECK_LOWER
+	paycheck_department = ACCOUNT_CIV
+	cyberpunk_role_group = "antagonist"
+	cyberpunk_role_class = "criminal"
+	cyberpunk_bonus_credits = 0
+	job_flags = STATION_JOB_FLAGS | JOB_CANNOT_OPEN_SLOTS | JOB_ANTAG_PROTECTED
 
 /// Return the outfit to use
 /datum/job/proc/get_outfit(consistent)

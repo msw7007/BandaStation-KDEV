@@ -1,4 +1,3 @@
-import { Button } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
 import { JobPriority, type Job } from '../../types';
@@ -7,6 +6,28 @@ const priorityText: Record<number, string> = {
   [JobPriority.Low]: 'Низкий',
   [JobPriority.Medium]: 'Средний',
   [JobPriority.High]: 'Высокий',
+};
+
+const roleNameText: Record<string, string> = {
+  'City Worker': 'Житель',
+  'Council Member': 'Член совета',
+  'Government Officer': 'Правительство',
+  'Police Officer': 'Офицер полиции',
+  'Benn Intern': 'Интерн Бэнь',
+  'Ryaznov Intern': 'Стажер Рязнов',
+  'Starlight Intern': 'Подмастерье Старлайт',
+  'Benn Agent': 'Оперативник Бэнь',
+  'Ryaznov Agent': 'Агент Рязнов',
+  'Starlight Agent': 'Боец Старлайт',
+  'Benn Ripper Specialist': 'Специалист Бэнь',
+  'Ryaznov Engineering Specialist': 'Инженер Рязнов',
+  'Starlight Logistics Specialist': 'Мастер Старлайт',
+  'Benn Representative': 'Глава представительства Бэнь',
+  'Ryaznov Representative': 'Глава представительства Рязнов',
+  'Starlight Representative': 'Глава представительства Старлайт',
+  Mercenary: 'Наемник',
+  Netrunner: 'Нетраннер',
+  'Criminal Contractor': 'Серый подрядчик',
 };
 
 type RoleCardProps = {
@@ -19,40 +40,53 @@ type RoleCardProps = {
   onPriority?: (priority: JobPriority | null) => void;
 };
 
+export function roleDisplayName(id: string) {
+  return roleNameText[id] || id;
+}
+
 export function RoleCard(props: RoleCardProps) {
-  const { disabled, id, job, onPriority, onSelect, priority, selected } = props;
+  const { disabled, id, onPriority, onSelect, priority, selected } = props;
 
   return (
     <div className={classes(['RoleCard', selected && 'selected'])}>
       <button className="RoleCard__main" disabled={disabled} onClick={onSelect}>
-        <b>{id}</b>
-        <span>{job.department}</span>
+        <b>{roleDisplayName(id)}</b>
         {!!priority && <em>{priorityText[priority]}</em>}
       </button>
       {!!onPriority && (
         <div className="RoleCard__priority">
-          <Button
-            selected={priority === JobPriority.Low}
+          <button
+            className={classes([
+              'RoleCard__priorityButton',
+              priority === JobPriority.Low && 'selected',
+            ])}
             onClick={() => onPriority(JobPriority.Low)}
           >
             Н
-          </Button>
-          <Button
-            selected={priority === JobPriority.Medium}
+          </button>
+          <button
+            className={classes([
+              'RoleCard__priorityButton',
+              priority === JobPriority.Medium && 'selected',
+            ])}
             onClick={() => onPriority(JobPriority.Medium)}
           >
             С
-          </Button>
-          <Button
-            selected={priority === JobPriority.High}
+          </button>
+          <button
+            className={classes([
+              'RoleCard__priorityButton',
+              priority === JobPriority.High && 'selected',
+            ])}
             onClick={() => onPriority(JobPriority.High)}
           >
             В
-          </Button>
-          <Button icon="times" onClick={() => onPriority(null)} />
+          </button>
+          <button className="RoleCard__priorityButton" onClick={() => onPriority(null)}>
+            Х
+          </button>
         </div>
       )}
     </div>
   );
 }
-
