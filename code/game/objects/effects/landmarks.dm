@@ -57,8 +57,12 @@ INITIALIZE_IMMEDIATE(/obj/effect/landmark)
 
 // START LANDMARKS FOLLOW. Don't change the names unless
 // you are refactoring shitty landmark code.
+//CYBERPUNK BUILD - rebuild and delete before release
+// Legacy TG landmark paths are temporarily repointed to cyberpunk role titles.
+// This keeps existing maps spawnable while old station jobs are being removed.
+//CYBERPUNK BUILD - rebuild and delete before release
 /obj/effect/landmark/start/assistant
-	name = JOB_ASSISTANT
+	name = "City Worker"
 	icon_state = JOB_ASSISTANT //icon_state is case sensitive. why are all of these capitalized? because fuck you that's why
 
 /obj/effect/landmark/start/assistant/override
@@ -66,144 +70,150 @@ INITIALIZE_IMMEDIATE(/obj/effect/landmark)
 	delete_after_roundstart = FALSE
 
 /obj/effect/landmark/start/prisoner
-	name = "Prisoner"
+	name = "Criminal Contractor"
 	icon_state = "Prisoner"
 
 /obj/effect/landmark/start/janitor
-	name = "Janitor"
+	name = "City Worker"
 	icon_state = "Janitor"
 
 /obj/effect/landmark/start/cargo_technician
-	name = "Cargo Technician"
+	name = "Starlight Intern"
 	icon_state = "Cargo Technician"
 
 /obj/effect/landmark/start/bitrunner
-	name = "Bitrunner"
+	name = "Mercenary"
 	icon_state = "Bitrunner"
 
 /obj/effect/landmark/start/bartender
-	name = "Bartender"
+	name = "City Worker"
 	icon_state = "Bartender"
 
 /obj/effect/landmark/start/clown
-	name = "Clown"
+	name = "Mercenary"
 	icon_state = "Clown"
 
 /obj/effect/landmark/start/mime
-	name = "Mime"
+	name = "Mercenary"
 	icon_state = "Mime"
 
 /obj/effect/landmark/start/quartermaster
-	name = "Quartermaster"
+	name = "Starlight Representative"
 	icon_state = "Quartermaster"
 
 /obj/effect/landmark/start/atmospheric_technician
-	name = "Atmospheric Technician"
+	name = "Ryaznov Intern"
 	icon_state = "Atmospheric Technician"
 
 /obj/effect/landmark/start/cook
-	name = "Cook"
+	name = "City Worker"
 	icon_state = "Cook"
 
 /obj/effect/landmark/start/shaft_miner
-	name = "Shaft Miner"
+	name = "Starlight Logistics Specialist"
 	icon_state = "Shaft Miner"
 
 /obj/effect/landmark/start/security_officer
-	name = "Security Officer"
+	name = "Police Officer"
 	icon_state = "Security Officer"
 
 /obj/effect/landmark/start/botanist
-	name = "Botanist"
+	name = "City Worker"
 	icon_state = "Botanist"
 
 /obj/effect/landmark/start/head_of_security
-	name = "Head of Security"
+	name = "Police Officer"
 	icon_state = "Head of Security"
 
 /obj/effect/landmark/start/captain
-	name = "Captain"
+	name = "Government Officer"
 	icon_state = "Captain"
 
 /obj/effect/landmark/start/detective
-	name = "Detective"
+	name = "Police Officer"
 	icon_state = "Detective"
 
 /obj/effect/landmark/start/warden
-	name = "Warden"
+	name = "Police Officer"
 	icon_state = "Warden"
 
 /obj/effect/landmark/start/chief_engineer
-	name = "Chief Engineer"
+	name = "Ryaznov Representative"
 	icon_state = "Chief Engineer"
 
 /obj/effect/landmark/start/head_of_personnel
-	name = "Head of Personnel"
+	name = "Council Member"
 	icon_state = "Head of Personnel"
 
 /obj/effect/landmark/start/librarian
-	name = "Curator"
+	name = "City Worker"
 	icon_state = "Curator"
 
 /obj/effect/landmark/start/lawyer
-	name = "Lawyer"
+	name = "Council Member"
 	icon_state = "Lawyer"
 
 /obj/effect/landmark/start/station_engineer
-	name = "Station Engineer"
+	name = "Ryaznov Engineering Specialist"
 	icon_state = "Station Engineer"
 
 /obj/effect/landmark/start/medical_doctor
-	name = "Medical Doctor"
+	name = "Benn Intern"
 	icon_state = "Medical Doctor"
 
 /obj/effect/landmark/start/coroner
-	name = "Coroner"
+	name = "Benn Ripper Specialist"
 	icon_state = "Coroner"
 
 /obj/effect/landmark/start/paramedic
-	name = "Paramedic"
+	name = "Benn Agent"
 	icon_state = "Paramedic"
 
 /obj/effect/landmark/start/scientist
-	name = "Scientist"
+	name = "Benn Ripper Specialist"
 	icon_state = "Scientist"
 
 /obj/effect/landmark/start/chemist
-	name = "Chemist"
+	name = "Benn Ripper Specialist"
 	icon_state = "Chemist"
 
 /obj/effect/landmark/start/roboticist
-	name = "Roboticist"
+	name = "Ryaznov Engineering Specialist"
 	icon_state = "Roboticist"
 
 /obj/effect/landmark/start/research_director
-	name = JOB_RESEARCH_DIRECTOR
+	name = "Benn Representative"
 	icon_state = JOB_RESEARCH_DIRECTOR
 
 /obj/effect/landmark/start/geneticist
-	name = "Geneticist"
+	name = "Benn Ripper Specialist"
 	icon_state = "Geneticist"
 
 /obj/effect/landmark/start/chief_medical_officer
-	name = "Chief Medical Officer"
+	name = "Benn Representative"
 	icon_state = "Chief Medical Officer"
 
 
 /obj/effect/landmark/start/psychologist
-	name = "Psychologist"
+	name = "City Worker"
 	icon_state = "Psychologist"
 
 /obj/effect/landmark/start/chaplain
-	name = "Chaplain"
+	name = "City Worker"
 	icon_state = "Chaplain"
 
 /obj/effect/landmark/start/cyborg
-	name = "Cyborg"
+	//CYBERPUNK BUILD - rebuild and delete before release
+	// Kept as an inert legacy synthetic spawn. The old cyborg role is no longer player-facing.
+	name = JOB_CYBORG
+	//CYBERPUNK BUILD - rebuild and delete before release
 	icon_state = "Cyborg"
 
 /obj/effect/landmark/start/ai
-	name = "AI"
+	//CYBERPUNK BUILD - rebuild and delete before release
+	// Kept as an inert legacy synthetic spawn. Malfunctioning AI is disabled until rebuilt.
+	name = JOB_AI
+	//CYBERPUNK BUILD - rebuild and delete before release
 	icon_state = "AI"
 	delete_after_roundstart = FALSE
 	var/primary_ai = TRUE
@@ -223,7 +233,7 @@ INITIALIZE_IMMEDIATE(/obj/effect/landmark)
 //Department Security spawns
 
 /obj/effect/landmark/start/depsec
-	name = "department_sec"
+	name = "Police Officer"
 	icon_state = "Security Officer"
 	/// What department this spawner is for
 	var/department
@@ -237,19 +247,19 @@ INITIALIZE_IMMEDIATE(/obj/effect/landmark)
 	return ..()
 
 /obj/effect/landmark/start/depsec/supply
-	name = "supply_sec"
+	name = "Police Officer"
 	department = SEC_DEPT_SUPPLY
 
 /obj/effect/landmark/start/depsec/medical
-	name = "medical_sec"
+	name = "Police Officer"
 	department = SEC_DEPT_MEDICAL
 
 /obj/effect/landmark/start/depsec/engineering
-	name = "engineering_sec"
+	name = "Police Officer"
 	department = SEC_DEPT_ENGINEERING
 
 /obj/effect/landmark/start/depsec/science
-	name = "science_sec"
+	name = "Police Officer"
 	department = SEC_DEPT_SCIENCE
 
 //Antagonist spawns

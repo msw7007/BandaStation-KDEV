@@ -1188,7 +1188,11 @@
 	candidate.add_antag_datum(/datum/antagonist/malf_ai)
 
 /datum/dynamic_ruleset/midround/from_living/malf_ai/can_be_selected()
-	return ..() && !HAS_TRAIT(SSstation, STATION_TRAIT_HUMAN_AI)
+	//CYBERPUNK BUILD - rebuild and delete before release
+	// Disabled while the old station AI job is removed from the player-facing role tree.
+	// Rebuild this as a cyberpunk synthetic/network antagonist instead of requiring /datum/job/ai.
+	return FALSE
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 /datum/dynamic_ruleset/midround/from_living/blob
 	name = "Blob Infection"

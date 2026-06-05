@@ -153,6 +153,15 @@
 	var/new_total_positions = CHECK_MAP_JOB_CHANGE(title, "total_positions")
 	if(isnum(new_total_positions))
 		total_positions = new_total_positions
+	//CYBERPUNK BUILD - rebuild and delete before release
+	// The cyberpunk role tree is now the only player-facing roundstart job set.
+	// Keep legacy TG jobs as data/outfit providers, but remove them from normal
+	// assignment until the upstream job tree is fully deleted.
+	if((job_flags & JOB_NEW_PLAYER_JOINABLE) && !istype(src, /datum/job/cyberpunk))
+		job_flags &= ~(JOB_NEW_PLAYER_JOINABLE|JOB_REOPEN_ON_ROUNDSTART_LOSS|JOB_CAN_BE_INTERN)
+		spawn_positions = 0
+		total_positions = 0
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Executes after the mob has been spawned in the map. Client might not be yet in the mob, and is thus a separate variable.
 /datum/job/proc/after_spawn(mob/living/spawned, client/player_client)
