@@ -163,12 +163,6 @@
 			return CORP_GROUP_RYAZNOV
 		if(CORP_ALIGN_STARLIGHT)
 			return CORP_GROUP_STARLIGHT
-		if("benn_bio", "benn_clinic", "benn_shadow")
-			return CORP_GROUP_BEN
-		if("ryaznov_works", "ryaznov_energy", "ryaznov_defense")
-			return CORP_GROUP_RYAZNOV
-		if("starlight_logistics", "starlight_transit", "starlight_market")
-			return CORP_GROUP_STARLIGHT
 		if(CORP_ALIGN_SUN_YON, CORP_ALIGN_ISHIKAWA, CORP_ALIGN_HO_SHI)
 			return CORP_GROUP_BEN
 		if(CORP_ALIGN_KOWALSKI, CORP_ALIGN_TYAZHMARSH, CORP_ALIGN_TESLA_SCIENCE)
@@ -186,28 +180,46 @@
 	switch(normalized)
 		if("benn", "ben", "benn conglomerate", "бэнь")
 			return CORP_ALIGN_BENN
+		if("sun yon", "sun yon corporation", "sun_yon")
+			return CORP_ALIGN_SUN_YON
+		if("ishikawa", "ishikawa industries")
+			return CORP_ALIGN_ISHIKAWA
+		if("ho shi", "ho shi technologies", "ho_shi")
+			return CORP_ALIGN_HO_SHI
 		if("benn bio")
-			return "benn_bio"
+			return CORP_ALIGN_SUN_YON
 		if("benn clinic")
-			return "benn_clinic"
+			return CORP_ALIGN_ISHIKAWA
 		if("benn shadow")
-			return "benn_shadow"
+			return CORP_ALIGN_HO_SHI
 		if("ryaznov", "riaznov", "ryaznov union", "рязнов")
 			return CORP_ALIGN_RYAZNOV
+		if("kowalski", "kowalski & co", "kowalski and co")
+			return CORP_ALIGN_KOWALSKI
+		if("tyazhmarsh", "tyazhmarsh production")
+			return CORP_ALIGN_TYAZHMARSH
+		if("tesla", "tesla science", "tesla_science")
+			return CORP_ALIGN_TESLA_SCIENCE
 		if("ryaznov works")
-			return "ryaznov_works"
+			return CORP_ALIGN_KOWALSKI
 		if("ryaznov energy")
-			return "ryaznov_energy"
+			return CORP_ALIGN_TESLA_SCIENCE
 		if("ryaznov defense")
-			return "ryaznov_defense"
+			return CORP_ALIGN_TYAZHMARSH
 		if("starlight", "starlight combine", "старлайт")
 			return CORP_ALIGN_STARLIGHT
 		if("starlight logistics")
-			return "starlight_logistics"
+			return CORP_ALIGN_TRANS_TRAVEL
 		if("starlight transit")
-			return "starlight_transit"
+			return CORP_ALIGN_BLACKROCK_INVESTIGATE
 		if("starlight market")
-			return "starlight_market"
+			return CORP_ALIGN_SAMANTHAS_KEIR
+		if("blackrock", "blackrock investigate", "blackrock_investigate")
+			return CORP_ALIGN_BLACKROCK_INVESTIGATE
+		if("trans travel", "trans_travel")
+			return CORP_ALIGN_TRANS_TRAVEL
+		if("samantha's keir", "samanthas keir", "samanthas_keir")
+			return CORP_ALIGN_SAMANTHAS_KEIR
 	var/list/choices = corp_align_choices()
 	if(normalized in choices)
 		return normalized

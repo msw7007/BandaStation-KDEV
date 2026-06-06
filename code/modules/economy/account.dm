@@ -479,7 +479,19 @@
 	var/manufacturer_id = cyberpunk_normalize_corporation_id(manufacturer)
 	if(cyberpunk_corporations[manufacturer_id])
 		return manufacturer_id
+	var/manufacturer_group = cyberpunk_major_corp_for_manufacturer(manufacturer)
+	switch(manufacturer_group)
+		if("ben")
+			return CYBERPUNK_CORP_BENN
+		if("ryaznov")
+			return CYBERPUNK_CORP_RYAZNOV
+		if("starlight")
+			return CYBERPUNK_CORP_STARLIGHT
 	var/manufacturer_text = lowertext(trim("[manufacturer]"))
+	for(var/corporation_id in cyberpunk_corporations)
+		var/datum/cyberpunk_corporation/corporation = cyberpunk_corporations[corporation_id]
+		if(corporation?.get_subsidiary_by_manufacturer(manufacturer_text))
+			return corporation_id
 	if(findtext(manufacturer_text, "benn") || findtext(manufacturer_text, "ben"))
 		return CYBERPUNK_CORP_BENN
 	if(findtext(manufacturer_text, "ryaznov") || findtext(manufacturer_text, "riaznov"))
@@ -509,6 +521,38 @@
 			return active_multiplier
 	return default_multiplier
 
+/datum/cyberpunk_corporate_subsidiary
+	var/id = ""
+	var/name = ""
+	var/parent_id = ""
+	var/manufacturer = ""
+	var/focus = ""
+	var/data_type = "general"
+
+/datum/cyberpunk_corporate_subsidiary/New(parent_id, subsidiary_id, subsidiary_name, subsidiary_manufacturer, subsidiary_focus, subsidiary_data_type)
+	. = ..()
+	src.parent_id = parent_id
+	id = subsidiary_id
+	name = subsidiary_name
+	manufacturer = subsidiary_manufacturer || subsidiary_name
+	focus = subsidiary_focus
+	data_type = subsidiary_data_type || "general"
+
+/datum/cyberpunk_corporate_subsidiary/proc/matches_manufacturer(manufacturer_text)
+	manufacturer_text = lowertext(trim("[manufacturer_text]"))
+	if(!manufacturer_text)
+		return FALSE
+	return findtext(manufacturer_text, lowertext(name)) || findtext(manufacturer_text, lowertext(manufacturer)) || findtext(manufacturer_text, lowertext(id))
+
+/datum/cyberpunk_corporate_subsidiary/proc/to_ui_data()
+	return list(
+		"id" = id,
+		"name" = name,
+		"manufacturer" = manufacturer,
+		"focus" = focus,
+		"dataType" = data_type,
+	)
+
 /datum/cyberpunk_corporation
 	var/id = ""
 	var/name = "Corporation"
@@ -528,6 +572,7 @@
 	var/list/subscribers = list()
 	var/list/stolen_technology_progress = list()
 	var/list/stolen_technologies = list()
+	var/list/technology_discount_points = list()
 	var/list/technologies = list()
 	var/list/edicts = list()
 	var/list/history = list()
@@ -545,7 +590,11 @@
 			group = "Asian medical and genetic group"
 			direction = "Medicine, genetics, chemistry, stealth, precision, speed."
 			combat_doctrine = "Hidden and precise strikes, blade damage, poison, acceleration, stealth."
-			subsidiaries = list("Benn Bio", "Benn Clinic", "Benn Shadow")
+			subsidiaries = list(
+				new /datum/cyberpunk_corporate_subsidiary(id, "sun_yon", "Sun Yon Corporation", "Sun Yon", "Precision systems and ranged weapon modules.", "precision"),
+				new /datum/cyberpunk_corporate_subsidiary(id, "ishikawa", "Ishikawa Industries", "Ishikawa", "Stealth systems and covert equipment.", "stealth"),
+				new /datum/cyberpunk_corporate_subsidiary(id, "ho_shi", "Ho Shi Technologies", "Ho Shi", "Speed, reflex and acceleration modules.", "speed"),
+			)
 			technologies = list(
 				list("id" = "benn_medtech", "name" = "Medical service lattice", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Medical kiosks, analyzers, insurance goods, and treatment automation."),
 				list("id" = "benn_genetics", "name" = "Genetic stabilization", "tier" = 2, "cost" = 45, "prereq" = "benn_medtech", "description" = "Genetic consoles, infusers, stabilizers, and mutation rollback support."),
@@ -559,7 +608,11 @@
 			group = "European infrastructure and industry group"
 			direction = "Construction, repair, robotics, energy, heavy machinery, industrial production."
 			combat_doctrine = "Open force, reliability, armor, area damage, impact and thermal weapons."
-			subsidiaries = list("Ryaznov Works", "Ryaznov Energy", "Ryaznov Defense")
+			subsidiaries = list(
+				new /datum/cyberpunk_corporate_subsidiary(id, "kowalski", "Kowalski & Co", "Kowalski", "Industrial tooling and heavy classic weapons.", "engineering"),
+				new /datum/cyberpunk_corporate_subsidiary(id, "tyazhmarsh", "Tyazhmarsh Production", "Tyazhmarsh", "Armor, heavy machinery and reinforced frames.", "defense"),
+				new /datum/cyberpunk_corporate_subsidiary(id, "tesla_science", "Tesla Science", "Tesla Science", "Energy, power and shield modules.", "power"),
+			)
 			technologies = list(
 				list("id" = "ryaznov_tools", "name" = "Industrial toolchain", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Engineering tools, analyzers, repair stations, and construction gear."),
 				list("id" = "ryaznov_fortification", "name" = "Fortification grid", "tier" = 2, "cost" = 45, "prereq" = "ryaznov_tools", "description" = "Barriers, shields, barricades, plating, and reinforced structures."),
@@ -573,7 +626,11 @@
 			group = "North American logistics and mass production group"
 			direction = "Goods, transport, delivery, contracts, vending, teleport nodes, social influence."
 			combat_doctrine = "Control, mass pressure, speed, buffs, debuffs, teleportation, positional manipulation."
-			subsidiaries = list("Starlight Logistics", "Starlight Transit", "Starlight Market")
+			subsidiaries = list(
+				new /datum/cyberpunk_corporate_subsidiary(id, "blackrock_investigate", "Blackrock Investigate", "Blackrock", "Data collection, investigation and suppression modules.", "intel"),
+				new /datum/cyberpunk_corporate_subsidiary(id, "trans_travel", "Trans Travel", "Trans Travel", "Routing, movement and delivery systems.", "route"),
+				new /datum/cyberpunk_corporate_subsidiary(id, "samanthas_keir", "Samantha's Keir", "Samantha's Keir", "Social influence, advertising and market pressure.", "social"),
+			)
 			technologies = list(
 				list("id" = "starlight_market", "name" = "Market routing", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Contracts, vending, subscriptions, and stock telemetry."),
 				list("id" = "starlight_delivery", "name" = "Delivery network", "tier" = 2, "cost" = 45, "prereq" = "starlight_market", "description" = "Cargo drones, delivery beacons, route data, and business logistics."),
@@ -588,7 +645,11 @@
 			direction = "Taxes, city stability, laws, emergency modes, police support."
 			combat_doctrine = "Police operations, cameras, emergency armories, council voting keys."
 			hidden = TRUE
-			subsidiaries = list("Council", "Police", "City Treasury")
+			subsidiaries = list(
+				new /datum/cyberpunk_corporate_subsidiary(id, "gov_council", "Council", "City Council", "Votes, laws, emergency decrees.", "civic", 1, 1, 1),
+				new /datum/cyberpunk_corporate_subsidiary(id, "gov_police", "Police", "City Police", "Public order and emergency enforcement.", "security", 1, 1, 1),
+				new /datum/cyberpunk_corporate_subsidiary(id, "gov_treasury", "City Treasury", "City Treasury", "Taxes, debt, registered finance.", "finance", 1, 1, 1),
+			)
 			technologies = list(
 				list("id" = "gov_tax", "name" = "Tax registry", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Legal transaction tracking, tax records, and debt oversight."),
 				list("id" = "gov_cameras", "name" = "City surveillance", "tier" = 2, "cost" = 45, "prereq" = "gov_tax", "description" = "Camera monitoring, evidence routing, and public order data."),
@@ -612,14 +673,63 @@
 /datum/cyberpunk_corporation/proc/add_history(message)
 	LAZYADD(history, "[round_timestamp()] - [message]")
 
+/datum/cyberpunk_corporation/proc/get_subsidiary_by_manufacturer(manufacturer)
+	var/manufacturer_text = lowertext(trim("[manufacturer]"))
+	if(!manufacturer_text)
+		return null
+	for(var/datum/cyberpunk_corporate_subsidiary/subsidiary as anything in subsidiaries)
+		if(subsidiary.matches_manufacturer(manufacturer_text))
+			return subsidiary
+	return null
+
+/datum/cyberpunk_corporation/proc/technology_matches_data_type(list/technology, data_type)
+	if(!islist(technology) || !data_type)
+		return FALSE
+	var/technology_id = technology["id"]
+	var/technology_name = technology["name"]
+	var/technology_description = technology["description"]
+	var/search_text = lowertext("[technology_id] [technology_name] [technology_description]")
+	switch(data_type)
+		if("bio", "medical", "genetic", "chemistry", "stealth")
+			return findtext(search_text, "benn") || findtext(search_text, "med") || findtext(search_text, "gene") || findtext(search_text, "chem") || findtext(search_text, "bio") || findtext(search_text, "stealth")
+		if("engineering", "power", "defense", "repair", "salvage")
+			return findtext(search_text, "ryaznov") || findtext(search_text, "tool") || findtext(search_text, "fort") || findtext(search_text, "power") || findtext(search_text, "robot") || findtext(search_text, "blueprint")
+		if("market", "route", "social", "delivery", "supply")
+			return findtext(search_text, "starlight") || findtext(search_text, "market") || findtext(search_text, "delivery") || findtext(search_text, "vehicle") || findtext(search_text, "phase") || findtext(search_text, "route")
+	return findtext(search_text, data_type)
+
+/datum/cyberpunk_corporation/proc/apply_technology_discounts(data_type, amount, source = "activity")
+	if(!amount)
+		return FALSE
+	var/applied = FALSE
+	for(var/list/technology as anything in technologies)
+		var/technology_id = technology["id"]
+		if(unlocked_technologies[technology_id] || !technology_matches_data_type(technology, data_type))
+			continue
+		var/max_discount = round((technology["cost"] || 0) * 0.35)
+		if(max_discount <= 0)
+			continue
+		var/current_discount = technology_discount_points[technology_id] || 0
+		var/add_discount = min(max_discount - current_discount, max(1, round(amount / 3)))
+		if(add_discount <= 0)
+			continue
+		technology_discount_points[technology_id] = current_discount + add_discount
+		applied = TRUE
+	if(applied)
+		add_history("[source]: [data_type] activity reduced matching technology costs")
+	return applied
+
 /datum/cyberpunk_corporation/proc/add_data(data_type, amount, source = "activity")
 	data_type = lowertext(trim("[data_type]")) || "general"
 	amount = max(0, round(amount))
 	if(!amount)
 		return FALSE
+	if(has_edict("[id]_self_analysis") || has_edict("[id]_self_diagnostics") || has_edict("[id]_self_statistics"))
+		amount = max(1, round(amount * 1.25))
 	research_data[data_type] = (research_data[data_type] || 0) + amount
 	research_points += amount
 	experience += amount
+	apply_technology_discounts(data_type, amount, source)
 	update_level()
 	add_history("[source]: +[amount] [data_type] data, +[amount] RP")
 	return TRUE
@@ -669,6 +779,14 @@
 /datum/cyberpunk_corporation/proc/get_foreign_technology_bonus()
 	return min(0.25, length(stolen_technologies) * 0.05)
 
+/datum/cyberpunk_corporation/proc/get_technology_cost(list/technology)
+	if(!islist(technology))
+		return 0
+	var/technology_id = technology["id"]
+	var/base_cost = technology["cost"] || 0
+	var/activity_discount = min(technology_discount_points[technology_id] || 0, round(base_cost * 0.35))
+	return max(0, round((base_cost - activity_discount) * (1 - get_foreign_technology_bonus())))
+
 /datum/cyberpunk_corporation/proc/unlock_technology(technology_id)
 	var/list/technology = get_technology(technology_id)
 	if(!technology || unlocked_technologies[technology_id])
@@ -676,11 +794,12 @@
 	var/prereq = technology["prereq"]
 	if(prereq && !unlocked_technologies[prereq])
 		return FALSE
-	var/cost = round((technology["cost"] || 0) * (1 - get_foreign_technology_bonus()))
+	var/cost = get_technology_cost(technology)
 	if(research_points < cost)
 		return FALSE
 	research_points -= cost
 	unlocked_technologies[technology_id] = TRUE
+	technology_discount_points -= technology_id
 	var/technology_name = technology["name"]
 	add_history("unlocked technology: [technology_name]")
 	return TRUE
@@ -926,15 +1045,19 @@
 	for(var/list/technology as anything in technologies)
 		var/technology_id = technology["id"]
 		var/prereq = technology["prereq"]
+		var/base_cost = technology["cost"] || 0
+		var/current_cost = get_technology_cost(technology)
 		technology_records += list(list(
 			"id" = technology_id,
 			"name" = technology["name"],
 			"tier" = technology["tier"],
-			"cost" = technology["cost"],
+			"cost" = current_cost,
+			"baseCost" = base_cost,
+			"discount" = max(0, base_cost - current_cost),
 			"prereq" = prereq,
 			"description" = technology["description"],
 			"unlocked" = !!unlocked_technologies[technology_id],
-			"canUnlock" = !unlocked_technologies[technology_id] && (!prereq || unlocked_technologies[prereq]) && research_points >= (technology["cost"] || 0),
+			"canUnlock" = !unlocked_technologies[technology_id] && (!prereq || unlocked_technologies[prereq]) && research_points >= current_cost,
 		))
 	var/list/edict_records = list()
 	for(var/list/edict as anything in edicts)
@@ -955,6 +1078,9 @@
 	var/list/stolen_progress_records = list()
 	for(var/technology_id in stolen_technology_progress)
 		stolen_progress_records += list(list("id" = technology_id, "progress" = stolen_technology_progress[technology_id]))
+	var/list/subsidiary_records = list()
+	for(var/datum/cyberpunk_corporate_subsidiary/subsidiary as anything in subsidiaries)
+		subsidiary_records += list(subsidiary.to_ui_data())
 	return list(
 		"id" = id,
 		"name" = name,
@@ -962,7 +1088,7 @@
 		"direction" = direction,
 		"combatDoctrine" = combat_doctrine,
 		"hidden" = hidden,
-		"subsidiaries" = subsidiaries,
+		"subsidiaries" = subsidiary_records,
 		"level" = level,
 		"experience" = experience,
 		"nextLevelAt" = level < 5 ? level * CYBERPUNK_CORP_LEVEL_STEP : null,
@@ -1885,6 +2011,7 @@
 
 #define CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST 10
 #define CYBERPUNK_BUSINESS_TAX_RATE 0.05
+#define CYBERPUNK_BUSINESS_AUTO_RESTOCK_INTERVAL (5 MINUTES)
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /proc/cyberpunk_area_turfs(area/target_area)
@@ -1897,6 +2024,127 @@
 
 /proc/cyberpunk_is_apartment_area(area/target_area)
 	return istype(target_area, /area/station/commons/dorms/persistent_apartment) || istype(target_area, /area/station/commons/dorms/apartment1) || istype(target_area, /area/station/commons/dorms/apartment2)
+
+/proc/cyberpunk_persistent_read_var(datum/source, var_name, fallback = null)
+	if(!source || !(var_name in source.vars))
+		return fallback
+	return source.vars[var_name]
+
+/proc/cyberpunk_persistent_write_var(datum/target, var_name, value)
+	if(!target || !(var_name in target.vars))
+		return FALSE
+	target.vars[var_name] = value
+	return TRUE
+
+/proc/cyberpunk_persistent_capture_reagents(atom/movable/thing)
+	var/list/reagent_records = list()
+	if(!thing?.reagents)
+		return reagent_records
+	for(var/datum/reagent/reagent as anything in thing.reagents.reagent_list)
+		reagent_records += list(list(
+			"type" = "[reagent.type]",
+			"volume" = reagent.volume,
+		))
+	return reagent_records
+
+/proc/cyberpunk_persistent_capture_movable(atom/movable/thing, turf/base_turf, turf/center, obj/machinery/active_terminal, depth = 0)
+	if(!thing || thing == active_terminal || ismob(thing))
+		return null
+	if(!(isitem(thing) || istype(thing, /obj/machinery) || istype(thing, /obj/structure)))
+		return null
+	var/list/req_access = cyberpunk_persistent_read_var(thing, "req_access")
+	var/list/req_one_access = cyberpunk_persistent_read_var(thing, "req_one_access")
+	var/list/entry = list(
+		"type" = "[thing.type]",
+		"name" = thing.name,
+		"desc" = thing.desc,
+		"x" = base_turf.x - center.x,
+		"y" = base_turf.y - center.y,
+		"z" = base_turf.z - center.z,
+		"dir" = thing.dir,
+		"pixel_x" = thing.pixel_x,
+		"pixel_y" = thing.pixel_y,
+		"pixel_z" = thing.pixel_z,
+		"anchored" = thing.anchored,
+		"density" = thing.density,
+		"opacity" = thing.opacity,
+		"alpha" = thing.alpha,
+		"color" = thing.color,
+		"icon_state" = thing.icon_state,
+		"base_icon_state" = cyberpunk_persistent_read_var(thing, "base_icon_state"),
+		"integrity" = cyberpunk_persistent_read_var(thing, "atom_integrity"),
+		"max_integrity" = cyberpunk_persistent_read_var(thing, "max_integrity"),
+		"machine_stat" = cyberpunk_persistent_read_var(thing, "machine_stat"),
+		"manufacturer" = cyberpunk_persistent_read_var(thing, "manufacturer"),
+		"corp_manufacturer" = cyberpunk_persistent_read_var(thing, "corp_manufacturer"),
+		"req_access" = islist(req_access) ? req_access.Copy() : null,
+		"req_one_access" = islist(req_one_access) ? req_one_access.Copy() : null,
+	)
+	var/list/reagent_records = cyberpunk_persistent_capture_reagents(thing)
+	if(length(reagent_records))
+		entry["reagents"] = reagent_records
+	var/obj/item/clothing/clothing = thing
+	if(istype(clothing) && islist(clothing.cyberpunk_custom_design_data))
+		entry["clothing_design"] = clothing.cyberpunk_custom_design_data.Copy()
+	if(depth < 3 && length(thing.contents))
+		var/list/content_records = list()
+		for(var/atom/movable/content as anything in thing.contents)
+			var/list/content_entry = cyberpunk_persistent_capture_movable(content, base_turf, center, active_terminal, depth + 1)
+			if(content_entry)
+				content_records += list(content_entry)
+		if(length(content_records))
+			entry["contents"] = content_records
+	return entry
+
+/proc/cyberpunk_persistent_restore_movable(list/entry, atom/location, area/target_area, turf/center, obj/machinery/active_terminal)
+	if(!islist(entry) || !location)
+		return null
+	var/movable_path = text2path("[entry["type"]]")
+	if(!ispath(movable_path, /atom/movable))
+		return null
+	var/turf/target_turf = isturf(location) ? location : get_turf(location)
+	if(!target_turf || get_area(target_turf) != target_area)
+		return null
+	var/atom/movable/restored_atom = new movable_path(location)
+	if(restored_atom == active_terminal)
+		return null
+	restored_atom.name = entry["name"] || restored_atom.name
+	restored_atom.desc = entry["desc"] || restored_atom.desc
+	restored_atom.dir = entry["dir"] || SOUTH
+	restored_atom.pixel_x = entry["pixel_x"] || 0
+	restored_atom.pixel_y = entry["pixel_y"] || 0
+	restored_atom.pixel_z = entry["pixel_z"] || 0
+	restored_atom.anchored = !!entry["anchored"]
+	restored_atom.density = !!entry["density"]
+	restored_atom.opacity = !!entry["opacity"]
+	restored_atom.alpha = isnum(entry["alpha"]) ? entry["alpha"] : restored_atom.alpha
+	restored_atom.color = entry["color"] || restored_atom.color
+	if(entry["icon_state"])
+		restored_atom.icon_state = entry["icon_state"]
+	cyberpunk_persistent_write_var(restored_atom, "base_icon_state", entry["base_icon_state"])
+	cyberpunk_persistent_write_var(restored_atom, "atom_integrity", entry["integrity"])
+	cyberpunk_persistent_write_var(restored_atom, "max_integrity", entry["max_integrity"])
+	cyberpunk_persistent_write_var(restored_atom, "machine_stat", entry["machine_stat"])
+	cyberpunk_persistent_write_var(restored_atom, "manufacturer", entry["manufacturer"])
+	cyberpunk_persistent_write_var(restored_atom, "corp_manufacturer", entry["corp_manufacturer"])
+	if(islist(entry["req_access"]))
+		cyberpunk_persistent_write_var(restored_atom, "req_access", entry["req_access"].Copy())
+	if(islist(entry["req_one_access"]))
+		cyberpunk_persistent_write_var(restored_atom, "req_one_access", entry["req_one_access"].Copy())
+	if(restored_atom.reagents && islist(entry["reagents"]))
+		restored_atom.reagents.clear_reagents()
+		for(var/list/reagent_entry as anything in entry["reagents"])
+			var/reagent_path = text2path("[reagent_entry["type"]]")
+			var/volume = max(0, reagent_entry["volume"] || 0)
+			if(ispath(reagent_path, /datum/reagent) && volume)
+				restored_atom.reagents.add_reagent(reagent_path, volume)
+	var/obj/item/clothing/clothing = restored_atom
+	if(istype(clothing) && islist(entry["clothing_design"]))
+		clothing.cyberpunk_apply_design(entry["clothing_design"])
+	if(islist(entry["contents"]))
+		for(var/list/content_entry as anything in entry["contents"])
+			cyberpunk_persistent_restore_movable(content_entry, restored_atom, target_area, center, active_terminal)
+	return restored_atom
 
 /proc/cyberpunk_persistent_area_capture(area/target_area, obj/machinery/active_terminal)
 	var/list/snapshot = list(
@@ -1914,24 +2162,9 @@
 			"z" = area_turf.z - center.z,
 		))
 		for(var/atom/movable/thing as anything in area_turf.contents)
-			if(thing == active_terminal || ismob(thing))
-				continue
-			if(!(isitem(thing) || istype(thing, /obj/machinery) || istype(thing, /obj/structure)))
-				continue
-			var/list/entry = list(
-				"type" = "[thing.type]",
-				"name" = thing.name,
-				"x" = area_turf.x - center.x,
-				"y" = area_turf.y - center.y,
-				"z" = area_turf.z - center.z,
-				"dir" = thing.dir,
-				"pixel_x" = thing.pixel_x,
-				"pixel_y" = thing.pixel_y,
-			)
-			var/obj/item/clothing/clothing = thing
-			if(istype(clothing) && islist(clothing.cyberpunk_custom_design_data))
-				entry["clothing_design"] = clothing.cyberpunk_custom_design_data.Copy()
-			snapshot["movables"] += list(entry)
+			var/list/entry = cyberpunk_persistent_capture_movable(thing, area_turf, center, active_terminal)
+			if(entry)
+				snapshot["movables"] += list(entry)
 	return snapshot
 
 /proc/cyberpunk_persistent_area_restore(area/target_area, obj/machinery/active_terminal, list/snapshot)
@@ -1965,15 +2198,8 @@
 			var/turf/target = locate(clamp(center.x + (entry["x"] || 0), 1, world.maxx), clamp(center.y + (entry["y"] || 0), 1, world.maxy), clamp(center.z + (entry["z"] || 0), 1, world.maxz))
 			if(!target || get_area(target) != target_area)
 				continue
-			var/atom/movable/restored_atom = new movable_path(target)
-			restored_atom.name = entry["name"] || restored_atom.name
-			restored_atom.dir = entry["dir"] || SOUTH
-			restored_atom.pixel_x = entry["pixel_x"] || 0
-			restored_atom.pixel_y = entry["pixel_y"] || 0
-			var/obj/item/clothing/clothing = restored_atom
-			if(istype(clothing) && islist(entry["clothing_design"]))
-				clothing.cyberpunk_apply_design(entry["clothing_design"])
-			restored++
+			if(cyberpunk_persistent_restore_movable(entry, target, target_area, center, active_terminal))
+				restored++
 	return restored
 
 /mob/living/proc/cyberpunk_read_persistent_area_records(preference_type)
@@ -2014,6 +2240,19 @@
 
 /proc/cyberpunk_persistent_access_id(kind, owner_character_key, area_type)
 	return "persistent:[kind]:[owner_character_key]:[area_type]"
+
+/proc/cyberpunk_business_link_list_from_text(raw_text)
+	var/list/links = list()
+	for(var/link in splittext("[raw_text]", ","))
+		var/clean_link = reject_bad_text(trim(link), max_length = 64, ascii_only = FALSE)
+		if(clean_link)
+			links += clean_link
+	return links
+
+/proc/cyberpunk_business_link_list_to_text(list/links)
+	if(!islist(links) || !length(links))
+		return ""
+	return jointext(links, ", ")
 
 /proc/cyberpunk_grant_persistent_access(mob/living/user, datum/cyberpunk_crypto_key/access_key)
 	if(!user || !access_key)
@@ -2060,6 +2299,10 @@
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/supplier = cyberpunk_businesses[business_id]
 		if(!supplier || supplier == requester || !supplier.warehouse_enabled)
+			continue
+		if(length(requester.warehouse_buy_links) && !requester.allows_warehouse_partner(supplier, TRUE))
+			continue
+		if(length(supplier.warehouse_sell_links) && !supplier.allows_warehouse_partner(requester, FALSE))
 			continue
 		if(source_key && source_key != "external supplier" && source_key != "auto")
 			if(source_key != lowertext("[supplier.id]") && source_key != lowertext(supplier.name))
@@ -2201,6 +2444,7 @@
 	var/warehouse_unload_zone = "unset"
 	var/list/warehouse_buy_links = list()
 	var/list/warehouse_sell_links = list()
+	var/last_auto_restock_at = 0
 	var/premises_valid = FALSE
 	var/premises_validation = "not checked"
 	var/warehouse_valid = FALSE
@@ -2285,6 +2529,8 @@
 			"warehouse_surplus_percent" = warehouse_surplus_percent,
 			"warehouse_markup_percent" = warehouse_markup_percent,
 			"warehouse_unload_zone" = warehouse_unload_zone,
+			"warehouse_buy_links" = warehouse_buy_links.Copy(),
+			"warehouse_sell_links" = warehouse_sell_links.Copy(),
 			"employees" = employees.Copy(),
 		),
 	)
@@ -2310,6 +2556,12 @@
 		warehouse_surplus_percent = clamp(round(meta["warehouse_surplus_percent"] || 0), 0, 100)
 		warehouse_markup_percent = clamp(round(meta["warehouse_markup_percent"] || 0), -100, 500)
 		warehouse_unload_zone = meta["warehouse_unload_zone"] || warehouse_unload_zone
+		var/list/persistent_buy_links = meta["warehouse_buy_links"]
+		if(islist(persistent_buy_links))
+			warehouse_buy_links = persistent_buy_links.Copy()
+		var/list/persistent_sell_links = meta["warehouse_sell_links"]
+		if(islist(persistent_sell_links))
+			warehouse_sell_links = persistent_sell_links.Copy()
 		var/list/persistent_employees = meta["employees"]
 		if(islist(persistent_employees))
 			employees = persistent_employees.Copy()
@@ -2383,6 +2635,18 @@
 	var/base_price = CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST
 	return max(1, round(base_price * (100 + warehouse_markup_percent) / 100))
 
+/datum/cyberpunk_business/proc/allows_warehouse_partner(datum/cyberpunk_business/partner, buy_side = TRUE)
+	if(!partner)
+		return FALSE
+	var/list/links = buy_side ? warehouse_buy_links : warehouse_sell_links
+	if(!length(links))
+		return TRUE
+	for(var/link in links)
+		var/link_key = lowertext("[link]")
+		if(link_key == lowertext("[partner.id]") || link_key == lowertext(partner.name))
+			return TRUE
+	return FALSE
+
 /datum/cyberpunk_business/proc/charge(amount, reason, allow_debt = TRUE)
 	amount = max(0, round(amount))
 	if(!amount)
@@ -2433,6 +2697,22 @@
 	tax_paid += amount
 	add_history("[user.real_name || user.name] paid [amount][MONEY_SYMBOL] tax")
 	log_econ("Business #[id] [name] paid [amount][MONEY_NAME] tax.")
+	return TRUE
+
+/datum/cyberpunk_business/proc/auto_pay_taxes()
+	if(!legal || tax_debt <= 0)
+		return FALSE
+	var/datum/bank_account/account = get_account()
+	if(!account)
+		return FALSE
+	var/amount = min(tax_debt, max(0, round(account.account_balance)))
+	if(amount <= 0 || !account.adjust_money(-amount, "Automatic business tax payment: [name]"))
+		return FALSE
+	SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(amount, "Automatic business tax: [name]")
+	tax_debt -= amount
+	tax_paid += amount
+	add_history("automatic tax payment: [amount][MONEY_SYMBOL]")
+	log_econ("Business #[id] [name] automatically paid [amount][MONEY_NAME] tax.")
 	return TRUE
 
 /datum/cyberpunk_business/proc/validate_premises(mob/living/user)
@@ -2505,6 +2785,8 @@
 	warehouse_surplus_percent = clamp(round(text2num(params["surplus_percent"]) || 0), 0, 100)
 	warehouse_markup_percent = clamp(round(text2num(params["markup_percent"]) || 0), -100, 500)
 	warehouse_unload_zone = reject_bad_text(params["unload_zone"], max_length = 64, ascii_only = FALSE) || warehouse_unload_zone
+	warehouse_buy_links = cyberpunk_business_link_list_from_text(params["buy_links"])
+	warehouse_sell_links = cyberpunk_business_link_list_from_text(params["sell_links"])
 	add_history("[user.real_name || user.name] updated warehouse settings")
 	return TRUE
 
@@ -2636,6 +2918,21 @@
 		add_history("[user.real_name || user.name] linked [linked] vendor(s) inside business area")
 	return linked > 0
 
+/datum/cyberpunk_business/proc/link_nearby_production_machines(mob/living/user)
+	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !terminal)
+		return FALSE
+	var/linked = 0
+	for(var/turf/business_turf as anything in get_business_turfs())
+		for(var/obj/machinery/machine in business_turf.contents)
+			if(!(istype(machine, /obj/machinery/autolathe) || istype(machine, /obj/machinery/rnd/production)))
+				continue
+			machine.cyberpunk_business_id = id
+			machine.cyberpunk_business_warehouse_linked = TRUE
+			linked++
+	if(linked)
+		add_history("[user.real_name || user.name] linked [linked] production machine(s) to warehouse")
+	return linked > 0
+
 /datum/cyberpunk_business/proc/restock_linked_vendors(mob/living/user)
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !terminal || !warehouse_enabled || !warehouse_valid)
 		return FALSE
@@ -2647,6 +2944,20 @@
 			restocked += vendor.cyberpunk_business_restock_from_warehouse()
 	if(restocked)
 		add_history("[user.real_name || user.name] restocked linked vendors with [restocked] item(s)")
+	return restocked > 0
+
+/datum/cyberpunk_business/proc/auto_restock_linked_vendors()
+	if(!warehouse_auto_restock || !warehouse_enabled || !warehouse_valid || world.time < last_auto_restock_at + CYBERPUNK_BUSINESS_AUTO_RESTOCK_INTERVAL)
+		return FALSE
+	last_auto_restock_at = world.time
+	var/restocked = 0
+	for(var/turf/business_turf as anything in get_business_turfs())
+		for(var/obj/machinery/vending/vendor in business_turf.contents)
+			if(vendor.cyberpunk_business_id != id || !vendor.cyberpunk_business_auto_restock)
+				continue
+			restocked += vendor.cyberpunk_business_restock_from_warehouse()
+	if(restocked)
+		add_history("automatic vendor restock: [restocked] item(s)")
 	return restocked > 0
 
 /datum/cyberpunk_business/proc/to_ui_data(mob/living/user, include_history = FALSE)
@@ -2684,6 +2995,8 @@
 			"surplusPercent" = warehouse_surplus_percent,
 			"markupPercent" = warehouse_markup_percent,
 			"unloadZone" = warehouse_unload_zone,
+			"buyLinks" = cyberpunk_business_link_list_to_text(warehouse_buy_links),
+			"sellLinks" = cyberpunk_business_link_list_to_text(warehouse_sell_links),
 			"valid" = warehouse_valid,
 			"unloadValid" = unload_zone_valid,
 			"validation" = warehouse_validation,
@@ -2883,6 +3196,7 @@
 //CYBERPUNK BUILD - rebuild and delete before release
 
 #undef CYBERPUNK_BUSINESS_TAX_RATE
+#undef CYBERPUNK_BUSINESS_AUTO_RESTOCK_INTERVAL
 #undef CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST
 #undef CYBERPUNK_BUSINESS_ACCESS_CONTRACTS
 #undef CYBERPUNK_BUSINESS_ACCESS_STAFF

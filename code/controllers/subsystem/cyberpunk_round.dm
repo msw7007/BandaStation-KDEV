@@ -21,6 +21,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_round_ingame_minutes = 0
 	/// Minimum time between snapshot rebuilds.
 	var/cyberpunk_round_snapshot_interval = 1 MINUTES
+	/// Minimum time between expensive infrastructure rebuilds.
+	var/cyberpunk_round_infrastructure_interval = 5 MINUTES
 	/// Minimum time between storyteller pulses.
 	var/cyberpunk_round_storyteller_interval = 2 MINUTES
 	/// Minimum time between storyteller executions.
@@ -65,6 +67,10 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/list/cyberpunk_round_last_summary = list()
 	/// Last city snapshot used by the storyteller.
 	var/list/cyberpunk_round_last_snapshot = list()
+	/// Last expensive infrastructure metrics bundle.
+	var/list/cyberpunk_round_last_infrastructure = list()
+	/// Last infrastructure metrics build world time.
+	var/cyberpunk_round_last_infrastructure_at = 0
 	/// Storyteller pressure curve generated from the active profile.
 	var/list/cyberpunk_storyteller_curve = list()
 	/// Current coarse event plan generated from the active curve.
@@ -140,6 +146,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_catastrophic_evac_requested = SScyberpunk_round.cyberpunk_round_catastrophic_evac_requested
 	cyberpunk_round_last_summary = SScyberpunk_round.cyberpunk_round_last_summary
 	cyberpunk_round_last_snapshot = SScyberpunk_round.cyberpunk_round_last_snapshot
+	cyberpunk_round_last_infrastructure = SScyberpunk_round.cyberpunk_round_last_infrastructure
+	cyberpunk_round_last_infrastructure_at = SScyberpunk_round.cyberpunk_round_last_infrastructure_at
 	cyberpunk_storyteller_curve = SScyberpunk_round.cyberpunk_storyteller_curve
 	cyberpunk_storyteller_round_plan = SScyberpunk_round.cyberpunk_storyteller_round_plan
 	cyberpunk_round_event_history = SScyberpunk_round.cyberpunk_round_event_history
@@ -189,6 +197,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	SScyberpunk_corporations?.ensure_cyberpunk_corporations_seeded()
 	SSeconomy?.ensure_cyberpunk_contract_pool_seeded()
 	cyberpunk_round_last_snapshot_at = 0
+	cyberpunk_round_last_infrastructure = list()
+	cyberpunk_round_last_infrastructure_at = 0
 	cyberpunk_round_last_storyteller_at = 0
 	cyberpunk_round_event_history = list()
 	cyberpunk_round_active_events = list()
@@ -740,7 +750,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			"active_edicts" = length(corporation.active_edicts),
 		))
 
-	var/list/infrastructure = cyberpunk_round_build_infrastructure_metrics()
+	var/list/infrastructure = cyberpunk_round_get_infrastructure_metrics()
 
 	return list(
 		"clock" = cyberpunk_round_clock_text(),
@@ -823,6 +833,13 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"daylight_phase" = cyberpunk_round_phase,
 		"daylight_sources" = length(cyberpunk_daylight_sources),
 	)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_get_infrastructure_metrics()
+	if(length(cyberpunk_round_last_infrastructure) && world.time < cyberpunk_round_last_infrastructure_at + cyberpunk_round_infrastructure_interval)
+		return cyberpunk_round_last_infrastructure
+	cyberpunk_round_last_infrastructure = cyberpunk_round_build_infrastructure_metrics()
+	cyberpunk_round_last_infrastructure_at = world.time
+	return cyberpunk_round_last_infrastructure
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_build_infrastructure_metrics()
 	var/list/result = list(
@@ -1551,8 +1568,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		if(!cyberpunk_round_started_at)
 			start_cyberpunk_round_clock()
 		update_cyberpunk_round_clock()
-	cyberpunk_round_last_snapshot = build_cyberpunk_round_snapshot()
-	cyberpunk_round_last_snapshot_at = world.time
+	if(!length(cyberpunk_round_last_snapshot) || world.time >= cyberpunk_round_last_snapshot_at + cyberpunk_round_snapshot_interval)
+		cyberpunk_round_last_snapshot = build_cyberpunk_round_snapshot()
+		cyberpunk_round_last_snapshot_at = world.time
 	var/list/profile = cyberpunk_storyteller_profile_options[cyberpunk_storyteller_profile] || cyberpunk_storyteller_profile_options["balanced"]
 	var/min_gap = cyberpunk_storyteller_min_event_gap * (profile ? (profile["gap_multiplier"] || 1) : 1)
 	return list(

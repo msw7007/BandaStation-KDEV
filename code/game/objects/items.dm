@@ -612,6 +612,16 @@
 	else
 		cyberpunk_manufacturer = manufacturer
 
+/obj/item/proc/get_cyberpunk_synergy_multiplier(mob/living/user)
+	if(!istype(user))
+		return 1
+	var/best_multiplier = user.get_corporate_synergy_multiplier(get_cyberpunk_manufacturer())
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(!module?.manufacturer || module.manufacturer == "independent")
+			continue
+		best_multiplier = max(best_multiplier, user.get_corporate_synergy_multiplier(module.manufacturer))
+	return best_multiplier
+
 /obj/item/proc/get_cyberpunk_price(mob/living/buyer)
 	var/base_price = cyberpunk_base_price || custom_price || 0
 	if(base_price <= 0)
@@ -622,7 +632,7 @@
 		condition_multiplier = 0.15
 	else if(uses_integrity && max_integrity)
 		condition_multiplier = clamp(get_integrity() / max_integrity, 0.15, 1)
-	var/synergy_multiplier = istype(buyer) ? buyer.get_corporate_synergy_multiplier(get_cyberpunk_manufacturer()) : 1
+	var/synergy_multiplier = get_cyberpunk_synergy_multiplier(buyer)
 	return round(base_price * quality_multiplier * condition_multiplier * synergy_multiplier)
 
 /obj/item/proc/get_cyberpunk_guard_value()
@@ -795,7 +805,7 @@
 	var/rating = ..()
 	var/mob/living/wearer = loc
 	if(istype(wearer))
-		rating = round(rating * wearer.get_corporate_synergy_multiplier(get_cyberpunk_manufacturer()))
+		rating = round(rating * get_cyberpunk_synergy_multiplier(wearer))
 	return rating
 
 /obj/item/proc/install_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
@@ -823,7 +833,9 @@
 	var/module_datum_type = /datum/cyberpunk_item_module
 
 /obj/item/cyberpunk_item_module/proc/create_module_datum()
-	return new module_datum_type
+	var/datum/cyberpunk_item_module/module = new module_datum_type
+	module.manufacturer = get_cyberpunk_manufacturer()
+	return module
 
 /obj/item/cyberpunk_item_module/examine(mob/user)
 	. = ..()
@@ -910,8 +922,6 @@
 /datum/cyberpunk_item_module/proc/on_install(obj/item/target, mob/living/user)
 	if(!target)
 		return
-	if(manufacturer && manufacturer != "independent")
-		target.set_cyberpunk_manufacturer(manufacturer)
 	target.cyberpunk_quality = max(target.cyberpunk_quality, quality)
 	if(weight_delta)
 		target.w_class = clamp(target.w_class + weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)

@@ -351,6 +351,7 @@
 			//check for materials
 			if(!materials.can_use_resource(user_data = ID_DATA(usr)))
 				return
+			cyberpunk_business_supply_materials(materials.mat_container, design.materials, coefficient, print_quantity)
 			if(!materials.mat_container.has_materials(design.materials, coefficient, print_quantity))
 				say("Not enough materials to complete prototype[print_quantity > 1 ? "s" : ""].")
 				return FALSE
@@ -429,6 +430,7 @@
 
 	var/is_stack = ispath(design.build_path, /obj/item/stack)
 	var/list/design_materials = design.materials
+	cyberpunk_business_supply_materials(materials.mat_container, design_materials, material_cost_coefficient, is_stack ? items_remaining : 1)
 	if(!materials.mat_container.has_materials(design_materials, material_cost_coefficient, is_stack ? items_remaining : 1))
 		say("Unable to continue production, missing materials.")
 		finalize_build()

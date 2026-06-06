@@ -26,10 +26,20 @@ type CorporateTechnology = {
   name: string;
   tier: number;
   cost: number;
+  baseCost: number;
+  discount: number;
   prereq?: string;
   description: string;
   unlocked: BooleanLike;
   canUnlock: BooleanLike;
+};
+
+type CorporateSubsidiary = {
+  id: string;
+  name: string;
+  manufacturer: string;
+  focus: string;
+  dataType: string;
 };
 
 type CorporateEdict = {
@@ -56,7 +66,7 @@ type Corporation = {
   direction: string;
   combatDoctrine: string;
   hidden: BooleanLike;
-  subsidiaries: string[];
+  subsidiaries: CorporateSubsidiary[];
   level: number;
   experience: number;
   nextLevelAt?: number;
@@ -199,9 +209,34 @@ const CorporateDetails = (props: {
             {corporation.combatDoctrine}
           </LabeledList.Item>
           <LabeledList.Item label="Subsidiaries">
-            {(corporation.subsidiaries || []).join(', ') || 'none'}
+            {(corporation.subsidiaries || [])
+              .map((subsidiary) => subsidiary.name)
+              .join(', ') || 'none'}
           </LabeledList.Item>
         </LabeledList>
+      </Section>
+
+      <Section title="Subsidiaries">
+        {!corporation.subsidiaries?.length ? (
+          <Box className="CyberpunkPanel__Muted">No subsidiaries.</Box>
+        ) : (
+          <Table>
+            <Table.Row header>
+              <Table.Cell>Name</Table.Cell>
+              <Table.Cell>Focus</Table.Cell>
+              <Table.Cell collapsing>Manufacturer</Table.Cell>
+              <Table.Cell collapsing>Data</Table.Cell>
+            </Table.Row>
+            {corporation.subsidiaries.map((subsidiary) => (
+              <Table.Row key={subsidiary.id}>
+                <Table.Cell>{subsidiary.name}</Table.Cell>
+                <Table.Cell>{subsidiary.focus}</Table.Cell>
+                <Table.Cell>{subsidiary.manufacturer}</Table.Cell>
+                <Table.Cell>{subsidiary.dataType}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table>
+        )}
       </Section>
 
       <Section title="State">
@@ -410,6 +445,9 @@ const CorporateDetails = (props: {
                 <Box>{technology.description}</Box>
                 <Box className="CyberpunkPanel__Muted CyberpunkPanel__Small">
                   Cost {technology.cost} RP
+                  {technology.discount
+                    ? `, activity discount ${technology.discount} RP`
+                    : ''}
                   {corporation.foreignTechBonus
                     ? `, foreign tech discount ${corporation.foreignTechBonus}%`
                     : ''}

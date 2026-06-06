@@ -908,6 +908,10 @@
 	var/list/datum/cyberpunk_machine_module/cyberpunk_machine_modules
 	///Generic module slots. Specific machines can override this later.
 	var/cyberpunk_machine_module_slots = 2
+	///Business warehouse this machine may draw from when a subsystem opts into Cyberpunk 13 warehouse routing.
+	var/cyberpunk_business_id
+	///Whether the owning business terminal linked this machine to its warehouse.
+	var/cyberpunk_business_warehouse_linked = FALSE
 	///Temporary CP13 module installation UI holder.
 	var/datum/cyberpunk_machine_module_interface/cyberpunk_module_ui
 	//CYBERPUNK BUILD - rebuild and delete before release
@@ -1872,6 +1876,61 @@
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		apc_multiplier *= module.apc_efficiency_multiplier
 	return max(0.1, apc_multiplier)
+
+/obj/machinery/proc/cyberpunk_business_consume_warehouse(item_label, amount)
+	if(!cyberpunk_business_warehouse_linked || !cyberpunk_business_id)
+		return 0
+	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(cyberpunk_business_id)
+	if(!business || !business.warehouse_enabled || !business.warehouse_valid)
+		return 0
+	return business.consume_stock(item_label, amount)
+
+/obj/machinery/proc/cyberpunk_business_material_stock_keys(datum/material/material)
+	var/list/keys = list()
+	if(!istype(material))
+		material = SSmaterials.get_material(material)
+	if(!material)
+		return keys
+	keys += material.name
+	keys += lowertext(material.name)
+	keys += "[material.type]"
+	if(material.id)
+		keys += material.id
+	if(material.sheet_type)
+		keys += "[material.sheet_type]"
+	return keys
+
+/obj/machinery/proc/cyberpunk_business_supply_materials(datum/material_container/container, list/materials_needed, coefficient = 1, multiplier = 1)
+	if(!cyberpunk_business_warehouse_linked || !cyberpunk_business_id || !container || !length(materials_needed))
+		return FALSE
+	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(cyberpunk_business_id)
+	if(!business || !business.warehouse_enabled || !business.warehouse_valid)
+		return FALSE
+	var/supplied_total = 0
+	for(var/material_entry in materials_needed)
+		var/datum/material/material = material_entry
+		if(!istype(material))
+			material = SSmaterials.get_material(material_entry)
+		if(!material || !container.can_hold_material(material))
+			continue
+		var/required_amount = OPTIMAL_COST(materials_needed[material_entry] * coefficient) * multiplier
+		var/missing_amount = max(0, required_amount - container.get_material_amount(material))
+		if(!missing_amount)
+			continue
+		var/supplied_amount = 0
+		for(var/stock_key in cyberpunk_business_material_stock_keys(material))
+			var/taken = business.consume_stock(stock_key, missing_amount - supplied_amount)
+			if(!taken)
+				continue
+			supplied_amount += taken
+			if(supplied_amount >= missing_amount)
+				break
+		if(supplied_amount > 0)
+			container.insert_amount_mat(supplied_amount, material)
+			supplied_total += supplied_amount
+	if(supplied_total)
+		business.add_history("[name] pulled [supplied_total] material unit(s) from warehouse")
+	return supplied_total > 0
 
 /obj/machinery/proc/get_cyberpunk_machine_salvage_amount(base_amount)
 	return max(1, round(base_amount * get_cyberpunk_machine_salvage_multiplier()))

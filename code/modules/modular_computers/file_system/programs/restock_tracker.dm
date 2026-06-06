@@ -520,7 +520,6 @@
 	new /obj/machinery/computer/apartment_terminal(get_turf(src))
 
 /obj/machinery/vending
-	var/cyberpunk_business_id
 	var/cyberpunk_business_auto_restock = FALSE
 	var/cyberpunk_business_markup_percent = 0
 	var/cyberpunk_business_minimum_stock = 0
@@ -544,7 +543,10 @@
 		return 0
 	var/restocked = 0
 	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
-		var/target_amount = cyberpunk_business_minimum_stock > 0 ? min(cyberpunk_business_minimum_stock, record.max_amount) : record.max_amount
+		var/stock_multiplier = get_cyberpunk_machine_vending_stock_multiplier()
+		stock_multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(get_cyberspace_manufacturer(src), list("benn_supply_cert", "ryaznov_supply_cert", "starlight_supply_cert"), 1, 1.15)
+		var/target_maximum = max(1, round(record.max_amount * stock_multiplier))
+		var/target_amount = cyberpunk_business_minimum_stock > 0 ? min(cyberpunk_business_minimum_stock, target_maximum) : target_maximum
 		var/needed = target_amount - record.amount
 		if(needed <= 0)
 			continue
@@ -879,6 +881,12 @@
 				to_chat(living_user, span_notice("Business area vendors linked."))
 			else
 				to_chat(living_user, span_warning("No vendors inside the business area could be linked."))
+			return TRUE
+		if("link_production")
+			if(business?.link_nearby_production_machines(living_user))
+				to_chat(living_user, span_notice("Business area production machines linked."))
+			else
+				to_chat(living_user, span_warning("No production machines inside the business area could be linked."))
 			return TRUE
 		if("restock_vendors")
 			if(business?.restock_linked_vendors(living_user))

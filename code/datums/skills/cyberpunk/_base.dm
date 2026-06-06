@@ -416,7 +416,7 @@
 	multiplier *= 1 + (max(get_attribute_value(ATTRIBUTE_STRENGTH), get_attribute_value(ATTRIBUTE_DEXTERITY), get_attribute_value(ATTRIBUTE_PERCEPTION)) - ATTRIBUTE_DEFAULT) * 0.01
 	var/heavy_bonus = weapon.w_class >= WEIGHT_CLASS_BULKY ? get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 2) : 0
 	var/precise_bonus = get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 2)
-	var/corporate_multiplier = get_corporate_synergy_multiplier(weapon.get_cyberpunk_manufacturer())
+	var/corporate_multiplier = weapon.get_cyberpunk_synergy_multiplier(src)
 	return multiplier * (1 + max(heavy_bonus, precise_bonus) * 0.01) * corporate_multiplier
 
 /mob/living/proc/get_cyberpunk_weapon_cooldown_multiplier(obj/item/weapon)

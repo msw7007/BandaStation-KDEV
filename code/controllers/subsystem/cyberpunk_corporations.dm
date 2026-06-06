@@ -1,5 +1,6 @@
 SUBSYSTEM_DEF(cyberpunk_corporations)
 	name = "Cyberpunk Corporations"
+	wait = 1 MINUTES
 	runlevels = RUNLEVEL_GAME
 	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Round-local corporate registry. Keyed by corporation id.
@@ -15,3 +16,6 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 /datum/controller/subsystem/cyberpunk_corporations/Recover()
 	cyberpunk_corporations = SScyberpunk_corporations.cyberpunk_corporations
 	cyberpunk_corporations_seeded = SScyberpunk_corporations.cyberpunk_corporations_seeded
+
+/datum/controller/subsystem/cyberpunk_corporations/fire(resumed = 0)
+	ensure_cyberpunk_corporations_seeded()

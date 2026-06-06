@@ -308,6 +308,7 @@
 
 	//checks for available materials
 	var/material_cost_coefficient = ispath(design.build_path, /obj/item/stack) ? 1 : creation_efficiency
+	cyberpunk_business_supply_materials(materials, materials_needed, material_cost_coefficient, build_count)
 	if(!materials.has_materials(materials_needed, material_cost_coefficient, build_count))
 		say("Not enough materials to begin production.")
 		return
@@ -383,6 +384,7 @@
 		return
 
 	var/is_stack = ispath(design.build_path, /obj/item/stack)
+	cyberpunk_business_supply_materials(materials, materials_needed, material_cost_coefficient, is_stack ? items_remaining : 1)
 	if(!materials.has_materials(materials_needed, material_cost_coefficient, is_stack ? items_remaining : 1))
 		say("Unable to continue production, missing materials.")
 		finalize_build()

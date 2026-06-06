@@ -65,6 +65,8 @@ type Business = {
     surplusPercent: number;
     markupPercent: number;
     unloadZone: string;
+    buyLinks: string;
+    sellLinks: string;
     valid: BooleanLike;
     unloadValid: BooleanLike;
     validation: string;
@@ -376,6 +378,8 @@ const BusinessWarehouse = (props: { business: Business }) => {
   const [surplus, setSurplus] = useState(business.warehouse.surplusPercent || 0);
   const [markup, setMarkup] = useState(business.warehouse.markupPercent || 0);
   const [unloadZone, setUnloadZone] = useState(business.warehouse.unloadZone || 'unset');
+  const [buyLinks, setBuyLinks] = useState(business.warehouse.buyLinks || '');
+  const [sellLinks, setSellLinks] = useState(business.warehouse.sellLinks || '');
   const [item, setItem] = useState('goods');
   const [source, setSource] = useState('external supplier');
   const [amount, setAmount] = useState(1);
@@ -429,6 +433,26 @@ const BusinessWarehouse = (props: { business: Business }) => {
           <Input fluid value={unloadZone} onChange={setUnloadZone} />
         </Stack.Item>
         <Stack.Item>
+          <Stack>
+            <Stack.Item grow>
+              <Input
+                fluid
+                placeholder="Buy links: business ids or names, comma-separated"
+                value={buyLinks}
+                onChange={setBuyLinks}
+              />
+            </Stack.Item>
+            <Stack.Item grow>
+              <Input
+                fluid
+                placeholder="Sell links: business ids or names, comma-separated"
+                value={sellLinks}
+                onChange={setSellLinks}
+              />
+            </Stack.Item>
+          </Stack>
+        </Stack.Item>
+        <Stack.Item>
           <LabeledList>
             <LabeledList.Item label="Premises validator">
               {business.premises.valid ? 'valid' : 'invalid'} -{' '}
@@ -469,6 +493,8 @@ const BusinessWarehouse = (props: { business: Business }) => {
                 surplus_percent: surplus,
                 markup_percent: markup,
                 unload_zone: unloadZone,
+                buy_links: buyLinks,
+                sell_links: sellLinks,
               })
             }
           >
@@ -480,6 +506,13 @@ const BusinessWarehouse = (props: { business: Business }) => {
             onClick={() => act('link_vendors', { id: business.id })}
           >
             Link area vendors
+          </Button>
+          <Button
+            icon="industry"
+            disabled={!business.canStock}
+            onClick={() => act('link_production', { id: business.id })}
+          >
+            Link production
           </Button>
           <Button
             icon="boxes-stacked"
