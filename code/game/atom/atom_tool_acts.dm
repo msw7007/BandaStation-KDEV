@@ -144,11 +144,11 @@
 					to_chat(user, span_notice("Ваши строительные навыки улучшают ремонт на [applied_repair] прочности."))
 
 			SSeconomy.record_cyberpunk_contract_repair(user, src)
-			SSeconomy.record_cyberpunk_corporate_activity("ryaznov", "engineering", max(1, round((current_integrity - previous_integrity) / 10)), 0, "field repair")
-			if(SSeconomy.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_self_diagnostics"))
-				SSeconomy.record_cyberpunk_corporate_activity("ryaznov", "diagnostics", 1, 0, "field repair telemetry")
-			if(SSeconomy.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_route_registry"))
-				SSeconomy.record_cyberpunk_corporate_activity("ryaznov", "infrastructure", 1, 0, "serviced infrastructure: [src]")
+			SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "engineering", max(1, round((current_integrity - previous_integrity) / 10)), 0, "field repair")
+			if(SScyberpunk_corporations.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_self_diagnostics"))
+				SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "diagnostics", 1, 0, "field repair telemetry")
+			if(SScyberpunk_corporations.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_route_registry"))
+				SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "infrastructure", 1, 0, "serviced infrastructure: [src]")
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	// A tooltype_act has completed successfully

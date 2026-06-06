@@ -85,6 +85,10 @@ SUBSYSTEM_DEF(events)
 //checks if we should select a random event yet, and reschedules if necessary
 /datum/controller/subsystem/events/proc/checkEvent()
 	if(scheduled <= world.time)
+		if(SScyberpunk_round?.cyberpunk_storyteller_controls_random_events())
+			SScyberpunk_round.cyberpunk_storyteller_consider_random_event()
+			reschedule()
+			return
 #ifdef MAP_TEST
 		message_admins("Random event skipped (Game is compiled in MAP_TEST mode)")
 #else

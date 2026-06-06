@@ -420,11 +420,11 @@
 #define CYBERPUNK_CORP_RESEARCH_TO_CREDITS 50
 #define CYBERPUNK_CORP_LEVEL_STEP 100
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_corporation(corporation_id)
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_corporation(corporation_id)
 	ensure_cyberpunk_corporations_seeded()
 	return cyberpunk_corporations[cyberpunk_normalize_corporation_id(corporation_id)]
 
-/datum/controller/subsystem/economy/proc/cyberpunk_normalize_corporation_id(corporation_id)
+/datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_normalize_corporation_id(corporation_id)
 	var/corp_id = lowertext(trim("[corporation_id]"))
 	switch(corp_id)
 		if("benn", "ben", "bэн", "бэнь")
@@ -437,7 +437,7 @@
 			return CYBERPUNK_CORP_GOVERNMENT
 	return corp_id
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_public_corporation_names(include_government = FALSE)
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_public_corporation_names(include_government = FALSE)
 	ensure_cyberpunk_corporations_seeded()
 	var/list/names = list()
 	for(var/corporation_id in cyberpunk_corporations)
@@ -447,7 +447,7 @@
 		names += corporation.name
 	return names
 
-/datum/controller/subsystem/economy/proc/ensure_cyberpunk_corporations_seeded()
+/datum/controller/subsystem/cyberpunk_corporations/proc/ensure_cyberpunk_corporations_seeded()
 	if(cyberpunk_corporations_seeded)
 		return
 	cyberpunk_corporations_seeded = TRUE
@@ -456,7 +456,7 @@
 	create_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
 	create_cyberpunk_corporation(CYBERPUNK_CORP_GOVERNMENT)
 
-/datum/controller/subsystem/economy/proc/create_cyberpunk_corporation(corporation_id)
+/datum/controller/subsystem/cyberpunk_corporations/proc/create_cyberpunk_corporation(corporation_id)
 	corporation_id = cyberpunk_normalize_corporation_id(corporation_id)
 	if(cyberpunk_corporations[corporation_id])
 		return cyberpunk_corporations[corporation_id]
@@ -465,7 +465,7 @@
 	cyberpunk_corporations[corporation_id] = corporation
 	return corporation
 
-/datum/controller/subsystem/economy/proc/record_cyberpunk_corporate_activity(corporation_id, data_type = "general", data_amount = 0, credit_amount = 0, source = "activity")
+/datum/controller/subsystem/cyberpunk_corporations/proc/record_cyberpunk_corporate_activity(corporation_id, data_type = "general", data_amount = 0, credit_amount = 0, source = "activity")
 	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(corporation_id)
 	if(!corporation)
 		return FALSE
@@ -475,7 +475,7 @@
 		corporation.add_funds(credit_amount, source)
 	return TRUE
 
-/datum/controller/subsystem/economy/proc/cyberpunk_corporation_id_from_manufacturer(manufacturer)
+/datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_corporation_id_from_manufacturer(manufacturer)
 	var/manufacturer_id = cyberpunk_normalize_corporation_id(manufacturer)
 	if(cyberpunk_corporations[manufacturer_id])
 		return manufacturer_id
@@ -490,17 +490,17 @@
 		return CYBERPUNK_CORP_GOVERNMENT
 	return null
 
-/datum/controller/subsystem/economy/proc/cyberpunk_corporation_has_edict(corporation_id, edict_id)
+/datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_corporation_has_edict(corporation_id, edict_id)
 	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(corporation_id)
 	return corporation?.has_edict(edict_id)
 
-/datum/controller/subsystem/economy/proc/cyberpunk_manufacturer_has_edict(manufacturer, edict_id)
+/datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_manufacturer_has_edict(manufacturer, edict_id)
 	return cyberpunk_corporation_has_edict(cyberpunk_corporation_id_from_manufacturer(manufacturer), edict_id)
 
-/datum/controller/subsystem/economy/proc/record_cyberpunk_manufacturer_activity(manufacturer, data_type = "general", data_amount = 0, credit_amount = 0, source = "activity")
+/datum/controller/subsystem/cyberpunk_corporations/proc/record_cyberpunk_manufacturer_activity(manufacturer, data_type = "general", data_amount = 0, credit_amount = 0, source = "activity")
 	return record_cyberpunk_corporate_activity(cyberpunk_corporation_id_from_manufacturer(manufacturer), data_type, data_amount, credit_amount, source)
 
-/datum/controller/subsystem/economy/proc/cyberpunk_corporate_edict_multiplier(manufacturer, list/edict_ids, default_multiplier = 1, active_multiplier = 1.1)
+/datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_corporate_edict_multiplier(manufacturer, list/edict_ids, default_multiplier = 1, active_multiplier = 1.1)
 	var/corporation_id = cyberpunk_corporation_id_from_manufacturer(manufacturer)
 	if(!corporation_id)
 		return default_multiplier
@@ -1045,18 +1045,18 @@
 	)
 
 /proc/cyberpunk_corporations_ui_data(mob/user, selected_corporation_id = null, locked_corporation_id = null)
-	SSeconomy.ensure_cyberpunk_corporations_seeded()
+	SScyberpunk_corporations.ensure_cyberpunk_corporations_seeded()
 	var/mob/living/living_user = isliving(user) ? user : null
 	var/list/corporations = list()
-	var/locked_id = SSeconomy.cyberpunk_normalize_corporation_id(locked_corporation_id)
-	var/selected_id = SSeconomy.cyberpunk_normalize_corporation_id(selected_corporation_id)
+	var/locked_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(locked_corporation_id)
+	var/selected_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(selected_corporation_id)
 	if(locked_id && selected_id != locked_id)
 		selected_id = locked_id
 	var/datum/cyberpunk_corporation/selected_corporation
-	for(var/corporation_id in SSeconomy.cyberpunk_corporations)
+	for(var/corporation_id in SScyberpunk_corporations.cyberpunk_corporations)
 		if(locked_id && corporation_id != locked_id)
 			continue
-		var/datum/cyberpunk_corporation/corporation = SSeconomy.cyberpunk_corporations[corporation_id]
+		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.cyberpunk_corporations[corporation_id]
 		var/list/corporation_data = corporation.to_ui_data(TRUE)
 		if(!corporation_data)
 			continue
@@ -1065,7 +1065,7 @@
 			selected_corporation = corporation
 	if(!selected_corporation && length(corporations))
 		var/list/first_corporation = corporations[1]
-		selected_corporation = SSeconomy.cyberpunk_corporations[first_corporation["id"]]
+		selected_corporation = SScyberpunk_corporations.cyberpunk_corporations[first_corporation["id"]]
 	var/datum/bank_account/user_account = living_user?.get_bank_account()
 	return list(
 		"accountName" = user_account?.account_holder,
@@ -1075,7 +1075,7 @@
 	)
 
 /proc/cyberpunk_corporations_ui_act(action, list/params, mob/user)
-	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(params && params["corporation_id"])
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(params && params["corporation_id"])
 	if(!corporation)
 		return FALSE
 	var/mob/living/living_user = isliving(user) ? user : null
@@ -1119,7 +1119,7 @@
 				to_chat(user, span_warning("Unable to request this service."))
 			return TRUE
 		if("steal_technology")
-			var/datum/cyberpunk_corporation/victim = SSeconomy.get_cyberpunk_corporation(params["target_corporation_id"])
+			var/datum/cyberpunk_corporation/victim = SScyberpunk_corporations.get_cyberpunk_corporation(params["target_corporation_id"])
 			var/theft_amount = clamp(round(text2num(params["amount"]) || 10), 1, 100)
 			var/source_name = user?.name || "system"
 			if(corporation.steal_technology_from(victim, theft_amount, "[source_name] tech theft"))
@@ -1139,7 +1139,7 @@
 	var/mob/living/user = user_ref?.resolve()
 	if(!user || QDELETED(user))
 		return FALSE
-	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(corporation_id)
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
 	switch(service_id)
 		if("medical")
 			var/heal_amount = corporation?.is_subscribed(user) ? 60 : 35
@@ -1162,14 +1162,14 @@
 			if(!user.put_in_hands(package))
 				package.forceMove(get_turf(user))
 			to_chat(user, span_notice("Benn chemical support delivers a compact chemistry kit."))
-	SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "bio", 2, 0, "Benn service completed: [service_id]")
+	SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "bio", 2, 0, "Benn service completed: [service_id]")
 	return TRUE
 
 /proc/cyberpunk_complete_ryaznov_service(datum/weakref/user_ref, corporation_id, service_id)
 	var/mob/living/user = user_ref?.resolve()
 	if(!user || QDELETED(user))
 		return FALSE
-	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(corporation_id)
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
 	var/repair_amount = corporation?.is_subscribed(user) ? 80 : 45
 	if(service_id == "fortify")
 		repair_amount *= 0.5
@@ -1186,13 +1186,13 @@
 			call(package, "set_cyberpunk_manufacturer")("Ryaznov")
 		if(!user.put_in_hands(package))
 			package.forceMove(get_turf(user))
-		SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", 2, 0, "Ryaznov salvage service completed")
+		SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "engineering", 2, 0, "Ryaznov salvage service completed")
 		to_chat(user, span_notice("Ryaznov salvage service delivers an industrial pack."))
 		return TRUE
 	if(service_id == "power")
 		for(var/obj/machinery/nearby_machine in range(1, user))
 			nearby_machine.repair_cyberpunk_machine_wear(repair_amount, user)
-		SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", 2, 0, "Ryaznov power service completed")
+		SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "engineering", 2, 0, "Ryaznov power service completed")
 		to_chat(user, span_notice("Ryaznov power tuning refreshes nearby machinery components."))
 		return TRUE
 	if(!repair_target)
@@ -1202,7 +1202,7 @@
 	var/obj/machinery/repaired_machine = repair_target
 	if(istype(repaired_machine))
 		repaired_machine.repair_cyberpunk_machine_wear(repair_amount, user)
-	SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "engineering", max(1, round(applied_repair / 10)), 0, "Ryaznov service completed: [service_id]")
+	SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "engineering", max(1, round(applied_repair / 10)), 0, "Ryaznov service completed: [service_id]")
 	to_chat(user, span_notice("Ryaznov field service repairs [repair_target] by [applied_repair] integrity."))
 	return TRUE
 
@@ -1210,7 +1210,7 @@
 	var/mob/living/user = user_ref?.resolve()
 	if(!user || QDELETED(user))
 		return FALSE
-	var/datum/cyberpunk_corporation/corporation = SSeconomy.get_cyberpunk_corporation(corporation_id)
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
 	switch(service_id)
 		if("delivery")
 			var/obj/item/storage/box/package = new(get_turf(user))
@@ -1240,7 +1240,7 @@
 			user.adjust_stamina_loss(-35)
 			user.add_mood_event("starlight_influence", /datum/mood_event/starlight_influence)
 			to_chat(user, span_notice("Starlight influence pulse stabilizes your tempo."))
-	SSeconomy.record_cyberpunk_corporate_activity(corporation_id, "market", 2, 0, "Starlight service completed: [service_id]")
+	SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "market", 2, 0, "Starlight service completed: [service_id]")
 	return TRUE
 
 /datum/mood_event/starlight_influence
@@ -1280,7 +1280,7 @@
 	if(cyberpunk_contract_pool_seeded)
 		return
 	cyberpunk_contract_pool_seeded = TRUE
-	var/list/corporations = get_cyberpunk_public_corporation_names()
+	var/list/corporations = SScyberpunk_corporations.get_cyberpunk_public_corporation_names()
 	for(var/corporation in corporations)
 		var/contract_count = rand(3, 4)
 		for(var/i in 1 to contract_count)
@@ -1682,7 +1682,7 @@
 	add_history("completed: [reason]")
 	if(pool_corporation)
 		var/data_type = contract_type == CYBERPUNK_CONTRACT_DELIVERY ? "market" : contract_type
-		SSeconomy.record_cyberpunk_corporate_activity(pool_corporation, data_type, max(1, round(payment / 100)), max(1, round(payment * 0.02)), "contract completed #[id]")
+		SScyberpunk_corporations.record_cyberpunk_corporate_activity(pool_corporation, data_type, max(1, round(payment / 100)), max(1, round(payment * 0.02)), "contract completed #[id]")
 	clear_delivery_tracking()
 	SSeconomy.adjust_cyberpunk_contract_stat(contractor_character_key, "completed")
 	return TRUE
@@ -2024,16 +2024,16 @@
 		card.store_cyberpunk_crypto_key(access_key)
 	return TRUE
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_business(business_id)
+/datum/controller/subsystem/cyberpunk_property/proc/get_cyberpunk_business(business_id)
 	return cyberpunk_businesses["[business_id]"]
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_apartment(apartment_id)
+/datum/controller/subsystem/cyberpunk_property/proc/get_cyberpunk_apartment(apartment_id)
 	return cyberpunk_apartments["[apartment_id]"]
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_business_key(mob/living/person, datum/bank_account/account)
-	return get_cyberpunk_contract_character_key(person, account)
+/datum/controller/subsystem/cyberpunk_property/proc/get_cyberpunk_business_key(mob/living/person, datum/bank_account/account)
+	return SSeconomy.get_cyberpunk_contract_character_key(person, account)
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_businesses_for_user(mob/living/user)
+/datum/controller/subsystem/cyberpunk_property/proc/get_cyberpunk_businesses_for_user(mob/living/user)
 	var/list/businesses = list()
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/business = cyberpunk_businesses[business_id]
@@ -2041,7 +2041,7 @@
 			businesses += business
 	return businesses
 
-/datum/controller/subsystem/economy/proc/get_cyberpunk_apartments_for_user(mob/living/user)
+/datum/controller/subsystem/cyberpunk_property/proc/get_cyberpunk_apartments_for_user(mob/living/user)
 	var/list/apartments = list()
 	for(var/apartment_id in cyberpunk_apartments)
 		var/datum/cyberpunk_apartment/apartment = cyberpunk_apartments[apartment_id]
@@ -2049,7 +2049,7 @@
 			apartments += apartment
 	return apartments
 
-/datum/controller/subsystem/economy/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label)
+/datum/controller/subsystem/cyberpunk_property/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label)
 	item_label = reject_bad_text(item_label, max_length = 48, ascii_only = FALSE)
 	if(!requester || !item_label)
 		return null
@@ -2072,7 +2072,7 @@
 			best_supplier = supplier
 	return best_supplier
 
-/datum/controller/subsystem/economy/proc/create_cyberpunk_business(mob/living/owner, obj/machinery/computer/business_terminal/terminal, list/params)
+/datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business(mob/living/owner, obj/machinery/computer/business_terminal/terminal, list/params)
 	if(!owner || !terminal)
 		return null
 	if(!owner.has_neural_implant())
@@ -2108,7 +2108,7 @@
 	business.apply_generated_access(owner)
 	return business
 
-/datum/controller/subsystem/economy/proc/create_cyberpunk_apartment(mob/living/owner, obj/machinery/computer/apartment_terminal/terminal, list/params)
+/datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_apartment(mob/living/owner, obj/machinery/computer/apartment_terminal/terminal, list/params)
 	if(!owner || !terminal)
 		return null
 	if(!owner.has_neural_implant())
@@ -2139,7 +2139,7 @@
 	apartment.apply_generated_access(owner)
 	return apartment
 
-/datum/controller/subsystem/economy/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
+/datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
 	if(!business)
 		return null
 	item_label = reject_bad_text(item_label, max_length = 48, ascii_only = FALSE)
@@ -2170,11 +2170,11 @@
 	cyberpunk_business_deliveries["[delivery.id]"] = delivery
 	business.deliveries += delivery
 	business.add_history("delivery #[delivery.id] requested: [amount]x [item_label] from [delivery.source_label]; cost [total_cost][MONEY_SYMBOL]")
-	record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "market", max(1, round(amount / 2)), max(0, round(total_cost * 0.03)), "business delivery #[delivery.id]")
-	if(cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_cargo_tracking"))
-		record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "cargo tracking: delivery #[delivery.id]")
-	if(cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_log_observation"))
-		record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", max(1, round(amount / 4)), 0, "log observation: delivery #[delivery.id]")
+	SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "market", max(1, round(amount / 2)), max(0, round(total_cost * 0.03)), "business delivery #[delivery.id]")
+	if(SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_cargo_tracking"))
+		SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "cargo tracking: delivery #[delivery.id]")
+	if(SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_log_observation"))
+		SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", max(1, round(amount / 4)), 0, "log observation: delivery #[delivery.id]")
 	addtimer(CALLBACK(delivery, TYPE_PROC_REF(/datum/cyberpunk_business_delivery, complete_delivery)), 2 MINUTES, TIMER_STOPPABLE)
 	return delivery
 
@@ -2218,7 +2218,7 @@
 	return SSeconomy.bank_accounts_by_id["[account_id]"]
 
 /datum/cyberpunk_business/proc/user_key(mob/living/user)
-	return SSeconomy.get_cyberpunk_business_key(user, user?.get_bank_account())
+	return SScyberpunk_property.get_cyberpunk_business_key(user, user?.get_bank_account())
 
 /datum/cyberpunk_business/proc/add_history(message)
 	LAZYADD(history, "[round_timestamp()] - [message]")
@@ -2620,7 +2620,7 @@
 /datum/cyberpunk_business/proc/request_delivery(mob/living/user, item_label, amount, source_label)
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !warehouse_enabled || !warehouse_valid)
 		return FALSE
-	return !!SSeconomy.create_cyberpunk_business_delivery(src, item_label, amount, source_label)
+	return !!SScyberpunk_property.create_cyberpunk_business_delivery(src, item_label, amount, source_label)
 
 /datum/cyberpunk_business/proc/link_nearby_vendors(mob/living/user)
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !terminal)
@@ -2725,7 +2725,7 @@
 	var/list/history = list()
 
 /datum/cyberpunk_apartment/proc/user_key(mob/living/user)
-	return SSeconomy.get_cyberpunk_business_key(user, user?.get_bank_account())
+	return SScyberpunk_property.get_cyberpunk_business_key(user, user?.get_bank_account())
 
 /datum/cyberpunk_apartment/proc/add_history(message)
 	LAZYADD(history, "[round_timestamp()] - [message]")
@@ -2859,7 +2859,7 @@
 /datum/cyberpunk_business_delivery/proc/complete_delivery()
 	if(status != "enroute")
 		return FALSE
-	var/datum/cyberpunk_business/business = SSeconomy.get_cyberpunk_business(business_id)
+	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(business_id)
 	if(!business)
 		return FALSE
 	status = "completed"

@@ -63,6 +63,10 @@ SUBSYSTEM_DEF(dynamic)
 	if(!COOLDOWN_FINISHED(src, midround_cooldown) || EMERGENCY_PAST_POINT_OF_NO_RETURN)
 		return
 
+	if(SScyberpunk_round?.cyberpunk_storyteller_controls_dynamic_rules())
+		SScyberpunk_round.cyberpunk_storyteller_consider_dynamic_rules()
+		return
+
 	if(COOLDOWN_FINISHED(src, light_ruleset_start))
 		if(try_spawn_midround(LIGHT_MIDROUND))
 			return
@@ -140,7 +144,10 @@ SUBSYSTEM_DEF(dynamic)
 	// put rulesets in the queue (if admins didn't)
 	// this will even handle the case in which the tier wants 0 roundstart rulesets
 	if(!length(queued_rulesets))
-		for(var/ruleset in pick_roundstart_rulesets(antag_candidates))
+		var/list/storyteller_rulesets = SScyberpunk_round?.cyberpunk_storyteller_pick_roundstart_rulesets(antag_candidates)
+		if(isnull(storyteller_rulesets))
+			storyteller_rulesets = pick_roundstart_rulesets(antag_candidates)
+		for(var/ruleset in storyteller_rulesets)
 			queue_ruleset(ruleset)
 	// we got what we needed, reset so we can do real job selection later
 	// reset only happens AFTER roundstart selection so we can verify stuff like "can we get 3 heads of staff for revs?"

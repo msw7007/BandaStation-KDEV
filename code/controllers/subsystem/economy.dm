@@ -56,22 +56,6 @@ SUBSYSTEM_DEF(economy)
 	var/list/cyberpunk_contract_stats = list()
 	/// Whether the round-local corporate pool was filled with starter contracts.
 	var/cyberpunk_contract_pool_seeded = FALSE
-	/// Round-local business registry. Keyed by business id.
-	var/list/cyberpunk_businesses = list()
-	/// Next id for round-local businesses.
-	var/next_cyberpunk_business_id = 1
-	/// Round-local apartment registry. Keyed by apartment id.
-	var/list/cyberpunk_apartments = list()
-	/// Next id for round-local apartments.
-	var/next_cyberpunk_apartment_id = 1
-	/// Round-local business delivery jobs.
-	var/list/cyberpunk_business_deliveries = list()
-	/// Next id for round-local business delivery jobs.
-	var/next_cyberpunk_business_delivery_id = 1
-	/// Round-local corporate registry. Keyed by corporation id.
-	var/list/cyberpunk_corporations = list()
-	/// Whether round-local corporate datums and accounts were created.
-	var/cyberpunk_corporations_seeded = FALSE
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Number of mail items generated.
@@ -99,7 +83,6 @@ SUBSYSTEM_DEF(economy)
 			new /datum/bank_account/department(dep_id, 0, player_account = FALSE)
 			continue
 		new /datum/bank_account/department(dep_id, budget_to_hand_out, player_account = FALSE)
-	ensure_cyberpunk_corporations_seeded()
 	return SS_INIT_SUCCESS
 
 /datum/controller/subsystem/economy/Recover()
@@ -111,14 +94,6 @@ SUBSYSTEM_DEF(economy)
 	next_cyberpunk_contract_id = SSeconomy.next_cyberpunk_contract_id
 	cyberpunk_contract_stats = SSeconomy.cyberpunk_contract_stats
 	cyberpunk_contract_pool_seeded = SSeconomy.cyberpunk_contract_pool_seeded
-	cyberpunk_businesses = SSeconomy.cyberpunk_businesses
-	next_cyberpunk_business_id = SSeconomy.next_cyberpunk_business_id
-	cyberpunk_apartments = SSeconomy.cyberpunk_apartments
-	next_cyberpunk_apartment_id = SSeconomy.next_cyberpunk_apartment_id
-	cyberpunk_business_deliveries = SSeconomy.cyberpunk_business_deliveries
-	next_cyberpunk_business_delivery_id = SSeconomy.next_cyberpunk_business_delivery_id
-	cyberpunk_corporations = SSeconomy.cyberpunk_corporations
-	cyberpunk_corporations_seeded = SSeconomy.cyberpunk_corporations_seeded
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Processing step defines, to track what we've done so far
@@ -322,6 +297,7 @@ SUBSYSTEM_DEF(economy)
 		return FALSE
 	card_holder.adjust_timed_status_effect(wait, /datum/status_effect/spotlight_light)
 	return TRUE
+
 
 #undef ECON_DEPARTMENT_STEP
 #undef ECON_ACCOUNT_STEP

@@ -1451,13 +1451,13 @@
 	if(!driver)
 		return 1
 	var/base_manufacturer = "Starlight"
-	var/total_multiplier = driver.get_corporate_synergy_multiplier(base_manufacturer) * SSeconomy.cyberpunk_corporate_edict_multiplier(base_manufacturer, list("starlight_route_registry", "starlight_phase_tuning"), 1, 1.05)
+	var/total_multiplier = driver.get_corporate_synergy_multiplier(base_manufacturer) * SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(base_manufacturer, list("starlight_route_registry", "starlight_phase_tuning"), 1, 1.05)
 	var/counted_parts = 1
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
 		if(!part?.manufacturer)
 			continue
 		var/part_multiplier = driver.get_corporate_synergy_multiplier(part.manufacturer)
-		part_multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(part.manufacturer, list("starlight_route_registry", "starlight_phase_tuning", "ryaznov_power_tuning", "benn_self_analysis"), 1, 1.05)
+		part_multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(part.manufacturer, list("starlight_route_registry", "starlight_phase_tuning", "ryaznov_power_tuning", "benn_self_analysis"), 1, 1.05)
 		total_multiplier += part_multiplier
 		counted_parts++
 	return total_multiplier / max(1, counted_parts)

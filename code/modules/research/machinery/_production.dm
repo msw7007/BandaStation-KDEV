@@ -228,9 +228,9 @@
 /obj/machinery/rnd/production/proc/get_cyberpunk_fabrication_edict_multiplier()
 	var/manufacturer = get_cyberspace_manufacturer(src)
 	var/multiplier = 1
-	multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_gene_combo", "benn_chem_tuning"), 1, 1.08)
-	multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("ryaznov_blueprint_tuning", "ryaznov_power_tuning"), 1, 1.08)
-	multiplier *= SSeconomy.cyberpunk_corporate_edict_multiplier(manufacturer, list("starlight_mass_production", "starlight_phase_tuning"), 1, 1.08)
+	multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_gene_combo", "benn_chem_tuning"), 1, 1.08)
+	multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("ryaznov_blueprint_tuning", "ryaznov_power_tuning"), 1, 1.08)
+	multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("starlight_mass_production", "starlight_phase_tuning"), 1, 1.08)
 	return multiplier
 
 /obj/machinery/rnd/production/ui_assets(mob/user)
@@ -458,15 +458,15 @@
 		created_item.set_cyberpunk_manufacturer(manufacturer)
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
 		created.pixel_y = created.base_pixel_y + rand(-6, 6)
-		SSeconomy.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "fabricated [design.name]")
-		if(!is_stack && SSeconomy.cyberpunk_manufacturer_has_edict(manufacturer, "starlight_mass_production") && prob(10))
+		SScyberpunk_corporations.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "fabricated [design.name]")
+		if(!is_stack && SScyberpunk_corporations.cyberpunk_manufacturer_has_edict(manufacturer, "starlight_mass_production") && prob(10))
 			var/atom/movable/bonus_created = design.create_result(target, design_materials)
 			if(isitem(bonus_created))
 				var/obj/item/bonus_item = bonus_created
 				bonus_item.set_cyberpunk_manufacturer(manufacturer)
 				bonus_item.pixel_x = bonus_item.base_pixel_x + rand(-6, 6)
 				bonus_item.pixel_y = bonus_item.base_pixel_y + rand(-6, 6)
-				SSeconomy.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "mass-production copy: [design.name]")
+				SScyberpunk_corporations.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "mass-production copy: [design.name]")
 	SSblackbox.record_feedback("nested tally", "lathe_printed_items", 1, list("[type]", "[created.type]"))
 
 	if(is_stack)

@@ -178,12 +178,12 @@
 
 /obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_chromity_penalty()
 	var/penalty = get_ice().get_chromity_penalty()
-	penalty /= SSeconomy.cyberpunk_corporate_edict_multiplier(corp_manufacturer, list("benn_dna_storage", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.1)
+	penalty /= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(corp_manufacturer, list("benn_dna_storage", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.1)
 	return round(penalty)
 
 /obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_timer_duration(hacking_skill = 0)
 	var/timer_duration = get_ice().get_timer_duration(hacking_skill)
-	timer_duration /= SSeconomy.cyberpunk_corporate_edict_multiplier(corp_manufacturer, list("benn_dna_storage", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.05)
+	timer_duration /= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(corp_manufacturer, list("benn_dna_storage", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.05)
 	return max(1, round(timer_duration))
 
 /obj/item/organ/cyberimp/brain/neural_interface/proc/get_ice_grid_size(hacking_skill = 0)
