@@ -25,8 +25,8 @@
 	RegisterSignal(src, COMSIG_ATOM_PRE_BULLET_ACT, PROC_REF(block_bullets))
 
 
-/mob/living/basic/bot/secbot/grievous/check_block(atom/hit_by, damage, attack_text = "the attack", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE)
-	. = ..()
+/mob/living/basic/bot/secbot/grievous/check_block(atom/hit_by, damage, attack_text = "the attack", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null)
+	. = ..(hit_by, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break)
 	if(. & FAILED_BLOCK)
 		return .
 

@@ -82,8 +82,8 @@
 		SEND_SIGNAL(user, COMSIG_MOB_PAT_BORG)
 		return TRUE
 
-/mob/living/silicon/check_block(atom/hitby, damage, attack_text, attack_type, armour_penetration, damage_type, attack_flag)
-	. = ..()
+/mob/living/silicon/check_block(atom/hitby, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break = null, attack_flag = MELEE)
+	. = ..(hitby, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break)
 	if(. == SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
 	if(damage_type == BRUTE && attack_type == UNARMED_ATTACK && attack_flag == MELEE && damage <= 10)

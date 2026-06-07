@@ -100,10 +100,10 @@ export function RolesTab() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const jobs = useMemo(
     () => getJobsForFilter(serverData, roleFilter, data),
-    [serverData, roleFilter, data],
+    [serverData, roleFilter, data.is_admin],
   );
   const fallbackRole = firstJobId(jobs);
-  const [selectedRole, setSelectedRole] = useState(fallbackRole);
+  const [selectedRole, setSelectedRole] = useState<string | undefined>();
   const [selectedAntags, setSelectedAntags] = useState(
     () => new Set(data.selected_antags),
   );
@@ -116,24 +116,12 @@ export function RolesTab() {
 
   function selectRoleFilter(nextFilter: RoleFilter) {
     setRoleFilter(nextFilter);
-    const nextRole = firstJobId(getJobsForFilter(serverData, nextFilter, data));
-    if (nextRole) {
-      setSelectedRole(nextRole);
-    }
+    setSelectedRole(undefined);
   }
 
   useEffect(() => {
     setSelectedAntags(new Set(data.selected_antags));
   }, [data.selected_antags]);
-
-  useEffect(() => {
-    if (!visibleRole) {
-      return;
-    }
-    act('set_role_preview_job', {
-      job: visibleRole,
-    });
-  }, [act, visibleRole]);
 
   useEffect(() => {
     return () => {
@@ -166,7 +154,7 @@ export function RolesTab() {
               key={jobId}
               id={jobId}
               job={job}
-              selected={visibleRole === jobId}
+              selected={selectedRole === jobId}
               priority={data.job_preferences[jobId]}
               onSelect={() => {
                 setSelectedRole(jobId);
@@ -190,7 +178,7 @@ export function RolesTab() {
         title="Превью выбранной роли"
       >
         <RoleGearPreview
-          previewId={data.character_preview_view}
+          previewId={selectedRole ? data.character_preview_view : undefined}
           roleId={visibleRole}
           job={jobs[visibleRole]}
         />

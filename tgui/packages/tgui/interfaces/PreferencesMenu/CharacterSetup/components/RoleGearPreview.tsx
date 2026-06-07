@@ -1,5 +1,5 @@
-import type { CyberpunkRole, Job, RoleOutfitItem } from '../../types';
 import { CharacterPreview } from '../../../common/CharacterPreview';
+import type { CyberpunkRole, Job, RoleOutfitItem } from '../../types';
 import { CyberSectionHeader } from './CyberPanel';
 import { ItemCard } from './ItemCard';
 import { roleDisplayName } from './RoleCard';
@@ -102,6 +102,25 @@ function bonusRows(cyberRole?: CyberpunkRole) {
   return ['+6 свободных очков навыков'];
 }
 
+function expectationRows(cyberRole?: CyberpunkRole) {
+  if (cyberRole?.tasks?.length) {
+    return cyberRole.tasks;
+  }
+  if (cyberRole?.role_class === 'agent') {
+    return ['Работать на интересы корпорации, выполнять силовые задачи и защищать активы.'];
+  }
+  if (cyberRole?.role_class === 'specialist') {
+    return ['Поддерживать профильные системы корпорации и давать игрокам полезный сервис.'];
+  }
+  if (cyberRole?.role_class === 'government' || cyberRole?.role_class === 'officer') {
+    return ['Поддерживать порядок города и реагировать на конфликты в рамках полномочий.'];
+  }
+  if (cyberRole?.group === 'mercenary') {
+    return ['Искать работу через городские конфликты, контракты и договоренности с игроками.'];
+  }
+  return ['Жить в городе, искать работу, создавать связи и реагировать на события раунда.'];
+}
+
 export function RoleGearPreview(props: RoleGearPreviewProps) {
   const { job, previewId, roleId } = props;
   const outfitItems = job?.outfit_items || [];
@@ -111,7 +130,7 @@ export function RoleGearPreview(props: RoleGearPreviewProps) {
   if (!roleId || !job) {
     return (
       <div className="RoleGearPreview empty">
-        Выберите роль, чтобы увидеть направление, лимиты, бонусы и выдаваемый набор.
+        Выберите роль, чтобы увидеть направление, лимиты, ожидания, бонусы и выдаваемый набор.
       </div>
     );
   }
@@ -152,31 +171,43 @@ export function RoleGearPreview(props: RoleGearPreviewProps) {
           )}
         </div>
 
-      <CyberSectionHeader>Бонусы роли</CyberSectionHeader>
-      <div className="RoleGearPreview__bonusList">
-        {bonusRows(cyberRole).map((bonus) => (
-          <span key={bonus}>{bonus}</span>
-        ))}
-      </div>
+        <CyberSectionHeader>Описание роли</CyberSectionHeader>
+        <div className="RoleGearPreview__description">
+          {job.description || 'Описание роли пока не заполнено.'}
+        </div>
 
-      <CyberSectionHeader>Выдаваемые вещи</CyberSectionHeader>
-      <div className="RoleGearPreview__grid">
-        {Object.entries(groupedItems).map(([slot, items]) => (
-          <div key={slot} className="RoleGearPreview__slot">
-            <b>{slot}</b>
-            {items.map((item, index) => (
-              <ItemCard
-                key={`${slot}-${item.item_type}-${index}`}
-                name={item.item_name}
-                icon={item.icon}
-                iconState={item.icon_state}
-                meta={item.guaranteed ? item.source : `${item.source} / попытка`}
-                tags={item.warning ? [item.warning] : undefined}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
+        <CyberSectionHeader>Ожидания</CyberSectionHeader>
+        <div className="RoleGearPreview__expectations">
+          {expectationRows(cyberRole).map((expectation) => (
+            <span key={expectation}>{expectation}</span>
+          ))}
+        </div>
+
+        <CyberSectionHeader>Бонусы роли</CyberSectionHeader>
+        <div className="RoleGearPreview__bonusList">
+          {bonusRows(cyberRole).map((bonus) => (
+            <span key={bonus}>{bonus}</span>
+          ))}
+        </div>
+
+        <CyberSectionHeader>Выдаваемые вещи</CyberSectionHeader>
+        <div className="RoleGearPreview__grid">
+          {Object.entries(groupedItems).map(([slot, items]) => (
+            <div key={slot} className="RoleGearPreview__slot">
+              <b>{slot}</b>
+              {items.map((item, index) => (
+                <ItemCard
+                  key={`${slot}-${item.item_type}-${index}`}
+                  name={item.item_name}
+                  icon={item.icon}
+                  iconState={item.icon_state}
+                  meta={item.guaranteed ? item.source : `${item.source} / попытка`}
+                  tags={item.warning ? [item.warning] : undefined}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

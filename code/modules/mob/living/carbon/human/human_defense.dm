@@ -78,11 +78,11 @@
 			return TRUE
 	return FALSE
 
-/mob/living/carbon/human/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE)
-	. = ..()
+/mob/living/carbon/human/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null)
+	. = ..(hit_by, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break)
 	if(. == SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
-	if(!can_parry())
+	if(defense_break == "parry" || !can_parry())
 		return FAILED_BLOCK
 
 	var/active_parry = has_active_cyberpunk_parry()

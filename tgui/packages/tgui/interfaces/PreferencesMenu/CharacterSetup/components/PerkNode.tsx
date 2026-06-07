@@ -90,8 +90,9 @@ export function PerkNode(props: PerkNodeProps) {
           'PerkNode',
           rank > 0 && 'taken',
           locked && 'locked',
+          disabled && 'disabled',
         ])}
-        disabled={disabled || locked}
+        aria-disabled={disabled || locked}
         onClick={onClick}
         onContextMenu={onContextMenu}
       >

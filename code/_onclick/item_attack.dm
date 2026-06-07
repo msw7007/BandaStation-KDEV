@@ -305,8 +305,10 @@
 	switch(combat_intent)
 		if("stab")
 			MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1.05)
+			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_PIERCE = 1)
 		if("slash")
 			MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1.02)
+			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_SLASH = 1)
 	return TRUE
 
 /obj/item/proc/apply_cyberpunk_charged_intent(mob/living/user, list/modifiers, list/attack_modifiers)
@@ -315,6 +317,11 @@
 		return FALSE
 	var/damage_multiplier = 1.15 * user.get_cyberpunk_charged_intent_damage_multiplier(src)
 	MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, damage_multiplier)
+	switch(charged_intent)
+		if("pierce")
+			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_PIERCE = 1)
+		if("chop")
+			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_SLASH = 1)
 	user.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
 	user.balloon_alert(user, charged_intent)
 	return TRUE
@@ -384,6 +391,7 @@
 
 	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
 	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
+	var/defense_break = LAZYACCESS(modifiers, "cyberpunk_defense_break")
 	var/effective_armour_penetration = attacking_item.armour_penetration
 	if(combat_intent == "stab")
 		effective_armour_penetration += 10
@@ -424,7 +432,7 @@
 
 	if(user != src)
 		// This doesn't factor in armor, or most damage modifiers (physiology). Your mileage may vary
-		if(check_block(attacking_item, final_force, "[attacking_item.declent_ru(ACCUSATIVE)]", MELEE_ATTACK, effective_armour_penetration, attacking_item.damtype))
+		if(check_block(attacking_item, final_force, "[attacking_item.declent_ru(ACCUSATIVE)]", MELEE_ATTACK, effective_armour_penetration, attacking_item.damtype, defense_break))
 			return ATTACK_FAILED
 
 	SEND_SIGNAL(attacking_item, COMSIG_ITEM_ATTACK_ZONE, src, user, targeting)
@@ -438,8 +446,9 @@
 
 	var/damage_done = 0
 	//CYBERPUNK BUILD - rebuild and delete before release
-	var/list/cyberpunk_damage_entries = attacking_item.get_cyberpunk_damage_entries()
-	if(length(attacking_item.cyberpunk_damage_profile) || length(cyberpunk_damage_entries) > 1 || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_HEAT) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_COLD) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_ACID))
+	var/list/forced_damage_profile = LAZYACCESS(modifiers, "cyberpunk_damage_profile")
+	var/list/cyberpunk_damage_entries = forced_damage_profile || attacking_item.get_cyberpunk_damage_entries()
+	if(length(forced_damage_profile) || length(attacking_item.cyberpunk_damage_profile) || length(cyberpunk_damage_entries) > 1 || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_HEAT) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_COLD) || LAZYACCESS(cyberpunk_damage_entries, BODYPART_DAMAGE_ACID))
 		var/total_weight = 0
 		for(var/damage_key in cyberpunk_damage_entries)
 			total_weight += cyberpunk_damage_entries[damage_key]

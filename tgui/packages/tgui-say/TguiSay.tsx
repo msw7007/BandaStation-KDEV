@@ -158,9 +158,9 @@ export function TguiSay() {
 
   function handleSaveText(): void {
     const iterator = channelIterator.current;
-    const currentValue = innerRef.current?.value;
+    const currentValue = innerRef.current?.value || '';
 
-    if (!currentValue || !iterator.isVisible()) return;
+    if (!iterator.isVisible()) return;
 
     messages.current.saveText(currentValue, iterator.current());
   }

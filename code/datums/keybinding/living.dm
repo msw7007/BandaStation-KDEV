@@ -256,6 +256,21 @@
 	living_user.cyberpunk_defensive_action_held = FALSE
 	return TRUE
 
+/datum/keybinding/living/cyberpunk_surrender
+	hotkey_keys = list("AltShiftH", "ShiftAltH")
+	name = "cyberpunk_surrender"
+	full_name = "Surrender"
+	description = "Surrender."
+	keybind_signal = "keybinding_living_cyberpunk_surrender_down"
+
+/datum/keybinding/living/cyberpunk_surrender/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.emote("surrender")
+	return TRUE
+
 /datum/keybinding/living/give
 	hotkey_keys = list(UNBOUND_KEY) // BANDASTATION EDIT
 	name = "Give_Item"

@@ -87,12 +87,16 @@
 
 /datum/preference_middleware/loadout/proc/action_toggle_job_outfit(list/params, mob/user)
 	PRIVATE_PROC(TRUE)
+	if(isnull(preferences.character_preview_view))
+		return TRUE
 	preferences.character_preview_view.show_job_clothes = !preferences.character_preview_view.show_job_clothes
 	preferences.character_preview_view.update_body()
 	return TRUE
 
 /datum/preference_middleware/loadout/proc/action_rotate_model_dir(list/params, mob/user)
 	PRIVATE_PROC(TRUE)
+	if(isnull(preferences.character_preview_view))
+		return TRUE
 	switch(params["dir"])
 		if("left")
 			preferences.character_preview_view.setDir(turn(preferences.character_preview_view.dir, -90))
@@ -108,7 +112,7 @@
 		return TRUE // update
 
 	if(interacted_item.handle_loadout_action(src, user, params["subaction"], params))
-		preferences.character_preview_view.update_body()
+		preferences.character_preview_view?.update_body()
 		return TRUE
 
 	return FALSE
@@ -116,7 +120,7 @@
 /// Select [path] item to [category_slot] slot.
 /datum/preference_middleware/loadout/proc/select_item(datum/loadout_item/selected_item)
 	/// BANDASTATION ADDITION START - Loadout
-	if(preferences.parent.get_donator_level() < selected_item.donator_level)
+	if((preferences.parent?.get_donator_level() || 0) < selected_item.donator_level)
 		return
 
 	var/points_left = preferences.get_loadout_max_points() - preferences.loadout_points_spent
@@ -165,18 +169,18 @@
 
 /datum/preference_middleware/loadout/get_ui_data(mob/user)
 	var/list/data = list()
-	data["job_clothes"] = preferences.character_preview_view.show_job_clothes
+	data["job_clothes"] = preferences.character_preview_view?.show_job_clothes || FALSE
 	/** BANDASTATION ADDITION - START */
 	var/loadout_maxpoints = preferences.get_loadout_max_points()
 	data["loadout_leftpoints"] = max(0, loadout_maxpoints - preferences.loadout_points_spent)
 	data["loadout_maxpoints"] = loadout_maxpoints
-	data["donator_level"] = preferences.parent.get_donator_level()
+	data["donator_level"] = preferences.parent?.get_donator_level() || 0
 	/** BANDASTATION ADDITION - END */
 	return data
 
 /datum/preference_middleware/loadout/get_ui_static_data(mob/user)
 	var/list/data = list()
-	data["loadout_preview_view"] = preferences.character_preview_view.assigned_map
+	data["loadout_preview_view"] = preferences.character_preview_view?.assigned_map
 	return data
 
 /datum/preference_middleware/loadout/get_constant_data()

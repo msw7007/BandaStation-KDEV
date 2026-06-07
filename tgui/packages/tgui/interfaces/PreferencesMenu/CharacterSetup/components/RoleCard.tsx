@@ -1,3 +1,4 @@
+import { Tooltip } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
 import { JobPriority, type Job } from '../../types';
@@ -30,6 +31,23 @@ const roleNameText: Record<string, string> = {
   'Criminal Contractor': 'Серый подрядчик',
 };
 
+const roleClassText: Record<string, string> = {
+  agent: 'Корпоративный оперативник',
+  council: 'Совет города',
+  government: 'Правительство',
+  intern: 'Корпоративный стажер',
+  mercenary: 'Наемная работа',
+  netrunner: 'Сетевая роль',
+  officer: 'Силовая структура',
+  specialist: 'Профильный специалист',
+};
+
+const corporationText: Record<string, string> = {
+  benn: 'Бэнь',
+  ryaznov: 'Рязнов',
+  starlight: 'Старлайт',
+};
+
 type RoleCardProps = {
   id: string;
   job: Job;
@@ -45,14 +63,57 @@ export function roleDisplayName(id: string) {
 }
 
 export function RoleCard(props: RoleCardProps) {
-  const { disabled, id, onPriority, onSelect, priority, selected } = props;
+  const { disabled, id, job, onPriority, onSelect, priority, selected } = props;
+  const cyberRole = job.cyberpunk_role;
+  const roleClass = cyberRole?.role_class
+    ? roleClassText[cyberRole.role_class] || cyberRole.role_class
+    : 'Городская роль';
+  const roleGroup = cyberRole?.corporation
+    ? corporationText[cyberRole.corporation] || cyberRole.corporation
+    : cyberRole?.group || job.department;
+  const tooltip = (
+    <div className="RoleCard__tooltip">
+      <strong>{roleDisplayName(id)}</strong>
+      <span>{job.description || 'Описание роли пока не заполнено.'}</span>
+      <dl>
+        <dt>Направление</dt>
+        <dd>{roleGroup}</dd>
+        <dt>Ожидание</dt>
+        <dd>{roleClass}</dd>
+        {!!job.supervisors && (
+          <>
+            <dt>Кому подчиняется</dt>
+            <dd>{job.supervisors}</dd>
+          </>
+        )}
+      </dl>
+      {!!cyberRole?.tasks?.length && (
+        <ul>
+          {cyberRole.tasks.map((task) => (
+            <li key={task}>{task}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 
   return (
     <div className={classes(['RoleCard', selected && 'selected'])}>
-      <button className="RoleCard__main" disabled={disabled} onClick={onSelect}>
-        <b>{roleDisplayName(id)}</b>
-        {!!priority && <em>{priorityText[priority]}</em>}
-      </button>
+      <Tooltip content={tooltip} position="top">
+        <button
+          aria-disabled={disabled}
+          className="RoleCard__main"
+          onClick={() => {
+            if (!disabled) {
+              onSelect?.();
+            }
+          }}
+        >
+          <b>{roleDisplayName(id)}</b>
+          <span>{roleClass}</span>
+          {!!priority && <em>{priorityText[priority]}</em>}
+        </button>
+      </Tooltip>
       {!!onPriority && (
         <div className="RoleCard__priority">
           <button
@@ -62,7 +123,7 @@ export function RoleCard(props: RoleCardProps) {
             ])}
             onClick={() => onPriority(JobPriority.Low)}
           >
-            Н
+            Низкий
           </button>
           <button
             className={classes([
@@ -71,7 +132,7 @@ export function RoleCard(props: RoleCardProps) {
             ])}
             onClick={() => onPriority(JobPriority.Medium)}
           >
-            С
+            Средний
           </button>
           <button
             className={classes([
@@ -80,10 +141,16 @@ export function RoleCard(props: RoleCardProps) {
             ])}
             onClick={() => onPriority(JobPriority.High)}
           >
-            В
+            Высокий
           </button>
-          <button className="RoleCard__priorityButton" onClick={() => onPriority(null)}>
-            Х
+          <button
+            className={classes([
+              'RoleCard__priorityButton',
+              !priority && 'selected',
+            ])}
+            onClick={() => onPriority(null)}
+          >
+            Отк.
           </button>
         </div>
       )}

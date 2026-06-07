@@ -645,6 +645,8 @@
 /mob/living/proc/can_cyberpunk_grapple_action(mob/living/target, action, zone = null)
 	if(!target || pulling != target || grab_state < GRAB_AGGRESSIVE)
 		return FALSE
+	if(action != "limb_slam" && !combat_mode)
+		return FALSE
 	switch(action)
 		if("furniture_throw", "limb_slam")
 			return TRUE
@@ -671,12 +673,14 @@
 	if(!zone)
 		zone = BODY_ZONE_CHEST
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK))
-		return perform_cyberpunk_spine_knee(target)
+		if(grab_state >= GRAB_NECK)
+			return perform_cyberpunk_spine_knee(target)
+		return FALSE
 	if(LAZYACCESS(modifiers, RIGHT_CLICK))
-		if(zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && perform_cyberpunk_neck_back_slam(target))
-			return TRUE
+		if(grab_state >= GRAB_NECK)
+			return perform_cyberpunk_neck_back_slam(target)
 		return perform_cyberpunk_grapple_special(target, zone)
-	if(zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK)
+	if(grab_state >= GRAB_NECK)
 		return perform_cyberpunk_neck_choke(target)
 	return FALSE
 

@@ -84,7 +84,10 @@
 			modifiers["cyberpunk_charged_intent"] = charged_intent
 	if(isliving(src))
 		var/mob/living/living_user = src
-		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK))
+		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK))
+			if(LAZYACCESS(modifiers, ALT_CLICK))
+				modifiers["cyberpunk_defense_break"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "parry" : "dodge"
+				modifiers[ALT_CLICK] = null
 			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
 
 	if(SEND_SIGNAL(src, COMSIG_MOB_CLICKON, A, modifiers) & COMSIG_MOB_CANCEL_CLICKON)
@@ -118,6 +121,9 @@
 			AltClickOn(A)
 		return
 	if(LAZYACCESS(modifiers, CTRL_CLICK))
+		if(LAZYACCESS(modifiers, RIGHT_CLICK))
+			CtrlRightClickOn(A)
+			return
 		CtrlClickOn(A)
 		return
 

@@ -234,7 +234,7 @@ GLOBAL_LIST_EMPTY(station_turfs)
 	if(LAZYACCESS(modifiers, RIGHT_CLICK) && isliving(user))
 		var/mob/living/living_user = user
 		var/mob/living/grappled_target = living_user.pulling
-		if(istype(grappled_target) && living_user.perform_cyberpunk_wrestling_launch(grappled_target, src))
+		if(living_user.combat_mode && istype(grappled_target) && living_user.perform_cyberpunk_wrestling_launch(grappled_target, src))
 			return TRUE
 	user.Move_Pulled(src)
 

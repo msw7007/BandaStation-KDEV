@@ -421,7 +421,6 @@
 				visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] агрессивно хватает [declent_ru(ACCUSATIVE)]!"), \
 								span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] агрессивно хватает вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
 				to_chat(user, span_danger("Вы агрессивно хватаете [declent_ru(ACCUSATIVE)]!"))
-			stop_pulling()
 			log_combat(user, src, "grabbed", addition="aggressive grab[add_log]")
 		if(GRAB_NECK)
 			log_combat(user, src, "grabbed", addition="neck grab")
@@ -433,8 +432,6 @@
 			visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает душить [declent_ru(ACCUSATIVE)]!"), \
 							span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] начинает душить вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
 			to_chat(user, span_danger("Вы начинаете душить [declent_ru(ACCUSATIVE)]!"))
-			if(!buckled && !density)
-				Move(user.loc)
 	user.set_pull_offsets(src, user.grab_state)
 	return TRUE
 
@@ -459,7 +456,7 @@
 		return FALSE
 
 	var/damage = rand(user.melee_damage_lower, user.melee_damage_upper)
-	if(check_block(user, damage, "атаку [capitalize(user.declent_ru(ACCUSATIVE))]", UNARMED_ATTACK, user.armour_penetration, user.melee_damage_type)) // TODO220 - translate this somehow using [user.attack_verb_simple]
+	if(check_block(user, damage, "атаку [capitalize(user.declent_ru(ACCUSATIVE))]", UNARMED_ATTACK, user.armour_penetration, user.melee_damage_type, LAZYACCESS(modifiers, "cyberpunk_defense_break"))) // TODO220 - translate this somehow using [user.attack_verb_simple]
 		return FALSE
 
 	if(user.attack_sound)
@@ -910,10 +907,10 @@
 		span_userdanger("[capitalize(shover.declent_ru(NOMINATIVE))] толкает вас[weapon ? " с помощью [weapon.declent_ru(GENITIVE)]" : ""]!"), span_hear("Вы слышите агрессивное шарканье!"), COMBAT_MESSAGE_RANGE, shover)
 	to_chat(shover, span_danger("Вы толкаете [declent_ru(ACCUSATIVE)][weapon ? " с помощью [weapon.declent_ru(GENITIVE)]" : ""]!"))
 
-/mob/living/proc/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE)
+/mob/living/proc/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null)
 	if(SEND_SIGNAL(src, COMSIG_LIVING_CHECK_BLOCK, hit_by, damage, attack_text, attack_type, armour_penetration, damage_type) & SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
-	if(has_active_cyberpunk_dodge() && can_dodge())
+	if(defense_break != "dodge" && has_active_cyberpunk_dodge() && can_dodge())
 		var/dodge_chance = clamp(20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1), 5, 85)
 		if(prob(dodge_chance) && spend_stamina(STAMINA_COST_DODGE, "dodge"))
 			cyberpunk_dodge_until = 0

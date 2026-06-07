@@ -44,6 +44,22 @@
 	pulled(target)
 
 /**
+ * Ctrl right click
+ */
+/mob/proc/CtrlRightClickOn(atom/A)
+	CtrlClickOn(A)
+
+/mob/living/CtrlRightClickOn(atom/target)
+	if(world.time < next_move)
+		return
+	if(combat_mode && isliving(target) && can_perform_action(target, NOT_INSIDE_TARGET | SILENT_ADJACENCY | ALLOW_RESTING | FORBID_TELEKINESIS_REACH))
+		var/mob/living/living_target = target
+		disarm(living_target)
+		changeNext_move(CLICK_CD_MELEE)
+		return
+	CtrlClickOn(target)
+
+/**
  * Ctrl mouse wheel click
  * Except for tagging datumns same as control click
  */
