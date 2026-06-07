@@ -21,7 +21,6 @@ export function QuirkCard(props: QuirkCardProps) {
         name={quirk.name}
         description={quirk.description}
         selected={selected}
-        neutral={quirk.customizable ? 'Есть дополнительные настройки после выбора' : null}
         value={quirk.value}
         onClick={onClick}
       />

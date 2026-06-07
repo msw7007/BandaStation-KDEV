@@ -57,6 +57,26 @@ function getCustomizationPreferences(
   );
 }
 
+function PersonalityTooltip(props: { personality: Personality }) {
+  const { personality } = props;
+  return (
+    <div className="CharacterSetup__personalityTooltip">
+      <b>{personality.name}</b>
+      <p>{personality.description || 'Описание черты пока не заполнено.'}</p>
+    </div>
+  );
+}
+
+function QuirkTooltip(props: { quirk: Quirk }) {
+  const { quirk } = props;
+  return (
+    <div className="CharacterSetup__personalityTooltip">
+      <b>{quirk.name}</b>
+      <p>{quirk.description || 'Описание квирка пока не заполнено.'}</p>
+    </div>
+  );
+}
+
 export function CharacterTraitsTab() {
   const { act, data } = useBackend<PreferencesMenuData>();
   const serverData = useServerPrefs();
@@ -86,7 +106,7 @@ export function CharacterTraitsTab() {
     );
   }, [allPersonalities, personalitySearch]);
 
-  const quirkEntries = Object.entries(quirks).filter(([key, quirk]) => {
+  const quirkEntries = Object.entries(quirks).filter(([, quirk]) => {
     const query = quirkSearch.toLowerCase();
     return `${quirk.name} ${quirk.description}`.toLowerCase().includes(query);
   });
@@ -110,7 +130,7 @@ export function CharacterTraitsTab() {
       return 'Неизвестная черта.';
     }
     if (quirk.value > 0 && maxPositive !== -1 && positiveSelected >= maxPositive) {
-      return 'Лимит положительных quirks: 2.';
+      return `Лимит положительных квирков: ${maxPositive}.`;
     }
     if (serverData?.quirks.points_enabled && availableQuirkPoints - quirk.value < 0) {
       return 'Нужна отрицательная черта для баланса очков.';
@@ -153,24 +173,6 @@ export function CharacterTraitsTab() {
     );
   }
 
-  function personalityTooltip(personality: Personality) {
-    return (
-      <div className="CharacterSetup__personalityTooltip">
-        <b>{personality.name}</b>
-        {!!personality.description && <p>{personality.description}</p>}
-        {!!personality.pos_gameplay_description && (
-          <em className="good">+ {personality.pos_gameplay_description}</em>
-        )}
-        {!!personality.neg_gameplay_description && (
-          <em className="bad">- {personality.neg_gameplay_description}</em>
-        )}
-        {!!personality.neut_gameplay_description && (
-          <em>± {personality.neut_gameplay_description}</em>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div className="CharacterSetup__layout CharacterSetup__traitsLayout">
       <CyberPanel
@@ -200,8 +202,8 @@ export function CharacterTraitsTab() {
             return (
               <Tooltip
                 key={personality.path}
-                content={personalityTooltip(personality)}
-                position="bottom"
+                content={<PersonalityTooltip personality={personality} />}
+                position="top"
               >
                 <div
                   className={[
@@ -254,48 +256,39 @@ export function CharacterTraitsTab() {
               Персонализации: {selectedPersonalities.length}/
               {data.max_personalities === -1 ? '∞' : data.max_personalities}
             </span>
-            <span>Quirks: {selectedQuirks.length}</span>
-            <span>Положительные quirks: {positiveSelected}/{maxPositive}</span>
-            <span>Баланс quirks: {displayedQuirkBalance}</span>
+            <span>Квирки: {selectedQuirks.length}</span>
+            <span>Положительные квирки: {positiveSelected}/{maxPositive}</span>
+            <span>Баланс квирков: {displayedQuirkBalance}</span>
           </div>
         </div>
 
         <div className="CharacterSetup__selectedStacks CharacterSetup__selectedStacks--detailed">
           <section>
             <CyberSectionHeader>Выбранные персонализации</CyberSectionHeader>
-            <div className="CharacterSetup__selectedDetailList">
+            <div className="CharacterSetup__selectedDetailList compact">
               {selectedPersonalityDetails.length ? (
                 selectedPersonalityDetails.map((personality) => (
-                  <div
+                  <Tooltip
                     key={personality.path}
-                    className="CharacterSetup__selectedDetail"
+                    content={<PersonalityTooltip personality={personality} />}
+                    position="top"
                   >
-                    <div className="CharacterSetup__selectedDetailHeader">
-                      <Icon name={personalityIcon(personality)} />
-                      <b>{personality.name}</b>
-                      <button
-                        onClick={() =>
-                          act('handle_personality', {
-                            personality_type: personality.path,
-                          })
-                        }
-                      >
-                        ×
-                      </button>
+                    <div className="CharacterSetup__selectedDetail compact">
+                      <div className="CharacterSetup__selectedDetailHeader">
+                        <Icon name={personalityIcon(personality)} />
+                        <b>{personality.name}</b>
+                        <button
+                          onClick={() =>
+                            act('handle_personality', {
+                              personality_type: personality.path,
+                            })
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
-                    {!!personality.description && <p>{personality.description}</p>}
-                    <div className="CharacterSetup__selectedEffects">
-                      {!!personality.pos_gameplay_description && (
-                        <em className="good">+ {personality.pos_gameplay_description}</em>
-                      )}
-                      {!!personality.neg_gameplay_description && (
-                        <em className="bad">- {personality.neg_gameplay_description}</em>
-                      )}
-                      {!!personality.neut_gameplay_description && (
-                        <em>± {personality.neut_gameplay_description}</em>
-                      )}
-                    </div>
-                  </div>
+                  </Tooltip>
                 ))
               ) : (
                 <em className="CharacterSetup__empty">Пусто</em>
@@ -304,14 +297,14 @@ export function CharacterTraitsTab() {
           </section>
 
           <section>
-            <CyberSectionHeader>Выбранные TG quirks</CyberSectionHeader>
-            <div className="CharacterSetup__selectedDetailList">
+            <CyberSectionHeader>Выбранные квирки</CyberSectionHeader>
+            <div className="CharacterSetup__selectedDetailList compact">
               {selectedQuirks.length ? (
                 selectedQuirks.map((key) => {
                   const quirk = quirks[key];
                   if (!quirk) {
                     return (
-                      <div key={key} className="CharacterSetup__selectedDetail">
+                      <div key={key} className="CharacterSetup__selectedDetail compact">
                         <div className="CharacterSetup__selectedDetailHeader">
                           <Icon name="question" />
                           <b>{key}</b>
@@ -333,20 +326,21 @@ export function CharacterTraitsTab() {
                   return (
                     <div
                       key={key}
-                      className={`CharacterSetup__selectedDetail ${quirkValueClass(quirk)}`}
+                      className={`CharacterSetup__selectedDetail compact ${quirkValueClass(quirk)}`}
                     >
-                      <div className="CharacterSetup__selectedDetailHeader">
-                        <Icon name={quirk.icon || 'diamond'} />
-                        <b>{quirk.name}</b>
-                        <span>{quirk.value}</span>
-                        <button onClick={() => act('remove_quirk', { quirk: quirk.name })}>
-                          ×
-                        </button>
-                      </div>
-                      {!!quirk.description && <p>{quirk.description}</p>}
+                      <Tooltip content={<QuirkTooltip quirk={quirk} />} position="top">
+                        <div className="CharacterSetup__selectedDetailHeader">
+                          <Icon name={quirk.icon || 'diamond'} />
+                          <b>{quirk.name}</b>
+                          <span>{quirk.value}</span>
+                          <button onClick={() => act('remove_quirk', { quirk: quirk.name })}>
+                            ×
+                          </button>
+                        </div>
+                      </Tooltip>
                       {hasCustomization && (
                         <div className="CharacterSetup__quirkCustomization">
-                          <CyberSectionHeader>Настройки quirk</CyberSectionHeader>
+                          <CyberSectionHeader>Настройки квирка</CyberSectionHeader>
                           <PreferenceList
                             preferences={customizationPreferences}
                             randomizations={getCustomizationRandomizations(
@@ -368,12 +362,12 @@ export function CharacterTraitsTab() {
 
       <CyberPanel
         className="CharacterSetup__traitsStore CharacterSetup__traitsStore--quirks"
-        title="B. Браузер quirks (TG)"
+        title="B. Квирки"
         scrollable
       >
         <div className="CharacterSetup__storeTools">
           <CyberSearch
-            placeholder="Поиск quirks..."
+            placeholder="Поиск квирка..."
             value={quirkSearch}
             onChange={setQuirkSearch}
           />
