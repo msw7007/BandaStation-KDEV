@@ -123,6 +123,11 @@
 		if(proj.is_hostile_projectile())
 			apply_projectile_effects(proj, def_zone, blocked)
 		return .
+	if(proj.is_hostile_projectile() && can_dodge() && get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 5) > 0 && prob(get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)))
+		spend_stamina(STAMINA_COST_DODGE, "dodge")
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [proj.declent_ru(ACCUSATIVE)]!"), span_notice("You dodge [proj.declent_ru(ACCUSATIVE)]."))
+		reward_character_check_experience(SKILL_EVASION, max(1, proj.damage), FALSE, 1)
+		return BULLET_ACT_BLOCK
 
 	var/hit_limb_zone = check_hit_limb_zone_name(def_zone)
 	var/organ_hit_text = ""
@@ -388,6 +393,8 @@
 	if(user.grab_state) //only the first upgrade is instantaneous
 		var/old_grab_state = user.grab_state
 		var/grab_upgrade_time = instant ? 0 : 30
+		if(user.grab_state == GRAB_AGGRESSIVE && user.get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0)
+			grab_upgrade_time *= 0.5
 		visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на [declent_ru(PREPOSITIONAL)]!"), \
 						span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
 		to_chat(user, span_danger("Вы начинаете усиливать захват на [declent_ru(PREPOSITIONAL)]!"))
@@ -612,12 +619,14 @@
 	if(SEND_SIGNAL(src, COMSIG_LIVING_ELECTROCUTE_ACT, shock_damage, source, siemens_coeff, flags) & COMPONENT_LIVING_BLOCK_SHOCK)
 		return FALSE
 	shock_damage *= siemens_coeff
+	shock_damage *= get_cyberpunk_electric_shock_multiplier()
 	if((flags & SHOCK_TESLA) && HAS_TRAIT(src, TRAIT_TESLA_SHOCKIMMUNE))
 		return FALSE
 	if(!(flags & SHOCK_IGNORE_IMMUNITY) && HAS_TRAIT(src, TRAIT_SHOCKIMMUNE))
 		return FALSE
 	if(shock_damage < 1)
 		return FALSE
+	reward_character_check_experience(SKILL_ELECTRICS, max(1, shock_damage * 0.1), FALSE, 1)
 	if(!(flags & SHOCK_ILLUSION))
 		adjust_fire_loss(shock_damage)
 		retune_implants_from_electricity(shock_damage)
@@ -870,7 +879,7 @@
 	var/datum/target_held_item = target.get_active_held_item()
 	var/append_message = weapon ? " with [weapon]" : ""
 	// If it's in our typecache, they're staggered and it exists, disarm. If they're knocked down, disarm too.
-	if(target_held_item && target.get_timed_status_effect_duration(/datum/status_effect/staggered) && is_type_in_typecache(target_held_item, GLOB.shove_disarming_types) || target_held_item && target.body_position == LYING_DOWN)
+	if(target_held_item && ((target.get_timed_status_effect_duration(/datum/status_effect/staggered) && is_type_in_typecache(target_held_item, GLOB.shove_disarming_types)) || target.body_position == LYING_DOWN || roll_cyberpunk_precise_weapon_disarm(weapon)))
 		target.dropItemToGround(target_held_item)
 		append_message = "causing [target.p_them()] to drop [target_held_item]"
 		target.visible_message(span_danger("[capitalize(target.declent_ru(NOMINATIVE))] роняет [target_held_item.declent_ru(ACCUSATIVE)]!"),
@@ -905,6 +914,14 @@
 /mob/living/proc/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE)
 	if(SEND_SIGNAL(src, COMSIG_LIVING_CHECK_BLOCK, hit_by, damage, attack_text, attack_type, armour_penetration, damage_type) & SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
+	if(has_active_cyberpunk_dodge() && can_dodge())
+		var/dodge_chance = clamp(20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1), 5, 85)
+		if(prob(dodge_chance) && spend_stamina(STAMINA_COST_DODGE, "dodge"))
+			cyberpunk_dodge_until = 0
+			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [attack_text]!"), span_notice("You dodge [attack_text]."))
+			reward_character_check_experience(SKILL_EVASION, max(1, damage), FALSE, 1)
+			return SUCCESSFUL_BLOCK
+		cyberpunk_dodge_until = 0
 
 	return FAILED_BLOCK
 

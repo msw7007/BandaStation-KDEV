@@ -102,17 +102,17 @@
 
 /datum/skill_perk/physical/charisma/style/perk_3
 	name = "Обученный"
-	desc = "После действия предмет получает ваш статус на {value_1} секунд; повторивший действие получает +{value_2}% опыта."
-	effectiveness_values = list(30, 45, 60)
+	desc = "После совершения действия предмет получает ваш статус на 30 секунд; любой, кто повторяет действие этим предметом, получает увеличенный на {value_2}% бонус опыта."
+	effectiveness_values = list(20, 30, 40)
 	effectiveness_by_key = list(
-		"value_1" = list(30, 45, 60),
+		"value_1" = list(30, 30, 30),
 		"value_2" = list(20, 30, 40),
 	)
 
 /datum/skill_perk/physical/charisma/style/perk_4
 	name = "Эксперт"
-	desc = "Если вы наносите урон или стреляете, повторяющие такую же атаку получают +{value}% опыта."
-	effectiveness_values = list(20, 30, 40)
+	desc = "Другие игроки в радиусе 6 клеток получают бонус к опыту в {value}%; бонус не получают те, кто атаковал вас в течение 30 секунд."
+	effectiveness_values = list(20, 20, 20)
 
 /datum/skill_perk/physical/charisma/style/perk_5
 	name = "Профессионал"
@@ -123,4 +123,3 @@
 	name = "Мастер"
 	desc = "Если вас успешно атакуют, есть {value}% шанс дезориентировать противника."
 	effectiveness_values = list(20, 30, 40)
-

@@ -71,7 +71,7 @@
 		if(target.stat == CONSCIOUS && IS_NUKE_OP(shooter) && !IS_NUKE_OP(target) && (locate(/obj/item/disk/nuclear) in target.get_contents()) && shooter.client)
 			shooter.client.give_award(/datum/award/achievement/misc/rocket_holdup, shooter)
 
-	addtimer(CALLBACK(src, PROC_REF(update_stage), 2), GUNPOINT_DELAY_STAGE_2)
+	addtimer(CALLBACK(src, PROC_REF(update_stage), 2), GUNPOINT_DELAY_STAGE_2 * shooter.get_cyberpunk_gunpoint_time_multiplier(weapon))
 
 /datum/component/gunpoint/Destroy(force)
 	var/mob/living/shooter = parent
@@ -132,7 +132,8 @@
 		to_chat(parent, span_danger("You steady [weapon] on [target]."))
 		to_chat(target, span_userdanger("[parent] has steadied [weapon] on you!"))
 		damage_mult = GUNPOINT_MULT_STAGE_2
-		addtimer(CALLBACK(src, PROC_REF(update_stage), 3), GUNPOINT_DELAY_STAGE_3)
+		var/mob/living/shooter = parent
+		addtimer(CALLBACK(src, PROC_REF(update_stage), 3), GUNPOINT_DELAY_STAGE_3 * shooter.get_cyberpunk_gunpoint_time_multiplier(weapon))
 	else if(stage == 3)
 		to_chat(parent, span_danger("You have fully steadied [weapon] on [target]."))
 		to_chat(target, span_userdanger("[parent] has fully steadied [weapon] on you!"))
@@ -142,7 +143,8 @@
 /datum/component/gunpoint/proc/check_deescalate()
 	SIGNAL_HANDLER
 
-	if(!can_see(parent, target, GUNPOINT_SHOOTER_STRAY_RANGE))
+	var/mob/living/shooter = parent
+	if(!can_see(parent, target, shooter.get_cyberpunk_gunpoint_range(weapon)))
 		cancel()
 		return TRUE
 
@@ -162,12 +164,15 @@
 	point_of_no_return = TRUE
 
 	if(weapon.chambered && weapon.chambered.loaded_projectile)
+		damage_mult *= shooter.get_cyberpunk_gunpoint_damage_multiplier(weapon)
 		weapon.chambered.loaded_projectile.damage *= damage_mult
 		if(weapon.chambered.loaded_projectile.wound_bonus != CANT_WOUND)
 			weapon.chambered.loaded_projectile.wound_bonus += damage_mult * GUNPOINT_BASE_WOUND_BONUS
 			weapon.chambered.loaded_projectile.exposed_wound_bonus += damage_mult * GUNPOINT_BASE_WOUND_BONUS
 
 	var/fired = weapon.fire_gun(target, shooter)
+	if(fired)
+		shooter.reward_character_check_experience(SKILL_PRECISE_WEAPON, 5, FALSE, 1)
 	if(!fired && weapon.chambered?.loaded_projectile)
 		weapon.chambered.loaded_projectile.damage /= damage_mult
 		if(weapon.chambered.loaded_projectile.wound_bonus != CANT_WOUND)

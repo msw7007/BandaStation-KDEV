@@ -804,7 +804,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	user.do_cpr(target)
 
 ///This proc handles punching damage. IMPORTANT: Our owner is the TARGET and not the USER in this proc. For whatever reason...
-/datum/species/proc/harm(mob/living/carbon/human/user, mob/living/carbon/human/target, datum/martial_art/attacker_style)
+/datum/species/proc/harm(mob/living/carbon/human/user, mob/living/carbon/human/target, datum/martial_art/attacker_style, list/modifiers)
 	if(HAS_TRAIT(user, TRAIT_PACIFISM) && !attacker_style?.pacifist_style)
 		to_chat(user, span_warning("Вы не хотите причинить вред [target.declent_ru(DATIVE)]!"))
 		return FALSE
@@ -860,9 +860,21 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
 	damage *= user.get_cyberpunk_unarmed_damage_multiplier()
+	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
+	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
+	if(combat_intent == "slash")
+		damage *= 1.05
+	else if(combat_intent == "stab")
+		damage *= 1.03
+	if(charged_intent == "chop")
+		damage *= 1.15
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
 	limb_accuracy *= user.get_cyberpunk_unarmed_damage_multiplier()
+	if(combat_intent == "stab")
+		limb_accuracy += 5
+	if(charged_intent == "chop")
+		limb_accuracy += 10
 	// Limb sharpness determines the type of wounds this unarmed strike could possibly roll. By default, most limbs are blunt and have no sharpness.
 	var/limb_sharpness = attacking_bodypart.unarmed_sharpness
 
@@ -916,7 +928,10 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		log_combat(user, target, "attempted to punch")
 		return FALSE
 
-	var/armor_block = target.run_armor_check(affecting, MELEE)
+	var/armor_penetration = 0
+	if(combat_intent == "stab")
+		armor_penetration += 10
+	var/armor_block = target.run_armor_check(affecting, MELEE, armour_penetration = armor_penetration)
 
 	// In a brawl, drunkenness is a boon if you're a bit drunk but not too much. Else you're easier to hit.
 	// But, generally, getting hit while drunk is probably a good way to start throwing up
@@ -965,6 +980,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		if(damage >= 9)
 			target.force_say()
 		log_combat(user, target, "punched")
+	user.apply_cyberpunk_power_unarmed_effects(target)
 	user.apply_cyberpunk_unarmed_zone_effect(target, user.zone_selected)
 
 	if(user != target && biting && (target.mob_biotypes & MOB_ORGANIC)) //Good for you. You probably just ate someone alive.
@@ -1067,7 +1083,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		disarm(owner, target, attacker_style)
 		return // dont attack after
 	if(owner.combat_mode)
-		harm(owner, target, attacker_style)
+		harm(owner, target, attacker_style, modifiers)
 	else
 		help(owner, target, attacker_style)
 

@@ -85,7 +85,10 @@
 	if(!can_parry())
 		return FAILED_BLOCK
 
+	var/active_parry = has_active_cyberpunk_parry()
 	var/block_chance_modifier = round(damage / -3)
+	if(active_parry)
+		block_chance_modifier += 35
 	for(var/obj/item/worn_thing in get_equipped_items(INCLUDE_HELD|INCLUDE_PROSTHETICS|INCLUDE_ABSTRACT))
 		// Things that are supposed to be worn, being held = cannot block
 		if(isclothing(worn_thing))
@@ -95,10 +98,26 @@
 		else if(!(worn_thing in held_items))
 			continue
 
-		var/final_block_chance = worn_thing.block_chance - (clamp((armour_penetration - worn_thing.armour_penetration) / 2, 0, 100)) + block_chance_modifier
+		var/final_block_chance = worn_thing.block_chance - (clamp((armour_penetration - worn_thing.armour_penetration) / 2, 0, 100)) + block_chance_modifier + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1)
 		if(worn_thing.hit_reaction(src, hit_by, attack_text, final_block_chance, damage, attack_type, damage_type))
+			cyberpunk_parry_until = 0
 			spend_stamina(STAMINA_COST_PARRY, "parry")
+			reward_character_check_experience(SKILL_CONCENTRATION, max(1, damage), FALSE, 1)
+			if(prob(get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 6)) && isliving(hit_by))
+				var/mob/living/attacker = hit_by
+				var/obj/item/attacker_item = attacker.get_active_held_item()
+				if(attacker_item)
+					attacker.dropItemToGround(attacker_item)
 			return SUCCESSFUL_BLOCK
+
+	if(active_parry && attack_type != PROJECTILE_ATTACK)
+		var/bare_parry_chance = clamp(15 + get_character_skill_level(SKILL_CONCENTRATION) * 3 + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1), 5, 75)
+		if(prob(bare_parry_chance) && spend_stamina(STAMINA_COST_PARRY, "parry"))
+			cyberpunk_parry_until = 0
+			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] parries [attack_text]!"), span_notice("You parry [attack_text]."))
+			reward_character_check_experience(SKILL_CONCENTRATION, max(1, damage), FALSE, 1)
+			return SUCCESSFUL_BLOCK
+		cyberpunk_parry_until = 0
 
 	return FAILED_BLOCK
 
@@ -128,6 +147,8 @@
 	if(ishuman(user))
 		var/mob/living/carbon/human/H = user
 		if(!H.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK) && cyberpunk_open_npc_dialog(H))
+			return TRUE
+		if(H.try_cyberpunk_grapple_attack(src, modifiers))
 			return TRUE
 		dna.species.spec_attack_hand(H, src, null, modifiers)
 

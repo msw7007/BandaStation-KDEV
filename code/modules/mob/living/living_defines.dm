@@ -208,6 +208,8 @@
 
 	///a list of all status effects the mob has
 	var/list/status_effects
+	/// Active Cyberpunk buff/debuff effects keyed by effect id.
+	var/list/cyberpunk_status_effects
 	var/list/implants = null
 
 	///used for database logging
@@ -263,6 +265,24 @@
 	var/code_fov_angle = 360
 	/// Whether this mob is actively listening through nearby obstructions.
 	var/listening_intently = FALSE
+	/// Recent attackers keyed by ckey/name for Style perk XP sharing exclusions.
+	var/list/cyberpunk_recent_style_attackers
+	/// Current Cyberpunk cohort membership.
+	var/datum/cyberpunk_cohort/cyberpunk_cohort
+	/// Temporary acrobatics speed bonus expiry.
+	var/cyberpunk_acrobatics_speed_until = 0
+	/// Cooldown for Weakness Analysis critical hits.
+	var/cyberpunk_last_weakness_crit = 0
+	/// Whether the defensive action key is currently held for Space+click controls.
+	var/cyberpunk_defensive_action_held = FALSE
+	/// Last defensive action selected by Space+click controls.
+	var/cyberpunk_last_defensive_action = "parry"
+	/// Active parry window expiry.
+	var/cyberpunk_parry_until = 0
+	/// Active dodge window expiry.
+	var/cyberpunk_dodge_until = 0
+	/// Current basic Cyberpunk combat intent, switched by 2/3 or mouse wheel.
+	var/cyberpunk_combat_intent = "slash"
 	/// Whether this mob has manually extended their view to inspect distant targets.
 	var/focused_look = FALSE
 	///what multiplicative slowdown we get from turfs currently.

@@ -66,7 +66,7 @@
 	return TRUE
 
 /datum/keybinding/mob/activate_inhand
-	hotkey_keys = list("Z")
+	hotkey_keys = list("Q")
 	name = "activate_inhand"
 	full_name = "Использовать предмет в руке"
 	description = "Использует предмет в вашей активной руке"
@@ -81,7 +81,7 @@
 	return TRUE
 
 /datum/keybinding/mob/drop_item
-	hotkey_keys = list("Q")
+	hotkey_keys = list("Z")
 	name = "drop_item"
 	full_name = "Выложить предмет в руке"
 	description = "Drops the item in your active hand to the ground."

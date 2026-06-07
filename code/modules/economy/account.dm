@@ -2127,10 +2127,12 @@
 	cyberpunk_persistent_write_var(restored_atom, "machine_stat", entry["machine_stat"])
 	cyberpunk_persistent_write_var(restored_atom, "manufacturer", entry["manufacturer"])
 	cyberpunk_persistent_write_var(restored_atom, "corp_manufacturer", entry["corp_manufacturer"])
-	if(islist(entry["req_access"]))
-		cyberpunk_persistent_write_var(restored_atom, "req_access", entry["req_access"].Copy())
-	if(islist(entry["req_one_access"]))
-		cyberpunk_persistent_write_var(restored_atom, "req_one_access", entry["req_one_access"].Copy())
+	var/list/req_access = entry["req_access"]
+	if(islist(req_access))
+		cyberpunk_persistent_write_var(restored_atom, "req_access", req_access.Copy())
+	var/list/req_one_access = entry["req_one_access"]
+	if(islist(req_one_access))
+		cyberpunk_persistent_write_var(restored_atom, "req_one_access", req_one_access.Copy())
 	if(restored_atom.reagents && islist(entry["reagents"]))
 		restored_atom.reagents.clear_reagents()
 		for(var/list/reagent_entry as anything in entry["reagents"])

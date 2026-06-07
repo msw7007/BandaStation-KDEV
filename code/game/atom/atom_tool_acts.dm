@@ -352,8 +352,14 @@
 	if(!is_cyberpunk_structure_target())
 		return
 	tool.play_tool_sound(src)
+	mark_cyberpunk_analyzed(user)
 	for(var/diagnostic_line in user.get_cyberpunk_machine_diagnostic_data(src))
 		to_chat(user, span_notice("[diagnostic_line]"))
+	user.reward_character_check_experience(SKILL_ANALYSIS, 5, FALSE, 1)
+	var/insight_chance = max(user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 4), user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 5))
+	if(insight_chance > 0 && prob(insight_chance))
+		user.apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/analysis_insight, 2 MINUTES, 1, src)
+		to_chat(user, span_notice("The analysis yields a useful technical pattern."))
 	return TRUE
 
 /// Called on an object when a tool with analyzer capabilities is used to right click an object

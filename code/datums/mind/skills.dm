@@ -268,10 +268,17 @@
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.is_character_skill())
 		return clamp((get_skill_level(skill) * 10) + modifier, CHARACTER_SKILL_CHECK_MINIMUM, CHARACTER_SKILL_CHECK_MAXIMUM)
+	var/mob/living/living_current
+	if(isliving(current))
+		living_current = current
 	var/effective_skill_level = max(CHARACTER_SKILL_LEVEL_NONE, get_character_skill_level(skill) + get_cyberdemon_skill_modifier(skill))
-	var/check_value = (effective_skill_level * 10) + (get_attribute_value(skill_datum.attribute_id) * 5) + modifier
-	if(apply_body_penalty && isliving(current))
-		var/mob/living/living_current = current
+	if(living_current)
+		effective_skill_level += living_current.get_cyberpunk_status_skill_modifier(skill)
+	var/attribute_value = get_attribute_value(skill_datum.attribute_id)
+	if(living_current)
+		attribute_value += living_current.get_cyberpunk_status_attribute_modifier(skill_datum.attribute_id)
+	var/check_value = (effective_skill_level * 10) + (attribute_value * 5) + modifier + (living_current?.get_cyberpunk_status_check_modifier() || 0)
+	if(apply_body_penalty && living_current)
 		check_value *= (1 - living_current.get_check_penalty())
 	return clamp(round(check_value), CHARACTER_SKILL_CHECK_MINIMUM, CHARACTER_SKILL_CHECK_MAXIMUM)
 

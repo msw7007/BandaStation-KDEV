@@ -94,6 +94,9 @@
 		return
 	if(check_stun_immunity(CANKNOCKDOWN, ignore_canstun))
 		return
+	if(amount > 0 && roll_cyberpunk_fortitude_knockdown_resist())
+		return
+	amount *= get_cyberpunk_knockdown_duration_multiplier()
 	var/datum/status_effect/incapacitating/knockdown/K = IsKnockdown()
 	if(K)
 		K.duration = max(amount, K.duration)
@@ -108,6 +111,9 @@
 		return
 	if(check_stun_immunity(CANKNOCKDOWN, ignore_canstun))
 		return
+	if(amount > 0 && roll_cyberpunk_fortitude_knockdown_resist())
+		return
+	amount *= get_cyberpunk_knockdown_duration_multiplier()
 	var/datum/status_effect/incapacitating/knockdown/K = IsKnockdown()
 	if(amount <= 0)
 		if(K)
@@ -124,6 +130,9 @@
 		return
 	if(check_stun_immunity(CANKNOCKDOWN, ignore_canstun))
 		return
+	if(amount > 0 && roll_cyberpunk_fortitude_knockdown_resist())
+		return
+	amount *= get_cyberpunk_knockdown_duration_multiplier()
 	var/datum/status_effect/incapacitating/knockdown/K = IsKnockdown()
 	if(K)
 		K.duration += amount

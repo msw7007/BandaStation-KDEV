@@ -78,6 +78,14 @@
 		return
 
 	var/list/modifiers = params2list(params)
+	if(client)
+		var/charged_intent = client.consume_cyberpunk_charged_intent(A, modifiers)
+		if(charged_intent)
+			modifiers["cyberpunk_charged_intent"] = charged_intent
+	if(isliving(src))
+		var/mob/living/living_user = src
+		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK))
+			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
 
 	if(SEND_SIGNAL(src, COMSIG_MOB_CLICKON, A, modifiers) & COMSIG_MOB_CANCEL_CLICKON)
 		return
@@ -115,6 +123,12 @@
 
 	if(INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS|INCAPABLE_STASIS))
 		return
+
+	if(isliving(src))
+		var/mob/living/living_user = src
+		if(living_user.cyberpunk_defensive_action_held)
+			living_user.perform_cyberpunk_defensive_action(LAZYACCESS(modifiers, RIGHT_CLICK) ? "dodge" : "parry")
+			return
 
 	face_atom(A)
 
@@ -380,6 +394,11 @@
 	. = SEND_SIGNAL(src, COMSIG_MOB_MIDDLECLICKON, A, params)
 	if(. & COMSIG_MOB_CANCEL_CLICKON)
 		return
+	if(isliving(src) && isliving(A))
+		var/mob/living/living_user = src
+		var/mob/living/living_target = A
+		if(living_user.try_cyberpunk_grapple_attack(living_target, list(MIDDLE_CLICK = TRUE)))
+			return
 	swap_hand()
 
 /mob/proc/MiddleMouseDownOn(atom/A, params)
@@ -409,6 +428,17 @@
 	return tile.Adjacent(src)
 
 /mob/proc/ShiftMiddleClickOn(atom/A)
+	if(isliving(src))
+		var/mob/living/living_user = src
+		if(A == src)
+			living_user.look_up()
+			return
+		if(isliving(A))
+			living_user.toggle_intent_listen()
+			return
+		living_user.toggle_focused_look()
+		living_user.focus_look_at(A)
+		return
 	src.pointed(A)
 	return
 
@@ -502,6 +532,11 @@
 
 /// MouseWheelOn
 /mob/proc/MouseWheelOn(atom/A, delta_x, delta_y, params)
+	if(isliving(src))
+		var/mob/living/living_user = src
+		if(living_user.combat_mode)
+			living_user.cycle_cyberpunk_combat_intent()
+			return
 	SEND_SIGNAL(src, COMSIG_MOUSE_SCROLL_ON, A, delta_x, delta_y, params)
 
 /mob/dead/observer/MouseWheelOn(atom/A, delta_x, delta_y, params)

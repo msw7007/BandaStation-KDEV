@@ -34,6 +34,7 @@ export const MemoryPanel = () => {
   const memories = data.memories || [];
   const notes = data.notes || [];
   const cryptokeys = data.cryptokeys || [];
+  const identityMemories = data.identityMemories || [];
   const [entryType, setEntryType] = useState('note');
   const [noteText, setNoteText] = useState('');
   const [keyName, setKeyName] = useState('');
@@ -172,6 +173,36 @@ export const MemoryPanel = () => {
                 </Table.Row>
               ))}
             </Table>
+          )}
+        </Section>
+
+        <Section title={`Observed identities (${identityMemories.length})`}>
+          {!identityMemories.length ? (
+            <Box className="CyberpunkPanel__Muted">No examined identities.</Box>
+          ) : (
+            <Stack vertical>
+              {identityMemories.map((identity, index) => (
+                <Stack.Item key={`${identity.name}-${identity.last_seen_time}-${index}`}>
+                  <Box className="CyberpunkPanel__Card">
+                    <Stack vertical>
+                      <Stack.Item>
+                        <Stack>
+                          <Stack.Item grow>
+                            <Box bold>{identity.name}</Box>
+                          </Stack.Item>
+                          <Stack.Item className="CyberpunkPanel__Muted">
+                            {identity.area} / {identity.last_seen}
+                          </Stack.Item>
+                        </Stack>
+                      </Stack.Item>
+                      <Stack.Item>
+                        <Box>{identity.snapshot}</Box>
+                      </Stack.Item>
+                    </Stack>
+                  </Box>
+                </Stack.Item>
+              ))}
+            </Stack>
           )}
         </Section>
 

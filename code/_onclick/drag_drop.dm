@@ -5,6 +5,11 @@
 	receiving object instead, so that's the default action.  This allows you to drag
 	almost anything into a trash can.
 */
+/client/var/datum/weakref/cyberpunk_charged_click_ref
+/client/var/cyberpunk_charged_click_started = 0
+/client/var/cyberpunk_charged_click_button
+/client/var/cyberpunk_next_charged_intent
+
 /atom/MouseDrop(atom/over, src_location, over_location, src_control, over_control, params)
 	SHOULD_NOT_OVERRIDE(TRUE)
 
@@ -126,6 +131,7 @@
 		return
 	SEND_SIGNAL(src, COMSIG_CLIENT_MOUSEDOWN, object, location, control, params)
 	var/list/modifiers = params2list(params)
+	start_cyberpunk_charged_click(object, modifiers)
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && mob?.MiddleMouseDownOn(object, params) & COMSIG_MOB_CANCEL_CLICKON)
 		return
 	if(mouse_down_icon)
@@ -142,11 +148,81 @@
 	if(SEND_SIGNAL(src, COMSIG_CLIENT_MOUSEUP, object, location, control, params) & COMPONENT_CLIENT_MOUSEUP_INTERCEPT)
 		click_intercept_time = world.time
 	var/list/modifiers = params2list(params)
+	prepare_cyberpunk_charged_click(object, modifiers)
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && mob?.MiddleMouseUpOn(object, params) & COMSIG_MOB_CANCEL_CLICKON)
 		click_intercept_time = world.time
 	if(mouse_up_icon)
 		mouse_pointer_icon = mouse_up_icon
 	selected_target[1] = null
+
+/client/proc/start_cyberpunk_charged_click(datum/object, list/modifiers)
+	cyberpunk_next_charged_intent = null
+	cyberpunk_charged_click_ref = null
+	cyberpunk_charged_click_started = 0
+	cyberpunk_charged_click_button = null
+	if(!isliving(mob) || !isatom(object))
+		return FALSE
+	var/mob/living/living_user = mob
+	if(!living_user.combat_mode)
+		return FALSE
+	if(LAZYACCESS(modifiers, SHIFT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || LAZYACCESS(modifiers, ALT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK))
+		return FALSE
+	var/used_button = LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
+	cyberpunk_charged_click_ref = WEAKREF(object)
+	cyberpunk_charged_click_started = world.time
+	cyberpunk_charged_click_button = used_button
+	addtimer(CALLBACK(src, PROC_REF(show_cyberpunk_charged_click_indicator), cyberpunk_charged_click_started), 1 SECONDS)
+	return TRUE
+
+/client/proc/show_cyberpunk_charged_click_indicator(started_at)
+	if(cyberpunk_charged_click_started != started_at || !isliving(mob))
+		return
+	var/mob/living/living_user = mob
+	if(!living_user.combat_mode)
+		return
+	living_user.balloon_alert(living_user, cyberpunk_charged_click_button == RIGHT_CLICK ? "pierce ready" : "chop ready")
+
+/client/proc/prepare_cyberpunk_charged_click(datum/object, list/modifiers)
+	if(!cyberpunk_charged_click_started || !cyberpunk_charged_click_ref || !isatom(object))
+		clear_cyberpunk_charged_click()
+		return FALSE
+	var/atom/charged_target = cyberpunk_charged_click_ref.resolve()
+	if(charged_target == object && world.time >= cyberpunk_charged_click_started + 1 SECONDS)
+		cyberpunk_next_charged_intent = cyberpunk_charged_click_button == RIGHT_CLICK ? "pierce" : "chop"
+	clear_cyberpunk_charged_click(FALSE)
+	return !!cyberpunk_next_charged_intent
+
+/client/proc/consume_cyberpunk_charged_intent(atom/target, list/modifiers)
+	if(!isliving(mob) || !target)
+		clear_cyberpunk_charged_click()
+		return null
+	var/mob/living/living_user = mob
+	if(!living_user.combat_mode)
+		clear_cyberpunk_charged_click()
+		return null
+	if(cyberpunk_next_charged_intent)
+		. = cyberpunk_next_charged_intent
+		cyberpunk_next_charged_intent = null
+		return
+	if(!cyberpunk_charged_click_started || !cyberpunk_charged_click_ref)
+		return null
+	var/atom/charged_target = cyberpunk_charged_click_ref.resolve()
+	if(charged_target != target)
+		return null
+	var/expected_button = LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
+	if(expected_button != cyberpunk_charged_click_button)
+		return null
+	if(world.time < cyberpunk_charged_click_started + 1 SECONDS)
+		return null
+	. = cyberpunk_charged_click_button == RIGHT_CLICK ? "pierce" : "chop"
+	clear_cyberpunk_charged_click()
+
+/client/proc/clear_cyberpunk_charged_click(clear_next = TRUE)
+	cyberpunk_charged_click_ref = null
+	cyberpunk_charged_click_started = 0
+	cyberpunk_charged_click_button = null
+	if(clear_next)
+		cyberpunk_next_charged_intent = null
 
 /mob/proc/CanMobAutoclick(object, location, params)
 

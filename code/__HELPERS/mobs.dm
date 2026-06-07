@@ -298,6 +298,9 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 			return
 		// all out, let's clear er out fully
 		LAZYREMOVE(user.do_afters, interaction_key)
+	if(. && living_user && istype(holding, /obj/item))
+		var/obj/item/style_item = holding
+		style_item.apply_cyberpunk_style_action_status(living_user)
 	SEND_SIGNAL(user, COMSIG_DO_AFTER_ENDED)
 
 /// Returns the total amount of do_afters this mob is taking part in

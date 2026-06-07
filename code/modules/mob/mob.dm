@@ -596,6 +596,7 @@
 		SEND_SIGNAL(src, COMSIG_MOB_EXAMINING, examinify, result, overrides)
 		if (length(overrides))
 			result = overrides[max(overrides)]
+		remember_examined_identity(examinify, result, atom_title)
 		if(removes_double_click)
 			result += span_notice("<i>You can <a href=byond://?src=[REF(src)];run_examinate=[REF(examinify)]>examine</a> [examinify] closer...</i>")
 		result_combined = (atom_title ? fieldset_block("[atom_title].", jointext(result, "<br>"), "boxed_message") : boxed_message(jointext(result, "<br>")))
@@ -922,6 +923,27 @@
 	LAZYINITLIST(memory_holder)
 	memory_holder[title] = information
 	return TRUE
+
+/mob/proc/remember_examined_identity(atom/examined_atom, list/examine_lines, atom_title)
+	if(!ismob(examined_atom) || examined_atom == src || !length(examine_lines))
+		return FALSE
+	var/mob/examined_mob = examined_atom
+	var/stable_name = examined_mob.name
+	if("real_name" in examined_mob.vars)
+		stable_name = examined_mob.vars["real_name"] || stable_name
+	if(!stable_name)
+		stable_name = "[examined_mob]"
+	var/area/current_area = get_area(examined_mob)
+	var/plain_snapshot = strip_html_full(jointext(examine_lines, "\n"), 2048)
+	return remember_data("identity:[stable_name]", list(
+		"cyberpunk_kind" = "identity_snapshot",
+		"name" = stable_name,
+		"title" = atom_title || examined_mob.name,
+		"area" = current_area?.name || "unknown",
+		"last_seen" = round_timestamp("hh:mm"),
+		"last_seen_time" = world.time,
+		"snapshot" = plain_snapshot,
+	))
 
 /mob/proc/read_memory_data(title)
 	if(!title || !memory_holder)
@@ -1671,6 +1693,7 @@
 	var/list/memories = list()
 	var/list/notes = list()
 	var/list/cryptokeys = list()
+	var/list/identity_memories = list()
 
 	for(var/memory_key in user?.mind.memories)
 		var/datum/memory/memory = user.mind.memories[memory_key]
@@ -1687,10 +1710,17 @@
 				"owner" = key_datum.owner,
 				"code" = key_datum.code,
 			))
+	if(length(living_holder?.memory_holder))
+		for(var/memory_key in living_holder.memory_holder)
+			var/list/identity_memory = living_holder.memory_holder[memory_key]
+			if(!islist(identity_memory) || identity_memory["cyberpunk_kind"] != "identity_snapshot")
+				continue
+			identity_memories += list(identity_memory.Copy())
 
 	data["memories"] = memories
 	data["notes"] = notes
 	data["cryptokeys"] = cryptokeys
+	data["identityMemories"] = identity_memories
 	return data
 
 /datum/memory_panel/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)

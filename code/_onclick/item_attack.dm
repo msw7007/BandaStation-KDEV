@@ -27,8 +27,9 @@
 	if(source_atom != src) //if we are someone else then call that attack chain else we can proceed with the usual stuff
 		return source_atom.melee_attack_chain(user, target, modifiers, attack_modifiers)
 
-	var/is_right_clicking = LAZYACCESS(modifiers, RIGHT_CLICK)
 	var/mob/living/carbon/carbon_user = iscarbon(user) ? user : null
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/is_right_clicking = LAZYACCESS(modifiers, RIGHT_CLICK) && !(living_user?.combat_mode && LAZYACCESS(modifiers, "cyberpunk_combat_intent"))
 	if(carbon_user?.handle_active_hand_medical_pain())
 		return TRUE
 
@@ -39,6 +40,9 @@
 		return FALSE
 
 	// At this point it means we're not doing a non-combat interaction so let's just try to bash it
+	if(living_user?.combat_mode)
+		apply_cyberpunk_combat_intent(living_user, modifiers, attack_modifiers)
+		apply_cyberpunk_charged_intent(living_user, modifiers, attack_modifiers)
 
 	var/pre_attack_result
 	if (is_right_clicking)
@@ -58,7 +62,6 @@
 		return TRUE
 
 	// At this point the attack is really about to happen
-	var/mob/living/living_user = isliving(user) ? user : null
 	living_user?.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
 
 	var/attackby_result
@@ -94,12 +97,18 @@
 /obj/item/proc/attack_self(mob/user, modifiers)
 	if(SEND_SIGNAL(src, COMSIG_ITEM_ATTACK_SELF, user) & COMPONENT_CANCEL_ATTACK_CHAIN)
 		return TRUE
+	var/mob/living/living_user = user
 	interact(user)
+	if(istype(living_user))
+		apply_cyberpunk_style_action_status(living_user)
 
 /// Called when the item is in the active hand, and right-clicked. Intended for alternate or opposite functions, such as lowering reagent transfer amount. At the moment, there is no verb or hotkey.
 /obj/item/proc/attack_self_secondary(mob/user, modifiers)
 	if(SEND_SIGNAL(src, COMSIG_ITEM_ATTACK_SELF_SECONDARY, user) & COMPONENT_CANCEL_ATTACK_CHAIN)
 		return TRUE
+	if(isliving(user))
+		var/mob/living/living_user = user
+		apply_cyberpunk_style_action_status(living_user)
 
 /**
  * Called on the item before it hits something
@@ -266,6 +275,7 @@
 	//CYBERPUNK BUILD - rebuild and delete before release
 	if(final_force > 0)
 		apply_cyberpunk_active_wear(user, target_mob)
+		apply_cyberpunk_style_action_status(user)
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, target_mob, user, modifiers, attack_modifiers)
@@ -288,6 +298,27 @@
 
 	return SECONDARY_ATTACK_CALL_NORMAL
 
+/obj/item/proc/apply_cyberpunk_combat_intent(mob/living/user, list/modifiers, list/attack_modifiers)
+	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
+	if(!combat_intent)
+		return FALSE
+	switch(combat_intent)
+		if("stab")
+			MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1.05)
+		if("slash")
+			MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1.02)
+	return TRUE
+
+/obj/item/proc/apply_cyberpunk_charged_intent(mob/living/user, list/modifiers, list/attack_modifiers)
+	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
+	if(!charged_intent)
+		return FALSE
+	var/damage_multiplier = 1.15 * user.get_cyberpunk_charged_intent_damage_multiplier(src)
+	MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, damage_multiplier)
+	user.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
+	user.balloon_alert(user, charged_intent)
+	return TRUE
+
 /// The equivalent of the standard version of [/obj/item/proc/attack] but for non mob targets.
 /obj/item/proc/attack_atom(atom/attacked_atom, mob/living/user, list/modifiers, list/attack_modifiers)
 	var/signal_return = SEND_SIGNAL(src, COMSIG_ITEM_ATTACK_ATOM, attacked_atom, user, modifiers, attack_modifiers) | SEND_SIGNAL(user, COMSIG_LIVING_ATTACK_ATOM, attacked_atom, modifiers, attack_modifiers)
@@ -307,6 +338,7 @@
 	//CYBERPUNK BUILD - rebuild and delete before release
 	if(force > 0)
 		apply_cyberpunk_active_wear(user, attacked_atom)
+		apply_cyberpunk_style_action_status(user)
 	//CYBERPUNK BUILD - rebuild and delete before release
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, attacked_atom, user, modifiers, attack_modifiers)
 	SEND_SIGNAL(attacked_atom, COMSIG_ATOM_AFTER_ATTACKEDBY, src, user, modifiers, attack_modifiers)
@@ -350,16 +382,29 @@
 	if(!LAZYACCESS(attack_modifiers, SILENCE_DEFAULT_MESSAGES))
 		send_item_attack_message(attacking_item, user, targeting_human_readable, targeting)
 
+	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
+	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
+	var/effective_armour_penetration = attacking_item.armour_penetration
+	if(combat_intent == "stab")
+		effective_armour_penetration += 10
+	if(charged_intent == "pierce")
+		effective_armour_penetration += 25
+
 	var/armor_block = min(run_armor_check(
 			def_zone = targeting,
 			attack_flag = MELEE,
 			absorb_text = span_notice("Ваша броня защитила вашу [targeting_human_readable]!"),
 			soften_text = span_warning("Ваша броня смягчила удар, нанесенный в вашу [targeting_human_readable]!"),
-			armour_penetration = attacking_item.armour_penetration,
+			armour_penetration = effective_armour_penetration,
 			weak_against_armour = attacking_item.weak_against_armour,
 		), ARMOR_MAX_BLOCK)
 
 	var/final_force = CALCULATE_FORCE(attacking_item, attack_modifiers)
+	var/weakness_critical = user.roll_cyberpunk_weakness_critical(src)
+	if(weakness_critical)
+		final_force *= user.get_cyberpunk_weakness_critical_damage_multiplier()
+		if(prob(user.get_cyberpunk_weakness_armor_ignore_chance()))
+			armor_block = 0
 	final_force *= user.get_cyberpunk_weapon_damage_multiplier(attacking_item)
 	if(mob_biotypes & (MOB_ROBOTIC|MOB_MINERAL|MOB_SKELETAL)) // this should probably check hit bodypart for humanoids
 		final_force *= attacking_item.get_demolition_modifier(src)
@@ -368,12 +413,18 @@
 		final_force *= user.get_stealth_damage_multiplier()
 
 	var/wounding = attacking_item.wound_bonus
+	if(weakness_critical)
+		wounding += 20
+	if(combat_intent == "slash")
+		wounding += 5
+	if(charged_intent == "chop")
+		wounding += 15
 	if((attacking_item.item_flags & SURGICAL_TOOL) && !user.combat_mode && HAS_TRAIT(user, TRAIT_READY_TO_OPERATE))
 		wounding = CANT_WOUND
 
 	if(user != src)
 		// This doesn't factor in armor, or most damage modifiers (physiology). Your mileage may vary
-		if(check_block(attacking_item, final_force, "[attacking_item.declent_ru(ACCUSATIVE)]", MELEE_ATTACK, attacking_item.armour_penetration, attacking_item.damtype))
+		if(check_block(attacking_item, final_force, "[attacking_item.declent_ru(ACCUSATIVE)]", MELEE_ATTACK, effective_armour_penetration, attacking_item.damtype))
 			return ATTACK_FAILED
 
 	SEND_SIGNAL(attacking_item, COMSIG_ITEM_ATTACK_ZONE, src, user, targeting)
@@ -399,7 +450,7 @@
 			var/partial_force = final_force * (damage_weight / total_weight)
 			var/partial_damage_type = attacking_item.get_cyberpunk_damage_type(damage_key)
 			var/partial_armor_flag = attacking_item.get_cyberpunk_damage_armor_flag(damage_key)
-			var/partial_armor_block = partial_armor_flag == MELEE ? armor_block : min(run_armor_check(def_zone = targeting, attack_flag = partial_armor_flag, armour_penetration = attacking_item.armour_penetration, silent = TRUE), ARMOR_MAX_BLOCK)
+			var/partial_armor_block = partial_armor_flag == MELEE ? armor_block : min(run_armor_check(def_zone = targeting, attack_flag = partial_armor_flag, armour_penetration = effective_armour_penetration, silent = TRUE), ARMOR_MAX_BLOCK)
 			damage_done += apply_damage(
 				damage = partial_force,
 				damagetype = partial_damage_type,
@@ -430,6 +481,18 @@
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
+	if(weakness_critical && damage_done > 0)
+		user.apply_cyberpunk_weakness_critical_effects(src)
+	if(damage_done > 0 && user != src)
+		if(user.roll_cyberpunk_weapon_free_repeat(attacking_item))
+			user.changeNext_move(0)
+		if(targeting in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_PRECISE_L_HAND, BODY_ZONE_PRECISE_R_HAND) && user.roll_cyberpunk_precise_weapon_disarm(attacking_item))
+			var/obj/item/held_item = get_active_held_item()
+			if(held_item && dropItemToGround(held_item))
+				visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] роняет [held_item.declent_ru(ACCUSATIVE)]!"),
+					span_warning("Вы роняете [held_item.declent_ru(ACCUSATIVE)]!"), null, COMBAT_MESSAGE_RANGE)
+		remember_cyberpunk_style_attacker(user)
+		apply_cyberpunk_style_counterattack_disorient(user)
 	if(user != src)
 		user.reveal_from_stealth_attack()
 

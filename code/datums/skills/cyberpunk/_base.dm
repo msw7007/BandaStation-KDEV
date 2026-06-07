@@ -52,6 +52,38 @@
 /mob/living/proc/get_cyberpunk_structure_time_multiplier(atom/target, action = "work")
 	return 1 / get_cyberpunk_structure_work_speed_modifier(target, action)
 
+/mob/living/proc/get_cyberpunk_crafting_time_multiplier(datum/crafting_recipe/recipe)
+	if(!recipe || !mind)
+		return 1
+	var/highest_bonus = 0
+	if(ispath(recipe.result, /obj/machinery))
+		highest_bonus = max(
+			highest_bonus,
+			get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
+			get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
+			get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+		)
+	else if(ispath(recipe.result, /obj/structure) || ispath(recipe.result, /turf))
+		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5))
+	else if(ispath(recipe.result, /obj/item/food) || istype(recipe, /datum/crafting_recipe/food))
+		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_2"))
+	else if(ispath(recipe.result, /obj/item))
+		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
+	return 1 / max(0.1, 1 + highest_bonus * 0.01)
+
+/mob/living/proc/reward_cyberpunk_crafting_experience(datum/crafting_recipe/recipe)
+	if(!recipe || !mind)
+		return
+	if(ispath(recipe.result, /obj/machinery))
+		reward_character_check_experience(SKILL_ELECTRICS, 4, FALSE, 1)
+		reward_character_check_experience(SKILL_INVENTION, 3, FALSE, 1)
+	else if(ispath(recipe.result, /obj/structure) || ispath(recipe.result, /turf))
+		reward_character_check_experience(SKILL_CONSTRUCTION, 4, FALSE, 1)
+	else if(ispath(recipe.result, /obj/item/food) || istype(recipe, /datum/crafting_recipe/food))
+		reward_character_check_experience(SKILL_COOKING, 4, FALSE, 1)
+	else if(ispath(recipe.result, /obj/item))
+		reward_character_check_experience(SKILL_INVENTION, 3, FALSE, 1)
+
 /mob/living/proc/get_cyberpunk_structure_integrity_bonus(atom/target)
 	if(!target?.is_cyberpunk_structure_target())
 		return 0
@@ -388,6 +420,14 @@
 	reduction += max(0, get_attribute_value(ATTRIBUTE_STRENGTH) - ATTRIBUTE_DEFAULT)
 	return max(0.1, 1 - reduction * 0.01)
 
+/mob/living/proc/get_cyberpunk_knockdown_duration_multiplier()
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 3)
+	return max(0.1, 1 - reduction * 0.01)
+
+/mob/living/proc/roll_cyberpunk_fortitude_knockdown_resist()
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 6, "value_2")
+	return chance > 0 && prob(chance)
+
 /obj/item/proc/get_cyberpunk_weapon_skill()
 	if(cyberpunk_weapon_skill)
 		return cyberpunk_weapon_skill
@@ -435,24 +475,165 @@
 		multiplier /= corporate_multiplier
 	return max(0.1, multiplier)
 
+/mob/living/proc/get_cyberpunk_gun_fire_delay_multiplier(obj/item/gun/gun)
+	if(!gun)
+		return 1
+	var/multiplier = get_cyberpunk_weapon_cooldown_multiplier(gun)
+	if(gun.w_class >= WEIGHT_CLASS_BULKY)
+		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 6, "value_1") * 0.01)
+	else
+		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 4, "value_1") * 0.01)
+	return max(0.1, multiplier)
+
+/mob/living/proc/get_cyberpunk_gun_spread_multiplier(obj/item/gun/gun)
+	if(!gun || gun.w_class < WEIGHT_CLASS_BULKY)
+		return 1
+	var/reduction = max(get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 4, "value_1"), get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 6, "value_1"))
+	return max(0.1, 1 - reduction * 0.01)
+
+/mob/living/proc/roll_cyberpunk_weapon_free_repeat(obj/item/weapon)
+	if(!weapon || !mind)
+		return FALSE
+	if(get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 3) <= 0)
+		return FALSE
+	if(weapon.w_class > WEIGHT_CLASS_NORMAL)
+		return FALSE
+	return prob(get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 3))
+
+/mob/living/proc/get_cyberpunk_reload_time_multiplier(obj/item/gun/gun)
+	if(!gun || !mind)
+		return 1
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 1)
+	if(gun.w_class >= WEIGHT_CLASS_BULKY)
+		reduction = max(reduction, get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 4, "value_2"))
+	return max(0.25, 1 - reduction * 0.01)
+
+/mob/living/proc/get_cyberpunk_rack_delay_multiplier(obj/item/gun/gun)
+	if(!gun || !mind)
+		return 1
+	var/reduction = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 1),
+		get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 3, "value_2"),
+	)
+	return max(0.25, 1 - reduction * 0.01)
+
+/mob/living/proc/get_cyberpunk_draw_time_multiplier(obj/item/weapon)
+	if(!weapon || !mind)
+		return 1
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 5, "value_1")
+	return max(0.1, 1 - reduction * 0.01)
+
+/mob/living/proc/get_cyberpunk_gunpoint_time_multiplier(obj/item/gun/gun)
+	if(!gun || !mind)
+		return 1
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 3, "value_2")
+	return max(0.25, 1 - reduction * 0.01)
+
+/mob/living/proc/get_cyberpunk_gunpoint_range(obj/item/gun/gun)
+	if(!gun || !mind)
+		return GUNPOINT_SHOOTER_STRAY_RANGE
+	return GUNPOINT_SHOOTER_STRAY_RANGE + round(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 1))
+
+/mob/living/proc/get_cyberpunk_gunpoint_damage_multiplier(obj/item/gun/gun)
+	if(!gun || !mind)
+		return 1
+	var/damage_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 2),
+		get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 4),
+	)
+	return 1 + damage_bonus * 0.01
+
+/mob/living/proc/can_cyberpunk_move_while_aiming(obj/item/gun/gun)
+	return gun && get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 6) > 0
+
+/mob/living/proc/get_cyberpunk_charged_intent_time_multiplier(obj/item/weapon)
+	if(!weapon || !mind)
+		return 1
+	var/reduction = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 4, "value_2"),
+		get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 3, "value_2"),
+	)
+	return max(0.1, 1 - reduction * 0.01)
+
+/mob/living/proc/get_cyberpunk_charged_intent_damage_multiplier(obj/item/weapon)
+	if(!weapon || !mind)
+		return 1
+	var/damage_bonus = max(
+		get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 2),
+		get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 4),
+	)
+	return 1 + damage_bonus * 0.01
+
+/mob/living/proc/get_cyberpunk_charged_intent_followup_bonus(obj/item/weapon)
+	if(!weapon || !mind)
+		return 0
+	return get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 5)
+
+/mob/living/proc/roll_cyberpunk_precise_weapon_disarm(obj/item/weapon)
+	if(!weapon || !mind)
+		return FALSE
+	if(!iscarbon(src))
+		return FALSE
+	if(weapon.w_class >= WEIGHT_CLASS_BULKY)
+		return FALSE
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_WEAPON, 6)
+	if(chance <= 0)
+		return FALSE
+	return prob(chance)
+
+/mob/living/proc/get_cyberpunk_electric_shock_multiplier()
+	var/electric_safety = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 3)
+	if(electric_safety <= 0)
+		return 1
+	return clamp(electric_safety * 0.01, 0.1, 1)
+
+/mob/living/proc/get_cyberpunk_electric_chain_multiplier()
+	var/chain_safety = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 4)
+	if(chain_safety <= 0)
+		return 1
+	return clamp(chain_safety * 0.01, 0.1, 1)
+
 /mob/living/proc/get_cyberpunk_unarmed_damage_multiplier()
 	var/power_bonus = get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 1)
+	power_bonus += get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 2)
 	var/precision_bonus = get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 1)
+	precision_bonus += get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 2)
 	var/attribute_bonus = max(0, get_attribute_value(ATTRIBUTE_STRENGTH) - ATTRIBUTE_DEFAULT) * 2
 	return 1 + (max(power_bonus, precision_bonus) + attribute_bonus) * 0.01
 
 /mob/living/proc/apply_cyberpunk_unarmed_zone_effect(mob/living/target, zone)
 	if(!target || get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4) <= 0)
 		return FALSE
+	var/zone_bonus = 0
+	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 5, "value_1")))
+		zone_bonus += get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 5, "value_2")
+	zone_bonus += get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 6, "value_1")
 	switch(zone)
 		if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG, BODY_ZONE_PRECISE_L_FOOT, BODY_ZONE_PRECISE_R_FOOT)
-			if(prob(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_1")))
+			if(prob(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_1") + zone_bonus))
 				target.Knockdown(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_2") * 1 SECONDS)
 		if(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_PRECISE_L_HAND, BODY_ZONE_PRECISE_R_HAND)
-			target.dropItemToGround(target.get_active_held_item())
+			if(prob(50 + zone_bonus))
+				target.dropItemToGround(target.get_active_held_item())
 			target.Stun(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_3") * 1 SECONDS)
 		if(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES)
 			target.set_confusion_if_lower(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_4") * 1 SECONDS)
+		if(BODY_ZONE_CHEST)
+			if(prob(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 6, "value_2")))
+				target.Knockdown(2 SECONDS)
+	return TRUE
+
+/mob/living/proc/apply_cyberpunk_power_unarmed_effects(mob/living/target)
+	if(!target)
+		return FALSE
+	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 4)))
+		target.adjust_staggered_up_to(4 SECONDS, 10 SECONDS)
+	if(target.has_status_effect(/datum/status_effect/staggered) && prob(get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 5)))
+		target.Stun(2 SECONDS)
+	if(target.IsStun() && prob(get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 6)))
+		target.visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] uppercuts [target.declent_ru(ACCUSATIVE)]!"))
+		target.Knockdown(3 SECONDS)
+		target.apply_damage(10, STAMINA)
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_grapple_control_bonus()
@@ -466,15 +647,33 @@
 		return FALSE
 	switch(action)
 		if("furniture_throw", "limb_slam")
-			return get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
+			return TRUE
 		if("wrestling_launch")
-			return get_character_perk_rank(SKILL_GRAPPLING, 3) > 0
+			return get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
 		if("special_limb")
-			return get_character_perk_rank(SKILL_GRAPPLING, 4) > 0
-		if("neck_throw", "choke")
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && get_character_perk_rank(SKILL_GRAPPLING, 5) > 0
-		if("neck_back_slam", "spine_knee")
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && get_character_perk_rank(SKILL_GRAPPLING, 6) > 0
+			return get_character_perk_rank(SKILL_PRECISE_UNARMED, 2) > 0
+		if("choke")
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
+		if("neck_throw", "spine_knee")
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0
+		if("neck_back_slam")
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
+	return FALSE
+
+/mob/living/proc/try_cyberpunk_grapple_attack(mob/living/target, list/modifiers)
+	if(!target || pulling != target || grab_state < GRAB_AGGRESSIVE || !combat_mode)
+		return FALSE
+	var/zone = zone_selected
+	if(!zone)
+		zone = BODY_ZONE_CHEST
+	if(LAZYACCESS(modifiers, MIDDLE_CLICK))
+		return perform_cyberpunk_spine_knee(target)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK))
+		if(zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && perform_cyberpunk_neck_back_slam(target))
+			return TRUE
+		return perform_cyberpunk_grapple_special(target, zone)
+	if(zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK)
+		return perform_cyberpunk_neck_choke(target)
 	return FALSE
 
 /mob/living/proc/perform_cyberpunk_grapple_furniture_throw(mob/living/target, obj/structure/furniture)
@@ -486,6 +685,7 @@
 	if(!destination)
 		return FALSE
 	target.throw_at(destination, max(1, get_dist(target, destination)), 2, src, spin = TRUE, force = MOVE_FORCE_STRONG, callback = CALLBACK(src, PROC_REF(finish_cyberpunk_grapple_furniture_throw), target, furniture))
+	apply_cyberpunk_grapple_limb_impact_effect(target, zone_selected)
 	target.apply_damage(20, STAMINA)
 	stop_pulling()
 	log_combat(src, target, "grapple threw", null, "onto [furniture]")
@@ -547,13 +747,16 @@
 			target.sound_damage(0, 4 SECONDS)
 		if(BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK, BODY_ZONE_HEAD)
 			target.apply_damage(10, STAMINA)
+			target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+		if(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_ABDOMEN)
+			target.apply_damage(15, STAMINA)
 	return TRUE
 
 /mob/living/proc/perform_cyberpunk_grapple_special(mob/living/target, zone)
 	if(!can_cyberpunk_grapple_action(target, "special_limb", zone))
 		return FALSE
 	apply_cyberpunk_grapple_limb_impact_effect(target, zone)
-	if(zone == BODY_ZONE_CHEST)
+	if(zone == BODY_ZONE_CHEST || zone == BODY_ZONE_PRECISE_ABDOMEN)
 		target.Knockdown(1 SECONDS)
 		target.apply_damage(20, STAMINA)
 	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] twists [target.declent_ru(ACCUSATIVE)] in a painful hold!"), span_danger("You twist [target.declent_ru(ACCUSATIVE)] in a painful hold!"), null, COMBAT_MESSAGE_RANGE, target)

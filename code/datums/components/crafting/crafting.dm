@@ -249,6 +249,10 @@
 			for(var/behavior in recipe.tool_behaviors)
 				recipe_time += dynamic_recipe_time * found_behaviors[behavior]
 
+		if(isliving(crafter))
+			var/mob/living/living_crafter = crafter
+			recipe_time *= living_crafter.get_cyberpunk_crafting_time_multiplier(recipe)
+
 		if(!do_after(crafter, round(recipe_time, 0.1 SECONDS), target = crafter))
 			return "."
 		contents = get_surroundings(crafter, recipe.blacklist)
@@ -299,6 +303,9 @@
 	result.on_craft_completion(stuff_to_use, recipe, crafter)
 	if(set_materials)
 		result.set_custom_materials(total_materials)
+	if(isliving(crafter))
+		var/mob/living/living_crafter = crafter
+		living_crafter.reward_cyberpunk_crafting_experience(recipe)
 	for(var/atom/movable/component as anything in stuff_to_use) //delete anything that wasn't stored inside the object
 		if(component.loc != result || isturf(result))
 			qdel(component)

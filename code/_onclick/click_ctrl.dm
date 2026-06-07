@@ -51,7 +51,7 @@
 	if(check_rights_for(client, R_ADMIN))
 		client.toggle_tag_datum(A)
 		return
-	CtrlClickOn(A)
+	pointed(A)
 
 /**
  * ## Custom ctrl click interaction

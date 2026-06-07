@@ -130,8 +130,38 @@
 	var/mob/living/user_mob = user.mob
 	user_mob.set_combat_mode(FALSE, silent = FALSE)
 
+/datum/keybinding/living/cyberpunk_slash_intent
+	hotkey_keys = list("2")
+	name = "cyberpunk_slash_intent"
+	full_name = "Slash Intent"
+	description = "Switches to slash intent."
+	keybind_signal = "keybinding_living_cyberpunk_slash_intent_down"
+
+/datum/keybinding/living/cyberpunk_slash_intent/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user_mob = user.mob
+	user_mob.set_cyberpunk_combat_intent("slash")
+	return TRUE
+
+/datum/keybinding/living/cyberpunk_stab_intent
+	hotkey_keys = list("3")
+	name = "cyberpunk_stab_intent"
+	full_name = "Stab Intent"
+	description = "Switches to stab intent."
+	keybind_signal = "keybinding_living_cyberpunk_stab_intent_down"
+
+/datum/keybinding/living/cyberpunk_stab_intent/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user_mob = user.mob
+	user_mob.set_cyberpunk_combat_intent("stab")
+	return TRUE
+
 /datum/keybinding/living/toggle_move_intent
-	hotkey_keys = list("Unbound") // BANDASTATION EDIT
+	hotkey_keys = list("V") // BANDASTATION EDIT
 	name = "toggle_move_intent"
 	full_name = "Смена режима ходьбы (зажать)"
 	description = "Удерживайте, чтобы временно поменять режим передвижения."
@@ -182,7 +212,7 @@
 	return TRUE
 
 /datum/keybinding/living/hold_throw_mode
-	hotkey_keys = list("Space")
+	hotkey_keys = list(UNBOUND_KEY)
 	name = "hold_throw_mode"
 	full_name = "Режим броска (зажать)"
 	description = "Удерживайте, чтобы включить режим броска, и отпустите, чтобы выключить его"
@@ -202,8 +232,32 @@
 	var/mob/living/living_user = user.mob
 	living_user.throw_mode_off(THROW_MODE_HOLD)
 
+/datum/keybinding/living/cyberpunk_defensive_action
+	hotkey_keys = list("Space")
+	name = "cyberpunk_defensive_action"
+	full_name = "Defensive Action"
+	description = "Repeats the last defensive action. Hold and click to choose parry or dodge."
+	keybind_signal = "keybinding_living_cyberpunk_defensive_down"
+
+/datum/keybinding/living/cyberpunk_defensive_action/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.cyberpunk_defensive_action_held = TRUE
+	living_user.perform_cyberpunk_defensive_action()
+	return TRUE
+
+/datum/keybinding/living/cyberpunk_defensive_action/up(client/user, turf/target)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/living_user = user.mob
+	living_user.cyberpunk_defensive_action_held = FALSE
+	return TRUE
+
 /datum/keybinding/living/give
-	hotkey_keys = list("V") // BANDASTATION EDIT
+	hotkey_keys = list(UNBOUND_KEY) // BANDASTATION EDIT
 	name = "Give_Item"
 	full_name = "Передать вещь"
 	description = "Передать предмет в активной руке"

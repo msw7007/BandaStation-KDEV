@@ -61,6 +61,9 @@
 			if(!throwable_mob.buckled)
 				thrown_thing = throwable_mob
 				if(grab_state >= GRAB_NECK)
+					if(!can_cyberpunk_grapple_action(throwable_mob, "neck_throw", BODY_ZONE_PRECISE_NECK))
+						balloon_alert(src, "need power grip")
+						return FALSE
 					neckgrab_throw = TRUE
 				stop_pulling()
 				if(HAS_TRAIT(src, TRAIT_PACIFISM) || HAS_TRAIT(src, TRAIT_NO_THROWING))

@@ -14,6 +14,7 @@
 	if(istype(user, /mob/living/carbon/human))
 		var/mob/living/carbon/human/user_human = user
 		user_human.put_in_hands(item)
+		user_human.reward_character_check_experience(SKILL_THEFT, max(1, item.w_class || 1), FALSE, 1)
 
 	user.log_message("has stealthy stripped [key_name(source)] of [item].", LOG_ATTACK, color="red")
 	source.log_message("has been stealthy stripped of [item] by [key_name(user)].", LOG_VICTIM, color="orange", log_globally=FALSE)

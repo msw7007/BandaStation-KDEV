@@ -232,7 +232,11 @@
 	update_appearance()
 
 /obj/item/gun/ballistic/rifle/rebarxbow/drop_bolt(mob/user = null)
-	if(!do_after(user, draw_time, target = src))
+	var/effective_draw_time = draw_time
+	if(isliving(user))
+		var/mob/living/living_user = user
+		effective_draw_time *= living_user.get_cyberpunk_draw_time_multiplier(src)
+	if(!do_after(user, effective_draw_time, target = src))
 		return
 	playsound(src, bolt_drop_sound, bolt_drop_sound_volume, FALSE)
 	balloon_alert(user, "bowstring drawn")

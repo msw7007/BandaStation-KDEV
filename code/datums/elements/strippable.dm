@@ -308,7 +308,16 @@
 
 /// A utility function for `/datum/strippable_item`s to start unequipping an item from a mob.
 /proc/start_unequip_mob(obj/item/item, mob/source, mob/user, strip_delay, hidden = FALSE)
-	if (!do_after(user, strip_delay || item.strip_delay, source, interaction_key = REF(item), hidden = hidden))
+	var/final_strip_delay = strip_delay || item.strip_delay
+	if(isliving(user))
+		var/mob/living/living_user = user
+		var/theft_speed_bonus = living_user.get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 4)
+		if(theft_speed_bonus > 0)
+			final_strip_delay *= max(0.1, 1 - theft_speed_bonus * 0.01)
+		var/hidden_chance = living_user.get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 2) + living_user.get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 3)
+		if(hidden_chance > 0 && prob(min(hidden_chance, 95)))
+			hidden = TRUE
+	if (!do_after(user, final_strip_delay, source, interaction_key = REF(item), hidden = hidden))
 		return FALSE
 
 	return TRUE
@@ -317,6 +326,9 @@
 /proc/finish_unequip_mob(obj/item/item, mob/source, mob/user)
 	if (!item.doStrip(user, source))
 		return FALSE
+	if(isliving(user))
+		var/mob/living/living_user = user
+		living_user.reward_character_check_experience(SKILL_THEFT, max(1, item.w_class || 1), FALSE, 1)
 
 	user.log_message("has stripped [key_name(source)] of [item].", LOG_ATTACK, color="red")
 	source.log_message("has been stripped of [item] by [key_name(user)].", LOG_VICTIM, color="orange", log_globally=FALSE)

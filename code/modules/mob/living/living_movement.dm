@@ -195,7 +195,9 @@
 		animate(src, pixel_z = original_pixel_z, time = world.tick_lag, easing = SINE_EASING|EASE_IN)
 		sleep(world.tick_lag)
 
-	if(success && long_jump)
+	if(success)
+		apply_cyberpunk_acrobatics_speed_bonus()
+	if(success && long_jump && !prob(get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 1)))
 		continue_long_jump(jump_dir)
 	pixel_z = original_pixel_z
 	currently_jumping = FALSE
@@ -235,6 +237,15 @@
 		step(src, REVERSE_DIR(jump_dir))
 	Knockdown(STAMINA_JUMP_COLLISION_KNOCKDOWN, ignore_canstun = TRUE)
 	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] clips the obstacle and falls!"), span_userdanger("You clip the obstacle and fall!"))
+
+/mob/living/mouse_drop_dragged(atom/over, mob/user, src_location, over_location, params)
+	. = ..()
+	if(user != src || !stealth_mode || !isturf(over))
+		return
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, SHIFT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || LAZYACCESS(modifiers, ALT_CLICK))
+		return
+	start_wall_hug()
 
 /mob/living/proc/near_wall_hug_cover()
 	var/turf/current_turf = get_turf(src)
@@ -335,10 +346,10 @@
 	var/turf/current_turf = get_turf(src)
 	if(!current_turf)
 		return 1
-	return current_turf.get_lumcount()
+	return max(0, current_turf.get_lumcount() - get_cyberpunk_skill_perk_bonus(SKILL_STEALTH, 3) * 0.01)
 
 /mob/living/proc/get_stealth_skill_bonus()
-	return 0
+	return get_cyberpunk_skill_perk_bonus(SKILL_STEALTH, 1)
 
 /mob/living/proc/get_stealth_equipment_weight()
 	var/total_weight = 0
@@ -356,8 +367,10 @@
 	if(!stealth_mode)
 		return
 	var/light_level = get_stealth_light_level()
-	var/target_chameleon = clamp(round((1 - light_level) * STEALTH_CHAMELEON_MAX) + get_stealth_skill_bonus() + chameleon_bonus, 0, chameleon_cap)
-	var/change_rate = (target_chameleon > chameleon ? STEALTH_CHAMELEON_FADE_RATE : STEALTH_CHAMELEON_LIGHT_RATE) + chameleon_speed_bonus
+	var/perk_cap = get_cyberpunk_skill_perk_bonus(SKILL_STEALTH, 6)
+	var/effective_chameleon_cap = perk_cap > 0 ? max(chameleon_cap, perk_cap) : chameleon_cap
+	var/target_chameleon = clamp(round((1 - light_level) * STEALTH_CHAMELEON_MAX) + get_stealth_skill_bonus() + chameleon_bonus, 0, effective_chameleon_cap)
+	var/change_rate = (target_chameleon > chameleon ? STEALTH_CHAMELEON_FADE_RATE : STEALTH_CHAMELEON_LIGHT_RATE) + chameleon_speed_bonus + round(get_cyberpunk_skill_perk_bonus(SKILL_STEALTH, 2) * 0.1)
 	if(chameleon < target_chameleon)
 		chameleon = min(chameleon + change_rate, target_chameleon)
 	else if(chameleon > target_chameleon)
@@ -373,7 +386,8 @@
 /mob/living/proc/get_stealth_damage_multiplier()
 	if(!stealth_mode)
 		return 1
-	return clamp(STEALTH_DAMAGE_MULTIPLIER_MIN + ((STEALTH_DAMAGE_MULTIPLIER_MAX - STEALTH_DAMAGE_MULTIPLIER_MIN) * (chameleon / STEALTH_CHAMELEON_MAX)), STEALTH_DAMAGE_MULTIPLIER_MIN, STEALTH_DAMAGE_MULTIPLIER_MAX)
+	var/maximum_multiplier = max(STEALTH_DAMAGE_MULTIPLIER_MAX, 1 + get_cyberpunk_skill_perk_bonus(SKILL_STEALTH, 5) * 0.1)
+	return clamp(STEALTH_DAMAGE_MULTIPLIER_MIN + ((maximum_multiplier - STEALTH_DAMAGE_MULTIPLIER_MIN) * (chameleon / STEALTH_CHAMELEON_MAX)), STEALTH_DAMAGE_MULTIPLIER_MIN, maximum_multiplier)
 
 /mob/living/proc/reveal_from_stealth_attack()
 	if(!stealth_mode)

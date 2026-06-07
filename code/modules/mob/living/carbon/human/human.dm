@@ -874,6 +874,50 @@
 		arm.attack_self(src)
 	return ..()
 
+/mob/living/carbon/human/mouse_drop_receive(atom/dropping, atom/user, params)
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) && cyberpunk_carry_mouse_drop(dropping, user))
+		return
+	return ..()
+
+/mob/living/carbon/human/proc/cyberpunk_carry_mouse_drop(atom/dropping, atom/user)
+	if(!iscarbon(dropping) || !isliving(user))
+		return FALSE
+	var/mob/living/carbon/passenger = dropping
+	var/mob/living/requester = user
+	if(passenger == src || get_dist(src, passenger) > 1 || get_dist(src, requester) > 1)
+		return FALSE
+	if(requester != src && requester != passenger)
+		return FALSE
+	if(!can_cyberpunk_offer_carry(passenger))
+		return TRUE
+	var/mob/consent_target = requester == src ? passenger : src
+	if(consent_target.stat == CONSCIOUS && consent_target.client)
+		var/request_text = requester == src ? "[src] offers to carry you." : "[passenger] asks you to carry them."
+		if(tgui_alert(consent_target, request_text, "Carry", list("Accept", "Decline"), timeout = 10 SECONDS) != "Accept")
+			return TRUE
+	if(QDELETED(passenger) || QDELETED(src) || get_dist(src, passenger) > 1 || !can_cyberpunk_offer_carry(passenger))
+		return TRUE
+	if(passenger.body_position == LYING_DOWN)
+		fireman_carry(passenger)
+	else
+		piggyback(passenger)
+	return TRUE
+
+/mob/living/carbon/human/proc/can_cyberpunk_offer_carry(mob/living/carbon/passenger)
+	if(!istype(passenger) || passenger.buckled || buckled || INCAPACITATED_IGNORING(src, INCAPABLE_GRAB))
+		balloon_alert(src, "can't carry")
+		return FALSE
+	if(passenger.body_position == LYING_DOWN)
+		if(can_be_firemanned(passenger))
+			return TRUE
+		balloon_alert(src, "can't shoulder")
+		return FALSE
+	if(can_piggyback(passenger))
+		return TRUE
+	balloon_alert(src, "can't carry")
+	return FALSE
+
 /mob/living/carbon/human/mouse_buckle_handling(mob/living/M, mob/living/user)
 	if(pulling != M || grab_state != GRAB_AGGRESSIVE || stat != CONSCIOUS)
 		return FALSE

@@ -351,6 +351,30 @@
 /obj/structure/bed/can_hide_under_stealth_cover(mob/living/user)
 	return TRUE
 
+/obj/structure/proc/cyberpunk_grapple_furniture_mouse_drop(atom/dropped, mob/user)
+	var/mob/living/living_user = user
+	var/mob/living/living_target = dropped
+	if(!istype(living_user) || !istype(living_target) || !living_user.combat_mode)
+		return FALSE
+	if(living_user.pulling != living_target || living_user.grab_state < GRAB_AGGRESSIVE)
+		return FALSE
+	return living_user.perform_cyberpunk_grapple_furniture_throw(living_target, src)
+
+/obj/structure/table/mouse_drop_receive(atom/dropped, mob/user, params)
+	if(cyberpunk_grapple_furniture_mouse_drop(dropped, user))
+		return
+	return ..()
+
+/obj/structure/chair/mouse_drop_receive(atom/dropped, mob/user, params)
+	if(cyberpunk_grapple_furniture_mouse_drop(dropped, user))
+		return
+	return ..()
+
+/obj/structure/bed/mouse_drop_receive(atom/dropped, mob/user, params)
+	if(cyberpunk_grapple_furniture_mouse_drop(dropped, user))
+		return
+	return ..()
+
 /// Feedback displayed to nearby players after a mob is buckled to src.
 /atom/movable/proc/buckle_feedback(mob/living/being_buckled, mob/buckler)
 	if(being_buckled == buckler)

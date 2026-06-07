@@ -276,7 +276,9 @@
 		//Found our victims, now lets shock them all
 		for(var/victim in shocking_queue)
 			var/mob/living/carbon/C = victim
-			C.electrocute_act(shock_damage*0.75, src, 1, flags, jitter_time, stutter_time, stun_duration)
+			var/chain_damage = shock_damage * 0.75 * C.get_cyberpunk_electric_chain_multiplier()
+			if(chain_damage >= 1)
+				C.electrocute_act(chain_damage, src, 1, flags, jitter_time, stutter_time, stun_duration)
 	//Stun
 	var/should_stun = (!(flags & SHOCK_TESLA) || siemens_coeff > 0.5) && !(flags & SHOCK_NOSTUN)
 	var/stun = !(flags & SHOCK_KNOCKDOWN)

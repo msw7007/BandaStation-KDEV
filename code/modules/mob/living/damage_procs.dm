@@ -242,7 +242,7 @@
 		apply_effect(stun, EFFECT_STUN, blocked)
 	if(knockdown)
 		apply_effect(knockdown, EFFECT_KNOCKDOWN, blocked)
-	if(unconscious)
+	if(unconscious && !has_cyberpunk_cohort_unconscious_protection())
 		apply_effect(unconscious, EFFECT_UNCONSCIOUS, blocked)
 	if(paralyze)
 		apply_effect(paralyze, EFFECT_PARALYZE, blocked)

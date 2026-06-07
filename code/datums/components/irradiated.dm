@@ -68,6 +68,7 @@
 	var/mob/living/carbon/human/human_parent = parent
 	if (istype(human_parent))
 		human_parent.clear_alert(ALERT_IRRADIATED)
+		human_parent.remove_cyberpunk_status_effect("radiation")
 
 	REMOVE_TRAIT(parent, TRAIT_IRRADIATED, REF(src))
 
@@ -91,6 +92,9 @@
 
 	if (should_halt_effects(parent))
 		return
+
+	var/radiation_power = clamp(CEILING(human_parent.get_tox_loss() / 25, 1), 1, 4)
+	human_parent.apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/radiation, 5 SECONDS, radiation_power, src, FALSE)
 
 	if (human_parent.stat != DEAD)
 		human_parent.dna?.species?.handle_radiation(human_parent, world.time - beginning_of_irradiation, seconds_per_tick)

@@ -73,6 +73,12 @@
 	obj_flags = NONE
 	///Item flags for the item
 	var/item_flags = NONE
+	/// Temporary Style perk XP bonus left on the item after a styled action.
+	var/cyberpunk_style_xp_bonus_until = 0
+	/// Percent XP bonus granted while the temporary Style status is active.
+	var/cyberpunk_style_xp_bonus = 0
+	/// Name of the character whose style status is currently imprinted on the item.
+	var/cyberpunk_style_status_owner
 
 	///Sound played when you hit something with the item
 	var/hitsound

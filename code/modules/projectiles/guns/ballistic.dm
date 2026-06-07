@@ -474,6 +474,9 @@
 		if (bolt_type == BOLT_TYPE_OPEN && !bolt_locked)
 			chamber_round()
 		update_appearance()
+		if(isliving(user))
+			var/mob/living/living_user = user
+			living_user.changeNext_move(CLICK_CD_MELEE * living_user.get_cyberpunk_reload_time_multiplier(src))
 		return TRUE
 	else
 		to_chat(user, span_warning("Кажется, [AM.declent_ru(NOMINATIVE)] застревает на вашей руке!"))
@@ -502,6 +505,9 @@
 	if (display_message)
 		balloon_alert(user, "извлечение [magazine_wording]")
 	update_appearance()
+	if(isliving(user))
+		var/mob/living/living_user = user
+		living_user.changeNext_move(CLICK_CD_MELEE * living_user.get_cyberpunk_reload_time_multiplier(src))
 
 /obj/item/gun/ballistic/can_shoot()
 	return chambered?.loaded_projectile
@@ -573,6 +579,7 @@
 		chamber_round()
 	ammo.update_appearance()
 	update_appearance()
+	user.changeNext_move(CLICK_CD_MELEE * user.get_cyberpunk_reload_time_multiplier(src))
 	return TRUE
 
 /obj/item/gun/ballistic/proc/check_if_held(mob/user)
@@ -673,7 +680,7 @@
 		return
 	if (recent_rack > world.time)
 		return
-	recent_rack = world.time + rack_delay
+	recent_rack = world.time + rack_delay * user.get_cyberpunk_rack_delay_multiplier(src)
 	rack(user)
 	return
 

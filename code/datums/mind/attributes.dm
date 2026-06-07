@@ -57,22 +57,30 @@
 /datum/mind/proc/get_attribute_perk_point_limit(attribute_id)
 	return get_attribute_value(attribute_id)
 
+/datum/mind/proc/add_raw_character_experience(skill_key, amount, attribute_limited = FALSE)
+	if(amount <= 0)
+		return 0
+	if(attribute_limited)
+		unconverted_general_experience += amount * 0.6
+		return amount
+	if(skill_key)
+		pending_skill_experience[skill_key] = (pending_skill_experience[skill_key] || 0) + (amount * 0.75)
+	unconverted_general_experience += amount * 0.25
+	return amount
+
 /datum/mind/proc/reward_character_check_experience(skill_key, difficulty, attribute_limited = FALSE, action_multiplier = 1)
 	if(difficulty <= 0)
 		return 0
-
 	var/final_experience = difficulty * action_multiplier
+	var/mob/living/living_current
 	if(isliving(current))
-		var/mob/living/living_current = current
+		living_current = current
 		final_experience *= living_current.get_experience_multiplier()
+		final_experience *= living_current.get_cyberpunk_active_item_style_xp_multiplier()
 
-	if(attribute_limited)
-		unconverted_general_experience += final_experience * 0.6
-		return final_experience
-
-	if(skill_key)
-		pending_skill_experience[skill_key] = (pending_skill_experience[skill_key] || 0) + (final_experience * 0.75)
-	unconverted_general_experience += final_experience * 0.25
+	add_raw_character_experience(skill_key, final_experience, attribute_limited)
+	living_current?.share_cyberpunk_style_experience_bonus(skill_key, final_experience, attribute_limited)
+	living_current?.cyberpunk_cohort?.share_experience(living_current, skill_key, final_experience, attribute_limited)
 	return final_experience
 
 /datum/mind/proc/convert_rest_experience()
@@ -107,13 +115,15 @@
 	return TRUE
 
 /mob/living/proc/get_attribute_value(attribute_id)
-	return mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT
+	return (mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT) + get_cyberpunk_status_attribute_modifier(attribute_id)
 
 /mob/living/proc/get_attribute_check_value(skill_level, attribute_id)
-	return mind?.get_attribute_check_value(skill_level, attribute_id) || ((skill_level * 10) + (ATTRIBUTE_DEFAULT * 5))
+	if(mind)
+		return (skill_level * 10) + (get_attribute_value(attribute_id) * 5)
+	return (skill_level * 10) + (ATTRIBUTE_DEFAULT * 5)
 
 /mob/living/proc/get_character_check_value(skill_level, attribute_id, apply_body_penalty = TRUE)
-	var/check_value = get_attribute_check_value(skill_level, attribute_id)
+	var/check_value = get_attribute_check_value(skill_level, attribute_id) + get_cyberpunk_status_check_modifier()
 	if(apply_body_penalty)
 		check_value *= (1 - get_check_penalty())
 	return check_value

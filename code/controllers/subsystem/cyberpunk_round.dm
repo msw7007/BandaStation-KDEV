@@ -71,6 +71,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/list/cyberpunk_round_last_infrastructure = list()
 	/// Last infrastructure metrics build world time.
 	var/cyberpunk_round_last_infrastructure_at = 0
+	/// World time before which full round metrics should not run after round start.
+	var/cyberpunk_round_heavy_metrics_defer_until = 0
 	/// Storyteller pressure curve generated from the active profile.
 	var/list/cyberpunk_storyteller_curve = list()
 	/// Current coarse event plan generated from the active curve.
@@ -117,6 +119,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_daylight_stride = 4
 	/// Last daylight phase applied to the world.
 	var/cyberpunk_daylight_last_phase
+	/// World time before which daylight source generation should not run after round start.
+	var/cyberpunk_daylight_defer_until = 0
 	/// Sparse daylight source objects keyed by turf coordinate.
 	var/list/cyberpunk_daylight_sources = list()
 	/// Daylight strength per phase.
@@ -148,6 +152,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_last_snapshot = SScyberpunk_round.cyberpunk_round_last_snapshot
 	cyberpunk_round_last_infrastructure = SScyberpunk_round.cyberpunk_round_last_infrastructure
 	cyberpunk_round_last_infrastructure_at = SScyberpunk_round.cyberpunk_round_last_infrastructure_at
+	cyberpunk_round_heavy_metrics_defer_until = SScyberpunk_round.cyberpunk_round_heavy_metrics_defer_until
 	cyberpunk_storyteller_curve = SScyberpunk_round.cyberpunk_storyteller_curve
 	cyberpunk_storyteller_round_plan = SScyberpunk_round.cyberpunk_storyteller_round_plan
 	cyberpunk_round_event_history = SScyberpunk_round.cyberpunk_round_event_history
@@ -172,6 +177,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_storyteller_dynamic_rules_enabled = SScyberpunk_round.cyberpunk_storyteller_dynamic_rules_enabled
 	cyberpunk_daylight_enabled = SScyberpunk_round.cyberpunk_daylight_enabled
 	cyberpunk_daylight_last_phase = null
+	cyberpunk_daylight_defer_until = SScyberpunk_round.cyberpunk_daylight_defer_until
 	cyberpunk_daylight_sources = list()
 
 /datum/controller/subsystem/cyberpunk_round/fire(resumed = 0)
@@ -183,7 +189,10 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	if(!cyberpunk_round_started_at)
 		start_cyberpunk_round_clock()
 	update_cyberpunk_round_clock()
-	update_cyberpunk_daylight()
+	if(world.time >= cyberpunk_daylight_defer_until)
+		update_cyberpunk_daylight()
+	if(world.time < cyberpunk_round_heavy_metrics_defer_until)
+		return
 	if(!cyberpunk_round_last_snapshot_at || world.time >= cyberpunk_round_last_snapshot_at + cyberpunk_round_snapshot_interval)
 		cyberpunk_round_last_snapshot = build_cyberpunk_round_snapshot()
 		cyberpunk_round_last_snapshot_at = world.time
@@ -197,8 +206,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	SScyberpunk_corporations?.ensure_cyberpunk_corporations_seeded()
 	SSeconomy?.ensure_cyberpunk_contract_pool_seeded()
 	cyberpunk_round_last_snapshot_at = 0
-	cyberpunk_round_last_infrastructure = list()
+	cyberpunk_round_last_infrastructure = cyberpunk_round_empty_infrastructure_metrics()
 	cyberpunk_round_last_infrastructure_at = 0
+	cyberpunk_round_heavy_metrics_defer_until = world.time + 45 SECONDS
 	cyberpunk_round_last_storyteller_at = 0
 	cyberpunk_round_event_history = list()
 	cyberpunk_round_active_events = list()
@@ -219,6 +229,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_start_report_announced = FALSE
 	cyberpunk_round_catastrophic_evac_requested = FALSE
 	cyberpunk_round_last_summary = list()
+	cyberpunk_daylight_defer_until = world.time + 90 SECONDS
+	cyberpunk_daylight_last_phase = null
 	ensure_cyberpunk_storyteller_config()
 	cyberpunk_storyteller_rebuild_round_plan()
 	record_cyberpunk_round_event("round_clock_started", "city", "city", 0, "Cyberpunk round clock started.", "completed")
@@ -367,19 +379,36 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_start_report_announced = TRUE
 	var/list/snapshot = cyberpunk_round_last_snapshot
 	if(!length(snapshot))
-		snapshot = build_cyberpunk_round_snapshot()
+		snapshot = build_cyberpunk_round_snapshot(FALSE)
 	var/report = cyberpunk_round_build_start_report(snapshot)
 	priority_announce(report, "Bright City Morning Report", SSstation.announcer.get_rand_report_sound(), sender_override = "Starlight City Network")
 	record_cyberpunk_round_event("start_report", "city_report", "city", cyberpunk_round_chaos, report, "completed")
 
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_russian_cop_word(amount)
+	amount = abs(round(amount))
+	var/last_two = amount % 100
+	if(last_two >= 11 && last_two <= 14)
+		return "копов"
+	switch(amount % 10)
+		if(1)
+			return "коп"
+		if(2 to 4)
+			return "копа"
+	return "копов"
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_report_place(list/snapshot, fallback = "городская подстанция")
+	var/list/districts = islist(snapshot) ? snapshot["districts"] : null
+	if(!length(districts))
+		return fallback
+	var/list/selected = pick(districts)
+	return selected?["name"] || fallback
+
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_build_start_report(list/snapshot)
 	var/dead = snapshot["dead_players"] || 0
-	var/contracts = snapshot["accepted_contracts"] || 0
-	var/businesses = snapshot["businesses"] || 0
-	var/corporations = snapshot["corporation_count"] || 0
-	var/antags = snapshot["active_antags"] || 0
-	var/tax_debt = snapshot["business_tax_debt"] || 0
-	return "Good morning, [station_name()]. City systems report [businesses] registered businesses, [corporations] corporate actors, [contracts] active contracts, [antags] flagged hostile actors, and [dead] confirmed fatalities. Outstanding business tax debt: [tax_debt] cr. Keep the streets moving."
+	var/dead_security = snapshot["dead_security_players"] || 0
+	var/hacked_place = cyberpunk_round_report_place(snapshot, "городская подстанция")
+	var/cyberpsycho_place = cyberpunk_round_report_place(snapshot, "старый жилой сектор")
+	return "Доброе утро, Брайт-Сити! Вчерашний подсчет трупов закончился на крепкой [dead]очке. Спонсоры десятки - неутихающие войны банд по всем районам и очередные благородные решения наших корпораций. Минус [dead_security] [cyberpunk_round_russian_cop_word(dead_security)], так что все готовтесь - правительство по этому поводу ни сделает нихрена. А вот [hacked_place] вчера отрубило свет. Очевидно Нетраннеры решили порезвится в сети. В [cyberpsycho_place] Бэнь отскребает от асльфата очередную жертву киберпсиха. И как обычно, в пустошах без перемен. С вами была ваша любимая Старлайт и я, ведущая Кершни. Добро пожаловать в новый день в городе мечты."
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_build_summary(list/snapshot, reason = "status")
 	if(!snapshot || !length(snapshot))
@@ -539,6 +568,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		return
 	var/stride = max(cyberpunk_daylight_stride, 1)
 	for(var/turf/source_turf as anything in world)
+		CHECK_TICK
 		if(!isopenturf(source_turf))
 			continue
 		if(is_space_or_openspace(source_turf))
@@ -569,6 +599,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/light_color = cyberpunk_daylight_color_by_phase[cyberpunk_round_phase] || "#ffffff"
 	var/list/deleted_sources = list()
 	for(var/source_key in cyberpunk_daylight_sources)
+		CHECK_TICK
 		var/obj/effect/cyberpunk_daylight_source/daylight_source = cyberpunk_daylight_sources[source_key]
 		if(QDELETED(daylight_source))
 			deleted_sources += source_key
@@ -579,6 +610,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 
 /datum/controller/subsystem/cyberpunk_round/proc/clear_cyberpunk_daylight()
 	for(var/source_key in cyberpunk_daylight_sources)
+		CHECK_TICK
 		var/obj/effect/cyberpunk_daylight_source/daylight_source = cyberpunk_daylight_sources[source_key]
 		qdel(daylight_source)
 	cyberpunk_daylight_sources = list()
@@ -591,11 +623,12 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/minute_text = minute < 10 ? "0[minute]" : "[minute]"
 	return "Day [cyberpunk_round_day], [hour_text]:[minute_text] ([cyberpunk_round_phase_name])"
 
-/datum/controller/subsystem/cyberpunk_round/proc/build_cyberpunk_round_snapshot()
+/datum/controller/subsystem/cyberpunk_round/proc/build_cyberpunk_round_snapshot(include_infrastructure = TRUE)
 	update_cyberpunk_round_clock()
 	var/player_count = 0
 	var/living_players = 0
 	var/dead_players = 0
+	var/dead_security_players = 0
 	var/critical_players = 0
 	var/total_player_damage = 0
 	var/security_players = 0
@@ -619,6 +652,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		if(player_job)
 			if(player_job.departments_bitflags & DEPARTMENT_BITFLAG_SECURITY)
 				security_players++
+				if(living_player.stat == DEAD)
+					dead_security_players++
 			if(player_job.departments_bitflags & DEPARTMENT_BITFLAG_COMMAND)
 				command_players++
 			if(player_job.departments_bitflags & DEPARTMENT_BITFLAG_MEDICAL)
@@ -750,7 +785,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			"active_edicts" = length(corporation.active_edicts),
 		))
 
-	var/list/infrastructure = cyberpunk_round_get_infrastructure_metrics()
+	var/list/infrastructure = include_infrastructure ? cyberpunk_round_get_infrastructure_metrics() : cyberpunk_round_light_infrastructure_metrics()
 
 	return list(
 		"clock" = cyberpunk_round_clock_text(),
@@ -766,6 +801,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"player_count" = player_count,
 		"living_players" = living_players,
 		"dead_players" = dead_players,
+		"dead_security_players" = dead_security_players,
 		"critical_players" = critical_players,
 		"total_player_damage" = total_player_damage,
 		"security_players" = security_players,
@@ -841,8 +877,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_last_infrastructure_at = world.time
 	return cyberpunk_round_last_infrastructure
 
-/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_build_infrastructure_metrics()
-	var/list/result = list(
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_empty_infrastructure_metrics()
+	return list(
 		"district_count" = 0,
 		"districts" = list(),
 		"damaged_districts" = 0,
@@ -868,9 +904,18 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"cyber_nodes_weak" = 0,
 		"cyber_net_data" = 0,
 	)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_light_infrastructure_metrics()
+	if(length(cyberpunk_round_last_infrastructure))
+		return cyberpunk_round_last_infrastructure
+	return cyberpunk_round_empty_infrastructure_metrics()
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_build_infrastructure_metrics()
+	var/list/result = cyberpunk_round_empty_infrastructure_metrics()
 	var/list/districts = list()
 	if(length(GLOB.the_station_areas))
 		for(var/area_type as anything in GLOB.the_station_areas)
+			CHECK_TICK
 			var/area/station_area = GLOB.areas_by_type[area_type]
 			if(!station_area)
 				continue
@@ -894,6 +939,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	result["districts"] = districts
 
 	for(var/obj/machinery/telecomms/telecom_machine as anything in GLOB.telecomm_machines)
+		CHECK_TICK
 		if(!telecom_machine)
 			continue
 		result["telecomms_total"]++
@@ -902,6 +948,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 
 	if(SSmachines)
 		for(var/datum/powernet/powernet as anything in SSmachines.powernets)
+			CHECK_TICK
 			if(!powernet)
 				continue
 			result["powernet_count"]++
@@ -915,6 +962,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/list/datum/cyberspace_node/cyber_nodes = build_cyberspace_nodes_from_candidates(cyber_objects)
 	result["cyber_nodes"] = length(cyber_nodes)
 	for(var/datum/cyberspace_node/node as anything in cyber_nodes)
+		CHECK_TICK
 		if(!node)
 			continue
 		var/integrity_percent = node.get_protection_integrity_percent()
@@ -944,6 +992,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"pressure" = 0,
 	)
 	for(var/turf/station_turf as anything in station_area.get_turfs_from_all_zlevels())
+		CHECK_TICK
 		if(!station_turf)
 			continue
 		district["turfs"]++
@@ -1294,9 +1343,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		return 1
 	var/multiplier = 1
 	var/list/tags = package["tags"]
-	if("security" in tags || "escalation" in tags)
+	if(("security" in tags) || ("escalation" in tags))
 		multiplier *= profile["combat_weight"] || 1
-	if("economy" in tags || "contracts" in tags)
+	if(("economy" in tags) || ("contracts" in tags))
 		multiplier *= profile["economy_weight"] || 1
 	if("network" in tags)
 		multiplier *= profile["network_weight"] || 1
@@ -1569,7 +1618,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			start_cyberpunk_round_clock()
 		update_cyberpunk_round_clock()
 	if(!length(cyberpunk_round_last_snapshot) || world.time >= cyberpunk_round_last_snapshot_at + cyberpunk_round_snapshot_interval)
-		cyberpunk_round_last_snapshot = build_cyberpunk_round_snapshot()
+		cyberpunk_round_last_snapshot = build_cyberpunk_round_snapshot(FALSE)
 		cyberpunk_round_last_snapshot_at = world.time
 	var/list/profile = cyberpunk_storyteller_profile_options[cyberpunk_storyteller_profile] || cyberpunk_storyteller_profile_options["balanced"]
 	var/min_gap = cyberpunk_storyteller_min_event_gap * (profile ? (profile["gap_multiplier"] || 1) : 1)
@@ -1653,7 +1702,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			cyberpunk_storyteller_profile = profile_id
 			cyberpunk_storyteller_curve = cyberpunk_storyteller_build_curve()
 			cyberpunk_storyteller_rebuild_round_plan()
-			cyberpunk_round_storyteller_candidates = build_cyberpunk_storyteller_candidates(cyberpunk_round_last_snapshot || build_cyberpunk_round_snapshot())
+			cyberpunk_round_storyteller_candidates = build_cyberpunk_storyteller_candidates(cyberpunk_round_last_snapshot || build_cyberpunk_round_snapshot(FALSE))
 			return TRUE
 		if("toggle_daylight")
 			cyberpunk_daylight_enabled = !cyberpunk_daylight_enabled

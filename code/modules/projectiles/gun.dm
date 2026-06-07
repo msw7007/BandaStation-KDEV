@@ -364,15 +364,17 @@
 		balloon_alert(user, "вы не можете держать себя на прицеле!")
 		return ITEM_INTERACT_BLOCKING
 
-	if(do_after(user, 0.5 SECONDS, interacting_with))
+	var/aim_flags = user.can_cyberpunk_move_while_aiming(src) ? IGNORE_USER_LOC_CHANGE : NONE
+	if(do_after(user, 0.5 SECONDS * user.get_cyberpunk_gunpoint_time_multiplier(src), interacting_with, timed_action_flags = aim_flags))
 		user.AddComponent(/datum/component/gunpoint, interacting_with, src)
+		user.reward_character_check_experience(SKILL_PRECISE_WEAPON, 3, FALSE, 1)
 	return ITEM_INTERACT_SUCCESS
 
 /obj/item/gun/ranged_interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	return try_fire_gun(interacting_with, user, list2params(modifiers))
 
 /obj/item/gun/ranged_interact_with_atom_secondary(atom/interacting_with, mob/living/user, list/modifiers)
-	if(IN_GIVEN_RANGE(user, interacting_with, GUNPOINT_SHOOTER_STRAY_RANGE))
+	if(IN_GIVEN_RANGE(user, interacting_with, user.get_cyberpunk_gunpoint_range(src)))
 		return interact_with_atom_secondary(interacting_with, user, modifiers)
 	return ..()
 
@@ -560,6 +562,7 @@
 	var/randomized_bonus_spread = rand(base_bonus_spread, bonus_spread)
 	var/randomized_gun_spread = spread ? rand(0, spread) : 0
 	var/total_random_spread = max(0, randomized_bonus_spread + randomized_gun_spread)
+	total_random_spread = round(total_random_spread * (user?.get_cyberpunk_gun_spread_multiplier(src) || 1))
 	var/burst_spread_mult = rand()
 
 	var/modified_burst_delay = burst_delay
@@ -567,6 +570,11 @@
 	if(user && HAS_TRAIT(user, TRAIT_DOUBLE_TAP))
 		modified_burst_delay = ROUND_UP(burst_delay * 0.5)
 		modified_fire_delay = ROUND_UP(fire_delay * 0.5)
+	if(user)
+		modified_burst_delay = ROUND_UP(modified_burst_delay * user.get_cyberpunk_gun_fire_delay_multiplier(src))
+		modified_fire_delay = ROUND_UP(modified_fire_delay * user.get_cyberpunk_gun_fire_delay_multiplier(src))
+		if(user.roll_cyberpunk_weapon_free_repeat(src))
+			modified_fire_delay = 0
 
 	if(burst_size > 1)
 		firing_burst = TRUE

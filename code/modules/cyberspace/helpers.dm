@@ -28,6 +28,7 @@
 	var/list/nodes = list()
 	var/list/grouped_nodes = list()
 	for(var/atom/movable/candidate as anything in candidates)
+		CHECK_TICK
 		if(!candidate)
 			continue
 		var/trace_only = is_cyberspace_trace_object(candidate)
@@ -61,12 +62,15 @@
 /proc/collect_all_cyberspace_network_objects()
 	var/list/candidates = list()
 	for(var/obj/machinery/machine as anything in SSmachines.get_all_machines())
+		CHECK_TICK
 		if(is_cyberspace_network_object(machine) && is_cyberspace_source_z_level(machine.z))
 			candidates |= machine
 	for(var/mob/living/living_mob as anything in GLOB.mob_living_list)
+		CHECK_TICK
 		if(is_cyberspace_network_object(living_mob) && is_cyberspace_source_z_level(living_mob.z))
 			candidates |= living_mob
 	for(var/obj/item/organ/cyberimp/implant as anything in world)
+		CHECK_TICK
 		if(is_cyberspace_network_object(implant) && is_cyberspace_source_z_level(implant.z))
 			candidates |= implant
 	return candidates
@@ -80,6 +84,7 @@
 			continue
 		var/list/area_turfs = get_area_turfs(origin_area.type, z_level)
 		for(var/turf/area_turf as anything in area_turfs)
+			CHECK_TICK
 			for(var/atom/movable/candidate as anything in area_turf)
 				if(is_cyberspace_network_object(candidate))
 					candidates += candidate
@@ -100,6 +105,7 @@
 	var/list/merged_nodes = list()
 	var/list/spatial_buckets = list()
 	for(var/datum/cyberspace_node/current_node as anything in nodes)
+		CHECK_TICK
 		if(!current_node)
 			continue
 		var/datum/cyberspace_node/merge_candidate = find_cyberspace_node_merge_candidate(current_node, spatial_buckets)
