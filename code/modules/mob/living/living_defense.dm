@@ -428,8 +428,6 @@
 			visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] хватает [declent_ru(ACCUSATIVE)] за шею!"),\
 							span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] хватает вас за шею!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
 			to_chat(user, span_danger("Вы хватаете [declent_ru(ACCUSATIVE)] за шею!"))
-			if(!buckled && !density)
-				Move(user.loc)
 		if(GRAB_KILL)
 			log_combat(user, src, "strangled", addition="kill grab")
 			visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает душить [declent_ru(ACCUSATIVE)]!"), \
