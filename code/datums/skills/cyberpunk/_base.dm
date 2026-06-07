@@ -649,15 +649,19 @@
 		if("furniture_throw", "limb_slam")
 			return TRUE
 		if("wrestling_launch")
-			return get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
+			// TODO CYBERPUNK TESTING: restore before release: get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
+			return TRUE
 		if("special_limb")
-			return get_character_perk_rank(SKILL_PRECISE_UNARMED, 2) > 0
+			// TODO CYBERPUNK TESTING: restore before release: get_character_perk_rank(SKILL_PRECISE_UNARMED, 2) > 0
+			return TRUE
 		if("choke")
 			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
 		if("neck_throw", "spine_knee")
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0
+			// TODO CYBERPUNK TESTING: restore before release: && get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
 		if("neck_back_slam")
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK && get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
+			// TODO CYBERPUNK TESTING: restore before release: && get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
 	return FALSE
 
 /mob/living/proc/try_cyberpunk_grapple_attack(mob/living/target, list/modifiers)
