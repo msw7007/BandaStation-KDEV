@@ -637,15 +637,94 @@
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_grapple_control_bonus()
-	return max(
-		get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 1),
-		get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 5),
-	)
+	if(grab_state == GRAB_AGGRESSIVE)
+		return get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 5)
+	return 0
+
+/mob/living/proc/get_cyberpunk_grapple_power_damage_multiplier()
+	var/damage_bonus = grab_state >= GRAB_TWOHANDED ? get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 2, "value_2") : get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 2, "value_1")
+	return 1 + damage_bonus * 0.01
+
+/mob/living/proc/cyberpunk_grapple_suplex_self_save()
+	return prob(get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 6, "value_2"))
+
+/mob/living/proc/get_cyberpunk_grapple_unarmed_damage(zone = BODY_ZONE_CHEST, multiplier = 1)
+	var/base_damage = 10
+	var/obj/item/bodypart/active_part = get_active_hand()
+	if(active_part)
+		base_damage = max(1, round((active_part.unarmed_damage_low + active_part.unarmed_damage_high) * 0.5))
+	return round(base_damage * get_cyberpunk_unarmed_damage_multiplier() * multiplier)
+
+/mob/living/proc/get_cyberpunk_grapple_trip_chance()
+	switch(grab_state)
+		if(GRAB_PASSIVE)
+			return 10
+		if(GRAB_AGGRESSIVE)
+			return 30
+		if(GRAB_TWOHANDED to GRAB_KILL)
+			return 50
+	return 0
+
+/mob/living/proc/get_cyberpunk_grapple_disarm_chance()
+	switch(grab_state)
+		if(GRAB_PASSIVE)
+			return 20
+		if(GRAB_AGGRESSIVE)
+			return 40
+		if(GRAB_TWOHANDED to GRAB_KILL)
+			return 60
+	return 0
+
+/mob/living/proc/get_cyberpunk_grapple_action_bonus()
+	if(grab_state == GRAB_AGGRESSIVE)
+		return get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 5)
+	return 0
+
+/mob/living/proc/roll_cyberpunk_grapple_action_success(mob/living/target, base_chance)
+	if(!istype(target))
+		return FALSE
+	var/grapple_check = get_character_skill_level(SKILL_GRAPPLING)
+	var/fortitude_check = target.get_character_skill_level(SKILL_FORTITUDE)
+	var/chance = base_chance + ((grapple_check - fortitude_check) * 10) + get_cyberpunk_grapple_action_bonus()
+	return prob(clamp(chance, 5, 95))
+
+/mob/living/proc/try_cyberpunk_wrestling_launch_click(atom/target_atom)
+	if(!isturf(target_atom) || !is_cyberpunk_grabbing_living())
+		return FALSE
+	if(!is_cyberpunk_grab_zone_arm() && !is_cyberpunk_grab_zone_torso())
+		if(!is_cyberpunk_grab_zone_arm(zone_selected) && !is_cyberpunk_grab_zone_torso(zone_selected))
+			return FALSE
+	var/mob/living/grappled_target = pulling
+	return perform_cyberpunk_wrestling_launch(grappled_target, target_atom)
+
+/proc/get_cyberpunk_cardinal_dir_between(atom/start, atom/end)
+	if(!start || !end)
+		return NONE
+	var/delta_x = end.x - start.x
+	var/delta_y = end.y - start.y
+	if(abs(delta_x) >= abs(delta_y) && delta_x)
+		return delta_x > 0 ? EAST : WEST
+	if(delta_y)
+		return delta_y > 0 ? NORTH : SOUTH
+	return NONE
+
+/atom/proc/is_cyberpunk_grapple_hard_target()
+	return density
+
+/turf/closed/is_cyberpunk_grapple_hard_target()
+	return TRUE
+
+/obj/structure/is_cyberpunk_grapple_hard_target()
+	return TRUE
+
+/obj/machinery/is_cyberpunk_grapple_hard_target()
+	return TRUE
+
+/mob/living/is_cyberpunk_grapple_hard_target()
+	return TRUE
 
 /mob/living/proc/can_cyberpunk_grapple_action(mob/living/target, action, zone = null)
 	if(!target || pulling != target || grab_state < GRAB_AGGRESSIVE)
-		return FALSE
-	if(action != "limb_slam" && !combat_mode)
 		return FALSE
 	switch(action)
 		if("furniture_throw", "limb_slam")
@@ -655,34 +734,183 @@
 			return TRUE
 		if("special_limb")
 			// TODO CYBERPUNK TESTING: restore before release: get_character_perk_rank(SKILL_PRECISE_UNARMED, 2) > 0
-			return TRUE
+			return combat_mode
 		if("choke")
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_TWOHANDED
 		if("neck_throw", "spine_knee")
 			// TODO CYBERPUNK TESTING: restore before release: && get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_TWOHANDED
 		if("neck_back_slam")
 			// TODO CYBERPUNK TESTING: restore before release: && get_character_perk_rank(SKILL_GRAPPLING, 2) > 0
-			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_NECK
+			return zone == BODY_ZONE_PRECISE_NECK && grab_state >= GRAB_TWOHANDED
 	return FALSE
 
 /mob/living/proc/try_cyberpunk_grapple_attack(mob/living/target, list/modifiers)
-	if(!target || pulling != target || grab_state < GRAB_AGGRESSIVE || !combat_mode)
+	if(!target || pulling != target)
 		return FALSE
 	var/zone = zone_selected
 	if(!zone)
 		zone = BODY_ZONE_CHEST
+	if(LAZYACCESS(modifiers, CTRL_CLICK) && is_cyberpunk_grab_zone_head(cyberpunk_grab_zone))
+		return perform_cyberpunk_neck_choke(target)
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK))
-		if(grab_state >= GRAB_NECK)
+		if(grab_state >= GRAB_TWOHANDED)
 			return perform_cyberpunk_spine_knee(target)
 		return FALSE
 	if(LAZYACCESS(modifiers, RIGHT_CLICK))
-		if(grab_state >= GRAB_NECK)
-			return perform_cyberpunk_neck_back_slam(target)
+		if(is_cyberpunk_grab_zone_torso(cyberpunk_grab_zone) && is_cyberpunk_grab_zone_torso(zone))
+			if(grab_state >= GRAB_AGGRESSIVE && combat_mode && move_intent == MOVE_INTENT_RUN)
+				return perform_cyberpunk_grapple_pounce(target)
+			return FALSE
+		if(is_cyberpunk_grab_zone_arm(cyberpunk_grab_zone) && is_cyberpunk_grab_zone_arm(zone))
+			return perform_cyberpunk_grapple_disarm(target)
+		if(!is_cyberpunk_grab_zone_leg(cyberpunk_grab_zone) && is_cyberpunk_grab_zone_leg(zone))
+			return perform_cyberpunk_grapple_trip(target)
+		if(is_cyberpunk_grab_zone_head(cyberpunk_grab_zone))
+			return perform_cyberpunk_grapple_head_control(target)
+		if(grab_state >= GRAB_TWOHANDED)
+			return perform_cyberpunk_german_suplex(target)
 		return perform_cyberpunk_grapple_special(target, zone)
-	if(grab_state >= GRAB_NECK)
+	if(grab_state >= GRAB_TWOHANDED)
 		return perform_cyberpunk_neck_choke(target)
 	return FALSE
+
+/mob/living/proc/perform_cyberpunk_grapple_table_drop(mob/living/target, obj/structure/table/table)
+	if(!istype(table) || !target || pulling != target)
+		return FALSE
+	if(grab_state >= GRAB_AGGRESSIVE)
+		return perform_cyberpunk_grapple_hard_impact(target, table)
+	if(combat_mode)
+		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] shoves [target.declent_ru(ACCUSATIVE)] onto [table.declent_ru(ACCUSATIVE)]!"), span_danger("You shove [target.declent_ru(ACCUSATIVE)] onto [table.declent_ru(ACCUSATIVE)]!"), null, COMBAT_MESSAGE_RANGE, target)
+		target.forceMove(table.loc)
+		target.Knockdown(2 SECONDS)
+		target.apply_damage(round(20 * get_cyberpunk_grapple_power_damage_multiplier()), STAMINA)
+		stop_pulling()
+		return TRUE
+	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] places [target.declent_ru(ACCUSATIVE)] onto [table.declent_ru(ACCUSATIVE)]."), span_notice("You place [target.declent_ru(ACCUSATIVE)] onto [table.declent_ru(ACCUSATIVE)]."))
+	target.forceMove(table.loc)
+	target.set_resting(TRUE, TRUE)
+	stop_pulling()
+	return TRUE
+
+/mob/living/proc/perform_cyberpunk_grapple_drop_onto(mob/living/target, atom/solid)
+	if(!target || pulling != target || !solid)
+		return FALSE
+	if(isturf(solid) && !combat_mode)
+		var/turf/closed/wall = solid
+		if(istype(wall))
+			return perform_cyberpunk_grapple_wall_pin(target, wall)
+	if(combat_mode && solid.is_cyberpunk_grapple_hard_target())
+		return perform_cyberpunk_grapple_hard_impact(target, solid)
+	return FALSE
+
+/mob/living/proc/perform_cyberpunk_grapple_wall_pin(mob/living/target, turf/closed/wall)
+	if(!istype(wall))
+		return FALSE
+	var/old_grab_state = grab_state
+	var/old_grab_zone = cyberpunk_grab_zone
+	var/old_grab_durability = cyberpunk_grab_durability
+	var/old_grab_max_durability = cyberpunk_grab_max_durability
+	var/turf/user_turf = get_turf(src)
+	var/turf/pin_turf
+	var/best_dist = 999
+	for(var/check_dir in GLOB.cardinals)
+		var/turf/candidate = get_step(wall, check_dir)
+		if(!candidate || candidate.density)
+			continue
+		var/candidate_dist = get_dist(user_turf, candidate)
+		if(candidate_dist >= best_dist)
+			continue
+		pin_turf = candidate
+		best_dist = candidate_dist
+	if(!pin_turf)
+		pin_turf = user_turf
+	if(!pin_turf)
+		return FALSE
+	var/wall_dir = get_dir(pin_turf, wall)
+	if(!wall_dir || ISDIAGONALDIR(wall_dir))
+		return FALSE
+	forceMove(pin_turf)
+	target.forceMove(pin_turf)
+	restore_cyberpunk_grapple_after_positioning(target, old_grab_state, old_grab_zone, old_grab_durability, old_grab_max_durability)
+	reset_pull_offsets(target, TRUE)
+	target.setDir(REVERSE_DIR(wall_dir))
+	target.start_leaning(wall, 11)
+	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] pins [target.declent_ru(ACCUSATIVE)] against [wall.declent_ru(ACCUSATIVE)]."), span_warning("You pin [target.declent_ru(ACCUSATIVE)] against [wall.declent_ru(ACCUSATIVE)]."), null, COMBAT_MESSAGE_RANGE, target)
+	target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+	log_combat(src, target, "wall pinned", null, "against [wall]")
+	return TRUE
+
+/mob/living/proc/perform_cyberpunk_grapple_self_drag(mob/living/target)
+	if(!target || pulling != target || !is_cyberpunk_grab_zone_torso())
+		return FALSE
+	if(!ishuman(src) || !iscarbon(target) || buckled || target.buckled)
+		return FALSE
+	var/mob/living/carbon/human/carrier = src
+	var/mob/living/carbon/carried = target
+	var/carry_mode
+	var/buckle_flags = CARRIER_NEEDS_ARM
+	var/lying_angle = (dir & (EAST|WEST)) ? LYING_ANGLE_EAST : LYING_ANGLE_WEST
+	if(grab_state >= GRAB_TWOHANDED)
+		carry_mode = "living_shield"
+		buckle_flags = NONE
+		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] turns [target.declent_ru(ACCUSATIVE)] into a living shield!"), span_danger("You turn [target.declent_ru(ACCUSATIVE)] into a living shield!"), null, COMBAT_MESSAGE_RANGE, target)
+		carried.set_resting(FALSE, TRUE)
+	else if(grab_state >= GRAB_AGGRESSIVE)
+		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] hauls [target.declent_ru(ACCUSATIVE)] onto a shoulder!"), span_danger("You haul [target.declent_ru(ACCUSATIVE)] onto your shoulder!"), null, COMBAT_MESSAGE_RANGE, target)
+		carried.set_lying_down(lying_angle)
+	else
+		carry_mode = "front_carry"
+		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] lifts [target.declent_ru(ACCUSATIVE)] into their arms."), span_notice("You lift [target.declent_ru(ACCUSATIVE)] into your arms."), null, COMBAT_MESSAGE_RANGE, target)
+		carried.set_lying_down(lying_angle)
+	carrier.cyberpunk_carry_mode = carry_mode
+	if(!carrier.buckle_mob(carried, TRUE, TRUE, buckle_flags))
+		carrier.cyberpunk_carry_mode = null
+		return FALSE
+	if(carrier.pulling == carried)
+		carrier.stop_pulling()
+	if(carry_mode == "living_shield")
+		carrier.buckle_lying = 0
+		carried.set_resting(FALSE, TRUE)
+	return TRUE
+
+/mob/living/proc/restore_cyberpunk_grapple_after_positioning(mob/living/target, old_grab_state, old_grab_zone, old_grab_durability, old_grab_max_durability)
+	if(!istype(target) || QDELETED(target))
+		return FALSE
+	pulling = target
+	target.set_pulledby(src)
+	setGrabState(old_grab_state)
+	cyberpunk_grab_zone = old_grab_zone
+	cyberpunk_grab_durability = old_grab_durability
+	cyberpunk_grab_max_durability = old_grab_max_durability
+	update_cyberpunk_grab_hold_items()
+	update_pull_movespeed()
+	update_pull_hud_icon()
+	return TRUE
+
+/mob/living/proc/perform_cyberpunk_grapple_hard_impact(mob/living/target, atom/solid)
+	if(!solid || !target || pulling != target)
+		return FALSE
+	var/zone = cyberpunk_grab_zone || zone_selected || BODY_ZONE_CHEST
+	var/damage_multiplier = get_cyberpunk_grapple_power_damage_multiplier()
+	if(is_cyberpunk_grab_zone_torso(zone))
+		damage_multiplier *= 0.5
+	var/brute_damage = round(18 * damage_multiplier)
+	var/stamina_damage = round(35 * damage_multiplier)
+	var/obj/item/bodypart/impacted = target.get_bodypart(zone) || target.get_bodypart(BODY_ZONE_CHEST)
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] slams [target.declent_ru(ACCUSATIVE)] against [solid.declent_ru(ACCUSATIVE)]!"), span_danger("You slam [target.declent_ru(ACCUSATIVE)] against [solid.declent_ru(ACCUSATIVE)]!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.apply_damage(brute_damage, BRUTE, impacted)
+	target.apply_damage(stamina_damage, STAMINA)
+	apply_cyberpunk_grapple_limb_impact_effect(target, zone)
+	if(is_cyberpunk_grab_zone_mouth(zone) && ishuman(target))
+		var/mob/living/carbon/human/human_target = target
+		human_target.force_say()
+	if(ismovable(solid))
+		var/atom/movable/movable_solid = solid
+		movable_solid.take_damage(max(5, brute_damage))
+	playsound(target, 'sound/effects/bang.ogg', 80, TRUE)
+	log_combat(src, target, "grapple slammed", null, "against [solid]")
+	return TRUE
 
 /mob/living/proc/perform_cyberpunk_grapple_furniture_throw(mob/living/target, obj/structure/furniture)
 	if(!istype(furniture) || !can_cyberpunk_grapple_action(target, "furniture_throw"))
@@ -692,14 +920,16 @@
 	var/turf/destination = get_turf(furniture)
 	if(!destination)
 		return FALSE
-	target.throw_at(destination, max(1, get_dist(target, destination)), 2, src, spin = TRUE, force = MOVE_FORCE_STRONG, callback = CALLBACK(src, PROC_REF(finish_cyberpunk_grapple_furniture_throw), target, furniture))
+	var/damage_multiplier = get_cyberpunk_grapple_power_damage_multiplier()
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] throws [target.declent_ru(ACCUSATIVE)] into [furniture.declent_ru(ACCUSATIVE)]!"), span_danger("You throw [target.declent_ru(ACCUSATIVE)] into [furniture.declent_ru(ACCUSATIVE)]!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.throw_at(destination, max(1, get_dist(target, destination)), 2, src, spin = TRUE, force = MOVE_FORCE_STRONG, callback = CALLBACK(src, PROC_REF(finish_cyberpunk_grapple_furniture_throw), target, furniture, damage_multiplier))
 	apply_cyberpunk_grapple_limb_impact_effect(target, zone_selected)
-	target.apply_damage(20, STAMINA)
+	target.apply_damage(round(20 * damage_multiplier), STAMINA)
 	stop_pulling()
 	log_combat(src, target, "grapple threw", null, "onto [furniture]")
 	return TRUE
 
-/mob/living/proc/finish_cyberpunk_grapple_furniture_throw(mob/living/target, obj/structure/furniture)
+/mob/living/proc/finish_cyberpunk_grapple_furniture_throw(mob/living/target, obj/structure/furniture, damage_multiplier = 1)
 	if(QDELETED(target) || QDELETED(furniture))
 		return FALSE
 	var/turf/furniture_turf = get_turf(furniture)
@@ -707,7 +937,7 @@
 		return FALSE
 	target.forceMove(furniture_turf)
 	target.Knockdown(2 SECONDS)
-	target.apply_damage(12, BRUTE)
+	target.apply_damage(round(12 * damage_multiplier), BRUTE)
 	if(istype(furniture, /obj/structure/chair) || istype(furniture, /obj/structure/bed))
 		furniture.buckle_mob(target, force = TRUE, check_loc = FALSE)
 	else if(istype(furniture, /obj/structure/table))
@@ -717,21 +947,92 @@
 /mob/living/proc/perform_cyberpunk_wrestling_launch(mob/living/target, turf/destination)
 	if(!istype(destination) || !can_cyberpunk_grapple_action(target, "wrestling_launch"))
 		return FALSE
-	target.throw_at(destination, max(1, get_dist(target, destination)), 2, src, spin = TRUE, force = MOVE_FORCE_STRONG)
-	target.Knockdown(2 SECONDS)
-	target.apply_damage(30, STAMINA)
-	if(prob(35))
-		Knockdown(1 SECONDS)
+	if(!roll_cyberpunk_grapple_action_success(target, 50))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to launch [target.declent_ru(ACCUSATIVE)] from the grab."), span_warning("You fail to launch [target.declent_ru(ACCUSATIVE)] from the grab."), null, COMBAT_MESSAGE_RANGE, target)
+		log_combat(src, target, "attempted wrestling launch")
+		return TRUE
+	var/launch_dir = get_cyberpunk_cardinal_dir_between(target, destination)
+	if(!launch_dir)
+		launch_dir = get_cyberpunk_cardinal_dir_between(src, destination)
+	if(!launch_dir)
+		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] forces [target.declent_ru(ACCUSATIVE)] into a stumbling wrestling run!"), span_danger("You force [target.declent_ru(ACCUSATIVE)] into a wrestling run!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.cyberpunk_wrestling_launch_dir = launch_dir
+	target.cyberpunk_wrestling_launch_rebounded = FALSE
+	target.cyberpunk_wrestling_launch_until = world.time + 4 SECONDS
 	stop_pulling()
+	target.setDir(launch_dir)
+	target.continue_cyberpunk_wrestling_launch(src, launch_dir, 6, FALSE)
 	log_combat(src, target, "wrestling launched")
+	return TRUE
+
+/mob/living/proc/continue_cyberpunk_wrestling_launch(mob/living/launcher, launch_dir, steps_left, rebounded)
+	if(QDELETED(src) || stat == DEAD || steps_left <= 0 || !launch_dir)
+		cyberpunk_wrestling_launch_until = max(cyberpunk_wrestling_launch_until, world.time + 2 SECONDS)
+		return
+	cyberpunk_wrestling_launch_dir = launch_dir
+	cyberpunk_wrestling_launch_rebounded = rebounded
+	cyberpunk_wrestling_launch_until = world.time + 2 SECONDS
+	var/turf/current_turf = get_turf(src)
+	var/turf/next_turf = get_step(current_turf, launch_dir)
+	if(!next_turf)
+		finish_cyberpunk_wrestling_launch_impact(launcher, current_turf, rebounded)
+		return
+	if(next_turf.density)
+		if(!rebounced_cyberpunk_wrestling_launch_from_wall(launcher, next_turf, launch_dir, rebounded))
+			finish_cyberpunk_wrestling_launch_impact(launcher, next_turf, rebounded)
+		return
+	for(var/atom/movable/blocker as anything in next_turf)
+		if(blocker == src)
+			continue
+		if(blocker.density && !blocker.CanPass(src, launch_dir))
+			finish_cyberpunk_wrestling_launch_impact(launcher, blocker, rebounded)
+			return
+	if(!Move(next_turf, launch_dir))
+		finish_cyberpunk_wrestling_launch_impact(launcher, next_turf, rebounded)
+		return
+	setDir(launch_dir)
+	addtimer(CALLBACK(src, PROC_REF(continue_cyberpunk_wrestling_launch), launcher, launch_dir, steps_left - 1, rebounded), 0.2 SECONDS)
+
+/mob/living/proc/rebounced_cyberpunk_wrestling_launch_from_wall(mob/living/launcher, turf/hit_wall, launch_dir, rebounded)
+	if(rebounded || !istype(hit_wall, /turf/closed))
+		return FALSE
+	var/rebound_dir = REVERSE_DIR(launch_dir)
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] rebounds from [hit_wall.declent_ru(ACCUSATIVE)] and staggers back!"), span_userdanger("You hit [hit_wall.declent_ru(ACCUSATIVE)] and rebound back!"))
+	setDir(rebound_dir)
+	addtimer(CALLBACK(src, PROC_REF(continue_cyberpunk_wrestling_launch), launcher, rebound_dir, 6, TRUE), 0.2 SECONDS)
+	return TRUE
+
+/mob/living/proc/finish_cyberpunk_wrestling_launch_impact(mob/living/launcher, atom/impact_target, rebounded)
+	cyberpunk_wrestling_launch_until = max(cyberpunk_wrestling_launch_until, world.time + 2 SECONDS)
+	Knockdown(2 SECONDS)
+	var/damage = 10
+	if(istype(launcher))
+		damage = launcher.get_attribute_value(ATTRIBUTE_STRENGTH) + launcher.get_cyberpunk_grapple_unarmed_damage(BODY_ZONE_HEAD)
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] crashes head-first into [impact_target.declent_ru(ACCUSATIVE)]!"), span_userdanger("You crash head-first into [impact_target.declent_ru(ACCUSATIVE)]!"))
+	apply_damage(damage, BRUTE, BODY_ZONE_HEAD)
+	apply_damage(round(damage * 0.5), STAMINA)
+	log_combat(launcher, src, "wrestling launch impact", null, "against [impact_target]")
+
+/mob/living/proc/try_cyberpunk_wrestling_elbow_check(mob/living/target)
+	if(!target || target.cyberpunk_wrestling_launch_until < world.time)
+		return FALSE
+	if(get_dist(src, target) > 1)
+		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] cuts [target.declent_ru(ACCUSATIVE)] down with an elbow check!"), span_danger("You cut [target.declent_ru(ACCUSATIVE)] down with an elbow check!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.Knockdown(2 SECONDS)
+	target.apply_damage(round(get_cyberpunk_grapple_unarmed_damage(BODY_ZONE_HEAD, 0.75)), STAMINA)
+	target.cyberpunk_wrestling_launch_until = 0
+	target.cyberpunk_wrestling_launch_dir = NONE
+	log_combat(src, target, "elbow checked wrestling launch")
 	return TRUE
 
 /mob/living/proc/perform_cyberpunk_neck_throw(mob/living/target, atom/destination)
 	if(!destination || !can_cyberpunk_grapple_action(target, "neck_throw", BODY_ZONE_PRECISE_NECK))
 		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] throws [target.declent_ru(ACCUSATIVE)] by the neck grip!"), span_danger("You throw [target.declent_ru(ACCUSATIVE)] by the neck grip!"), null, COMBAT_MESSAGE_RANGE, target)
 	target.throw_at(destination, max(1, get_dist(target, destination)), 2, src, spin = TRUE, force = MOVE_FORCE_STRONG)
-	target.Knockdown(2 SECONDS)
-	target.apply_damage(20, STAMINA)
+	target.apply_damage(round(20 * get_cyberpunk_grapple_power_damage_multiplier()), STAMINA)
 	stop_pulling()
 	log_combat(src, target, "neck threw")
 	return TRUE
@@ -740,7 +1041,8 @@
 	if(!can_cyberpunk_grapple_action(target, "limb_slam", zone))
 		return FALSE
 	var/control_bonus = get_cyberpunk_grapple_control_bonus()
-	target.apply_damage(round(10 * (1 + control_bonus * 0.01)), STAMINA)
+	var/damage_multiplier = get_cyberpunk_grapple_power_damage_multiplier()
+	target.apply_damage(round(10 * (1 + control_bonus * 0.01) * damage_multiplier), STAMINA)
 	switch(zone)
 		if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG, BODY_ZONE_PRECISE_L_FOOT, BODY_ZONE_PRECISE_R_FOOT)
 			target.Knockdown(2 SECONDS)
@@ -754,26 +1056,126 @@
 		if(BODY_ZONE_PRECISE_EARS)
 			target.sound_damage(0, 4 SECONDS)
 		if(BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK, BODY_ZONE_HEAD)
-			target.apply_damage(10, STAMINA)
+			target.apply_damage(round(10 * damage_multiplier), STAMINA)
 			target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
 		if(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_ABDOMEN)
-			target.apply_damage(15, STAMINA)
+			target.apply_damage(round(15 * damage_multiplier), STAMINA)
 	return TRUE
 
 /mob/living/proc/perform_cyberpunk_grapple_special(mob/living/target, zone)
 	if(!can_cyberpunk_grapple_action(target, "special_limb", zone))
 		return FALSE
+	if(is_cyberpunk_grab_zone_torso(cyberpunk_grab_zone) && is_cyberpunk_grab_zone_torso(zone))
+		if(grab_state >= GRAB_AGGRESSIVE && combat_mode && move_intent == MOVE_INTENT_RUN)
+			return perform_cyberpunk_grapple_pounce(target)
+		return FALSE
+	if(!roll_cyberpunk_grapple_action_success(target, 50))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to force [target.declent_ru(ACCUSATIVE)] into a painful hold."), span_warning("You fail to force [target.declent_ru(ACCUSATIVE)] into a painful hold."), null, COMBAT_MESSAGE_RANGE, target)
+		log_combat(src, target, "attempted grapple special", null, "zone [zone]")
+		return TRUE
 	apply_cyberpunk_grapple_limb_impact_effect(target, zone)
 	if(zone == BODY_ZONE_CHEST || zone == BODY_ZONE_PRECISE_ABDOMEN)
 		target.Knockdown(1 SECONDS)
-		target.apply_damage(20, STAMINA)
-	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] twists [target.declent_ru(ACCUSATIVE)] in a painful hold!"), span_danger("You twist [target.declent_ru(ACCUSATIVE)] in a painful hold!"), null, COMBAT_MESSAGE_RANGE, target)
+		target.apply_damage(round(20 * get_cyberpunk_grapple_power_damage_multiplier()), STAMINA)
+	var/list/hold_messages = get_cyberpunk_grapple_special_messages(target, zone)
+	visible_message(span_danger(hold_messages[1]), span_danger(hold_messages[2]), null, COMBAT_MESSAGE_RANGE, target)
 	log_combat(src, target, "used grapple special", null, "zone [zone]")
 	return TRUE
 
-/mob/living/proc/perform_cyberpunk_neck_choke(mob/living/target)
-	if(!can_cyberpunk_grapple_action(target, "choke", BODY_ZONE_PRECISE_NECK))
+/mob/living/proc/perform_cyberpunk_grapple_pounce(mob/living/target)
+	if(!target || pulling != target || grab_state < GRAB_AGGRESSIVE || !is_cyberpunk_grab_zone_torso())
 		return FALSE
+	var/pounce_dir = get_dir(src, target)
+	if(!pounce_dir || ISDIAGONALDIR(pounce_dir))
+		pounce_dir = dir
+	var/turf/next_turf = get_step(src, pounce_dir)
+	if(next_turf && !next_turf.is_blocked_turf(source_atom = src))
+		Move(next_turf, pounce_dir)
+	target.forceMove(get_turf(src))
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] drives [target.declent_ru(ACCUSATIVE)] down in a grapple pounce!"), span_danger("You drive [target.declent_ru(ACCUSATIVE)] down in a grapple pounce!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.Knockdown(2 SECONDS, ignore_canstun = TRUE)
+	Knockdown(1 SECONDS, ignore_canstun = TRUE)
+	target.apply_damage(round(25 * get_cyberpunk_grapple_power_damage_multiplier()), STAMINA)
+	stop_pulling()
+	log_combat(src, target, "grapple pounced")
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_grapple_special_messages(mob/living/target, zone)
+	switch(zone)
+		if(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_PRECISE_L_HAND, BODY_ZONE_PRECISE_R_HAND)
+			return list("[capitalize(declent_ru(NOMINATIVE))] wrenches [target.declent_ru(GENITIVE)] arm, forcing the grip open!", "You wrench [target.declent_ru(GENITIVE)] arm and force their grip open!")
+		if(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG, BODY_ZONE_PRECISE_L_FOOT, BODY_ZONE_PRECISE_R_FOOT)
+			return list("[capitalize(declent_ru(NOMINATIVE))] sweeps [target.declent_ru(GENITIVE)] leg out from the grab!", "You sweep [target.declent_ru(GENITIVE)] leg out from the grab!")
+		if(BODY_ZONE_HEAD)
+			return list("[capitalize(declent_ru(NOMINATIVE))] crushes [target.declent_ru(GENITIVE)] head between both hands!", "You crush [target.declent_ru(GENITIVE)] head between your hands!")
+		if(BODY_ZONE_PRECISE_EYES)
+			return list("[capitalize(declent_ru(NOMINATIVE))] digs fingers toward [target.declent_ru(GENITIVE)] eyes!", "You dig your fingers toward [target.declent_ru(GENITIVE)] eyes!")
+		if(BODY_ZONE_PRECISE_EARS)
+			return list("[capitalize(declent_ru(NOMINATIVE))] twists [target.declent_ru(GENITIVE)] ear and breaks their balance!", "You twist [target.declent_ru(GENITIVE)] ear and break their balance!")
+		if(BODY_ZONE_PRECISE_MOUTH)
+			return list("[capitalize(declent_ru(NOMINATIVE))] clamps [target.declent_ru(GENITIVE)] mouth shut in the grab!", "You clamp [target.declent_ru(GENITIVE)] mouth shut in the grab!")
+		if(BODY_ZONE_PRECISE_NECK)
+			return list("[capitalize(declent_ru(NOMINATIVE))] twists [target.declent_ru(GENITIVE)] neck into a painful hold!", "You twist [target.declent_ru(GENITIVE)] neck into a painful hold!")
+		if(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_ABDOMEN)
+			return list("[capitalize(declent_ru(NOMINATIVE))] drives [target.declent_ru(ACCUSATIVE)] down by the torso!", "You drive [target.declent_ru(ACCUSATIVE)] down by the torso!")
+	return list("[capitalize(declent_ru(NOMINATIVE))] twists [target.declent_ru(ACCUSATIVE)] in a painful hold!", "You twist [target.declent_ru(ACCUSATIVE)] in a painful hold!")
+
+/mob/living/proc/perform_cyberpunk_grapple_trip(mob/living/target)
+	if(!target || pulling != target)
+		return FALSE
+	var/chance = get_cyberpunk_grapple_trip_chance()
+	var/damage = round(get_cyberpunk_grapple_unarmed_damage(BODY_ZONE_L_LEG, 0.5) * get_cyberpunk_grapple_power_damage_multiplier())
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] tries to knock [target.declent_ru(ACCUSATIVE)] off balance from the grab!"), span_danger("You try to knock [target.declent_ru(ACCUSATIVE)] off balance from the grab!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.apply_damage(damage, STAMINA)
+	if(roll_cyberpunk_grapple_action_success(target, chance))
+		target.Knockdown(2 SECONDS)
+		to_chat(src, span_danger("You knock [target.declent_ru(ACCUSATIVE)] off balance."))
+		log_combat(src, target, "grapple tripped")
+	else
+		to_chat(src, span_warning("You fail to knock [target.declent_ru(ACCUSATIVE)] off balance."))
+		to_chat(target, span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to knock you off balance."))
+		log_combat(src, target, "attempted grapple trip")
+	return TRUE
+
+/mob/living/proc/perform_cyberpunk_grapple_disarm(mob/living/target)
+	if(!target || pulling != target)
+		return FALSE
+	var/obj/item/held_item = target.get_active_held_item() || target.get_inactive_held_item()
+	if(!held_item)
+		to_chat(src, span_warning("[capitalize(target.declent_ru(NOMINATIVE))] is not holding anything."))
+		return TRUE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] twists [target.declent_ru(GENITIVE)] arm, trying to take [held_item.declent_ru(ACCUSATIVE)]!"), span_danger("You try to take [held_item.declent_ru(ACCUSATIVE)] from [target.declent_ru(GENITIVE)] grip!"), null, COMBAT_MESSAGE_RANGE, target)
+	if(!roll_cyberpunk_grapple_action_success(target, get_cyberpunk_grapple_disarm_chance()))
+		to_chat(src, span_warning("You fail to take [held_item.declent_ru(ACCUSATIVE)] from [target.declent_ru(GENITIVE)] grip."))
+		to_chat(target, span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to take [held_item.declent_ru(ACCUSATIVE)] from your grip."))
+		log_combat(src, target, "attempted grapple disarm", null, "[held_item]")
+		return TRUE
+	if(target.dropItemToGround(held_item, TRUE))
+		if(!put_in_hands(held_item))
+			held_item.forceMove(get_turf(target))
+		to_chat(src, span_danger("You take [held_item.declent_ru(ACCUSATIVE)] from [target.declent_ru(GENITIVE)] grip."))
+		log_combat(src, target, "grapple disarmed", null, "[held_item]")
+	return TRUE
+
+/mob/living/proc/perform_cyberpunk_grapple_head_control(mob/living/target)
+	if(!target || pulling != target)
+		return FALSE
+	if(!roll_cyberpunk_grapple_action_success(target, 50))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to control [target.declent_ru(GENITIVE)] head."), span_warning("You fail to control [target.declent_ru(GENITIVE)] head."), null, COMBAT_MESSAGE_RANGE, target)
+		log_combat(src, target, "attempted grapple head control")
+		return TRUE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] squeezes [target.declent_ru(GENITIVE)] head!"), span_danger("You squeeze [target.declent_ru(GENITIVE)] head!"), null, COMBAT_MESSAGE_RANGE, target)
+	target.sound_damage(0, 5 SECONDS)
+	target.adjust_staggered_up_to(1 SECONDS, 4 SECONDS)
+	if(grab_state >= GRAB_TWOHANDED)
+		target.apply_damage(round(get_cyberpunk_grapple_unarmed_damage(BODY_ZONE_HEAD, 1.1) * get_cyberpunk_grapple_power_damage_multiplier()), BRUTE, BODY_ZONE_HEAD)
+	log_combat(src, target, "grapple head controlled")
+	return TRUE
+
+/mob/living/proc/perform_cyberpunk_neck_choke(mob/living/target)
+	if(!target || pulling != target || !is_cyberpunk_grab_zone_head(cyberpunk_grab_zone))
+		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] chokes [target.declent_ru(ACCUSATIVE)]!"), span_danger("You choke [target.declent_ru(ACCUSATIVE)]!"), null, COMBAT_MESSAGE_RANGE, target)
 	target.apply_damage(12, OXY)
 	target.apply_damage(35, STAMINA)
 	log_combat(src, target, "choked")
@@ -782,24 +1184,51 @@
 /mob/living/proc/perform_cyberpunk_spine_knee(mob/living/target)
 	if(!can_cyberpunk_grapple_action(target, "spine_knee", BODY_ZONE_PRECISE_NECK))
 		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] drives [target.declent_ru(ACCUSATIVE)] spine-first into a knee!"), span_danger("You drive [target.declent_ru(ACCUSATIVE)] spine-first into your knee!"), null, COMBAT_MESSAGE_RANGE, target)
 	target.Stun(2 SECONDS)
-	target.apply_damage(25, STAMINA)
+	target.apply_damage(round(25 * get_cyberpunk_grapple_power_damage_multiplier()), STAMINA)
 	if(prob(65))
 		stop_pulling()
 		Knockdown(1 SECONDS)
 	log_combat(src, target, "kneed spine")
 	return TRUE
 
+/mob/living/proc/perform_cyberpunk_german_suplex(mob/living/target)
+	if(!target || pulling != target || grab_state < GRAB_TWOHANDED || is_cyberpunk_grab_zone_head(cyberpunk_grab_zone))
+		return FALSE
+	if(!roll_cyberpunk_grapple_action_success(target, 50))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to suplex [target.declent_ru(ACCUSATIVE)]."), span_warning("You fail to suplex [target.declent_ru(ACCUSATIVE)]."), null, COMBAT_MESSAGE_RANGE, target)
+		log_combat(src, target, "attempted german suplex")
+		return TRUE
+	var/turf/behind = get_step(src, REVERSE_DIR(dir)) || get_turf(src)
+	if(!behind)
+		return FALSE
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] throws [target.declent_ru(ACCUSATIVE)] backward in a suplex!"), span_danger("You throw [target.declent_ru(ACCUSATIVE)] backward in a suplex!"), null, COMBAT_MESSAGE_RANGE, target)
+	var/old_density = density
+	density = FALSE
+	target.throw_at(behind, max(1, get_dist(target, behind)), 2, src, spin = TRUE, force = MOVE_FORCE_STRONG)
+	target.Knockdown(3 SECONDS)
+	target.apply_damage(round(35 * get_cyberpunk_grapple_power_damage_multiplier()), STAMINA)
+	addtimer(CALLBACK(src, PROC_REF(restore_cyberpunk_grapple_density), old_density), 0.5 SECONDS)
+	stop_pulling()
+	log_combat(src, target, "german suplexed")
+	return TRUE
+
+/mob/living/proc/restore_cyberpunk_grapple_density(old_density)
+	density = old_density
+
 /mob/living/proc/perform_cyberpunk_neck_back_slam(mob/living/target)
 	if(!can_cyberpunk_grapple_action(target, "neck_back_slam", BODY_ZONE_PRECISE_NECK))
 		return FALSE
 	var/turf/behind = get_step(src, REVERSE_DIR(dir)) || get_turf(src)
+	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] slams [target.declent_ru(ACCUSATIVE)] down behind them!"), span_danger("You slam [target.declent_ru(ACCUSATIVE)] down behind you!"), null, COMBAT_MESSAGE_RANGE, target)
 	target.forceMove(behind)
 	setDir(REVERSE_DIR(dir))
 	target.Knockdown(3 SECONDS)
 	Knockdown(2 SECONDS)
-	target.apply_damage(15, BRUTE)
-	target.apply_damage(35, STAMINA)
+	var/damage_multiplier = get_cyberpunk_grapple_power_damage_multiplier()
+	target.apply_damage(round(15 * damage_multiplier), BRUTE)
+	target.apply_damage(round(35 * damage_multiplier), STAMINA)
 	stop_pulling()
 	log_combat(src, target, "neck back slammed")
 	return TRUE

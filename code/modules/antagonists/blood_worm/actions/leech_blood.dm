@@ -87,7 +87,7 @@
 		leech.setGrabState(GRAB_AGGRESSIVE)
 
 	// Flooring the target makes them treat our grab state as one higher, halving their escape chance.
-	// Using a neck grab would reduce their escape chance to a third, which is too low.
+	// Using a two-handed grab would reduce their escape chance to a third, which is too low.
 	ADD_TRAIT(target, TRAIT_FLOORED, REF(src))
 
 	// Prevents NPCs from resisting out of this.

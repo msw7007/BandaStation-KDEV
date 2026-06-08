@@ -154,6 +154,12 @@
 		return FALSE
 	if(mob.pulledby == mob.pulling && mob.pulledby.grab_state == GRAB_PASSIVE) //Don't autoresist passive grabs if we're grabbing them too.
 		return FALSE
+	if(isliving(mob))
+		var/mob/living/living_mob = mob
+		if(living_mob.is_cyberpunk_grabbed_by_leg())
+			COOLDOWN_START(src, move_delay, 1 SECONDS)
+			to_chat(src, span_warning("Your leg is locked in a grab."))
+			return TRUE
 	if(HAS_TRAIT(mob, TRAIT_INCAPACITATED))
 		COOLDOWN_START(src, move_delay, 1 SECONDS)
 		return TRUE

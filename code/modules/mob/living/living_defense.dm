@@ -390,25 +390,31 @@
 			sound_to_play = H.dna.species.grab_sound
 	playsound(src.loc, sound_to_play, 50, TRUE, -1)
 
-	if(user.grab_state) //only the first upgrade is instantaneous
-		var/old_grab_state = user.grab_state
-		var/grab_upgrade_time = instant ? 0 : 30
-		// TODO CYBERPUNK TESTING: restore before release: && user.get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0 to grab_upgrade_time *= 0.5
-		if(user.grab_state == GRAB_AGGRESSIVE)
-			grab_upgrade_time *= 0.5
-		visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на [declent_ru(PREPOSITIONAL)]!"), \
-						span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
-		to_chat(user, span_danger("Вы начинаете усиливать захват на [declent_ru(PREPOSITIONAL)]!"))
-		switch(user.grab_state)
-			if(GRAB_AGGRESSIVE)
-				log_combat(user, src, "attempted to neck grab", addition="neck grab")
-			if(GRAB_NECK)
-				log_combat(user, src, "attempted to strangle", addition="kill grab")
-		if(!do_after(user, grab_upgrade_time, src))
-			return FALSE
-		if(!user.pulling || user.pulling != src || user.grab_state != old_grab_state)
-			return FALSE
+	var/old_grab_state = user.grab_state
+	var/grab_upgrade_time = instant ? 0 : 0.5 SECONDS
+	// TODO CYBERPUNK TESTING: restore before release: && user.get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0 to grab_upgrade_time *= 0.5
+	user.set_cyberpunk_grab_zone(user.zone_selected)
+	visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на [declent_ru(PREPOSITIONAL)]!"), \
+					span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
+	to_chat(user, span_danger("Вы начинаете усиливать захват на [declent_ru(PREPOSITIONAL)]!"))
+	switch(user.grab_state)
+		if(GRAB_AGGRESSIVE)
+			log_combat(user, src, "attempted two-handed grab", addition="two-handed grab")
+		if(GRAB_TWOHANDED)
+			log_combat(user, src, "attempted to strangle", addition="kill grab")
+	if(!do_after(user, grab_upgrade_time, src))
+		return FALSE
+	if(!user.pulling || user.pulling != src || user.grab_state != old_grab_state)
+		return FALSE
+	user.spend_stamina(user.get_cyberpunk_grab_stamina_cost(), "attack", TRUE)
+	if(user.get_cyberpunk_grab_durability_ratio() <= 0.25)
+		return user.reinforce_cyberpunk_grab()
+	if(!user.can_cyberpunk_grab_succeed(src, TRUE))
+		return user.fail_cyberpunk_grab_attempt(src, TRUE)
 	user.setGrabState(user.grab_state + 1)
+	if(!user.update_cyberpunk_grab_hold_items())
+		return FALSE
+	user.try_cyberpunk_grapple_stagger_on_grab(src)
 	switch(user.grab_state)
 		if(GRAB_AGGRESSIVE)
 			var/add_log = ""
@@ -422,11 +428,11 @@
 								span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] агрессивно хватает вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
 				to_chat(user, span_danger("Вы агрессивно хватаете [declent_ru(ACCUSATIVE)]!"))
 			log_combat(user, src, "grabbed", addition="aggressive grab[add_log]")
-		if(GRAB_NECK)
-			log_combat(user, src, "grabbed", addition="neck grab")
-			visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] хватает [declent_ru(ACCUSATIVE)] за шею!"),\
-							span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] хватает вас за шею!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
-			to_chat(user, span_danger("Вы хватаете [declent_ru(ACCUSATIVE)] за шею!"))
+		if(GRAB_TWOHANDED)
+			log_combat(user, src, "grabbed", addition="two-handed grab")
+			visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] locks [declent_ru(ACCUSATIVE)] in a two-handed grab!"),\
+							span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] locks you in a two-handed grab!"), span_hear("You hear an aggressive shuffle!"), null, user)
+			to_chat(user, span_danger("You lock [declent_ru(ACCUSATIVE)] in a two-handed grab!"))
 		if(GRAB_KILL)
 			log_combat(user, src, "strangled", addition="kill grab")
 			visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает душить [declent_ru(ACCUSATIVE)]!"), \

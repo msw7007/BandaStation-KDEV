@@ -159,6 +159,12 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 
 	if(HAS_TRAIT(src, TRAIT_SOFTSPOKEN) && !HAS_TRAIT(src, TRAIT_SIGN_LANG)) // softspoken trait only applies to spoken languages
 		message_mods[WHISPER_MODE] = MODE_WHISPER
+	if(is_cyberpunk_mouth_grabbed(GRAB_AGGRESSIVE) && !forced)
+		to_chat(src, span_warning("You cannot speak with your mouth held shut."))
+		return
+	if(is_cyberpunk_mouth_grabbed() && !forced)
+		message_mods[WHISPER_MODE] = MODE_WHISPER
+		adjust_stutter(2 SECONDS)
 
 	if(client && SSlag_switch.measures[SLOWMODE_SAY] && !HAS_TRAIT(src, TRAIT_BYPASS_MEASURES) && !forced && src == usr)
 		if(!COOLDOWN_FINISHED(client, say_slowmode))

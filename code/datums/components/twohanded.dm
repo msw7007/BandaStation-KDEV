@@ -473,3 +473,38 @@
 	. = ..()
 	if(wielded && !user.is_holding(src) && !QDELETED(src))
 		qdel(src)
+
+/obj/item/cyberpunk_grab_hold
+	name = "grab hold"
+	desc = "This hand is occupied by an active grab."
+	icon = 'icons/obj/weapons/hand.dmi'
+	icon_state = "offhand"
+	w_class = WEIGHT_CLASS_HUGE
+	item_flags = ABSTRACT | DROPDEL | NOBLUDGEON
+	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
+	var/mob/living/holder
+	var/mob/living/grabbed
+	var/power_hold = FALSE
+
+/obj/item/cyberpunk_grab_hold/Initialize(mapload)
+	. = ..()
+	ADD_TRAIT(src, TRAIT_NODROP, ABSTRACT_ITEM_TRAIT)
+
+/obj/item/cyberpunk_grab_hold/Destroy()
+	if(holder?.cyberpunk_grab_hold_item == src)
+		holder.cyberpunk_grab_hold_item = null
+	if(holder?.cyberpunk_grab_power_hold_item == src)
+		holder.cyberpunk_grab_power_hold_item = null
+	holder = null
+	grabbed = null
+	return ..()
+
+/obj/item/cyberpunk_grab_hold/dropped(mob/user, silent = FALSE)
+	if(holder && grabbed && holder.pulling == grabbed)
+		holder.stop_pulling()
+	return ..()
+
+/obj/item/cyberpunk_grab_hold/equipped(mob/user, slot)
+	. = ..()
+	if(holder && loc != holder && !QDELETED(src))
+		qdel(src)

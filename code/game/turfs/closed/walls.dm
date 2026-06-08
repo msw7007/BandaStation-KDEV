@@ -67,6 +67,10 @@
 			return CONTEXTUAL_SCREENTIP_SET
 
 /turf/closed/wall/mouse_drop_receive(atom/dropping, mob/user, params)
+	var/mob/living/living_user = user
+	var/mob/living/living_target = dropping
+	if(istype(living_user) && istype(living_target) && living_user.pulling == living_target && living_user.perform_cyberpunk_grapple_drop_onto(living_target, src))
+		return
 	//Adds the component only once. We do it here & not in Initialize() because there are tons of walls & we don't want to add to their init times
 	LoadComponent(/datum/component/leanable, dropping)
 

@@ -20,7 +20,7 @@
 	if(!owner.pulling || !iscarbon(owner.pulling))
 		owner.balloon_alert(owner, "нужно взять в захват!")
 		return
-	if(owner.grab_state <= GRAB_NECK)
+	if(owner.grab_state <= GRAB_TWOHANDED)
 		owner.balloon_alert(owner, "нужно усилить захват!")
 		return
 

@@ -15,7 +15,12 @@
  * (Potentially) gives feedback to the mob if they cannot.
  */
 /mob/living/proc/can_unarmed_attack()
-	return !HAS_TRAIT(src, TRAIT_HANDS_BLOCKED)
+	if(HAS_TRAIT(src, TRAIT_HANDS_BLOCKED))
+		return FALSE
+	if(is_active_hand_cyberpunk_grabbed())
+		to_chat(src, span_warning("Your active hand is locked in a grab."))
+		return FALSE
+	return TRUE
 
 /mob/living/carbon/can_unarmed_attack()
 	. = ..()
@@ -41,6 +46,18 @@
 		return TRUE
 	if(sigreturn & COMPONENT_SKIP_ATTACK)
 		return FALSE
+
+	if(isliving(attack_target) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
+		var/mob/living/living_target = attack_target
+		if(try_cyberpunk_grapple_attack(living_target, modifiers))
+			return TRUE
+	if(isliving(attack_target) && !LAZYACCESS(modifiers, RIGHT_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK))
+		var/mob/living/living_target = attack_target
+		if(try_cyberpunk_wrestling_elbow_check(living_target))
+			return TRUE
+	if(isturf(attack_target) && LAZYACCESS(modifiers, RIGHT_CLICK))
+		if(try_cyberpunk_wrestling_launch_click(attack_target))
+			return TRUE
 
 	if(!can_unarmed_attack())
 		return FALSE

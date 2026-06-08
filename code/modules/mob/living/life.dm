@@ -920,10 +920,16 @@
 	return (1 + style_bonus + max(0, mood) / 20 * 0.5) * get_cyberpunk_status_experience_multiplier()
 
 /mob/living/proc/can_dodge()
+	if(is_cyberpunk_grabbing_living() || is_cyberpunk_grabbed_by_leg())
+		return FALSE
 	var/threshold_multiplier = max(0.2, 1 - get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1) * 0.01)
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_DODGE * threshold_multiplier && !is_exhausted_by_needs()
 
 /mob/living/proc/can_parry()
+	if(is_active_hand_cyberpunk_grabbed())
+		return FALSE
+	if(is_cyberpunk_grabbing_living() && grab_state >= GRAB_TWOHANDED)
+		return FALSE
 	var/threshold_multiplier = max(0.2, 1 - get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1) * 0.01)
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_PARRY * threshold_multiplier && !is_exhausted_by_needs()
 

@@ -154,6 +154,17 @@
 			changeNext_move(CLICK_CD_THROW)
 		return
 
+	if(isliving(src) && isturf(A) && LAZYACCESS(modifiers, RIGHT_CLICK))
+		var/mob/living/living_user = src
+		if(living_user.try_cyberpunk_wrestling_launch_click(A))
+			return
+
+	if(isliving(src) && isliving(A) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
+		var/mob/living/living_user = src
+		var/mob/living/living_target = A
+		if(living_user.try_cyberpunk_grapple_attack(living_target, modifiers))
+			return
+
 	var/obj/item/W = get_active_held_item()
 
 	if(W == A)
@@ -389,6 +400,15 @@
  * Useful for mobs that have their abilities mapped to right click.
  */
 /mob/proc/ranged_secondary_attack(atom/target, modifiers)
+	if(isliving(src) && isliving(target))
+		var/mob/living/living_user = src
+		var/mob/living/living_target = target
+		if(living_user.try_cyberpunk_grapple_attack(living_target, modifiers))
+			return TRUE
+	if(isliving(src) && isturf(target))
+		var/mob/living/living_user = src
+		if(living_user.try_cyberpunk_wrestling_launch_click(target))
+			return TRUE
 	if(SEND_SIGNAL(src, COMSIG_MOB_ATTACK_RANGED_SECONDARY, target, modifiers) & COMPONENT_CANCEL_ATTACK_CHAIN)
 		return TRUE
 

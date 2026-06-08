@@ -116,7 +116,7 @@ DEFINE_BITFIELD(status_flags, list(
 //Grab levels
 #define GRAB_PASSIVE 0
 #define GRAB_AGGRESSIVE 1
-#define GRAB_NECK 2
+#define GRAB_TWOHANDED 2
 #define GRAB_KILL 3
 
 // Grab attack chain results

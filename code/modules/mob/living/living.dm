@@ -27,6 +27,7 @@
 	med_hud_set_status()
 
 /mob/living/Destroy()
+	clear_cyberpunk_grab_hold_items()
 	QDEL_NULL(cyberpunk_npc_profile)
 	if(vertical_state_timer != TIMER_ID_NULL)
 		deltimer(vertical_state_timer)
@@ -380,6 +381,233 @@
 		AM.setDir(current_dir)
 	now_pushing = FALSE
 
+/mob/living/proc/normalize_cyberpunk_grab_zone(zone)
+	if(!zone)
+		return BODY_ZONE_CHEST
+	return check_zone(zone) || zone
+
+/mob/living/proc/set_cyberpunk_grab_zone(zone)
+	cyberpunk_grab_zone = normalize_cyberpunk_grab_zone(zone)
+
+/mob/living/proc/is_cyberpunk_grab_zone_arm(zone = cyberpunk_grab_zone)
+	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
+	return (checked_zone in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_PRECISE_L_HAND, BODY_ZONE_PRECISE_R_HAND))
+
+/mob/living/proc/is_cyberpunk_grab_zone_leg(zone = cyberpunk_grab_zone)
+	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
+	return (checked_zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG, BODY_ZONE_PRECISE_L_FOOT, BODY_ZONE_PRECISE_R_FOOT))
+
+/mob/living/proc/is_cyberpunk_grab_zone_head(zone = cyberpunk_grab_zone)
+	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
+	return (checked_zone in list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK))
+
+/mob/living/proc/is_cyberpunk_grab_zone_torso(zone = cyberpunk_grab_zone)
+	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
+	return (checked_zone in list(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_ABDOMEN))
+
+/mob/living/proc/is_cyberpunk_grab_zone_mouth(zone = cyberpunk_grab_zone)
+	return normalize_cyberpunk_grab_zone(zone) == BODY_ZONE_PRECISE_MOUTH
+
+/mob/living/proc/is_cyberpunk_grab_zone_eyes(zone = cyberpunk_grab_zone)
+	return normalize_cyberpunk_grab_zone(zone) == BODY_ZONE_PRECISE_EYES
+
+/mob/living/proc/is_cyberpunk_grabbing_living()
+	return isliving(pulling)
+
+/mob/living/proc/is_cyberpunk_grabbed_by_arm()
+	var/mob/living/grabber = pulledby
+	return istype(grabber) && grabber.pulling == src && grabber.is_cyberpunk_grab_zone_arm()
+
+/mob/living/proc/is_cyberpunk_grabbed_by_leg()
+	var/mob/living/grabber = pulledby
+	return istype(grabber) && grabber.pulling == src && grabber.is_cyberpunk_grab_zone_leg()
+
+/mob/living/proc/is_active_hand_cyberpunk_grabbed()
+	var/mob/living/grabber = pulledby
+	if(!istype(grabber) || grabber.pulling != src || !grabber.is_cyberpunk_grab_zone_arm())
+		return FALSE
+	var/obj/item/bodypart/active_arm = get_active_hand()
+	if(!active_arm)
+		return TRUE
+	var/grabbed_zone = normalize_cyberpunk_grab_zone(grabber.cyberpunk_grab_zone)
+	return active_arm.body_zone == grabbed_zone
+
+/mob/living/proc/is_cyberpunk_mouth_grabbed(grab_level = GRAB_PASSIVE)
+	var/mob/living/grabber = pulledby
+	return istype(grabber) && grabber.pulling == src && grabber.grab_state >= grab_level && grabber.is_cyberpunk_grab_zone_mouth()
+
+/mob/living/proc/apply_cyberpunk_grab_zone_effects(mob/living/target)
+	if(!istype(target) || pulling != target)
+		return FALSE
+	if(is_cyberpunk_grab_zone_eyes())
+		if(grab_state >= GRAB_AGGRESSIVE)
+			target.adjust_temp_blindness(2 SECONDS)
+		else
+			target.set_eye_blur_if_lower(4 SECONDS)
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_grab_power(mob/living/target, upgrade = FALSE)
+	return get_character_skill_level(SKILL_GRAPPLING)
+
+/mob/living/proc/get_cyberpunk_grab_resistance(mob/living/grabber)
+	return get_character_skill_level(SKILL_ATHLETICS)
+
+/mob/living/proc/get_cyberpunk_grab_stamina_cost(base_cost = STAMINA_COST_ATTACK)
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 4)
+	return base_cost * max(0.1, 1 - reduction * 0.01)
+
+/mob/living/proc/get_cyberpunk_grab_max_durability(grab_level = grab_state)
+	switch(grab_level)
+		if(GRAB_PASSIVE)
+			return combat_mode ? 15 : 5
+		if(GRAB_AGGRESSIVE)
+			return 25
+		if(GRAB_TWOHANDED, GRAB_KILL)
+			var/strength_bonus = round(get_attribute_value(ATTRIBUTE_STRENGTH) * get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 3) * 0.01)
+			return 50 + strength_bonus
+	return 0
+
+/mob/living/proc/reset_cyberpunk_grab_durability()
+	cyberpunk_grab_max_durability = get_cyberpunk_grab_max_durability()
+	cyberpunk_grab_durability = cyberpunk_grab_max_durability
+
+/mob/living/proc/get_cyberpunk_grab_durability_ratio()
+	if(cyberpunk_grab_max_durability <= 0)
+		return 0
+	return cyberpunk_grab_durability / cyberpunk_grab_max_durability
+
+/mob/living/proc/reinforce_cyberpunk_grab()
+	reset_cyberpunk_grab_durability()
+	var/mob/living/grabbed = pulling
+	if(istype(grabbed))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] tightens the grip on [grabbed.declent_ru(ACCUSATIVE)]!"), span_warning("You tighten your grip on [grabbed.declent_ru(ACCUSATIVE)]."))
+	return TRUE
+
+/mob/living/proc/reduce_cyberpunk_grab_durability(amount, mob/living/source = null)
+	if(amount <= 0 || !isliving(pulling))
+		return FALSE
+	if(cyberpunk_grab_max_durability <= 0)
+		reset_cyberpunk_grab_durability()
+	cyberpunk_grab_durability = max(0, cyberpunk_grab_durability - amount)
+	if(cyberpunk_grab_durability > 0)
+		return TRUE
+	var/mob/living/grabbed = pulling
+	var/old_grab_state = grab_state
+	if(grab_state > GRAB_PASSIVE)
+		setGrabState(max(GRAB_PASSIVE, grab_state - 1))
+	else
+		reset_cyberpunk_grab_durability()
+	reset_cyberpunk_grab_durability()
+	if(istype(grabbed))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))]'s grip on [grabbed.declent_ru(ACCUSATIVE)] weakens!"), span_warning("Your grip weakens."))
+	log_combat(src, grabbed, "weakened grab", addition = "from [old_grab_state] to [grab_state]")
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_grab_resist_amount()
+	return 5 + get_attribute_value(ATTRIBUTE_STRENGTH)
+
+/mob/living/proc/get_cyberpunk_grab_resist_cooldown()
+	return max(0, 2 SECONDS - (get_attribute_value(ATTRIBUTE_DEXTERITY) * 0.2 SECONDS))
+
+/mob/living/proc/can_cyberpunk_grab_succeed(mob/living/target, upgrade = FALSE)
+	if(!istype(target))
+		return TRUE
+	var/grabber_power = get_cyberpunk_grab_power(target, upgrade)
+	var/target_resistance = target.get_cyberpunk_grab_resistance(src)
+	if(upgrade)
+		if(grabber_power > target_resistance)
+			return TRUE
+		return prob(get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 1))
+	return grabber_power >= target_resistance
+
+/mob/living/proc/try_cyberpunk_grapple_stagger_on_grab(mob/living/target)
+	if(!istype(target))
+		return FALSE
+	var/stagger_chance = get_cyberpunk_skill_perk_bonus(SKILL_GRAPPLING, 6, "value_1")
+	if(stagger_chance <= 0 || !prob(stagger_chance))
+		return FALSE
+	target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))]'s grab makes [target.declent_ru(ACCUSATIVE)] stagger!"), span_warning("Your grab makes [target.declent_ru(ACCUSATIVE)] stagger."))
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_failed_grab_cooldown()
+	return max(0, 1 SECONDS - get_character_skill_level(SKILL_GRAPPLING))
+
+/mob/living/proc/fail_cyberpunk_grab_attempt(mob/living/target, upgrade = FALSE)
+	cyberpunk_grab_next_attempt = world.time + get_cyberpunk_failed_grab_cooldown()
+	if(upgrade)
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to strengthen the grab on [target.declent_ru(ACCUSATIVE)]."), span_warning("You fail to strengthen the grab."))
+	else
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] fails to grab [target.declent_ru(ACCUSATIVE)]."), span_warning("You fail to grab [target.declent_ru(ACCUSATIVE)]."))
+	return FALSE
+
+/mob/living/proc/cyberpunk_grab_action_delay(mob/living/target, upgrade = FALSE)
+	if(!client || !istype(target))
+		return TRUE
+	if(world.time < cyberpunk_grab_next_attempt)
+		balloon_alert(src, "recovering")
+		return FALSE
+	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] reaches for [target.declent_ru(ACCUSATIVE)]."), span_notice("You reach for [target.declent_ru(ACCUSATIVE)]."))
+	if(!do_after(src, 0.5 SECONDS, target))
+		return FALSE
+	if(!Adjacent(target) || QDELETED(target) || stat > CONSCIOUS)
+		return FALSE
+	spend_stamina(get_cyberpunk_grab_stamina_cost(), "attack", TRUE)
+	if(!can_cyberpunk_grab_succeed(target, upgrade))
+		return fail_cyberpunk_grab_attempt(target, upgrade)
+	return TRUE
+
+/mob/living/proc/create_cyberpunk_grab_hold_item(mob/living/target, power_hold = FALSE)
+	var/obj/item/cyberpunk_grab_hold/hold_item = new(src)
+	hold_item.holder = src
+	hold_item.grabbed = target
+	hold_item.power_hold = power_hold
+	hold_item.name = power_hold ? "two-handed grab" : "grab hold"
+	hold_item.desc = power_hold ? "This hand reinforces a two-handed grab." : "This hand is occupied by an active grab."
+	return hold_item
+
+/mob/living/proc/equip_cyberpunk_grab_hold_item(mob/living/target, power_hold = FALSE)
+	var/obj/item/cyberpunk_grab_hold/hold_item = create_cyberpunk_grab_hold_item(target, power_hold)
+	var/equipped = FALSE
+	if(power_hold)
+		if(get_active_held_item())
+			qdel(hold_item)
+			return null
+		equipped = put_in_active_hand(hold_item, forced = TRUE)
+	else
+		equipped = put_in_active_hand(hold_item, forced = TRUE)
+	if(!equipped)
+		qdel(hold_item)
+		return null
+	return hold_item
+
+/mob/living/proc/update_cyberpunk_grab_hold_items()
+	var/mob/living/grabbed = pulling
+	if(!istype(grabbed))
+		clear_cyberpunk_grab_hold_items()
+		return FALSE
+	if(!cyberpunk_grab_hold_item || QDELETED(cyberpunk_grab_hold_item))
+		cyberpunk_grab_hold_item = equip_cyberpunk_grab_hold_item(grabbed)
+	if(!cyberpunk_grab_hold_item)
+		stop_pulling()
+		return FALSE
+	cyberpunk_grab_hold_item.grabbed = grabbed
+	if(grab_state >= GRAB_TWOHANDED)
+		if(!cyberpunk_grab_power_hold_item || QDELETED(cyberpunk_grab_power_hold_item))
+			cyberpunk_grab_power_hold_item = equip_cyberpunk_grab_hold_item(grabbed, TRUE)
+		if(!cyberpunk_grab_power_hold_item)
+			to_chat(src, span_warning("You need a second hand for a two-handed grab."))
+			setGrabState(GRAB_AGGRESSIVE)
+			return FALSE
+		cyberpunk_grab_power_hold_item.grabbed = grabbed
+	else
+		QDEL_NULL(cyberpunk_grab_power_hold_item)
+	return TRUE
+
+/mob/living/proc/clear_cyberpunk_grab_hold_items()
+	QDEL_NULL(cyberpunk_grab_power_hold_item)
+	QDEL_NULL(cyberpunk_grab_hold_item)
+
 /mob/living/start_pulling(atom/movable/AM, state, force = pull_force, supress_message = FALSE)
 	if(!AM || !src)
 		return FALSE
@@ -391,6 +619,10 @@
 		return FALSE
 	if(SEND_SIGNAL(AM, COMSIG_LIVING_TRYING_TO_PULL, src, force) & COMSIG_LIVING_CANCEL_PULL)
 		return FALSE
+	if(isliving(AM))
+		var/mob/living/living_target = AM
+		if(!cyberpunk_grab_action_delay(living_target))
+			return FALSE
 
 	AM.add_fingerprint(src)
 
@@ -413,6 +645,8 @@
 
 	pulling = AM
 	AM.set_pulledby(src)
+	if(isliving(AM))
+		set_cyberpunk_grab_zone(zone_selected)
 
 	SEND_SIGNAL(src, COMSIG_LIVING_START_PULL, AM, state, force)
 
@@ -465,9 +699,19 @@
 					C.grabbedby(src)
 
 			update_pull_movespeed()
+			try_cyberpunk_grapple_stagger_on_grab(L)
+			apply_cyberpunk_grab_zone_effects(L)
 
 		set_pull_offsets(M, state)
+		update_cyberpunk_grab_hold_items()
+		reset_cyberpunk_grab_durability()
 		return TRUE
+
+/mob/living/stop_pulling()
+	cyberpunk_grab_durability = 0
+	cyberpunk_grab_max_durability = 0
+	clear_cyberpunk_grab_hold_items()
+	return ..()
 
 /**
  * Updates the offsets of the passed mob according to the passed grab state and the direction between them and us
@@ -485,10 +729,10 @@
 			offset = GRAB_PIXEL_SHIFT_PASSIVE
 		if(GRAB_AGGRESSIVE)
 			offset = GRAB_PIXEL_SHIFT_AGGRESSIVE
-		if(GRAB_NECK)
-			offset = GRAB_PIXEL_SHIFT_NECK
+		if(GRAB_TWOHANDED)
+			offset = GRAB_PIXEL_SHIFT_AGGRESSIVE
 		if(GRAB_KILL)
-			offset = GRAB_PIXEL_SHIFT_NECK
+			offset = GRAB_PIXEL_SHIFT_AGGRESSIVE
 	mob_to_set.setDir(get_dir(mob_to_set, src))
 	var/dir_filter = mob_to_set.dir
 	if(ISDIAGONALDIR(dir_filter))
@@ -2481,6 +2725,15 @@
 
 /mob/living/resist_grab(moving_resist)
 	. = TRUE
+	if(isliving(pulledby))
+		if(world.time < cyberpunk_next_grab_resist)
+			return TRUE
+		var/mob/living/grabber = pulledby
+		cyberpunk_next_grab_resist = world.time + get_cyberpunk_grab_resist_cooldown()
+		var/resist_amount = get_cyberpunk_grab_resist_amount()
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] struggles against [grabber.declent_ru(GENITIVE)] grip!"), span_warning("You struggle against [grabber.declent_ru(GENITIVE)] grip."))
+		grabber.reduce_cyberpunk_grab_durability(resist_amount, src)
+		return TRUE
 
 	//Our effective grab state. GRAB_PASSIVE is equal to 0, so if we have no other altering factors to our grab state, we can break free immediately on resist.
 	var/effective_grab_state = pulledby.grab_state
@@ -2529,7 +2782,7 @@
 	//We only resist our grab state if we are currently in a grab equal to or greater than GRAB_AGGRESSIVE (1). Otherwise, break out immediately!
 	if(effective_grab_state >= GRAB_AGGRESSIVE)
 		// see defines/combat.dm, this should be baseline 60%
-		// Resist chance divided by the value imparted by your grab state. It isn't until you reach neckgrab that you gain a penalty to escaping a grab.
+		// Resist chance divided by the value imparted by your grab state. It isn't until you reach a two-handed grab that you gain a penalty to escaping a grab.
 		var/resist_chance = clamp(escape_chance / effective_grab_state, 0, 100)
 		if(prob(resist_chance))
 			visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] вырывается из хватки [pulledby.declent_ru(GENITIVE)]!"), \
@@ -2688,6 +2941,9 @@
 	if((action_bitflags & NEED_HANDS))
 		if(HAS_TRAIT(src, TRAIT_HANDS_BLOCKED))
 			to_chat(src, span_warning("Ваши руки сейчас недоступны!"))
+			return FALSE
+		if(is_active_hand_cyberpunk_grabbed())
+			to_chat(src, span_warning("Your active hand is locked in a grab."))
 			return FALSE
 		if(!can_hold_items(isitem(target) ? target : null)) // almost redundant if it weren't for mobs
 			to_chat(src, span_warning("У вас нет рук!"))
@@ -3323,6 +3579,9 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	var/mob/living/U = user
 	if(isliving(dropping))
 		var/mob/living/M = dropping
+		var/list/modifiers = params2list(params)
+		if(U == src && LAZYACCESS(modifiers, RIGHT_CLICK) && U.pulling == M && U.perform_cyberpunk_grapple_self_drag(M))
+			return
 		if(M.can_be_held && U.pulling == M)
 			M.mob_try_pickup(U)//blame kevinz
 			return//dont open the mobs inventory if you are picking them up
@@ -3842,10 +4101,19 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 			remove_movespeed_modifier(MOVESPEED_ID_MOB_GRAB_STATE)
 		if(GRAB_AGGRESSIVE)
 			add_movespeed_modifier(/datum/movespeed_modifier/grab_slowdown/aggressive)
-		if(GRAB_NECK)
+		if(GRAB_TWOHANDED)
 			add_movespeed_modifier(/datum/movespeed_modifier/grab_slowdown/neck)
 		if(GRAB_KILL)
 			add_movespeed_modifier(/datum/movespeed_modifier/grab_slowdown/kill)
+	if(grab_state == GRAB_PASSIVE)
+		cyberpunk_grab_durability = 0
+		cyberpunk_grab_max_durability = 0
+		clear_cyberpunk_grab_hold_items()
+	else if(update_cyberpunk_grab_hold_items())
+		reset_cyberpunk_grab_durability()
+		var/mob/living/grabbed = pulling
+		if(istype(grabbed))
+			apply_cyberpunk_grab_zone_effects(grabbed)
 
 /// Sprite to show for photocopying mob butts
 /mob/living/proc/get_butt_sprite()

@@ -63,18 +63,10 @@
 /// We have a mob being pressed onto the table, but how strongly?
 /datum/element/table_smash/proc/perform_table_smash(obj/structure/table/table, mob/living/user)
 	var/mob/living/pushed_mob = user.pulling
-	if (user.combat_mode)
-		switch(user.grab_state)
-			if (GRAB_PASSIVE)
-				to_chat(user, span_warning("You need a better grip to do that!"))
-				return
-			if (GRAB_AGGRESSIVE)
-				if (gentle_push)
-					tableplace(user, pushed_mob, table)
-				else
-					tablepush(user, pushed_mob, table)
-			if (GRAB_NECK to GRAB_KILL)
-				tablelimbsmash(user, pushed_mob, table)
+	if(user.grab_state >= GRAB_AGGRESSIVE)
+		tablelimbsmash(user, pushed_mob, table)
+	else if(user.combat_mode)
+		tablepush(user, pushed_mob, table)
 	else
 		pushed_mob.visible_message(span_notice("[user] begins to place [pushed_mob] onto [table]..."), \
 							span_userdanger("[user] begins to place [pushed_mob] onto [table]..."))

@@ -12,8 +12,8 @@
 			if (GRAB_PASSIVE)
 				context[SCREENTIP_CONTEXT_CTRL_LMB] = "Схватить"
 			if (GRAB_AGGRESSIVE)
-				context[SCREENTIP_CONTEXT_CTRL_LMB] = "За горло"
-			if (GRAB_NECK)
+				context[SCREENTIP_CONTEXT_CTRL_LMB] = "Двуручный хват"
+			if (GRAB_TWOHANDED)
 				context[SCREENTIP_CONTEXT_CTRL_LMB] = "Задушить"
 			else
 				return .

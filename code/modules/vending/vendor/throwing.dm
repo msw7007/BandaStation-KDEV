@@ -51,7 +51,7 @@
 /obj/machinery/vending/hitby(atom/movable/hitting_atom, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum)
 	. = ..()
 	var/mob/living/living_mob = hitting_atom
-	if(tilted || !istype(living_mob) || !prob(20 * (throwingdatum.speed - living_mob.throw_speed))) // hulk throw = +20%, neckgrab throw = +20%
+	if(tilted || !istype(living_mob) || !prob(20 * (throwingdatum.speed - living_mob.throw_speed))) // hulk throw = +20%, two-handed grab throw = +20%
 		return
 
 	tilt(living_mob)

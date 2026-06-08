@@ -281,6 +281,28 @@
 	var/cyberpunk_parry_until = 0
 	/// Active dodge window expiry.
 	var/cyberpunk_dodge_until = 0
+	/// Body zone currently controlled by this mob's active grab.
+	var/cyberpunk_grab_zone = BODY_ZONE_CHEST
+	/// Cooldown before this mob can attempt another Cyberpunk grab after a failed upgrade.
+	var/cyberpunk_grab_next_attempt = 0
+	/// Current durability of this mob's active grab.
+	var/cyberpunk_grab_durability = 0
+	/// Maximum durability of this mob's active grab at the current grab state.
+	var/cyberpunk_grab_max_durability = 0
+	/// Cooldown before this mob can resist their current grab again.
+	var/cyberpunk_next_grab_resist = 0
+	/// Current forced wrestling launch direction.
+	var/cyberpunk_wrestling_launch_dir = NONE
+	/// World time while this mob can be elbow-checked out of a wrestling launch.
+	var/cyberpunk_wrestling_launch_until = 0
+	/// Whether the current wrestling launch already rebounded from a wall.
+	var/cyberpunk_wrestling_launch_rebounded = FALSE
+	/// Cyberpunk carry presentation mode consumed by the human riding component.
+	var/cyberpunk_carry_mode
+	/// Hand placeholder used while holding a grabbed target.
+	var/obj/item/cyberpunk_grab_hold/cyberpunk_grab_hold_item
+	/// Second hand placeholder used for two-handed grabs.
+	var/obj/item/cyberpunk_grab_hold/cyberpunk_grab_power_hold_item
 	/// Current basic Cyberpunk combat intent, switched by 2/3 or mouse wheel.
 	var/cyberpunk_combat_intent = "slash"
 	/// Whether this mob has manually extended their view to inspect distant targets.

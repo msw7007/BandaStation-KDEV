@@ -47,6 +47,9 @@
 			return user_unbuckle_mob(buckled_mobs[1], user)
 
 /atom/movable/mouse_drop_receive(mob/living/M, mob/user, params)
+	var/mob/living/living_user = user
+	if(istype(M) && istype(living_user) && living_user.pulling == M && living_user.perform_cyberpunk_grapple_drop_onto(M, src))
+		return TRUE
 	return mouse_buckle_handling(M, user)
 
 /**
@@ -354,11 +357,13 @@
 /obj/structure/proc/cyberpunk_grapple_furniture_mouse_drop(atom/dropped, mob/user)
 	var/mob/living/living_user = user
 	var/mob/living/living_target = dropped
-	if(!istype(living_user) || !istype(living_target) || !living_user.combat_mode)
+	if(!istype(living_user) || !istype(living_target))
 		return FALSE
-	if(living_user.pulling != living_target || living_user.grab_state < GRAB_AGGRESSIVE)
+	if(living_user.pulling != living_target)
 		return FALSE
-	return living_user.perform_cyberpunk_grapple_furniture_throw(living_target, src)
+	if(istype(src, /obj/structure/table))
+		return living_user.perform_cyberpunk_grapple_table_drop(living_target, src)
+	return living_user.perform_cyberpunk_grapple_drop_onto(living_target, src)
 
 /obj/structure/table/mouse_drop_receive(atom/dropped, mob/user, params)
 	if(cyberpunk_grapple_furniture_mouse_drop(dropped, user))

@@ -33,6 +33,12 @@
 	SHOULD_NOT_OVERRIDE(TRUE)
 
 	var/mob/user = usr
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) && isliving(user) && isliving(src) && over == user)
+		var/mob/living/living_user = user
+		var/mob/living/living_target = src
+		if(living_user.perform_cyberpunk_grapple_self_drag(living_target))
+			return
 
 	if(SEND_SIGNAL(src, COMSIG_MOUSEDROP_ONTO, over, user) & COMPONENT_CANCEL_MOUSEDROP_ONTO)
 		return

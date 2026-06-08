@@ -211,7 +211,11 @@
 	var/mob/living/carbon/human/human_parent = parent
 	human_parent.add_movespeed_modifier(/datum/movespeed_modifier/human_carry)
 
-	if(ride_check_flags & RIDER_NEEDS_ARMS) // piggyback
+	if(human_parent.cyberpunk_carry_mode == "living_shield")
+		human_parent.buckle_lying = 0
+	else if(human_parent.cyberpunk_carry_mode == "front_carry")
+		human_parent.buckle_lying = 90
+	else if(ride_check_flags & RIDER_NEEDS_ARMS) // piggyback
 		human_parent.buckle_lying = 0
 		// the riding mob is made nondense so they don't bump into any dense atoms the carrier is pulling,
 		// since pulled movables are moved before buckled movables
@@ -249,6 +253,7 @@
 	unequip_buckle_inhands(parent)
 	var/mob/living/carbon/human/H = parent
 	H.remove_movespeed_modifier(/datum/movespeed_modifier/human_carry)
+	H.cyberpunk_carry_mode = null
 	REMOVE_TRAIT(former_rider, TRAIT_UNDENSE, VEHICLE_TRAIT)
 	return ..()
 
@@ -281,6 +286,20 @@
 
 /datum/component/riding/creature/human/get_rider_offsets_and_layers(pass_index, mob/offsetter)
 	var/mob/living/carbon/human/seat = parent
+	if(seat.cyberpunk_carry_mode == "living_shield")
+		return list(
+			TEXT_NORTH = list(0, 14, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_SOUTH = list(0, -8, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_EAST =  list(12, 4, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_WEST =  list(-12, 4, MOB_ABOVE_PIGGYBACK_LAYER),
+		)
+	if(seat.cyberpunk_carry_mode == "front_carry")
+		return list(
+			TEXT_NORTH = list(0, 10, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_SOUTH = list(0, -6, MOB_BELOW_PIGGYBACK_LAYER),
+			TEXT_EAST =  list(10, 4, MOB_BELOW_PIGGYBACK_LAYER),
+			TEXT_WEST =  list(-10, 4, MOB_BELOW_PIGGYBACK_LAYER),
+		)
 	// fireman carry
 	if(seat.buckle_lying)
 		return list(

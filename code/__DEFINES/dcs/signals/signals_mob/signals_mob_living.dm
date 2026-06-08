@@ -347,7 +347,7 @@
 
 /// When a living mob is table slamming another mob: (mob/living/slammed, obj/structure/table/slammed_table)
 #define COMSIG_LIVING_TABLE_SLAMMING "living_table_slamming"
-/// When a living mob is table slamming another mob, neck grab (so a limb slam): (mob/living/slammed, obj/structure/table/slammed_table)
+/// When a living mob is table slamming another mob with a two-handed grab (so a limb slam): (mob/living/slammed, obj/structure/table/slammed_table)
 #define COMSIG_LIVING_TABLE_LIMB_SLAMMING "living_table_limb_slamming"
 
 /// From /mob/living/get_examine_name(mob/user) : (mob/examined, visible_name, list/name_override)

@@ -103,6 +103,9 @@
 		if(BRAIN)
 			damage_dealt = -1 * adjust_organ_loss(ORGAN_SLOT_BRAIN, damage_amount)
 
+	if(damage_dealt > 0 && isliving(pulling))
+		reduce_cyberpunk_grab_durability(damage_dealt * 0.75)
+
 	SEND_SIGNAL(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, damage_dealt, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
 	return damage_dealt
 

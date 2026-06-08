@@ -351,8 +351,8 @@
 		to_chat(attacker, span_danger("Вы берёте [defender.declent_ru(ACCUSATIVE)] в удушающий захват!"))
 		defender.SetSleeping(40 SECONDS)
 		restraining_mob = null
-		if(attacker.grab_state < GRAB_NECK && !HAS_TRAIT(attacker, TRAIT_PACIFISM))
-			attacker.setGrabState(GRAB_NECK)
+		if(attacker.grab_state < GRAB_TWOHANDED && !HAS_TRAIT(attacker, TRAIT_PACIFISM))
+			attacker.setGrabState(GRAB_TWOHANDED)
 		return MARTIAL_ATTACK_SUCCESS
 
 	attacker.do_attack_animation(defender, ATTACK_EFFECT_DISARM)

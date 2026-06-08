@@ -53,18 +53,18 @@
 	var/self_throw_verb = ru_attack_verb(chosen_verb)
 	var/visible_throw_verb = ru_attack_verb(chosen_verb + plural_s(chosen_verb))
 	// BANDAСТATION EDIT END
-	var/neckgrab_throw = FALSE // we can't check for if it's a neckgrab throw when totaling up power_throw since we've already stopped pulling them by then, so get it early
+	var/twohanded_grab_throw = FALSE // We can't check the grab level after stop_pulling(), so cache it early.
 	var/frequency_number = 1 //We assign a default frequency number for the sound of the throw.
 	if(!held_item)
 		if(pulling && isliving(pulling) && grab_state >= GRAB_AGGRESSIVE)
 			var/mob/living/throwable_mob = pulling
 			if(!throwable_mob.buckled)
 				thrown_thing = throwable_mob
-				if(grab_state >= GRAB_NECK)
+				if(grab_state >= GRAB_TWOHANDED)
 					if(!can_cyberpunk_grapple_action(throwable_mob, "neck_throw", BODY_ZONE_PRECISE_NECK))
-						balloon_alert(src, "need power grip")
+						balloon_alert(src, "need two-handed grab")
 						return FALSE
-					neckgrab_throw = TRUE
+					twohanded_grab_throw = TRUE
 				stop_pulling()
 				if(HAS_TRAIT(src, TRAIT_PACIFISM) || HAS_TRAIT(src, TRAIT_NO_THROWING))
 					to_chat(src, span_notice("You gently let go of [throwable_mob]."))
@@ -92,7 +92,7 @@
 		power_throw--
 	if(HAS_TRAIT(thrown_thing, TRAIT_DWARF))
 		power_throw++
-	if(neckgrab_throw)
+	if(twohanded_grab_throw)
 		power_throw++
 	if(HAS_TRAIT(src, TRAIT_TOSS_GUN_HARD) && isgun(thrown_thing))
 		power_throw++

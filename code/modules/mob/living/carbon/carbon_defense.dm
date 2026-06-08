@@ -338,7 +338,7 @@
 		check_self_for_injuries()
 		return
 
-	if(helper.pulling == src && !helper.combat_mode && !combat_mode)
+	if(helper.pulling == src && helper.grab_state < GRAB_AGGRESSIVE && !helper.combat_mode && !combat_mode)
 		palpate_selected_bodypart(helper)
 		return
 
@@ -457,7 +457,7 @@
 	helper.visible_message(span_notice("[helper] palpates [src]'s [parse_zone_with_bodypart(limb.body_zone)]."), span_notice("You start palpating [src]'s [parse_zone_with_bodypart(limb.body_zone)]."))
 	if(!do_after(helper, 20 SECONDS, target = src))
 		return TRUE
-	if(helper.pulling != src || helper.combat_mode || combat_mode)
+	if(helper.pulling != src || helper.grab_state >= GRAB_AGGRESSIVE || helper.combat_mode || combat_mode)
 		return TRUE
 	var/list/report = list()
 	report += span_notice("<b>Palpation: [parse_zone_with_bodypart(limb.body_zone)]</b>")

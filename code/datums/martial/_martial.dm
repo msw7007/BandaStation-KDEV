@@ -34,7 +34,7 @@
 	/// If the mob has two locked martial arts, it's first come first serve.
 	var/locked_to_use = FALSE
 	/// A modifier to the effective grab state for resist grabs of users of this martial art.
-	/// IE: grab_state_modifier = 1 means passive grabs are aggro grab difficulty, and aggro grabs are neckgrab difficulty.
+	/// IE: grab_state_modifier = 1 means passive grabs are aggro grab difficulty, and aggro grabs are two-handed grab difficulty.
 	var/grab_state_modifier = 0
 	/// A modifier to the damage dealt on a failed grab resist.
 	/// IE: grab_damage_modifier = 10 means 10 more stamina damage dealt
