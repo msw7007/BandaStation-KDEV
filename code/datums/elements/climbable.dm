@@ -75,6 +75,12 @@
 	// Our climbers fitness level, which removes some climb time and speeds up our climbing do_after, assuming they worked out
 	var/fitness_level = user.mind?.get_skill_level(/datum/skill/athletics) - 1
 	adjusted_climb_time = clamp(adjusted_climb_time - fitness_level, 1, climb_time) //Here we adjust the number of deciseconds we shave off per level of fitness, with a minimum of 1 decisecond and a maximum of climb_time (just in case)
+	var/acrobatics_climb_reduction = user.get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 2)
+	if(acrobatics_climb_reduction > 0)
+		adjusted_climb_time *= max(0.1, 1 - acrobatics_climb_reduction * 0.01)
+	if(user.get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0)
+		adjusted_climb_time = 0
+		adjusted_climb_stun = 0
 
 	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)
 	if(istype(potential_spine))
@@ -91,9 +97,13 @@
 	if(HAS_TRAIT(user, TRAIT_STUBBY_BODY)) //hold on, gimme a moment, my tiny legs can't get over the goshdamn table
 		adjusted_climb_time *= 1.5
 		adjusted_climb_stun *= 1.5
+	if(!user.spend_stamina(VERTICAL_CLIMB_STAMINA_COST, "vertical_movement"))
+		user.balloon_alert(user, "too tired")
+		return
 	LAZYADDASSOCLIST(current_climbers, climbed_thing, user)
-	if(do_after(user, adjusted_climb_time, climbed_thing))
+	if(adjusted_climb_time <= 0 || do_after(user, adjusted_climb_time, climbed_thing))
 		if(QDELETED(climbed_thing)) //Checking if structure has been destroyed
+			LAZYREMOVEASSOC(current_climbers, climbed_thing, user)
 			return
 		if(do_climb(climbed_thing, user, params))
 			user.visible_message(span_warning("[user.declent_ru(NOMINATIVE)] взбирается на [climbed_thing.declent_ru(ACCUSATIVE)]."), \
@@ -106,6 +116,8 @@
 				if(buckle_target.is_buckle_possible(user))
 					buckle_target.buckle_mob(user)
 			user.mind?.adjust_experience(/datum/skill/athletics, round(ATHLETICS_SKILL_MISC_EXP/(fitness_level || 1), 1)) //Get a bit fitter with every climb. But it has diminishing returns at a certain point.
+			user.reward_character_check_experience(SKILL_ACROBATICS, max(1, VERTICAL_CLIMB_STAMINA_COST), FALSE, 1)
+			user.apply_cyberpunk_acrobatics_speed_bonus()
 		else
 			to_chat(user, span_warning("Вам не удается взобраться на [climbed_thing.declent_ru(ACCUSATIVE)]."))
 	LAZYREMOVEASSOC(current_climbers, climbed_thing, user)
