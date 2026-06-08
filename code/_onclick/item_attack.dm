@@ -306,22 +306,32 @@
 		if("stab")
 			MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1.05)
 			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_PIERCE = 1)
+			modifiers["cyberpunk_attack_verb_continuous"] = "stabs"
+			modifiers["cyberpunk_attack_verb_simple"] = "stab"
 		if("slash")
 			MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1.02)
 			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_SLASH = 1)
+			modifiers["cyberpunk_attack_verb_continuous"] = "slashes"
+			modifiers["cyberpunk_attack_verb_simple"] = "slash"
 	return TRUE
 
 /obj/item/proc/apply_cyberpunk_charged_intent(mob/living/user, list/modifiers, list/attack_modifiers)
 	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
 	if(!charged_intent)
 		return FALSE
+	if(charged_intent == "kick")
+		return FALSE
 	var/damage_multiplier = 1.15 * user.get_cyberpunk_charged_intent_damage_multiplier(src)
 	MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, damage_multiplier)
 	switch(charged_intent)
 		if("pierce")
 			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_PIERCE = 1)
+			modifiers["cyberpunk_attack_verb_continuous"] = "pierces"
+			modifiers["cyberpunk_attack_verb_simple"] = "pierce"
 		if("chop")
 			modifiers["cyberpunk_damage_profile"] = list(BODYPART_DAMAGE_SLASH = 1)
+			modifiers["cyberpunk_attack_verb_continuous"] = "chops"
+			modifiers["cyberpunk_attack_verb_simple"] = "chop"
 	user.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
 	user.balloon_alert(user, charged_intent)
 	return TRUE
@@ -387,7 +397,7 @@
 	var/targeting_human_readable = parse_zone_with_bodypart(targeting, declent = ACCUSATIVE)
 
 	if(!LAZYACCESS(attack_modifiers, SILENCE_DEFAULT_MESSAGES))
-		send_item_attack_message(attacking_item, user, targeting_human_readable, targeting)
+		send_item_attack_message(attacking_item, user, targeting_human_readable, targeting, modifiers)
 
 	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
 	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
@@ -615,7 +625,7 @@
 		else
 			return clamp(w_class * 6, 10, 100) // Multiply the item's weight class by 6, then clamp the value between 10 and 100
 
-/mob/living/proc/send_item_attack_message(obj/item/weapon, mob/living/user, hit_area, def_zone)
+/mob/living/proc/send_item_attack_message(obj/item/weapon, mob/living/user, hit_area, def_zone, list/modifiers = null)
 	if(SEND_SIGNAL(weapon, COMSIG_SEND_ITEM_ATTACK_MESSAGE_OBJECT, src, user) & SIGNAL_MESSAGE_MODIFIED)
 		return TRUE
 	if(SEND_SIGNAL(src, COMSIG_SEND_ITEM_ATTACK_MESSAGE_CARBON, weapon, user) & SIGNAL_MESSAGE_MODIFIED)
@@ -635,6 +645,8 @@
 		message_verb_continuous = weapon.attack_verb_continuous[picked_index]
 	if (picked_index && length(weapon.attack_verb_simple) >= picked_index)
 		message_verb_simple = weapon.attack_verb_simple[picked_index]
+	message_verb_continuous = LAZYACCESS(modifiers, "cyberpunk_attack_verb_continuous") || message_verb_continuous
+	message_verb_simple = LAZYACCESS(modifiers, "cyberpunk_attack_verb_simple") || message_verb_simple
 
 	var/attack_message_spectator = "[capitalize(declent_ru(NOMINATIVE))] [ru_attack_verb(message_verb_continuous)][message_hit_area] с помощью [weapon.declent_ru(GENITIVE)]!"
 	var/attack_message_victim = "Кто-то [ru_attack_verb(message_verb_continuous)] вас[message_hit_area] с помощью [weapon.declent_ru(GENITIVE)]!"

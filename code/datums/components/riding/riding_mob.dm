@@ -288,10 +288,10 @@
 	var/mob/living/carbon/human/seat = parent
 	if(seat.cyberpunk_carry_mode == "living_shield")
 		return list(
-			TEXT_NORTH = list(0, 14, MOB_ABOVE_PIGGYBACK_LAYER),
-			TEXT_SOUTH = list(0, -8, MOB_ABOVE_PIGGYBACK_LAYER),
-			TEXT_EAST =  list(12, 4, MOB_ABOVE_PIGGYBACK_LAYER),
-			TEXT_WEST =  list(-12, 4, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_NORTH = list(0, 9, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_SOUTH = list(0, -3, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_EAST =  list(7, 4, MOB_ABOVE_PIGGYBACK_LAYER),
+			TEXT_WEST =  list(-7, 4, MOB_ABOVE_PIGGYBACK_LAYER),
 		)
 	if(seat.cyberpunk_carry_mode == "front_carry")
 		return list(

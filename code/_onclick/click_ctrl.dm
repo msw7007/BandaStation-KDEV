@@ -64,9 +64,6 @@
  * Except for tagging datumns same as control click
  */
 /mob/proc/CtrlMiddleClickOn(atom/A)
-	if(check_rights_for(client, R_ADMIN))
-		client.toggle_tag_datum(A)
-		return
 	pointed(A)
 
 /**

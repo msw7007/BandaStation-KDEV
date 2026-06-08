@@ -811,6 +811,10 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	var/obj/item/organ/brain/brain = user.get_organ_slot(ORGAN_SLOT_BRAIN)
 	var/obj/item/bodypart/attacking_bodypart = attacker_style?.get_attacking_limb(user, target) || brain?.get_attacking_limb(target) || user.get_active_hand()
+	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
+	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
+	if(charged_intent == "kick")
+		attacking_bodypart = user.get_bodypart(BODY_ZONE_R_LEG) || user.get_bodypart(BODY_ZONE_L_LEG) || attacking_bodypart
 
 	// Whether or not we get some protein for a successful attack. Nom.
 	var/biting = FALSE
@@ -860,14 +864,16 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	// The actual damage roll. May still be augmented by further factors.
 	var/damage = rand(lower_unarmed_damage, upper_unarmed_damage)
 	damage *= user.get_cyberpunk_unarmed_damage_multiplier()
-	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
-	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
 	if(combat_intent == "slash")
 		damage *= 1.05
 	else if(combat_intent == "stab")
 		damage *= 1.03
 	if(charged_intent == "chop")
 		damage *= 1.15
+	else if(charged_intent == "pierce")
+		damage *= 1.12
+	else if(charged_intent == "kick")
+		damage *= 1.1
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
 	limb_accuracy *= user.get_cyberpunk_unarmed_damage_multiplier()
@@ -875,6 +881,10 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		limb_accuracy += 5
 	if(charged_intent == "chop")
 		limb_accuracy += 10
+	else if(charged_intent == "pierce")
+		limb_accuracy += 12
+	else if(charged_intent == "kick")
+		limb_accuracy += 8
 	// Limb sharpness determines the type of wounds this unarmed strike could possibly roll. By default, most limbs are blunt and have no sharpness.
 	var/limb_sharpness = attacking_bodypart.unarmed_sharpness
 
@@ -931,6 +941,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	var/armor_penetration = 0
 	if(combat_intent == "stab")
 		armor_penetration += 10
+	if(charged_intent == "pierce")
+		armor_penetration += 25
 	var/armor_block = target.run_armor_check(affecting, MELEE, armour_penetration = armor_penetration)
 
 	// In a brawl, drunkenness is a boon if you're a bit drunk but not too much. Else you're easier to hit.
@@ -954,6 +966,21 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	if(grappled && attacking_bodypart.grappled_attack_verb)
 		atk_verb = attacking_bodypart.grappled_attack_verb
 		atk_verb_continuous = attacking_bodypart.grappled_attack_verb_continuous
+	if(charged_intent == "pierce")
+		atk_verb = "pierce"
+		atk_verb_continuous = "pierces"
+	else if(charged_intent == "chop")
+		atk_verb = "chop"
+		atk_verb_continuous = "chops"
+	else if(charged_intent == "kick")
+		atk_verb = "kick"
+		atk_verb_continuous = "kicks"
+	else if(combat_intent == "stab")
+		atk_verb = "stab"
+		atk_verb_continuous = "stabs"
+	else if(combat_intent == "slash")
+		atk_verb = "slash"
+		atk_verb_continuous = "slashes"
 
 	target.visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(atk_verb_continuous, GLOB.ru_attack_verbs_unarmed)] [target.declent_ru(ACCUSATIVE)]!"), \
 					span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(atk_verb_continuous, GLOB.ru_attack_verbs_unarmed)] вас!"), span_hear("You hear a sickening sound of flesh hitting flesh!"), COMBAT_MESSAGE_RANGE, user)
@@ -1079,7 +1106,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	SEND_SIGNAL(owner, COMSIG_MOB_ATTACK_HAND, owner, target, attacker_style)
 
-	if(LAZYACCESS(modifiers, RIGHT_CLICK))
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) && LAZYACCESS(modifiers, "cyberpunk_charged_intent") != "kick")
 		disarm(owner, target, attacker_style)
 		return // dont attack after
 	if(owner.combat_mode)

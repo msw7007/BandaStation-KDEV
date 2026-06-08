@@ -307,6 +307,12 @@
 	var/cyberpunk_combat_intent = "slash"
 	/// Whether this mob has manually extended their view to inspect distant targets.
 	var/focused_look = FALSE
+	/// Whether active listening was started by holding Shift+MMB on self.
+	var/cyberpunk_shift_middle_listening = FALSE
+	/// Shift+MMB hold start time for entering active listening.
+	var/cyberpunk_shift_middle_listen_started = 0
+	/// Target captured for Shift+MMB hold activation.
+	var/datum/weakref/cyberpunk_shift_middle_listen_ref
 	///what multiplicative slowdown we get from turfs currently.
 	var/current_turf_slowdown = 0
 

@@ -144,6 +144,52 @@
 	balloon_alert(src, listening_intently ? "listening" : "stopped listening")
 	return listening_intently
 
+/mob/living/proc/start_held_intent_listen()
+	if(listening_intently && cyberpunk_shift_middle_listening)
+		return TRUE
+	clear_focused_look()
+	cyberpunk_shift_middle_listening = TRUE
+	cyberpunk_shift_middle_listen_started = 0
+	cyberpunk_shift_middle_listen_ref = null
+	if(!listening_intently)
+		listening_intently = TRUE
+		balloon_alert(src, "listening")
+	return TRUE
+
+/mob/living/proc/stop_held_intent_listen()
+	if(!cyberpunk_shift_middle_listening)
+		return FALSE
+	cyberpunk_shift_middle_listening = FALSE
+	cyberpunk_shift_middle_listen_started = 0
+	cyberpunk_shift_middle_listen_ref = null
+	if(listening_intently)
+		listening_intently = FALSE
+		balloon_alert(src, "stopped listening")
+	return TRUE
+
+/mob/living/proc/prepare_held_intent_listen(atom/target)
+	if(target != src)
+		return FALSE
+	cyberpunk_shift_middle_listen_started = world.time
+	cyberpunk_shift_middle_listen_ref = WEAKREF(target)
+	return TRUE
+
+/mob/living/proc/complete_held_intent_listen()
+	if(!cyberpunk_shift_middle_listen_started)
+		return FALSE
+	var/atom/target = cyberpunk_shift_middle_listen_ref?.resolve()
+	if(target != src)
+		clear_held_intent_listen_pending()
+		return FALSE
+	if(world.time < cyberpunk_shift_middle_listen_started + 0.35 SECONDS)
+		clear_held_intent_listen_pending()
+		return FALSE
+	return start_held_intent_listen()
+
+/mob/living/proc/clear_held_intent_listen_pending()
+	cyberpunk_shift_middle_listen_started = 0
+	cyberpunk_shift_middle_listen_ref = null
+
 /// Updates the applied FOV value and applies the handler to client if able
 /mob/living/proc/update_fov()
 	var/highest_fov

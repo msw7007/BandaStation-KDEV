@@ -34,10 +34,19 @@
 
 	var/mob/user = usr
 	var/list/modifiers = params2list(params)
+	if(isliving(user) && user == src && !LAZYACCESS(modifiers, RIGHT_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK) && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK))
+		var/mob/living/living_user = user
+		if(living_user.perform_cyberpunk_self_drag(over))
+			return
+
 	if(LAZYACCESS(modifiers, RIGHT_CLICK) && isliving(user) && isliving(src) && over == user)
 		var/mob/living/living_user = user
 		var/mob/living/living_target = src
 		if(living_user.perform_cyberpunk_grapple_self_drag(living_target))
+			return
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) && ishuman(user) && iscarbon(src) && ishuman(over))
+		var/mob/living/carbon/human/carry_receiver = over
+		if(carry_receiver.cyberpunk_carry_mouse_drop(src, user))
 			return
 
 	if(SEND_SIGNAL(src, COMSIG_MOUSEDROP_ONTO, over, user) & COMPONENT_CANCEL_MOUSEDROP_ONTO)
@@ -138,7 +147,7 @@
 	SEND_SIGNAL(src, COMSIG_CLIENT_MOUSEDOWN, object, location, control, params)
 	var/list/modifiers = params2list(params)
 	start_cyberpunk_charged_click(object, modifiers)
-	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && mob?.MiddleMouseDownOn(object, params) & COMSIG_MOB_CANCEL_CLICKON)
+	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && mob?.MiddleMouseDownOn(object, params, location) & COMSIG_MOB_CANCEL_CLICKON)
 		return
 	if(mouse_down_icon)
 		mouse_pointer_icon = mouse_down_icon
@@ -155,7 +164,7 @@
 		click_intercept_time = world.time
 	var/list/modifiers = params2list(params)
 	prepare_cyberpunk_charged_click(object, modifiers)
-	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && mob?.MiddleMouseUpOn(object, params) & COMSIG_MOB_CANCEL_CLICKON)
+	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && mob?.MiddleMouseUpOn(object, params, location) & COMSIG_MOB_CANCEL_CLICKON)
 		click_intercept_time = world.time
 	if(mouse_up_icon)
 		mouse_pointer_icon = mouse_up_icon
@@ -177,7 +186,7 @@
 	cyberpunk_charged_click_ref = WEAKREF(object)
 	cyberpunk_charged_click_started = world.time
 	cyberpunk_charged_click_button = used_button
-	addtimer(CALLBACK(src, PROC_REF(show_cyberpunk_charged_click_indicator), cyberpunk_charged_click_started), 1 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(show_cyberpunk_charged_click_indicator), cyberpunk_charged_click_started), get_cyberpunk_charged_click_delay(used_button))
 	return TRUE
 
 /client/proc/show_cyberpunk_charged_click_indicator(started_at)
@@ -186,15 +195,15 @@
 	var/mob/living/living_user = mob
 	if(!living_user.combat_mode)
 		return
-	living_user.balloon_alert(living_user, cyberpunk_charged_click_button == RIGHT_CLICK ? "pierce ready" : "chop ready")
+	living_user.balloon_alert(living_user, "[get_cyberpunk_charged_intent_for_button(cyberpunk_charged_click_button)] ready")
 
 /client/proc/prepare_cyberpunk_charged_click(datum/object, list/modifiers)
 	if(!cyberpunk_charged_click_started || !cyberpunk_charged_click_ref || !isatom(object))
 		clear_cyberpunk_charged_click()
 		return FALSE
 	var/atom/charged_target = cyberpunk_charged_click_ref.resolve()
-	if(charged_target == object && world.time >= cyberpunk_charged_click_started + 1 SECONDS)
-		cyberpunk_next_charged_intent = cyberpunk_charged_click_button == RIGHT_CLICK ? "pierce" : "chop"
+	if(charged_target == object && world.time >= cyberpunk_charged_click_started + get_cyberpunk_charged_click_delay(cyberpunk_charged_click_button))
+		cyberpunk_next_charged_intent = get_cyberpunk_charged_intent_for_button(cyberpunk_charged_click_button)
 	clear_cyberpunk_charged_click(FALSE)
 	return !!cyberpunk_next_charged_intent
 
@@ -218,10 +227,22 @@
 	var/expected_button = LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
 	if(expected_button != cyberpunk_charged_click_button)
 		return null
-	if(world.time < cyberpunk_charged_click_started + 1 SECONDS)
+	if(world.time < cyberpunk_charged_click_started + get_cyberpunk_charged_click_delay(cyberpunk_charged_click_button))
 		return null
-	. = cyberpunk_charged_click_button == RIGHT_CLICK ? "pierce" : "chop"
+	. = get_cyberpunk_charged_intent_for_button(cyberpunk_charged_click_button)
 	clear_cyberpunk_charged_click()
+
+/client/proc/get_cyberpunk_charged_intent_for_button(used_button)
+	if(used_button == RIGHT_CLICK)
+		return "kick"
+	if(isliving(mob))
+		var/mob/living/living_user = mob
+		if(living_user.cyberpunk_combat_intent == "stab")
+			return "pierce"
+	return "chop"
+
+/client/proc/get_cyberpunk_charged_click_delay(used_button)
+	return used_button == RIGHT_CLICK ? 0.25 SECONDS : 1 SECONDS
 
 /client/proc/clear_cyberpunk_charged_click(clear_next = TRUE)
 	cyberpunk_charged_click_ref = null

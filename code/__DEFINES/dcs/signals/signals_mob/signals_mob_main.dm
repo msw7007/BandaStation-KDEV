@@ -18,9 +18,9 @@
 #define COMSIG_MOB_CLICKON "mob_clickon"
 ///from base of mob/MiddleClickOn(): (atom/A)
 #define COMSIG_MOB_MIDDLECLICKON "mob_middleclickon"
-///from base of mob/MiddleMouseDownOn(): (atom/A, params)
+///from base of mob/MiddleMouseDownOn(): (atom/A, params, atom/location)
 #define COMSIG_MOB_MIDDLEMOUSEDOWNON "mob_middlemousedownon"
-///from base of mob/MiddleMouseUpOn(): (atom/A, params)
+///from base of mob/MiddleMouseUpOn(): (atom/A, params, atom/location)
 #define COMSIG_MOB_MIDDLEMOUSEUPON "mob_middlemouseupon"
 ///from base of mob/AltClickOn(): (atom/A)
 #define COMSIG_MOB_ALTCLICKON "mob_altclickon"

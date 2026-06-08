@@ -1,7 +1,9 @@
 /mob/living/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
 	clear_focused_look()
-	if(listening_intently)
+	if(cyberpunk_shift_middle_listening)
+		stop_held_intent_listen()
+	else if(listening_intently)
 		toggle_intent_listen()
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_mover = src
@@ -137,7 +139,7 @@
 	Knockdown(STAMINA_SPRINT_COLLISION_KNOCKDOWN, ignore_canstun = TRUE)
 	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] crashes and falls!"), span_userdanger("You crash and fall!"))
 
-/mob/living/proc/try_jump_forward()
+/mob/living/proc/try_jump_forward(long_jump = FALSE)
 	if(currently_jumping)
 		return FALSE
 	if(!(mobility_flags & MOBILITY_MOVE) || body_position != STANDING_UP || buckled || incapacitated)
@@ -147,7 +149,7 @@
 		balloon_alert(src, "too tired")
 		return FALSE
 
-	var/long_jump = move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING)
+	long_jump = (long_jump || move_intent == MOVE_INTENT_RUN) && !(movement_type & FLOATING)
 	INVOKE_ASYNC(src, PROC_REF(perform_jump_sequence), dir, long_jump)
 	return TRUE
 
@@ -155,49 +157,41 @@
 	currently_jumping = TRUE
 	var/original_pixel_z = pixel_z
 	setDir(jump_dir)
-	var/air_steps = long_jump ? 2 : 1
-	var/success = FALSE
-	for(var/i in 1 to air_steps)
-		var/turf/current_turf = get_turf(src)
-		var/turf/next_turf = get_step(current_turf, jump_dir)
-		if(!next_turf)
+	var/air_distance = long_jump ? 3 : 2
+	var/turf/current_turf = get_turf(src)
+	var/turf/landing_turf = current_turf
+	var/atom/jumpable_obstacle
+	for(var/i in 1 to air_distance)
+		landing_turf = get_step(landing_turf, jump_dir)
+		if(!landing_turf)
+			pixel_z = original_pixel_z
+			handle_jump_collision(jump_dir)
+			currently_jumping = FALSE
+			return FALSE
+		if(landing_turf.is_blocked_turf(source_atom = src))
+			if(i < air_distance)
+				if(!jumpable_obstacle)
+					jumpable_obstacle = get_jumpable_obstacle(landing_turf)
+				if(jumpable_obstacle)
+					continue
 			pixel_z = original_pixel_z
 			handle_jump_collision(jump_dir)
 			currently_jumping = FALSE
 			return FALSE
 
-		var/atom/jumpable_obstacle
-		if(next_turf.is_blocked_turf(source_atom = src))
-			jumpable_obstacle = get_jumpable_obstacle(next_turf)
-			if(!jumpable_obstacle)
-				pixel_z = original_pixel_z
-				handle_jump_collision(jump_dir)
-				currently_jumping = FALSE
-				return FALSE
-			var/turf/landing_turf = get_step(next_turf, jump_dir)
-			if(!landing_turf || landing_turf.is_blocked_turf(source_atom = src))
-				pixel_z = original_pixel_z
-				handle_jump_collision(jump_dir)
-				currently_jumping = FALSE
-				return FALSE
-			next_turf = landing_turf
-			i = air_steps
+	animate_jump_arc(1, air_distance, original_pixel_z)
+	sleep(world.tick_lag)
+	forceMove(landing_turf)
+	setDir(jump_dir)
+	if(jumpable_obstacle)
+		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] vaults over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."), span_notice("You vault over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."))
+	else
+		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] jumps forward."), span_notice("You jump forward."))
+	animate(src, pixel_z = original_pixel_z, time = world.tick_lag, easing = SINE_EASING|EASE_IN)
+	sleep(world.tick_lag)
 
-		animate_jump_arc(i, air_steps, original_pixel_z)
-		sleep(world.tick_lag)
-		forceMove(next_turf)
-		setDir(jump_dir)
-		if(jumpable_obstacle)
-			visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] vaults over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."), span_notice("You vault over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."))
-		else
-			visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] jumps forward."), span_notice("You jump forward."))
-		success = TRUE
-		animate(src, pixel_z = original_pixel_z, time = world.tick_lag, easing = SINE_EASING|EASE_IN)
-		sleep(world.tick_lag)
-
-	if(success)
-		apply_cyberpunk_acrobatics_speed_bonus()
-	if(success && long_jump && !prob(get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 1)))
+	apply_cyberpunk_acrobatics_speed_bonus()
+	if(long_jump)
 		continue_long_jump(jump_dir)
 	pixel_z = original_pixel_z
 	currently_jumping = FALSE
@@ -238,38 +232,74 @@
 	Knockdown(STAMINA_JUMP_COLLISION_KNOCKDOWN, ignore_canstun = TRUE)
 	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] clips the obstacle and falls!"), span_userdanger("You clip the obstacle and fall!"))
 
-/mob/living/mouse_drop_dragged(atom/over, mob/user, src_location, over_location, params)
-	. = ..()
-	if(user != src || !stealth_mode || !isturf(over))
-		return
-	var/list/modifiers = params2list(params)
-	if(LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, SHIFT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || LAZYACCESS(modifiers, ALT_CLICK))
-		return
-	start_wall_hug()
+/mob/living/proc/perform_cyberpunk_self_drag(atom/over)
+	if(!over)
+		return FALSE
+	if(ismovable(over))
+		var/atom/movable/movable_cover = over
+		if(stealth_mode && movable_cover.can_hide_under_stealth_cover(src))
+			return hide_under_stealth_cover(movable_cover)
+	if(isturf(over))
+		return start_wall_hug(over)
+	return FALSE
 
-/mob/living/proc/near_wall_hug_cover()
+/mob/living/proc/handle_cyberpunk_shift_secondary_click(atom/target, params)
+	if(!target)
+		return FALSE
+	if(cyberpunk_shift_middle_listening)
+		stop_held_intent_listen()
+		return TRUE
+	if(target == src)
+		look_up()
+		return TRUE
+	if(isturf(target))
+		var/turf/target_turf = target
+		if(!target_turf.density && get_dist(src, target_turf) <= 1)
+			var/look_dir = get_dir(src, target_turf)
+			if(look_dir)
+				setDir(look_dir)
+			look_down()
+			return TRUE
+	if(focused_look)
+		clear_focused_look()
+		return TRUE
+	if(!toggle_focused_look())
+		return FALSE
+	focus_look_at(target)
+	return TRUE
+
+/mob/living/proc/get_wall_hug_cover(atom/preferred_cover = null)
 	var/turf/current_turf = get_turf(src)
 	if(!current_turf)
-		return FALSE
+		return null
+	if(preferred_cover)
+		var/turf/preferred_turf = get_turf(preferred_cover)
+		if(preferred_turf && get_dist(current_turf, preferred_turf) <= 1 && preferred_turf.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+			return preferred_turf
 	for(var/check_dir in GLOB.cardinals)
 		var/turf/check_turf = get_step(current_turf, check_dir)
 		if(check_turf?.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
-			return TRUE
-	return FALSE
+			return check_turf
+	return null
 
-/mob/living/proc/start_wall_hug()
+/mob/living/proc/near_wall_hug_cover()
+	return !!get_wall_hug_cover()
+
+/mob/living/proc/start_wall_hug(atom/preferred_cover = null)
 	if(wall_hugging)
 		return TRUE
 	if(body_position != STANDING_UP || buckled || incapacitated)
 		balloon_alert(src, "can't hug cover")
 		return FALSE
-	if(!near_wall_hug_cover())
+	var/turf/cover = get_wall_hug_cover(preferred_cover)
+	if(!cover)
 		balloon_alert(src, "no cover")
 		return FALSE
 	wall_hugging = TRUE
-	if(!stealth_mode)
-		start_stealth()
-		wall_hug_started_stealth = TRUE
+	var/wall_dir = get_dir(src, cover)
+	if(wall_dir && !ISDIAGONALDIR(wall_dir))
+		setDir(REVERSE_DIR(wall_dir))
+		start_leaning(cover, 11)
 	chameleon_bonus += WALL_HUG_CHAMELEON_BONUS
 	add_movespeed_modifier(/datum/movespeed_modifier/wall_hug)
 	if(move_intent == MOVE_INTENT_RUN)
@@ -282,12 +312,12 @@
 	if(!wall_hugging)
 		return
 	wall_hugging = FALSE
+	stop_leaning()
 	chameleon_bonus = max(0, chameleon_bonus - WALL_HUG_CHAMELEON_BONUS)
 	remove_movespeed_modifier(/datum/movespeed_modifier/wall_hug)
 	if(wall_hug_started_stealth)
 		wall_hug_started_stealth = FALSE
-		end_stealth()
-	else
+	if(stealth_mode)
 		update_stealth_chameleon()
 	if(!silent)
 		balloon_alert(src, "left cover")

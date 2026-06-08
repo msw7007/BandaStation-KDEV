@@ -2269,6 +2269,15 @@
 /// Change the [body_position] to [LYING_DOWN] and update associated behavior.
 /mob/living/proc/set_lying_down(new_lying_angle)
 	set_body_position(LYING_DOWN)
+	if(body_position != LYING_DOWN)
+		return
+	if(new_lying_angle)
+		set_lying_angle(new_lying_angle)
+	else if(!lying_angle && rotate_on_lying)
+		if(buckled && buckled.buckle_lying != NO_BUCKLE_LYING)
+			set_lying_angle(buckled.buckle_lying)
+		else
+			set_lying_angle(pick(LYING_ANGLE_EAST, LYING_ANGLE_WEST))
 
 /// Proc to append behavior related to lying down.
 /mob/living/proc/on_lying_down(new_lying_angle)
@@ -3948,7 +3957,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	//down needs to check this floor
 	var/turf/check_turf = get_step_multiz(src, direction == DOWN ? NONE : direction)
 	if(!get_step_multiz(src, direction)) //We are at the edge z-level.
-		to_chat(src, span_warning("Сверху нет ничего интересного."))
+		to_chat(src, span_warning("[direction == DOWN ? "Снизу" : "Сверху"] нет ничего интересного."))
 		return
 	else if(!istransparentturf(check_turf)) //There is no turf we can look through above us
 		var/turf/front_hole = get_step(check_turf, dir)

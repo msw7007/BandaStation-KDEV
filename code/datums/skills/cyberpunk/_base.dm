@@ -855,7 +855,10 @@
 		carry_mode = "living_shield"
 		buckle_flags = NONE
 		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] turns [target.declent_ru(ACCUSATIVE)] into a living shield!"), span_danger("You turn [target.declent_ru(ACCUSATIVE)] into a living shield!"), null, COMBAT_MESSAGE_RANGE, target)
-		carried.set_resting(FALSE, TRUE)
+		carried.resting = FALSE
+		carried.update_resting()
+		carried.set_body_position(STANDING_UP)
+		carried.set_lying_angle(0)
 	else if(grab_state >= GRAB_AGGRESSIVE)
 		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] hauls [target.declent_ru(ACCUSATIVE)] onto a shoulder!"), span_danger("You haul [target.declent_ru(ACCUSATIVE)] onto your shoulder!"), null, COMBAT_MESSAGE_RANGE, target)
 		carried.set_lying_down(lying_angle)
@@ -871,7 +874,10 @@
 		carrier.stop_pulling()
 	if(carry_mode == "living_shield")
 		carrier.buckle_lying = 0
-		carried.set_resting(FALSE, TRUE)
+		carried.resting = FALSE
+		carried.update_resting()
+		carried.set_body_position(STANDING_UP)
+		carried.set_lying_angle(0)
 	return TRUE
 
 /mob/living/proc/restore_cyberpunk_grapple_after_positioning(mob/living/target, old_grab_state, old_grab_zone, old_grab_durability, old_grab_max_durability)

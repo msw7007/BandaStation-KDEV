@@ -160,6 +160,36 @@
 	user_mob.set_cyberpunk_combat_intent("stab")
 	return TRUE
 
+/datum/keybinding/living/cyberpunk_toggle_stealth
+	hotkey_keys = list("ShiftC")
+	name = "cyberpunk_toggle_stealth"
+	full_name = "Toggle Stealth"
+	description = "Toggle stealth mode."
+	keybind_signal = "keybinding_living_cyberpunk_toggle_stealth_down"
+
+/datum/keybinding/living/cyberpunk_toggle_stealth/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user_mob = user.mob
+	user_mob.toggle_stealth_mode()
+	return TRUE
+
+/datum/keybinding/living/cyberpunk_jump
+	hotkey_keys = list("ShiftJ")
+	name = "cyberpunk_jump"
+	full_name = "Jump"
+	description = "Jump forward."
+	keybind_signal = "keybinding_living_cyberpunk_jump_down"
+
+/datum/keybinding/living/cyberpunk_jump/down(client/user, turf/target, mousepos_x, mousepos_y)
+	. = ..()
+	if(.)
+		return
+	var/mob/living/user_mob = user.mob
+	user_mob.try_jump_forward()
+	return TRUE
+
 /datum/keybinding/living/toggle_move_intent
 	hotkey_keys = list("V") // BANDASTATION EDIT
 	name = "toggle_move_intent"

@@ -90,7 +90,7 @@
 		return TRUE
 	return ..()
 
-/mob/living/carbon/send_item_attack_message(obj/item/weapon, mob/living/user, hit_area, def_zone)
+/mob/living/carbon/send_item_attack_message(obj/item/weapon, mob/living/user, hit_area, def_zone, list/modifiers = null)
 	// In the future replace these with parent call if the item attack message proc is ever unshittified
 	if(SEND_SIGNAL(weapon, COMSIG_SEND_ITEM_ATTACK_MESSAGE_OBJECT, src, user) & SIGNAL_MESSAGE_MODIFIED)
 		return TRUE
@@ -114,6 +114,8 @@
 		message_verb_continuous = weapon.attack_verb_continuous[picked_index]
 	if (picked_index && length(weapon.attack_verb_simple) >= picked_index)
 		message_verb_simple = weapon.attack_verb_simple[picked_index]
+	message_verb_continuous = LAZYACCESS(modifiers, "cyberpunk_attack_verb_continuous") || message_verb_continuous
+	message_verb_simple = LAZYACCESS(modifiers, "cyberpunk_attack_verb_simple") || message_verb_simple
 
 	var/extra_wound_details = ""
 

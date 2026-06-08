@@ -84,11 +84,15 @@
 			modifiers["cyberpunk_charged_intent"] = charged_intent
 	if(isliving(src))
 		var/mob/living/living_user = src
-		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK))
-			if(LAZYACCESS(modifiers, ALT_CLICK))
-				modifiers["cyberpunk_defense_break"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "parry" : "dodge"
-				modifiers[ALT_CLICK] = null
+		if(living_user.combat_mode && LAZYACCESS(modifiers, ALT_CLICK) && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK))
+			modifiers -= ALT_CLICK
 			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
+			modifiers["cyberpunk_defense_break"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "parry" : "dodge"
+		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK))
+			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
+			if(LAZYACCESS(modifiers, "cyberpunk_charged_intent") == "kick" && isliving(A) && Adjacent(A))
+				UnarmedAttack(A, TRUE, modifiers)
+				return
 
 	if(SEND_SIGNAL(src, COMSIG_MOB_CLICKON, A, modifiers) & COMSIG_MOB_CANCEL_CLICKON)
 		return
@@ -96,9 +100,13 @@
 	if(LAZYACCESS(modifiers, BUTTON4) || LAZYACCESS(modifiers, BUTTON5))
 		return
 
+	if(isliving(src) && !(LAZYACCESS(modifiers, SHIFT_CLICK) && LAZYACCESS(modifiers, MIDDLE_CLICK)))
+		var/mob/living/living_user = src
+		living_user.stop_held_intent_listen()
+
 	if(LAZYACCESS(modifiers, SHIFT_CLICK))
 		if(LAZYACCESS(modifiers, MIDDLE_CLICK))
-			ShiftMiddleClickOn(A)
+			ShiftMiddleClickOn(A, params)
 			return
 		if(LAZYACCESS(modifiers, CTRL_CLICK))
 			CtrlShiftClickOn(A)
@@ -133,7 +141,7 @@
 	if(isliving(src))
 		var/mob/living/living_user = src
 		if(living_user.cyberpunk_defensive_action_held)
-			living_user.perform_cyberpunk_defensive_action(LAZYACCESS(modifiers, RIGHT_CLICK) ? "dodge" : "parry")
+			living_user.perform_cyberpunk_defensive_action(LAZYACCESS(modifiers, RIGHT_CLICK) ? "parry" : "dodge")
 			return
 
 	face_atom(A)
@@ -159,7 +167,7 @@
 		if(living_user.try_cyberpunk_wrestling_launch_click(A))
 			return
 
-	if(isliving(src) && isliving(A) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
+	if(isliving(src) && isliving(A) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
 		var/mob/living/living_user = src
 		var/mob/living/living_target = A
 		if(living_user.try_cyberpunk_grapple_attack(living_target, modifiers))
@@ -420,18 +428,39 @@
 	. = SEND_SIGNAL(src, COMSIG_MOB_MIDDLECLICKON, A, params)
 	if(. & COMSIG_MOB_CANCEL_CLICKON)
 		return
-	if(isliving(src) && isliving(A))
-		var/mob/living/living_user = src
-		var/mob/living/living_target = A
-		if(living_user.try_cyberpunk_grapple_attack(living_target, list(MIDDLE_CLICK = TRUE)))
-			return
+	if(isliving(src))
+		return
 	swap_hand()
 
-/mob/proc/MiddleMouseDownOn(atom/A, params)
-	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEDOWNON, A, params)
+/mob/proc/MiddleMouseDownOn(atom/A, params, atom/location = null)
+	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEDOWNON, A, params, location)
 
-/mob/proc/MiddleMouseUpOn(atom/A, params)
-	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEUPON, A, params)
+/mob/living/MiddleMouseDownOn(atom/A, params, atom/location = null)
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, SHIFT_CLICK) && A == src)
+		prepare_held_intent_listen(A)
+		return COMSIG_MOB_CANCEL_CLICKON
+	return ..()
+
+/mob/proc/MiddleMouseUpOn(atom/A, params, atom/location = null)
+	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEUPON, A, params, location)
+
+/mob/living/MiddleMouseUpOn(atom/A, params, atom/location = null)
+	if(cyberpunk_shift_middle_listen_started)
+		var/turf/current_turf = get_turf(src)
+		var/turf/clicked_turf = get_turf(location || A)
+		if(current_turf && clicked_turf && clicked_turf != current_turf && get_dist(current_turf, clicked_turf) <= 1)
+			clear_held_intent_listen_pending()
+			var/look_dir = get_dir(current_turf, clicked_turf)
+			if(look_dir)
+				setDir(look_dir)
+			look_down()
+			return COMSIG_MOB_CANCEL_CLICKON
+		if(!complete_held_intent_listen())
+			if((A == src || clicked_turf == current_turf) && (!clicked_turf || clicked_turf == current_turf))
+				look_up()
+		return COMSIG_MOB_CANCEL_CLICKON
+	return ..()
 
 /**
  * Shift click
@@ -453,17 +482,10 @@
 /mob/proc/TurfAdjacent(turf/tile)
 	return tile.Adjacent(src)
 
-/mob/proc/ShiftMiddleClickOn(atom/A)
+/mob/proc/ShiftMiddleClickOn(atom/A, params)
 	if(isliving(src))
 		var/mob/living/living_user = src
-		if(A == src)
-			living_user.look_up()
-			return
-		if(isliving(A))
-			living_user.toggle_intent_listen()
-			return
-		living_user.toggle_focused_look()
-		living_user.focus_look_at(A)
+		living_user.handle_cyberpunk_shift_secondary_click(A, params)
 		return
 	src.pointed(A)
 	return
