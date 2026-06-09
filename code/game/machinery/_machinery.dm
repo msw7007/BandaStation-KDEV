@@ -588,6 +588,9 @@
 	var/chem_cost_multiplier = 1
 	var/vending_stock_multiplier = 1
 	var/apc_efficiency_multiplier = 1
+	var/production_time_multiplier = 1
+	var/production_material_multiplier = 1
+	var/failure_shock_multiplier = 1
 
 /datum/cyberpunk_machine_module/proc/can_install(obj/machinery/machine, mob/living/user)
 	return TRUE
@@ -680,6 +683,90 @@
 	wear_multiplier = 0.9
 	apc_efficiency_multiplier = 0.85
 
+/datum/cyberpunk_machine_module/emergency_battery
+	name = "emergency buffer battery"
+	id = "emergency_battery"
+	description = "Stabilizes power draw and lets the machine tolerate short local power dips."
+	module_item_type = /obj/item/cyberpunk_machine_module/emergency_battery
+	power_usage_multiplier = 0.88
+	wear_multiplier = 0.95
+	failure_shock_multiplier = 0.85
+
+/datum/cyberpunk_machine_module/arc_suppressor
+	name = "arc suppressor"
+	id = "arc_suppressor"
+	description = "Reduces dangerous electrical shorts when worn machinery starts failing."
+	module_item_type = /obj/item/cyberpunk_machine_module/arc_suppressor
+	power_usage_multiplier = 0.95
+	failure_shock_multiplier = 0.45
+
+/datum/cyberpunk_machine_module/production_overclocker
+	name = "production overclocker"
+	id = "production_overclocker"
+	description = "Speeds fabricators at the cost of higher power draw and component wear."
+	module_item_type = /obj/item/cyberpunk_machine_module/production_overclocker
+	power_usage_multiplier = 1.12
+	wear_multiplier = 1.15
+	production_time_multiplier = 0.82
+
+/datum/cyberpunk_machine_module/material_optimizer
+	name = "material optimizer"
+	id = "material_optimizer"
+	description = "Reduces fabricator material waste with slower machine staging."
+	module_item_type = /obj/item/cyberpunk_machine_module/material_optimizer
+	power_usage_multiplier = 0.95
+	wear_multiplier = 0.95
+	production_time_multiplier = 1.08
+	production_material_multiplier = 0.88
+
+/datum/cyberpunk_machine_module/vendor_stock_router
+	name = "vendor stock router"
+	id = "vendor_stock_router"
+	description = "Improves vending restock routing and service throughput."
+	module_item_type = /obj/item/cyberpunk_machine_module/vendor_stock_router
+	power_usage_multiplier = 0.95
+	wear_multiplier = 0.9
+	tool_time_multiplier = 0.9
+	vending_stock_multiplier = 1.25
+
+/datum/cyberpunk_machine_module/vendor_security_cage
+	name = "vendor security cage"
+	id = "vendor_security_cage"
+	description = "Reinforces vending internals against tilts, shocks and rough servicing."
+	module_item_type = /obj/item/cyberpunk_machine_module/vendor_security_cage
+	wear_multiplier = 0.85
+	integrity_bonus = 35
+	failure_shock_multiplier = 0.75
+
+/datum/cyberpunk_machine_module/medical_sterile_bus
+	name = "medical sterile bus"
+	id = "medical_sterile_bus"
+	description = "Improves medical machine servicing, repair response and safe power flow."
+	module_item_type = /obj/item/cyberpunk_machine_module/medical_sterile_bus
+	power_usage_multiplier = 0.92
+	wear_multiplier = 0.88
+	tool_time_multiplier = 0.88
+	repair_multiplier = 1.15
+	failure_shock_multiplier = 0.8
+
+/datum/cyberpunk_machine_module/security_response_core
+	name = "security response core"
+	id = "security_response_core"
+	description = "Reinforces camera, turret and alarm equipment for longer operation under stress."
+	module_item_type = /obj/item/cyberpunk_machine_module/security_response_core
+	power_usage_multiplier = 0.95
+	wear_multiplier = 0.82
+	integrity_bonus = 20
+
+/datum/cyberpunk_machine_module/network_filter
+	name = "network filter"
+	id = "network_filter"
+	description = "Reduces wear and power instability in computers, servers and telecom equipment."
+	module_item_type = /obj/item/cyberpunk_machine_module/network_filter
+	power_usage_multiplier = 0.86
+	wear_multiplier = 0.88
+	tool_time_multiplier = 0.92
+
 /datum/cyberpunk_machine_module/chem_reaction_accelerator/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
 
@@ -692,6 +779,27 @@
 /datum/cyberpunk_machine_module/apc_efficiency_core/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/power/apc)
 
+/datum/cyberpunk_machine_module/production_overclocker/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/rnd/production) || istype(machine, /obj/machinery/autolathe) || istype(machine, /obj/machinery/mecha_part_fabricator) || istype(machine, /obj/machinery/component_printer)
+
+/datum/cyberpunk_machine_module/material_optimizer/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/rnd/production) || istype(machine, /obj/machinery/autolathe) || istype(machine, /obj/machinery/mecha_part_fabricator) || istype(machine, /obj/machinery/component_printer)
+
+/datum/cyberpunk_machine_module/vendor_stock_router/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/vending) || istype(machine, /obj/machinery/smartfridge)
+
+/datum/cyberpunk_machine_module/vendor_security_cage/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/vending)
+
+/datum/cyberpunk_machine_module/medical_sterile_bus/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/sleeper) || istype(machine, /obj/machinery/cryo_cell) || istype(machine, /obj/machinery/stasis) || istype(machine, /obj/machinery/dna_scannernew) || istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
+
+/datum/cyberpunk_machine_module/security_response_core/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/camera) || istype(machine, /obj/machinery/porta_turret) || istype(machine, /obj/machinery/deployable_turret) || istype(machine, /obj/machinery/flasher) || istype(machine, /obj/machinery/firealarm) || istype(machine, /obj/machinery/turretid)
+
+/datum/cyberpunk_machine_module/network_filter/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/computer) || istype(machine, /obj/machinery/modular_computer) || istype(machine, /obj/machinery/telecomms) || istype(machine, /obj/machinery/ntnet_relay) || istype(machine, /obj/machinery/quantum_server)
+
 /proc/cyberpunk_machine_module_catalog()
 	return list(
 		/datum/cyberpunk_machine_module/power_governor,
@@ -699,10 +807,19 @@
 		/datum/cyberpunk_machine_module/reinforced_frame,
 		/datum/cyberpunk_machine_module/service_bus,
 		/datum/cyberpunk_machine_module/salvage_router,
+		/datum/cyberpunk_machine_module/emergency_battery,
+		/datum/cyberpunk_machine_module/arc_suppressor,
+		/datum/cyberpunk_machine_module/production_overclocker,
+		/datum/cyberpunk_machine_module/material_optimizer,
 		/datum/cyberpunk_machine_module/chem_reaction_accelerator,
 		/datum/cyberpunk_machine_module/chem_yield_regulator,
 		/datum/cyberpunk_machine_module/corporate_vending_bus,
+		/datum/cyberpunk_machine_module/vendor_stock_router,
+		/datum/cyberpunk_machine_module/vendor_security_cage,
 		/datum/cyberpunk_machine_module/apc_efficiency_core,
+		/datum/cyberpunk_machine_module/medical_sterile_bus,
+		/datum/cyberpunk_machine_module/security_response_core,
+		/datum/cyberpunk_machine_module/network_filter,
 	)
 
 /obj/item/cyberpunk_machine_module
@@ -783,6 +900,51 @@
 	icon_state = "circuit_board"
 	module_datum_type = /datum/cyberpunk_machine_module/apc_efficiency_core
 
+/obj/item/cyberpunk_machine_module/emergency_battery
+	name = "emergency buffer battery"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_machine_module/emergency_battery
+
+/obj/item/cyberpunk_machine_module/arc_suppressor
+	name = "arc suppressor"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_machine_module/arc_suppressor
+
+/obj/item/cyberpunk_machine_module/production_overclocker
+	name = "production overclocker"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_machine_module/production_overclocker
+
+/obj/item/cyberpunk_machine_module/material_optimizer
+	name = "material optimizer"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/material_optimizer
+
+/obj/item/cyberpunk_machine_module/vendor_stock_router
+	name = "vendor stock router"
+	icon_state = "harddisk"
+	module_datum_type = /datum/cyberpunk_machine_module/vendor_stock_router
+
+/obj/item/cyberpunk_machine_module/vendor_security_cage
+	name = "vendor security cage"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_machine_module/vendor_security_cage
+
+/obj/item/cyberpunk_machine_module/medical_sterile_bus
+	name = "medical sterile bus"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_machine_module/medical_sterile_bus
+
+/obj/item/cyberpunk_machine_module/security_response_core
+	name = "security response core"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_machine_module/security_response_core
+
+/obj/item/cyberpunk_machine_module/network_filter
+	name = "network filter"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/network_filter
+
 /datum/design/cyberpunk_machine_module
 	name = "Р СЏР·РЅРѕРІ Machine Module"
 	desc = "A Р СЏР·РЅРѕРІ-certified maintenance module for Cyberpunk 13 machinery."
@@ -846,6 +1008,60 @@
 	id = "ryaznov_apc_efficiency_core"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/apc_efficiency_core
+
+/datum/design/cyberpunk_machine_module/emergency_battery
+	name = "Ryaznov Emergency Buffer Battery"
+	id = "ryaznov_emergency_battery"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/emergency_battery
+
+/datum/design/cyberpunk_machine_module/arc_suppressor
+	name = "Ryaznov Arc Suppressor"
+	id = "ryaznov_arc_suppressor"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/arc_suppressor
+
+/datum/design/cyberpunk_machine_module/production_overclocker
+	name = "Ryaznov Production Overclocker"
+	id = "ryaznov_production_overclocker"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_machine_module/production_overclocker
+
+/datum/design/cyberpunk_machine_module/material_optimizer
+	name = "Ryaznov Material Optimizer"
+	id = "ryaznov_material_optimizer"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/material_optimizer
+
+/datum/design/cyberpunk_machine_module/vendor_stock_router
+	name = "Ryaznov Vendor Stock Router"
+	id = "ryaznov_vendor_stock_router"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_machine_module/vendor_stock_router
+
+/datum/design/cyberpunk_machine_module/vendor_security_cage
+	name = "Ryaznov Vendor Security Cage"
+	id = "ryaznov_vendor_security_cage"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/vendor_security_cage
+
+/datum/design/cyberpunk_machine_module/medical_sterile_bus
+	name = "Ryaznov Medical Sterile Bus"
+	id = "ryaznov_medical_sterile_bus"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/medical_sterile_bus
+
+/datum/design/cyberpunk_machine_module/security_response_core
+	name = "Ryaznov Security Response Core"
+	id = "ryaznov_security_response_core"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/security_response_core
+
+/datum/design/cyberpunk_machine_module/network_filter
+	name = "Ryaznov Network Filter"
+	id = "ryaznov_network_filter"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/network_filter
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery
@@ -1877,6 +2093,24 @@
 		apc_multiplier *= module.apc_efficiency_multiplier
 	return max(0.1, apc_multiplier)
 
+/obj/machinery/proc/get_cyberpunk_machine_production_time_multiplier()
+	var/production_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		production_multiplier *= module.production_time_multiplier
+	return max(0.1, production_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_production_material_multiplier()
+	var/production_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		production_multiplier *= module.production_material_multiplier
+	return max(0.1, production_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_failure_shock_multiplier()
+	var/shock_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		shock_multiplier *= module.failure_shock_multiplier
+	return max(0, shock_multiplier)
+
 /obj/machinery/proc/cyberpunk_business_consume_warehouse(item_label, amount)
 	if(!cyberpunk_business_warehouse_linked || !cyberpunk_business_id)
 		return 0
@@ -2068,7 +2302,7 @@
 		return FALSE
 	switch(cyberpunk_machine_failure_state)
 		if("short", "unsafe")
-			var/shock_chance = round(cyberpunk_machine_failure_shock_chance * user.get_cyberpunk_machine_shock_multiplier(src))
+			var/shock_chance = round(cyberpunk_machine_failure_shock_chance * get_cyberpunk_machine_failure_shock_multiplier() * user.get_cyberpunk_machine_shock_multiplier(src))
 			if(powered() && prob(shock_chance))
 				shock(user, 100)
 				return TRUE
@@ -2241,6 +2475,9 @@
 		"chem_cost_multiplier" = module.chem_cost_multiplier,
 		"vending_stock_multiplier" = module.vending_stock_multiplier,
 		"apc_efficiency_multiplier" = module.apc_efficiency_multiplier,
+		"production_time_multiplier" = module.production_time_multiplier,
+		"production_material_multiplier" = module.production_material_multiplier,
+		"failure_shock_multiplier" = module.failure_shock_multiplier,
 	)
 
 /datum/cyberpunk_machine_module_interface/ui_data(mob/user)
@@ -2267,6 +2504,9 @@
 		"chem_cost_multiplier" = machine.get_cyberpunk_machine_chem_cost_multiplier(),
 		"vending_stock_multiplier" = machine.get_cyberpunk_machine_vending_stock_multiplier(),
 		"apc_efficiency_multiplier" = machine.get_cyberpunk_machine_apc_efficiency_multiplier(),
+		"production_time_multiplier" = machine.get_cyberpunk_machine_production_time_multiplier(),
+		"production_material_multiplier" = machine.get_cyberpunk_machine_production_material_multiplier(),
+		"failure_shock_multiplier" = machine.get_cyberpunk_machine_failure_shock_multiplier(),
 	)
 	data["installed_modules"] = list()
 	for(var/datum/cyberpunk_machine_module/module as anything in machine.cyberpunk_machine_modules)

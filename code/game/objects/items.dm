@@ -192,6 +192,10 @@
 	var/cyberpunk_weapon_material = "steel"
 	/// Whether a modular weapon frame has been locked into a usable weapon.
 	var/cyberpunk_weapon_assembled = TRUE
+	/// Original display name before modular weapon identity is rebuilt from the main module.
+	var/cyberpunk_weapon_base_name
+	/// Original description before modular weapon identity is rebuilt from the main module.
+	var/cyberpunk_weapon_base_desc
 	/// Required module slots before the weapon can be assembled.
 	var/list/cyberpunk_weapon_required_slots
 	/// Baseline weapon stats captured before modular weapon recalculation.
@@ -1048,10 +1052,10 @@
 		report += "slots: [slot_report.Join(", ")]"
 	return report
 
-/obj/item/proc/select_cyberpunk_module(mob/user, active_only = FALSE)
+/obj/item/proc/select_cyberpunk_module(mob/user, active_only = FALSE, force_menu = FALSE)
 	if(!length(cyberpunk_modules))
 		return null
-	if(length(cyberpunk_modules) == 1 && (!active_only || cyberpunk_modules[1]?.has_active_ability()))
+	if(!force_menu && length(cyberpunk_modules) == 1 && (!active_only || cyberpunk_modules[1]?.has_active_ability()))
 		return cyberpunk_modules[1]
 	var/list/choices = list()
 	var/list/module_by_choice = list()
@@ -1068,6 +1072,64 @@
 		return null
 	var/pick = show_radial_menu(user, src, choices, radius = 36, require_near = TRUE, tooltips = TRUE)
 	return module_by_choice[pick]
+
+/obj/item/proc/can_hand_remove_cyberpunk_modules(mob/user)
+	if(!user || !length(cyberpunk_modules))
+		return FALSE
+	if(is_cyberpunk_modular_weapon())
+		return !cyberpunk_weapon_assembled
+	return !!cyberpunk_equipment_form
+
+/obj/item/proc/get_cyberpunk_module_item_type(datum/cyberpunk_item_module/module)
+	if(!module)
+		return null
+	var/fallback_type
+	for(var/module_item_type in subtypesof(/obj/item/cyberpunk_item_module))
+		var/obj/item/cyberpunk_item_module/module_item = new module_item_type(null)
+		if(module_item.module_datum_type != module.type)
+			qdel(module_item)
+			continue
+		if(module_item.module_tier == module.module_tier)
+			qdel(module_item)
+			return module_item_type
+		if(!fallback_type)
+			fallback_type = module_item_type
+		qdel(module_item)
+	return fallback_type
+
+/obj/item/proc/eject_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
+	if(!(module in cyberpunk_modules))
+		return FALSE
+	var/module_item_type = get_cyberpunk_module_item_type(module)
+	if(!module_item_type)
+		return FALSE
+	var/module_name = module.name
+	var/obj/item/cyberpunk_item_module/module_item = new module_item_type(get_turf(src))
+	module_item.cyberpunk_manufacturer = module.manufacturer
+	module_item.module_tier = module.module_tier
+	module_item.module_variant = module.module_variant
+	clear_cyberpunk_module_active(module)
+	LAZYREMOVE(cyberpunk_modules, module)
+	module.on_remove(src, user)
+	qdel(module)
+	if(user && !user.put_in_hands(module_item))
+		module_item.forceMove(drop_location())
+	if(is_cyberpunk_modular_weapon() && length(get_missing_cyberpunk_weapon_modules()))
+		cyberpunk_weapon_assembled = FALSE
+	if(cyberpunk_weapon_form)
+		recalculate_cyberpunk_weapon_stats()
+	else if(cyberpunk_equipment_form)
+		recalculate_cyberpunk_equipment_stats()
+	to_chat(user, span_notice("You remove [module_name] from [src]."))
+	return TRUE
+
+/obj/item/proc/hand_remove_cyberpunk_module(mob/living/user)
+	if(!can_hand_remove_cyberpunk_modules(user))
+		return FALSE
+	var/datum/cyberpunk_item_module/module = select_cyberpunk_module(user, FALSE, TRUE)
+	if(!module)
+		return TRUE
+	return eject_cyberpunk_module(module, user)
 
 /obj/item/proc/show_cyberpunk_modular_radial(mob/user)
 	if(!cyberpunk_equipment_form && !cyberpunk_weapon_form && !length(cyberpunk_modules))
@@ -1138,6 +1200,70 @@
 			return module.weapon_form_override
 	return cyberpunk_weapon_form
 
+/obj/item/proc/get_cyberpunk_weapon_form_label()
+	switch(get_cyberpunk_effective_weapon_form())
+		if("physical_melee")
+			return "physical melee base"
+		if("energy_melee")
+			return "energy melee base"
+		if("knife")
+			return "knife"
+		if("club")
+			return "club"
+		if("twohand_sword")
+			return "two-handed sword"
+		if("twohand_hammer")
+			return "two-handed hammer"
+		if("axe")
+			return "axe"
+		if("twohand_axe")
+			return "two-handed axe"
+		if("rapier")
+			return "rapier"
+		if("spear")
+			return "spear"
+		if("staff")
+			return "staff"
+		if("ballistic")
+			return "ballistic firearm"
+		if("energy")
+			return "energy weapon"
+		if("revolver")
+			return "revolver"
+		if("pistol")
+			return "pistol"
+		if("smg")
+			return "SMG"
+		if("rifle")
+			return "rifle"
+		if("shotgun")
+			return "shotgun"
+		if("sniper")
+			return "sniper rifle"
+		if("assault")
+			return "assault rifle"
+		if("lmg")
+			return "machine gun"
+		if("rocket")
+			return "rocket launcher"
+		if("laser")
+			return "laser weapon"
+		if("plasma")
+			return "plasma weapon"
+	return "[get_cyberpunk_effective_weapon_form()]"
+
+/obj/item/proc/update_cyberpunk_weapon_identity()
+	if(!is_cyberpunk_modular_weapon())
+		return
+	if(!cyberpunk_weapon_base_name)
+		cyberpunk_weapon_base_name = initial(name)
+	if(!cyberpunk_weapon_base_desc)
+		cyberpunk_weapon_base_desc = initial(desc)
+	var/form_label = get_cyberpunk_weapon_form_label()
+	var/material_label = get_cyberpunk_weapon_material_name()
+	name = "[material_label] modular [form_label]"
+	desc = "[cyberpunk_weapon_base_desc] Its current main module configures it as a [form_label]."
+
 /obj/item/proc/is_cyberpunk_on_table()
 	return !!(locate(/obj/structure/table) in get_turf(src))
 
@@ -1151,7 +1277,23 @@
 	var/slot_limit = cyberpunk_module_slots[module.module_slot]
 	if(!slot_limit)
 		return FALSE
+	if(get_cyberpunk_module_to_replace(module))
+		return TRUE
 	return get_cyberpunk_installed_module_count(module.module_slot) < slot_limit
+
+/obj/item/proc/get_cyberpunk_module_to_replace(datum/cyberpunk_item_module/new_module)
+	if(!new_module || !length(cyberpunk_modules))
+		return null
+	if(!length(cyberpunk_module_slots))
+		return null
+	var/slot_limit = cyberpunk_module_slots[new_module.module_slot]
+	if(!slot_limit || get_cyberpunk_installed_module_count(new_module.module_slot) < slot_limit)
+		return null
+	for(var/datum/cyberpunk_item_module/installed_module as anything in cyberpunk_modules)
+		if(installed_module.module_slot != new_module.module_slot)
+			continue
+		return installed_module
+	return null
 
 /obj/item/proc/get_missing_cyberpunk_weapon_modules()
 	var/list/missing = list()
@@ -1289,6 +1431,7 @@
 	apply_cyberpunk_weapon_material_stats()
 	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
 		module.apply_weapon_stats(src)
+	update_cyberpunk_weapon_identity()
 
 /obj/item/proc/setup_cyberpunk_weapon(form_id, list/base_slots, list/required_slots, assembled = FALSE, material_id = "steel")
 	cyberpunk_weapon_form = form_id
@@ -1297,6 +1440,8 @@
 	cyberpunk_base_module_slots = base_slots?.Copy() || list()
 	cyberpunk_module_slots = cyberpunk_base_module_slots.Copy()
 	cyberpunk_weapon_required_slots = required_slots?.Copy() || list()
+	cyberpunk_weapon_base_name ||= initial(name)
+	cyberpunk_weapon_base_desc ||= initial(desc)
 	recalculate_cyberpunk_weapon_stats()
 	if(length(cyberpunk_initial_module_types) && !length(cyberpunk_modules))
 		for(var/module_type in cyberpunk_initial_module_types)
@@ -1670,6 +1815,12 @@
 /obj/item/proc/install_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
 	if(!module || !module.can_install(src, user))
 		return FALSE
+	var/datum/cyberpunk_item_module/replaced_module = get_cyberpunk_module_to_replace(module)
+	if(replaced_module)
+		var/replaced_name = replaced_module.name
+		remove_cyberpunk_module(replaced_module, user)
+		if(user)
+			to_chat(user, span_notice("You replace [replaced_name] in [src]."))
 	LAZYADD(cyberpunk_modules, module)
 	module.on_install(src, user)
 	return TRUE
@@ -2732,8 +2883,11 @@
 	return TRUE
 
 /datum/cyberpunk_item_module/proc/can_install(obj/item/target, mob/living/user)
-	if(length(allowed_weapon_forms) && target?.cyberpunk_weapon_form && !(target.get_cyberpunk_effective_weapon_form() in allowed_weapon_forms))
-		return FALSE
+	if(length(allowed_weapon_forms) && target?.cyberpunk_weapon_form)
+		var/effective_form = target.get_cyberpunk_effective_weapon_form()
+		var/base_form = target.cyberpunk_weapon_form
+		if(!(effective_form in allowed_weapon_forms) && !(base_form in allowed_weapon_forms))
+			return FALSE
 	return istype(target) && target.can_accept_cyberpunk_module(src)
 
 /datum/cyberpunk_item_module/proc/apply_weapon_stats(obj/item/target)
@@ -5849,6 +6003,9 @@
 	. = ..()
 	if(. || !user || anchored)
 		return
+	var/mob/living/living_user = user
+	if(istype(living_user) && can_hand_remove_cyberpunk_modules(living_user))
+		return hand_remove_cyberpunk_module(living_user)
 	return attempt_pickup(user)
 
 /obj/item/proc/attempt_pickup(mob/living/user, skip_grav = FALSE)

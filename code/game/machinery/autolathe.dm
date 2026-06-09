@@ -312,6 +312,7 @@
 
 	//checks for available materials
 	var/material_cost_coefficient = ispath(design.build_path, /obj/item/stack) ? 1 : creation_efficiency
+	material_cost_coefficient *= get_cyberpunk_machine_production_material_multiplier()
 	cyberpunk_business_supply_materials(materials, materials_needed, material_cost_coefficient, build_count)
 	if(!materials.has_materials(materials_needed, material_cost_coefficient, build_count))
 		say("Not enough materials to begin production.")
@@ -323,7 +324,7 @@
 		charge_per_item += amount
 
 	charge_per_item = ROUND_UP((charge_per_item / (MAX_STACK_SIZE * SHEET_MATERIAL_AMOUNT)) * material_cost_coefficient * active_power_usage)
-	var/build_time_per_item = (design.construction_time * design.lathe_time_factor) ** 0.8
+	var/build_time_per_item = (design.construction_time * design.lathe_time_factor * get_cyberpunk_machine_production_time_multiplier()) ** 0.8
 
 	//do the printing sequentially
 	busy = TRUE

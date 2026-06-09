@@ -257,7 +257,7 @@
 	for(var/datum/design/design in cached_designs)
 		var/cost = list()
 
-		coefficient = build_efficiency(design.build_path)
+		coefficient = build_efficiency(design.build_path) * get_cyberpunk_machine_production_material_multiplier()
 		for(var/datum/material/mat as anything in design.materials)
 			var/amount = design.materials[mat]
 			cost[mat.name] = OPTIMAL_COST(amount * coefficient)
@@ -350,7 +350,7 @@
 
 			//efficiency for this design, stacks use exact materials
 			var/synergy = get_cyberpunk_fabrication_synergy(ui.user) * get_cyberpunk_fabrication_edict_multiplier()
-			var/coefficient = build_efficiency(design.build_path) / synergy
+			var/coefficient = (build_efficiency(design.build_path) * get_cyberpunk_machine_production_material_multiplier()) / synergy
 
 			//check for materials
 			if(!materials.can_use_resource(user_data = ID_DATA(usr)))
@@ -365,7 +365,7 @@
 			for(var/material, amount in design_materials)
 				charge_per_item += amount
 			charge_per_item = ROUND_UP((charge_per_item / (MAX_STACK_SIZE * SHEET_MATERIAL_AMOUNT)) * coefficient * active_power_usage)
-			var/build_time_per_item = ((design.construction_time * design.lathe_time_factor * efficiency_coeff) / synergy) ** 0.8
+			var/build_time_per_item = (((design.construction_time * design.lathe_time_factor * efficiency_coeff * get_cyberpunk_machine_production_time_multiplier()) / synergy) ** 0.8)
 
 			//start production
 			busy = TRUE
