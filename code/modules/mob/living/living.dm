@@ -893,12 +893,6 @@
 	SetSleeping(400) //Short nap
 	return
 
-	if(IsSleeping())
-		to_chat(src, span_warning("Вы уже спите!"))
-		return
-	else
-		if(tgui_alert(usr, "Вы уверены, что хотите немного поспать?", "Сон", list("Да", "Нет")) == "Да")
-			SetSleeping(400) //Short nap
 
 
 /mob/proc/get_contents()

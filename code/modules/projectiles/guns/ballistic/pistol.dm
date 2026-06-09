@@ -30,6 +30,70 @@
 /obj/item/gun/ballistic/automatic/pistol/no_mag
 	spawnwithmagazine = FALSE
 
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk
+	name = "modular pistol frame"
+	desc = "A Cyberpunk 13 pistol frame. Install a firearm core, barrel, magwell, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "pistol"
+	base_icon_state = "pistol"
+	fire_delay = 0.1 SECONDS
+	spread = 6
+	projectile_damage_multiplier = 0.85
+	projectile_wound_bonus = -2
+	spawnwithmagazine = FALSE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/polymer
+	name = "polymer modular pistol frame"
+	cyberpunk_weapon_material = "polymer"
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/ceramic
+	name = "ceramic modular pistol frame"
+	cyberpunk_weapon_material = "ceramic"
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/plasteel
+	name = "plasteel modular pistol frame"
+	cyberpunk_weapon_material = "plasteel"
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/composite
+	name = "composite modular pistol frame"
+	cyberpunk_weapon_material = "composite"
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/sidearm
+	name = "Sidearm modular pistol"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/pistol_barrel,
+		/datum/cyberpunk_item_module/pistol_magwell_9mm,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/sidearm/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/handcannon
+	name = "Handcannon modular pistol"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/pistol_barrel,
+		/datum/cyberpunk_item_module/pistol_magwell_10mm,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/tactical_light,
+	)
+
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/handcannon/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 /obj/item/gun/ballistic/automatic/pistol/fire_mag
 	spawn_magazine_type = /obj/item/ammo_box/magazine/m9mm/fire
 

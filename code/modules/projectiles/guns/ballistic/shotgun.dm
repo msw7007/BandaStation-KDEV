@@ -39,6 +39,37 @@
 /obj/item/gun/ballistic/shotgun/lethal
 	accepted_magazine_type = /obj/item/ammo_box/magazine/internal/shot/lethal
 
+/obj/item/gun/ballistic/shotgun/cyberpunk
+	name = "modular shotgun frame"
+	desc = "A Cyberpunk 13 shotgun frame. Install a firearm core, barrel, tube, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "shotgun"
+	base_icon_state = "shotgun"
+	fire_delay = 1 SECONDS
+	spread = 14
+	projectile_damage_multiplier = 0.95
+	projectile_wound_bonus = 6
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/shotgun/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/shotgun/cyberpunk/room_clearer
+	name = "Room-Clearer modular shotgun"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/shotgun_barrel,
+		/datum/cyberpunk_item_module/shotgun_tube,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/tactical_light,
+	)
+
+/obj/item/gun/ballistic/shotgun/cyberpunk/room_clearer/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 // RIOT SHOTGUN //
 
 /obj/item/gun/ballistic/shotgun/riot //for spawn in the armory

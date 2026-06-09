@@ -125,6 +125,8 @@
 	var/signal_result = SEND_SIGNAL(src, COMSIG_ITEM_PRE_ATTACK, target, user, modifiers, attack_modifiers) | SEND_SIGNAL(user, COMSIG_USER_PRE_ITEM_ATTACK, src, target, modifiers, attack_modifiers)
 	if(signal_result & COMPONENT_CANCEL_ATTACK_CHAIN)
 		return TRUE
+	if(!can_use_cyberpunk_weapon(user))
+		return TRUE
 	return FALSE //return TRUE to avoid calling attackby after this proc does stuff
 
 /**
@@ -268,6 +270,12 @@
 	if(final_force && target_mob == user && user.client)
 		user.client.give_award(/datum/award/achievement/misc/selfouch, user)
 
+	//CYBERPUNK BUILD - rebuild and delete before release
+	if(final_force > 0)
+		apply_cyberpunk_manufacturer_melee_pre(user, modifiers, attack_modifiers)
+		final_force = CALCULATE_FORCE(src, attack_modifiers)
+	//CYBERPUNK BUILD - rebuild and delete before release
+
 	if(get(src, /mob/living) == user) // telekinesis.
 		user.do_attack_animation(target_mob)
 	if(target_mob.attacked_by(src, user, modifiers, attack_modifiers) == ATTACK_FAILED)
@@ -276,6 +284,8 @@
 	if(final_force > 0)
 		apply_cyberpunk_active_wear(user, target_mob)
 		apply_cyberpunk_style_action_status(user)
+		apply_cyberpunk_melee_module_effects(target_mob, user)
+		apply_cyberpunk_manufacturer_melee_post(target_mob, user, final_force)
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	SEND_SIGNAL(src, COMSIG_ITEM_AFTERATTACK, target_mob, user, modifiers, attack_modifiers)
@@ -407,6 +417,7 @@
 		effective_armour_penetration += 10
 	if(charged_intent == "pierce")
 		effective_armour_penetration += 25
+	effective_armour_penetration += LAZYACCESS(modifiers, "cyberpunk_manufacturer_armor_penetration") || 0
 
 	var/armor_block = min(run_armor_check(
 			def_zone = targeting,
@@ -631,6 +642,10 @@
  */
 /obj/item/proc/afterattack(atom/target, mob/user, list/modifiers, list/attack_modifiers)
 	PROTECTED_PROC(TRUE)
+	var/mob/living/living_target = target
+	var/mob/living/living_user = user
+	if(istype(living_target) && istype(living_user))
+		inject_cyberpunk_melee_coating(living_target, living_user)
 	return
 
 /obj/item/proc/get_clamped_volume()

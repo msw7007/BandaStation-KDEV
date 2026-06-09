@@ -190,6 +190,9 @@
  * Return NONE to allow default interaction / tool handling.
  */
 /obj/item/proc/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	var/obj/item/reagent_containers/container = interacting_with
+	if(istype(container) && apply_cyberpunk_melee_coating_from(container, user))
+		return ITEM_INTERACT_SUCCESS
 	return NONE
 
 /**

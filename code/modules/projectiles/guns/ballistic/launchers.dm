@@ -111,6 +111,36 @@
 		A sticker near the back of the launcher warn to \"CHECK BACKBLAST CLEAR BEFORE FIRING\", whatever that means."
 	pin = /obj/item/firing_pin
 
+/obj/item/gun/ballistic/rocketlauncher/cyberpunk
+	name = "modular rocket launcher frame"
+	desc = "A Cyberpunk 13 launcher frame. Install a firearm core, launch tube, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "rocketlauncher"
+	base_icon_state = "rocketlauncher"
+	projectile_damage_multiplier = 1
+	projectile_wound_bonus = 0
+	spawnwithmagazine = FALSE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/rocketlauncher/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/rocketlauncher/cyberpunk/punchline
+	name = "Punchline modular rocket launcher"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/rocket_barrel,
+		/datum/cyberpunk_item_module/rocket_tube,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/ballistic/rocketlauncher/cyberpunk/punchline/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 /obj/item/gun/ballistic/rocketlauncher/nobackblast
 	name = "\improper Dardo-REF Flameless Rocket Launcher"
 	desc = "A reusable rocket propelled grenade launcher. An arrow pointing toward the front of the launcher \

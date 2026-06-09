@@ -50,6 +50,204 @@
 	alt_simple = string_list(alt_simple)
 	make_stabby()
 
+/obj/item/knife/cyberpunk
+	name = "modular physical melee base"
+	desc = "A Cyberpunk 13 physical melee base. Install a core, attacking element, guard, balancer and optional coating, then lock it with a wrench on a table. It can also hold a one-use-per-hit chemical coating."
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/knife/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("physical_melee", list("core" = 1, "element" = 1, "guard" = 1, "balance" = 1, "coating" = 1), list("core" = 1, "element" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/knife/cyberpunk/polymer
+	name = "polymer modular physical melee base"
+	cyberpunk_weapon_material = "polymer"
+
+/obj/item/knife/cyberpunk/ceramic
+	name = "ceramic modular physical melee base"
+	cyberpunk_weapon_material = "ceramic"
+
+/obj/item/knife/cyberpunk/plasteel
+	name = "plasteel modular physical melee base"
+	cyberpunk_weapon_material = "plasteel"
+
+/obj/item/knife/cyberpunk/composite
+	name = "composite modular physical melee base"
+	cyberpunk_weapon_material = "composite"
+
+/obj/item/knife/cyberpunk/energy
+	name = "modular energy melee base"
+	desc = "A Cyberpunk 13 energy melee base. Its attacking element defines the final weapon form while the base supplies an energized strike profile."
+	damtype = BURN
+	cyberpunk_weapon_material = "composite"
+
+/obj/item/knife/cyberpunk/energy/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("energy_melee", list("core" = 1, "element" = 1, "guard" = 1, "balance" = 1, "coating" = 1), list("core" = 1, "element" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/knife/cyberpunk/razor
+	name = "Razor modular knife"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_knife_element,
+		/datum/cyberpunk_item_module/balancer,
+	)
+
+/obj/item/knife/cyberpunk/razor/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/puncture
+	name = "Puncture modular knife"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_rapier_element,
+		/datum/cyberpunk_item_module/guard,
+	)
+
+/obj/item/knife/cyberpunk/puncture/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/club
+	name = "Breaker modular club"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_club_element,
+		/datum/cyberpunk_item_module/guard,
+	)
+
+/obj/item/knife/cyberpunk/club/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/twohand_sword
+	name = "Linebreaker modular two-handed sword"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core/t2,
+		/datum/cyberpunk_item_module/melee_twohand_sword_element,
+		/datum/cyberpunk_item_module/guard/t2,
+		/datum/cyberpunk_item_module/balancer,
+	)
+
+/obj/item/knife/cyberpunk/twohand_sword/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/twohand_hammer
+	name = "Pile-Driver modular two-handed hammer"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core/t2,
+		/datum/cyberpunk_item_module/melee_twohand_hammer_element,
+		/datum/cyberpunk_item_module/guard,
+	)
+
+/obj/item/knife/cyberpunk/twohand_hammer/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/axe
+	name = "Street-Cutter modular axe"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_axe_element,
+		/datum/cyberpunk_item_module/balancer,
+	)
+
+/obj/item/knife/cyberpunk/axe/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/twohand_axe
+	name = "Gatecrack modular two-handed axe"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core/t2,
+		/datum/cyberpunk_item_module/melee_twohand_axe_element,
+		/datum/cyberpunk_item_module/guard,
+	)
+
+/obj/item/knife/cyberpunk/twohand_axe/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/rapier
+	name = "Needlepoint modular rapier"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_rapier_element,
+		/datum/cyberpunk_item_module/guard,
+		/datum/cyberpunk_item_module/balancer/t2,
+	)
+
+/obj/item/knife/cyberpunk/rapier/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/spear
+	name = "Longreach modular spear"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_spear_element,
+		/datum/cyberpunk_item_module/guard,
+	)
+
+/obj/item/knife/cyberpunk/spear/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/staff
+	name = "Crowdline modular staff"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core,
+		/datum/cyberpunk_item_module/melee_staff_element,
+		/datum/cyberpunk_item_module/guard/t2,
+		/datum/cyberpunk_item_module/balancer,
+	)
+
+/obj/item/knife/cyberpunk/staff/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/energy_blade
+	name = "Hotline modular energy blade"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core/t2,
+		/datum/cyberpunk_item_module/melee_knife_element/t2,
+		/datum/cyberpunk_item_module/thermal_coating,
+		/datum/cyberpunk_item_module/balancer,
+	)
+
+/obj/item/knife/cyberpunk/energy_blade/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("energy_melee", list("core" = 1, "element" = 1, "guard" = 1, "balance" = 1, "coating" = 1), list("core" = 1, "element" = 1), FALSE, cyberpunk_weapon_material)
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/knife/cyberpunk/shock_staff
+	name = "Crowdline modular shock staff"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/melee_core/t2,
+		/datum/cyberpunk_item_module/melee_staff_element,
+		/datum/cyberpunk_item_module/shock_coating/t2,
+		/datum/cyberpunk_item_module/guard/t2,
+	)
+
+/obj/item/knife/cyberpunk/shock_staff/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("energy_melee", list("core" = 1, "element" = 1, "guard" = 1, "balance" = 1, "coating" = 1), list("core" = 1, "element" = 1), FALSE, cyberpunk_weapon_material)
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 ///Adds the butchering component, used to override stats for special cases
 /obj/item/knife/proc/set_butchering()
 	AddComponent(/datum/component/butchering, \

@@ -40,7 +40,7 @@
 /obj/item/clothing/glasses/cyberpunk
 	name = "modular visor"
 	desc = "Cyberpunk modular eyewear with small utility bays."
-	icon_state = "glasses"
+	icon_state = "sun"
 	cyberpunk_equipment_form = "visor"
 	cyberpunk_equipment_material = "fabric"
 	cyberpunk_base_price = 95

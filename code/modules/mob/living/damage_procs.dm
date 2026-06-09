@@ -43,12 +43,17 @@
 		damage_amount *= ((100 - blocked) / 100)
 		damage_amount *= get_incoming_damage_modifier(damage_amount, damagetype, def_zone, sharpness, attack_direction, attacking_item)
 		damage_amount *= get_cyberpunk_incoming_damage_multiplier(damagetype)
+		damage_amount *= get_cyberpunk_defense_damage_multiplier(damagetype)
 	if(damage_amount <= 0)
 		return 0
 
 	SEND_SIGNAL(src, COMSIG_MOB_APPLY_DAMAGE, damage_amount, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
 
 	var/damage_dealt = 0
+	var/damage_source = attacking_item
+	var/obj/projectile/damaging_projectile = attacking_item
+	if(istype(damaging_projectile) && damaging_projectile.cyberpunk_hide_wound_source)
+		damage_source = null
 	switch(damagetype)
 		if(BRUTE)
 			if(isbodypart(def_zone))
@@ -62,7 +67,7 @@
 					exposed_wound_bonus = exposed_wound_bonus,
 					sharpness = sharpness,
 					attack_direction = attack_direction,
-					damage_source = attacking_item,
+					damage_source = damage_source,
 					wound_clothing = wound_clothing,
 					brute_type = brute_type,
 					precise_zone = precise_zone || actual_hit.body_zone,
@@ -83,7 +88,7 @@
 					exposed_wound_bonus = exposed_wound_bonus,
 					sharpness = sharpness,
 					attack_direction = attack_direction,
-					damage_source = attacking_item,
+					damage_source = damage_source,
 					wound_clothing = wound_clothing,
 					burn_type = burn_type,
 					precise_zone = precise_zone || actual_hit.body_zone,
@@ -105,6 +110,8 @@
 
 	if(damage_dealt > 0 && isliving(pulling))
 		reduce_cyberpunk_grab_durability(damage_dealt * 0.75)
+	if(damage_dealt > 0 && attacking_item)
+		try_cyberpunk_trans_travel_defense_teleport(attacking_item)
 
 	SEND_SIGNAL(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, damage_dealt, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
 	return damage_dealt

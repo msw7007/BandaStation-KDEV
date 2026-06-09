@@ -186,6 +186,40 @@
 	var/list/cyberpunk_active_module_armor
 	/// Temporary slowdown deltas from active Cyberpunk modules, keyed by installed module datum.
 	var/list/cyberpunk_active_module_slowdown
+	/// Modular weapon form id. Empty means this item is not a Cyberpunk weapon frame.
+	var/cyberpunk_weapon_form
+	/// Core material of a modular weapon frame.
+	var/cyberpunk_weapon_material = "steel"
+	/// Whether a modular weapon frame has been locked into a usable weapon.
+	var/cyberpunk_weapon_assembled = TRUE
+	/// Required module slots before the weapon can be assembled.
+	var/list/cyberpunk_weapon_required_slots
+	/// Baseline weapon stats captured before modular weapon recalculation.
+	var/cyberpunk_base_force
+	var/cyberpunk_base_throwforce
+	var/cyberpunk_base_attack_speed
+	var/cyberpunk_base_armour_penetration
+	var/cyberpunk_base_fire_delay
+	var/cyberpunk_base_spread
+	var/cyberpunk_base_projectile_damage_multiplier
+	var/cyberpunk_base_projectile_wound_bonus
+	var/cyberpunk_base_projectile_speed_multiplier
+	var/cyberpunk_base_accepted_magazine_type
+	var/cyberpunk_base_spawn_magazine_type
+	var/cyberpunk_base_ammo_type
+	var/cyberpunk_base_caliber
+	/// Whether baseline modular weapon stats were already captured.
+	var/cyberpunk_weapon_baseline_ready = FALSE
+	/// Reagent holder for one-shot melee coating.
+	var/datum/reagents/cyberpunk_melee_coating
+	/// Remaining successful hits that inject the coating.
+	var/cyberpunk_melee_coating_charges = 0
+	/// Extra burn damage applied by installed melee coating modules on successful hits.
+	var/cyberpunk_melee_module_burn_damage = 0
+	/// Extra stamina damage applied by installed melee coating modules on successful hits.
+	var/cyberpunk_melee_module_stamina_damage = 0
+	/// Chance for installed shock coating modules to stagger a living target on hit.
+	var/cyberpunk_melee_module_shock_chance = 0
 	/// Round-local contract id attached to this item as cargo evidence.
 	var/cyberpunk_contract_id
 	//CYBERPUNK BUILD - rebuild and delete before release
@@ -553,6 +587,15 @@
 			report += span_notice("Installed modules: [module_report.Join("; ")].")
 		else
 			report += span_notice("Installed modules: none.")
+	if(cyberpunk_weapon_form)
+		report += span_notice("Weapon frame: [cyberpunk_weapon_form]. Material: [get_cyberpunk_weapon_material_name()]. State: [cyberpunk_weapon_assembled ? "assembled" : "unassembled"].")
+		var/list/missing_modules = get_missing_cyberpunk_weapon_modules()
+		if(length(missing_modules))
+			report += span_notice("Missing required modules: [missing_modules.Join(", ")].")
+		var/list/module_report = get_cyberpunk_module_report()
+		report += span_notice("Installed modules: [length(module_report) ? module_report.Join("; ") : "none"].")
+		if(cyberpunk_melee_coating?.total_volume)
+			report += span_notice("Chemical coating: [round(cyberpunk_melee_coating.total_volume)]u, [cyberpunk_melee_coating_charges] hit(s) left.")
 	if(analysis_depth >= 3 || cyberpunk_equipment_form)
 		var/list/armor_report = get_cyberpunk_armor_report()
 		if(length(armor_report))
@@ -577,6 +620,10 @@
 		diagnostics += "Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()]."
 	if(cyberpunk_equipment_form)
 		diagnostics += "Equipment form: [cyberpunk_equipment_form]. Material: [get_cyberpunk_equipment_material_name()]."
+		var/list/module_report = get_cyberpunk_module_report()
+		diagnostics += "Installed modules: [length(module_report) ? module_report.Join("; ") : "none"]."
+	if(cyberpunk_weapon_form)
+		diagnostics += "Weapon frame: [cyberpunk_weapon_form]. Material: [get_cyberpunk_weapon_material_name()]. State: [cyberpunk_weapon_assembled ? "assembled" : "unassembled"]."
 		var/list/module_report = get_cyberpunk_module_report()
 		diagnostics += "Installed modules: [length(module_report) ? module_report.Join("; ") : "none"]."
 	var/list/armor_report = get_cyberpunk_armor_report()
@@ -662,6 +709,226 @@
 			continue
 		best_multiplier = max(best_multiplier, user.get_corporate_synergy_multiplier(module.manufacturer))
 	return best_multiplier
+
+/obj/item/proc/get_cyberpunk_base_effect_strength(mob/living/user, manufacturer_id)
+	if(!istype(user) || !manufacturer_id)
+		return 0
+	var/normalized_manufacturer = cyberpunk_normalize_manufacturer_id(get_cyberpunk_manufacturer())
+	if(normalized_manufacturer != manufacturer_id)
+		return 0
+	var/synergy = user.get_corporate_synergy_multiplier(normalized_manufacturer)
+	if(synergy >= 1.09)
+		return 1
+	if(synergy >= 1.04)
+		return 0.5
+	return 0
+
+/obj/item/proc/apply_cyberpunk_manufacturer_melee_pre(mob/living/user, list/modifiers, list/attack_modifiers)
+	if(!istype(user))
+		return
+	var/sun_yon = get_cyberpunk_base_effect_strength(user, "sun_yon")
+	if(sun_yon > 0)
+		var/item_sharpness = get_sharpness()
+		if(item_sharpness & (SHARP_POINTY|SHARP_EDGED))
+			modifiers["cyberpunk_manufacturer_armor_penetration"] = (modifiers["cyberpunk_manufacturer_armor_penetration"] || 0) + round(8 * sun_yon)
+	var/ishikawa = get_cyberpunk_base_effect_strength(user, "ishikawa")
+	if(ishikawa > 0)
+		attack_modifiers[SILENCE_HITSOUND] = TRUE
+	var/tesla = get_cyberpunk_base_effect_strength(user, "tesla_science")
+	if(tesla > 0)
+		MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1 + (0.1 * tesla))
+
+/obj/item/proc/apply_cyberpunk_manufacturer_melee_post(mob/living/target, mob/living/user, damage_hint = 0)
+	if(!istype(target) || !istype(user) || damage_hint <= 0)
+		return FALSE
+	var/applied = FALSE
+	var/blackrock = get_cyberpunk_base_effect_strength(user, "blackrock_investigate")
+	if(blackrock > 0)
+		target.adjust_staggered_up_to(round(2 SECONDS * blackrock), 6 SECONDS)
+		applied = TRUE
+	var/samanthas = get_cyberpunk_base_effect_strength(user, "samanthas_keir")
+	if(samanthas > 0)
+		target.adjust_mood(-max(1, round(2 * samanthas)))
+		applied = TRUE
+	var/trans_travel = get_cyberpunk_base_effect_strength(user, "trans_travel")
+	if(trans_travel > 0 && prob(20 * trans_travel))
+		apply_cyberpunk_trans_travel_extra_melee(target, user, max(1, damage_hint * 0.35))
+		applied = TRUE
+	var/tyazhmarsh = get_cyberpunk_base_effect_strength(user, "tyazhmarsh")
+	if(tyazhmarsh > 0)
+		apply_cyberpunk_tyazhmarsh_melee_zone(target, user, max(1, damage_hint * 0.35))
+		applied = TRUE
+	return applied
+
+/obj/item/proc/apply_cyberpunk_trans_travel_extra_melee(mob/living/target, mob/living/user, damage)
+	var/mob/living/extra_target
+	for(var/mob/living/nearby in orange(3, target))
+		if(nearby == user || nearby == target || nearby.stat == DEAD)
+			continue
+		if(!extra_target || get_dist(target, nearby) < get_dist(target, extra_target))
+			extra_target = nearby
+	if(!extra_target)
+		return FALSE
+	var/zone = user.zone_selected || BODY_ZONE_CHEST
+	extra_target.apply_damage(damage, damtype, zone, attacking_item = src, sharpness = get_sharpness(), brute_type = get_cyberpunk_damage_brute_type(null))
+	user.visible_message(span_warning("[capitalize(src.declent_ru(NOMINATIVE))] catches [extra_target.declent_ru(ACCUSATIVE)] in a follow-through strike!"))
+	return TRUE
+
+/obj/item/proc/apply_cyberpunk_tyazhmarsh_melee_zone(mob/living/target, mob/living/user, damage)
+	var/list/zone_targets = list()
+	var/forward_dir = get_dir(user, target) || user.dir
+	var/turf/forward_turf = get_step(target, forward_dir)
+	for(var/mob/living/nearby in orange(3, target))
+		if(nearby == user || nearby == target || nearby.stat == DEAD)
+			continue
+		if(get_turf(nearby) == forward_turf || get_dist(target, nearby) <= 1)
+			zone_targets += nearby
+	if(!length(zone_targets))
+		return FALSE
+	for(var/mob/living/zone_target as anything in zone_targets)
+		zone_target.apply_damage(damage, damtype, user.zone_selected || BODY_ZONE_CHEST, attacking_item = src, sharpness = get_sharpness(), brute_type = get_cyberpunk_damage_brute_type(null))
+	user.visible_message(span_warning("[capitalize(src.declent_ru(NOMINATIVE))] sweeps through nearby targets!"))
+	return TRUE
+
+/obj/item/proc/apply_cyberpunk_manufacturer_projectile_hit(mob/living/target, mob/living/user, obj/projectile/projectile, blocked = 0)
+	if(!istype(target) || !istype(user) || !projectile)
+		return FALSE
+	var/applied = FALSE
+	var/ishikawa = get_cyberpunk_base_effect_strength(user, "ishikawa")
+	if(ishikawa > 0)
+		projectile.cyberpunk_hide_wound_source = TRUE
+		applied = TRUE
+	var/tesla = get_cyberpunk_base_effect_strength(user, "tesla_science")
+	if(tesla > 0)
+		projectile.damage *= 1 + (0.1 * tesla)
+		applied = TRUE
+	var/sun_yon = get_cyberpunk_base_effect_strength(user, "sun_yon")
+	if(sun_yon > 0)
+		projectile.armour_penetration += round(5 * sun_yon)
+		applied = TRUE
+	var/kowalski = get_cyberpunk_base_effect_strength(user, "kowalski")
+	if(kowalski > 0)
+		projectile.wound_bonus += round(3 * kowalski)
+		applied = TRUE
+	var/blackrock = get_cyberpunk_base_effect_strength(user, "blackrock_investigate")
+	if(blackrock > 0)
+		target.adjust_staggered_up_to(round(2 SECONDS * blackrock), 6 SECONDS)
+		applied = TRUE
+	var/samanthas = get_cyberpunk_base_effect_strength(user, "samanthas_keir")
+	if(samanthas > 0)
+		target.adjust_mood(-max(1, round(2 * samanthas)))
+		applied = TRUE
+	var/tyazhmarsh = get_cyberpunk_base_effect_strength(user, "tyazhmarsh")
+	if(tyazhmarsh > 0 && projectile.damage > 0)
+		apply_cyberpunk_tyazhmarsh_projectile_aoe(target, user, projectile, tyazhmarsh)
+		applied = TRUE
+	var/trans_travel = get_cyberpunk_base_effect_strength(user, "trans_travel")
+	if(trans_travel > 0 && projectile.damage > 0 && prob(20 * trans_travel))
+		target.apply_damage(max(1, projectile.damage * 0.35), projectile.damage_type, projectile.def_zone || BODY_ZONE_CHEST, min(ARMOR_MAX_BLOCK, blocked), attacking_item = src, sharpness = projectile.sharpness)
+		applied = TRUE
+	return applied
+
+/obj/item/proc/apply_cyberpunk_tyazhmarsh_projectile_aoe(mob/living/direct_target, mob/living/user, obj/projectile/projectile, effect_strength)
+	var/turf/hit_turf = get_turf(direct_target)
+	if(!hit_turf)
+		return FALSE
+	var/damage = max(1, round(projectile.damage * 0.35 * effect_strength))
+	var/applied = FALSE
+	for(var/mob/living/nearby in range(1, hit_turf))
+		if(nearby == direct_target || nearby == user || nearby.stat == DEAD)
+			continue
+		if(nearby.has_cyberpunk_active_defense_manufacturer("tyazhmarsh"))
+			to_chat(nearby, span_notice("Your Tyazhmarsh protection absorbs the blast wave."))
+			continue
+		nearby.apply_damage(damage, projectile.damage_type, BODY_ZONE_CHEST, spread_damage = TRUE, wound_bonus = CANT_WOUND, attacking_item = src, sharpness = projectile.sharpness)
+		applied = TRUE
+	if(applied)
+		visible_message(span_warning("[capitalize(src.declent_ru(NOMINATIVE))]'s impact blooms into a short-radius blast!"))
+	return applied
+
+/mob/living/proc/get_cyberpunk_active_defense_effect_strength(manufacturer_id)
+	if(!manufacturer_id)
+		return 0
+	var/list/slots_to_check = list(
+		ITEM_SLOT_HEAD,
+		ITEM_SLOT_EYES,
+		ITEM_SLOT_MASK,
+		ITEM_SLOT_NECK,
+		ITEM_SLOT_OCLOTHING,
+		ITEM_SLOT_ICLOTHING,
+		ITEM_SLOT_GLOVES,
+		ITEM_SLOT_BRACERS,
+		ITEM_SLOT_FEET,
+		ITEM_SLOT_PANTS,
+		ITEM_SLOT_CHEST,
+	)
+	var/best_strength = 0
+	for(var/slot_id in slots_to_check)
+		var/obj/item/equipped = get_item_by_slot(slot_id)
+		if(!equipped)
+			continue
+		best_strength = max(best_strength, equipped.get_cyberpunk_base_effect_strength(src, manufacturer_id))
+	return best_strength
+
+/mob/living/proc/has_cyberpunk_active_defense_manufacturer(manufacturer_id)
+	return get_cyberpunk_active_defense_effect_strength(manufacturer_id) > 0
+
+/mob/living/proc/get_cyberpunk_defense_armor_bonus(attack_flag)
+	var/bonus = 0
+	bonus += round(5 * get_cyberpunk_active_defense_effect_strength("sun_yon"))
+	bonus += round(4 * get_cyberpunk_active_defense_effect_strength("ishikawa"))
+	bonus += round(3 * get_cyberpunk_active_defense_effect_strength("ho_shi"))
+	bonus += round(8 * get_cyberpunk_active_defense_effect_strength("kowalski"))
+	bonus += round(5 * get_cyberpunk_active_defense_effect_strength("tesla_science"))
+	bonus += round(4 * get_cyberpunk_active_defense_effect_strength("blackrock_investigate"))
+	bonus += round(4 * get_cyberpunk_active_defense_effect_strength("samanthas_keir"))
+	if(attack_flag == LASER || attack_flag == ENERGY)
+		bonus += round(5 * get_cyberpunk_active_defense_effect_strength("tesla_science"))
+	if(attack_flag == STAMINA)
+		bonus += round(8 * get_cyberpunk_active_defense_effect_strength("blackrock_investigate"))
+	return bonus
+
+/mob/living/proc/get_cyberpunk_defense_damage_multiplier(damagetype)
+	var/multiplier = 1
+	var/sun_yon = get_cyberpunk_active_defense_effect_strength("sun_yon")
+	if(sun_yon > 0)
+		multiplier *= 1 - 0.04 * sun_yon
+	var/ishikawa = get_cyberpunk_active_defense_effect_strength("ishikawa")
+	if(ishikawa > 0 && (stealth_mode || chameleon > 0))
+		multiplier *= 1 - 0.08 * ishikawa
+	var/ho_shi = get_cyberpunk_active_defense_effect_strength("ho_shi")
+	if(ho_shi > 0)
+		multiplier *= 1 - 0.03 * ho_shi
+	var/kowalski = get_cyberpunk_active_defense_effect_strength("kowalski")
+	if(kowalski > 0)
+		multiplier *= 1 - 0.06 * kowalski
+	var/tesla = get_cyberpunk_active_defense_effect_strength("tesla_science")
+	if(tesla > 0 && damagetype == BURN)
+		multiplier *= 1 - 0.08 * tesla
+	var/blackrock = get_cyberpunk_active_defense_effect_strength("blackrock_investigate")
+	if(blackrock > 0 && damagetype == STAMINA)
+		multiplier *= 1 - 0.12 * blackrock
+	var/samanthas = get_cyberpunk_active_defense_effect_strength("samanthas_keir")
+	if(samanthas > 0 && damagetype == BRAIN)
+		multiplier *= 1 - 0.15 * samanthas
+	return max(0.1, multiplier)
+
+/mob/living/proc/try_cyberpunk_trans_travel_defense_teleport(atom/attacker)
+	var/effect_strength = get_cyberpunk_active_defense_effect_strength("trans_travel")
+	if(effect_strength <= 0 || world.time < cyberpunk_next_trans_travel_defense)
+		return FALSE
+	var/list/options = list()
+	for(var/turf/open/open_turf in orange(4, src))
+		if(open_turf.density || locate(/mob/living) in open_turf)
+			continue
+		options += open_turf
+	if(!length(options))
+		return FALSE
+	cyberpunk_next_trans_travel_defense = world.time + 10 SECONDS
+	var/turf/destination = pick(options)
+	visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))]'s Trans Travel protection snaps [ru_p_them()] away from the hit!"))
+	forceMove(destination)
+	return TRUE
 
 /obj/item/proc/get_cyberpunk_price(mob/living/buyer)
 	var/base_price = cyberpunk_base_price || custom_price || 0
@@ -781,10 +1048,10 @@
 		report += "slots: [slot_report.Join(", ")]"
 	return report
 
-/obj/item/proc/select_cyberpunk_module(mob/user)
+/obj/item/proc/select_cyberpunk_module(mob/user, active_only = FALSE)
 	if(!length(cyberpunk_modules))
 		return null
-	if(length(cyberpunk_modules) == 1)
+	if(length(cyberpunk_modules) == 1 && (!active_only || cyberpunk_modules[1]?.has_active_ability()))
 		return cyberpunk_modules[1]
 	var/list/choices = list()
 	var/list/module_by_choice = list()
@@ -792,11 +1059,66 @@
 		var/datum/cyberpunk_item_module/module = cyberpunk_modules[i]
 		if(!module)
 			continue
+		if(active_only && !module.has_active_ability())
+			continue
 		var/choice_name = "[i]. [module.name] T[module.module_tier]"
 		choices[choice_name] = image(icon = 'icons/obj/devices/circuitry_n_data.dmi', icon_state = "component")
 		module_by_choice[choice_name] = module
+	if(!length(choices))
+		return null
 	var/pick = show_radial_menu(user, src, choices, radius = 36, require_near = TRUE, tooltips = TRUE)
 	return module_by_choice[pick]
+
+/obj/item/proc/show_cyberpunk_modular_radial(mob/user)
+	if(!cyberpunk_equipment_form && !cyberpunk_weapon_form && !length(cyberpunk_modules))
+		return FALSE
+	var/list/options = list(
+		"Inspect modules" = image(icon = 'icons/obj/devices/circuitry_n_data.dmi', icon_state = "component"),
+		"Show stats" = image(icon = 'icons/obj/devices/scanner.dmi', icon_state = "scanmode"),
+	)
+	var/has_active = FALSE
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(module?.has_active_ability())
+			has_active = TRUE
+			break
+	if(has_active)
+		options["Activate module"] = image(icon = 'icons/obj/devices/circuitry_n_data.dmi', icon_state = "integrated_circuit")
+	if(cyberpunk_weapon_form)
+		options["Weapon state"] = image(icon = 'icons/obj/weapons/guns/projectiles.dmi', icon_state = "revolver")
+	if(cyberpunk_equipment_form)
+		options["Protection"] = image(icon = 'icons/obj/clothing/suits/armor.dmi', icon_state = "armor")
+	var/choice = show_radial_menu(user, src, options, radius = 42, require_near = TRUE, tooltips = TRUE)
+	switch(choice)
+		if("Inspect modules")
+			var/datum/cyberpunk_item_module/picked_module = select_cyberpunk_module(user)
+			if(!picked_module)
+				to_chat(user, span_notice("[src] has no installed modules."))
+				return TRUE
+			to_chat(user, span_notice("[picked_module.name] T[picked_module.module_tier]: slot [picked_module.module_slot], manufacturer [picked_module.manufacturer], effect scale [round(picked_module.get_effective_scale() * 100)]%[picked_module.has_active_ability() ? ", active: [picked_module.active_ability_name]" : ""]."))
+			return TRUE
+		if("Show stats")
+			var/list/diagnostics = get_cyberpunk_diagnostic_data(user)
+			if(length(diagnostics))
+				to_chat(user, span_notice(diagnostics.Join("<br>")))
+			else
+				to_chat(user, span_notice("[src] has no modular diagnostics."))
+			return TRUE
+		if("Activate module")
+			var/datum/cyberpunk_item_module/active_module = select_cyberpunk_module(user, TRUE)
+			var/mob/living/living_user = user
+			if(!active_module || !istype(living_user))
+				return TRUE
+			active_module.activate(src, living_user)
+			return TRUE
+		if("Weapon state")
+			var/list/missing_modules = get_missing_cyberpunk_weapon_modules()
+			to_chat(user, span_notice("[src]: [cyberpunk_weapon_assembled ? "assembled" : "unassembled"] [get_cyberpunk_effective_weapon_form()], material [get_cyberpunk_weapon_material_name()][length(missing_modules) ? ", missing [missing_modules.Join(", ")]" : ""]."))
+			return TRUE
+		if("Protection")
+			var/list/armor_report = get_cyberpunk_armor_report()
+			to_chat(user, span_notice("[src]: [cyberpunk_equipment_form], material [get_cyberpunk_equipment_material_name()], protection [length(armor_report) ? armor_report.Join(", ") : "none"]."))
+			return TRUE
+	return TRUE
 
 /obj/item/proc/get_cyberpunk_installed_module_count(slot_id)
 	var/count = 0
@@ -805,8 +1127,24 @@
 			count++
 	return count
 
+/obj/item/proc/is_cyberpunk_modular_weapon()
+	return !!cyberpunk_weapon_form
+
+/obj/item/proc/get_cyberpunk_effective_weapon_form()
+	if(!cyberpunk_weapon_form)
+		return null
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(module.weapon_form_override)
+			return module.weapon_form_override
+	return cyberpunk_weapon_form
+
+/obj/item/proc/is_cyberpunk_on_table()
+	return !!(locate(/obj/structure/table) in get_turf(src))
+
 /obj/item/proc/can_accept_cyberpunk_module(datum/cyberpunk_item_module/module)
 	if(!module)
+		return FALSE
+	if(is_cyberpunk_modular_weapon() && cyberpunk_weapon_assembled && !(module.module_slot in list("sight", "underbarrel")))
 		return FALSE
 	if(!length(cyberpunk_module_slots))
 		return TRUE
@@ -814,6 +1152,256 @@
 	if(!slot_limit)
 		return FALSE
 	return get_cyberpunk_installed_module_count(module.module_slot) < slot_limit
+
+/obj/item/proc/get_missing_cyberpunk_weapon_modules()
+	var/list/missing = list()
+	for(var/slot_id in cyberpunk_weapon_required_slots)
+		var/needed = cyberpunk_weapon_required_slots[slot_id]
+		if(get_cyberpunk_installed_module_count(slot_id) < needed)
+			missing += "[slot_id] [get_cyberpunk_installed_module_count(slot_id)]/[needed]"
+	return missing
+
+/obj/item/proc/can_use_cyberpunk_weapon(mob/living/user)
+	if(!is_cyberpunk_modular_weapon() || cyberpunk_weapon_assembled)
+		return TRUE
+	if(user)
+		to_chat(user, span_warning("[src] is not assembled yet. Lock its modules with a wrench while it rests on a table."))
+	return FALSE
+
+/obj/item/proc/get_cyberpunk_weapon_material_name()
+	switch(cyberpunk_weapon_material)
+		if("polymer")
+			return "polymer"
+		if("ceramic")
+			return "ceramic"
+		if("plasteel")
+			return "plasteel"
+		if("composite")
+			return "smart composite"
+	return "steel"
+
+/obj/item/proc/apply_cyberpunk_weapon_material_stats()
+	switch(cyberpunk_weapon_material)
+		if("polymer")
+			w_class = max(WEIGHT_CLASS_TINY, w_class - 1)
+			force *= 0.9
+			throwforce *= 0.9
+			attack_speed *= 0.9
+			if(uses_integrity)
+				modify_max_integrity(max(1, round(max_integrity * 0.85)), FALSE)
+			var/obj/item/gun/polymer_gun = src
+			if(istype(polymer_gun))
+				polymer_gun.fire_delay = round(polymer_gun.fire_delay * 0.9)
+				polymer_gun.spread += 2
+		if("ceramic")
+			armour_penetration += 4
+			force *= 1.05
+			throwforce *= 1.05
+			if(uses_integrity)
+				modify_max_integrity(max(1, round(max_integrity * 0.9)), FALSE)
+			var/obj/item/gun/ceramic_gun = src
+			if(istype(ceramic_gun))
+				ceramic_gun.projectile_wound_bonus += 2
+				ceramic_gun.spread += 1
+		if("plasteel")
+			w_class = min(WEIGHT_CLASS_GIGANTIC, w_class + 1)
+			force *= 1.15
+			throwforce *= 1.15
+			armour_penetration += 2
+			if(uses_integrity)
+				modify_max_integrity(max(1, round(max_integrity * 1.25)), FALSE)
+			var/obj/item/gun/plasteel_gun = src
+			if(istype(plasteel_gun))
+				plasteel_gun.projectile_damage_multiplier += 0.08
+				plasteel_gun.fire_delay = round(plasteel_gun.fire_delay * 1.05)
+		if("composite")
+			force *= 1.05
+			throwforce *= 1.05
+			attack_speed *= 0.95
+			armour_penetration += 2
+			if(uses_integrity)
+				modify_max_integrity(max(1, round(max_integrity * 1.1)), FALSE)
+			if(cyberpunk_module_slots)
+				cyberpunk_module_slots["utility"] = (cyberpunk_module_slots["utility"] || 0) + 1
+			var/obj/item/gun/composite_gun = src
+			if(istype(composite_gun))
+				composite_gun.spread = max(0, composite_gun.spread - 2)
+				composite_gun.projectile_speed_multiplier += 0.05
+
+/obj/item/proc/capture_cyberpunk_weapon_baseline()
+	if(cyberpunk_weapon_baseline_ready)
+		return
+	cyberpunk_base_force = force
+	cyberpunk_base_throwforce = throwforce
+	cyberpunk_base_attack_speed = attack_speed
+	cyberpunk_base_armour_penetration = armour_penetration
+	cyberpunk_base_w_class = w_class
+	if(uses_integrity)
+		cyberpunk_base_max_integrity = max_integrity
+	var/obj/item/gun/gun = src
+	if(istype(gun))
+		cyberpunk_base_fire_delay = gun.fire_delay
+		cyberpunk_base_spread = gun.spread
+		cyberpunk_base_projectile_damage_multiplier = gun.projectile_damage_multiplier
+		cyberpunk_base_projectile_wound_bonus = gun.projectile_wound_bonus
+		cyberpunk_base_projectile_speed_multiplier = gun.projectile_speed_multiplier
+		if("accepted_magazine_type" in gun.vars)
+			cyberpunk_base_accepted_magazine_type = gun.vars["accepted_magazine_type"]
+		if("spawn_magazine_type" in gun.vars)
+			cyberpunk_base_spawn_magazine_type = gun.vars["spawn_magazine_type"]
+		if("ammo_type" in gun.vars)
+			cyberpunk_base_ammo_type = gun.vars["ammo_type"]
+		if("caliber" in gun.vars)
+			cyberpunk_base_caliber = gun.vars["caliber"]
+	cyberpunk_weapon_baseline_ready = TRUE
+
+/obj/item/proc/recalculate_cyberpunk_weapon_stats()
+	if(!is_cyberpunk_modular_weapon())
+		return
+	capture_cyberpunk_weapon_baseline()
+	force = cyberpunk_base_force
+	throwforce = cyberpunk_base_throwforce
+	attack_speed = cyberpunk_base_attack_speed
+	armour_penetration = cyberpunk_base_armour_penetration
+	w_class = cyberpunk_base_w_class
+	cyberpunk_damage_profile = null
+	cyberpunk_melee_module_burn_damage = 0
+	cyberpunk_melee_module_stamina_damage = 0
+	cyberpunk_melee_module_shock_chance = 0
+	cyberpunk_module_slots = cyberpunk_base_module_slots?.Copy() || cyberpunk_module_slots?.Copy() || list()
+	if(uses_integrity)
+		modify_max_integrity(max(1, cyberpunk_base_max_integrity), FALSE)
+	var/obj/item/gun/gun = src
+	if(istype(gun))
+		gun.fire_delay = cyberpunk_base_fire_delay
+		gun.spread = cyberpunk_base_spread
+		gun.projectile_damage_multiplier = cyberpunk_base_projectile_damage_multiplier || 1
+		gun.projectile_wound_bonus = cyberpunk_base_projectile_wound_bonus
+		gun.projectile_speed_multiplier = cyberpunk_base_projectile_speed_multiplier || 1
+		if("accepted_magazine_type" in gun.vars)
+			gun.vars["accepted_magazine_type"] = cyberpunk_base_accepted_magazine_type
+		if("spawn_magazine_type" in gun.vars)
+			gun.vars["spawn_magazine_type"] = cyberpunk_base_spawn_magazine_type
+		if("ammo_type" in gun.vars)
+			gun.vars["ammo_type"] = cyberpunk_base_ammo_type
+		if("caliber" in gun.vars)
+			gun.vars["caliber"] = cyberpunk_base_caliber
+	apply_cyberpunk_weapon_material_stats()
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		module.apply_weapon_stats(src)
+
+/obj/item/proc/setup_cyberpunk_weapon(form_id, list/base_slots, list/required_slots, assembled = FALSE, material_id = "steel")
+	cyberpunk_weapon_form = form_id
+	cyberpunk_weapon_material = material_id || "steel"
+	cyberpunk_weapon_assembled = assembled
+	cyberpunk_base_module_slots = base_slots?.Copy() || list()
+	cyberpunk_module_slots = cyberpunk_base_module_slots.Copy()
+	cyberpunk_weapon_required_slots = required_slots?.Copy() || list()
+	recalculate_cyberpunk_weapon_stats()
+	if(length(cyberpunk_initial_module_types) && !length(cyberpunk_modules))
+		for(var/module_type in cyberpunk_initial_module_types)
+			var/datum/cyberpunk_item_module/module = new module_type
+			module.manufacturer = get_cyberpunk_manufacturer()
+			if(!can_accept_cyberpunk_module(module))
+				qdel(module)
+				continue
+			LAZYADD(cyberpunk_modules, module)
+		recalculate_cyberpunk_weapon_stats()
+
+/obj/item/proc/assemble_cyberpunk_weapon(mob/living/user)
+	if(!is_cyberpunk_modular_weapon())
+		return FALSE
+	if(!is_cyberpunk_on_table())
+		to_chat(user, span_warning("Put [src] on a table before locking its frame."))
+		return TRUE
+	if(cyberpunk_weapon_assembled)
+		if(!do_after(user, 2 SECONDS, target = src))
+			return TRUE
+		cyberpunk_weapon_assembled = FALSE
+		to_chat(user, span_notice("You unlock [src]'s frame. Its modules can now be changed."))
+		return TRUE
+	var/list/missing = get_missing_cyberpunk_weapon_modules()
+	if(length(missing))
+		to_chat(user, span_warning("[src] is missing required modules: [missing.Join(", ")]."))
+		return TRUE
+	if(!do_after(user, 3 SECONDS, target = src))
+		return TRUE
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+	to_chat(user, span_notice("You lock [src]'s frame into a working [get_cyberpunk_effective_weapon_form()]."))
+	return TRUE
+
+/obj/item/proc/remove_cyberpunk_weapon_module_with_tool(mob/living/user)
+	if(!length(cyberpunk_modules))
+		return FALSE
+	if(!is_cyberpunk_on_table())
+		to_chat(user, span_warning("Put [src] on a table before removing weapon modules."))
+		return TRUE
+	var/datum/cyberpunk_item_module/module = select_cyberpunk_module(user)
+	if(!module)
+		return TRUE
+	var/remove_delay = 2 SECONDS * (user ? user.get_cyberpunk_item_module_time_multiplier(src) : 1)
+	if(!do_after(user, remove_delay, target = src))
+		return TRUE
+	var/module_name = module.name
+	if(remove_cyberpunk_module(module, user))
+		if(length(get_missing_cyberpunk_weapon_modules()))
+			cyberpunk_weapon_assembled = FALSE
+		recalculate_cyberpunk_weapon_stats()
+		to_chat(user, span_notice("You remove [module_name] from [src]."))
+	return TRUE
+
+/obj/item/proc/can_cyberpunk_weapon_hold_melee_coating()
+	return is_cyberpunk_modular_weapon() && cyberpunk_weapon_assembled && !istype(src, /obj/item/gun)
+
+/obj/item/proc/apply_cyberpunk_melee_coating_from(obj/item/reagent_containers/container, mob/living/user)
+	if(!can_cyberpunk_weapon_hold_melee_coating())
+		return FALSE
+	if(!container?.reagents?.total_volume || !container.is_open_container())
+		return FALSE
+	if(!cyberpunk_melee_coating)
+		cyberpunk_melee_coating = new /datum/reagents(10, INJECTABLE)
+		cyberpunk_melee_coating.my_atom = src
+	var/free_volume = cyberpunk_melee_coating.maximum_volume - cyberpunk_melee_coating.total_volume
+	if(free_volume <= 0)
+		to_chat(user, span_warning("[src]'s edge is already fully coated."))
+		return TRUE
+	var/transferred = container.reagents.trans_to(cyberpunk_melee_coating, min(10, free_volume), transferred_by = user)
+	if(transferred <= 0)
+		return FALSE
+	cyberpunk_melee_coating_charges = min(10, cyberpunk_melee_coating_charges + round(transferred))
+	to_chat(user, span_notice("You coat [src] with [round(transferred)]u of reagents. It has [cyberpunk_melee_coating_charges] injection hit(s)."))
+	return TRUE
+
+/obj/item/proc/inject_cyberpunk_melee_coating(mob/living/target, mob/living/user)
+	if(!can_cyberpunk_weapon_hold_melee_coating() || !target?.reagents || !cyberpunk_melee_coating?.total_volume || cyberpunk_melee_coating_charges <= 0)
+		return FALSE
+	var/transferred = cyberpunk_melee_coating.trans_to(target, min(1, cyberpunk_melee_coating.total_volume), transferred_by = user, methods = INJECT)
+	if(transferred <= 0)
+		return FALSE
+	cyberpunk_melee_coating_charges--
+	to_chat(user, span_notice("[src] injects its coating into [target]. [cyberpunk_melee_coating_charges] hit(s) remain."))
+	if(cyberpunk_melee_coating_charges <= 0 || cyberpunk_melee_coating.total_volume <= 0)
+		qdel(cyberpunk_melee_coating)
+		cyberpunk_melee_coating = null
+		cyberpunk_melee_coating_charges = 0
+	return TRUE
+
+/obj/item/proc/apply_cyberpunk_melee_module_effects(mob/living/target, mob/living/user)
+	if(!can_cyberpunk_weapon_hold_melee_coating() || !target || !user)
+		return FALSE
+	var/applied = FALSE
+	if(cyberpunk_melee_module_burn_damage > 0)
+		target.apply_damage(cyberpunk_melee_module_burn_damage, BURN, user.zone_selected, attacking_item = src, burn_type = BODYPART_DAMAGE_HEAT)
+		applied = TRUE
+	if(cyberpunk_melee_module_stamina_damage > 0)
+		target.apply_damage(cyberpunk_melee_module_stamina_damage, STAMINA, user.zone_selected, attacking_item = src)
+		applied = TRUE
+	if(cyberpunk_melee_module_shock_chance > 0 && prob(cyberpunk_melee_module_shock_chance))
+		target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+		to_chat(user, span_notice("[src]'s shock coating makes [target.declent_ru(ACCUSATIVE)] stagger."))
+		applied = TRUE
+	return applied
 
 /obj/item/proc/get_cyberpunk_equipment_material_name()
 	switch(cyberpunk_equipment_material)
@@ -963,19 +1551,9 @@
 	name = "[get_cyberpunk_equipment_material_name()] [cyberpunk_equipment_form]"
 
 /obj/item/click_alt_secondary(mob/user)
-	if(!length(cyberpunk_modules))
+	if(!cyberpunk_equipment_form && !cyberpunk_weapon_form && !length(cyberpunk_modules))
 		return ..()
-	var/datum/cyberpunk_item_module/picked_module = select_cyberpunk_module(user)
-	if(!picked_module)
-		return CLICK_ACTION_BLOCKING
-	if(picked_module.has_active_ability())
-		var/mob/living/living_user = user
-		if(!istype(living_user))
-			return CLICK_ACTION_BLOCKING
-		picked_module.activate(src, living_user)
-		return CLICK_ACTION_SUCCESS
-	to_chat(user, span_notice("[picked_module.name] T[picked_module.module_tier]: slot [picked_module.module_slot], manufacturer [picked_module.manufacturer], effect scale [round(picked_module.get_effective_scale() * 100)]%."))
-	return CLICK_ACTION_SUCCESS
+	return show_cyberpunk_modular_radial(user) ? CLICK_ACTION_SUCCESS : CLICK_ACTION_BLOCKING
 
 /obj/item/proc/add_cyberpunk_module_active(datum/cyberpunk_item_module/module, list/armor_delta, slowdown_delta, duration)
 	if(!module)
@@ -1000,7 +1578,11 @@
 /obj/item/proc/apply_cyberpunk_active_wear(mob/living/user, atom/target)
 	if(cyberpunk_active_wear <= 0 || !uses_integrity || (resistance_flags & INDESTRUCTIBLE) || cyberpunk_broken)
 		return FALSE
-	take_damage(cyberpunk_active_wear, BRUTE, CONSUME, FALSE)
+	var/wear_amount = cyberpunk_active_wear
+	var/kowalski = get_cyberpunk_base_effect_strength(user, "kowalski")
+	if(kowalski > 0)
+		wear_amount *= max(0.1, 1 - 0.25 * kowalski)
+	take_damage(max(0, round(wear_amount, 0.1)), BRUTE, CONSUME, FALSE)
 	return TRUE
 
 /obj/item/proc/repair_cyberpunk_item(amount, mob/living/user)
@@ -1028,6 +1610,8 @@
 	return ..()
 
 /obj/item/wrench_act(mob/living/user, obj/item/tool)
+	if(is_cyberpunk_modular_weapon())
+		return assemble_cyberpunk_weapon(user) ? ITEM_INTERACT_SUCCESS : ..()
 	if(!length(cyberpunk_modules))
 		return ..()
 	var/datum/cyberpunk_item_module/module = select_cyberpunk_module(user)
@@ -1040,6 +1624,11 @@
 	if(remove_cyberpunk_module(module, user))
 		to_chat(user, span_notice("You remove [module_name] from [src]."))
 		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/item/screwdriver_act(mob/living/user, obj/item/tool)
+	if(is_cyberpunk_modular_weapon())
+		return remove_cyberpunk_weapon_module_with_tool(user) ? ITEM_INTERACT_SUCCESS : ..()
 	return ..()
 
 /obj/item/atom_break(damage_flag)
@@ -1103,19 +1692,51 @@
 	cyberpunk_manufacturer = "Starlight"
 	var/module_datum_type = /datum/cyberpunk_item_module
 	var/module_tier = 1
+	var/module_variant = "standard"
+
+/obj/item/cyberpunk_item_module/proc/get_module_variant_name()
+	switch(module_variant)
+		if("lightweight")
+			return "Lightweight"
+		if("reinforced")
+			return "Reinforced"
+		if("precision")
+			return "Precision"
+	return "Standard"
+
+/obj/item/cyberpunk_item_module/proc/cycle_module_variant(mob/user)
+	switch(module_variant)
+		if("standard")
+			module_variant = "lightweight"
+		if("lightweight")
+			module_variant = "reinforced"
+		if("reinforced")
+			module_variant = "precision"
+		else
+			module_variant = "standard"
+	to_chat(user, span_notice("[src] variant set to [get_module_variant_name()]."))
+
+/obj/item/cyberpunk_item_module/attack_self(mob/user, modifiers)
+	cycle_module_variant(user)
+	return TRUE
 
 /obj/item/cyberpunk_item_module/proc/create_module_datum()
 	var/datum/cyberpunk_item_module/module = new module_datum_type
 	module.manufacturer = get_cyberpunk_manufacturer()
 	module.module_tier = module_tier
+	module.module_variant = module_variant
+	module.apply_cyberpunk_module_variant()
 	return module
 
 /obj/item/cyberpunk_item_module/examine(mob/user)
 	. = ..()
 	var/datum/cyberpunk_item_module/module = new module_datum_type
 	module.module_tier = module_tier
+	module.module_variant = module_variant
+	module.apply_cyberpunk_module_variant()
 	. += span_notice("Manufacturer: [get_cyberpunk_manufacturer()].")
-	. += span_notice("Tier: [module_tier]. Slot: [module.module_slot]. Effect scale: [round(module.get_effective_scale() * 100)]%.")
+	. += span_notice("Tier: [module_tier]. Variant: [get_module_variant_name()]. Slot: [module.module_slot]. Effect scale: [round(module.get_effective_scale() * 100)]%.")
+	. += span_notice("Use in hand before installation to cycle Standard, Lightweight, Reinforced and Precision variants.")
 	if(module.has_active_ability())
 		. += span_notice("Active ability: [module.active_ability_name]. [module.active_ability_description]")
 	qdel(module)
@@ -1130,8 +1751,12 @@
 		qdel(module)
 		return ITEM_INTERACT_BLOCKING
 	if(!target_item.install_cyberpunk_module(module, user))
+		if(target_item.is_cyberpunk_modular_weapon() && target_item.cyberpunk_weapon_assembled && !(module.module_slot in list("sight", "underbarrel")))
+			to_chat(user, span_warning("Unlock [target_item]'s frame with a wrench on a table before changing its internal weapon modules."))
+		else
+			to_chat(user, span_warning("[name] does not fit into [target_item]."))
 		qdel(module)
-		return NONE
+		return ITEM_INTERACT_BLOCKING
 	to_chat(user, span_notice("You install [name] into [target_item]."))
 	qdel(src)
 	return ITEM_INTERACT_SUCCESS
@@ -1141,30 +1766,624 @@
 	icon_state = "integrated_circuit"
 	module_datum_type = /datum/cyberpunk_item_module/melee_core
 
+/obj/item/cyberpunk_item_module/melee_core/t2
+	name = "melee core T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_core/t3
+	name = "melee core T3"
+	module_tier = 3
+
 /obj/item/cyberpunk_item_module/melee_blade
 	name = "blade element"
 	icon_state = "component"
 	module_datum_type = /datum/cyberpunk_item_module/melee_blade
+
+/obj/item/cyberpunk_item_module/melee_blade/t2
+	name = "blade element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_blade/t3
+	name = "blade element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_knife_element
+	name = "knife attacking element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_knife_element
+
+/obj/item/cyberpunk_item_module/melee_knife_element/t2
+	name = "knife attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_knife_element/t3
+	name = "knife attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_club_element
+	name = "club attacking element"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/melee_club_element
+
+/obj/item/cyberpunk_item_module/melee_club_element/t2
+	name = "club attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_club_element/t3
+	name = "club attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_twohand_sword_element
+	name = "two-handed sword attacking element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_twohand_sword_element
+
+/obj/item/cyberpunk_item_module/melee_twohand_sword_element/t2
+	name = "two-handed sword attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_twohand_sword_element/t3
+	name = "two-handed sword attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_twohand_hammer_element
+	name = "two-handed hammer attacking element"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/melee_twohand_hammer_element
+
+/obj/item/cyberpunk_item_module/melee_twohand_hammer_element/t2
+	name = "two-handed hammer attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_twohand_hammer_element/t3
+	name = "two-handed hammer attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_axe_element
+	name = "axe attacking element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_axe_element
+
+/obj/item/cyberpunk_item_module/melee_axe_element/t2
+	name = "axe attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_axe_element/t3
+	name = "axe attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_twohand_axe_element
+	name = "two-handed axe attacking element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_twohand_axe_element
+
+/obj/item/cyberpunk_item_module/melee_twohand_axe_element/t2
+	name = "two-handed axe attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_twohand_axe_element/t3
+	name = "two-handed axe attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_rapier_element
+	name = "rapier attacking element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_rapier_element
+
+/obj/item/cyberpunk_item_module/melee_rapier_element/t2
+	name = "rapier attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_rapier_element/t3
+	name = "rapier attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_spear_element
+	name = "spear attacking element"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/melee_spear_element
+
+/obj/item/cyberpunk_item_module/melee_spear_element/t2
+	name = "spear attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_spear_element/t3
+	name = "spear attacking element T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/melee_staff_element
+	name = "staff attacking element"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/melee_staff_element
+
+/obj/item/cyberpunk_item_module/melee_staff_element/t2
+	name = "staff attacking element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_staff_element/t3
+	name = "staff attacking element T3"
+	module_tier = 3
 
 /obj/item/cyberpunk_item_module/melee_spike
 	name = "spike element"
 	icon_state = "component"
 	module_datum_type = /datum/cyberpunk_item_module/melee_spike
 
+/obj/item/cyberpunk_item_module/melee_spike/t2
+	name = "spike element T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_spike/t3
+	name = "spike element T3"
+	module_tier = 3
+
 /obj/item/cyberpunk_item_module/melee_head
 	name = "weighted head"
 	icon_state = "cell_con"
 	module_datum_type = /datum/cyberpunk_item_module/melee_head
+
+/obj/item/cyberpunk_item_module/melee_head/t2
+	name = "weighted head T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/melee_head/t3
+	name = "weighted head T3"
+	module_tier = 3
 
 /obj/item/cyberpunk_item_module/guard
 	name = "weapon guard"
 	icon_state = "circuit_board"
 	module_datum_type = /datum/cyberpunk_item_module/guard
 
+/obj/item/cyberpunk_item_module/guard/t2
+	name = "weapon guard T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/guard/t3
+	name = "weapon guard T3"
+	module_tier = 3
+
 /obj/item/cyberpunk_item_module/balancer
 	name = "weapon balancer"
 	icon_state = "integrated_circuit"
 	module_datum_type = /datum/cyberpunk_item_module/balancer
+
+/obj/item/cyberpunk_item_module/balancer/t2
+	name = "weapon balancer T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/balancer/t3
+	name = "weapon balancer T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/shock_coating
+	name = "shock weapon coating"
+	icon_state = "capacitor"
+	module_datum_type = /datum/cyberpunk_item_module/shock_coating
+
+/obj/item/cyberpunk_item_module/shock_coating/t2
+	name = "shock weapon coating T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/shock_coating/t3
+	name = "shock weapon coating T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/thermal_coating
+	name = "thermal weapon coating"
+	icon_state = "capacitor"
+	module_datum_type = /datum/cyberpunk_item_module/thermal_coating
+
+/obj/item/cyberpunk_item_module/thermal_coating/t2
+	name = "thermal weapon coating T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/thermal_coating/t3
+	name = "thermal weapon coating T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/serrated_coating
+	name = "serrated weapon coating"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/serrated_coating
+
+/obj/item/cyberpunk_item_module/serrated_coating/t2
+	name = "serrated weapon coating T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/serrated_coating/t3
+	name = "serrated weapon coating T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/firearm_core
+	name = "firearm core"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/firearm_core
+
+/obj/item/cyberpunk_item_module/firearm_core/t2
+	name = "firearm core T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/firearm_core/t3
+	name = "firearm core T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/heavy_barrel
+	name = "heavy barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/heavy_barrel
+
+/obj/item/cyberpunk_item_module/heavy_barrel/t2
+	name = "heavy barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/heavy_barrel/t3
+	name = "heavy barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/long_barrel
+	name = "long barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/long_barrel
+
+/obj/item/cyberpunk_item_module/long_barrel/t2
+	name = "long barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/long_barrel/t3
+	name = "long barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/revolver_barrel
+	name = "revolver barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/revolver_barrel
+
+/obj/item/cyberpunk_item_module/revolver_barrel/t2
+	name = "revolver barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/revolver_barrel/t3
+	name = "revolver barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/pistol_barrel
+	name = "pistol barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/pistol_barrel
+
+/obj/item/cyberpunk_item_module/pistol_barrel/t2
+	name = "pistol barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/pistol_barrel/t3
+	name = "pistol barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/smg_barrel
+	name = "SMG barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/smg_barrel
+
+/obj/item/cyberpunk_item_module/smg_barrel/t2
+	name = "SMG barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/smg_barrel/t3
+	name = "SMG barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/rifle_barrel
+	name = "rifle barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/rifle_barrel
+
+/obj/item/cyberpunk_item_module/rifle_barrel/t2
+	name = "rifle barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/rifle_barrel/t3
+	name = "rifle barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/shotgun_barrel
+	name = "shotgun barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/shotgun_barrel
+
+/obj/item/cyberpunk_item_module/shotgun_barrel/t2
+	name = "shotgun barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/shotgun_barrel/t3
+	name = "shotgun barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/sniper_barrel
+	name = "sniper barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/sniper_barrel
+
+/obj/item/cyberpunk_item_module/sniper_barrel/t2
+	name = "sniper barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/sniper_barrel/t3
+	name = "sniper barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/assault_barrel
+	name = "assault barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/assault_barrel
+
+/obj/item/cyberpunk_item_module/assault_barrel/t2
+	name = "assault barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/assault_barrel/t3
+	name = "assault barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/lmg_barrel
+	name = "machine gun barrel"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/lmg_barrel
+
+/obj/item/cyberpunk_item_module/lmg_barrel/t2
+	name = "machine gun barrel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/lmg_barrel/t3
+	name = "machine gun barrel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/rocket_barrel
+	name = "launcher tube"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/rocket_barrel
+
+/obj/item/cyberpunk_item_module/rocket_barrel/t2
+	name = "launcher tube T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/rocket_barrel/t3
+	name = "launcher tube T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/cylinder_50
+	name = ".50 revolver cylinder"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/cylinder_50
+
+/obj/item/cyberpunk_item_module/cylinder_50/t2
+	name = ".50 revolver cylinder T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/cylinder_50/t3
+	name = ".50 revolver cylinder T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/cylinder_357
+	name = ".357 revolver cylinder"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/cylinder_357
+
+/obj/item/cyberpunk_item_module/cylinder_357/t2
+	name = ".357 revolver cylinder T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/cylinder_357/t3
+	name = ".357 revolver cylinder T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/pistol_magwell_9mm
+	name = "9mm pistol magwell"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/pistol_magwell_9mm
+
+/obj/item/cyberpunk_item_module/pistol_magwell_9mm/t2
+	name = "9mm pistol magwell T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/pistol_magwell_9mm/t3
+	name = "9mm pistol magwell T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/pistol_magwell_10mm
+	name = "10mm pistol magwell"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/pistol_magwell_10mm
+
+/obj/item/cyberpunk_item_module/pistol_magwell_10mm/t2
+	name = "10mm pistol magwell T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/pistol_magwell_10mm/t3
+	name = "10mm pistol magwell T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/smg_magwell_9mm
+	name = "9mm SMG magwell"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/smg_magwell_9mm
+
+/obj/item/cyberpunk_item_module/smg_magwell_9mm/t2
+	name = "9mm SMG magwell T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/smg_magwell_9mm/t3
+	name = "9mm SMG magwell T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/rifle_magwell_223
+	name = ".223 rifle magwell"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/rifle_magwell_223
+
+/obj/item/cyberpunk_item_module/rifle_magwell_223/t2
+	name = ".223 rifle magwell T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/rifle_magwell_223/t3
+	name = ".223 rifle magwell T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/shotgun_tube
+	name = "shotgun tube"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/shotgun_tube
+
+/obj/item/cyberpunk_item_module/shotgun_tube/t2
+	name = "shotgun tube T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/shotgun_tube/t3
+	name = "shotgun tube T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/sniper_chamber
+	name = "sniper chamber"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/sniper_chamber
+
+/obj/item/cyberpunk_item_module/sniper_chamber/t2
+	name = "sniper chamber T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/sniper_chamber/t3
+	name = "sniper chamber T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/assault_magwell_223
+	name = ".223 assault magwell"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/assault_magwell_223
+
+/obj/item/cyberpunk_item_module/assault_magwell_223/t2
+	name = ".223 assault magwell T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/assault_magwell_223/t3
+	name = ".223 assault magwell T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/lmg_feed_223
+	name = ".223 belt feed"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/lmg_feed_223
+
+/obj/item/cyberpunk_item_module/lmg_feed_223/t2
+	name = ".223 belt feed T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/lmg_feed_223/t3
+	name = ".223 belt feed T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/rocket_tube
+	name = "rocket launch tube"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/rocket_tube
+
+/obj/item/cyberpunk_item_module/rocket_tube/t2
+	name = "rocket launch tube T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/rocket_tube/t3
+	name = "rocket launch tube T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/laser_emitter
+	name = "laser emitter"
+	icon_state = "power_mod"
+	module_datum_type = /datum/cyberpunk_item_module/laser_emitter
+
+/obj/item/cyberpunk_item_module/laser_emitter/t2
+	name = "laser emitter T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/laser_emitter/t3
+	name = "laser emitter T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/plasma_emitter
+	name = "plasma emitter"
+	icon_state = "power_mod"
+	module_datum_type = /datum/cyberpunk_item_module/plasma_emitter
+
+/obj/item/cyberpunk_item_module/plasma_emitter/t2
+	name = "plasma emitter T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/plasma_emitter/t3
+	name = "plasma emitter T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/precision_receiver
+	name = "precision receiver"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_item_module/precision_receiver
+
+/obj/item/cyberpunk_item_module/precision_receiver/t2
+	name = "precision receiver T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/precision_receiver/t3
+	name = "precision receiver T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/damage_trigger
+	name = "overpressure trigger"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/damage_trigger
+
+/obj/item/cyberpunk_item_module/damage_trigger/t2
+	name = "overpressure trigger T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/damage_trigger/t3
+	name = "overpressure trigger T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/speed_trigger
+	name = "short-reset trigger"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/speed_trigger
+
+/obj/item/cyberpunk_item_module/speed_trigger/t2
+	name = "short-reset trigger T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/speed_trigger/t3
+	name = "short-reset trigger T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/reflex_sight
+	name = "reflex sight"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_item_module/reflex_sight
+
+/obj/item/cyberpunk_item_module/reflex_sight/t2
+	name = "reflex sight T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/reflex_sight/t3
+	name = "reflex sight T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/tactical_light
+	name = "tactical light"
+	icon_state = "power_mod"
+	module_datum_type = /datum/cyberpunk_item_module/tactical_light
+
+/obj/item/cyberpunk_item_module/tactical_light/t2
+	name = "tactical light T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/tactical_light/t3
+	name = "tactical light T3"
+	module_tier = 3
 
 /obj/item/cyberpunk_item_module/armor_plate
 	name = "armor plate"
@@ -1374,6 +2593,12 @@
 	name = "medfoam injector T3"
 	module_tier = 3
 
+/obj/item/ammo_box/magazine/internal/cylinder/cyberpunk_50
+	name = ".50 revolver cylinder"
+	ammo_type = /obj/item/ammo_casing/a50ae
+	caliber = CALIBER_50AE
+	max_ammo = 5
+
 /datum/cyberpunk_item_module
 	var/name = "item module"
 	var/manufacturer = "independent"
@@ -1406,9 +2631,67 @@
 	var/active_burn_heal = 0
 	var/active_extinguish = FALSE
 	var/active_next_use = 0
+	var/gun_spread_delta = 0
+	var/gun_fire_delay_multiplier = 1
+	var/gun_projectile_damage_multiplier_delta = 0
+	var/gun_projectile_wound_bonus_delta = 0
+	var/gun_projectile_speed_multiplier_delta = 0
+	var/gun_magazine_type
+	var/gun_ammo_type
+	var/list/gun_energy_ammo_types
+	var/gun_caliber
+	var/weapon_form_override
+	var/list/allowed_weapon_forms
+	var/list/melee_damage_profile
+	var/melee_stamina_damage_delta = 0
+	var/melee_burn_damage_delta = 0
+	var/melee_shock_chance_delta = 0
+	var/module_variant = "standard"
 
 /datum/cyberpunk_item_module/proc/get_effective_scale()
 	return 1 + max(0, module_tier - 1) * 0.15
+
+/datum/cyberpunk_item_module/proc/apply_cyberpunk_module_variant()
+	switch(module_variant)
+		if("lightweight")
+			weight_delta -= 1
+			integrity_delta -= 5
+			force_multiplier = 1 + ((force_multiplier - 1) * 0.85)
+			attack_speed_multiplier *= 0.92
+			gun_fire_delay_multiplier *= 0.92
+			gun_spread_delta += 1
+			fit_armor_delta_modifier(-2)
+			if(active_cooldown)
+				active_cooldown = round(active_cooldown * 0.9)
+		if("reinforced")
+			weight_delta += 1
+			integrity_delta += 20
+			force_multiplier *= 1.06
+			attack_speed_multiplier *= 1.08
+			gun_fire_delay_multiplier *= 1.08
+			guard_delta += 5
+			melee_stamina_damage_delta += 2
+			fit_armor_delta_modifier(3)
+			if(active_duration)
+				active_duration = round(active_duration * 1.15)
+		if("precision")
+			armour_penetration_delta += 4
+			gun_spread_delta -= 4
+			gun_projectile_speed_multiplier_delta += 0.05
+			guard_delta += 2
+			force_multiplier *= 0.98
+			gun_fire_delay_multiplier *= 1.03
+			melee_shock_chance_delta += 4
+
+/datum/cyberpunk_item_module/proc/fit_armor_delta_modifier(amount)
+	if(!amount)
+		return
+	if(!length(armor_delta))
+		if(module_slot in list("plate", "lining", "shell", "visor", "guard"))
+			armor_delta = list(MELEE = amount, BULLET = amount, LASER = amount)
+		return
+	for(var/armor_key in armor_delta)
+		armor_delta[armor_key] += amount
 
 /datum/cyberpunk_item_module/proc/has_active_ability()
 	return !!active_ability_name
@@ -1449,7 +2732,60 @@
 	return TRUE
 
 /datum/cyberpunk_item_module/proc/can_install(obj/item/target, mob/living/user)
+	if(length(allowed_weapon_forms) && target?.cyberpunk_weapon_form && !(target.get_cyberpunk_effective_weapon_form() in allowed_weapon_forms))
+		return FALSE
 	return istype(target) && target.can_accept_cyberpunk_module(src)
+
+/datum/cyberpunk_item_module/proc/apply_weapon_stats(obj/item/target)
+	if(!target)
+		return
+	var/effect_scale = get_effective_scale()
+	if(weight_delta)
+		target.w_class = clamp(target.w_class + round(weight_delta * effect_scale), WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
+	if(force_multiplier != 1)
+		target.force *= 1 + ((force_multiplier - 1) * effect_scale)
+	if(attack_speed_multiplier != 1)
+		target.attack_speed *= 1 + ((attack_speed_multiplier - 1) * effect_scale)
+	if(armour_penetration_delta)
+		target.armour_penetration += round(armour_penetration_delta * effect_scale)
+	if(guard_delta)
+		target.cyberpunk_guard_value = target.get_cyberpunk_guard_value() + round(guard_delta * effect_scale)
+	if(length(melee_damage_profile))
+		target.cyberpunk_damage_profile = melee_damage_profile.Copy()
+	if(melee_stamina_damage_delta)
+		target.cyberpunk_melee_module_stamina_damage += round(melee_stamina_damage_delta * effect_scale)
+	if(melee_burn_damage_delta)
+		target.cyberpunk_melee_module_burn_damage += round(melee_burn_damage_delta * effect_scale)
+	if(melee_shock_chance_delta)
+		target.cyberpunk_melee_module_shock_chance += round(melee_shock_chance_delta * effect_scale)
+	var/obj/item/gun/gun = target
+	if(istype(gun))
+		if(gun_spread_delta)
+			gun.spread = max(0, gun.spread + round(gun_spread_delta * effect_scale))
+		if(gun_fire_delay_multiplier != 1)
+			gun.fire_delay = max(0, round(gun.fire_delay * (1 + ((gun_fire_delay_multiplier - 1) * effect_scale))))
+		if(gun_projectile_damage_multiplier_delta)
+			gun.projectile_damage_multiplier += gun_projectile_damage_multiplier_delta * effect_scale
+		if(gun_projectile_wound_bonus_delta)
+			gun.projectile_wound_bonus += round(gun_projectile_wound_bonus_delta * effect_scale)
+		if(gun_projectile_speed_multiplier_delta)
+			gun.projectile_speed_multiplier += gun_projectile_speed_multiplier_delta * effect_scale
+		if(gun_magazine_type && ("accepted_magazine_type" in gun.vars))
+			gun.vars["accepted_magazine_type"] = gun_magazine_type
+		if(gun_magazine_type && ("spawn_magazine_type" in gun.vars))
+			gun.vars["spawn_magazine_type"] = gun_magazine_type
+		if(gun_ammo_type && ("ammo_type" in gun.vars))
+			gun.vars["ammo_type"] = gun_ammo_type
+		if(length(gun_energy_ammo_types) && ("ammo_type" in gun.vars))
+			gun.vars["ammo_type"] = gun_energy_ammo_types.Copy()
+		if(gun_caliber && ("caliber" in gun.vars))
+			gun.vars["caliber"] = gun_caliber
+		var/obj/item/gun/energy/energy_gun = target
+		if(istype(energy_gun) && length(gun_energy_ammo_types))
+			energy_gun.select = 1
+			energy_gun.update_ammo_types()
+			energy_gun.recharge_newshot(TRUE)
+			energy_gun.update_appearance()
 
 /datum/cyberpunk_item_module/proc/on_install(obj/item/target, mob/living/user)
 	if(!target)
@@ -1457,6 +2793,9 @@
 	target.cyberpunk_quality = max(target.cyberpunk_quality, quality)
 	if(target.cyberpunk_equipment_form)
 		target.recalculate_cyberpunk_equipment_stats()
+		return
+	if(target.cyberpunk_weapon_form)
+		target.recalculate_cyberpunk_weapon_stats()
 		return
 	var/effect_scale = get_effective_scale()
 	if(weight_delta)
@@ -1490,6 +2829,9 @@
 	if(target.cyberpunk_equipment_form)
 		target.recalculate_cyberpunk_equipment_stats()
 		return
+	if(target.cyberpunk_weapon_form)
+		target.recalculate_cyberpunk_weapon_stats()
+		return
 	if(applied_weight_delta)
 		target.w_class = clamp(target.w_class - applied_weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
 	if(applied_integrity_delta && target.uses_integrity)
@@ -1511,17 +2853,38 @@
 
 /datum/cyberpunk_item_module/melee_core
 	name = "melee core"
+	module_slot = "core"
 	integrity_delta = 20
+
+/datum/cyberpunk_item_module/melee_core/t2
+	name = "melee core T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_core/t3
+	name = "melee core T3"
+	module_tier = 3
 
 /datum/cyberpunk_item_module/melee_blade
 	name = "blade element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "knife", "twohand_sword", "axe", "twohand_axe")
+	weapon_form_override = "knife"
+	melee_damage_profile = list(BODYPART_DAMAGE_SLASH = 1)
 	force_multiplier = 1.15
 	armour_penetration_delta = 5
+
+/datum/cyberpunk_item_module/melee_blade/t2
+	name = "blade element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_blade/t3
+	name = "blade element T3"
+	module_tier = 3
 
 /datum/cyberpunk_item_module/melee_blade/on_install(obj/item/target, mob/living/user)
 	previous_damage_profile = target.cyberpunk_damage_profile?.Copy()
 	. = ..()
-	target.cyberpunk_damage_profile = list(BODYPART_DAMAGE_SLASH = 1)
+	target.cyberpunk_damage_profile = melee_damage_profile.Copy()
 
 /datum/cyberpunk_item_module/melee_blade/on_remove(obj/item/target, mob/living/user)
 	. = ..()
@@ -1529,13 +2892,25 @@
 
 /datum/cyberpunk_item_module/melee_spike
 	name = "spike element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "knife", "rapier", "spear")
+	weapon_form_override = "rapier"
+	melee_damage_profile = list(BODYPART_DAMAGE_PIERCE = 1)
 	force_multiplier = 1.05
 	armour_penetration_delta = 10
+
+/datum/cyberpunk_item_module/melee_spike/t2
+	name = "spike element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_spike/t3
+	name = "spike element T3"
+	module_tier = 3
 
 /datum/cyberpunk_item_module/melee_spike/on_install(obj/item/target, mob/living/user)
 	previous_damage_profile = target.cyberpunk_damage_profile?.Copy()
 	. = ..()
-	target.cyberpunk_damage_profile = list(BODYPART_DAMAGE_PIERCE = 1)
+	target.cyberpunk_damage_profile = melee_damage_profile.Copy()
 
 /datum/cyberpunk_item_module/melee_spike/on_remove(obj/item/target, mob/living/user)
 	. = ..()
@@ -1543,28 +2918,796 @@
 
 /datum/cyberpunk_item_module/melee_head
 	name = "weighted head"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "club", "twohand_hammer", "staff")
+	weapon_form_override = "club"
+	melee_damage_profile = list(BODYPART_DAMAGE_BLUNT = 1)
 	weight_delta = 1
 	force_multiplier = 1.2
 	attack_speed_multiplier = 1.1
 
+/datum/cyberpunk_item_module/melee_head/t2
+	name = "weighted head T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_head/t3
+	name = "weighted head T3"
+	module_tier = 3
+
 /datum/cyberpunk_item_module/melee_head/on_install(obj/item/target, mob/living/user)
 	previous_damage_profile = target.cyberpunk_damage_profile?.Copy()
 	. = ..()
-	target.cyberpunk_damage_profile = list(BODYPART_DAMAGE_BLUNT = 1)
+	target.cyberpunk_damage_profile = melee_damage_profile.Copy()
 
 /datum/cyberpunk_item_module/melee_head/on_remove(obj/item/target, mob/living/user)
 	. = ..()
 	target.cyberpunk_damage_profile = previous_damage_profile?.Copy()
 
+/datum/cyberpunk_item_module/melee_knife_element
+	name = "knife attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "knife")
+	weapon_form_override = "knife"
+	melee_damage_profile = list(BODYPART_DAMAGE_SLASH = 0.65, BODYPART_DAMAGE_PIERCE = 0.35)
+	force_multiplier = 1.08
+	attack_speed_multiplier = 0.9
+	armour_penetration_delta = 4
+
+/datum/cyberpunk_item_module/melee_knife_element/t2
+	name = "knife attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_knife_element/t3
+	name = "knife attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_club_element
+	name = "club attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "club")
+	weapon_form_override = "club"
+	melee_damage_profile = list(BODYPART_DAMAGE_BLUNT = 1)
+	weight_delta = 1
+	force_multiplier = 1.2
+	attack_speed_multiplier = 1.08
+	guard_delta = 6
+
+/datum/cyberpunk_item_module/melee_club_element/t2
+	name = "club attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_club_element/t3
+	name = "club attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_twohand_sword_element
+	name = "two-handed sword attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "twohand_sword")
+	weapon_form_override = "twohand_sword"
+	melee_damage_profile = list(BODYPART_DAMAGE_SLASH = 0.75, BODYPART_DAMAGE_PIERCE = 0.25)
+	weight_delta = 2
+	force_multiplier = 1.35
+	attack_speed_multiplier = 1.18
+	armour_penetration_delta = 8
+	guard_delta = 12
+
+/datum/cyberpunk_item_module/melee_twohand_sword_element/t2
+	name = "two-handed sword attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_twohand_sword_element/t3
+	name = "two-handed sword attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_twohand_hammer_element
+	name = "two-handed hammer attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "twohand_hammer")
+	weapon_form_override = "twohand_hammer"
+	melee_damage_profile = list(BODYPART_DAMAGE_BLUNT = 1)
+	weight_delta = 3
+	force_multiplier = 1.55
+	attack_speed_multiplier = 1.35
+	armour_penetration_delta = 12
+	guard_delta = 8
+
+/datum/cyberpunk_item_module/melee_twohand_hammer_element/t2
+	name = "two-handed hammer attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_twohand_hammer_element/t3
+	name = "two-handed hammer attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_axe_element
+	name = "axe attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "axe")
+	weapon_form_override = "axe"
+	melee_damage_profile = list(BODYPART_DAMAGE_SLASH = 0.85, BODYPART_DAMAGE_BLUNT = 0.15)
+	weight_delta = 1
+	force_multiplier = 1.25
+	attack_speed_multiplier = 1.1
+	armour_penetration_delta = 6
+
+/datum/cyberpunk_item_module/melee_axe_element/t2
+	name = "axe attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_axe_element/t3
+	name = "axe attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_twohand_axe_element
+	name = "two-handed axe attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "twohand_axe")
+	weapon_form_override = "twohand_axe"
+	melee_damage_profile = list(BODYPART_DAMAGE_SLASH = 0.8, BODYPART_DAMAGE_BLUNT = 0.2)
+	weight_delta = 3
+	force_multiplier = 1.48
+	attack_speed_multiplier = 1.3
+	armour_penetration_delta = 10
+	guard_delta = 6
+
+/datum/cyberpunk_item_module/melee_twohand_axe_element/t2
+	name = "two-handed axe attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_twohand_axe_element/t3
+	name = "two-handed axe attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_rapier_element
+	name = "rapier attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "rapier")
+	weapon_form_override = "rapier"
+	melee_damage_profile = list(BODYPART_DAMAGE_PIERCE = 0.9, BODYPART_DAMAGE_SLASH = 0.1)
+	force_multiplier = 1.02
+	attack_speed_multiplier = 0.85
+	armour_penetration_delta = 14
+	guard_delta = 5
+
+/datum/cyberpunk_item_module/melee_rapier_element/t2
+	name = "rapier attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_rapier_element/t3
+	name = "rapier attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_spear_element
+	name = "spear attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "spear")
+	weapon_form_override = "spear"
+	melee_damage_profile = list(BODYPART_DAMAGE_PIERCE = 0.75, BODYPART_DAMAGE_BLUNT = 0.25)
+	weight_delta = 2
+	force_multiplier = 1.22
+	attack_speed_multiplier = 1.05
+	armour_penetration_delta = 12
+	guard_delta = 10
+
+/datum/cyberpunk_item_module/melee_spear_element/t2
+	name = "spear attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_spear_element/t3
+	name = "spear attacking element T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/melee_staff_element
+	name = "staff attacking element"
+	module_slot = "element"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "staff")
+	weapon_form_override = "staff"
+	melee_damage_profile = list(BODYPART_DAMAGE_BLUNT = 1)
+	weight_delta = 1
+	force_multiplier = 1.12
+	attack_speed_multiplier = 0.95
+	guard_delta = 18
+
+/datum/cyberpunk_item_module/melee_staff_element/t2
+	name = "staff attacking element T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/melee_staff_element/t3
+	name = "staff attacking element T3"
+	module_tier = 3
+
 /datum/cyberpunk_item_module/guard
 	name = "guard"
+	module_slot = "guard"
 	guard_delta = 15
 	weight_delta = 1
 
+/datum/cyberpunk_item_module/guard/t2
+	name = "guard T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/guard/t3
+	name = "guard T3"
+	module_tier = 3
+
 /datum/cyberpunk_item_module/balancer
 	name = "balancer"
+	module_slot = "balance"
 	attack_speed_multiplier = 0.9
 	guard_delta = 5
+
+/datum/cyberpunk_item_module/balancer/t2
+	name = "balancer T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/balancer/t3
+	name = "balancer T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/shock_coating
+	name = "shock weapon coating"
+	module_slot = "coating"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "knife", "club", "twohand_sword", "twohand_hammer", "axe", "twohand_axe", "rapier", "spear", "staff")
+	melee_stamina_damage_delta = 8
+	melee_shock_chance_delta = 18
+	armour_penetration_delta = 2
+
+/datum/cyberpunk_item_module/shock_coating/t2
+	name = "shock weapon coating T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/shock_coating/t3
+	name = "shock weapon coating T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/thermal_coating
+	name = "thermal weapon coating"
+	module_slot = "coating"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "knife", "club", "twohand_sword", "twohand_hammer", "axe", "twohand_axe", "rapier", "spear", "staff")
+	melee_damage_profile = list(BODYPART_DAMAGE_HEAT = 0.35, BODYPART_DAMAGE_SLASH = 0.65)
+	melee_burn_damage_delta = 4
+	armour_penetration_delta = 4
+
+/datum/cyberpunk_item_module/thermal_coating/t2
+	name = "thermal weapon coating T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/thermal_coating/t3
+	name = "thermal weapon coating T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/serrated_coating
+	name = "serrated weapon coating"
+	module_slot = "coating"
+	allowed_weapon_forms = list("physical_melee", "energy_melee", "knife", "twohand_sword", "axe", "twohand_axe", "rapier", "spear")
+	force_multiplier = 1.08
+	armour_penetration_delta = 3
+	melee_damage_profile = list(BODYPART_DAMAGE_SLASH = 0.8, BODYPART_DAMAGE_PIERCE = 0.2)
+
+/datum/cyberpunk_item_module/serrated_coating/t2
+	name = "serrated weapon coating T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/serrated_coating/t3
+	name = "serrated weapon coating T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/firearm_core
+	name = "firearm core"
+	module_slot = "core"
+	integrity_delta = 15
+	guard_delta = 5
+
+/datum/cyberpunk_item_module/firearm_core/t2
+	name = "firearm core T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/firearm_core/t3
+	name = "firearm core T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/heavy_barrel
+	name = "heavy barrel"
+	module_slot = "barrel"
+	weight_delta = 1
+	gun_projectile_damage_multiplier_delta = 0.12
+	gun_projectile_wound_bonus_delta = 4
+	gun_spread_delta = 3
+	gun_fire_delay_multiplier = 1.1
+
+/datum/cyberpunk_item_module/heavy_barrel/t2
+	name = "heavy barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/heavy_barrel/t3
+	name = "heavy barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/long_barrel
+	name = "long barrel"
+	module_slot = "barrel"
+	weight_delta = 1
+	gun_spread_delta = -5
+	gun_projectile_speed_multiplier_delta = 0.12
+	gun_fire_delay_multiplier = 1.05
+
+/datum/cyberpunk_item_module/long_barrel/t2
+	name = "long barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/long_barrel/t3
+	name = "long barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/revolver_barrel
+	name = "revolver barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "revolver")
+	weapon_form_override = "revolver"
+	gun_spread_delta = -2
+
+/datum/cyberpunk_item_module/revolver_barrel/t2
+	name = "revolver barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/revolver_barrel/t3
+	name = "revolver barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/pistol_barrel
+	name = "pistol barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "pistol")
+	weapon_form_override = "pistol"
+	gun_fire_delay_multiplier = 0.95
+
+/datum/cyberpunk_item_module/pistol_barrel/t2
+	name = "pistol barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/pistol_barrel/t3
+	name = "pistol barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/smg_barrel
+	name = "SMG barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "smg")
+	weapon_form_override = "smg"
+	gun_fire_delay_multiplier = 0.9
+	gun_spread_delta = 3
+
+/datum/cyberpunk_item_module/smg_barrel/t2
+	name = "SMG barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/smg_barrel/t3
+	name = "SMG barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/rifle_barrel
+	name = "rifle barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "rifle")
+	weapon_form_override = "rifle"
+	weight_delta = 1
+	gun_spread_delta = -4
+	gun_projectile_speed_multiplier_delta = 0.05
+
+/datum/cyberpunk_item_module/rifle_barrel/t2
+	name = "rifle barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/rifle_barrel/t3
+	name = "rifle barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/shotgun_barrel
+	name = "shotgun barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "shotgun")
+	weapon_form_override = "shotgun"
+	weight_delta = 1
+	gun_spread_delta = 8
+	gun_projectile_wound_bonus_delta = 4
+
+/datum/cyberpunk_item_module/shotgun_barrel/t2
+	name = "shotgun barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/shotgun_barrel/t3
+	name = "shotgun barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/sniper_barrel
+	name = "sniper barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "sniper")
+	weapon_form_override = "sniper"
+	weight_delta = 2
+	gun_spread_delta = -12
+	gun_fire_delay_multiplier = 1.2
+	gun_projectile_speed_multiplier_delta = 0.15
+
+/datum/cyberpunk_item_module/sniper_barrel/t2
+	name = "sniper barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/sniper_barrel/t3
+	name = "sniper barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/assault_barrel
+	name = "assault barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "assault")
+	weapon_form_override = "assault"
+	weight_delta = 1
+	gun_spread_delta = 2
+	gun_fire_delay_multiplier = 0.95
+
+/datum/cyberpunk_item_module/assault_barrel/t2
+	name = "assault barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/assault_barrel/t3
+	name = "assault barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/lmg_barrel
+	name = "machine gun barrel"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "lmg")
+	weapon_form_override = "lmg"
+	weight_delta = 2
+	gun_spread_delta = 6
+	gun_fire_delay_multiplier = 0.85
+
+/datum/cyberpunk_item_module/lmg_barrel/t2
+	name = "machine gun barrel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/lmg_barrel/t3
+	name = "machine gun barrel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/rocket_barrel
+	name = "launcher tube"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("ballistic", "rocket")
+	weapon_form_override = "rocket"
+	weight_delta = 3
+	gun_fire_delay_multiplier = 1.15
+
+/datum/cyberpunk_item_module/rocket_barrel/t2
+	name = "launcher tube T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/rocket_barrel/t3
+	name = "launcher tube T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/cylinder_50
+	name = ".50 revolver cylinder"
+	module_slot = "action"
+	allowed_weapon_forms = list("revolver")
+	weight_delta = 1
+	gun_magazine_type = /obj/item/ammo_box/magazine/internal/cylinder/cyberpunk_50
+	gun_ammo_type = /obj/item/ammo_casing/a50ae
+	gun_caliber = CALIBER_50AE
+	gun_fire_delay_multiplier = 1.25
+	gun_projectile_damage_multiplier_delta = 0.2
+	gun_projectile_wound_bonus_delta = 6
+
+/datum/cyberpunk_item_module/cylinder_50/t2
+	name = ".50 revolver cylinder T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/cylinder_50/t3
+	name = ".50 revolver cylinder T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/cylinder_357
+	name = ".357 revolver cylinder"
+	module_slot = "action"
+	allowed_weapon_forms = list("revolver")
+	gun_magazine_type = /obj/item/ammo_box/magazine/internal/cylinder
+	gun_ammo_type = /obj/item/ammo_casing/c357
+	gun_caliber = CALIBER_357
+	gun_projectile_damage_multiplier_delta = 0.05
+
+/datum/cyberpunk_item_module/cylinder_357/t2
+	name = ".357 revolver cylinder T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/cylinder_357/t3
+	name = ".357 revolver cylinder T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/pistol_magwell_9mm
+	name = "9mm pistol magwell"
+	module_slot = "action"
+	allowed_weapon_forms = list("pistol")
+	gun_magazine_type = /obj/item/ammo_box/magazine/m9mm
+	gun_ammo_type = /obj/item/ammo_casing/c9mm
+	gun_caliber = CALIBER_9MM
+	gun_projectile_damage_multiplier_delta = -0.05
+	gun_fire_delay_multiplier = 0.9
+
+/datum/cyberpunk_item_module/pistol_magwell_9mm/t2
+	name = "9mm pistol magwell T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/pistol_magwell_9mm/t3
+	name = "9mm pistol magwell T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/pistol_magwell_10mm
+	name = "10mm pistol magwell"
+	module_slot = "action"
+	allowed_weapon_forms = list("pistol")
+	gun_magazine_type = /obj/item/ammo_box/magazine/m10mm
+	gun_ammo_type = /obj/item/ammo_casing/c10mm
+	gun_caliber = CALIBER_10MM
+	gun_projectile_damage_multiplier_delta = 0.05
+	gun_fire_delay_multiplier = 1.05
+
+/datum/cyberpunk_item_module/pistol_magwell_10mm/t2
+	name = "10mm pistol magwell T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/pistol_magwell_10mm/t3
+	name = "10mm pistol magwell T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/smg_magwell_9mm
+	name = "9mm SMG magwell"
+	module_slot = "action"
+	allowed_weapon_forms = list("smg")
+	gun_magazine_type = /obj/item/ammo_box/magazine/smgm9mm
+	gun_ammo_type = /obj/item/ammo_casing/c9mm
+	gun_caliber = CALIBER_9MM
+	gun_fire_delay_multiplier = 0.85
+	gun_spread_delta = 3
+
+/datum/cyberpunk_item_module/smg_magwell_9mm/t2
+	name = "9mm SMG magwell T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/smg_magwell_9mm/t3
+	name = "9mm SMG magwell T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/rifle_magwell_223
+	name = ".223 rifle magwell"
+	module_slot = "action"
+	allowed_weapon_forms = list("rifle")
+	gun_magazine_type = /obj/item/ammo_box/magazine/m223
+	gun_ammo_type = /obj/item/ammo_casing/a223
+	gun_caliber = CALIBER_A223
+	weight_delta = 1
+	gun_projectile_damage_multiplier_delta = 0.12
+	gun_projectile_speed_multiplier_delta = 0.1
+	gun_fire_delay_multiplier = 1.15
+
+/datum/cyberpunk_item_module/rifle_magwell_223/t2
+	name = ".223 rifle magwell T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/rifle_magwell_223/t3
+	name = ".223 rifle magwell T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/shotgun_tube
+	name = "shotgun tube"
+	module_slot = "action"
+	allowed_weapon_forms = list("shotgun")
+	gun_magazine_type = /obj/item/ammo_box/magazine/internal/shot/lethal
+	gun_ammo_type = /obj/item/ammo_casing/shotgun
+	gun_caliber = CALIBER_SHOTGUN
+	weight_delta = 1
+	gun_spread_delta = 10
+	gun_fire_delay_multiplier = 1.2
+	gun_projectile_wound_bonus_delta = 5
+
+/datum/cyberpunk_item_module/shotgun_tube/t2
+	name = "shotgun tube T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/shotgun_tube/t3
+	name = "shotgun tube T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/sniper_chamber
+	name = "sniper chamber"
+	module_slot = "action"
+	allowed_weapon_forms = list("sniper")
+	gun_magazine_type = /obj/item/ammo_box/magazine/m223
+	gun_ammo_type = /obj/item/ammo_casing/a223
+	gun_caliber = CALIBER_A223
+	weight_delta = 1
+	gun_spread_delta = -10
+	gun_fire_delay_multiplier = 1.35
+	gun_projectile_damage_multiplier_delta = 0.22
+	gun_projectile_wound_bonus_delta = 8
+	gun_projectile_speed_multiplier_delta = 0.18
+
+/datum/cyberpunk_item_module/sniper_chamber/t2
+	name = "sniper chamber T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/sniper_chamber/t3
+	name = "sniper chamber T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/assault_magwell_223
+	name = ".223 assault magwell"
+	module_slot = "action"
+	allowed_weapon_forms = list("assault")
+	gun_magazine_type = /obj/item/ammo_box/magazine/m223
+	gun_ammo_type = /obj/item/ammo_casing/a223
+	gun_caliber = CALIBER_A223
+	gun_fire_delay_multiplier = 0.95
+	gun_spread_delta = 4
+	gun_projectile_damage_multiplier_delta = 0.04
+
+/datum/cyberpunk_item_module/assault_magwell_223/t2
+	name = ".223 assault magwell T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/assault_magwell_223/t3
+	name = ".223 assault magwell T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/lmg_feed_223
+	name = ".223 belt feed"
+	module_slot = "action"
+	allowed_weapon_forms = list("lmg")
+	gun_magazine_type = /obj/item/ammo_box/magazine/m223
+	gun_ammo_type = /obj/item/ammo_casing/a223
+	gun_caliber = CALIBER_A223
+	weight_delta = 2
+	gun_fire_delay_multiplier = 0.8
+	gun_spread_delta = 8
+	gun_projectile_damage_multiplier_delta = -0.05
+
+/datum/cyberpunk_item_module/lmg_feed_223/t2
+	name = ".223 belt feed T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/lmg_feed_223/t3
+	name = ".223 belt feed T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/rocket_tube
+	name = "rocket launch tube"
+	module_slot = "action"
+	allowed_weapon_forms = list("rocket")
+	gun_magazine_type = /obj/item/ammo_box/magazine/internal/rocketlauncher
+	gun_ammo_type = /obj/item/ammo_casing/rocket
+	weight_delta = 3
+	gun_fire_delay_multiplier = 1.25
+	gun_projectile_damage_multiplier_delta = 0.1
+
+/datum/cyberpunk_item_module/rocket_tube/t2
+	name = "rocket launch tube T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/rocket_tube/t3
+	name = "rocket launch tube T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/laser_emitter
+	name = "laser emitter"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("energy", "laser")
+	weapon_form_override = "laser"
+	gun_energy_ammo_types = list(/obj/item/ammo_casing/energy/lasergun)
+	gun_projectile_speed_multiplier_delta = 0.08
+	gun_fire_delay_multiplier = 0.95
+
+/datum/cyberpunk_item_module/laser_emitter/t2
+	name = "laser emitter T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/laser_emitter/t3
+	name = "laser emitter T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/plasma_emitter
+	name = "plasma emitter"
+	module_slot = "barrel"
+	allowed_weapon_forms = list("energy", "plasma")
+	weapon_form_override = "plasma"
+	gun_energy_ammo_types = list(/obj/item/ammo_casing/energy/plasma)
+	weight_delta = 1
+	gun_projectile_damage_multiplier_delta = 0.16
+	gun_projectile_wound_bonus_delta = 6
+	gun_fire_delay_multiplier = 1.2
+
+/datum/cyberpunk_item_module/plasma_emitter/t2
+	name = "plasma emitter T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/plasma_emitter/t3
+	name = "plasma emitter T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/precision_receiver
+	name = "precision receiver"
+	module_slot = "receiver"
+	gun_spread_delta = -8
+	gun_projectile_speed_multiplier_delta = 0.08
+	armour_penetration_delta = 4
+
+/datum/cyberpunk_item_module/precision_receiver/t2
+	name = "precision receiver T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/precision_receiver/t3
+	name = "precision receiver T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/damage_trigger
+	name = "overpressure trigger"
+	module_slot = "trigger"
+	gun_projectile_damage_multiplier_delta = 0.1
+	gun_fire_delay_multiplier = 1.08
+
+/datum/cyberpunk_item_module/damage_trigger/t2
+	name = "overpressure trigger T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/damage_trigger/t3
+	name = "overpressure trigger T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/speed_trigger
+	name = "short-reset trigger"
+	module_slot = "trigger"
+	gun_fire_delay_multiplier = 0.85
+	gun_spread_delta = 2
+
+/datum/cyberpunk_item_module/speed_trigger/t2
+	name = "short-reset trigger T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/speed_trigger/t3
+	name = "short-reset trigger T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/reflex_sight
+	name = "reflex sight"
+	module_slot = "sight"
+	weight_delta = 0
+	gun_spread_delta = -6
+
+/datum/cyberpunk_item_module/reflex_sight/t2
+	name = "reflex sight T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/reflex_sight/t3
+	name = "reflex sight T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/tactical_light
+	name = "tactical light"
+	module_slot = "underbarrel"
+	weight_delta = 1
+	gun_spread_delta = -2
+	active_ability_name = "weapon light"
+	active_ability_description = "The underslung light floods the target area."
+	active_cooldown = 12 SECONDS
+	active_duration = 6 SECONDS
+
+/datum/cyberpunk_item_module/tactical_light/t2
+	name = "tactical light T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/tactical_light/t3
+	name = "tactical light T3"
+	module_tier = 3
 
 /datum/cyberpunk_item_module/armor_plate
 	name = "armor plate"
@@ -1882,6 +4025,919 @@
 	name = "Starlight Weapon Balancer"
 	id = "starlight_weapon_balancer"
 	build_path = /obj/item/cyberpunk_item_module/balancer
+
+/datum/design/cyberpunk_item_module/melee_knife_element
+	name = "Starlight Knife Attacking Element"
+	id = "starlight_knife_attacking_element"
+	build_path = /obj/item/cyberpunk_item_module/melee_knife_element
+
+/datum/design/cyberpunk_item_module/melee_club_element
+	name = "Starlight Club Attacking Element"
+	id = "starlight_club_attacking_element"
+	build_path = /obj/item/cyberpunk_item_module/melee_club_element
+
+/datum/design/cyberpunk_item_module/melee_twohand_sword_element
+	name = "Starlight Two-Handed Sword Attacking Element"
+	id = "starlight_twohand_sword_attacking_element"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/melee_twohand_sword_element
+
+/datum/design/cyberpunk_item_module/melee_twohand_hammer_element
+	name = "Starlight Two-Handed Hammer Attacking Element"
+	id = "starlight_twohand_hammer_attacking_element"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/melee_twohand_hammer_element
+
+/datum/design/cyberpunk_item_module/melee_axe_element
+	name = "Starlight Axe Attacking Element"
+	id = "starlight_axe_attacking_element"
+	build_path = /obj/item/cyberpunk_item_module/melee_axe_element
+
+/datum/design/cyberpunk_item_module/melee_twohand_axe_element
+	name = "Starlight Two-Handed Axe Attacking Element"
+	id = "starlight_twohand_axe_attacking_element"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/melee_twohand_axe_element
+
+/datum/design/cyberpunk_item_module/melee_rapier_element
+	name = "Starlight Rapier Attacking Element"
+	id = "starlight_rapier_attacking_element"
+	build_path = /obj/item/cyberpunk_item_module/melee_rapier_element
+
+/datum/design/cyberpunk_item_module/melee_spear_element
+	name = "Starlight Spear Attacking Element"
+	id = "starlight_spear_attacking_element"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/melee_spear_element
+
+/datum/design/cyberpunk_item_module/melee_staff_element
+	name = "Starlight Staff Attacking Element"
+	id = "starlight_staff_attacking_element"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/melee_staff_element
+
+/datum/design/cyberpunk_item_module/shock_coating
+	name = "Starlight Shock Weapon Coating"
+	id = "starlight_shock_weapon_coating"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/shock_coating
+
+/datum/design/cyberpunk_item_module/thermal_coating
+	name = "Starlight Thermal Weapon Coating"
+	id = "starlight_thermal_weapon_coating"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/plasma = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/thermal_coating
+
+/datum/design/cyberpunk_item_module/serrated_coating
+	name = "Starlight Serrated Weapon Coating"
+	id = "starlight_serrated_weapon_coating"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/serrated_coating
+
+/datum/design/cyberpunk_item_module/firearm_core
+	name = "Starlight Firearm Core"
+	id = "starlight_firearm_core"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/firearm_core
+
+/datum/design/cyberpunk_item_module/heavy_barrel
+	name = "Starlight Heavy Barrel"
+	id = "starlight_heavy_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/heavy_barrel
+
+/datum/design/cyberpunk_item_module/long_barrel
+	name = "Starlight Long Barrel"
+	id = "starlight_long_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/long_barrel
+
+/datum/design/cyberpunk_item_module/revolver_barrel
+	name = "Starlight Revolver Barrel"
+	id = "starlight_revolver_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4)
+	build_path = /obj/item/cyberpunk_item_module/revolver_barrel
+
+/datum/design/cyberpunk_item_module/pistol_barrel
+	name = "Starlight Pistol Barrel"
+	id = "starlight_pistol_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/cyberpunk_item_module/pistol_barrel
+
+/datum/design/cyberpunk_item_module/smg_barrel
+	name = "Starlight SMG Barrel"
+	id = "starlight_smg_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/smg_barrel
+
+/datum/design/cyberpunk_item_module/rifle_barrel
+	name = "Starlight Rifle Barrel"
+	id = "starlight_rifle_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/rifle_barrel
+
+/datum/design/cyberpunk_item_module/shotgun_barrel
+	name = "Starlight Shotgun Barrel"
+	id = "starlight_shotgun_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/shotgun_barrel
+
+/datum/design/cyberpunk_item_module/sniper_barrel
+	name = "Starlight Sniper Barrel"
+	id = "starlight_sniper_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/sniper_barrel
+
+/datum/design/cyberpunk_item_module/assault_barrel
+	name = "Starlight Assault Barrel"
+	id = "starlight_assault_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/assault_barrel
+
+/datum/design/cyberpunk_item_module/lmg_barrel
+	name = "Starlight Machine Gun Barrel"
+	id = "starlight_lmg_barrel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/lmg_barrel
+
+/datum/design/cyberpunk_item_module/rocket_barrel
+	name = "Starlight Launcher Tube"
+	id = "starlight_launcher_tube"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/rocket_barrel
+
+/datum/design/cyberpunk_item_module/cylinder_50
+	name = "Starlight .50 Cylinder"
+	id = "starlight_cylinder_50"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/cylinder_50
+
+/datum/design/cyberpunk_item_module/cylinder_357
+	name = "Starlight .357 Cylinder"
+	id = "starlight_cylinder_357"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/cyberpunk_item_module/cylinder_357
+
+/datum/design/cyberpunk_item_module/pistol_magwell_9mm
+	name = "Starlight 9mm Pistol Magwell"
+	id = "starlight_pistol_magwell_9mm"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/pistol_magwell_9mm
+
+/datum/design/cyberpunk_item_module/pistol_magwell_10mm
+	name = "Starlight 10mm Pistol Magwell"
+	id = "starlight_pistol_magwell_10mm"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/cyberpunk_item_module/pistol_magwell_10mm
+
+/datum/design/cyberpunk_item_module/smg_magwell_9mm
+	name = "Starlight 9mm SMG Magwell"
+	id = "starlight_smg_magwell_9mm"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/smg_magwell_9mm
+
+/datum/design/cyberpunk_item_module/rifle_magwell_223
+	name = "Starlight .223 Rifle Magwell"
+	id = "starlight_rifle_magwell_223"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/rifle_magwell_223
+
+/datum/design/cyberpunk_item_module/shotgun_tube
+	name = "Starlight Shotgun Tube"
+	id = "starlight_shotgun_tube"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/shotgun_tube
+
+/datum/design/cyberpunk_item_module/sniper_chamber
+	name = "Starlight Sniper Chamber"
+	id = "starlight_sniper_chamber"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/sniper_chamber
+
+/datum/design/cyberpunk_item_module/assault_magwell_223
+	name = "Starlight .223 Assault Magwell"
+	id = "starlight_assault_magwell_223"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/assault_magwell_223
+
+/datum/design/cyberpunk_item_module/lmg_feed_223
+	name = "Starlight .223 Belt Feed"
+	id = "starlight_lmg_feed_223"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/lmg_feed_223
+
+/datum/design/cyberpunk_item_module/rocket_tube
+	name = "Starlight Rocket Launch Tube"
+	id = "starlight_rocket_tube"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3, /datum/material/plasma = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/rocket_tube
+
+/datum/design/cyberpunk_item_module/laser_emitter
+	name = "Starlight Laser Emitter"
+	id = "starlight_laser_emitter"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/laser_emitter
+
+/datum/design/cyberpunk_item_module/plasma_emitter
+	name = "Starlight Plasma Emitter"
+	id = "starlight_plasma_emitter"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plasma = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/plasma_emitter
+
+/datum/design/cyberpunk_item_module/precision_receiver
+	name = "Starlight Precision Receiver"
+	id = "starlight_precision_receiver"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/precision_receiver
+
+/datum/design/cyberpunk_item_module/damage_trigger
+	name = "Starlight Overpressure Trigger"
+	id = "starlight_damage_trigger"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/damage_trigger
+
+/datum/design/cyberpunk_item_module/speed_trigger
+	name = "Starlight Short-Reset Trigger"
+	id = "starlight_speed_trigger"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/speed_trigger
+
+/datum/design/cyberpunk_item_module/reflex_sight
+	name = "Starlight Reflex Sight"
+	id = "starlight_reflex_sight"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/reflex_sight
+
+/datum/design/cyberpunk_item_module/tactical_light
+	name = "Starlight Tactical Light"
+	id = "starlight_tactical_light"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/tactical_light
+
+/datum/design/cyberpunk_item_module/firearm_core/t2
+	name = "Starlight Firearm Core T2"
+	id = "starlight_firearm_core_t2"
+	build_path = /obj/item/cyberpunk_item_module/firearm_core/t2
+
+/datum/design/cyberpunk_item_module/firearm_core/t3
+	name = "Starlight Firearm Core T3"
+	id = "starlight_firearm_core_t3"
+	build_path = /obj/item/cyberpunk_item_module/firearm_core/t3
+
+/datum/design/cyberpunk_item_module/heavy_barrel/t2
+	name = "Starlight Heavy Barrel T2"
+	id = "starlight_heavy_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/heavy_barrel/t2
+
+/datum/design/cyberpunk_item_module/heavy_barrel/t3
+	name = "Starlight Heavy Barrel T3"
+	id = "starlight_heavy_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/heavy_barrel/t3
+
+/datum/design/cyberpunk_item_module/long_barrel/t2
+	name = "Starlight Long Barrel T2"
+	id = "starlight_long_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/long_barrel/t2
+
+/datum/design/cyberpunk_item_module/long_barrel/t3
+	name = "Starlight Long Barrel T3"
+	id = "starlight_long_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/long_barrel/t3
+
+/datum/design/cyberpunk_item_module/cylinder_50/t2
+	name = "Starlight .50 Cylinder T2"
+	id = "starlight_cylinder_50_t2"
+	build_path = /obj/item/cyberpunk_item_module/cylinder_50/t2
+
+/datum/design/cyberpunk_item_module/cylinder_50/t3
+	name = "Starlight .50 Cylinder T3"
+	id = "starlight_cylinder_50_t3"
+	build_path = /obj/item/cyberpunk_item_module/cylinder_50/t3
+
+/datum/design/cyberpunk_item_module/cylinder_357/t2
+	name = "Starlight .357 Cylinder T2"
+	id = "starlight_cylinder_357_t2"
+	build_path = /obj/item/cyberpunk_item_module/cylinder_357/t2
+
+/datum/design/cyberpunk_item_module/cylinder_357/t3
+	name = "Starlight .357 Cylinder T3"
+	id = "starlight_cylinder_357_t3"
+	build_path = /obj/item/cyberpunk_item_module/cylinder_357/t3
+
+/datum/design/cyberpunk_item_module/pistol_magwell_9mm/t2
+	name = "Starlight 9mm Pistol Magwell T2"
+	id = "starlight_pistol_magwell_9mm_t2"
+	build_path = /obj/item/cyberpunk_item_module/pistol_magwell_9mm/t2
+
+/datum/design/cyberpunk_item_module/pistol_magwell_9mm/t3
+	name = "Starlight 9mm Pistol Magwell T3"
+	id = "starlight_pistol_magwell_9mm_t3"
+	build_path = /obj/item/cyberpunk_item_module/pistol_magwell_9mm/t3
+
+/datum/design/cyberpunk_item_module/pistol_magwell_10mm/t2
+	name = "Starlight 10mm Pistol Magwell T2"
+	id = "starlight_pistol_magwell_10mm_t2"
+	build_path = /obj/item/cyberpunk_item_module/pistol_magwell_10mm/t2
+
+/datum/design/cyberpunk_item_module/pistol_magwell_10mm/t3
+	name = "Starlight 10mm Pistol Magwell T3"
+	id = "starlight_pistol_magwell_10mm_t3"
+	build_path = /obj/item/cyberpunk_item_module/pistol_magwell_10mm/t3
+
+/datum/design/cyberpunk_item_module/smg_magwell_9mm/t2
+	name = "Starlight 9mm SMG Magwell T2"
+	id = "starlight_smg_magwell_9mm_t2"
+	build_path = /obj/item/cyberpunk_item_module/smg_magwell_9mm/t2
+
+/datum/design/cyberpunk_item_module/smg_magwell_9mm/t3
+	name = "Starlight 9mm SMG Magwell T3"
+	id = "starlight_smg_magwell_9mm_t3"
+	build_path = /obj/item/cyberpunk_item_module/smg_magwell_9mm/t3
+
+/datum/design/cyberpunk_item_module/rifle_magwell_223/t2
+	name = "Starlight .223 Rifle Magwell T2"
+	id = "starlight_rifle_magwell_223_t2"
+	build_path = /obj/item/cyberpunk_item_module/rifle_magwell_223/t2
+
+/datum/design/cyberpunk_item_module/rifle_magwell_223/t3
+	name = "Starlight .223 Rifle Magwell T3"
+	id = "starlight_rifle_magwell_223_t3"
+	build_path = /obj/item/cyberpunk_item_module/rifle_magwell_223/t3
+
+/datum/design/cyberpunk_item_module/precision_receiver/t2
+	name = "Starlight Precision Receiver T2"
+	id = "starlight_precision_receiver_t2"
+	build_path = /obj/item/cyberpunk_item_module/precision_receiver/t2
+
+/datum/design/cyberpunk_item_module/precision_receiver/t3
+	name = "Starlight Precision Receiver T3"
+	id = "starlight_precision_receiver_t3"
+	build_path = /obj/item/cyberpunk_item_module/precision_receiver/t3
+
+/datum/design/cyberpunk_item_module/damage_trigger/t2
+	name = "Starlight Overpressure Trigger T2"
+	id = "starlight_damage_trigger_t2"
+	build_path = /obj/item/cyberpunk_item_module/damage_trigger/t2
+
+/datum/design/cyberpunk_item_module/damage_trigger/t3
+	name = "Starlight Overpressure Trigger T3"
+	id = "starlight_damage_trigger_t3"
+	build_path = /obj/item/cyberpunk_item_module/damage_trigger/t3
+
+/datum/design/cyberpunk_item_module/speed_trigger/t2
+	name = "Starlight Short-Reset Trigger T2"
+	id = "starlight_speed_trigger_t2"
+	build_path = /obj/item/cyberpunk_item_module/speed_trigger/t2
+
+/datum/design/cyberpunk_item_module/speed_trigger/t3
+	name = "Starlight Short-Reset Trigger T3"
+	id = "starlight_speed_trigger_t3"
+	build_path = /obj/item/cyberpunk_item_module/speed_trigger/t3
+
+/datum/design/cyberpunk_item_module/reflex_sight/t2
+	name = "Starlight Reflex Sight T2"
+	id = "starlight_reflex_sight_t2"
+	build_path = /obj/item/cyberpunk_item_module/reflex_sight/t2
+
+/datum/design/cyberpunk_item_module/reflex_sight/t3
+	name = "Starlight Reflex Sight T3"
+	id = "starlight_reflex_sight_t3"
+	build_path = /obj/item/cyberpunk_item_module/reflex_sight/t3
+
+/datum/design/cyberpunk_item_module/tactical_light/t2
+	name = "Starlight Tactical Light T2"
+	id = "starlight_tactical_light_t2"
+	build_path = /obj/item/cyberpunk_item_module/tactical_light/t2
+
+/datum/design/cyberpunk_item_module/tactical_light/t3
+	name = "Starlight Tactical Light T3"
+	id = "starlight_tactical_light_t3"
+	build_path = /obj/item/cyberpunk_item_module/tactical_light/t3
+
+/datum/design/cyberpunk_item_module/revolver_barrel/t2
+	name = "Starlight Revolver Barrel T2"
+	id = "starlight_revolver_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/revolver_barrel/t2
+
+/datum/design/cyberpunk_item_module/revolver_barrel/t3
+	name = "Starlight Revolver Barrel T3"
+	id = "starlight_revolver_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/revolver_barrel/t3
+
+/datum/design/cyberpunk_item_module/pistol_barrel/t2
+	name = "Starlight Pistol Barrel T2"
+	id = "starlight_pistol_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/pistol_barrel/t2
+
+/datum/design/cyberpunk_item_module/pistol_barrel/t3
+	name = "Starlight Pistol Barrel T3"
+	id = "starlight_pistol_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/pistol_barrel/t3
+
+/datum/design/cyberpunk_item_module/smg_barrel/t2
+	name = "Starlight SMG Barrel T2"
+	id = "starlight_smg_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/smg_barrel/t2
+
+/datum/design/cyberpunk_item_module/smg_barrel/t3
+	name = "Starlight SMG Barrel T3"
+	id = "starlight_smg_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/smg_barrel/t3
+
+/datum/design/cyberpunk_item_module/rifle_barrel/t2
+	name = "Starlight Rifle Barrel T2"
+	id = "starlight_rifle_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/rifle_barrel/t2
+
+/datum/design/cyberpunk_item_module/rifle_barrel/t3
+	name = "Starlight Rifle Barrel T3"
+	id = "starlight_rifle_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/rifle_barrel/t3
+
+/datum/design/cyberpunk_item_module/shotgun_barrel/t2
+	name = "Starlight Shotgun Barrel T2"
+	id = "starlight_shotgun_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/shotgun_barrel/t2
+
+/datum/design/cyberpunk_item_module/shotgun_barrel/t3
+	name = "Starlight Shotgun Barrel T3"
+	id = "starlight_shotgun_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/shotgun_barrel/t3
+
+/datum/design/cyberpunk_item_module/sniper_barrel/t2
+	name = "Starlight Sniper Barrel T2"
+	id = "starlight_sniper_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/sniper_barrel/t2
+
+/datum/design/cyberpunk_item_module/sniper_barrel/t3
+	name = "Starlight Sniper Barrel T3"
+	id = "starlight_sniper_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/sniper_barrel/t3
+
+/datum/design/cyberpunk_item_module/assault_barrel/t2
+	name = "Starlight Assault Barrel T2"
+	id = "starlight_assault_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/assault_barrel/t2
+
+/datum/design/cyberpunk_item_module/assault_barrel/t3
+	name = "Starlight Assault Barrel T3"
+	id = "starlight_assault_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/assault_barrel/t3
+
+/datum/design/cyberpunk_item_module/lmg_barrel/t2
+	name = "Starlight Machine Gun Barrel T2"
+	id = "starlight_lmg_barrel_t2"
+	build_path = /obj/item/cyberpunk_item_module/lmg_barrel/t2
+
+/datum/design/cyberpunk_item_module/lmg_barrel/t3
+	name = "Starlight Machine Gun Barrel T3"
+	id = "starlight_lmg_barrel_t3"
+	build_path = /obj/item/cyberpunk_item_module/lmg_barrel/t3
+
+/datum/design/cyberpunk_item_module/rocket_barrel/t2
+	name = "Starlight Launcher Tube T2"
+	id = "starlight_launcher_tube_t2"
+	build_path = /obj/item/cyberpunk_item_module/rocket_barrel/t2
+
+/datum/design/cyberpunk_item_module/rocket_barrel/t3
+	name = "Starlight Launcher Tube T3"
+	id = "starlight_launcher_tube_t3"
+	build_path = /obj/item/cyberpunk_item_module/rocket_barrel/t3
+
+/datum/design/cyberpunk_item_module/shotgun_tube/t2
+	name = "Starlight Shotgun Tube T2"
+	id = "starlight_shotgun_tube_t2"
+	build_path = /obj/item/cyberpunk_item_module/shotgun_tube/t2
+
+/datum/design/cyberpunk_item_module/shotgun_tube/t3
+	name = "Starlight Shotgun Tube T3"
+	id = "starlight_shotgun_tube_t3"
+	build_path = /obj/item/cyberpunk_item_module/shotgun_tube/t3
+
+/datum/design/cyberpunk_item_module/sniper_chamber/t2
+	name = "Starlight Sniper Chamber T2"
+	id = "starlight_sniper_chamber_t2"
+	build_path = /obj/item/cyberpunk_item_module/sniper_chamber/t2
+
+/datum/design/cyberpunk_item_module/sniper_chamber/t3
+	name = "Starlight Sniper Chamber T3"
+	id = "starlight_sniper_chamber_t3"
+	build_path = /obj/item/cyberpunk_item_module/sniper_chamber/t3
+
+/datum/design/cyberpunk_item_module/assault_magwell_223/t2
+	name = "Starlight .223 Assault Magwell T2"
+	id = "starlight_assault_magwell_223_t2"
+	build_path = /obj/item/cyberpunk_item_module/assault_magwell_223/t2
+
+/datum/design/cyberpunk_item_module/assault_magwell_223/t3
+	name = "Starlight .223 Assault Magwell T3"
+	id = "starlight_assault_magwell_223_t3"
+	build_path = /obj/item/cyberpunk_item_module/assault_magwell_223/t3
+
+/datum/design/cyberpunk_item_module/lmg_feed_223/t2
+	name = "Starlight .223 Belt Feed T2"
+	id = "starlight_lmg_feed_223_t2"
+	build_path = /obj/item/cyberpunk_item_module/lmg_feed_223/t2
+
+/datum/design/cyberpunk_item_module/lmg_feed_223/t3
+	name = "Starlight .223 Belt Feed T3"
+	id = "starlight_lmg_feed_223_t3"
+	build_path = /obj/item/cyberpunk_item_module/lmg_feed_223/t3
+
+/datum/design/cyberpunk_item_module/rocket_tube/t2
+	name = "Starlight Rocket Launch Tube T2"
+	id = "starlight_rocket_tube_t2"
+	build_path = /obj/item/cyberpunk_item_module/rocket_tube/t2
+
+/datum/design/cyberpunk_item_module/rocket_tube/t3
+	name = "Starlight Rocket Launch Tube T3"
+	id = "starlight_rocket_tube_t3"
+	build_path = /obj/item/cyberpunk_item_module/rocket_tube/t3
+
+/datum/design/cyberpunk_item_module/laser_emitter/t2
+	name = "Starlight Laser Emitter T2"
+	id = "starlight_laser_emitter_t2"
+	build_path = /obj/item/cyberpunk_item_module/laser_emitter/t2
+
+/datum/design/cyberpunk_item_module/laser_emitter/t3
+	name = "Starlight Laser Emitter T3"
+	id = "starlight_laser_emitter_t3"
+	build_path = /obj/item/cyberpunk_item_module/laser_emitter/t3
+
+/datum/design/cyberpunk_item_module/plasma_emitter/t2
+	name = "Starlight Plasma Emitter T2"
+	id = "starlight_plasma_emitter_t2"
+	build_path = /obj/item/cyberpunk_item_module/plasma_emitter/t2
+
+/datum/design/cyberpunk_item_module/plasma_emitter/t3
+	name = "Starlight Plasma Emitter T3"
+	id = "starlight_plasma_emitter_t3"
+	build_path = /obj/item/cyberpunk_item_module/plasma_emitter/t3
+
+/datum/design/cyberpunk_weapon
+	name = "Cyberpunk Modular Weapon"
+	desc = "A Cyberpunk 13 modular weapon frame."
+	id = "cyberpunk_weapon"
+	build_type = PROTOLATHE | AUTOLATHE | AWAY_LATHE
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk
+	category = list(RND_CATEGORY_EQUIPMENT + RND_SUBCATEGORY_EQUIPMENT_ENGINEERING)
+//CYBERPUNK BUILD - rebuild and delete before release
+	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE | DEPARTMENT_BITFLAG_SECURITY
+
+/datum/design/cyberpunk_weapon/revolver_frame
+	name = "Modular Revolver Frame"
+	id = "cyberpunk_revolver_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk
+
+/datum/design/cyberpunk_weapon/knife_frame
+	name = "Modular Physical Melee Base"
+	id = "cyberpunk_knife_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk
+
+/datum/design/cyberpunk_weapon/energy_melee_base
+	name = "Modular Energy Melee Base"
+	id = "cyberpunk_energy_melee_base"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/energy
+
+/datum/design/cyberpunk_weapon/pistol_frame
+	name = "Modular Pistol Frame"
+	id = "cyberpunk_pistol_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk
+
+/datum/design/cyberpunk_weapon/smg_frame
+	name = "Modular Ballistic Weapon Base"
+	id = "cyberpunk_smg_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk
+
+/datum/design/cyberpunk_weapon/rifle_frame
+	name = "Modular Rifle Frame"
+	id = "cyberpunk_rifle_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk
+
+/datum/design/cyberpunk_weapon/shotgun_frame
+	name = "Modular Shotgun Frame"
+	id = "cyberpunk_shotgun_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 9, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/shotgun/cyberpunk
+
+/datum/design/cyberpunk_weapon/sniper_frame
+	name = "Modular Sniper Frame"
+	id = "cyberpunk_sniper_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 10, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/rifle/boltaction/cyberpunk
+
+/datum/design/cyberpunk_weapon/assault_frame
+	name = "Modular Assault Rifle Frame"
+	id = "cyberpunk_assault_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 9, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/ar/cyberpunk
+
+/datum/design/cyberpunk_weapon/lmg_frame
+	name = "Modular Machine Gun Frame"
+	id = "cyberpunk_lmg_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 12, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/automatic/l6_saw/cyberpunk
+
+/datum/design/cyberpunk_weapon/rocket_frame
+	name = "Modular Rocket Launcher Frame"
+	id = "cyberpunk_rocket_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 14, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3, /datum/material/plasma = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rocketlauncher/cyberpunk
+
+/datum/design/cyberpunk_weapon/energy_frame
+	name = "Modular Energy Weapon Base"
+	id = "cyberpunk_energy_frame"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/energy/laser/cyberpunk
+
+/datum/design/cyberpunk_weapon/revolver_frame_polymer
+	name = "Polymer Modular Revolver Frame"
+	id = "cyberpunk_revolver_frame_polymer"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 5, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk/polymer
+
+/datum/design/cyberpunk_weapon/revolver_frame_ceramic
+	name = "Ceramic Modular Revolver Frame"
+	id = "cyberpunk_revolver_frame_ceramic"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk/ceramic
+
+/datum/design/cyberpunk_weapon/revolver_frame_plasteel
+	name = "Plasteel Modular Revolver Frame"
+	id = "cyberpunk_revolver_frame_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk/plasteel
+
+/datum/design/cyberpunk_weapon/revolver_frame_composite
+	name = "Composite Modular Revolver Frame"
+	id = "cyberpunk_revolver_frame_composite"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk/composite
+
+/datum/design/cyberpunk_weapon/knife_frame_polymer
+	name = "Polymer Modular Physical Melee Base"
+	id = "cyberpunk_knife_frame_polymer"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/polymer
+
+/datum/design/cyberpunk_weapon/knife_frame_ceramic
+	name = "Ceramic Modular Physical Melee Base"
+	id = "cyberpunk_knife_frame_ceramic"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/knife/cyberpunk/ceramic
+
+/datum/design/cyberpunk_weapon/knife_frame_plasteel
+	name = "Plasteel Modular Physical Melee Base"
+	id = "cyberpunk_knife_frame_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/plasteel
+
+/datum/design/cyberpunk_weapon/knife_frame_composite
+	name = "Composite Modular Physical Melee Base"
+	id = "cyberpunk_knife_frame_composite"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/composite
+
+/datum/design/cyberpunk_weapon/pistol_frame_polymer
+	name = "Polymer Modular Pistol Frame"
+	id = "cyberpunk_pistol_frame_polymer"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 5, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk/polymer
+
+/datum/design/cyberpunk_weapon/pistol_frame_ceramic
+	name = "Ceramic Modular Pistol Frame"
+	id = "cyberpunk_pistol_frame_ceramic"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk/ceramic
+
+/datum/design/cyberpunk_weapon/pistol_frame_plasteel
+	name = "Plasteel Modular Pistol Frame"
+	id = "cyberpunk_pistol_frame_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk/plasteel
+
+/datum/design/cyberpunk_weapon/pistol_frame_composite
+	name = "Composite Modular Pistol Frame"
+	id = "cyberpunk_pistol_frame_composite"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk/composite
+
+/datum/design/cyberpunk_weapon/smg_frame_polymer
+	name = "Polymer Modular SMG Frame"
+	id = "cyberpunk_smg_frame_polymer"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 6, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk/polymer
+
+/datum/design/cyberpunk_weapon/smg_frame_ceramic
+	name = "Ceramic Modular SMG Frame"
+	id = "cyberpunk_smg_frame_ceramic"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk/ceramic
+
+/datum/design/cyberpunk_weapon/smg_frame_plasteel
+	name = "Plasteel Modular SMG Frame"
+	id = "cyberpunk_smg_frame_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk/plasteel
+
+/datum/design/cyberpunk_weapon/smg_frame_composite
+	name = "Composite Modular SMG Frame"
+	id = "cyberpunk_smg_frame_composite"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk/composite
+
+/datum/design/cyberpunk_weapon/rifle_frame_polymer
+	name = "Polymer Modular Rifle Frame"
+	id = "cyberpunk_rifle_frame_polymer"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 8, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk/polymer
+
+/datum/design/cyberpunk_weapon/rifle_frame_ceramic
+	name = "Ceramic Modular Rifle Frame"
+	id = "cyberpunk_rifle_frame_ceramic"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk/ceramic
+
+/datum/design/cyberpunk_weapon/rifle_frame_plasteel
+	name = "Plasteel Modular Rifle Frame"
+	id = "cyberpunk_rifle_frame_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk/plasteel
+
+/datum/design/cyberpunk_weapon/rifle_frame_composite
+	name = "Composite Modular Rifle Frame"
+	id = "cyberpunk_rifle_frame_composite"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk/composite
+
+/datum/design/cyberpunk_weapon/sentinel_revolver
+	name = "Sentinel Modular Revolver"
+	id = "cyberpunk_sentinel_revolver"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk/sentinel
+
+/datum/design/cyberpunk_weapon/bruiser_revolver
+	name = "Bruiser Modular Revolver"
+	id = "cyberpunk_bruiser_revolver"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 9, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/revolver/cyberpunk/bruiser
+
+/datum/design/cyberpunk_weapon/sidearm_pistol
+	name = "Sidearm Modular Pistol"
+	id = "cyberpunk_sidearm_pistol"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk/sidearm
+
+/datum/design/cyberpunk_weapon/handcannon_pistol
+	name = "Handcannon Modular Pistol"
+	id = "cyberpunk_handcannon_pistol"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/pistol/cyberpunk/handcannon
+
+/datum/design/cyberpunk_weapon/sprinter_smg
+	name = "Sprinter Modular SMG"
+	id = "cyberpunk_sprinter_smg"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk/sprinter
+
+/datum/design/cyberpunk_weapon/breacher_smg
+	name = "Breacher Modular SMG"
+	id = "cyberpunk_breacher_smg"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 9, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/proto/cyberpunk/breacher
+
+/datum/design/cyberpunk_weapon/marksman_rifle
+	name = "Marksman Modular Rifle"
+	id = "cyberpunk_marksman_rifle"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 10, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk/marksman
+
+/datum/design/cyberpunk_weapon/patrol_rifle
+	name = "Patrol Modular Rifle"
+	id = "cyberpunk_patrol_rifle"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 11, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rifle/cyberpunk/patrol
+
+/datum/design/cyberpunk_weapon/room_clearer_shotgun
+	name = "Room-Clearer Modular Shotgun"
+	id = "cyberpunk_room_clearer_shotgun"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 12, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/shotgun/cyberpunk/room_clearer
+
+/datum/design/cyberpunk_weapon/longwatch_sniper
+	name = "Longwatch Modular Sniper"
+	id = "cyberpunk_longwatch_sniper"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 13, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/rifle/boltaction/cyberpunk/longwatch
+
+/datum/design/cyberpunk_weapon/streetline_assault
+	name = "Streetline Modular Assault Rifle"
+	id = "cyberpunk_streetline_assault"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 12, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/ar/cyberpunk/streetline
+
+/datum/design/cyberpunk_weapon/suppressor_lmg
+	name = "Suppressor Modular LMG"
+	id = "cyberpunk_suppressor_lmg"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 16, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/gun/ballistic/automatic/l6_saw/cyberpunk/suppressor
+
+/datum/design/cyberpunk_weapon/punchline_launcher
+	name = "Punchline Modular Rocket Launcher"
+	id = "cyberpunk_punchline_launcher"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 18, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 5, /datum/material/plasma = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/ballistic/rocketlauncher/cyberpunk/punchline
+
+/datum/design/cyberpunk_weapon/radiant_laser
+	name = "Radiant Modular Laser"
+	id = "cyberpunk_radiant_laser"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 11, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/gun/energy/laser/cyberpunk/radiant
+
+/datum/design/cyberpunk_weapon/plasma_arc
+	name = "Plasma Arc Modular Projector"
+	id = "cyberpunk_plasma_arc"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 12, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/plasma = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/gun/energy/laser/cyberpunk/plasma
+
+/datum/design/cyberpunk_weapon/razor_knife
+	name = "Razor Modular Knife"
+	id = "cyberpunk_razor_knife"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/razor
+
+/datum/design/cyberpunk_weapon/puncture_knife
+	name = "Puncture Modular Knife"
+	id = "cyberpunk_puncture_knife"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/puncture
+
+/datum/design/cyberpunk_weapon/breaker_club
+	name = "Breaker Modular Club"
+	id = "cyberpunk_breaker_club"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/club
+
+/datum/design/cyberpunk_weapon/linebreaker_sword
+	name = "Linebreaker Modular Two-Handed Sword"
+	id = "cyberpunk_linebreaker_sword"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/knife/cyberpunk/twohand_sword
+
+/datum/design/cyberpunk_weapon/piledriver_hammer
+	name = "Pile-Driver Modular Two-Handed Hammer"
+	id = "cyberpunk_piledriver_hammer"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 10, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/knife/cyberpunk/twohand_hammer
+
+/datum/design/cyberpunk_weapon/streetcutter_axe
+	name = "Street-Cutter Modular Axe"
+	id = "cyberpunk_streetcutter_axe"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/axe
+
+/datum/design/cyberpunk_weapon/gatecrack_axe
+	name = "Gatecrack Modular Two-Handed Axe"
+	id = "cyberpunk_gatecrack_axe"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 9, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/knife/cyberpunk/twohand_axe
+
+/datum/design/cyberpunk_weapon/needlepoint_rapier
+	name = "Needlepoint Modular Rapier"
+	id = "cyberpunk_needlepoint_rapier"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/rapier
+
+/datum/design/cyberpunk_weapon/longreach_spear
+	name = "Longreach Modular Spear"
+	id = "cyberpunk_longreach_spear"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/spear
+
+/datum/design/cyberpunk_weapon/crowdline_staff
+	name = "Crowdline Modular Staff"
+	id = "cyberpunk_crowdline_staff"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/knife/cyberpunk/staff
+
+/datum/design/cyberpunk_weapon/hotline_energy_blade
+	name = "Hotline Modular Energy Blade"
+	id = "cyberpunk_hotline_energy_blade"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/plasma = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/energy_blade
+
+/datum/design/cyberpunk_weapon/crowdline_shock_staff
+	name = "Crowdline Modular Shock Staff"
+	id = "cyberpunk_crowdline_shock_staff"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/knife/cyberpunk/shock_staff
 
 /datum/design/cyberpunk_item_module/armor_plate
 	name = "Starlight Armor Plate"

@@ -312,6 +312,8 @@
 		if(56 to 60)
 			var/obj/item/organ/implant = pick_working_chrome_implant()
 			implant?.on_implant_erroneous_activation()
+		if(61 to 100)
+			return
 
 /mob/living/proc/trigger_cyberpsychosis()
 	if(world.time < last_cyberpsychosis_time + CYBERPSYCHOSIS_COOLDOWN)

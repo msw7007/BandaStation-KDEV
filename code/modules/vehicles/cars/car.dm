@@ -114,6 +114,7 @@
 	var/name = "vehicle part"
 	var/category = "part"
 	var/manufacturer = "Starlight"
+	var/tier = 1
 	var/max_health = 100
 	var/health = 100
 	var/effect_desc = "Provides baseline vehicle function."
@@ -125,6 +126,7 @@
 	var/brake_multiplier = 1
 	var/fuel_multiplier = 1
 	var/resource_type = "energy"
+	var/max_fuel_multiplier = 1
 	var/passenger_capacity = 0
 	var/mechanism_capacity = 0
 	var/running_gear_slots = 4
@@ -160,6 +162,7 @@
 		"name" = name,
 		"category" = category,
 		"manufacturer" = manufacturer,
+		"tier" = tier,
 		"health" = round(health, 0.1),
 		"maxHealth" = max_health,
 		"integrity" = health_fraction(),
@@ -171,6 +174,7 @@
 		"gripSwitchMultiplier" = grip_switch_multiplier,
 		"brakeMultiplier" = brake_multiplier,
 		"fuelMultiplier" = fuel_multiplier,
+		"maxFuelMultiplier" = max_fuel_multiplier,
 		"resourceType" = resource_type,
 		"passengerCapacity" = passenger_capacity,
 		"mechanismCapacity" = mechanism_capacity,
@@ -195,6 +199,7 @@
 	var/brake_multiplier = 1
 	var/fuel_multiplier = 1
 	var/resource_type = "energy"
+	var/max_fuel_multiplier = 1
 	var/passenger_capacity = 0
 	var/mechanism_capacity = 0
 	var/running_gear_slots = 4
@@ -203,10 +208,44 @@
 	var/bad_grip = 0.45
 	var/space_grip = 0.1
 	var/manufacturer = "Starlight"
+	var/part_variant = "standard"
+	var/part_tier = 1
+
+/obj/item/cyberpunk_vehicle_part/proc/get_part_variant_name()
+	switch(part_variant)
+		if("performance")
+			return "Performance"
+		if("reinforced")
+			return "Reinforced"
+		if("economy")
+			return "Economy"
+	return "Standard"
+
+/obj/item/cyberpunk_vehicle_part/proc/cycle_part_variant(mob/user)
+	switch(part_variant)
+		if("standard")
+			part_variant = "performance"
+		if("performance")
+			part_variant = "reinforced"
+		if("reinforced")
+			part_variant = "economy"
+		else
+			part_variant = "standard"
+	to_chat(user, span_notice("[src] variant set to [get_part_variant_name()]."))
+
+/obj/item/cyberpunk_vehicle_part/attack_self(mob/user, modifiers)
+	cycle_part_variant(user)
+	return TRUE
+
+/obj/item/cyberpunk_vehicle_part/examine(mob/user)
+	. = ..()
+	. += span_notice("Tier: T[part_tier].")
+	. += span_notice("Variant: [get_part_variant_name()]. Use in hand before installation to cycle Standard, Performance, Reinforced and Economy variants.")
 
 /obj/item/cyberpunk_vehicle_part/proc/build_part_datum()
 	var/datum/cyberpunk_vehicle_part/part = new(part_name, part_category, part_health, part_effect)
 	part.manufacturer = manufacturer
+	part.tier = part_tier
 	part.speed_multiplier = speed_multiplier
 	part.acceleration_multiplier = acceleration_multiplier
 	part.maneuver_multiplier = maneuver_multiplier
@@ -214,6 +253,7 @@
 	part.grip_switch_multiplier = grip_switch_multiplier
 	part.brake_multiplier = brake_multiplier
 	part.fuel_multiplier = fuel_multiplier
+	part.max_fuel_multiplier = max_fuel_multiplier
 	part.resource_type = resource_type
 	part.passenger_capacity = passenger_capacity
 	part.mechanism_capacity = mechanism_capacity
@@ -222,7 +262,167 @@
 	part.rough_grip = rough_grip
 	part.bad_grip = bad_grip
 	part.space_grip = space_grip
+	apply_part_tier_to(part)
+	apply_part_variant_to(part)
 	return part
+
+/obj/item/cyberpunk_vehicle_part/proc/apply_part_tier_to(datum/cyberpunk_vehicle_part/part)
+	if(!part || part_tier <= 1)
+		return
+	var/tier_power = clamp(part_tier, 1, 3)
+	var/power_bonus = 1 + (0.15 * (tier_power - 1))
+	var/durability_bonus = 1 + (0.2 * (tier_power - 1))
+	var/fuel_bonus = max(0.65, 1 - (0.1 * (tier_power - 1)))
+	part.name = "[part.name] T[tier_power]"
+	part.effect_desc = "[part.effect_desc] Higher-tier construction improves output, durability and efficiency."
+	part.max_health = max(1, round(part.max_health * durability_bonus))
+	part.health = part.max_health
+	part.speed_multiplier *= power_bonus
+	part.acceleration_multiplier *= power_bonus
+	part.maneuver_multiplier *= power_bonus
+	part.traction_multiplier *= power_bonus
+	part.grip_switch_multiplier *= power_bonus
+	part.brake_multiplier *= power_bonus
+	part.max_fuel_multiplier *= power_bonus
+	part.fuel_multiplier *= fuel_bonus
+	part.floor_grip *= power_bonus
+	part.rough_grip *= power_bonus
+	part.bad_grip *= power_bonus
+	part.space_grip *= power_bonus
+
+/obj/item/cyberpunk_vehicle_part/proc/apply_part_variant_to(datum/cyberpunk_vehicle_part/part)
+	if(!part)
+		return
+	switch(part_variant)
+		if("performance")
+			part.name = "[part.name] (performance)"
+			part.effect_desc = "[part.effect_desc] Tuned for speed and response at the cost of wear and fuel."
+			part.max_health = max(1, round(part.max_health * 0.9))
+			part.health = min(part.health, part.max_health)
+			part.speed_multiplier *= 1.1
+			part.acceleration_multiplier *= 1.12
+			part.maneuver_multiplier *= 1.08
+			part.fuel_multiplier *= 1.12
+			part.floor_grip *= 1.03
+			part.rough_grip *= 0.96
+		if("reinforced")
+			part.name = "[part.name] (reinforced)"
+			part.effect_desc = "[part.effect_desc] Reinforced for impact tolerance at the cost of speed."
+			part.max_health = max(1, round(part.max_health * 1.25))
+			part.health = part.max_health
+			part.speed_multiplier *= 0.92
+			part.acceleration_multiplier *= 0.95
+			part.brake_multiplier *= 1.05
+			part.fuel_multiplier *= 1.08
+			part.traction_multiplier *= 1.04
+		if("economy")
+			part.name = "[part.name] (economy)"
+			part.effect_desc = "[part.effect_desc] Tuned for lower resource use and longer operating range."
+			part.max_health = max(1, round(part.max_health * 0.95))
+			part.health = min(part.health, part.max_health)
+			part.speed_multiplier *= 0.96
+			part.acceleration_multiplier *= 0.94
+			part.fuel_multiplier *= 0.82
+			part.max_fuel_multiplier *= 1.15
+			part.grip_switch_multiplier *= 0.96
+	apply_category_variant_to(part)
+
+/obj/item/cyberpunk_vehicle_part/proc/apply_category_variant_to(datum/cyberpunk_vehicle_part/part)
+	if(!part || part_variant == "standard")
+		return
+	switch(part.category)
+		if("hull")
+			apply_hull_variant_to(part)
+		if("drivetrain")
+			apply_drivetrain_variant_to(part)
+		if("engine")
+			apply_engine_variant_to(part)
+
+/obj/item/cyberpunk_vehicle_part/proc/apply_hull_variant_to(datum/cyberpunk_vehicle_part/part)
+	switch(part_variant)
+		if("performance")
+			part.effect_desc = "[part.effect_desc] Hull weight is stripped down for a quicker chassis."
+			part.speed_multiplier *= 1.04
+			part.acceleration_multiplier *= 1.08
+			part.brake_multiplier *= 0.96
+			part.passenger_capacity = max(1, part.passenger_capacity - 1)
+		if("reinforced")
+			part.effect_desc = "[part.effect_desc] Hull bracing improves crash tolerance and payload stability."
+			part.max_health = max(part.max_health, round(part.max_health * 1.15))
+			part.health = part.max_health
+			part.speed_multiplier *= 0.96
+			part.brake_multiplier *= 1.08
+			part.mechanism_capacity += 1
+		if("economy")
+			part.effect_desc = "[part.effect_desc] Interior volume and service access are prioritized over response."
+			part.max_fuel_multiplier *= 1.08
+			part.fuel_multiplier *= 0.95
+			part.maneuver_multiplier *= 0.96
+
+/obj/item/cyberpunk_vehicle_part/proc/apply_drivetrain_variant_to(datum/cyberpunk_vehicle_part/part)
+	var/is_street = findtext(lowertext(part.name), "street")
+	var/is_offroad = findtext(lowertext(part.name), "off-road") || findtext(lowertext(part.name), "offroad")
+	var/is_tracks = findtext(lowertext(part.name), "track")
+	var/is_grav = findtext(lowertext(part.name), "gravitic") || findtext(lowertext(part.name), "grav")
+	var/is_flight = findtext(lowertext(part.name), "flight") || findtext(lowertext(part.name), "nozzle")
+	switch(part_variant)
+		if("performance")
+			part.effect_desc = "[part.effect_desc] Drive tuning sharpens the intended terrain profile."
+			part.maneuver_multiplier *= 1.08
+			if(is_street)
+				part.floor_grip *= 1.12
+				part.rough_grip *= 0.9
+			else if(is_offroad)
+				part.rough_grip *= 1.14
+				part.floor_grip *= 0.98
+			else if(is_tracks)
+				part.rough_grip *= 1.08
+				part.bad_grip *= 1.08
+				part.speed_multiplier *= 0.96
+			else if(is_grav)
+				part.speed_multiplier *= 1.08
+				part.maneuver_multiplier *= 1.08
+				part.traction_multiplier *= 0.88
+			else if(is_flight)
+				part.space_grip *= 1.18
+				part.acceleration_multiplier *= 1.08
+		if("reinforced")
+			part.effect_desc = "[part.effect_desc] Running gear is overbuilt for controlled recovery."
+			part.traction_multiplier *= 1.1
+			part.brake_multiplier *= 1.08
+			part.grip_switch_multiplier *= 1.08
+			if(is_grav)
+				part.traction_multiplier *= 0.95
+			if(is_flight)
+				part.space_grip *= 1.1
+		if("economy")
+			part.effect_desc = "[part.effect_desc] Running gear uses low-loss bearings and conservative servos."
+			part.fuel_multiplier *= 0.92
+			part.brake_multiplier *= 0.96
+			part.grip_switch_multiplier *= 0.94
+			if(is_tracks)
+				part.speed_multiplier *= 0.98
+
+/obj/item/cyberpunk_vehicle_part/proc/apply_engine_variant_to(datum/cyberpunk_vehicle_part/part)
+	switch(part_variant)
+		if("performance")
+			part.effect_desc = "[part.effect_desc] Engine output curve favors burst acceleration."
+			part.acceleration_multiplier *= 1.16
+			part.speed_multiplier *= 1.06
+			part.fuel_multiplier *= 1.08
+			part.max_fuel_multiplier *= 0.96
+		if("reinforced")
+			part.effect_desc = "[part.effect_desc] Engine block is overbuilt against dirty fuel and impact shock."
+			part.max_health = max(part.max_health, round(part.max_health * 1.18))
+			part.health = part.max_health
+			part.acceleration_multiplier *= 0.96
+			part.max_fuel_multiplier *= 1.08
+		if("economy")
+			part.effect_desc = "[part.effect_desc] Engine timing favors range and heat stability."
+			part.fuel_multiplier *= 0.78
+			part.max_fuel_multiplier *= 1.18
+			part.speed_multiplier *= 0.97
+			part.acceleration_multiplier *= 0.92
 
 /obj/item/cyberpunk_vehicle_part/hull
 	name = "Starlight compact chassis"
@@ -333,32 +533,130 @@
 	mechanism_capacity = 1
 	running_gear_slots = 8
 
+/obj/item/cyberpunk_vehicle_part/hull/sport_compact
+	name = "Starlight sport compact chassis"
+	part_name = "Starlight sport compact chassis"
+	part_health = 120
+	part_effect = "Two-seat compact body tuned for acceleration and corner entry."
+	speed_multiplier = 1.12
+	acceleration_multiplier = 1.18
+	maneuver_multiplier = 1.14
+	brake_multiplier = 0.95
+	passenger_capacity = 2
+	mechanism_capacity = 1
+	running_gear_slots = 4
+
+/obj/item/cyberpunk_vehicle_part/hull/utility_compact
+	name = "Starlight utility compact chassis"
+	part_name = "Starlight utility compact chassis"
+	part_health = 165
+	part_effect = "Four-seat utility body with more mechanism space and modest response."
+	speed_multiplier = 0.92
+	acceleration_multiplier = 0.95
+	maneuver_multiplier = 0.9
+	brake_multiplier = 1.05
+	passenger_capacity = 4
+	mechanism_capacity = 3
+	running_gear_slots = 4
+
+/obj/item/cyberpunk_vehicle_part/hull/armored_compact
+	name = "Starlight armored compact chassis"
+	part_name = "Starlight armored compact chassis"
+	part_health = 230
+	part_effect = "Four-seat compact body with reinforced cabin and slower handling."
+	speed_multiplier = 0.82
+	acceleration_multiplier = 0.88
+	maneuver_multiplier = 0.78
+	brake_multiplier = 1.12
+	passenger_capacity = 4
+	mechanism_capacity = 1
+	running_gear_slots = 4
+
+/obj/item/cyberpunk_vehicle_part/hull/bike/pursuit
+	name = "Starlight pursuit bike frame"
+	part_name = "Starlight pursuit bike frame"
+	part_health = 100
+	part_effect = "Lean two-seat bike frame tuned for pursuit acceleration."
+	speed_multiplier = 1.28
+	acceleration_multiplier = 1.22
+	maneuver_multiplier = 1.18
+	passenger_capacity = 2
+	mechanism_capacity = 0
+	running_gear_slots = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/bike/courier
+	name = "Starlight courier bike frame"
+	part_name = "Starlight courier bike frame"
+	part_health = 115
+	part_effect = "Delivery bike frame with a compact mechanism bay."
+	speed_multiplier = 1.12
+	acceleration_multiplier = 1.08
+	maneuver_multiplier = 1.08
+	passenger_capacity = 1
+	mechanism_capacity = 1
+	running_gear_slots = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/large_car/executive
+	name = "Starlight executive sedan chassis"
+	part_name = "Starlight executive sedan chassis"
+	part_health = 210
+	part_effect = "Stable four-seat sedan body with reinforced passenger space."
+	speed_multiplier = 0.86
+	acceleration_multiplier = 0.92
+	maneuver_multiplier = 0.88
+	brake_multiplier = 1.15
+	passenger_capacity = 4
+	mechanism_capacity = 2
+	running_gear_slots = 4
+
+/obj/item/cyberpunk_vehicle_part/hull/large_car/interceptor
+	name = "Starlight interceptor chassis"
+	part_name = "Starlight interceptor chassis"
+	part_health = 170
+	part_effect = "Four-seat patrol body with higher top speed and lower cargo tolerance."
+	speed_multiplier = 1.08
+	acceleration_multiplier = 1.08
+	maneuver_multiplier = 0.96
+	brake_multiplier = 1.08
+	passenger_capacity = 4
+	mechanism_capacity = 1
+	running_gear_slots = 4
+
 /obj/item/cyberpunk_vehicle_part/drivetrain
 	name = "Starlight street suspension"
 	part_name = "Starlight street suspension"
 	part_category = "drivetrain"
 	part_health = 100
-	part_effect = "Balanced wheels for station floors and roads."
+	part_effect = "Fast street suspension. Strong on floors and roads, weak on natural terrain."
+	speed_multiplier = 1.08
+	floor_grip = 1.1
+	rough_grip = 0.55
+	bad_grip = 0.4
+	space_grip = 0.05
 
 /obj/item/cyberpunk_vehicle_part/drivetrain/offroad
 	name = "Starlight off-road suspension"
 	part_name = "Starlight off-road suspension"
-	part_effect = "Lower top speed, better rough-terrain grip."
-	speed_multiplier = 0.9
+	part_effect = "Lower top speed, stronger grip on rough and natural terrain."
+	speed_multiplier = 0.92
 	traction_multiplier = 1.15
-	rough_grip = 1
-	bad_grip = 0.7
+	floor_grip = 0.9
+	rough_grip = 1.15
+	bad_grip = 0.8
+	space_grip = 0.1
 
 /obj/item/cyberpunk_vehicle_part/drivetrain/tracks
 	name = "Starlight tracked running gear"
 	part_name = "Starlight tracked running gear"
 	part_health = 160
-	part_effect = "Heavy tracks with high rough-terrain grip and slow turns."
+	part_effect = "Slow tracks with steady grip across most terrain."
 	speed_multiplier = 0.7
 	maneuver_multiplier = 0.65
 	traction_multiplier = 1.35
-	rough_grip = 1.15
-	bad_grip = 0.85
+	floor_grip = 0.95
+	rough_grip = 0.95
+	bad_grip = 0.95
+	space_grip = 0.15
 
 /obj/item/cyberpunk_vehicle_part/drivetrain/legs
 	name = "Starlight walker legs"
@@ -374,20 +672,20 @@
 	name = "Starlight gravitic drive"
 	part_name = "Starlight gravitic drive"
 	part_health = 120
-	part_effect = "Hover drive with reduced terrain penalty."
+	part_effect = "Terrain-agnostic grav drive with weak grip and heavy drift."
 	speed_multiplier = 1.05
 	maneuver_multiplier = 1.05
-	traction_multiplier = 0.9
-	floor_grip = 0.9
-	rough_grip = 0.9
-	bad_grip = 0.9
+	traction_multiplier = 0.55
+	floor_grip = 0.55
+	rough_grip = 0.55
+	bad_grip = 0.55
 	space_grip = 0.55
 
 /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles
 	name = "Starlight flight nozzles"
 	part_name = "Starlight flight nozzles"
 	part_health = 90
-	part_effect = "Flight nozzles with high speed and weak ground traction."
+	part_effect = "Flight nozzles. Enables altitude changes and handles open space."
 	speed_multiplier = 1.35
 	maneuver_multiplier = 0.85
 	traction_multiplier = 0.75
@@ -396,12 +694,167 @@
 	bad_grip = 0.65
 	space_grip = 0.9
 
+/obj/item/cyberpunk_vehicle_part/drivetrain/race_street
+	name = "Starlight race street suspension"
+	part_name = "Starlight race street suspension"
+	part_health = 85
+	part_effect = "High-speed street suspension with weak rough-terrain stability."
+	speed_multiplier = 1.18
+	acceleration_multiplier = 1.1
+	maneuver_multiplier = 1.08
+	traction_multiplier = 0.96
+	floor_grip = 1.22
+	rough_grip = 0.42
+	bad_grip = 0.32
+	space_grip = 0.05
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/comfort_street
+	name = "Starlight comfort street suspension"
+	part_name = "Starlight comfort street suspension"
+	part_health = 115
+	part_effect = "Stable city suspension with better braking and slower response."
+	speed_multiplier = 0.98
+	acceleration_multiplier = 0.95
+	maneuver_multiplier = 0.96
+	brake_multiplier = 1.18
+	floor_grip = 1.18
+	rough_grip = 0.62
+	bad_grip = 0.48
+	space_grip = 0.05
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/offroad/rally
+	name = "Starlight rally suspension"
+	part_name = "Starlight rally suspension"
+	part_health = 105
+	part_effect = "Fast rough-terrain suspension that keeps some street speed."
+	speed_multiplier = 1
+	acceleration_multiplier = 1.05
+	maneuver_multiplier = 1.08
+	traction_multiplier = 1.08
+	floor_grip = 0.95
+	rough_grip = 1.18
+	bad_grip = 0.72
+	space_grip = 0.1
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/offroad/crawler
+	name = "Starlight crawler suspension"
+	part_name = "Starlight crawler suspension"
+	part_health = 145
+	part_effect = "Slow off-road suspension with strong grip on broken terrain."
+	speed_multiplier = 0.78
+	acceleration_multiplier = 0.9
+	maneuver_multiplier = 0.92
+	traction_multiplier = 1.35
+	floor_grip = 0.85
+	rough_grip = 1.25
+	bad_grip = 1.05
+	space_grip = 0.12
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/tracks/light
+	name = "Starlight light tracks"
+	part_name = "Starlight light tracks"
+	part_health = 140
+	part_effect = "Lighter tracks with better turn-in and less armor tolerance."
+	speed_multiplier = 0.82
+	acceleration_multiplier = 0.95
+	maneuver_multiplier = 0.82
+	traction_multiplier = 1.22
+	floor_grip = 0.98
+	rough_grip = 0.98
+	bad_grip = 0.9
+	space_grip = 0.15
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/tracks/industrial
+	name = "Starlight industrial tracks"
+	part_name = "Starlight industrial tracks"
+	part_health = 210
+	part_effect = "Heavy tracks that trade speed for consistent pull and braking."
+	speed_multiplier = 0.58
+	acceleration_multiplier = 0.82
+	maneuver_multiplier = 0.55
+	traction_multiplier = 1.55
+	brake_multiplier = 1.25
+	floor_grip = 0.9
+	rough_grip = 1.02
+	bad_grip = 1.08
+	space_grip = 0.15
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/grav/sport
+	name = "Starlight sport gravitic drive"
+	part_name = "Starlight sport gravitic drive"
+	part_health = 95
+	part_effect = "Fast gravitic drive with extreme drift."
+	speed_multiplier = 1.24
+	acceleration_multiplier = 1.12
+	maneuver_multiplier = 1.12
+	traction_multiplier = 0.42
+	grip_switch_multiplier = 0.82
+	floor_grip = 0.45
+	rough_grip = 0.45
+	bad_grip = 0.45
+	space_grip = 0.62
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/grav/stable
+	name = "Starlight stabilized gravitic drive"
+	part_name = "Starlight stabilized gravitic drive"
+	part_health = 135
+	part_effect = "Controlled gravitic drive with lower top speed and safer drift."
+	speed_multiplier = 0.92
+	acceleration_multiplier = 0.95
+	maneuver_multiplier = 0.98
+	traction_multiplier = 0.78
+	grip_switch_multiplier = 1.18
+	floor_grip = 0.7
+	rough_grip = 0.7
+	bad_grip = 0.7
+	space_grip = 0.72
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/lift
+	name = "Starlight lift nozzles"
+	part_name = "Starlight lift nozzles"
+	part_health = 120
+	part_effect = "Stable lift nozzles with safer altitude changes and lower speed."
+	speed_multiplier = 1.08
+	acceleration_multiplier = 0.95
+	maneuver_multiplier = 0.95
+	traction_multiplier = 0.85
+	grip_switch_multiplier = 1.12
+	floor_grip = 0.75
+	rough_grip = 0.75
+	bad_grip = 0.75
+	space_grip = 0.95
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/vector
+	name = "Starlight vector nozzles"
+	part_name = "Starlight vector nozzles"
+	part_health = 80
+	part_effect = "Aggressive flight nozzles with high speed and touchy control."
+	speed_multiplier = 1.55
+	acceleration_multiplier = 1.18
+	maneuver_multiplier = 1.08
+	traction_multiplier = 0.62
+	grip_switch_multiplier = 0.9
+	floor_grip = 0.55
+	rough_grip = 0.55
+	bad_grip = 0.55
+	space_grip = 1.05
+
 /obj/item/cyberpunk_vehicle_part/engine
 	name = "Starlight electric engine"
 	part_name = "Starlight electric engine"
 	part_category = "engine"
 	part_health = 100
-	part_effect = "Balanced electric engine."
+	part_effect = "Internal rechargeable electric engine with a compact charge buffer."
+	fuel_multiplier = 0.85
+	max_fuel_multiplier = 0.75
+
+/obj/item/cyberpunk_vehicle_part/engine/battery
+	name = "Starlight removable-cell engine"
+	part_name = "Starlight removable-cell engine"
+	part_effect = "Electric engine powered by a removable power cell."
+	resource_type = "battery"
+	fuel_multiplier = 1.05
+	max_fuel_multiplier = 0
 
 /obj/item/cyberpunk_vehicle_part/engine/combustion
 	name = "Starlight combustion engine"
@@ -409,6 +862,7 @@
 	part_effect = "High acceleration and higher fuel demand."
 	acceleration_multiplier = 1.25
 	fuel_multiplier = 1.25
+	max_fuel_multiplier = 1.35
 	resource_type = "fuel"
 
 /obj/item/cyberpunk_vehicle_part/engine/performance
@@ -419,6 +873,7 @@
 	speed_multiplier = 1.3
 	acceleration_multiplier = 1.15
 	fuel_multiplier = 1.35
+	max_fuel_multiplier = 1.15
 	resource_type = "fuel"
 
 /obj/item/cyberpunk_vehicle_part/engine/heavy
@@ -429,7 +884,894 @@
 	speed_multiplier = 0.9
 	acceleration_multiplier = 0.85
 	fuel_multiplier = 1.15
+	max_fuel_multiplier = 1.8
 	resource_type = "fuel"
+
+/obj/item/cyberpunk_vehicle_part/engine/electric_efficiency
+	name = "Starlight efficient electric engine"
+	part_name = "Starlight efficient electric engine"
+	part_health = 105
+	part_effect = "Low-consumption internal electric engine with a small charge buffer."
+	speed_multiplier = 0.92
+	acceleration_multiplier = 0.9
+	fuel_multiplier = 0.62
+	max_fuel_multiplier = 0.8
+
+/obj/item/cyberpunk_vehicle_part/engine/electric_torque
+	name = "Starlight torque electric engine"
+	part_name = "Starlight torque electric engine"
+	part_health = 95
+	part_effect = "Responsive internal electric engine with higher draw."
+	speed_multiplier = 1.02
+	acceleration_multiplier = 1.25
+	fuel_multiplier = 1.08
+	max_fuel_multiplier = 0.7
+
+/obj/item/cyberpunk_vehicle_part/engine/battery/high_output
+	name = "Starlight high-output cell engine"
+	part_name = "Starlight high-output cell engine"
+	part_health = 85
+	part_effect = "Removable-cell engine with stronger acceleration and faster drain."
+	resource_type = "battery"
+	speed_multiplier = 1.08
+	acceleration_multiplier = 1.18
+	fuel_multiplier = 1.28
+	max_fuel_multiplier = 0
+
+/obj/item/cyberpunk_vehicle_part/engine/battery/long_range
+	name = "Starlight long-range cell engine"
+	part_name = "Starlight long-range cell engine"
+	part_health = 115
+	part_effect = "Removable-cell engine tuned for longer battery endurance."
+	resource_type = "battery"
+	speed_multiplier = 0.9
+	acceleration_multiplier = 0.88
+	fuel_multiplier = 0.72
+	max_fuel_multiplier = 0
+
+/obj/item/cyberpunk_vehicle_part/engine/combustion/diesel
+	name = "Starlight diesel combustion engine"
+	part_name = "Starlight diesel combustion engine"
+	part_health = 140
+	part_effect = "Fuel engine with strong pull and a larger tank profile."
+	resource_type = "fuel"
+	speed_multiplier = 0.94
+	acceleration_multiplier = 1.08
+	fuel_multiplier = 0.95
+	max_fuel_multiplier = 1.65
+
+/obj/item/cyberpunk_vehicle_part/engine/combustion/gasoline
+	name = "Starlight gasoline combustion engine"
+	part_name = "Starlight gasoline combustion engine"
+	part_health = 105
+	part_effect = "Fuel engine with quick acceleration and higher consumption."
+	resource_type = "fuel"
+	speed_multiplier = 1.08
+	acceleration_multiplier = 1.28
+	fuel_multiplier = 1.22
+	max_fuel_multiplier = 1.15
+
+/obj/item/cyberpunk_vehicle_part/engine/performance/turbo
+	name = "Starlight turbo performance engine"
+	part_name = "Starlight turbo performance engine"
+	part_health = 75
+	part_effect = "Fragile performance engine with high speed and fuel demand."
+	resource_type = "fuel"
+	speed_multiplier = 1.45
+	acceleration_multiplier = 1.25
+	fuel_multiplier = 1.55
+	max_fuel_multiplier = 1.05
+
+/obj/item/cyberpunk_vehicle_part/engine/performance/overdrive
+	name = "Starlight overdrive performance engine"
+	part_name = "Starlight overdrive performance engine"
+	part_health = 80
+	part_effect = "Performance engine tuned for top speed over launch power."
+	resource_type = "fuel"
+	speed_multiplier = 1.58
+	acceleration_multiplier = 1.05
+	fuel_multiplier = 1.48
+	max_fuel_multiplier = 1.1
+
+/obj/item/cyberpunk_vehicle_part/engine/heavy/industrial
+	name = "Starlight industrial heavy engine"
+	part_name = "Starlight industrial heavy engine"
+	part_health = 190
+	part_effect = "Durable heavy engine for cargo and tracked vehicles."
+	resource_type = "fuel"
+	speed_multiplier = 0.82
+	acceleration_multiplier = 0.78
+	fuel_multiplier = 1.05
+	max_fuel_multiplier = 2.05
+
+/obj/item/cyberpunk_vehicle_part/engine/heavy/armored
+	name = "Starlight armored heavy engine"
+	part_name = "Starlight armored heavy engine"
+	part_health = 240
+	part_effect = "Protected heavy engine with low speed and excellent endurance."
+	resource_type = "fuel"
+	speed_multiplier = 0.72
+	acceleration_multiplier = 0.72
+	fuel_multiplier = 0.92
+	max_fuel_multiplier = 2.25
+
+/obj/item/cyberpunk_vehicle_part/hull/sport_compact/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/sport_compact/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/hull/utility_compact/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/utility_compact/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/hull/armored_compact/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/armored_compact/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/hull/bike/pursuit/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/bike/pursuit/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/hull/bike/courier/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/bike/courier/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/hull/large_car/executive/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/large_car/executive/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/hull/large_car/interceptor/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/hull/large_car/interceptor/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/race_street/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/race_street/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/comfort_street/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/comfort_street/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/offroad/rally/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/offroad/rally/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/offroad/crawler/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/offroad/crawler/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/tracks/light/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/tracks/light/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/tracks/industrial/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/tracks/industrial/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/grav/sport/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/grav/sport/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/grav/stable/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/grav/stable/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/lift/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/lift/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/vector/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/vector/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/electric_efficiency/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/electric_efficiency/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/electric_torque/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/electric_torque/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/battery/high_output/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/battery/high_output/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/battery/long_range/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/battery/long_range/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/combustion/diesel/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/combustion/diesel/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/combustion/gasoline/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/combustion/gasoline/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/performance/turbo/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/performance/turbo/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/performance/overdrive/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/performance/overdrive/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/heavy/industrial/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/heavy/industrial/tier3
+	part_tier = 3
+
+/obj/item/cyberpunk_vehicle_part/engine/heavy/armored/tier2
+	part_tier = 2
+
+/obj/item/cyberpunk_vehicle_part/engine/heavy/armored/tier3
+	part_tier = 3
+
+/obj/vehicle/ridden/cyberpunk
+	name = "Starlight tech bike"
+	desc = "A modular Starlight rideable vehicle platform."
+	icon_state = "atv"
+	max_integrity = 160
+	max_occupants = 1
+	key_type = null
+	var/panel_open = FALSE
+	var/fuel = 160
+	var/max_fuel = 160
+	var/base_move_delay = 1.4
+	var/base_step_cost = 1
+	var/base_z_cost = 8
+	var/base_collision_damage = 8
+	var/base_crash_resistance = 0
+	var/cyberpunk_vehicle_can_fly = FALSE
+	var/obj/item/stock_parts/power_store/cyberpunk_power_cell
+	var/cyberpunk_base_max_fuel = 160
+	var/cyberpunk_last_slip = 0
+	var/list/datum/cyberpunk_vehicle_part/vehicle_parts
+	var/hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/microbike
+	var/drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain
+	var/engine_part_type = /obj/item/cyberpunk_vehicle_part/engine
+
+/obj/vehicle/ridden/cyberpunk/Initialize(mapload)
+	. = ..()
+	vehicle_parts = list()
+	install_default_cyberpunk_vehicle_part(hull_part_type)
+	install_default_cyberpunk_vehicle_part(drivetrain_part_type)
+	install_default_cyberpunk_vehicle_part(engine_part_type)
+	recalculate_cyberpunk_vehicle()
+	create_reagents(max(1, max_fuel), OPENCONTAINER)
+	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/cyberpunk)
+
+/obj/vehicle/ridden/cyberpunk/Destroy(force)
+	QDEL_NULL(cyberpunk_power_cell)
+	QDEL_LIST(vehicle_parts)
+	return ..()
+
+/obj/vehicle/ridden/cyberpunk/examine(mob/user)
+	. = ..()
+	. += span_notice("Charge/fuel: [get_cyberpunk_power_text()]. Dirty fuel: [round(get_cyberpunk_dirty_fuel_amount(), 0.1)]. Surface grip: [round(get_current_turf_grip_multiplier(), 0.01)]. Panel: [panel_open ? "open" : "closed"].")
+	if(cyberpunk_vehicle_can_fly)
+		. += span_notice("Flight drive is online. It can move between Z-levels while ridden.")
+	if(length(vehicle_parts))
+		. += span_notice("Installed parts:")
+		for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+			. += span_notice("- [part.name] ([part.category], [part.manufacturer], [round(part.health_fraction() * 100)]%).")
+
+/obj/vehicle/ridden/cyberpunk/proc/install_default_cyberpunk_vehicle_part(part_type)
+	var/obj/item/cyberpunk_vehicle_part/part_item = new part_type(src)
+	vehicle_parts += part_item.build_part_datum()
+	qdel(part_item)
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_part(category)
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		if(part.category == category)
+			return part
+	return null
+
+/obj/vehicle/ridden/cyberpunk/proc/install_cyberpunk_vehicle_part(datum/cyberpunk_vehicle_part/new_part)
+	if(!new_part)
+		return FALSE
+	for(var/i in 1 to length(vehicle_parts))
+		var/datum/cyberpunk_vehicle_part/old_part = vehicle_parts[i]
+		if(old_part.category != new_part.category)
+			continue
+		vehicle_parts[i] = new_part
+		qdel(old_part)
+		recalculate_cyberpunk_vehicle()
+		return TRUE
+	vehicle_parts += new_part
+	recalculate_cyberpunk_vehicle()
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/proc/remove_cyberpunk_vehicle_part(category)
+	for(var/i in 1 to length(vehicle_parts))
+		var/datum/cyberpunk_vehicle_part/part = vehicle_parts[i]
+		if(part.category != category)
+			continue
+		vehicle_parts.Cut(i, i + 1)
+		var/obj/item/cyberpunk_vehicle_part/removed = new /obj/item/cyberpunk_vehicle_part(drop_location())
+		removed.part_name = part.name
+		removed.name = part.name
+		removed.part_category = part.category
+		removed.part_health = part.max_health
+		removed.part_effect = part.effect_desc
+		removed.speed_multiplier = part.speed_multiplier
+		removed.acceleration_multiplier = part.acceleration_multiplier
+		removed.maneuver_multiplier = part.maneuver_multiplier
+		removed.traction_multiplier = part.traction_multiplier
+		removed.grip_switch_multiplier = part.grip_switch_multiplier
+		removed.brake_multiplier = part.brake_multiplier
+		removed.fuel_multiplier = part.fuel_multiplier
+		removed.max_fuel_multiplier = part.max_fuel_multiplier
+		removed.resource_type = part.resource_type
+		removed.passenger_capacity = part.passenger_capacity
+		removed.mechanism_capacity = part.mechanism_capacity
+		removed.running_gear_slots = part.running_gear_slots
+		removed.floor_grip = part.floor_grip
+		removed.rough_grip = part.rough_grip
+		removed.bad_grip = part.bad_grip
+		removed.space_grip = part.space_grip
+		removed.manufacturer = part.manufacturer
+		qdel(part)
+		recalculate_cyberpunk_vehicle()
+		return removed
+	return null
+
+/obj/vehicle/ridden/cyberpunk/proc/recalculate_cyberpunk_vehicle()
+	var/datum/cyberpunk_vehicle_part/hull = get_cyberpunk_part("hull")
+	var/datum/cyberpunk_vehicle_part/drivetrain = get_cyberpunk_part("drivetrain")
+	var/datum/cyberpunk_vehicle_part/engine = get_cyberpunk_part("engine")
+	var/old_integrity = uses_integrity ? get_integrity() : 0
+	var/old_max_integrity = max_integrity
+	var/old_fuel_ratio = (max_fuel > 0) ? (fuel / max_fuel) : 1
+	max_occupants = max(1, hull?.passenger_capacity || 1)
+	max_integrity = max(60, (hull?.max_health || 80) + (drivetrain?.max_health || 0) * 0.35 + (engine?.max_health || 0) * 0.25)
+	max_fuel = max(1, round(cyberpunk_base_max_fuel * (engine?.max_fuel_multiplier || 1)))
+	if(get_engine_resource_type() == "battery")
+		max_fuel = cyberpunk_power_cell?.maxcharge || 0
+		fuel = cyberpunk_power_cell?.charge || 0
+	else
+		if(cyberpunk_power_cell)
+			cyberpunk_power_cell.forceMove(drop_location())
+			cyberpunk_power_cell = null
+		fuel = clamp(round(max_fuel * old_fuel_ratio), 0, max_fuel)
+	if(reagents)
+		reagents.maximum_volume = max(1, max_fuel)
+	if(uses_integrity)
+		var/integrity_ratio = (old_integrity > 0 && old_max_integrity > 0) ? (old_integrity / old_max_integrity) : 1
+		update_integrity(clamp(round(max_integrity * integrity_ratio), 1, max_integrity))
+	cyberpunk_vehicle_can_fly = FALSE
+	if(drivetrain)
+		cyberpunk_vehicle_can_fly = (findtext(drivetrain.name, "flight") || findtext(drivetrain.name, "gravitic") || drivetrain.space_grip >= 0.5)
+	if(cyberpunk_vehicle_can_fly)
+		movement_type |= FLYING
+	else
+		movement_type &= ~FLYING
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_vehicle_stat(stat_key)
+	var/result = 1
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		var/health_factor = 0.35 + part.health_fraction() * 0.65
+		switch(stat_key)
+			if("speed")
+				result *= part.speed_multiplier * health_factor
+			if("acceleration")
+				result *= part.acceleration_multiplier * health_factor
+			if("fuel")
+				result *= part.fuel_multiplier
+			if("brake")
+				result *= part.brake_multiplier * health_factor
+			if("maneuver")
+				result *= part.maneuver_multiplier * health_factor
+			if("traction")
+				result *= part.traction_multiplier * health_factor
+			if("grip_switch")
+				result *= part.grip_switch_multiplier * health_factor
+	return max(0.1, result)
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_vehicle_synergy(mob/living/driver)
+	if(!driver)
+		return 1
+	var/total = 0
+	var/count = 0
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		if(!part.manufacturer)
+			continue
+		total += driver.get_corporate_synergy_multiplier(part.manufacturer)
+		count++
+	return count ? total / count : 1
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_move_delay(mob/living/driver, direction)
+	var/grip = max(0.2, get_current_turf_grip_multiplier())
+	var/delay = base_move_delay / get_cyberpunk_vehicle_stat("speed")
+	delay /= sqrt(max(0.1, get_cyberpunk_vehicle_stat("acceleration")))
+	delay /= max(0.35, grip)
+	if(driver)
+		delay *= driver.get_cyberpunk_driving_speed_multiplier()
+		delay /= get_cyberpunk_vehicle_synergy(driver)
+	return max(world.tick_lag, round(delay, world.tick_lag))
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_step_cost(mob/living/driver, direction)
+	var/cost = base_step_cost * get_cyberpunk_vehicle_stat("fuel")
+	cost *= 1 + max(0, 1 - get_current_turf_grip_multiplier()) * 0.5
+	if(driver)
+		cost *= driver.get_cyberpunk_driving_fuel_multiplier()
+	return max(0.05, cost)
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_z_cost(mob/living/driver)
+	return max(1, base_z_cost * get_cyberpunk_step_cost(driver, UP))
+
+/obj/vehicle/ridden/cyberpunk/proc/can_operate_cyberpunk_vehicle(mob/living/user, altitude_change = FALSE)
+	if(!length(vehicle_parts) || !get_cyberpunk_part("hull") || !get_cyberpunk_part("drivetrain") || !get_cyberpunk_part("engine"))
+		if(user)
+			to_chat(user, span_warning("[src] is missing required vehicle parts."))
+		return FALSE
+	if(get_integrity() <= 0)
+		if(user)
+			to_chat(user, span_warning("[src] is wrecked."))
+		return FALSE
+	if(get_cyberpunk_power_available() <= 0)
+		if(user)
+			to_chat(user, span_warning("[src] has no charge or fuel."))
+		return FALSE
+	if(altitude_change && !cyberpunk_vehicle_can_fly)
+		if(user)
+			to_chat(user, span_warning("[src] is not fitted for flight."))
+		return FALSE
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/proc/consume_cyberpunk_vehicle_charge(mob/living/user, amount)
+	if(amount <= 0)
+		return TRUE
+	var/resource_type = get_engine_resource_type()
+	if(resource_type == "battery")
+		if(!cyberpunk_power_cell)
+			if(user)
+				to_chat(user, span_warning("[src] has no power cell installed."))
+			return FALSE
+		var/power_amount = amount * 40
+		var/power_used = cyberpunk_power_cell.use(power_amount, TRUE)
+		fuel = cyberpunk_power_cell.charge
+		if(power_used >= power_amount)
+			return TRUE
+		if(user)
+			to_chat(user, span_warning("[src]'s power cell is empty."))
+		return FALSE
+	if(resource_type == "fuel")
+		var/available_fuel = get_cyberpunk_clean_fuel_amount()
+		if(available_fuel < amount)
+			if(user)
+				to_chat(user, span_warning("[src]'s fuel tank sputters."))
+			damage_cyberpunk_engine_from_dirty_fuel(amount)
+			return FALSE
+		remove_cyberpunk_clean_fuel(amount)
+		fuel = get_cyberpunk_clean_fuel_amount()
+		damage_cyberpunk_engine_from_dirty_fuel(amount)
+		return TRUE
+	if(fuel < amount)
+		if(user)
+			to_chat(user, span_warning("[src]'s drive sputters; it needs more charge or fuel."))
+		return FALSE
+	fuel = max(0, fuel - amount)
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/proc/refuel_cyberpunk_vehicle(amount)
+	if(amount <= 0 || fuel >= max_fuel)
+		return FALSE
+	fuel = min(max_fuel, fuel + amount)
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_power_available()
+	if(get_engine_resource_type() == "battery")
+		return cyberpunk_power_cell?.charge || 0
+	if(get_engine_resource_type() == "fuel")
+		return get_cyberpunk_clean_fuel_amount()
+	return fuel
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_power_max()
+	if(get_engine_resource_type() == "battery")
+		return cyberpunk_power_cell?.maxcharge || 0
+	return max_fuel
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_power_text()
+	var/resource_type = get_engine_resource_type()
+	if(resource_type == "battery")
+		return cyberpunk_power_cell ? "[round(cyberpunk_power_cell.charge)]/[cyberpunk_power_cell.maxcharge] cell" : "no power cell"
+	if(resource_type == "fuel")
+		return "[round(get_cyberpunk_clean_fuel_amount(), 0.1)]/[max_fuel] fuel mix"
+	return "[round(fuel, 0.1)]/[max_fuel] [resource_type]"
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_clean_fuel_amount()
+	if(!reagents)
+		return 0
+	var/total = 0
+	for(var/datum/reagent/reagent as anything in reagents.reagent_list)
+		if(is_cyberpunk_valid_fuel_reagent(reagent.type))
+			total += reagent.volume
+	return total
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_dirty_fuel_amount()
+	if(!reagents)
+		return 0
+	return max(0, reagents.total_volume - get_cyberpunk_clean_fuel_amount())
+
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_valid_fuel_reagents()
+	return list(
+		/datum/reagent/fuel,
+		/datum/reagent/fuel/gasoline,
+		/datum/reagent/fuel/diesel,
+		/datum/reagent/nitrogen,
+		/datum/reagent/hydrogen,
+		/datum/reagent/carbondioxide,
+	)
+
+/obj/vehicle/ridden/cyberpunk/proc/is_cyberpunk_valid_fuel_reagent(reagent_type)
+	if(ispath(reagent_type, /datum/reagent/fuel))
+		return TRUE
+	return reagent_type in list(
+		/datum/reagent/nitrogen,
+		/datum/reagent/hydrogen,
+		/datum/reagent/carbondioxide,
+	)
+
+/obj/vehicle/ridden/cyberpunk/proc/remove_cyberpunk_clean_fuel(amount)
+	if(!reagents || amount <= 0)
+		return 0
+	var/removed = 0
+	var/list/fuel_priority = list(
+		/datum/reagent/fuel/gasoline,
+		/datum/reagent/fuel/diesel,
+		/datum/reagent/fuel,
+		/datum/reagent/hydrogen,
+		/datum/reagent/nitrogen,
+		/datum/reagent/carbondioxide,
+	)
+	for(var/reagent_type in fuel_priority)
+		var/to_remove = min(amount - removed, reagents.get_reagent_amount(reagent_type, REAGENT_PARENT_TYPE))
+		if(to_remove <= 0)
+			continue
+		reagents.remove_reagent(reagent_type, to_remove, TRUE)
+		removed += to_remove
+		if(removed >= amount)
+			break
+	return removed
+
+/obj/vehicle/ridden/cyberpunk/proc/damage_cyberpunk_engine_from_dirty_fuel(amount)
+	var/dirty = get_cyberpunk_dirty_fuel_amount()
+	if(dirty <= 0 || amount <= 0)
+		return
+	var/burned_dirty = min(dirty, max(0.1, amount * 0.5))
+	var/list/dirty_reagents = reagents.reagent_list.Copy()
+	for(var/datum/reagent/reagent as anything in dirty_reagents)
+		if(is_cyberpunk_valid_fuel_reagent(reagent.type))
+			continue
+		var/to_remove = min(burned_dirty, reagent.volume)
+		if(to_remove <= 0)
+			continue
+		reagents.remove_reagent(reagent.type, to_remove)
+		burned_dirty -= to_remove
+		if(burned_dirty <= 0)
+			break
+	var/damage = max(1, amount * 2)
+	var/datum/cyberpunk_vehicle_part/engine = get_cyberpunk_part("engine")
+	engine?.take_damage(damage)
+	if(uses_integrity && get_integrity() > 0)
+		take_damage(max(1, damage * 0.25), BRUTE, MELEE, FALSE)
+	if(world.time > cyberpunk_last_slip + 1 SECONDS)
+		cyberpunk_last_slip = world.time
+		visible_message(span_warning("[src]'s engine coughs on dirty fuel!"))
+
+/obj/vehicle/ridden/cyberpunk/proc/get_current_turf_grip_multiplier()
+	var/turf/current_turf = get_turf(src)
+	var/datum/cyberpunk_vehicle_part/drivetrain = get_cyberpunk_part("drivetrain")
+	if(!current_turf || !drivetrain)
+		return 1
+	var/grip = drivetrain.bad_grip
+	if(isspaceturf(current_turf) || is_space_or_openspace(current_turf))
+		grip = drivetrain.space_grip
+	else if(istype(current_turf, /turf/open/floor))
+		grip = drivetrain.floor_grip
+	else if(istype(current_turf, /turf/open/lava))
+		grip = drivetrain.bad_grip
+	else if(istype(current_turf, /turf/open/misc/snow) || istype(current_turf, /turf/open/misc/ice) || istype(current_turf, /turf/open/misc/asteroid))
+		grip = drivetrain.rough_grip
+	return max(0.05, grip * drivetrain.traction_multiplier * get_cyberpunk_vehicle_stat("traction"))
+
+/obj/vehicle/ridden/cyberpunk/proc/resolve_cyberpunk_vehicle_direction(mob/living/driver, direction)
+	var/grip = get_current_turf_grip_multiplier()
+	if(grip >= 1 || !direction)
+		return direction
+	var/slip_chance = clamp((1 - grip) * 55, 0, 70)
+	slip_chance /= max(0.25, get_cyberpunk_vehicle_stat("maneuver"))
+	slip_chance /= max(0.25, get_cyberpunk_vehicle_stat("grip_switch"))
+	if(driver)
+		slip_chance *= driver.get_cyberpunk_driving_maneuver_multiplier()
+	if(!prob(slip_chance))
+		return direction
+	var/slip_direction = pick(turn(direction, 45), turn(direction, -45), direction)
+	if(world.time > cyberpunk_last_slip + 1 SECONDS)
+		cyberpunk_last_slip = world.time
+		visible_message(span_warning("[src] loses traction and drifts!"))
+		new /obj/effect/temp_visual/cyberpunk_vehicle_skid(get_turf(src))
+	return slip_direction
+
+/obj/vehicle/ridden/cyberpunk/proc/get_engine_resource_type()
+	var/datum/cyberpunk_vehicle_part/engine = get_cyberpunk_part("engine")
+	return engine?.resource_type || "energy"
+
+/obj/vehicle/ridden/cyberpunk/proc/get_primary_driver()
+	var/list/drivers = return_drivers()
+	if(!length(drivers))
+		return null
+	return drivers[1]
+
+/obj/vehicle/ridden/cyberpunk/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(istype(tool, /obj/item/cyberpunk_vehicle_part))
+		var/obj/item/cyberpunk_vehicle_part/part_item = tool
+		if(!user.transferItemToLoc(part_item, src))
+			return ITEM_INTERACT_BLOCKING
+		var/replaced_category = part_item.part_category
+		var/obj/item/removed_part = get_cyberpunk_part(replaced_category) ? remove_cyberpunk_vehicle_part(replaced_category) : null
+		install_cyberpunk_vehicle_part(part_item.build_part_datum())
+		qdel(part_item)
+		if(removed_part)
+			removed_part.forceMove(drop_location())
+			balloon_alert(user, "part replaced")
+		else
+			balloon_alert(user, "part installed")
+		return ITEM_INTERACT_SUCCESS
+	if(get_engine_resource_type() == "fuel" && tool?.reagents?.total_volume)
+		if(!tool.is_open_container())
+			balloon_alert(user, "open container")
+			return ITEM_INTERACT_BLOCKING
+		if(!reagents)
+			create_reagents(max_fuel, OPENCONTAINER)
+		var/free_volume = max(0, reagents.maximum_volume - reagents.total_volume)
+		if(free_volume <= 0)
+			balloon_alert(user, "tank full")
+			return ITEM_INTERACT_BLOCKING
+		var/transferred = tool.reagents.trans_to(src, min(free_volume, tool.reagents.total_volume), transferred_by = user)
+		if(transferred <= 0)
+			return ITEM_INTERACT_BLOCKING
+		fuel = get_cyberpunk_clean_fuel_amount()
+		balloon_alert(user, "fuel transferred")
+		return ITEM_INTERACT_SUCCESS
+	if(istype(tool, /obj/item/stack/sheet/mineral/plasma))
+		if(get_engine_resource_type() != "fuel")
+			balloon_alert(user, "wrong resource")
+			return ITEM_INTERACT_BLOCKING
+		balloon_alert(user, "use liquid fuel")
+		return ITEM_INTERACT_BLOCKING
+	if(istype(tool, /obj/item/stock_parts/power_store))
+		if(get_engine_resource_type() == "battery")
+			if(!panel_open)
+				balloon_alert(user, "open panel first")
+				return ITEM_INTERACT_BLOCKING
+			if(cyberpunk_power_cell)
+				balloon_alert(user, "cell installed")
+				return ITEM_INTERACT_BLOCKING
+			if(!user.transferItemToLoc(tool, src))
+				return ITEM_INTERACT_BLOCKING
+			cyberpunk_power_cell = tool
+			fuel = cyberpunk_power_cell.charge
+			max_fuel = cyberpunk_power_cell.maxcharge
+			balloon_alert(user, "cell installed")
+			return ITEM_INTERACT_SUCCESS
+		if(get_engine_resource_type() == "fuel")
+			balloon_alert(user, "wrong resource")
+			return ITEM_INTERACT_BLOCKING
+		var/obj/item/stock_parts/power_store/cell = tool
+		var/power_used = cell.use(1000, TRUE)
+		if(power_used <= 0)
+			balloon_alert(user, "cell empty")
+			return ITEM_INTERACT_BLOCKING
+		refuel_cyberpunk_vehicle(power_used / 40)
+		balloon_alert(user, "charged")
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/vehicle/ridden/cyberpunk/attack_hand(mob/living/user, list/modifiers)
+	if(panel_open && get_engine_resource_type() == "battery" && cyberpunk_power_cell)
+		var/obj/item/stock_parts/power_store/cell_to_remove = cyberpunk_power_cell
+		cyberpunk_power_cell = null
+		fuel = 0
+		max_fuel = 0
+		if(user.put_in_hands(cell_to_remove))
+			balloon_alert(user, "cell removed")
+			return TRUE
+		cell_to_remove.forceMove(drop_location())
+		balloon_alert(user, "cell removed")
+		return TRUE
+	return ..()
+
+/obj/vehicle/ridden/cyberpunk/screwdriver_act(mob/living/user, obj/item/tool)
+	panel_open = !panel_open
+	balloon_alert(user, panel_open ? "panel open" : "panel closed")
+	playsound(src, 'sound/items/tools/screwdriver.ogg', 50, TRUE)
+	return ITEM_INTERACT_SUCCESS
+
+/obj/vehicle/ridden/cyberpunk/wrench_act(mob/living/user, obj/item/tool)
+	balloon_alert(user, "RMB: remove part")
+	return ITEM_INTERACT_SUCCESS
+
+/obj/vehicle/ridden/cyberpunk/wrench_act_secondary(mob/living/user, obj/item/tool)
+	var/list/options = list()
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		if(part.category == "drivetrain")
+			options["drivetrain"] = image(icon = 'icons/obj/tools.dmi', icon_state = "rtd")
+		if(part.category == "engine")
+			options["engine"] = image(icon = 'icons/obj/tools.dmi', icon_state = "wrench")
+	if(!length(options))
+		return ITEM_INTERACT_BLOCKING
+	var/category = show_radial_menu(user, src, options, require_near = TRUE, tooltips = TRUE)
+	if(!category)
+		return ITEM_INTERACT_BLOCKING
+	var/obj/item/removed = remove_cyberpunk_vehicle_part(category)
+	if(removed)
+		user.put_in_hands(removed)
+		balloon_alert(user, "part removed")
+		return ITEM_INTERACT_SUCCESS
+	return ITEM_INTERACT_BLOCKING
+
+/obj/vehicle/ridden/cyberpunk/welder_act(mob/living/user, obj/item/tool)
+	if(get_integrity() >= max_integrity)
+		balloon_alert(user, "intact")
+		return ITEM_INTERACT_BLOCKING
+	user.visible_message(span_notice("[user] starts repairing [src]."), span_notice("You start repairing [src]."))
+	var/repair_time = 4 SECONDS * user.get_cyberpunk_vehicle_repair_time_multiplier(src)
+	if(!do_after(user, repair_time, target = src))
+		return ITEM_INTERACT_BLOCKING
+	var/repaired = repair_damage(user.get_cyberpunk_vehicle_repair_amount(src, 25))
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		part.repair(repaired * 0.25)
+	balloon_alert(user, "repaired")
+	return ITEM_INTERACT_SUCCESS
+
+/obj/vehicle/ridden/cyberpunk/click_alt_secondary(mob/user)
+	show_cyberpunk_vehicle_radial(user)
+	return CLICK_ACTION_SUCCESS
+
+/obj/vehicle/ridden/cyberpunk/proc/show_cyberpunk_vehicle_radial(mob/user)
+	if(!user || !Adjacent(user))
+		return
+	var/list/options = list(
+		"Inspect parts" = image(icon = 'icons/obj/tools.dmi', icon_state = "rtd"),
+		"Status" = image(icon = 'icons/obj/tools.dmi', icon_state = "analyzer"),
+		"Toggle panel" = image(icon = 'icons/obj/tools.dmi', icon_state = "screwdriver_map"),
+	)
+	var/choice = show_radial_menu(user, src, options, require_near = TRUE, tooltips = TRUE)
+	switch(choice)
+		if("Inspect parts")
+			for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+				to_chat(user, span_notice("[part.name]: [part.effect_desc] Health [round(part.health_fraction() * 100)]%."))
+		if("Status")
+			to_chat(user, span_notice("[src]: [round(get_integrity())]/[max_integrity] integrity, [get_cyberpunk_power_text()], grip [round(get_current_turf_grip_multiplier(), 0.01)], move delay [get_cyberpunk_move_delay(user, NORTH)]."))
+		if("Toggle panel")
+			panel_open = !panel_open
+			balloon_alert(user, panel_open ? "panel open" : "panel closed")
+
+/obj/vehicle/ridden/cyberpunk/can_z_move(direction, turf/start, turf/destination, z_move_flags = ZMOVE_FLIGHT_FLAGS, mob/living/rider)
+	. = ..()
+	if(!.)
+		return
+	if(!can_operate_cyberpunk_vehicle(rider, TRUE))
+		return FALSE
+	if(!rider || fuel >= get_cyberpunk_z_cost(rider))
+		return .
+	if(z_move_flags & ZMOVE_FEEDBACK)
+		to_chat(rider, span_warning("[src] lacks charge for altitude change."))
+	return FALSE
+
+/obj/vehicle/ridden/cyberpunk/zMove(dir, turf/target, z_move_flags)
+	var/mob/living/driver = get_primary_driver()
+	if(!consume_cyberpunk_vehicle_charge(driver, get_cyberpunk_z_cost(driver)))
+		return FALSE
+	return ..()
+
+/obj/vehicle/ridden/cyberpunk/Bump(atom/bumped)
+	. = ..()
+	var/mob/living/driver = get_primary_driver()
+	var/impact = max(2, base_collision_damage * get_cyberpunk_vehicle_stat("speed") - base_crash_resistance)
+	impact /= max(0.25, get_cyberpunk_vehicle_stat("brake"))
+	if(driver)
+		impact *= driver.get_cyberpunk_driving_brake_multiplier()
+	if(isliving(bumped))
+		var/mob/living/victim = bumped
+		victim.apply_damage(impact, BRUTE)
+		victim.Knockdown(1 SECONDS)
+	else if(bumped?.uses_integrity && impact > 0)
+		bumped.take_damage(impact, BRUTE, MELEE, TRUE)
+	if(impact > 0 && uses_integrity && get_integrity() > 0)
+		take_damage(max(1, impact * 0.4), BRUTE, MELEE, TRUE)
+	var/datum/cyberpunk_vehicle_part/part = length(vehicle_parts) ? pick(vehicle_parts) : null
+	part?.take_damage(impact * 0.35)
+	visible_message(span_warning("[src] slams into [bumped]!"))
+
+/obj/vehicle/ridden/cyberpunk/hover
+	name = "Starlight hover courier"
+	desc = "A compact hover platform with a gravitic drive."
+	icon_state = "hoverboard_red"
+	max_fuel = 220
+	fuel = 220
+	base_move_delay = 1.1
+	base_z_cost = 6
+	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/bike
+	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/grav
+	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine
+
+/obj/vehicle/ridden/cyberpunk/avi
+	name = "Starlight AVI courier"
+	desc = "A light automated-flight vehicle platform. It can climb and descend between Z-levels."
+	icon_state = "hoverboard_nt"
+	max_fuel = 360
+	fuel = 360
+	base_move_delay = 0.9
+	base_z_cost = 10
+	base_collision_damage = 14
+	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/cargo_minivan
+	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles
+	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/performance
+
+/obj/vehicle/ridden/cyberpunk/cargo
+	name = "Starlight cargo mule"
+	desc = "A slow modular cargo rideable with stronger body parts."
+	icon_state = "atv"
+	max_fuel = 240
+	fuel = 240
+	base_move_delay = 1.8
+	base_collision_damage = 12
+	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/cargo_truck
+	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks
+	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/heavy
 
 /obj/effect/temp_visual/cyberpunk_vehicle_skid
 	icon = 'icons/effects/effects.dmi'
@@ -522,6 +1864,48 @@
 	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 20, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 6, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_vehicle_part/hull/tank
 
+/datum/design/cyberpunk_vehicle_part/hull/sport_compact
+	name = "Starlight Sport Compact Chassis"
+	id = "starlight_hull_sport_compact"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/sport_compact
+
+/datum/design/cyberpunk_vehicle_part/hull/utility_compact
+	name = "Starlight Utility Compact Chassis"
+	id = "starlight_hull_utility_compact"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/utility_compact
+
+/datum/design/cyberpunk_vehicle_part/hull/armored_compact
+	name = "Starlight Armored Compact Chassis"
+	id = "starlight_hull_armored_compact"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/armored_compact
+
+/datum/design/cyberpunk_vehicle_part/hull/pursuit_bike
+	name = "Starlight Pursuit Bike Frame"
+	id = "starlight_hull_pursuit_bike"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/bike/pursuit
+
+/datum/design/cyberpunk_vehicle_part/hull/courier_bike
+	name = "Starlight Courier Bike Frame"
+	id = "starlight_hull_courier_bike"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/bike/courier
+
+/datum/design/cyberpunk_vehicle_part/hull/executive
+	name = "Starlight Executive Sedan Chassis"
+	id = "starlight_hull_executive"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/large_car/executive
+
+/datum/design/cyberpunk_vehicle_part/hull/interceptor
+	name = "Starlight Interceptor Chassis"
+	id = "starlight_hull_interceptor"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 1.5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/large_car/interceptor
+
 /datum/design/cyberpunk_vehicle_part/drivetrain
 	name = "Starlight Street Suspension"
 	id = "starlight_drivetrain_street"
@@ -557,11 +1941,77 @@
 	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
 	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles
 
+/datum/design/cyberpunk_vehicle_part/drivetrain/race_street
+	name = "Starlight Race Street Suspension"
+	id = "starlight_drivetrain_race_street"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/race_street
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/comfort_street
+	name = "Starlight Comfort Street Suspension"
+	id = "starlight_drivetrain_comfort_street"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/comfort_street
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/rally
+	name = "Starlight Rally Suspension"
+	id = "starlight_drivetrain_rally"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad/rally
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/crawler
+	name = "Starlight Crawler Suspension"
+	id = "starlight_drivetrain_crawler"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad/crawler
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/light_tracks
+	name = "Starlight Light Tracks"
+	id = "starlight_drivetrain_light_tracks"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks/light
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/industrial_tracks
+	name = "Starlight Industrial Tracks"
+	id = "starlight_drivetrain_industrial_tracks"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks/industrial
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/sport_grav
+	name = "Starlight Sport Gravitic Drive"
+	id = "starlight_drivetrain_sport_grav"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/grav/sport
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/stable_grav
+	name = "Starlight Stabilized Gravitic Drive"
+	id = "starlight_drivetrain_stable_grav"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/grav/stable
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/lift_nozzles
+	name = "Starlight Lift Nozzles"
+	id = "starlight_drivetrain_lift_nozzles"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/lift
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/vector_nozzles
+	name = "Starlight Vector Nozzles"
+	id = "starlight_drivetrain_vector_nozzles"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/vector
+
 /datum/design/cyberpunk_vehicle_part/engine
 	name = "Starlight Electric Engine"
 	id = "starlight_engine_electric"
 	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_vehicle_part/engine
+
+/datum/design/cyberpunk_vehicle_part/engine/battery
+	name = "Starlight Removable-Cell Engine"
+	id = "starlight_engine_battery"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery
 
 /datum/design/cyberpunk_vehicle_part/engine/combustion
 	name = "Starlight Combustion Engine"
@@ -580,6 +2030,390 @@
 	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy
 
+/datum/design/cyberpunk_vehicle_part/engine/electric_efficiency
+	name = "Starlight Efficient Electric Engine"
+	id = "starlight_engine_electric_efficiency"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/electric_efficiency
+
+/datum/design/cyberpunk_vehicle_part/engine/electric_torque
+	name = "Starlight Torque Electric Engine"
+	id = "starlight_engine_electric_torque"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/electric_torque
+
+/datum/design/cyberpunk_vehicle_part/engine/battery_high_output
+	name = "Starlight High-Output Cell Engine"
+	id = "starlight_engine_battery_high_output"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery/high_output
+
+/datum/design/cyberpunk_vehicle_part/engine/battery_long_range
+	name = "Starlight Long-Range Cell Engine"
+	id = "starlight_engine_battery_long_range"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery/long_range
+
+/datum/design/cyberpunk_vehicle_part/engine/combustion_diesel
+	name = "Starlight Diesel Combustion Engine"
+	id = "starlight_engine_combustion_diesel"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/combustion/diesel
+
+/datum/design/cyberpunk_vehicle_part/engine/combustion_gasoline
+	name = "Starlight Gasoline Combustion Engine"
+	id = "starlight_engine_combustion_gasoline"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/combustion/gasoline
+
+/datum/design/cyberpunk_vehicle_part/engine/turbo
+	name = "Starlight Turbo Performance Engine"
+	id = "starlight_engine_turbo"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/gold = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/performance/turbo
+
+/datum/design/cyberpunk_vehicle_part/engine/overdrive
+	name = "Starlight Overdrive Performance Engine"
+	id = "starlight_engine_overdrive"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 4, /datum/material/gold = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/performance/overdrive
+
+/datum/design/cyberpunk_vehicle_part/engine/industrial_heavy
+	name = "Starlight Industrial Heavy Engine"
+	id = "starlight_engine_industrial_heavy"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/industrial
+
+/datum/design/cyberpunk_vehicle_part/engine/armored_heavy
+	name = "Starlight Armored Heavy Engine"
+	id = "starlight_engine_armored_heavy"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/armored
+
+/datum/design/cyberpunk_vehicle_part/hull/sport_compact/tier2
+	name = "Starlight Sport Compact Chassis T2"
+	id = "starlight_hull_sport_compact_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/sport_compact/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/sport_compact/tier3
+	name = "Starlight Sport Compact Chassis T3"
+	id = "starlight_hull_sport_compact_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/sport_compact/tier3
+
+/datum/design/cyberpunk_vehicle_part/hull/utility_compact/tier2
+	name = "Starlight Utility Compact Chassis T2"
+	id = "starlight_hull_utility_compact_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/utility_compact/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/utility_compact/tier3
+	name = "Starlight Utility Compact Chassis T3"
+	id = "starlight_hull_utility_compact_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 11, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/utility_compact/tier3
+
+/datum/design/cyberpunk_vehicle_part/hull/armored_compact/tier2
+	name = "Starlight Armored Compact Chassis T2"
+	id = "starlight_hull_armored_compact_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 11, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/armored_compact/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/armored_compact/tier3
+	name = "Starlight Armored Compact Chassis T3"
+	id = "starlight_hull_armored_compact_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 13, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 4, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/armored_compact/tier3
+
+/datum/design/cyberpunk_vehicle_part/hull/pursuit_bike/tier2
+	name = "Starlight Pursuit Bike Frame T2"
+	id = "starlight_hull_pursuit_bike_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/bike/pursuit/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/pursuit_bike/tier3
+	name = "Starlight Pursuit Bike Frame T3"
+	id = "starlight_hull_pursuit_bike_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/bike/pursuit/tier3
+
+/datum/design/cyberpunk_vehicle_part/hull/courier_bike/tier2
+	name = "Starlight Courier Bike Frame T2"
+	id = "starlight_hull_courier_bike_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/bike/courier/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/courier_bike/tier3
+	name = "Starlight Courier Bike Frame T3"
+	id = "starlight_hull_courier_bike_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/bike/courier/tier3
+
+/datum/design/cyberpunk_vehicle_part/hull/executive/tier2
+	name = "Starlight Executive Sedan Chassis T2"
+	id = "starlight_hull_executive_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 11, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/large_car/executive/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/executive/tier3
+	name = "Starlight Executive Sedan Chassis T3"
+	id = "starlight_hull_executive_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 13, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/large_car/executive/tier3
+
+/datum/design/cyberpunk_vehicle_part/hull/interceptor/tier2
+	name = "Starlight Interceptor Chassis T2"
+	id = "starlight_hull_interceptor_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 10, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 1.5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/large_car/interceptor/tier2
+
+/datum/design/cyberpunk_vehicle_part/hull/interceptor/tier3
+	name = "Starlight Interceptor Chassis T3"
+	id = "starlight_hull_interceptor_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 12, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 1.5)
+	build_path = /obj/item/cyberpunk_vehicle_part/hull/large_car/interceptor/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/race_street/tier2
+	name = "Starlight Race Street Suspension T2"
+	id = "starlight_drivetrain_race_street_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/race_street/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/race_street/tier3
+	name = "Starlight Race Street Suspension T3"
+	id = "starlight_drivetrain_race_street_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/race_street/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/comfort_street/tier2
+	name = "Starlight Comfort Street Suspension T2"
+	id = "starlight_drivetrain_comfort_street_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/comfort_street/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/comfort_street/tier3
+	name = "Starlight Comfort Street Suspension T3"
+	id = "starlight_drivetrain_comfort_street_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/comfort_street/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/rally/tier2
+	name = "Starlight Rally Suspension T2"
+	id = "starlight_drivetrain_rally_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad/rally/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/rally/tier3
+	name = "Starlight Rally Suspension T3"
+	id = "starlight_drivetrain_rally_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad/rally/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/crawler/tier2
+	name = "Starlight Crawler Suspension T2"
+	id = "starlight_drivetrain_crawler_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad/crawler/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/crawler/tier3
+	name = "Starlight Crawler Suspension T3"
+	id = "starlight_drivetrain_crawler_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad/crawler/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/light_tracks/tier2
+	name = "Starlight Light Tracks T2"
+	id = "starlight_drivetrain_light_tracks_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks/light/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/light_tracks/tier3
+	name = "Starlight Light Tracks T3"
+	id = "starlight_drivetrain_light_tracks_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks/light/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/industrial_tracks/tier2
+	name = "Starlight Industrial Tracks T2"
+	id = "starlight_drivetrain_industrial_tracks_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks/industrial/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/industrial_tracks/tier3
+	name = "Starlight Industrial Tracks T3"
+	id = "starlight_drivetrain_industrial_tracks_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 11, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks/industrial/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/sport_grav/tier2
+	name = "Starlight Sport Gravitic Drive T2"
+	id = "starlight_drivetrain_sport_grav_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/grav/sport/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/sport_grav/tier3
+	name = "Starlight Sport Gravitic Drive T3"
+	id = "starlight_drivetrain_sport_grav_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/grav/sport/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/stable_grav/tier2
+	name = "Starlight Stabilized Gravitic Drive T2"
+	id = "starlight_drivetrain_stable_grav_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/grav/stable/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/stable_grav/tier3
+	name = "Starlight Stabilized Gravitic Drive T3"
+	id = "starlight_drivetrain_stable_grav_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/grav/stable/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/lift_nozzles/tier2
+	name = "Starlight Lift Nozzles T2"
+	id = "starlight_drivetrain_lift_nozzles_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/lift/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/lift_nozzles/tier3
+	name = "Starlight Lift Nozzles T3"
+	id = "starlight_drivetrain_lift_nozzles_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 9, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 3, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/lift/tier3
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/vector_nozzles/tier2
+	name = "Starlight Vector Nozzles T2"
+	id = "starlight_drivetrain_vector_nozzles_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/vector/tier2
+
+/datum/design/cyberpunk_vehicle_part/drivetrain/vector_nozzles/tier3
+	name = "Starlight Vector Nozzles T3"
+	id = "starlight_drivetrain_vector_nozzles_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 3, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles/vector/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/electric_efficiency/tier2
+	name = "Starlight Efficient Electric Engine T2"
+	id = "starlight_engine_electric_efficiency_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/electric_efficiency/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/electric_efficiency/tier3
+	name = "Starlight Efficient Electric Engine T3"
+	id = "starlight_engine_electric_efficiency_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/electric_efficiency/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/electric_torque/tier2
+	name = "Starlight Torque Electric Engine T2"
+	id = "starlight_engine_electric_torque_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/electric_torque/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/electric_torque/tier3
+	name = "Starlight Torque Electric Engine T3"
+	id = "starlight_engine_electric_torque_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/electric_torque/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/battery_high_output/tier2
+	name = "Starlight High-Output Cell Engine T2"
+	id = "starlight_engine_battery_high_output_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery/high_output/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/battery_high_output/tier3
+	name = "Starlight High-Output Cell Engine T3"
+	id = "starlight_engine_battery_high_output_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery/high_output/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/battery_long_range/tier2
+	name = "Starlight Long-Range Cell Engine T2"
+	id = "starlight_engine_battery_long_range_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 5)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery/long_range/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/battery_long_range/tier3
+	name = "Starlight Long-Range Cell Engine T3"
+	id = "starlight_engine_battery_long_range_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/battery/long_range/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/combustion_diesel/tier2
+	name = "Starlight Diesel Combustion Engine T2"
+	id = "starlight_engine_combustion_diesel_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/combustion/diesel/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/combustion_diesel/tier3
+	name = "Starlight Diesel Combustion Engine T3"
+	id = "starlight_engine_combustion_diesel_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/combustion/diesel/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/combustion_gasoline/tier2
+	name = "Starlight Gasoline Combustion Engine T2"
+	id = "starlight_engine_combustion_gasoline_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 5, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/combustion/gasoline/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/combustion_gasoline/tier3
+	name = "Starlight Gasoline Combustion Engine T3"
+	id = "starlight_engine_combustion_gasoline_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 7, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/combustion/gasoline/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/turbo/tier2
+	name = "Starlight Turbo Performance Engine T2"
+	id = "starlight_engine_turbo_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/performance/turbo/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/turbo/tier3
+	name = "Starlight Turbo Performance Engine T3"
+	id = "starlight_engine_turbo_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/gold = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/performance/turbo/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/overdrive/tier2
+	name = "Starlight Overdrive Performance Engine T2"
+	id = "starlight_engine_overdrive_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 6, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/performance/overdrive/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/overdrive/tier3
+	name = "Starlight Overdrive Performance Engine T3"
+	id = "starlight_engine_overdrive_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/gold = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/performance/overdrive/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/industrial_heavy/tier2
+	name = "Starlight Industrial Heavy Engine T2"
+	id = "starlight_engine_industrial_heavy_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/industrial/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/industrial_heavy/tier3
+	name = "Starlight Industrial Heavy Engine T3"
+	id = "starlight_engine_industrial_heavy_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 10, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 2, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/industrial/tier3
+
+/datum/design/cyberpunk_vehicle_part/engine/armored_heavy/tier2
+	name = "Starlight Armored Heavy Engine T2"
+	id = "starlight_engine_armored_heavy_t2"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 3, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/armored/tier2
+
+/datum/design/cyberpunk_vehicle_part/engine/armored_heavy/tier3
+	name = "Starlight Armored Heavy Engine T3"
+	id = "starlight_engine_armored_heavy_t3"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 10, /datum/material/titanium = SHEET_MATERIAL_AMOUNT * 4, /datum/material/silver = SHEET_MATERIAL_AMOUNT, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/armored/tier3
+
 /datum/design/cyberpunk_vehicle
 	name = "Starlight Prototype Vehicle"
 	id = "starlight_vehicle_prototype"
@@ -591,6 +2425,30 @@
 		RND_CATEGORY_MECHFAB_EQUIPMENT + RND_SUBCATEGORY_MECHFAB_EQUIPMENT_MISC,
 		RND_CATEGORY_CONSTRUCTION + RND_SUBCATEGORY_CONSTRUCTION_MOUNTS,
 	)
+
+/datum/design/cyberpunk_vehicle/ridden
+	name = "Starlight Tech Bike"
+	id = "starlight_vehicle_tech_bike"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/vehicle/ridden/cyberpunk
+
+/datum/design/cyberpunk_vehicle/ridden/hover
+	name = "Starlight Hover Courier"
+	id = "starlight_vehicle_hover_courier"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 10, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/vehicle/ridden/cyberpunk/hover
+
+/datum/design/cyberpunk_vehicle/ridden/avi
+	name = "Starlight AVI Courier"
+	id = "starlight_vehicle_avi_courier"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 14, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 2, /datum/material/titanium = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/vehicle/ridden/cyberpunk/avi
+
+/datum/design/cyberpunk_vehicle/ridden/cargo
+	name = "Starlight Cargo Mule"
+	id = "starlight_vehicle_cargo_mule"
+	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 16, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
+	build_path = /obj/vehicle/ridden/cyberpunk/cargo
 	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE
 
 /datum/design/cyberpunk_vehicle/microbike

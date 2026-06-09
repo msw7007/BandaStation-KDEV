@@ -26,7 +26,7 @@
 /obj/item/clothing/neck/cyberpunk
 	name = "modular collar"
 	desc = "A Cyberpunk modular neck guard and utility collar."
-	icon_state = "collar"
+	icon_state = "petcollar"
 	cyberpunk_equipment_form = "collar"
 	cyberpunk_equipment_material = "fabric"
 	cyberpunk_base_price = 75

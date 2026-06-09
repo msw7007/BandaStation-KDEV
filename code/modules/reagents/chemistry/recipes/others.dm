@@ -540,6 +540,16 @@
 	required_reagents = list(/datum/reagent/fuel = 1, /datum/reagent/carbon = 1, /datum/reagent/hydrogen = 1)
 	reaction_tags = REACTION_TAG_EASY | REACTION_TAG_CHEMICAL | REACTION_TAG_COMPONENT
 
+/datum/chemical_reaction/gasoline
+	results = list(/datum/reagent/fuel/gasoline = 3)
+	required_reagents = list(/datum/reagent/fuel = 1, /datum/reagent/hydrogen = 1, /datum/reagent/oxygen = 1)
+	reaction_tags = REACTION_TAG_EASY | REACTION_TAG_CHEMICAL | REACTION_TAG_COMPONENT
+
+/datum/chemical_reaction/diesel
+	results = list(/datum/reagent/fuel/diesel = 3)
+	required_reagents = list(/datum/reagent/fuel/oil = 1, /datum/reagent/carbon = 1, /datum/reagent/hydrogen = 1)
+	reaction_tags = REACTION_TAG_EASY | REACTION_TAG_CHEMICAL | REACTION_TAG_COMPONENT
+
 /datum/chemical_reaction/phenol
 	results = list(/datum/reagent/phenol = 3)
 	required_reagents = list(/datum/reagent/water = 1, /datum/reagent/chlorine = 1, /datum/reagent/fuel/oil = 1)

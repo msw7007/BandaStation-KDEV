@@ -204,6 +204,70 @@
 
 	accepted_magazine_type = /obj/item/ammo_box/magazine/internal/cylinder/rev762
 
+/obj/item/gun/ballistic/revolver/cyberpunk
+	name = "modular revolver frame"
+	desc = "A Cyberpunk 13 revolver frame. Install a firearm core, barrel, cylinder, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "revolver"
+	base_icon_state = "revolver"
+	fire_delay = 0.4 SECONDS
+	spread = 8
+	projectile_damage_multiplier = 0.9
+	projectile_wound_bonus = 0
+	spawnwithmagazine = FALSE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/revolver/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/revolver/cyberpunk/polymer
+	name = "polymer modular revolver frame"
+	cyberpunk_weapon_material = "polymer"
+
+/obj/item/gun/ballistic/revolver/cyberpunk/ceramic
+	name = "ceramic modular revolver frame"
+	cyberpunk_weapon_material = "ceramic"
+
+/obj/item/gun/ballistic/revolver/cyberpunk/plasteel
+	name = "plasteel modular revolver frame"
+	cyberpunk_weapon_material = "plasteel"
+
+/obj/item/gun/ballistic/revolver/cyberpunk/composite
+	name = "composite modular revolver frame"
+	cyberpunk_weapon_material = "composite"
+
+/obj/item/gun/ballistic/revolver/cyberpunk/sentinel
+	name = "Sentinel modular revolver"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/revolver_barrel,
+		/datum/cyberpunk_item_module/cylinder_357,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/ballistic/revolver/cyberpunk/sentinel/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/revolver/cyberpunk/bruiser
+	name = "Bruiser modular revolver"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/revolver_barrel,
+		/datum/cyberpunk_item_module/cylinder_50,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/tactical_light,
+	)
+
+/obj/item/gun/ballistic/revolver/cyberpunk/bruiser/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 
 // A gun to play Russian Roulette!
 // You can spin the chamber to randomize the position of the bullet.

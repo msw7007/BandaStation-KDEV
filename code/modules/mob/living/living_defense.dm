@@ -1,6 +1,7 @@
 
 /mob/living/proc/run_armor_check(def_zone = null, attack_flag = MELEE, absorb_text = null, soften_text = null, armour_penetration, penetrated_text, silent=FALSE, weak_against_armour = FALSE)
 	var/our_armor = getarmor(def_zone, attack_flag)
+	our_armor += get_cyberpunk_defense_armor_bonus(attack_flag)
 
 	if(our_armor <= 0)
 		return our_armor
@@ -120,6 +121,11 @@
 		return .
 
 	if(blocked >= 100)
+		//CYBERPUNK BUILD - rebuild and delete before release
+		if(proj.is_hostile_projectile() && has_cyberpunk_active_defense_manufacturer("tyazhmarsh"))
+			to_chat(src, span_notice("Your Tyazhmarsh protection swallows the stopped projectile's secondary effect."))
+			return BULLET_ACT_BLOCK
+		//CYBERPUNK BUILD - rebuild and delete before release
 		if(proj.is_hostile_projectile())
 			apply_projectile_effects(proj, def_zone, blocked)
 		return .

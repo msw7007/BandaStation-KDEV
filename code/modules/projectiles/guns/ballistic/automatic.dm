@@ -31,6 +31,134 @@
 	. = ..()
 	AddComponent(/datum/component/automatic_fire, 0.2 SECONDS)
 
+/obj/item/gun/ballistic/automatic/proto/cyberpunk
+	name = "modular ballistic weapon base"
+	desc = "A Cyberpunk 13 ballistic weapon base. Install a firearm core, type barrel, feed or chamber, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "saber"
+	base_icon_state = "saber"
+	burst_size = 3
+	fire_delay = 0.2 SECONDS
+	spread = 10
+	projectile_damage_multiplier = 0.75
+	projectile_wound_bonus = -4
+	spawnwithmagazine = FALSE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/polymer
+	name = "polymer modular SMG frame"
+	cyberpunk_weapon_material = "polymer"
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/ceramic
+	name = "ceramic modular SMG frame"
+	cyberpunk_weapon_material = "ceramic"
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/plasteel
+	name = "plasteel modular SMG frame"
+	cyberpunk_weapon_material = "plasteel"
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/composite
+	name = "composite modular SMG frame"
+	cyberpunk_weapon_material = "composite"
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/sprinter
+	name = "Sprinter modular SMG"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/smg_barrel,
+		/datum/cyberpunk_item_module/smg_magwell_9mm,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/sprinter/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/breacher
+	name = "Breacher modular SMG"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/smg_barrel,
+		/datum/cyberpunk_item_module/smg_magwell_9mm,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/tactical_light,
+	)
+
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/breacher/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/automatic/ar/cyberpunk
+	name = "modular assault rifle frame"
+	desc = "A Cyberpunk 13 assault rifle frame. Install a firearm core, barrel, magwell, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "arg"
+	base_icon_state = "arg"
+	fire_delay = 0.35 SECONDS
+	spread = 7
+	projectile_damage_multiplier = 0.95
+	projectile_wound_bonus = 2
+	spawnwithmagazine = FALSE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/automatic/ar/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/automatic/ar/cyberpunk/streetline
+	name = "Streetline modular assault rifle"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/assault_barrel,
+		/datum/cyberpunk_item_module/assault_magwell_223,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/ballistic/automatic/ar/cyberpunk/streetline/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/automatic/l6_saw/cyberpunk
+	name = "modular LMG frame"
+	desc = "A Cyberpunk 13 machine gun frame. Install a firearm core, barrel, feed, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "l6"
+	base_icon_state = "l6"
+	fire_delay = 0.25 SECONDS
+	spread = 10
+	projectile_damage_multiplier = 0.85
+	projectile_wound_bonus = 1
+	spawnwithmagazine = FALSE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/automatic/l6_saw/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/automatic/l6_saw/cyberpunk/suppressor
+	name = "Suppressor modular LMG"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/lmg_barrel,
+		/datum/cyberpunk_item_module/lmg_feed_223,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+	)
+
+/obj/item/gun/ballistic/automatic/l6_saw/cyberpunk/suppressor/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 /obj/item/gun/ballistic/automatic/proto/unrestricted
 	pin = /obj/item/firing_pin
 

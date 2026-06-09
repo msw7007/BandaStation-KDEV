@@ -573,9 +573,12 @@
 		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 4, "value_2") * 0.01)
 	else
 		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 2) * 0.01)
-	var/corporate_multiplier = get_corporate_synergy_multiplier(weapon.get_cyberpunk_manufacturer())
+	var/corporate_multiplier = weapon.get_cyberpunk_synergy_multiplier(src)
 	if(corporate_multiplier > 1)
 		multiplier /= corporate_multiplier
+	var/ho_shi = weapon.get_cyberpunk_base_effect_strength(src, "ho_shi")
+	if(ho_shi > 0 && !istype(weapon, /obj/item/gun))
+		multiplier *= max(0.1, 1 - 0.1 * ho_shi)
 	return max(0.1, multiplier)
 
 /mob/living/proc/get_cyberpunk_gun_fire_delay_multiplier(obj/item/gun/gun)
@@ -586,12 +589,20 @@
 		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 6, "value_1") * 0.01)
 	else
 		multiplier *= max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 4, "value_1") * 0.01)
+	var/ho_shi = gun.get_cyberpunk_base_effect_strength(src, "ho_shi")
+	if(ho_shi > 0)
+		multiplier *= max(0.1, 1 - 0.1 * ho_shi)
 	return max(0.1, multiplier)
 
 /mob/living/proc/get_cyberpunk_gun_spread_multiplier(obj/item/gun/gun)
-	if(!gun || gun.w_class < WEIGHT_CLASS_BULKY)
+	if(!gun)
 		return 1
-	var/reduction = max(get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 4, "value_1"), get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 6, "value_1"))
+	var/reduction = 0
+	if(gun.w_class >= WEIGHT_CLASS_BULKY)
+		reduction = max(get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 4, "value_1"), get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 6, "value_1"))
+	var/sun_yon = gun.get_cyberpunk_base_effect_strength(src, "sun_yon")
+	if(sun_yon > 0)
+		reduction = max(reduction, 10 * sun_yon)
 	return max(0.1, 1 - reduction * 0.01)
 
 /mob/living/proc/roll_cyberpunk_weapon_free_repeat(obj/item/weapon)

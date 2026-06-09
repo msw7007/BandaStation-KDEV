@@ -29,6 +29,8 @@
 	var/atom/movable/firer = null
 	/// The thing that the projectile was fired from (gun, turret, spell)
 	var/datum/fired_from = null
+	/// Cyberpunk manufacturer effect: do not leave a concrete wound source for autopsy.
+	var/cyberpunk_hide_wound_source = FALSE
 	/// One of three suppression states: NONE displays the hit message and produces a loud sound,
 	/// QUIET makes a quiet sound and only lets the victim know they've been shot, and VERY only makes a very quiet sound with no messages
 	var/suppressed = SUPPRESSED_NONE
@@ -355,6 +357,13 @@
 	if(fired_from)
 		SEND_SIGNAL(fired_from, COMSIG_PROJECTILE_ON_HIT, firer, target, angle, hit_limb_zone, blocked, pierce_hit)
 	SEND_SIGNAL(src, COMSIG_PROJECTILE_SELF_ON_HIT, firer, target, angle, hit_limb_zone, blocked, pierce_hit)
+	//CYBERPUNK BUILD - rebuild and delete before release
+	if(isliving(target) && isliving(firer) && isitem(fired_from))
+		var/mob/living/living_target = target
+		var/mob/living/living_firer = firer
+		var/obj/item/fired_weapon = fired_from
+		fired_weapon.apply_cyberpunk_manufacturer_projectile_hit(living_target, living_firer, src, blocked)
+	//CYBERPUNK BUILD - rebuild and delete before release
 
 	if(QDELETED(src) || deletion_queued) // in case one of the above signals deleted the projectile for whatever reason
 		return BULLET_ACT_BLOCK

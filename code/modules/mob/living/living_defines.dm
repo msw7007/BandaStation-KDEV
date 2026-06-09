@@ -381,6 +381,8 @@
 	var/last_control_loss = 0
 	var/last_cyberpsychosis_time = 0
 	var/last_combat_time = 0
+	/// Cooldown for Trans Travel defensive displacement from modular Cyberpunk protection.
+	var/cyberpunk_next_trans_travel_defense = 0
 
 	/// Lazylists of pixel offsets this mob is currently using
 	/// Modify this via add_offsets and remove_offsets,

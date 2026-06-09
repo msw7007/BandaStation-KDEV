@@ -107,6 +107,36 @@
 	update_parent_layer_and_offsets(movable_parent.dir)
 	return TRUE
 
+/datum/component/riding/vehicle/cyberpunk
+	ride_check_flags = RIDER_NEEDS_LEGS | RIDER_NEEDS_ARMS | UNBUCKLE_DISABLED_RIDER
+	vehicle_move_delay = 1.5
+	override_allow_spacemove = TRUE
+
+/datum/component/riding/vehicle/cyberpunk/driver_move(atom/movable/movable_parent, mob/living/user, direction)
+	var/obj/vehicle/ridden/cyberpunk/tech_vehicle = movable_parent
+	if(istype(tech_vehicle))
+		vehicle_move_delay = tech_vehicle.get_cyberpunk_move_delay(user, direction)
+		if(!tech_vehicle.can_operate_cyberpunk_vehicle(user, FALSE))
+			return COMPONENT_DRIVER_BLOCK_MOVE
+	return ..()
+
+/datum/component/riding/vehicle/cyberpunk/handle_ride(mob/user, direction)
+	var/obj/vehicle/ridden/cyberpunk/tech_vehicle = parent
+	if(istype(tech_vehicle))
+		var/resolved_direction = tech_vehicle.resolve_cyberpunk_vehicle_direction(user, direction)
+		if(!tech_vehicle.consume_cyberpunk_vehicle_charge(user, tech_vehicle.get_cyberpunk_step_cost(user, resolved_direction)))
+			return FALSE
+		return ..(user, resolved_direction)
+	return ..()
+
+/datum/component/riding/vehicle/cyberpunk/riding_can_z_move(atom/movable/movable_parent, direction, turf/start, turf/destination, z_move_flags, mob/living/rider)
+	var/obj/vehicle/ridden/cyberpunk/tech_vehicle = movable_parent
+	if(istype(tech_vehicle) && !tech_vehicle.can_operate_cyberpunk_vehicle(rider, TRUE))
+		if(z_move_flags & ZMOVE_FEEDBACK)
+			to_chat(rider, span_warning("[tech_vehicle] cannot safely change altitude right now."))
+		return COMPONENT_RIDDEN_STOP_Z_MOVE
+	return ..()
+
 /datum/component/riding/vehicle/atv
 	keytype = /obj/item/key/atv
 	ride_check_flags = RIDER_NEEDS_LEGS | RIDER_NEEDS_ARMS | UNBUCKLE_DISABLED_RIDER

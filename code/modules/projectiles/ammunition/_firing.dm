@@ -58,8 +58,9 @@
 		if(integrity_mult >= 0.95) //Guns that are only mildly smudged don't debuff projectiles.
 			integrity_mult = 1
 
-		loaded_projectile.damage *= gun.projectile_damage_multiplier * integrity_mult
-		loaded_projectile.stamina *= gun.projectile_damage_multiplier * integrity_mult
+		var/cyberpunk_synergy_multiplier = user ? gun.get_cyberpunk_synergy_multiplier(user) : 1
+		loaded_projectile.damage *= gun.projectile_damage_multiplier * integrity_mult * cyberpunk_synergy_multiplier
+		loaded_projectile.stamina *= gun.projectile_damage_multiplier * integrity_mult * cyberpunk_synergy_multiplier
 
 		loaded_projectile.speed *= gun.projectile_speed_multiplier * integrity_mult
 

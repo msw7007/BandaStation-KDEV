@@ -66,6 +66,50 @@
 		overlay_x = 18, \
 		overlay_y = 30)
 
+/obj/item/gun/energy/laser/cyberpunk
+	name = "modular energy weapon frame"
+	desc = "A Cyberpunk 13 energy weapon frame. Install a firearm core, emitter, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "laser"
+	base_icon_state = "laser"
+	projectile_damage_multiplier = 0.95
+	projectile_wound_bonus = 0
+	fire_delay = 0.8 SECONDS
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/energy/laser/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("energy", list("core" = 1, "barrel" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/energy/laser/cyberpunk/radiant
+	name = "Radiant modular laser"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/laser_emitter,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/energy/laser/cyberpunk/radiant/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/energy/laser/cyberpunk/plasma
+	name = "Plasma Arc modular projector"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/plasma_emitter,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/tactical_light,
+	)
+
+/obj/item/gun/energy/laser/cyberpunk/plasma/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 /obj/item/gun/energy/laser/practice
 	name = "practice laser gun"
 	desc = "A modified version of the Type 5 laser gun. Fires entirely harmless bolts of directed energy. Safe AND entertaining to fire with abandon."

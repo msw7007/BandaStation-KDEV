@@ -1363,6 +1363,22 @@
 	randomized_spawns = REAGENT_SPAWN_ALL_RANDOM_SPAWNS
 	addiction_types = list(/datum/addiction/alcohol = 300)
 
+/datum/reagent/fuel/gasoline
+	name = "Gasoline"
+	description = "A volatile light hydrocarbon fuel suitable for compact combustion engines."
+	color = "#d9b34c"
+	taste_description = "sharp fumes"
+	burning_temperature = 1800
+	burning_volume = 0.16
+
+/datum/reagent/fuel/diesel
+	name = "Diesel"
+	description = "A heavier engine fuel. It burns slower and dirtier, but carries a lot of work per unit."
+	color = "#8f6d2e"
+	taste_description = "oily fumes"
+	burning_temperature = 1650
+	burning_volume = 0.12
+
 /datum/glass_style/drinking_glass/fuel
 	required_drink_type = /datum/reagent/fuel
 	name = "glass of welder fuel"

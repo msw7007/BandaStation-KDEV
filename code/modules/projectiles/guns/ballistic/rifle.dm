@@ -46,6 +46,108 @@
 	. = ..()
 	. += "Затвор [bolt_locked ? "открыт" : "закрыт"]."
 
+/obj/item/gun/ballistic/rifle/cyberpunk
+	name = "modular rifle frame"
+	desc = "A Cyberpunk 13 rifle frame. Install a firearm core, barrel, magwell, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "sakhno"
+	base_icon_state = "sakhno"
+	fire_delay = 0.8 SECONDS
+	spread = 4
+	projectile_damage_multiplier = 1
+	projectile_wound_bonus = 4
+	spawnwithmagazine = FALSE
+	internal_magazine = FALSE
+	semi_auto = TRUE
+	tac_reloads = TRUE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/rifle/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/rifle/cyberpunk/polymer
+	name = "polymer modular rifle frame"
+	cyberpunk_weapon_material = "polymer"
+
+/obj/item/gun/ballistic/rifle/cyberpunk/ceramic
+	name = "ceramic modular rifle frame"
+	cyberpunk_weapon_material = "ceramic"
+
+/obj/item/gun/ballistic/rifle/cyberpunk/plasteel
+	name = "plasteel modular rifle frame"
+	cyberpunk_weapon_material = "plasteel"
+
+/obj/item/gun/ballistic/rifle/cyberpunk/composite
+	name = "composite modular rifle frame"
+	cyberpunk_weapon_material = "composite"
+
+/obj/item/gun/ballistic/rifle/cyberpunk/marksman
+	name = "Marksman modular rifle"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/rifle_barrel,
+		/datum/cyberpunk_item_module/rifle_magwell_223,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/reflex_sight,
+	)
+
+/obj/item/gun/ballistic/rifle/cyberpunk/marksman/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/rifle/cyberpunk/patrol
+	name = "Patrol modular rifle"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/rifle_barrel,
+		/datum/cyberpunk_item_module/rifle_magwell_223,
+		/datum/cyberpunk_item_module/precision_receiver,
+		/datum/cyberpunk_item_module/speed_trigger,
+		/datum/cyberpunk_item_module/tactical_light,
+	)
+
+/obj/item/gun/ballistic/rifle/cyberpunk/patrol/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
+/obj/item/gun/ballistic/rifle/boltaction/cyberpunk
+	name = "modular sniper frame"
+	desc = "A Cyberpunk 13 sniper frame. Install a firearm core, long barrel, chamber, receiver and trigger, then lock it with a wrench on a table."
+	icon_state = "sakhno"
+	base_icon_state = "sakhno"
+	fire_delay = 1.2 SECONDS
+	spread = 1
+	projectile_damage_multiplier = 1.25
+	projectile_wound_bonus = 8
+	spawnwithmagazine = FALSE
+	internal_magazine = FALSE
+	semi_auto = FALSE
+	tac_reloads = TRUE
+	cyberpunk_manufacturer = "Starlight"
+
+/obj/item/gun/ballistic/rifle/boltaction/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_weapon("ballistic", list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1, "sight" = 1, "underbarrel" = 1), list("core" = 1, "barrel" = 1, "action" = 1, "receiver" = 1, "trigger" = 1), FALSE, cyberpunk_weapon_material)
+
+/obj/item/gun/ballistic/rifle/boltaction/cyberpunk/longwatch
+	name = "Longwatch modular sniper"
+	cyberpunk_initial_module_types = list(
+		/datum/cyberpunk_item_module/firearm_core,
+		/datum/cyberpunk_item_module/sniper_barrel/t2,
+		/datum/cyberpunk_item_module/sniper_chamber,
+		/datum/cyberpunk_item_module/precision_receiver/t2,
+		/datum/cyberpunk_item_module/damage_trigger,
+		/datum/cyberpunk_item_module/reflex_sight/t2,
+	)
+
+/obj/item/gun/ballistic/rifle/boltaction/cyberpunk/longwatch/Initialize(mapload)
+	. = ..()
+	cyberpunk_weapon_assembled = TRUE
+	recalculate_cyberpunk_weapon_stats()
+
 ///////////////////////
 // BOLT ACTION RIFLE //
 ///////////////////////

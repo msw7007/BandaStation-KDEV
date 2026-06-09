@@ -386,6 +386,8 @@
 		return NONE
 	if(firing_burst)
 		return NONE
+	if(!can_use_cyberpunk_weapon(user))
+		return ITEM_INTERACT_BLOCKING
 
 	if(SEND_SIGNAL(user, COMSIG_MOB_TRYING_TO_FIRE_GUN, src, target, flag, params) & COMPONENT_CANCEL_GUN_FIRE)
 		return NONE
