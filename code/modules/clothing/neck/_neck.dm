@@ -23,6 +23,55 @@
 	if (blood_overlay)
 		. += blood_overlay
 
+/obj/item/clothing/neck/cyberpunk
+	name = "modular collar"
+	desc = "A Cyberpunk modular neck guard and utility collar."
+	icon_state = "collar"
+	cyberpunk_equipment_form = "collar"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 75
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	armor_type = /datum/armor/none
+	max_integrity = 80
+
+/obj/item/clothing/neck/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("collar", cyberpunk_equipment_material, list("lining" = 1, "utility" = 1, "active" = 1))
+
+/obj/item/clothing/neck/cyberpunk/ceramic
+	name = "ceramic modular collar"
+	cyberpunk_equipment_material = "ceramic"
+
+/obj/item/clothing/neck/cyberpunk/plasteel
+	name = "plasteel modular collar"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/neck/cyberpunk/composite
+	name = "smart composite modular collar"
+	cyberpunk_equipment_material = "composite"
+
+/obj/item/clothing/neck/cyberpunk/ryaznov_guard
+	name = "Ryaznov modular guard collar"
+	cyberpunk_manufacturer = "Ryaznov"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/reactive_hardener)
+
+/obj/item/clothing/neck/cyberpunk/sealed
+	name = "sealed modular collar"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/chemseal_lining, /datum/cyberpunk_item_module/insulation_lining, /datum/cyberpunk_item_module/medfoam_injector)
+
+/obj/item/clothing/neck/cyberpunk/patrol
+	name = "patrol modular collar"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "common"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/sensor_bus)
+
 /obj/item/clothing/neck/bowtie
 	name = "bow tie"
 	desc = "A small neosilk bowtie."

@@ -253,6 +253,10 @@
 	if(!(design.build_type & AUTOLATHE))
 		say("This fabricator does not have the necessary keys to decrypt this design.")
 		return
+	var/cyberpunk_material_choice = design.select_cyberpunk_material(ui.user, src)
+	if(length(design.cyberpunk_material_options) && !cyberpunk_material_choice)
+		return
+	var/list/design_materials = design.get_cyberpunk_materialized_materials(cyberpunk_material_choice)
 
 	//validate print quantity
 	var/build_count = params["multiplier"]
@@ -267,7 +271,7 @@
 	var/list/materials_needed = list()
 	var/list/slots_chosen = null
 	var/mat_choice = FALSE
-	for(var/material, amount_needed in design.materials)
+	for(var/material, amount_needed in design_materials)
 		if(!ispath(material, /datum/material_requirement) && !ispath(material, /datum/material_slot)) // Material requirement
 			if(!istype(material, /datum/material))
 				CRASH("Autolathe ui_act got passed an invalid material id: [material]")
@@ -315,7 +319,7 @@
 
 	//compute power & time to print 1 item
 	var/charge_per_item = 0
-	for(var/material, amount in design.materials)
+	for(var/material, amount in materials_needed)
 		charge_per_item += amount
 
 	charge_per_item = ROUND_UP((charge_per_item / (MAX_STACK_SIZE * SHEET_MATERIAL_AMOUNT)) * material_cost_coefficient * active_power_usage)
@@ -341,7 +345,7 @@
 			if(!istype(material, /datum/material/glass) && !istype(material, /datum/material/iron))
 				ui.user.client.give_award(/datum/award/achievement/misc/getting_an_upgrade, ui.user)
 				break
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, build_count, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target_location, slots_chosen), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, build_count, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target_location, slots_chosen, cyberpunk_material_choice), build_time_per_item)
 
 	return TRUE
 
@@ -357,7 +361,7 @@
  * * list/materials_needed - the list of materials to print 1 item
  * * turf/target - the location to drop the printed item on
 */
-/obj/machinery/autolathe/proc/do_make_item(datum/design/design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, list/materials_needed, turf/target, list/slots_chosen)
+/obj/machinery/autolathe/proc/do_make_item(datum/design/design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, list/materials_needed, turf/target, list/slots_chosen, cyberpunk_material_choice)
 	PROTECTED_PROC(TRUE)
 
 	if(items_remaining <= 0) // how
@@ -405,6 +409,7 @@
 		created = design.create_result(target, materials_needed, amount = number_to_make)
 	else
 		created = design.create_result(target, materials_needed)
+		design.apply_cyberpunk_material(created, cyberpunk_material_choice)
 		if (length(slots_chosen))
 			created.set_material_slots(slots_chosen)
 		split_materials_uniformly(materials_needed, material_cost_coefficient, created)
@@ -422,7 +427,7 @@
 	if(items_remaining <= 0)
 		finalize_build()
 		return
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target, slots_chosen), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target, slots_chosen, cyberpunk_material_choice), build_time_per_item)
 
 /**
  * Resets the icon state and busy flag

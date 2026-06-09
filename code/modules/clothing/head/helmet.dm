@@ -31,6 +31,60 @@
 	. = ..()
 	AddElement(/datum/element/update_icon_updates_onmob)
 
+/obj/item/clothing/head/helmet/cyberpunk
+	name = "modular helmet"
+	desc = "A Cyberpunk modular helmet shell. Its final protection depends on material and installed modules."
+	cyberpunk_equipment_form = "helmet"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 120
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	armor_type = /datum/armor/none
+	max_integrity = 140
+	w_class = WEIGHT_CLASS_NORMAL
+
+/obj/item/clothing/head/helmet/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("helmet", cyberpunk_equipment_material, list("plate" = 1, "lining" = 1, "utility" = 1, "active" = 1))
+
+/obj/item/clothing/head/helmet/cyberpunk/wood
+	name = "laminated wood modular helmet"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/head/helmet/cyberpunk/ceramic
+	name = "ceramic modular helmet"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/head/helmet/cyberpunk/plasteel
+	name = "plasteel modular helmet"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+
+/obj/item/clothing/head/helmet/cyberpunk/composite
+	name = "smart composite modular helmet"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/head/helmet/cyberpunk/patrol
+	name = "patrol modular helmet"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/ballistic_weave, /datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/head/helmet/cyberpunk/breacher
+	name = "breacher modular helmet"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate/t2, /datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/reactive_hardener)
+
+/obj/item/clothing/head/helmet/cyberpunk/anti_energy
+	name = "anti-energy modular helmet"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/deflection_laminate, /datum/cyberpunk_item_module/grounding_bus, /datum/cyberpunk_item_module/insulation_lining)
+
 /obj/item/clothing/head/helmet/sec
 	var/flipped_visor = FALSE
 	sound_vary = TRUE

@@ -60,6 +60,166 @@
 /obj/item/clothing/suit/armor/vest/alt/sec
 	icon_state = "armor_sec"
 
+/obj/item/clothing/suit/armor/vest/cyberpunk
+	name = "modular armor vest"
+	desc = "A Cyberpunk modular armor vest shell. Its final protection depends on material and installed modules."
+	cyberpunk_equipment_form = "vest"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 180
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	body_parts_covered = CHEST|GROIN
+	armor_type = /datum/armor/none
+	max_integrity = 180
+	w_class = WEIGHT_CLASS_NORMAL
+	slowdown = 0.15
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("vest", cyberpunk_equipment_material, list("plate" = 2, "lining" = 1, "utility" = 1, "active" = 1))
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/wood
+	name = "laminated wood modular vest"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/ceramic
+	name = "ceramic modular vest"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/plasteel
+	name = "plasteel modular vest"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/composite
+	name = "smart composite modular vest"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/benn_light
+	name = "Benn modular stealth vest"
+	cyberpunk_manufacturer = "Benn"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/ballistic_weave, /datum/cyberpunk_item_module/weight_reducer/t2, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/ryaznov_heavy
+	name = "Ryaznov modular assault vest"
+	cyberpunk_manufacturer = "Ryaznov"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate/t2, /datum/cyberpunk_item_module/impact_gel/t2, /datum/cyberpunk_item_module/reactive_hardener)
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/starlight_skirmisher
+	name = "Starlight modular skirmisher vest"
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/ballistic_weave, /datum/cyberpunk_item_module/mobility_servo/t2, /datum/cyberpunk_item_module/insulation_lining)
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/street_guard
+	name = "street guard modular vest"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate, /datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/runner
+	name = "runner modular vest"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_rarity = "common"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/weight_reducer, /datum/cyberpunk_item_module/mobility_servo, /datum/cyberpunk_item_module/medfoam_injector)
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/blast
+	name = "blast modular vest"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/blast_padding, /datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/reactive_hardener)
+
+/obj/item/clothing/suit/armor/vest/cyberpunk/anti_energy
+	name = "anti-energy modular vest"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/ablative_mesh, /datum/cyberpunk_item_module/grounding_bus, /datum/cyberpunk_item_module/insulation_lining)
+
+/obj/item/clothing/suit/armor/cyberpunk
+	name = "modular armor suit"
+	desc = "A full-body Cyberpunk modular armor shell. It accepts more modules than a vest, but weighs more."
+	icon_state = "riot"
+	inhand_icon_state = "armor"
+	cyberpunk_equipment_form = "suit"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 320
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	body_parts_covered = CHEST|GROIN|LEGS|FEET|ARMS|HANDS
+	armor_type = /datum/armor/none
+	max_integrity = 260
+	w_class = WEIGHT_CLASS_BULKY
+	slowdown = 0.3
+
+/obj/item/clothing/suit/armor/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("suit", cyberpunk_equipment_material, list("plate" = 3, "lining" = 2, "utility" = 2, "active" = 1, "mobility" = 1))
+
+/obj/item/clothing/suit/armor/cyberpunk/wood
+	name = "laminated wood modular armor suit"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/suit/armor/cyberpunk/ceramic
+	name = "ceramic modular armor suit"
+	cyberpunk_equipment_material = "ceramic"
+
+/obj/item/clothing/suit/armor/cyberpunk/plasteel
+	name = "plasteel modular armor suit"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+
+/obj/item/clothing/suit/armor/cyberpunk/composite
+	name = "smart composite modular armor suit"
+	cyberpunk_equipment_material = "composite"
+
+/obj/item/clothing/suit/armor/cyberpunk/ryaznov_bulwark
+	name = "Ryaznov modular bulwark suit"
+	cyberpunk_manufacturer = "Ryaznov"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate/t2, /datum/cyberpunk_item_module/impact_gel/t2, /datum/cyberpunk_item_module/ballistic_weave, /datum/cyberpunk_item_module/reactive_hardener/t2)
+
+/obj/item/clothing/suit/armor/cyberpunk/benn_mirage
+	name = "Benn modular mirage suit"
+	cyberpunk_manufacturer = "Benn"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/weight_reducer/t2, /datum/cyberpunk_item_module/mobility_servo/t2, /datum/cyberpunk_item_module/sensor_bus/t2, /datum/cyberpunk_item_module/ablative_mesh)
+
+/obj/item/clothing/suit/armor/cyberpunk/starlight_response
+	name = "Starlight modular response suit"
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/mobility_servo/t2, /datum/cyberpunk_item_module/insulation_lining, /datum/cyberpunk_item_module/chemseal_lining, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/suit/armor/cyberpunk/breacher
+	name = "breacher modular armor suit"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate/t2, /datum/cyberpunk_item_module/blast_padding/t2, /datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/reactive_hardener)
+
+/obj/item/clothing/suit/armor/cyberpunk/firebreak
+	name = "firebreak modular armor suit"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/insulation_lining/t2, /datum/cyberpunk_item_module/chemseal_lining, /datum/cyberpunk_item_module/medfoam_injector, /datum/cyberpunk_item_module/grounding_bus)
+
+/obj/item/clothing/suit/armor/cyberpunk/patrol
+	name = "patrol modular armor suit"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/ballistic_weave, /datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/sensor_bus, /datum/cyberpunk_item_module/medfoam_injector)
+
 /obj/item/clothing/suit/armor/vest/press
 	name = "press armor vest"
 	desc = "A blue armor vest used to distinguish <i>non-combatant</i> \"PRESS\" members, like if anyone cares."

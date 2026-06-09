@@ -37,6 +37,55 @@
 	if(glass_colour_type)
 		AddElement(/datum/element/wearable_client_colour, glass_colour_type, ITEM_SLOT_EYES, GLASSES_TRAIT, forced = forced_glass_color, comsig_toggle = COMSIG_CLICK_ALT_SECONDARY)
 
+/obj/item/clothing/glasses/cyberpunk
+	name = "modular visor"
+	desc = "Cyberpunk modular eyewear with small utility bays."
+	icon_state = "glasses"
+	cyberpunk_equipment_form = "visor"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 95
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	armor_type = /datum/armor/none
+	max_integrity = 70
+
+/obj/item/clothing/glasses/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("visor", cyberpunk_equipment_material, list("utility" = 2, "active" = 1))
+
+/obj/item/clothing/glasses/cyberpunk/ceramic
+	name = "ceramic modular visor"
+	cyberpunk_equipment_material = "ceramic"
+
+/obj/item/clothing/glasses/cyberpunk/plasteel
+	name = "plasteel modular visor"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/glasses/cyberpunk/composite
+	name = "smart composite modular visor"
+	cyberpunk_equipment_material = "composite"
+
+/obj/item/clothing/glasses/cyberpunk/benn_optic
+	name = "Benn modular optic visor"
+	cyberpunk_manufacturer = "Benn"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/sensor_bus/t2, /datum/cyberpunk_item_module/weight_reducer)
+
+/obj/item/clothing/glasses/cyberpunk/threat
+	name = "threat-scan modular visor"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/sensor_bus/t2, /datum/cyberpunk_item_module/grounding_bus)
+
+/obj/item/clothing/glasses/cyberpunk/industrial
+	name = "industrial modular visor"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "common"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/deflection_laminate, /datum/cyberpunk_item_module/insulation_lining)
+
 /obj/item/clothing/glasses/suicide_act(mob/living/carbon/user)
 	user.visible_message(span_suicide("[user] is stabbing \the [src] into [user.p_their()] eyes! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))
 	return BRUTELOSS

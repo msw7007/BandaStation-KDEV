@@ -34,6 +34,66 @@
 	siemens_coefficient = reset_fantasy_variable("siemens_coefficient", siemens_coefficient)
 	return ..()
 
+/obj/item/clothing/gloves/cyberpunk
+	name = "modular gloves"
+	desc = "Cyberpunk modular gloves with small module bays for protection and grip systems."
+	icon_state = "black"
+	cyberpunk_equipment_form = "gloves"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 70
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	armor_type = /datum/armor/none
+	max_integrity = 90
+
+/obj/item/clothing/gloves/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("gloves", cyberpunk_equipment_material, list("lining" = 1, "utility" = 1, "mobility" = 1))
+
+/obj/item/clothing/gloves/cyberpunk/wood
+	name = "laminated wood modular gloves"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/gloves/cyberpunk/ceramic
+	name = "ceramic modular gloves"
+	cyberpunk_equipment_material = "ceramic"
+
+/obj/item/clothing/gloves/cyberpunk/plasteel
+	name = "plasteel modular gloves"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/gloves/cyberpunk/composite
+	name = "smart composite modular gloves"
+	cyberpunk_equipment_material = "composite"
+
+/obj/item/clothing/gloves/cyberpunk/benn_grip
+	name = "Benn modular grip gloves"
+	cyberpunk_manufacturer = "Benn"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/mobility_servo, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/gloves/cyberpunk/ryaznov_knuckle
+	name = "Ryaznov modular knuckle gloves"
+	cyberpunk_manufacturer = "Ryaznov"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/armor_plate)
+
+/obj/item/clothing/gloves/cyberpunk/tech
+	name = "tech modular gloves"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/grounding_bus, /datum/cyberpunk_item_module/sensor_bus, /datum/cyberpunk_item_module/mobility_servo)
+
+/obj/item/clothing/gloves/cyberpunk/patrol
+	name = "patrol modular gloves"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "common"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/impact_gel)
+
 /obj/item/clothing/gloves/wash(clean_types)
 	. = ..()
 	if((clean_types & CLEAN_TYPE_BLOOD) && transfer_blood > 0)

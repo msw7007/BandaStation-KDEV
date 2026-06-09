@@ -334,6 +334,10 @@
 			if(design.build_type && !(design.build_type & allowed_buildtypes))
 				say("This fabricator does not have the necessary manipulation systems for this design.")
 				return FALSE
+			var/cyberpunk_material_choice = design.select_cyberpunk_material(ui.user, src)
+			if(length(design.cyberpunk_material_options) && !cyberpunk_material_choice)
+				return FALSE
+			var/list/design_materials = design.get_cyberpunk_materialized_materials(cyberpunk_material_choice)
 
 			//validate print quantity
 			var/print_quantity = params["amount"]
@@ -351,14 +355,14 @@
 			//check for materials
 			if(!materials.can_use_resource(user_data = ID_DATA(usr)))
 				return
-			cyberpunk_business_supply_materials(materials.mat_container, design.materials, coefficient, print_quantity)
-			if(!materials.mat_container.has_materials(design.materials, coefficient, print_quantity))
+			cyberpunk_business_supply_materials(materials.mat_container, design_materials, coefficient, print_quantity)
+			if(!materials.mat_container.has_materials(design_materials, coefficient, print_quantity))
 				say("Not enough materials to complete prototype[print_quantity > 1 ? "s" : ""].")
 				return FALSE
 
 			//compute power & time to print 1 item
 			var/charge_per_item = 0
-			for(var/material, amount in design.materials)
+			for(var/material, amount in design_materials)
 				charge_per_item += amount
 			charge_per_item = ROUND_UP((charge_per_item / (MAX_STACK_SIZE * SHEET_MATERIAL_AMOUNT)) * coefficient * active_power_usage)
 			var/build_time_per_item = ((design.construction_time * design.lathe_time_factor * efficiency_coeff) / synergy) ** 0.8
@@ -375,7 +379,7 @@
 					target_location = get_turf(src)
 			else
 				target_location = get_turf(src)
-			addtimer(CALLBACK(src, PROC_REF(do_make_item), design, print_quantity, build_time_per_item, coefficient, charge_per_item, target_location, ID_DATA(usr)), build_time_per_item)
+			addtimer(CALLBACK(src, PROC_REF(do_make_item), design, print_quantity, build_time_per_item, coefficient, charge_per_item, target_location, ID_DATA(usr), cyberpunk_material_choice, design_materials), build_time_per_item)
 
 			return TRUE
 
@@ -398,7 +402,9 @@
 		material_cost_coefficient,
 		charge_per_item,
 		turf/target,
-		alist/user_data)
+		alist/user_data,
+		cyberpunk_material_choice,
+		list/build_materials)
 	PROTECTED_PROC(TRUE)
 
 	if(!items_remaining) // how
@@ -429,7 +435,7 @@
 		return
 
 	var/is_stack = ispath(design.build_path, /obj/item/stack)
-	var/list/design_materials = design.materials
+	var/list/design_materials = build_materials || design.materials
 	cyberpunk_business_supply_materials(materials.mat_container, design_materials, material_cost_coefficient, is_stack ? items_remaining : 1)
 	if(!materials.mat_container.has_materials(design_materials, material_cost_coefficient, is_stack ? items_remaining : 1))
 		say("Unable to continue production, missing materials.")
@@ -452,6 +458,7 @@
 		created = design.create_result(target, design_materials, amount = number_to_make)
 	else
 		created = design.create_result(target, design_materials)
+		design.apply_cyberpunk_material(created, cyberpunk_material_choice)
 		split_materials_uniformly(design_materials, material_cost_coefficient, created)
 
 	if(isitem(created))
@@ -463,6 +470,7 @@
 		SScyberpunk_corporations.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "fabricated [design.name]")
 		if(!is_stack && SScyberpunk_corporations.cyberpunk_manufacturer_has_edict(manufacturer, "starlight_mass_production") && prob(10))
 			var/atom/movable/bonus_created = design.create_result(target, design_materials)
+			design.apply_cyberpunk_material(bonus_created, cyberpunk_material_choice)
 			if(isitem(bonus_created))
 				var/obj/item/bonus_item = bonus_created
 				bonus_item.set_cyberpunk_manufacturer(manufacturer)
@@ -479,7 +487,7 @@
 	if(!items_remaining)
 		finalize_build()
 		return
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, target, user_data), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, target, user_data, cyberpunk_material_choice, design_materials), build_time_per_item)
 
 /// Resets the busy flag
 /// Called at the end of do_make_item's timer loop

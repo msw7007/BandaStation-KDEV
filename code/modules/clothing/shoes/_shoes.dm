@@ -33,6 +33,63 @@
 /datum/armor/clothing_shoes
 	bio = 50
 
+/obj/item/clothing/shoes/cyberpunk
+	name = "modular boots"
+	desc = "Cyberpunk modular boots. Their final protection depends on material and installed modules."
+	icon_state = "jackboots"
+	cyberpunk_equipment_form = "boots"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 90
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	body_parts_covered = FEET|LEGS
+	armor_type = /datum/armor/none
+	max_integrity = 110
+	w_class = WEIGHT_CLASS_SMALL
+	slowdown = 0.05
+
+/obj/item/clothing/shoes/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("boots", cyberpunk_equipment_material, list("plate" = 1, "lining" = 1, "mobility" = 1))
+
+/obj/item/clothing/shoes/cyberpunk/wood
+	name = "laminated wood modular boots"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/shoes/cyberpunk/ceramic
+	name = "ceramic modular boots"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/shoes/cyberpunk/plasteel
+	name = "plasteel modular boots"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+
+/obj/item/clothing/shoes/cyberpunk/composite
+	name = "smart composite modular boots"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/shoes/cyberpunk/runner
+	name = "runner modular boots"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_rarity = "common"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/weight_reducer, /datum/cyberpunk_item_module/mobility_servo)
+
+/obj/item/clothing/shoes/cyberpunk/patrol
+	name = "patrol modular boots"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/mobility_servo)
+
+/obj/item/clothing/shoes/cyberpunk/sealed
+	name = "sealed modular boots"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/chemseal_lining, /datum/cyberpunk_item_module/insulation_lining, /datum/cyberpunk_item_module/grounding_bus)
+
 /obj/item/clothing/shoes/suicide_act(mob/living/carbon/user)
 	if(prob(50))
 		user.visible_message(span_suicide("[user] begins fastening \the [src] up waaay too tightly! Кажется, [user.ru_p_they()] пытается совершить самоубийство!"))

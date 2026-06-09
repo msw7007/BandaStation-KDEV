@@ -57,6 +57,8 @@ other types of metals and chemistry for reagents).
 	var/search_metadata
 	/// For protolathe designs that don't require reagents: If they can be exported to autolathes with a design disk or not.
 	var/autolathe_exportable = TRUE
+	/// Cyberpunk modular equipment material choices offered before lathe production.
+	var/list/cyberpunk_material_options
 
 /datum/design/error_design
 	name = "ERROR"
@@ -102,6 +104,61 @@ other types of metals and chemistry for reagents).
 	if (isnull(amount))
 		amount = 1
 	return new build_path(drop_loc, amount)
+
+/datum/design/proc/select_cyberpunk_material(mob/user, atom/source)
+	if(!length(cyberpunk_material_options))
+		return null
+	var/list/choices = list()
+	var/list/material_by_choice = list()
+	var/obj/item/material_preview = build_path
+	for(var/material_id in cyberpunk_material_options)
+		var/material_name = initial(material_preview.name)
+		switch(material_id)
+			if("fabric")
+				material_name = "Ballistic fabric"
+			if("wood")
+				material_name = "Laminated wood"
+			if("ceramic")
+				material_name = "Ceramic"
+			if("plasteel")
+				material_name = "Plasteel"
+			if("composite")
+				material_name = "Smart composite"
+		choices[material_name] = image(icon = initial(material_preview.icon), icon_state = initial(material_preview.icon_state))
+		material_by_choice[material_name] = material_id
+	var/pick = show_radial_menu(user, source, choices, radius = 42, require_near = TRUE, tooltips = TRUE)
+	return material_by_choice[pick]
+
+/datum/design/proc/apply_cyberpunk_material(atom/movable/created, material_id)
+	if(!material_id || !isitem(created))
+		return
+	var/obj/item/created_item = created
+	if(!created_item.cyberpunk_equipment_form)
+		return
+	created_item.set_cyberpunk_equipment_material(material_id)
+
+/datum/design/proc/get_cyberpunk_materialized_materials(material_id)
+	var/list/materialized = materials.Copy()
+	if(!material_id)
+		return materialized
+	var/list/extra_materials = list()
+	switch(material_id)
+		if("wood")
+			extra_materials[/datum/material/wood] = SMALL_MATERIAL_AMOUNT * 2
+		if("ceramic")
+			extra_materials[/datum/material/glass] = SMALL_MATERIAL_AMOUNT * 2
+		if("plasteel")
+			extra_materials[/datum/material/iron] = SMALL_MATERIAL_AMOUNT * 2
+			extra_materials[/datum/material/titanium] = SMALL_MATERIAL_AMOUNT
+		if("composite")
+			extra_materials[/datum/material/plastic] = SMALL_MATERIAL_AMOUNT
+			extra_materials[/datum/material/glass] = SMALL_MATERIAL_AMOUNT
+			extra_materials[/datum/material/titanium] = SMALL_MATERIAL_AMOUNT
+	for(var/material_type in extra_materials)
+		var/datum/material/material = SSmaterials.get_material(material_type)
+		if(material)
+			materialized[material] += extra_materials[material_type]
+	return materialized
 
 ////////////////////////////////////////
 //Disks for transporting design datums//
@@ -164,4 +221,3 @@ other types of metals and chemistry for reagents).
 	. = ..()
 	SSresearch.techweb_nodes_experimental -= bepis_node.id
 	log_research("[bepis_node.display_name] has been removed from experimental nodes through the BEPIS techweb's \"remove tech\" feature.")
-

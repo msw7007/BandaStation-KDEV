@@ -162,6 +162,30 @@
 	var/list/cyberpunk_armor_profile
 	/// Installed Cyberpunk item module datums.
 	var/list/datum/cyberpunk_item_module/cyberpunk_modules
+	/// Modular equipment form id, for example vest, helmet, bracers or boots.
+	var/cyberpunk_equipment_form
+	/// Modular equipment material id. Used to rebuild protection, weight and module slots.
+	var/cyberpunk_equipment_material
+	/// Maximum module count by module slot id.
+	var/list/cyberpunk_module_slots
+	/// Base module slot count before material modifiers.
+	var/list/cyberpunk_base_module_slots
+	/// Initial armor ratings captured before modular equipment recalculation.
+	var/list/cyberpunk_base_armor_values
+	/// Initial item weight class captured before modular equipment recalculation.
+	var/cyberpunk_base_w_class
+	/// Initial item max integrity captured before modular equipment recalculation.
+	var/cyberpunk_base_max_integrity
+	/// Initial clothing slowdown captured before modular equipment recalculation.
+	var/cyberpunk_base_slowdown
+	/// Whether baseline modular stats were already captured.
+	var/cyberpunk_modular_baseline_ready = FALSE
+	/// Module datum paths installed during modular equipment setup.
+	var/list/cyberpunk_initial_module_types
+	/// Temporary armor bonuses from active Cyberpunk modules, keyed by installed module datum.
+	var/list/cyberpunk_active_module_armor
+	/// Temporary slowdown deltas from active Cyberpunk modules, keyed by installed module datum.
+	var/list/cyberpunk_active_module_slowdown
 	/// Round-local contract id attached to this item as cargo evidence.
 	var/cyberpunk_contract_id
 	//CYBERPUNK BUILD - rebuild and delete before release
@@ -507,7 +531,7 @@
 	var/list/report = list()
 	var/mob/living/living_user = user
 	var/analysis_depth = istype(living_user) ? living_user.get_cyberpunk_item_analysis_depth(src) : 0
-	if(analysis_depth <= 0 && !is_cyberpunk_recently_analyzed())
+	if(analysis_depth <= 0 && !is_cyberpunk_recently_analyzed() && !cyberpunk_equipment_form)
 		return report
 
 	report += span_notice("Item condition: [get_cyberpunk_item_condition_name()].")
@@ -522,7 +546,14 @@
 		report += span_notice("Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%). Repair threshold: [round(cyberpunk_repair_threshold * 100)]%.")
 	if(analysis_depth >= 2 && (force || cyberpunk_guard_value || length(cyberpunk_damage_profile)))
 		report += span_notice("Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()].")
-	if(analysis_depth >= 3)
+	if(cyberpunk_equipment_form)
+		report += span_notice("Equipment form: [cyberpunk_equipment_form]. Material: [get_cyberpunk_equipment_material_name()].")
+		var/list/module_report = get_cyberpunk_module_report()
+		if(length(module_report))
+			report += span_notice("Installed modules: [module_report.Join("; ")].")
+		else
+			report += span_notice("Installed modules: none.")
+	if(analysis_depth >= 3 || cyberpunk_equipment_form)
 		var/list/armor_report = get_cyberpunk_armor_report()
 		if(length(armor_report))
 			report += span_notice("Protection: [armor_report.Join(", ")].")
@@ -544,6 +575,10 @@
 	diagnostics += "Inventory footprint: [footprint[1]]x[footprint[2]][cyberpunk_grid_rotated ? " rotated" : ""]."
 	if(force || cyberpunk_guard_value || length(cyberpunk_damage_profile))
 		diagnostics += "Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()]."
+	if(cyberpunk_equipment_form)
+		diagnostics += "Equipment form: [cyberpunk_equipment_form]. Material: [get_cyberpunk_equipment_material_name()]."
+		var/list/module_report = get_cyberpunk_module_report()
+		diagnostics += "Installed modules: [length(module_report) ? module_report.Join("; ") : "none"]."
 	var/list/armor_report = get_cyberpunk_armor_report()
 	if(length(armor_report))
 		diagnostics += "Protection: [armor_report.Join(", ")]."
@@ -733,6 +768,235 @@
 			report += "[armor_key] [rating]"
 	return report
 
+/obj/item/proc/get_cyberpunk_module_report()
+	var/list/report = list()
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(!module)
+			continue
+		report += "[module.name] T[module.module_tier] ([module.module_slot], [module.manufacturer][module.has_active_ability() ? ", active: [module.active_ability_name]" : ""])"
+	if(length(cyberpunk_module_slots))
+		var/list/slot_report = list()
+		for(var/slot_id in cyberpunk_module_slots)
+			slot_report += "[slot_id] [get_cyberpunk_installed_module_count(slot_id)]/[cyberpunk_module_slots[slot_id]]"
+		report += "slots: [slot_report.Join(", ")]"
+	return report
+
+/obj/item/proc/select_cyberpunk_module(mob/user)
+	if(!length(cyberpunk_modules))
+		return null
+	if(length(cyberpunk_modules) == 1)
+		return cyberpunk_modules[1]
+	var/list/choices = list()
+	var/list/module_by_choice = list()
+	for(var/i in 1 to length(cyberpunk_modules))
+		var/datum/cyberpunk_item_module/module = cyberpunk_modules[i]
+		if(!module)
+			continue
+		var/choice_name = "[i]. [module.name] T[module.module_tier]"
+		choices[choice_name] = image(icon = 'icons/obj/devices/circuitry_n_data.dmi', icon_state = "component")
+		module_by_choice[choice_name] = module
+	var/pick = show_radial_menu(user, src, choices, radius = 36, require_near = TRUE, tooltips = TRUE)
+	return module_by_choice[pick]
+
+/obj/item/proc/get_cyberpunk_installed_module_count(slot_id)
+	var/count = 0
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(module?.module_slot == slot_id)
+			count++
+	return count
+
+/obj/item/proc/can_accept_cyberpunk_module(datum/cyberpunk_item_module/module)
+	if(!module)
+		return FALSE
+	if(!length(cyberpunk_module_slots))
+		return TRUE
+	var/slot_limit = cyberpunk_module_slots[module.module_slot]
+	if(!slot_limit)
+		return FALSE
+	return get_cyberpunk_installed_module_count(module.module_slot) < slot_limit
+
+/obj/item/proc/get_cyberpunk_equipment_material_name()
+	switch(cyberpunk_equipment_material)
+		if("fabric")
+			return "ballistic fabric"
+		if("wood")
+			return "laminated wood"
+		if("ceramic")
+			return "ceramic"
+		if("plasteel")
+			return "plasteel"
+		if("composite")
+			return "smart composite"
+	return cyberpunk_equipment_material || "standard"
+
+/obj/item/proc/get_cyberpunk_equipment_material_armor()
+	switch(cyberpunk_equipment_material)
+		if("fabric")
+			return list(MELEE = 5, BULLET = 10, LASER = 3, ENERGY = 5, FIRE = 7, ACID = 4, WOUND = 2)
+		if("wood")
+			return list(MELEE = 10, BULLET = 4, LASER = 2, ENERGY = 2, FIRE = -15, ACID = 1, WOUND = 2)
+		if("ceramic")
+			return list(MELEE = 7, BULLET = 18, LASER = 16, ENERGY = 8, FIRE = 12, ACID = 5, WOUND = 6)
+		if("plasteel")
+			return list(MELEE = 18, BULLET = 16, LASER = 8, ENERGY = 10, FIRE = 14, ACID = 10, WOUND = 8)
+		if("composite")
+			return list(MELEE = 12, BULLET = 14, LASER = 12, ENERGY = 16, FIRE = 10, ACID = 9, WOUND = 5)
+	return list(MELEE = 10, BULLET = 10, LASER = 5, ENERGY = 5, FIRE = 5, ACID = 5)
+
+/obj/item/proc/get_cyberpunk_equipment_material_weight_delta()
+	switch(cyberpunk_equipment_material)
+		if("fabric")
+			return -1
+		if("wood")
+			return 0
+		if("ceramic")
+			return 1
+		if("plasteel")
+			return 2
+		if("composite")
+			return 0
+	return 0
+
+/obj/item/proc/get_cyberpunk_equipment_material_integrity_delta()
+	switch(cyberpunk_equipment_material)
+		if("fabric")
+			return -20
+		if("wood")
+			return -10
+		if("ceramic")
+			return 25
+		if("plasteel")
+			return 70
+		if("composite")
+			return 30
+	return 0
+
+/obj/item/proc/get_cyberpunk_equipment_material_slot_delta()
+	switch(cyberpunk_equipment_material)
+		if("fabric")
+			return list("lining" = 1, "utility" = 1)
+		if("wood")
+			return list("utility" = 1)
+		if("ceramic")
+			return list("plate" = 1)
+		if("plasteel")
+			return list("plate" = 1, "active" = 1)
+		if("composite")
+			return list("mobility" = 1, "utility" = 1)
+	return list()
+
+/obj/item/proc/capture_cyberpunk_modular_baseline()
+	if(cyberpunk_modular_baseline_ready)
+		return
+	cyberpunk_base_armor_values = get_armor().get_rating_list()
+	cyberpunk_base_w_class = w_class
+	cyberpunk_base_max_integrity = max_integrity
+	if("slowdown" in vars)
+		cyberpunk_base_slowdown = vars["slowdown"]
+	cyberpunk_modular_baseline_ready = TRUE
+
+/obj/item/proc/recalculate_cyberpunk_equipment_stats()
+	if(!cyberpunk_equipment_form)
+		return
+	capture_cyberpunk_modular_baseline()
+	var/list/final_armor = cyberpunk_base_armor_values?.Copy() || list()
+	var/list/material_armor = get_cyberpunk_equipment_material_armor()
+	for(var/armor_key in material_armor)
+		final_armor[armor_key] = (final_armor[armor_key] || 0) + material_armor[armor_key]
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(!module || !length(module.armor_delta))
+			continue
+		var/module_scale = module.get_effective_scale()
+		for(var/armor_key in module.armor_delta)
+			final_armor[armor_key] = (final_armor[armor_key] || 0) + round(module.armor_delta[armor_key] * module_scale)
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_active_module_armor)
+		var/list/active_armor = cyberpunk_active_module_armor[module]
+		for(var/armor_key in active_armor)
+			final_armor[armor_key] = (final_armor[armor_key] || 0) + active_armor[armor_key]
+	set_armor(get_armor_by_type(/datum/armor/none).generate_new_with_modifiers(final_armor))
+
+	var/final_weight = (isnull(cyberpunk_base_w_class) ? w_class : cyberpunk_base_w_class) + get_cyberpunk_equipment_material_weight_delta()
+	var/final_integrity = (cyberpunk_base_max_integrity || max_integrity) + get_cyberpunk_equipment_material_integrity_delta()
+	var/final_slowdown = isnull(cyberpunk_base_slowdown) ? null : cyberpunk_base_slowdown
+	cyberpunk_module_slots = cyberpunk_base_module_slots?.Copy() || cyberpunk_module_slots?.Copy() || list()
+	var/list/slot_delta = get_cyberpunk_equipment_material_slot_delta()
+	for(var/slot_id in slot_delta)
+		cyberpunk_module_slots[slot_id] = max(0, (cyberpunk_module_slots[slot_id] || 0) + slot_delta[slot_id])
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(!module)
+			continue
+		var/module_scale = module.get_effective_scale()
+		final_weight += round(module.weight_delta * module_scale)
+		final_integrity += round(module.integrity_delta * module_scale)
+		if(!isnull(final_slowdown))
+			final_slowdown += module.slowdown_delta * module_scale
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_active_module_slowdown)
+		if(!isnull(final_slowdown))
+			final_slowdown += cyberpunk_active_module_slowdown[module]
+	w_class = clamp(final_weight, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
+	if(uses_integrity)
+		modify_max_integrity(max(1, final_integrity), FALSE)
+	if(!isnull(final_slowdown) && ("slowdown" in vars))
+		vars["slowdown"] = max(0, final_slowdown)
+
+/obj/item/proc/setup_cyberpunk_equipment(form_id, material_id, list/base_slots)
+	cyberpunk_equipment_form = form_id
+	cyberpunk_equipment_material = material_id
+	cyberpunk_base_module_slots = base_slots?.Copy() || list()
+	cyberpunk_module_slots = cyberpunk_base_module_slots.Copy()
+	recalculate_cyberpunk_equipment_stats()
+	if(length(cyberpunk_initial_module_types) && !length(cyberpunk_modules))
+		for(var/module_type in cyberpunk_initial_module_types)
+			var/datum/cyberpunk_item_module/module = new module_type
+			module.manufacturer = get_cyberpunk_manufacturer()
+			if(!can_accept_cyberpunk_module(module))
+				qdel(module)
+				continue
+			LAZYADD(cyberpunk_modules, module)
+		recalculate_cyberpunk_equipment_stats()
+
+/obj/item/proc/set_cyberpunk_equipment_material(material_id)
+	if(!cyberpunk_equipment_form || !material_id)
+		return
+	cyberpunk_equipment_material = material_id
+	recalculate_cyberpunk_equipment_stats()
+	name = "[get_cyberpunk_equipment_material_name()] [cyberpunk_equipment_form]"
+
+/obj/item/click_alt_secondary(mob/user)
+	if(!length(cyberpunk_modules))
+		return ..()
+	var/datum/cyberpunk_item_module/picked_module = select_cyberpunk_module(user)
+	if(!picked_module)
+		return CLICK_ACTION_BLOCKING
+	if(picked_module.has_active_ability())
+		var/mob/living/living_user = user
+		if(!istype(living_user))
+			return CLICK_ACTION_BLOCKING
+		picked_module.activate(src, living_user)
+		return CLICK_ACTION_SUCCESS
+	to_chat(user, span_notice("[picked_module.name] T[picked_module.module_tier]: slot [picked_module.module_slot], manufacturer [picked_module.manufacturer], effect scale [round(picked_module.get_effective_scale() * 100)]%."))
+	return CLICK_ACTION_SUCCESS
+
+/obj/item/proc/add_cyberpunk_module_active(datum/cyberpunk_item_module/module, list/armor_delta, slowdown_delta, duration)
+	if(!module)
+		return
+	if(length(armor_delta))
+		LAZYSET(cyberpunk_active_module_armor, module, armor_delta)
+	if(slowdown_delta)
+		LAZYSET(cyberpunk_active_module_slowdown, module, slowdown_delta)
+	recalculate_cyberpunk_equipment_stats()
+	if(duration > 0)
+		addtimer(CALLBACK(src, PROC_REF(clear_cyberpunk_module_active), module), duration, TIMER_STOPPABLE)
+
+/obj/item/proc/clear_cyberpunk_module_active(datum/cyberpunk_item_module/module)
+	if(module)
+		cyberpunk_active_module_armor -= module
+		cyberpunk_active_module_slowdown -= module
+	else
+		cyberpunk_active_module_armor = null
+		cyberpunk_active_module_slowdown = null
+	recalculate_cyberpunk_equipment_stats()
+
 /obj/item/proc/apply_cyberpunk_active_wear(mob/living/user, atom/target)
 	if(cyberpunk_active_wear <= 0 || !uses_integrity || (resistance_flags & INDESTRUCTIBLE) || cyberpunk_broken)
 		return FALSE
@@ -766,9 +1030,9 @@
 /obj/item/wrench_act(mob/living/user, obj/item/tool)
 	if(!length(cyberpunk_modules))
 		return ..()
-	var/datum/cyberpunk_item_module/module = cyberpunk_modules[length(cyberpunk_modules)]
+	var/datum/cyberpunk_item_module/module = select_cyberpunk_module(user)
 	if(!module)
-		return ..()
+		return ITEM_INTERACT_BLOCKING
 	var/remove_delay = 2 SECONDS * (user ? user.get_cyberpunk_item_module_time_multiplier(src) : 1)
 	if(!do_after(user, remove_delay, target = src))
 		return ITEM_INTERACT_BLOCKING
@@ -824,6 +1088,7 @@
 /obj/item/proc/remove_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
 	if(!(module in cyberpunk_modules))
 		return FALSE
+	clear_cyberpunk_module_active(module)
 	LAZYREMOVE(cyberpunk_modules, module)
 	module.on_remove(src, user)
 	qdel(module)
@@ -837,15 +1102,23 @@
 	w_class = WEIGHT_CLASS_SMALL
 	cyberpunk_manufacturer = "Starlight"
 	var/module_datum_type = /datum/cyberpunk_item_module
+	var/module_tier = 1
 
 /obj/item/cyberpunk_item_module/proc/create_module_datum()
 	var/datum/cyberpunk_item_module/module = new module_datum_type
 	module.manufacturer = get_cyberpunk_manufacturer()
+	module.module_tier = module_tier
 	return module
 
 /obj/item/cyberpunk_item_module/examine(mob/user)
 	. = ..()
+	var/datum/cyberpunk_item_module/module = new module_datum_type
+	module.module_tier = module_tier
 	. += span_notice("Manufacturer: [get_cyberpunk_manufacturer()].")
+	. += span_notice("Tier: [module_tier]. Slot: [module.module_slot]. Effect scale: [round(module.get_effective_scale() * 100)]%.")
+	if(module.has_active_ability())
+		. += span_notice("Active ability: [module.active_ability_name]. [module.active_ability_description]")
+	qdel(module)
 
 /obj/item/cyberpunk_item_module/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	var/obj/item/target_item = interacting_with
@@ -898,17 +1171,218 @@
 	icon_state = "cell_con"
 	module_datum_type = /datum/cyberpunk_item_module/armor_plate
 
+/obj/item/cyberpunk_item_module/armor_plate/t2
+	name = "armor plate T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/armor_plate/t3
+	name = "armor plate T3"
+	module_tier = 3
+
 /obj/item/cyberpunk_item_module/armor_lining
 	name = "protective lining"
 	icon_state = "component"
 	module_datum_type = /datum/cyberpunk_item_module/armor_lining
 
+/obj/item/cyberpunk_item_module/armor_lining/t2
+	name = "protective lining T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/armor_lining/t3
+	name = "protective lining T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/weight_reducer
+	name = "lightweight frame"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/weight_reducer
+
+/obj/item/cyberpunk_item_module/weight_reducer/t2
+	name = "lightweight frame T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/weight_reducer/t3
+	name = "lightweight frame T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/mobility_servo
+	name = "mobility servo"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/mobility_servo
+
+/obj/item/cyberpunk_item_module/mobility_servo/t2
+	name = "mobility servo T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/mobility_servo/t3
+	name = "mobility servo T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/reactive_hardener
+	name = "reactive hardener"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_item_module/reactive_hardener
+
+/obj/item/cyberpunk_item_module/reactive_hardener/t2
+	name = "reactive hardener T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/reactive_hardener/t3
+	name = "reactive hardener T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/impact_gel
+	name = "impact gel"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/impact_gel
+
+/obj/item/cyberpunk_item_module/impact_gel/t2
+	name = "impact gel T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/impact_gel/t3
+	name = "impact gel T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/ballistic_weave
+	name = "ballistic weave"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/ballistic_weave
+
+/obj/item/cyberpunk_item_module/ballistic_weave/t2
+	name = "ballistic weave T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/ballistic_weave/t3
+	name = "ballistic weave T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/ablative_mesh
+	name = "ablative mesh"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/ablative_mesh
+
+/obj/item/cyberpunk_item_module/ablative_mesh/t2
+	name = "ablative mesh T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/ablative_mesh/t3
+	name = "ablative mesh T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/insulation_lining
+	name = "insulation lining"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/insulation_lining
+
+/obj/item/cyberpunk_item_module/insulation_lining/t2
+	name = "insulation lining T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/insulation_lining/t3
+	name = "insulation lining T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/chemseal_lining
+	name = "chemseal lining"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/chemseal_lining
+
+/obj/item/cyberpunk_item_module/chemseal_lining/t2
+	name = "chemseal lining T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/chemseal_lining/t3
+	name = "chemseal lining T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/sensor_bus
+	name = "sensor bus"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/sensor_bus
+
+/obj/item/cyberpunk_item_module/sensor_bus/t2
+	name = "sensor bus T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/sensor_bus/t3
+	name = "sensor bus T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/blast_padding
+	name = "blast padding"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/blast_padding
+
+/obj/item/cyberpunk_item_module/blast_padding/t2
+	name = "blast padding T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/blast_padding/t3
+	name = "blast padding T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/trauma_mesh
+	name = "trauma mesh"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_item_module/trauma_mesh
+
+/obj/item/cyberpunk_item_module/trauma_mesh/t2
+	name = "trauma mesh T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/trauma_mesh/t3
+	name = "trauma mesh T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/deflection_laminate
+	name = "deflection laminate"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_item_module/deflection_laminate
+
+/obj/item/cyberpunk_item_module/deflection_laminate/t2
+	name = "deflection laminate T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/deflection_laminate/t3
+	name = "deflection laminate T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/grounding_bus
+	name = "grounding bus"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/grounding_bus
+
+/obj/item/cyberpunk_item_module/grounding_bus/t2
+	name = "grounding bus T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/grounding_bus/t3
+	name = "grounding bus T3"
+	module_tier = 3
+
+/obj/item/cyberpunk_item_module/medfoam_injector
+	name = "medfoam injector"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_item_module/medfoam_injector
+
+/obj/item/cyberpunk_item_module/medfoam_injector/t2
+	name = "medfoam injector T2"
+	module_tier = 2
+
+/obj/item/cyberpunk_item_module/medfoam_injector/t3
+	name = "medfoam injector T3"
+	module_tier = 3
+
 /datum/cyberpunk_item_module
 	var/name = "item module"
 	var/manufacturer = "independent"
 	var/quality = 100
+	var/module_slot = "utility"
+	var/module_tier = 1
 	var/weight_delta = 0
 	var/integrity_delta = 0
+	var/slowdown_delta = 0
 	var/force_multiplier = 1
 	var/attack_speed_multiplier = 1
 	var/armour_penetration_delta = 0
@@ -921,38 +1395,100 @@
 	var/applied_armour_penetration_delta = 0
 	var/applied_guard_delta = 0
 	var/list/previous_damage_profile
+	var/active_ability_name
+	var/active_ability_description
+	var/active_cooldown = 30 SECONDS
+	var/active_duration = 8 SECONDS
+	var/list/active_armor_delta
+	var/active_slowdown_delta = 0
+	var/active_stamina_restore = 0
+	var/active_brute_heal = 0
+	var/active_burn_heal = 0
+	var/active_extinguish = FALSE
+	var/active_next_use = 0
+
+/datum/cyberpunk_item_module/proc/get_effective_scale()
+	return 1 + max(0, module_tier - 1) * 0.15
+
+/datum/cyberpunk_item_module/proc/has_active_ability()
+	return !!active_ability_name
+
+/datum/cyberpunk_item_module/proc/get_active_cooldown()
+	return max(1 SECONDS, round(active_cooldown / get_effective_scale()))
+
+/datum/cyberpunk_item_module/proc/get_active_duration()
+	return max(1 SECONDS, round(active_duration * get_effective_scale()))
+
+/datum/cyberpunk_item_module/proc/activate(obj/item/equipment, mob/living/user)
+	if(!has_active_ability() || !equipment || !user)
+		return FALSE
+	if(world.time < active_next_use)
+		to_chat(user, span_warning("[active_ability_name] is recharging for [DisplayTimeText(active_next_use - world.time, round_seconds_to = 1)]."))
+		return FALSE
+	if(!(equipment in user.get_all_contents()))
+		to_chat(user, span_warning("You need to wear or hold [equipment] to activate [active_ability_name]."))
+		return FALSE
+	var/effect_scale = get_effective_scale()
+	var/list/scaled_armor = list()
+	for(var/armor_key in active_armor_delta)
+		scaled_armor[armor_key] = round(active_armor_delta[armor_key] * effect_scale)
+	var/scaled_slowdown = active_slowdown_delta ? active_slowdown_delta * effect_scale : 0
+	if(length(scaled_armor) || scaled_slowdown)
+		equipment.add_cyberpunk_module_active(src, scaled_armor, scaled_slowdown, get_active_duration())
+	if(active_stamina_restore)
+		user.adjust_stamina_loss(-round(active_stamina_restore * effect_scale), forced = TRUE)
+	if(active_brute_heal)
+		user.adjust_brute_loss(-round(active_brute_heal * effect_scale), forced = TRUE)
+	if(active_burn_heal)
+		user.adjust_fire_loss(-round(active_burn_heal * effect_scale), forced = TRUE)
+	if(active_extinguish)
+		user.extinguish_mob()
+		user.adjust_fire_stacks(-round(4 * effect_scale))
+	active_next_use = world.time + get_active_cooldown()
+	user.visible_message(span_notice("[user] activates [active_ability_name] on [equipment]."), span_notice("You activate [active_ability_name] on [equipment]. [active_ability_description]"))
+	return TRUE
 
 /datum/cyberpunk_item_module/proc/can_install(obj/item/target, mob/living/user)
-	return istype(target)
+	return istype(target) && target.can_accept_cyberpunk_module(src)
 
 /datum/cyberpunk_item_module/proc/on_install(obj/item/target, mob/living/user)
 	if(!target)
 		return
 	target.cyberpunk_quality = max(target.cyberpunk_quality, quality)
+	if(target.cyberpunk_equipment_form)
+		target.recalculate_cyberpunk_equipment_stats()
+		return
+	var/effect_scale = get_effective_scale()
 	if(weight_delta)
-		target.w_class = clamp(target.w_class + weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
-		applied_weight_delta = weight_delta
+		applied_weight_delta = round(weight_delta * effect_scale)
+		target.w_class = clamp(target.w_class + applied_weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
 	if(integrity_delta && target.uses_integrity)
-		target.modify_max_integrity(max(1, target.max_integrity + integrity_delta), FALSE)
-		applied_integrity_delta = integrity_delta
+		applied_integrity_delta = round(integrity_delta * effect_scale)
+		target.modify_max_integrity(max(1, target.max_integrity + applied_integrity_delta), FALSE)
 	if(force_multiplier != 1)
-		target.force *= force_multiplier
-		applied_force_multiplier = force_multiplier
+		applied_force_multiplier = 1 + ((force_multiplier - 1) * effect_scale)
+		target.force *= applied_force_multiplier
 	if(attack_speed_multiplier != 1)
-		target.attack_speed *= attack_speed_multiplier
-		applied_attack_speed_multiplier = attack_speed_multiplier
+		applied_attack_speed_multiplier = 1 + ((attack_speed_multiplier - 1) * effect_scale)
+		target.attack_speed *= applied_attack_speed_multiplier
 	if(armour_penetration_delta)
-		target.armour_penetration += armour_penetration_delta
-		applied_armour_penetration_delta = armour_penetration_delta
+		applied_armour_penetration_delta = round(armour_penetration_delta * effect_scale)
+		target.armour_penetration += applied_armour_penetration_delta
 	if(guard_delta)
-		target.cyberpunk_guard_value = target.get_cyberpunk_guard_value() + guard_delta
-		applied_guard_delta = guard_delta
+		applied_guard_delta = round(guard_delta * effect_scale)
+		target.cyberpunk_guard_value = target.get_cyberpunk_guard_value() + applied_guard_delta
 	if(length(armor_delta))
 		var/datum/armor/current_armor = target.get_armor()
-		target.set_armor(current_armor.generate_new_with_modifiers(armor_delta))
+		var/list/scaled_armor_delta = list()
+		for(var/armor_key in armor_delta)
+			scaled_armor_delta[armor_key] = round(armor_delta[armor_key] * effect_scale)
+		target.set_armor(current_armor.generate_new_with_modifiers(scaled_armor_delta))
 
 /datum/cyberpunk_item_module/proc/on_remove(obj/item/target, mob/living/user)
 	if(!target)
+		return
+	if(target.cyberpunk_equipment_form)
+		target.recalculate_cyberpunk_equipment_stats()
 		return
 	if(applied_weight_delta)
 		target.w_class = clamp(target.w_class - applied_weight_delta, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
@@ -1032,14 +1568,279 @@
 
 /datum/cyberpunk_item_module/armor_plate
 	name = "armor plate"
+	module_slot = "plate"
 	weight_delta = 1
-	integrity_delta = 30
-	armor_delta = list(MELEE = 10, BULLET = 10)
+	integrity_delta = 25
+	armor_delta = list(MELEE = 8, BULLET = 8)
+
+/datum/cyberpunk_item_module/armor_plate/t2
+	name = "armor plate T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/armor_plate/t3
+	name = "armor plate T3"
+	module_tier = 3
 
 /datum/cyberpunk_item_module/armor_lining
 	name = "protective lining"
+	module_slot = "lining"
 	integrity_delta = 10
-	armor_delta = list(FIRE = 10, ACID = 5)
+	armor_delta = list(FIRE = 8, ACID = 5, WOUND = 3)
+
+/datum/cyberpunk_item_module/armor_lining/t2
+	name = "protective lining T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/armor_lining/t3
+	name = "protective lining T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/weight_reducer
+	name = "lightweight frame"
+	module_slot = "utility"
+	weight_delta = -1
+	integrity_delta = -5
+	armor_delta = list(MELEE = -2, BULLET = -2)
+
+/datum/cyberpunk_item_module/weight_reducer/t2
+	name = "lightweight frame T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/weight_reducer/t3
+	name = "lightweight frame T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/mobility_servo
+	name = "mobility servo"
+	module_slot = "mobility"
+	weight_delta = 0
+	slowdown_delta = -0.15
+	integrity_delta = 5
+	armor_delta = list(ENERGY = 4)
+	active_ability_name = "servo burst"
+	active_ability_description = "The mobility frame dumps reserve torque into your limbs."
+	active_cooldown = 24 SECONDS
+	active_duration = 6 SECONDS
+	active_slowdown_delta = -0.2
+	active_stamina_restore = 12
+
+/datum/cyberpunk_item_module/mobility_servo/t2
+	name = "mobility servo T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/mobility_servo/t3
+	name = "mobility servo T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/reactive_hardener
+	name = "reactive hardener"
+	module_slot = "active"
+	weight_delta = 1
+	integrity_delta = 15
+	armor_delta = list(MELEE = 6, BULLET = 6, LASER = 6, ENERGY = 6, WOUND = 4)
+	active_ability_name = "reactive hardening"
+	active_ability_description = "The plating locks into a short defensive state."
+	active_cooldown = 45 SECONDS
+	active_duration = 10 SECONDS
+	active_armor_delta = list(MELEE = 14, BULLET = 14, LASER = 14, ENERGY = 14, BOMB = 8, WOUND = 8)
+
+/datum/cyberpunk_item_module/reactive_hardener/t2
+	name = "reactive hardener T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/reactive_hardener/t3
+	name = "reactive hardener T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/impact_gel
+	name = "impact gel"
+	module_slot = "plate"
+	weight_delta = 1
+	integrity_delta = 20
+	armor_delta = list(MELEE = 12, BOMB = 8, WOUND = 8)
+
+/datum/cyberpunk_item_module/impact_gel/t2
+	name = "impact gel T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/impact_gel/t3
+	name = "impact gel T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/ballistic_weave
+	name = "ballistic weave"
+	module_slot = "plate"
+	weight_delta = 1
+	integrity_delta = 15
+	armor_delta = list(BULLET = 14, MELEE = 4, WOUND = 5)
+
+/datum/cyberpunk_item_module/ballistic_weave/t2
+	name = "ballistic weave T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/ballistic_weave/t3
+	name = "ballistic weave T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/ablative_mesh
+	name = "ablative mesh"
+	module_slot = "plate"
+	weight_delta = 1
+	integrity_delta = 15
+	armor_delta = list(LASER = 14, ENERGY = 8, FIRE = 4)
+
+/datum/cyberpunk_item_module/ablative_mesh/t2
+	name = "ablative mesh T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/ablative_mesh/t3
+	name = "ablative mesh T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/insulation_lining
+	name = "insulation lining"
+	module_slot = "lining"
+	integrity_delta = 8
+	armor_delta = list(ENERGY = 10, FIRE = 8)
+	active_ability_name = "thermal dump"
+	active_ability_description = "The lining vents heat and stabilizes energy insulation."
+	active_cooldown = 35 SECONDS
+	active_duration = 8 SECONDS
+	active_armor_delta = list(ENERGY = 12, FIRE = 16, LASER = 6)
+	active_extinguish = TRUE
+
+/datum/cyberpunk_item_module/insulation_lining/t2
+	name = "insulation lining T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/insulation_lining/t3
+	name = "insulation lining T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/chemseal_lining
+	name = "chemseal lining"
+	module_slot = "lining"
+	integrity_delta = 8
+	armor_delta = list(ACID = 14, BIO = 12)
+	active_ability_name = "seal purge"
+	active_ability_description = "The lining purges contaminants and seals vulnerable seams."
+	active_cooldown = 40 SECONDS
+	active_duration = 10 SECONDS
+	active_armor_delta = list(ACID = 18, BIO = 18, FIRE = 6)
+
+/datum/cyberpunk_item_module/chemseal_lining/t2
+	name = "chemseal lining T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/chemseal_lining/t3
+	name = "chemseal lining T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/sensor_bus
+	name = "sensor bus"
+	module_slot = "utility"
+	weight_delta = 0
+	integrity_delta = 5
+	armor_delta = list(ENERGY = 2)
+	active_ability_name = "threat scan"
+	active_ability_description = "The bus predicts incoming angles and tightens defensive timing."
+	active_cooldown = 30 SECONDS
+	active_duration = 8 SECONDS
+	active_armor_delta = list(MELEE = 5, BULLET = 5, LASER = 5, ENERGY = 5, WOUND = 5)
+
+/datum/cyberpunk_item_module/blast_padding
+	name = "blast padding"
+	module_slot = "plate"
+	weight_delta = 1
+	integrity_delta = 18
+	armor_delta = list(BOMB = 16, MELEE = 5, FIRE = 5, WOUND = 4)
+
+/datum/cyberpunk_item_module/blast_padding/t2
+	name = "blast padding T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/blast_padding/t3
+	name = "blast padding T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/trauma_mesh
+	name = "trauma mesh"
+	module_slot = "lining"
+	integrity_delta = 12
+	armor_delta = list(WOUND = 14, MELEE = 5, BULLET = 5)
+
+/datum/cyberpunk_item_module/trauma_mesh/t2
+	name = "trauma mesh T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/trauma_mesh/t3
+	name = "trauma mesh T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/deflection_laminate
+	name = "deflection laminate"
+	module_slot = "plate"
+	weight_delta = 1
+	integrity_delta = 18
+	armor_delta = list(LASER = 10, BULLET = 8, ENERGY = 6)
+
+/datum/cyberpunk_item_module/deflection_laminate/t2
+	name = "deflection laminate T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/deflection_laminate/t3
+	name = "deflection laminate T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/grounding_bus
+	name = "grounding bus"
+	module_slot = "utility"
+	integrity_delta = 6
+	armor_delta = list(ENERGY = 10, LASER = 4)
+	active_ability_name = "grounding pulse"
+	active_ability_description = "The bus shunts hostile charge through a short grounding loop."
+	active_cooldown = 32 SECONDS
+	active_duration = 8 SECONDS
+	active_armor_delta = list(ENERGY = 18, LASER = 8)
+	active_stamina_restore = 6
+
+/datum/cyberpunk_item_module/grounding_bus/t2
+	name = "grounding bus T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/grounding_bus/t3
+	name = "grounding bus T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/medfoam_injector
+	name = "medfoam injector"
+	module_slot = "active"
+	weight_delta = 1
+	integrity_delta = 8
+	armor_delta = list(WOUND = 4, BIO = 4)
+	active_ability_name = "medfoam release"
+	active_ability_description = "The injector floods inner pads with emergency foam."
+	active_cooldown = 60 SECONDS
+	active_duration = 6 SECONDS
+	active_armor_delta = list(WOUND = 10, MELEE = 5, BULLET = 5)
+	active_brute_heal = 6
+	active_burn_heal = 4
+
+/datum/cyberpunk_item_module/medfoam_injector/t2
+	name = "medfoam injector T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/medfoam_injector/t3
+	name = "medfoam injector T3"
+	module_tier = 3
+
+/datum/cyberpunk_item_module/sensor_bus/t2
+	name = "sensor bus T2"
+	module_tier = 2
+
+/datum/cyberpunk_item_module/sensor_bus/t3
+	name = "sensor bus T3"
+	module_tier = 3
 
 /datum/design/cyberpunk_item_module
 	name = "Starlight Item Module"
@@ -1093,6 +1894,808 @@
 	id = "starlight_protective_lining"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_item_module/armor_lining
+
+/datum/design/cyberpunk_item_module/armor_plate/t2
+	name = "Starlight Armor Plate T2"
+	id = "starlight_armor_plate_t2"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/armor_plate/t2
+
+/datum/design/cyberpunk_item_module/armor_plate/t3
+	name = "Starlight Armor Plate T3"
+	id = "starlight_armor_plate_t3"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 6, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/armor_plate/t3
+
+/datum/design/cyberpunk_item_module/armor_lining/t2
+	name = "Starlight Protective Lining T2"
+	id = "starlight_protective_lining_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/armor_lining/t2
+
+/datum/design/cyberpunk_item_module/armor_lining/t3
+	name = "Starlight Protective Lining T3"
+	id = "starlight_protective_lining_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/armor_lining/t3
+
+/datum/design/cyberpunk_item_module/weight_reducer
+	name = "Starlight Lightweight Frame"
+	id = "starlight_lightweight_frame"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/weight_reducer
+
+/datum/design/cyberpunk_item_module/weight_reducer/t2
+	name = "Starlight Lightweight Frame T2"
+	id = "starlight_lightweight_frame_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/weight_reducer/t2
+
+/datum/design/cyberpunk_item_module/weight_reducer/t3
+	name = "Starlight Lightweight Frame T3"
+	id = "starlight_lightweight_frame_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/weight_reducer/t3
+
+/datum/design/cyberpunk_item_module/mobility_servo
+	name = "Starlight Mobility Servo"
+	id = "starlight_mobility_servo"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/mobility_servo
+
+/datum/design/cyberpunk_item_module/mobility_servo/t2
+	name = "Starlight Mobility Servo T2"
+	id = "starlight_mobility_servo_t2"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/mobility_servo/t2
+
+/datum/design/cyberpunk_item_module/mobility_servo/t3
+	name = "Starlight Mobility Servo T3"
+	id = "starlight_mobility_servo_t3"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/mobility_servo/t3
+
+/datum/design/cyberpunk_item_module/reactive_hardener
+	name = "Starlight Reactive Hardener"
+	id = "starlight_reactive_hardener"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/reactive_hardener
+
+/datum/design/cyberpunk_item_module/reactive_hardener/t2
+	name = "Starlight Reactive Hardener T2"
+	id = "starlight_reactive_hardener_t2"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/titanium = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/reactive_hardener/t2
+
+/datum/design/cyberpunk_item_module/reactive_hardener/t3
+	name = "Starlight Reactive Hardener T3"
+	id = "starlight_reactive_hardener_t3"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/reactive_hardener/t3
+
+/datum/design/cyberpunk_item_module/impact_gel
+	name = "Starlight Impact Gel"
+	id = "starlight_impact_gel"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/impact_gel
+
+/datum/design/cyberpunk_item_module/impact_gel/t2
+	name = "Starlight Impact Gel T2"
+	id = "starlight_impact_gel_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/impact_gel/t2
+
+/datum/design/cyberpunk_item_module/impact_gel/t3
+	name = "Starlight Impact Gel T3"
+	id = "starlight_impact_gel_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/impact_gel/t3
+
+/datum/design/cyberpunk_item_module/ballistic_weave
+	name = "Starlight Ballistic Weave"
+	id = "starlight_ballistic_weave"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/ballistic_weave
+
+/datum/design/cyberpunk_item_module/ballistic_weave/t2
+	name = "Starlight Ballistic Weave T2"
+	id = "starlight_ballistic_weave_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/ballistic_weave/t2
+
+/datum/design/cyberpunk_item_module/ballistic_weave/t3
+	name = "Starlight Ballistic Weave T3"
+	id = "starlight_ballistic_weave_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/ballistic_weave/t3
+
+/datum/design/cyberpunk_item_module/ablative_mesh
+	name = "Starlight Ablative Mesh"
+	id = "starlight_ablative_mesh"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/ablative_mesh
+
+/datum/design/cyberpunk_item_module/ablative_mesh/t2
+	name = "Starlight Ablative Mesh T2"
+	id = "starlight_ablative_mesh_t2"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/ablative_mesh/t2
+
+/datum/design/cyberpunk_item_module/ablative_mesh/t3
+	name = "Starlight Ablative Mesh T3"
+	id = "starlight_ablative_mesh_t3"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/ablative_mesh/t3
+
+/datum/design/cyberpunk_item_module/insulation_lining
+	name = "Starlight Insulation Lining"
+	id = "starlight_insulation_lining"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/insulation_lining
+
+/datum/design/cyberpunk_item_module/insulation_lining/t2
+	name = "Starlight Insulation Lining T2"
+	id = "starlight_insulation_lining_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/insulation_lining/t2
+
+/datum/design/cyberpunk_item_module/insulation_lining/t3
+	name = "Starlight Insulation Lining T3"
+	id = "starlight_insulation_lining_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/insulation_lining/t3
+
+/datum/design/cyberpunk_item_module/chemseal_lining
+	name = "Starlight Chemseal Lining"
+	id = "starlight_chemseal_lining"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/chemseal_lining
+
+/datum/design/cyberpunk_item_module/chemseal_lining/t2
+	name = "Starlight Chemseal Lining T2"
+	id = "starlight_chemseal_lining_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/chemseal_lining/t2
+
+/datum/design/cyberpunk_item_module/chemseal_lining/t3
+	name = "Starlight Chemseal Lining T3"
+	id = "starlight_chemseal_lining_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/chemseal_lining/t3
+
+/datum/design/cyberpunk_item_module/sensor_bus
+	name = "Starlight Sensor Bus"
+	id = "starlight_sensor_bus"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/sensor_bus
+
+/datum/design/cyberpunk_item_module/sensor_bus/t2
+	name = "Starlight Sensor Bus T2"
+	id = "starlight_sensor_bus_t2"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/cyberpunk_item_module/sensor_bus/t2
+
+/datum/design/cyberpunk_item_module/sensor_bus/t3
+	name = "Starlight Sensor Bus T3"
+	id = "starlight_sensor_bus_t3"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/sensor_bus/t3
+
+/datum/design/cyberpunk_item_module/blast_padding
+	name = "Starlight Blast Padding"
+	id = "starlight_blast_padding"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/blast_padding
+
+/datum/design/cyberpunk_item_module/blast_padding/t2
+	name = "Starlight Blast Padding T2"
+	id = "starlight_blast_padding_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/blast_padding/t2
+
+/datum/design/cyberpunk_item_module/blast_padding/t3
+	name = "Starlight Blast Padding T3"
+	id = "starlight_blast_padding_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/blast_padding/t3
+
+/datum/design/cyberpunk_item_module/trauma_mesh
+	name = "Starlight Trauma Mesh"
+	id = "starlight_trauma_mesh"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/trauma_mesh
+
+/datum/design/cyberpunk_item_module/trauma_mesh/t2
+	name = "Starlight Trauma Mesh T2"
+	id = "starlight_trauma_mesh_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/trauma_mesh/t2
+
+/datum/design/cyberpunk_item_module/trauma_mesh/t3
+	name = "Starlight Trauma Mesh T3"
+	id = "starlight_trauma_mesh_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/trauma_mesh/t3
+
+/datum/design/cyberpunk_item_module/deflection_laminate
+	name = "Starlight Deflection Laminate"
+	id = "starlight_deflection_laminate"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/deflection_laminate
+
+/datum/design/cyberpunk_item_module/deflection_laminate/t2
+	name = "Starlight Deflection Laminate T2"
+	id = "starlight_deflection_laminate_t2"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/deflection_laminate/t2
+
+/datum/design/cyberpunk_item_module/deflection_laminate/t3
+	name = "Starlight Deflection Laminate T3"
+	id = "starlight_deflection_laminate_t3"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/deflection_laminate/t3
+
+/datum/design/cyberpunk_item_module/grounding_bus
+	name = "Starlight Grounding Bus"
+	id = "starlight_grounding_bus"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/grounding_bus
+
+/datum/design/cyberpunk_item_module/grounding_bus/t2
+	name = "Starlight Grounding Bus T2"
+	id = "starlight_grounding_bus_t2"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/grounding_bus/t2
+
+/datum/design/cyberpunk_item_module/grounding_bus/t3
+	name = "Starlight Grounding Bus T3"
+	id = "starlight_grounding_bus_t3"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/grounding_bus/t3
+
+/datum/design/cyberpunk_item_module/medfoam_injector
+	name = "Starlight Medfoam Injector"
+	id = "starlight_medfoam_injector"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/medfoam_injector
+
+/datum/design/cyberpunk_item_module/medfoam_injector/t2
+	name = "Starlight Medfoam Injector T2"
+	id = "starlight_medfoam_injector_t2"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/medfoam_injector/t2
+
+/datum/design/cyberpunk_item_module/medfoam_injector/t3
+	name = "Starlight Medfoam Injector T3"
+	id = "starlight_medfoam_injector_t3"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_item_module/medfoam_injector/t3
+
+/datum/design/cyberpunk_modular_equipment
+	name = "Cyberpunk Modular Equipment"
+	desc = "A modular equipment shell. The fabricator asks for a material before printing; protection is rebuilt from form, material, manufacturer and installed module tiers."
+	id = "cyberpunk_modular_equipment"
+	build_type = PROTOLATHE | AUTOLATHE | AWAY_LATHE
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk
+	category = list(RND_CATEGORY_EQUIPMENT + RND_SUBCATEGORY_EQUIPMENT_SECURITY)
+//CYBERPUNK BUILD - rebuild and delete before release
+	departmental_flags = DEPARTMENT_BITFLAG_SECURITY | DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE
+
+/datum/design/cyberpunk_modular_equipment/vest
+	name = "Modular Vest Shell"
+	id = "cyberpunk_vest_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/helmet
+	name = "Modular Helmet Shell"
+	id = "cyberpunk_helmet_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/bracers
+	name = "Modular Bracers Shell"
+	id = "cyberpunk_bracers_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/boots
+	name = "Modular Boots Shell"
+	id = "cyberpunk_boots_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/suit
+	name = "Modular Armor Suit Shell"
+	id = "cyberpunk_suit_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 6, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/gloves
+	name = "Modular Gloves Shell"
+	id = "cyberpunk_gloves_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/mask
+	name = "Modular Mask Shell"
+	id = "cyberpunk_mask_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk
+	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/visor
+	name = "Modular Visor Shell"
+	id = "cyberpunk_visor_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/glasses/cyberpunk
+	cyberpunk_material_options = list("fabric", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/collar
+	name = "Modular Collar Shell"
+	id = "cyberpunk_collar_shell"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk
+	cyberpunk_material_options = list("fabric", "ceramic", "plasteel", "composite")
+
+/datum/design/cyberpunk_modular_equipment/vest_fabric
+	name = "Modular Vest - Ballistic Fabric"
+	id = "cyberpunk_vest_fabric"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/vest_wood
+	name = "Modular Vest - Laminated Wood"
+	id = "cyberpunk_vest_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 5, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/vest_ceramic
+	name = "Modular Vest - Ceramic"
+	id = "cyberpunk_vest_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/vest_plasteel
+	name = "Modular Vest - Plasteel"
+	id = "cyberpunk_vest_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/vest_composite
+	name = "Modular Vest - Smart Composite"
+	id = "cyberpunk_vest_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/helmet_fabric
+	name = "Modular Helmet - Ballistic Fabric"
+	id = "cyberpunk_helmet_fabric"
+	build_path = /obj/item/clothing/head/helmet/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/helmet_wood
+	name = "Modular Helmet - Laminated Wood"
+	id = "cyberpunk_helmet_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/helmet_ceramic
+	name = "Modular Helmet - Ceramic"
+	id = "cyberpunk_helmet_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/helmet_plasteel
+	name = "Modular Helmet - Plasteel"
+	id = "cyberpunk_helmet_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/helmet_composite
+	name = "Modular Helmet - Smart Composite"
+	id = "cyberpunk_helmet_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/bracers_fabric
+	name = "Modular Bracers - Ballistic Fabric"
+	id = "cyberpunk_bracers_fabric"
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/bracers_wood
+	name = "Modular Bracers - Laminated Wood"
+	id = "cyberpunk_bracers_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/bracers_ceramic
+	name = "Modular Bracers - Ceramic"
+	id = "cyberpunk_bracers_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/bracers_plasteel
+	name = "Modular Bracers - Plasteel"
+	id = "cyberpunk_bracers_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/bracers_composite
+	name = "Modular Bracers - Smart Composite"
+	id = "cyberpunk_bracers_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/boots_fabric
+	name = "Modular Boots - Ballistic Fabric"
+	id = "cyberpunk_boots_fabric"
+	build_path = /obj/item/clothing/shoes/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/boots_wood
+	name = "Modular Boots - Laminated Wood"
+	id = "cyberpunk_boots_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/boots_ceramic
+	name = "Modular Boots - Ceramic"
+	id = "cyberpunk_boots_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/boots_plasteel
+	name = "Modular Boots - Plasteel"
+	id = "cyberpunk_boots_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/boots_composite
+	name = "Modular Boots - Smart Composite"
+	id = "cyberpunk_boots_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/suit_fabric
+	name = "Modular Armor Suit - Ballistic Fabric"
+	id = "cyberpunk_suit_fabric"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 6, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/suit_wood
+	name = "Modular Armor Suit - Laminated Wood"
+	id = "cyberpunk_suit_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 8, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/suit_ceramic
+	name = "Modular Armor Suit - Ceramic"
+	id = "cyberpunk_suit_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 7, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/suit_plasteel
+	name = "Modular Armor Suit - Plasteel"
+	id = "cyberpunk_suit_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/suit_composite
+	name = "Modular Armor Suit - Smart Composite"
+	id = "cyberpunk_suit_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/gloves_fabric
+	name = "Modular Gloves - Ballistic Fabric"
+	id = "cyberpunk_gloves_fabric"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/gloves_wood
+	name = "Modular Gloves - Laminated Wood"
+	id = "cyberpunk_gloves_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/gloves_ceramic
+	name = "Modular Gloves - Ceramic"
+	id = "cyberpunk_gloves_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/gloves_plasteel
+	name = "Modular Gloves - Plasteel"
+	id = "cyberpunk_gloves_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/gloves_composite
+	name = "Modular Gloves - Smart Composite"
+	id = "cyberpunk_gloves_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/mask_fabric
+	name = "Modular Mask - Ballistic Fabric"
+	id = "cyberpunk_mask_fabric"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/mask_wood
+	name = "Modular Mask - Laminated Wood"
+	id = "cyberpunk_mask_wood"
+	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk/wood
+
+/datum/design/cyberpunk_modular_equipment/mask_ceramic
+	name = "Modular Mask - Ceramic"
+	id = "cyberpunk_mask_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/mask_plasteel
+	name = "Modular Mask - Plasteel"
+	id = "cyberpunk_mask_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/mask_composite
+	name = "Modular Mask - Smart Composite"
+	id = "cyberpunk_mask_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/visor_fabric
+	name = "Modular Visor - Ballistic Fabric"
+	id = "cyberpunk_visor_fabric"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/glasses/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/visor_ceramic
+	name = "Modular Visor - Ceramic"
+	id = "cyberpunk_visor_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/glasses/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/visor_plasteel
+	name = "Modular Visor - Plasteel"
+	id = "cyberpunk_visor_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/glasses/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/visor_composite
+	name = "Modular Visor - Smart Composite"
+	id = "cyberpunk_visor_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/glasses/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/collar_fabric
+	name = "Modular Collar - Ballistic Fabric"
+	id = "cyberpunk_collar_fabric"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk
+
+/datum/design/cyberpunk_modular_equipment/collar_ceramic
+	name = "Modular Collar - Ceramic"
+	id = "cyberpunk_collar_ceramic"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk/ceramic
+
+/datum/design/cyberpunk_modular_equipment/collar_plasteel
+	name = "Modular Collar - Plasteel"
+	id = "cyberpunk_collar_plasteel"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk/plasteel
+
+/datum/design/cyberpunk_modular_equipment/collar_composite
+	name = "Modular Collar - Smart Composite"
+	id = "cyberpunk_collar_composite"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk/composite
+
+/datum/design/cyberpunk_modular_equipment/preset_benn_light_vest
+	name = "Preset - Benn Stealth Vest"
+	id = "cyberpunk_preset_benn_light_vest"
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/benn_light
+
+/datum/design/cyberpunk_modular_equipment/preset_ryaznov_assault_vest
+	name = "Preset - Ryaznov Assault Vest"
+	id = "cyberpunk_preset_ryaznov_assault_vest"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/ryaznov_heavy
+
+/datum/design/cyberpunk_modular_equipment/preset_starlight_skirmisher_vest
+	name = "Preset - Starlight Skirmisher Vest"
+	id = "cyberpunk_preset_starlight_skirmisher_vest"
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/starlight_skirmisher
+
+/datum/design/cyberpunk_modular_equipment/preset_ryaznov_bulwark
+	name = "Preset - Ryaznov Bulwark Suit"
+	id = "cyberpunk_preset_ryaznov_bulwark"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 10, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/ryaznov_bulwark
+
+/datum/design/cyberpunk_modular_equipment/preset_benn_mirage
+	name = "Preset - Benn Mirage Suit"
+	id = "cyberpunk_preset_benn_mirage"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/benn_mirage
+
+/datum/design/cyberpunk_modular_equipment/preset_starlight_response
+	name = "Preset - Starlight Response Suit"
+	id = "cyberpunk_preset_starlight_response"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/starlight_response
+
+/datum/design/cyberpunk_modular_equipment/preset_benn_optic
+	name = "Preset - Benn Optic Visor"
+	id = "cyberpunk_preset_benn_optic"
+	build_path = /obj/item/clothing/glasses/cyberpunk/benn_optic
+
+/datum/design/cyberpunk_modular_equipment/preset_starlight_filter_mask
+	name = "Preset - Starlight Filter Mask"
+	id = "cyberpunk_preset_starlight_filter_mask"
+	build_path = /obj/item/clothing/mask/cyberpunk/starlight_filter
+
+/datum/design/cyberpunk_modular_equipment/preset_ryaznov_guard_collar
+	name = "Preset - Ryaznov Guard Collar"
+	id = "cyberpunk_preset_ryaznov_guard_collar"
+	build_path = /obj/item/clothing/neck/cyberpunk/ryaznov_guard
+
+/datum/design/cyberpunk_modular_equipment/preset_benn_grip_gloves
+	name = "Preset - Benn Grip Gloves"
+	id = "cyberpunk_preset_benn_grip_gloves"
+	build_path = /obj/item/clothing/gloves/cyberpunk/benn_grip
+
+/datum/design/cyberpunk_modular_equipment/preset_ryaznov_knuckle_gloves
+	name = "Preset - Ryaznov Knuckle Gloves"
+	id = "cyberpunk_preset_ryaznov_knuckle_gloves"
+	build_path = /obj/item/clothing/gloves/cyberpunk/ryaznov_knuckle
+
+/datum/design/cyberpunk_modular_equipment/preset_street_guard_vest
+	name = "Preset - Street Guard Vest"
+	id = "cyberpunk_preset_street_guard_vest"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 5, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/street_guard
+
+/datum/design/cyberpunk_modular_equipment/preset_runner_vest
+	name = "Preset - Runner Vest"
+	id = "cyberpunk_preset_runner_vest"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 6, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/runner
+
+/datum/design/cyberpunk_modular_equipment/preset_blast_vest
+	name = "Preset - Blast Vest"
+	id = "cyberpunk_preset_blast_vest"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/blast
+
+/datum/design/cyberpunk_modular_equipment/preset_anti_energy_vest
+	name = "Preset - Anti-Energy Vest"
+	id = "cyberpunk_preset_anti_energy_vest"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/vest/cyberpunk/anti_energy
+
+/datum/design/cyberpunk_modular_equipment/preset_breacher_suit
+	name = "Preset - Breacher Suit"
+	id = "cyberpunk_preset_breacher_suit"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 11, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 4, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/breacher
+
+/datum/design/cyberpunk_modular_equipment/preset_firebreak_suit
+	name = "Preset - Firebreak Suit"
+	id = "cyberpunk_preset_firebreak_suit"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 5, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/firebreak
+
+/datum/design/cyberpunk_modular_equipment/preset_patrol_suit
+	name = "Preset - Patrol Suit"
+	id = "cyberpunk_preset_patrol_suit"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 8, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3)
+	build_path = /obj/item/clothing/suit/armor/cyberpunk/patrol
+
+/datum/design/cyberpunk_modular_equipment/preset_patrol_helmet
+	name = "Preset - Patrol Helmet"
+	id = "cyberpunk_preset_patrol_helmet"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/patrol
+
+/datum/design/cyberpunk_modular_equipment/preset_breacher_helmet
+	name = "Preset - Breacher Helmet"
+	id = "cyberpunk_preset_breacher_helmet"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/breacher
+
+/datum/design/cyberpunk_modular_equipment/preset_anti_energy_helmet
+	name = "Preset - Anti-Energy Helmet"
+	id = "cyberpunk_preset_anti_energy_helmet"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/head/helmet/cyberpunk/anti_energy
+
+/datum/design/cyberpunk_modular_equipment/preset_runner_boots
+	name = "Preset - Runner Boots"
+	id = "cyberpunk_preset_runner_boots"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/runner
+
+/datum/design/cyberpunk_modular_equipment/preset_patrol_boots
+	name = "Preset - Patrol Boots"
+	id = "cyberpunk_preset_patrol_boots"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/patrol
+
+/datum/design/cyberpunk_modular_equipment/preset_sealed_boots
+	name = "Preset - Sealed Boots"
+	id = "cyberpunk_preset_sealed_boots"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/shoes/cyberpunk/sealed
+
+/datum/design/cyberpunk_modular_equipment/preset_tech_gloves
+	name = "Preset - Tech Gloves"
+	id = "cyberpunk_preset_tech_gloves"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk/tech
+
+/datum/design/cyberpunk_modular_equipment/preset_patrol_gloves
+	name = "Preset - Patrol Gloves"
+	id = "cyberpunk_preset_patrol_gloves"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/cyberpunk/patrol
+
+/datum/design/cyberpunk_modular_equipment/preset_guard_bracers
+	name = "Preset - Guard Bracers"
+	id = "cyberpunk_preset_guard_bracers"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/guard
+
+/datum/design/cyberpunk_modular_equipment/preset_bulwark_bracers
+	name = "Preset - Bulwark Bracers"
+	id = "cyberpunk_preset_bulwark_bracers"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/bulwark
+
+/datum/design/cyberpunk_modular_equipment/preset_sealed_mask
+	name = "Preset - Sealed Mask"
+	id = "cyberpunk_preset_sealed_mask"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/mask/cyberpunk/sealed
+
+/datum/design/cyberpunk_modular_equipment/preset_street_mask
+	name = "Preset - Street Mask"
+	id = "cyberpunk_preset_street_mask"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
+	build_path = /obj/item/clothing/mask/cyberpunk/street
+
+/datum/design/cyberpunk_modular_equipment/preset_threat_visor
+	name = "Preset - Threat-Scan Visor"
+	id = "cyberpunk_preset_threat_visor"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/glasses/cyberpunk/threat
+
+/datum/design/cyberpunk_modular_equipment/preset_industrial_visor
+	name = "Preset - Industrial Visor"
+	id = "cyberpunk_preset_industrial_visor"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 4, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/glasses/cyberpunk/industrial
+
+/datum/design/cyberpunk_modular_equipment/preset_sealed_collar
+	name = "Preset - Sealed Collar"
+	id = "cyberpunk_preset_sealed_collar"
+	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk/sealed
+
+/datum/design/cyberpunk_modular_equipment/preset_patrol_collar
+	name = "Preset - Patrol Collar"
+	id = "cyberpunk_preset_patrol_collar"
+	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/clothing/neck/cyberpunk/patrol
 
 /obj/item/proc/research_scan(mob/user)
 	/// Research prospects, including boostable nodes and point values. Deliver to a console to know whether the boosts have already been used.

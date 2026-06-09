@@ -32,6 +32,59 @@
 			actions_types = list()
 // BANDASTATION ADDITION END - Surgery mask fix
 
+/obj/item/clothing/mask/cyberpunk
+	name = "modular mask"
+	desc = "A Cyberpunk modular mask shell for light facial protection and utility modules."
+	icon_state = "gas_mask"
+	cyberpunk_equipment_form = "mask"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 80
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	armor_type = /datum/armor/none
+	max_integrity = 90
+
+/obj/item/clothing/mask/cyberpunk/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("mask", cyberpunk_equipment_material, list("lining" = 1, "utility" = 1, "active" = 1))
+
+/obj/item/clothing/mask/cyberpunk/wood
+	name = "laminated wood modular mask"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/mask/cyberpunk/ceramic
+	name = "ceramic modular mask"
+	cyberpunk_equipment_material = "ceramic"
+
+/obj/item/clothing/mask/cyberpunk/plasteel
+	name = "plasteel modular mask"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/mask/cyberpunk/composite
+	name = "smart composite modular mask"
+	cyberpunk_equipment_material = "composite"
+
+/obj/item/clothing/mask/cyberpunk/starlight_filter
+	name = "Starlight modular filter mask"
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/chemseal_lining, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/mask/cyberpunk/sealed
+	name = "sealed modular mask"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/chemseal_lining/t2, /datum/cyberpunk_item_module/insulation_lining, /datum/cyberpunk_item_module/medfoam_injector)
+
+/obj/item/clothing/mask/cyberpunk/street
+	name = "street modular mask"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_rarity = "common"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/sensor_bus)
+
 /obj/item/clothing/mask/attack_self(mob/user)
 	if((clothing_flags & VOICEBOX_TOGGLABLE))
 		clothing_flags ^= (VOICEBOX_DISABLED)
