@@ -1235,6 +1235,12 @@
 	adjusted_duration -= get_character_skill_level(SKILL_ACROBATICS) * (0.15 SECONDS)
 	return max((0.2 SECONDS), adjusted_duration)
 
+/mob/living/proc/get_cyberpunk_acrobatics_get_up_duration(base_duration = 1 SECONDS)
+	var/perk_reduction = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 2)
+	if(perk_reduction <= 0)
+		return base_duration
+	return max((0.2 SECONDS), base_duration * max(0.1, 1 - perk_reduction * 0.01))
+
 /mob/living/proc/apply_cyberpunk_acrobatics_speed_bonus()
 	var/duration = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 4, "value_1")
 	if(duration <= 0)
