@@ -219,7 +219,7 @@
 		to_chat(src, span_notice("- [key_datum.name] / [key_datum.owner]: [key_datum.code]"))
 
 /mob/living/verb/write_cyberpunk_crypto_key_to_held_item()
-	set name = "Р—Р°РїРёСЃР°С‚СЊ РєСЂРёРїС‚РѕРєР»СЋС‡ РЅР° РїСЂРµРґРјРµС‚"
+	set name = "Р В РІР‚вЂќР В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂќР РЋР вЂљР В РЎвЂР В РЎвЂ”Р РЋРІР‚С™Р В РЎвЂўР В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋ Р В Р вЂ¦Р В Р’В° Р В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В РЎВР В Р’ВµР РЋРІР‚С™"
 	set category = "IC"
 
 	var/obj/item/held_item = get_active_held_item()
@@ -571,497 +571,13 @@
 //CYBERPUNK BUILD - rebuild and delete before release
 
 //CYBERPUNK BUILD - rebuild and delete before release
-/datum/cyberpunk_machine_module
-	var/name = "generic machinery module"
-	var/id = "generic"
-	var/description = "A generic machinery module."
-	var/manufacturer = "Р СЏР·РЅРѕРІ"
-	var/corp_manufacturer = "Р СЏР·РЅРѕРІ"
-	var/obj/item/module_item_type = /obj/item/cyberpunk_machine_module
-	var/power_usage_multiplier = 1
-	var/wear_multiplier = 1
-	var/tool_time_multiplier = 1
-	var/repair_multiplier = 1
-	var/salvage_multiplier = 1
-	var/integrity_bonus = 0
-	var/chem_speed_multiplier = 1
-	var/chem_cost_multiplier = 1
-	var/vending_stock_multiplier = 1
-	var/apc_efficiency_multiplier = 1
-	var/production_time_multiplier = 1
-	var/production_material_multiplier = 1
-	var/failure_shock_multiplier = 1
 
-/datum/cyberpunk_machine_module/proc/can_install(obj/machinery/machine, mob/living/user)
-	return TRUE
+// CYBERPUNK MACHINERY MODULARITY moved to code/modules/cyberpunk/modularity/machinery/modules.dm.
 
-/datum/cyberpunk_machine_module/proc/on_install(obj/machinery/machine, mob/living/user)
-	if(integrity_bonus > 0 && machine.uses_integrity)
-		machine.max_integrity += integrity_bonus
-		machine.update_integrity(min(machine.max_integrity, machine.get_integrity() + integrity_bonus))
-	machine.RefreshParts()
-	return
 
-/datum/cyberpunk_machine_module/proc/on_remove(obj/machinery/machine, mob/living/user)
-	if(integrity_bonus > 0 && machine.uses_integrity)
-		machine.max_integrity = max(1, machine.max_integrity - integrity_bonus)
-		machine.update_integrity(min(machine.get_integrity(), machine.max_integrity))
-	machine.RefreshParts()
-	return
 
-/datum/cyberpunk_machine_module/proc/get_diagnostic_line(obj/machinery/machine)
-	return "[name] ([manufacturer]): [description]"
+// CYBERPUNK MACHINERY MODULE DESIGNS moved to code/modules/cyberpunk/modularity/machinery/designs.dm.
 
-/datum/cyberpunk_machine_module/power_governor
-	name = "reserve power governor"
-	id = "power_governor"
-	description = "Lowers passive and active machine power draw."
-	module_item_type = /obj/item/cyberpunk_machine_module/power_governor
-	power_usage_multiplier = 0.8
-
-/datum/cyberpunk_machine_module/wear_buffer
-	name = "wear buffer"
-	id = "wear_buffer"
-	description = "Reduces component wear from machine use."
-	module_item_type = /obj/item/cyberpunk_machine_module/wear_buffer
-	wear_multiplier = 0.75
-
-/datum/cyberpunk_machine_module/reinforced_frame
-	name = "reinforced machine frame"
-	id = "reinforced_frame"
-	description = "Adds structural integrity to the machine housing."
-	module_item_type = /obj/item/cyberpunk_machine_module/reinforced_frame
-	integrity_bonus = 25
-
-/datum/cyberpunk_machine_module/service_bus
-	name = "service bus"
-	id = "service_bus"
-	description = "Improves maintenance and repair efficiency."
-	module_item_type = /obj/item/cyberpunk_machine_module/service_bus
-	tool_time_multiplier = 0.9
-	repair_multiplier = 1.25
-
-/datum/cyberpunk_machine_module/salvage_router
-	name = "salvage routing matrix"
-	id = "salvage_router"
-	description = "Improves recoverable component stack drops during clean deconstruction."
-	module_item_type = /obj/item/cyberpunk_machine_module/salvage_router
-	salvage_multiplier = 1.25
-
-/datum/cyberpunk_machine_module/chem_reaction_accelerator
-	name = "chem reaction accelerator"
-	id = "chem_reaction_accelerator"
-	description = "A general chemistry module that slightly improves reaction and handling speed."
-	module_item_type = /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
-	tool_time_multiplier = 0.85
-	chem_speed_multiplier = 0.85
-
-/datum/cyberpunk_machine_module/chem_yield_regulator
-	name = "chem yield regulator"
-	id = "chem_yield_regulator"
-	description = "A general chemistry module that trims reagent and energy waste."
-	module_item_type = /obj/item/cyberpunk_machine_module/chem_yield_regulator
-	power_usage_multiplier = 0.9
-	wear_multiplier = 0.9
-	chem_cost_multiplier = 0.9
-
-/datum/cyberpunk_machine_module/corporate_vending_bus
-	name = "corporate vending bus"
-	id = "corporate_vending_bus"
-	description = "A vending module for corporate stock routing and slightly cleaner service cycles."
-	module_item_type = /obj/item/cyberpunk_machine_module/corporate_vending_bus
-	power_usage_multiplier = 0.95
-	wear_multiplier = 0.9
-	vending_stock_multiplier = 1.1
-
-/datum/cyberpunk_machine_module/apc_efficiency_core
-	name = "APC efficiency core"
-	id = "apc_efficiency_core"
-	description = "An APC-focused module that reduces local control losses and passive draw."
-	module_item_type = /obj/item/cyberpunk_machine_module/apc_efficiency_core
-	power_usage_multiplier = 0.75
-	wear_multiplier = 0.9
-	apc_efficiency_multiplier = 0.85
-
-/datum/cyberpunk_machine_module/emergency_battery
-	name = "emergency buffer battery"
-	id = "emergency_battery"
-	description = "Stabilizes power draw and lets the machine tolerate short local power dips."
-	module_item_type = /obj/item/cyberpunk_machine_module/emergency_battery
-	power_usage_multiplier = 0.88
-	wear_multiplier = 0.95
-	failure_shock_multiplier = 0.85
-
-/datum/cyberpunk_machine_module/arc_suppressor
-	name = "arc suppressor"
-	id = "arc_suppressor"
-	description = "Reduces dangerous electrical shorts when worn machinery starts failing."
-	module_item_type = /obj/item/cyberpunk_machine_module/arc_suppressor
-	power_usage_multiplier = 0.95
-	failure_shock_multiplier = 0.45
-
-/datum/cyberpunk_machine_module/production_overclocker
-	name = "production overclocker"
-	id = "production_overclocker"
-	description = "Speeds fabricators at the cost of higher power draw and component wear."
-	module_item_type = /obj/item/cyberpunk_machine_module/production_overclocker
-	power_usage_multiplier = 1.12
-	wear_multiplier = 1.15
-	production_time_multiplier = 0.82
-
-/datum/cyberpunk_machine_module/material_optimizer
-	name = "material optimizer"
-	id = "material_optimizer"
-	description = "Reduces fabricator material waste with slower machine staging."
-	module_item_type = /obj/item/cyberpunk_machine_module/material_optimizer
-	power_usage_multiplier = 0.95
-	wear_multiplier = 0.95
-	production_time_multiplier = 1.08
-	production_material_multiplier = 0.88
-
-/datum/cyberpunk_machine_module/vendor_stock_router
-	name = "vendor stock router"
-	id = "vendor_stock_router"
-	description = "Improves vending restock routing and service throughput."
-	module_item_type = /obj/item/cyberpunk_machine_module/vendor_stock_router
-	power_usage_multiplier = 0.95
-	wear_multiplier = 0.9
-	tool_time_multiplier = 0.9
-	vending_stock_multiplier = 1.25
-
-/datum/cyberpunk_machine_module/vendor_security_cage
-	name = "vendor security cage"
-	id = "vendor_security_cage"
-	description = "Reinforces vending internals against tilts, shocks and rough servicing."
-	module_item_type = /obj/item/cyberpunk_machine_module/vendor_security_cage
-	wear_multiplier = 0.85
-	integrity_bonus = 35
-	failure_shock_multiplier = 0.75
-
-/datum/cyberpunk_machine_module/medical_sterile_bus
-	name = "medical sterile bus"
-	id = "medical_sterile_bus"
-	description = "Improves medical machine servicing, repair response and safe power flow."
-	module_item_type = /obj/item/cyberpunk_machine_module/medical_sterile_bus
-	power_usage_multiplier = 0.92
-	wear_multiplier = 0.88
-	tool_time_multiplier = 0.88
-	repair_multiplier = 1.15
-	failure_shock_multiplier = 0.8
-
-/datum/cyberpunk_machine_module/security_response_core
-	name = "security response core"
-	id = "security_response_core"
-	description = "Reinforces camera, turret and alarm equipment for longer operation under stress."
-	module_item_type = /obj/item/cyberpunk_machine_module/security_response_core
-	power_usage_multiplier = 0.95
-	wear_multiplier = 0.82
-	integrity_bonus = 20
-
-/datum/cyberpunk_machine_module/network_filter
-	name = "network filter"
-	id = "network_filter"
-	description = "Reduces wear and power instability in computers, servers and telecom equipment."
-	module_item_type = /obj/item/cyberpunk_machine_module/network_filter
-	power_usage_multiplier = 0.86
-	wear_multiplier = 0.88
-	tool_time_multiplier = 0.92
-
-/datum/cyberpunk_machine_module/chem_reaction_accelerator/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
-
-/datum/cyberpunk_machine_module/chem_yield_regulator/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
-
-/datum/cyberpunk_machine_module/corporate_vending_bus/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/vending)
-
-/datum/cyberpunk_machine_module/apc_efficiency_core/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/power/apc)
-
-/datum/cyberpunk_machine_module/production_overclocker/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/rnd/production) || istype(machine, /obj/machinery/autolathe) || istype(machine, /obj/machinery/mecha_part_fabricator) || istype(machine, /obj/machinery/component_printer)
-
-/datum/cyberpunk_machine_module/material_optimizer/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/rnd/production) || istype(machine, /obj/machinery/autolathe) || istype(machine, /obj/machinery/mecha_part_fabricator) || istype(machine, /obj/machinery/component_printer)
-
-/datum/cyberpunk_machine_module/vendor_stock_router/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/vending) || istype(machine, /obj/machinery/smartfridge)
-
-/datum/cyberpunk_machine_module/vendor_security_cage/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/vending)
-
-/datum/cyberpunk_machine_module/medical_sterile_bus/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/sleeper) || istype(machine, /obj/machinery/cryo_cell) || istype(machine, /obj/machinery/stasis) || istype(machine, /obj/machinery/dna_scannernew) || istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
-
-/datum/cyberpunk_machine_module/security_response_core/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/camera) || istype(machine, /obj/machinery/porta_turret) || istype(machine, /obj/machinery/deployable_turret) || istype(machine, /obj/machinery/flasher) || istype(machine, /obj/machinery/firealarm) || istype(machine, /obj/machinery/turretid)
-
-/datum/cyberpunk_machine_module/network_filter/can_install(obj/machinery/machine, mob/living/user)
-	return istype(machine, /obj/machinery/computer) || istype(machine, /obj/machinery/modular_computer) || istype(machine, /obj/machinery/telecomms) || istype(machine, /obj/machinery/ntnet_relay) || istype(machine, /obj/machinery/quantum_server)
-
-/proc/cyberpunk_machine_module_catalog()
-	return list(
-		/datum/cyberpunk_machine_module/power_governor,
-		/datum/cyberpunk_machine_module/wear_buffer,
-		/datum/cyberpunk_machine_module/reinforced_frame,
-		/datum/cyberpunk_machine_module/service_bus,
-		/datum/cyberpunk_machine_module/salvage_router,
-		/datum/cyberpunk_machine_module/emergency_battery,
-		/datum/cyberpunk_machine_module/arc_suppressor,
-		/datum/cyberpunk_machine_module/production_overclocker,
-		/datum/cyberpunk_machine_module/material_optimizer,
-		/datum/cyberpunk_machine_module/chem_reaction_accelerator,
-		/datum/cyberpunk_machine_module/chem_yield_regulator,
-		/datum/cyberpunk_machine_module/corporate_vending_bus,
-		/datum/cyberpunk_machine_module/vendor_stock_router,
-		/datum/cyberpunk_machine_module/vendor_security_cage,
-		/datum/cyberpunk_machine_module/apc_efficiency_core,
-		/datum/cyberpunk_machine_module/medical_sterile_bus,
-		/datum/cyberpunk_machine_module/security_response_core,
-		/datum/cyberpunk_machine_module/network_filter,
-	)
-
-/obj/item/cyberpunk_machine_module
-	name = "machine module"
-	desc = "A Р СЏР·РЅРѕРІ-produced Cyberpunk 13 machinery module shell."
-	icon = 'icons/obj/devices/circuitry_n_data.dmi'
-	icon_state = "integrated_circuit"
-	w_class = WEIGHT_CLASS_SMALL
-	var/manufacturer = "Р СЏР·РЅРѕРІ"
-	var/corp_manufacturer = "Р СЏР·РЅРѕРІ"
-	var/module_datum_type = /datum/cyberpunk_machine_module
-
-/obj/item/cyberpunk_machine_module/proc/create_module_datum()
-	return new module_datum_type
-
-/obj/item/cyberpunk_machine_module/examine(mob/user)
-	. = ..()
-	. += span_notice("Manufacturer: [manufacturer].")
-
-/obj/item/cyberpunk_machine_module/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
-	var/obj/machinery/machine = interacting_with
-	if(!istype(machine))
-		return NONE
-	if(!machine.panel_open)
-		to_chat(user, span_warning("Open the maintenance panel before installing a machine module."))
-		return ITEM_INTERACT_BLOCKING
-	var/datum/cyberpunk_machine_module/module = create_module_datum()
-	if(machine.install_cyberpunk_module(module, user, TRUE))
-		to_chat(user, span_notice("You install [module.name] into [machine]."))
-		qdel(src)
-		return ITEM_INTERACT_SUCCESS
-	qdel(module)
-	to_chat(user, span_warning("This machine cannot accept that module."))
-	return ITEM_INTERACT_BLOCKING
-
-/obj/item/cyberpunk_machine_module/power_governor
-	name = "reserve power governor"
-	icon_state = "circuit_board"
-	module_datum_type = /datum/cyberpunk_machine_module/power_governor
-
-/obj/item/cyberpunk_machine_module/wear_buffer
-	name = "wear buffer"
-	icon_state = "integrated_circuit"
-	module_datum_type = /datum/cyberpunk_machine_module/wear_buffer
-
-/obj/item/cyberpunk_machine_module/reinforced_frame
-	name = "reinforced machine frame"
-	icon_state = "cell_con"
-	module_datum_type = /datum/cyberpunk_machine_module/reinforced_frame
-
-/obj/item/cyberpunk_machine_module/service_bus
-	name = "service bus"
-	icon_state = "component"
-	module_datum_type = /datum/cyberpunk_machine_module/service_bus
-
-/obj/item/cyberpunk_machine_module/salvage_router
-	name = "salvage routing matrix"
-	icon_state = "harddisk"
-	module_datum_type = /datum/cyberpunk_machine_module/salvage_router
-
-/obj/item/cyberpunk_machine_module/chem_reaction_accelerator
-	name = "chem reaction accelerator"
-	icon_state = "component"
-	module_datum_type = /datum/cyberpunk_machine_module/chem_reaction_accelerator
-
-/obj/item/cyberpunk_machine_module/chem_yield_regulator
-	name = "chem yield regulator"
-	icon_state = "integrated_circuit"
-	module_datum_type = /datum/cyberpunk_machine_module/chem_yield_regulator
-
-/obj/item/cyberpunk_machine_module/corporate_vending_bus
-	name = "corporate vending bus"
-	icon_state = "harddisk"
-	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus
-
-/obj/item/cyberpunk_machine_module/apc_efficiency_core
-	name = "APC efficiency core"
-	icon_state = "circuit_board"
-	module_datum_type = /datum/cyberpunk_machine_module/apc_efficiency_core
-
-/obj/item/cyberpunk_machine_module/emergency_battery
-	name = "emergency buffer battery"
-	icon_state = "cell_con"
-	module_datum_type = /datum/cyberpunk_machine_module/emergency_battery
-
-/obj/item/cyberpunk_machine_module/arc_suppressor
-	name = "arc suppressor"
-	icon_state = "circuit_board"
-	module_datum_type = /datum/cyberpunk_machine_module/arc_suppressor
-
-/obj/item/cyberpunk_machine_module/production_overclocker
-	name = "production overclocker"
-	icon_state = "component"
-	module_datum_type = /datum/cyberpunk_machine_module/production_overclocker
-
-/obj/item/cyberpunk_machine_module/material_optimizer
-	name = "material optimizer"
-	icon_state = "integrated_circuit"
-	module_datum_type = /datum/cyberpunk_machine_module/material_optimizer
-
-/obj/item/cyberpunk_machine_module/vendor_stock_router
-	name = "vendor stock router"
-	icon_state = "harddisk"
-	module_datum_type = /datum/cyberpunk_machine_module/vendor_stock_router
-
-/obj/item/cyberpunk_machine_module/vendor_security_cage
-	name = "vendor security cage"
-	icon_state = "cell_con"
-	module_datum_type = /datum/cyberpunk_machine_module/vendor_security_cage
-
-/obj/item/cyberpunk_machine_module/medical_sterile_bus
-	name = "medical sterile bus"
-	icon_state = "component"
-	module_datum_type = /datum/cyberpunk_machine_module/medical_sterile_bus
-
-/obj/item/cyberpunk_machine_module/security_response_core
-	name = "security response core"
-	icon_state = "circuit_board"
-	module_datum_type = /datum/cyberpunk_machine_module/security_response_core
-
-/obj/item/cyberpunk_machine_module/network_filter
-	name = "network filter"
-	icon_state = "integrated_circuit"
-	module_datum_type = /datum/cyberpunk_machine_module/network_filter
-
-/datum/design/cyberpunk_machine_module
-	name = "Р СЏР·РЅРѕРІ Machine Module"
-	desc = "A Р СЏР·РЅРѕРІ-certified maintenance module for Cyberpunk 13 machinery."
-	id = "ryaznov_machine_module"
-	build_type = PROTOLATHE | AWAY_LATHE
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
-	build_path = /obj/item/cyberpunk_machine_module
-	category = list(RND_CATEGORY_EQUIPMENT + RND_SUBCATEGORY_EQUIPMENT_ENGINEERING)
-	departmental_flags = DEPARTMENT_BITFLAG_ENGINEERING | DEPARTMENT_BITFLAG_SCIENCE
-
-/datum/design/cyberpunk_machine_module/power_governor
-	name = "Р СЏР·РЅРѕРІ Reserve Power Governor"
-	id = "ryaznov_power_governor"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/power_governor
-
-/datum/design/cyberpunk_machine_module/wear_buffer
-	name = "Р СЏР·РЅРѕРІ Wear Buffer"
-	id = "ryaznov_wear_buffer"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/wear_buffer
-
-/datum/design/cyberpunk_machine_module/reinforced_frame
-	name = "Р СЏР·РЅРѕРІ Reinforced Machine Frame"
-	id = "ryaznov_reinforced_frame"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
-	build_path = /obj/item/cyberpunk_machine_module/reinforced_frame
-
-/datum/design/cyberpunk_machine_module/service_bus
-	name = "Р СЏР·РЅРѕРІ Service Bus"
-	id = "ryaznov_service_bus"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/service_bus
-
-/datum/design/cyberpunk_machine_module/salvage_router
-	name = "Р СЏР·РЅРѕРІ Salvage Routing Matrix"
-	id = "ryaznov_salvage_router"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/salvage_router
-
-/datum/design/cyberpunk_machine_module/chem_reaction_accelerator
-	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† Chem Reaction Accelerator"
-	id = "ryaznov_chem_reaction_accelerator"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
-
-/datum/design/cyberpunk_machine_module/chem_yield_regulator
-	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† Chem Yield Regulator"
-	id = "ryaznov_chem_yield_regulator"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/chem_yield_regulator
-
-/datum/design/cyberpunk_machine_module/corporate_vending_bus
-	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† Corporate Vending Bus"
-	id = "ryaznov_corporate_vending_bus"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/corporate_vending_bus
-
-/datum/design/cyberpunk_machine_module/apc_efficiency_core
-	name = "Р В РЎРЏР В·Р Р…Р С•Р Р† APC Efficiency Core"
-	id = "ryaznov_apc_efficiency_core"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/apc_efficiency_core
-
-/datum/design/cyberpunk_machine_module/emergency_battery
-	name = "Ryaznov Emergency Buffer Battery"
-	id = "ryaznov_emergency_battery"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/emergency_battery
-
-/datum/design/cyberpunk_machine_module/arc_suppressor
-	name = "Ryaznov Arc Suppressor"
-	id = "ryaznov_arc_suppressor"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/arc_suppressor
-
-/datum/design/cyberpunk_machine_module/production_overclocker
-	name = "Ryaznov Production Overclocker"
-	id = "ryaznov_production_overclocker"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
-	build_path = /obj/item/cyberpunk_machine_module/production_overclocker
-
-/datum/design/cyberpunk_machine_module/material_optimizer
-	name = "Ryaznov Material Optimizer"
-	id = "ryaznov_material_optimizer"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/material_optimizer
-
-/datum/design/cyberpunk_machine_module/vendor_stock_router
-	name = "Ryaznov Vendor Stock Router"
-	id = "ryaznov_vendor_stock_router"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT * 2)
-	build_path = /obj/item/cyberpunk_machine_module/vendor_stock_router
-
-/datum/design/cyberpunk_machine_module/vendor_security_cage
-	name = "Ryaznov Vendor Security Cage"
-	id = "ryaznov_vendor_security_cage"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 7, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/vendor_security_cage
-
-/datum/design/cyberpunk_machine_module/medical_sterile_bus
-	name = "Ryaznov Medical Sterile Bus"
-	id = "ryaznov_medical_sterile_bus"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/medical_sterile_bus
-
-/datum/design/cyberpunk_machine_module/security_response_core
-	name = "Ryaznov Security Response Core"
-	id = "ryaznov_security_response_core"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/security_response_core
-
-/datum/design/cyberpunk_machine_module/network_filter
-	name = "Ryaznov Network Filter"
-	id = "ryaznov_network_filter"
-	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/cyberpunk_machine_module/network_filter
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery
@@ -1216,13 +732,13 @@
 	. += "Modules: [length(cyberpunk_machine_modules)]/[cyberpunk_machine_module_slots]."
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		. += module.get_diagnostic_line(src)
-	. += "РџРёС‚Р°РЅРёРµ: [powered() ? "РµСЃС‚СЊ" : "РЅРµС‚"]."
-	. += "РЎРѕСЃС‚РѕСЏРЅРёРµ: [machine_stat ? "[machine_stat]" : "С€С‚Р°С‚РЅРѕРµ"]."
-	. += "РџР°РЅРµР»СЊ: [panel_open ? "РѕС‚РєСЂС‹С‚Р°" : "Р·Р°РєСЂС‹С‚Р°"]."
-	. += "РљРѕРјРїРѕРЅРµРЅС‚С‹: [length(component_parts)]."
+	. += "Р В РЎСџР В РЎвЂР РЋРІР‚С™Р В Р’В°Р В Р вЂ¦Р В РЎвЂР В Р’Вµ: [powered() ? "Р В Р’ВµР РЋР С“Р РЋРІР‚С™Р РЋР Р‰" : "Р В Р вЂ¦Р В Р’ВµР РЋРІР‚С™"]."
+	. += "Р В Р Р‹Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР РЋР РЏР В Р вЂ¦Р В РЎвЂР В Р’Вµ: [machine_stat ? "[machine_stat]" : "Р РЋРІвЂљВ¬Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚С™Р В Р вЂ¦Р В РЎвЂўР В Р’Вµ"]."
+	. += "Р В РЎСџР В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р’В»Р РЋР Р‰: [panel_open ? "Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°" : "Р В Р’В·Р В Р’В°Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°"]."
+	. += "Р В РЎв„ўР В РЎвЂўР В РЎВР В РЎвЂ”Р В РЎвЂўР В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–: [length(component_parts)]."
 	if(user?.get_cyberpunk_machine_diagnostic_depth(src) > 0)
-		. += "РџРѕСЂРѕРі РїРѕРІСЂРµР¶РґРµРЅРёСЏ РёР·РЅРѕСЃРѕРј: [cyberpunk_machine_wear_damage_threshold]."
-		. += "РЁР°РЅСЃ РєРѕСЂРѕС‚РєРѕРіРѕ Р·Р°РјС‹РєР°РЅРёСЏ: [cyberpunk_machine_failure_shock_chance]%."
+		. += "Р В РЎСџР В РЎвЂўР РЋР вЂљР В РЎвЂўР В РЎвЂ“ Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р В РЎвЂР В Р’В·Р В Р вЂ¦Р В РЎвЂўР РЋР С“Р В РЎвЂўР В РЎВ: [cyberpunk_machine_wear_damage_threshold]."
+		. += "Р В Р РѓР В Р’В°Р В Р вЂ¦Р РЋР С“ Р В РЎвЂќР В РЎвЂўР РЋР вЂљР В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В Р’В·Р В Р’В°Р В РЎВР РЋРІР‚в„–Р В РЎвЂќР В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋР РЏ: [cyberpunk_machine_failure_shock_chance]%."
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/LateInitialize()
@@ -1712,7 +1228,7 @@
 		return FALSE
 
 	if((interaction_flags_machine & INTERACT_MACHINE_REQUIRES_SIGHT) && user.is_blind())
-		to_chat(user, span_warning("Р§С‚РѕР±С‹ РІРѕСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ СЌС‚РѕР№ РјР°С€РёРЅРѕР№, РЅСѓР¶РЅРѕ РёРјРµС‚СЊ Р·СЂРµРЅРёРµ."))
+		to_chat(user, span_warning("Р В Р’В§Р РЋРІР‚С™Р В РЎвЂўР В Р’В±Р РЋРІР‚в„– Р В Р вЂ Р В РЎвЂўР РЋР С“Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В Р’В·Р В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰Р РЋР С“Р РЋР РЏ Р РЋР РЉР РЋРІР‚С™Р В РЎвЂўР В РІвЂћвЂ“ Р В РЎВР В Р’В°Р РЋРІвЂљВ¬Р В РЎвЂР В Р вЂ¦Р В РЎвЂўР В РІвЂћвЂ“, Р В Р вЂ¦Р РЋРЎвЂњР В Р’В¶Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂР В РЎВР В Р’ВµР РЋРІР‚С™Р РЋР Р‰ Р В Р’В·Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ."))
 		return FALSE
 
 	// machines have their own lit up display screens and LED buttons so we don't need to check for light
@@ -1752,7 +1268,7 @@
 	add_fingerprint(user)
 	update_last_used(user)
 	if(isAI(user) && !SScameras.is_visible_by_cameras(get_turf(src))) //We check if they're an AI specifically here, so borgs/adminghosts/human wand can still access off-camera stuff.
-		to_chat(user, span_warning("Р’С‹ Р±РѕР»СЊС€Рµ РЅРµ РјРѕР¶РµС‚Рµ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРѕРІР°С‚СЊ СЃ СЌС‚РёРј СѓСЃС‚СЂРѕР№СЃС‚РІРѕРј!"))
+		to_chat(user, span_warning("Р В РІР‚в„ўР РЋРІР‚в„– Р В Р’В±Р В РЎвЂўР В Р’В»Р РЋР Р‰Р РЋРІвЂљВ¬Р В Р’Вµ Р В Р вЂ¦Р В Р’Вµ Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™Р В Р’Вµ Р В Р вЂ Р В Р’В·Р В Р’В°Р В РЎвЂР В РЎВР В РЎвЂўР В РўвЂР В Р’ВµР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р РЋР С“ Р РЋР РЉР РЋРІР‚С™Р В РЎвЂР В РЎВ Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂўР В РЎВ!"))
 		return FALSE
 	return ..()
 
@@ -1809,7 +1325,7 @@
 		if(user_unbuckle_mob(buckled_mobs[1],user))
 			return TRUE
 
-	var/unbuckled = tgui_input_list(user, "РљРѕРіРѕ РІС‹ С…РѕС‚РёС‚Рµ РѕС‚СЃС‚РµРіРЅСѓС‚СЊ?", "РћС‚СЃС‚РµРіРёРІР°РЅРёРµ", sort_names(buckled_mobs))
+	var/unbuckled = tgui_input_list(user, "Р В РЎв„ўР В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В Р вЂ Р РЋРІР‚в„– Р РЋРІР‚В¦Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂР РЋРІР‚С™Р В Р’Вµ Р В РЎвЂўР РЋРІР‚С™Р РЋР С“Р РЋРІР‚С™Р В Р’ВµР В РЎвЂ“Р В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР Р‰?", "Р В РЎвЂєР РЋРІР‚С™Р РЋР С“Р РЋРІР‚С™Р В Р’ВµР В РЎвЂ“Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР В Р’Вµ", sort_names(buckled_mobs))
 	if(isnull(unbuckled))
 		return FALSE
 	if(user_unbuckle_mob(unbuckled,user))
@@ -1927,7 +1443,7 @@
 		return deconstruct_on_fail ? default_deconstruction_crowbar(user, crowbar) : ITEM_INTERACT_BLOCKING
 
 	crowbar.play_tool_sound(src, 50)
-	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] РІСЃРєСЂС‹РІР°РµС‚ [declent_ru(ACCUSATIVE)]."), span_notice("Р’С‹ РІСЃРєСЂС‹РІР°РµС‚Рµ [declent_ru(ACCUSATIVE)]."))
+	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] Р В Р вЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™ [declent_ru(ACCUSATIVE)]."), span_notice("Р В РІР‚в„ўР РЋРІР‚в„– Р В Р вЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р В Р’Вµ [declent_ru(ACCUSATIVE)]."))
 	open_machine(density_to_set = open_density)
 	if (close_after_pry) //Should it immediately close after prying? (If not, it must be closed elsewhere)
 		close_machine(density_to_set = closed_density)
@@ -2661,7 +2177,7 @@
 
 	screwdriver.play_tool_sound(src, 50)
 	toggle_panel_open()
-	balloon_alert(user, "РїР°РЅРµР»СЊ РѕР±СЃР»СѓР¶РёРІР°РЅРёСЏ [panel_open ? "РѕС‚РєСЂС‹С‚Р°" : "Р·Р°РєСЂС‹С‚Р°"]")
+	balloon_alert(user, "Р В РЎвЂ”Р В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р’В»Р РЋР Р‰ Р В РЎвЂўР В Р’В±Р РЋР С“Р В Р’В»Р РЋРЎвЂњР В Р’В¶Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋР РЏ [panel_open ? "Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°" : "Р В Р’В·Р В Р’В°Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°"]")
 	return ITEM_INTERACT_SUCCESS
 
 /**
@@ -2681,7 +2197,7 @@
 
 	wrench.play_tool_sound(src, 50)
 	setDir(turn(dir,-90))
-	to_chat(user, span_notice("Р’С‹ РїРѕРІРѕСЂР°С‡РёРІР°РµС‚Рµ [declent_ru(ACCUSATIVE)]."))
+	to_chat(user, span_notice("Р В РІР‚в„ўР РЋРІР‚в„– Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р В РЎвЂўР РЋР вЂљР В Р’В°Р РЋРІР‚РЋР В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р В Р’Вµ [declent_ru(ACCUSATIVE)]."))
 	SEND_SIGNAL(src, COMSIG_MACHINERY_DEFAULT_ROTATE_WRENCH, user, wrench)
 	return ITEM_INTERACT_SUCCESS
 
@@ -2772,7 +2288,7 @@
 					physical_part = primary_part_base
 
 				replacer_tool.atom_storage.attempt_insert(physical_part, user, TRUE, force = STORAGE_SOFT_LOCKED)
-				to_chat(user, span_notice("[capitalize(physical_part.declent_ru(NOMINATIVE))] Р·Р°РјРµРЅСЏРµС‚СЃСЏ РЅР° [secondary_part_name]."))
+				to_chat(user, span_notice("[capitalize(physical_part.declent_ru(NOMINATIVE))] Р В Р’В·Р В Р’В°Р В РЎВР В Р’ВµР В Р вЂ¦Р РЋР РЏР В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ¦Р В Р’В° [secondary_part_name]."))
 				shouldplaysound = TRUE //Only play the sound when parts are actually replaced!
 				break
 
@@ -2817,7 +2333,7 @@
 				part_count[component] = board.req_components[component]
 
 
-	var/text = span_notice("Р’РЅСѓС‚СЂРё РёРјРµСЋС‚СЃСЏ СЃР»РµРґСѓСЋС‰РёРµ РєРѕРјРїРѕРЅРµРЅС‚С‹:")
+	var/text = span_notice("Р В РІР‚в„ўР В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР вЂљР В РЎвЂ Р В РЎвЂР В РЎВР В Р’ВµР РЋР вЂ№Р РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р РЋР С“Р В Р’В»Р В Р’ВµР В РўвЂР РЋРЎвЂњР РЋР вЂ№Р РЋРІР‚В°Р В РЎвЂР В Р’Вµ Р В РЎвЂќР В РЎвЂўР В РЎВР В РЎвЂ”Р В РЎвЂўР В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–:")
 	for(var/component_part in part_count)
 		var/part_name
 		var/icon/html_icon
@@ -2841,19 +2357,19 @@
 /obj/machinery/examine(mob/user)
 	. = ..()
 	if(machine_stat & BROKEN)
-		. += span_notice("Р’С‹РіР»СЏРґРёС‚ СЃР»РѕРјР°РЅРѕ Рё РЅРµС„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕ.")
+		. += span_notice("Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂ“Р В Р’В»Р РЋР РЏР В РўвЂР В РЎвЂР РЋРІР‚С™ Р РЋР С“Р В Р’В»Р В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂ Р В Р вЂ¦Р В Р’ВµР РЋРІР‚С›Р РЋРЎвЂњР В Р вЂ¦Р В РЎвЂќР РЋРІР‚В Р В РЎвЂР В РЎвЂўР В Р вЂ¦Р В Р’В°Р В Р’В»Р РЋР Р‰Р В Р вЂ¦Р В РЎвЂў.")
 	if(!(resistance_flags & INDESTRUCTIBLE))
 		var/healthpercent = (atom_integrity/max_integrity) * 100
 		switch(healthpercent)
 			if(50 to 99)
-				. += "РРјРµРµС‚ РЅРµР·РЅР°С‡РёС‚РµР»СЊРЅС‹Рµ РїРѕРІСЂРµР¶РґРµРЅРёСЏ."
+				. += "Р В Р’ВР В РЎВР В Р’ВµР В Р’ВµР РЋРІР‚С™ Р В Р вЂ¦Р В Р’ВµР В Р’В·Р В Р вЂ¦Р В Р’В°Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ."
 			if(25 to 50)
-				. += "РРјРµРµС‚ Р·РЅР°С‡РёС‚РµР»СЊРЅС‹Рµ РїРѕРІСЂРµР¶РґРµРЅРёСЏ."
+				. += "Р В Р’ВР В РЎВР В Р’ВµР В Р’ВµР РЋРІР‚С™ Р В Р’В·Р В Р вЂ¦Р В Р’В°Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ."
 			if(0 to 25)
-				. += span_warning("Р Р°Р·РІР°Р»РёРІР°РµС‚СЃСЏ РЅР° С‡Р°СЃС‚Рё!")
+				. += span_warning("Р В Р’В Р В Р’В°Р В Р’В·Р В Р вЂ Р В Р’В°Р В Р’В»Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ¦Р В Р’В° Р РЋРІР‚РЋР В Р’В°Р РЋР С“Р РЋРІР‚С™Р В РЎвЂ!")
 
 /obj/machinery/examine_descriptor(mob/user)
-	return "РјР°С€РёРЅР°"
+	return "Р В РЎВР В Р’В°Р РЋРІвЂљВ¬Р В РЎвЂР В Р вЂ¦Р В Р’В°"
 
 /obj/machinery/examine_more(mob/user)
 	. = ..()
@@ -2915,7 +2431,7 @@
  * However, the proc may also be used elsewhere.
  */
 /obj/machinery/proc/AI_notify_hack()
-	var/alertstr = span_userdanger("РЎРµС‚РµРІР°СЏ С‚СЂРµРІРѕРіР°: РћР±РЅР°СЂСѓР¶РµРЅР° РїРѕРїС‹С‚РєР° РІР·Р»РѕРјР°[get_area(src)?" РІ [get_area_name(src, TRUE)]":". РќРµРІРѕР·РјРѕР¶РЅРѕ РѕРїСЂРµРґРµР»РёС‚СЊ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёРµ"].")
+	var/alertstr = span_userdanger("Р В Р Р‹Р В Р’ВµР РЋРІР‚С™Р В Р’ВµР В Р вЂ Р В Р’В°Р РЋР РЏ Р РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ Р В РЎвЂўР В РЎвЂ“Р В Р’В°: Р В РЎвЂєР В Р’В±Р В Р вЂ¦Р В Р’В°Р РЋР вЂљР РЋРЎвЂњР В Р’В¶Р В Р’ВµР В Р вЂ¦Р В Р’В° Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ”Р РЋРІР‚в„–Р РЋРІР‚С™Р В РЎвЂќР В Р’В° Р В Р вЂ Р В Р’В·Р В Р’В»Р В РЎвЂўР В РЎВР В Р’В°[get_area(src)?" Р В Р вЂ  [get_area_name(src, TRUE)]":". Р В РЎСљР В Р’ВµР В Р вЂ Р В РЎвЂўР В Р’В·Р В РЎВР В РЎвЂўР В Р’В¶Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂўР В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р’ВµР В Р’В»Р В РЎвЂР РЋРІР‚С™Р РЋР Р‰ Р В РЎВР В Р’ВµР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В РЎвЂ”Р В РЎвЂўР В Р’В»Р В РЎвЂўР В Р’В¶Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ"].")
 	for(var/mob/living/silicon/ai/AI in GLOB.player_list)
 		to_chat(AI, alertstr)
 
