@@ -12,6 +12,15 @@ GLOBAL_LIST_INIT(strippable_human_items, create_strippable_list(list(
 	/datum/strippable_item/mob_item_slot/suit,
 	/datum/strippable_item/mob_item_slot/gloves,
 	/datum/strippable_item/mob_item_slot/feet,
+	/datum/strippable_item/mob_item_slot/undershirt,
+	/datum/strippable_item/mob_item_slot/underwear,
+	/datum/strippable_item/mob_item_slot/tights,
+	/datum/strippable_item/mob_item_slot/shoulder_left,
+	/datum/strippable_item/mob_item_slot/shoulder_right,
+	/datum/strippable_item/mob_item_slot/finger,
+	/datum/strippable_item/mob_item_slot/bracers,
+	/datum/strippable_item/mob_item_slot/pants,
+	/datum/strippable_item/mob_item_slot/chest,
 	/datum/strippable_item/mob_item_slot/suit_storage,
 	/datum/strippable_item/mob_item_slot/id,
 	/datum/strippable_item/mob_item_slot/belt,
@@ -168,6 +177,42 @@ GLOBAL_LIST_INIT(strippable_human_items, create_strippable_list(list(
 	key = STRIPPABLE_ITEM_FEET
 	item_slot = ITEM_SLOT_FEET
 
+/datum/strippable_item/mob_item_slot/undershirt
+	key = STRIPPABLE_ITEM_UNDERSHIRT
+	item_slot = ITEM_SLOT_UNDERSHIRT
+
+/datum/strippable_item/mob_item_slot/underwear
+	key = STRIPPABLE_ITEM_UNDERWEAR
+	item_slot = ITEM_SLOT_UNDERWEAR
+
+/datum/strippable_item/mob_item_slot/tights
+	key = STRIPPABLE_ITEM_TIGHTS
+	item_slot = ITEM_SLOT_TIGHTS
+
+/datum/strippable_item/mob_item_slot/shoulder_left
+	key = STRIPPABLE_ITEM_SHOULDER_LEFT
+	item_slot = ITEM_SLOT_SHOULDER_LEFT
+
+/datum/strippable_item/mob_item_slot/shoulder_right
+	key = STRIPPABLE_ITEM_SHOULDER_RIGHT
+	item_slot = ITEM_SLOT_SHOULDER_RIGHT
+
+/datum/strippable_item/mob_item_slot/finger
+	key = STRIPPABLE_ITEM_FINGER
+	item_slot = ITEM_SLOT_FINGER
+
+/datum/strippable_item/mob_item_slot/bracers
+	key = STRIPPABLE_ITEM_BRACERS
+	item_slot = ITEM_SLOT_BRACERS
+
+/datum/strippable_item/mob_item_slot/pants
+	key = STRIPPABLE_ITEM_PANTS
+	item_slot = ITEM_SLOT_PANTS
+
+/datum/strippable_item/mob_item_slot/chest
+	key = STRIPPABLE_ITEM_CHEST
+	item_slot = ITEM_SLOT_CHEST
+
 /datum/strippable_item/mob_item_slot/feet/get_alternate_actions(atom/source, mob/user, obj/item/item)
 	. = ..()
 	var/obj/item/clothing/shoes/shoes = item
@@ -231,7 +276,11 @@ GLOBAL_LIST_INIT(strippable_human_items, create_strippable_list(list(
 	/// Which pocket we're referencing. Used for visible text.
 	var/pocket_side
 
-/datum/strippable_item/mob_item_slot/pocket/get_obscuring(atom/source)
+/datum/strippable_item/mob_item_slot/pocket/get_obscuring(atom/source, mob/user)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		if(living_user.get_cyberpunk_theft_search_level() >= 1)
+			return STRIPPABLE_OBSCURING_NONE
 	return isnull(get_item(source)) \
 		? STRIPPABLE_OBSCURING_NONE \
 		: STRIPPABLE_OBSCURING_HIDDEN

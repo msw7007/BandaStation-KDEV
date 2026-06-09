@@ -595,6 +595,11 @@
 	if(damage_type != BRUTE && damage_type != BURN)
 		return
 	damage_amount *= 0.5 //0.5 multiplier for balance reason, we don't want clothes to be too easily destroyed
+	var/guard_bonus = consume_cyberpunk_inspiration_guard("equipment protection")
+	if(guard_bonus > 0)
+		damage_amount *= max(0, 1 - guard_bonus * 0.01)
+	if(damage_amount <= 0)
+		return
 	if(!def_zone || def_zone == BODY_ZONE_HEAD)
 		var/obj/item/clothing/hit_clothes
 		if(wear_mask)

@@ -166,7 +166,7 @@
 	if(stamina >= max_stamina || is_exhausted_by_needs())
 		stamina_regen_accumulator = 0
 		return
-	if(world.time < last_stamina_spend + STAMINA_REGEN_DELAY)
+	if(world.time < last_stamina_spend + get_cyberpunk_stamina_regen_delay())
 		stamina_regen_accumulator = 0
 		return
 
@@ -181,7 +181,7 @@
 			recovery += 10
 		if(stamina < max_stamina && energy_pool >= STAMINA_ENERGY_RESERVE_COST)
 			adjust_energy_pool(-STAMINA_ENERGY_RESERVE_COST)
-			recovery += STAMINA_ENERGY_RESERVE_RECOVERY
+			recovery += get_cyberpunk_stamina_energy_reserve_recovery()
 		adjust_stamina(recovery, FALSE)
 
 /mob/living/proc/recover_energy_pool(seconds_per_tick)
@@ -201,7 +201,10 @@
 		adjust_energy_pool(recovery)
 
 /mob/living/proc/recover_tireness(seconds_per_tick)
-	if(tireness >= MAX_SATIETY || body_position != LYING_DOWN || (!IsSleeping() && !IsUnconscious()))
+	if(tireness >= MAX_SATIETY || (!IsSleeping() && !IsUnconscious()))
+		tireness_recovery_accumulator = 0
+		return
+	if(body_position != LYING_DOWN && !(istype(buckled, /obj/structure/chair) && get_cyberpunk_sleep_survival_comfort_multiplier() > 0))
 		tireness_recovery_accumulator = 0
 		return
 
@@ -209,12 +212,7 @@
 	while(tireness_recovery_accumulator >= 5)
 		tireness_recovery_accumulator -= 5
 		var/recovery = 10
-		if(istype(buckled, /obj/structure/bed))
-			recovery += 10
-			if(locate(/obj/item/pillow) in loc)
-				recovery += 20
-			if(locate(/obj/item/bedsheet) in loc)
-				recovery += 10
+		recovery += get_cyberpunk_sleep_comfort_recovery_bonus()
 		if(!has_hunger() && !has_overeating())
 			recovery += 20
 		if(!has_thirst() && !has_overdrinking())
@@ -292,6 +290,10 @@
 		return
 	if(!has_neural_implant())
 		return
+	var/overload_pain = get_cyberpunk_chromity_overload_pain(amount)
+	if(overload_pain > 0)
+		var/obj/item/organ/brain_for_pain = get_organ_slot(ORGAN_SLOT_BRAIN)
+		brain_for_pain?.add_organ_pain(overload_pain)
 	var/damage_cap = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 3)
 	if(damage_cap > 0)
 		amount = min(amount, damage_cap)
@@ -300,18 +302,16 @@
 		amount *= max(0, 1 - master_reduction * 0.01)
 	if(amount <= 0)
 		return
+	adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
 	switch(rand(1, 100))
 		if(1 to 40)
-			var/obj/item/organ/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
-			brain?.add_organ_pain(amount)
+			return
 		if(41 to 55)
 			var/obj/item/organ/implant = pick_working_chrome_implant()
 			implant?.disable_implant(IMPLANT_OVERHEAT_SHUTDOWN_TIME, "overheat")
 		if(56 to 60)
 			var/obj/item/organ/implant = pick_working_chrome_implant()
 			implant?.on_implant_erroneous_activation()
-		else
-			adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
 
 /mob/living/proc/trigger_cyberpsychosis()
 	if(world.time < last_cyberpsychosis_time + CYBERPSYCHOSIS_COOLDOWN)
@@ -392,11 +392,48 @@
 	return mood
 
 /mob/living/proc/is_comfortably_sleeping_for_experience()
-	if(body_position != LYING_DOWN || (!IsSleeping() && !IsUnconscious()))
+	if(!IsSleeping() && !IsUnconscious())
 		return FALSE
-	if(!istype(buckled, /obj/structure/bed))
+	if(istype(buckled, /obj/structure/bed))
+		return (locate(/obj/item/pillow) in loc) && (locate(/obj/item/bedsheet) in loc)
+	if(istype(buckled, /obj/structure/chair))
+		return get_cyberpunk_sleep_survival_comfort_multiplier() > 0
+	if(body_position != LYING_DOWN)
 		return FALSE
-	return (locate(/obj/item/pillow) in loc) && (locate(/obj/item/bedsheet) in loc)
+	return get_cyberpunk_sleep_survival_comfort_multiplier() > 0
+
+/mob/living/proc/get_cyberpunk_sleep_comfort_recovery_bonus()
+	if(istype(buckled, /obj/structure/bed))
+		var/recovery = 10
+		if(locate(/obj/item/pillow) in loc)
+			recovery += 20
+		if(locate(/obj/item/bedsheet) in loc)
+			recovery += 10
+		return recovery
+	return round(40 * get_cyberpunk_sleep_survival_comfort_multiplier())
+
+/mob/living/proc/get_cyberpunk_sleep_survival_comfort_multiplier()
+	var/perk_bonus = get_cyberpunk_skill_perk_bonus(SKILL_SURVIVAL, 4)
+	if(perk_bonus <= 0)
+		return 0
+	if(istype(buckled, /obj/structure/chair))
+		return perk_bonus * 0.01
+	if(!buckled && body_position == LYING_DOWN)
+		return perk_bonus * 0.01
+	return 0
+
+/mob/living/proc/get_cyberpunk_sleep_prepare_time()
+	var/prepare_time = 1 MINUTES
+	if(istype(buckled, /obj/structure/bed))
+		prepare_time *= 0.8
+	if(locate(/obj/item/bedsheet) in loc)
+		prepare_time *= 0.8
+	if(locate(/obj/item/pillow) in loc)
+		prepare_time *= 0.8
+	var/survival_bonus = get_cyberpunk_skill_perk_bonus(SKILL_SURVIVAL, 5)
+	if(survival_bonus > 0)
+		prepare_time *= max(0.1, 1 - (survival_bonus * 0.01))
+	return max(1 SECONDS, round(prepare_time))
 
 /datum/cyberpunk_status_effect
 	var/id = "status"
@@ -645,6 +682,7 @@
 	if(tireness > 450)
 		move_slowdown -= 0.1
 	move_slowdown -= get_cyberpunk_acrobatics_move_bonus()
+	move_slowdown -= get_cyberpunk_heavy_weapon_move_bonus()
 	if(stealth_mode)
 		move_slowdown -= get_cyberpunk_skill_perk_bonus(SKILL_STEALTH, 4) * 0.01
 	var/athletics_sprint_threshold = get_cyberpunk_skill_perk_bonus(SKILL_ATHLETICS, 4, "value_2")
@@ -719,8 +757,9 @@
 	var/old_value = mood
 	mood = clamp(mood + amount, -30, 20)
 	apply_body_state_effects()
-	if(share_cohort && amount > 0)
-		cyberpunk_cohort?.share_mood(src, amount)
+	if(share_cohort && amount > 0 && cyberpunk_cohort)
+		cyberpunk_cohort.try_grant_inspiration_guard(src, amount)
+		cyberpunk_cohort.share_mood(src, amount)
 	return mood - old_value
 
 /mob/living/proc/get_energy_pool_recovery()
@@ -820,6 +859,23 @@
 			continue
 		member.adjust_mood(shared_amount, FALSE)
 
+/datum/cyberpunk_cohort/proc/get_inspiration_guard_bonus(mob/living/source)
+	var/bonus = source?.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5) || 0
+	var/mob/living/leader = get_leader()
+	if(leader && leader != source)
+		bonus = max(bonus, leader.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5))
+	return bonus
+
+/datum/cyberpunk_cohort/proc/try_grant_inspiration_guard(mob/living/source, amount)
+	if(!source || amount < 5 || source.cyberpunk_cohort != src)
+		return FALSE
+	var/bonus = get_inspiration_guard_bonus(source)
+	if(bonus <= 0)
+		return FALSE
+	for(var/mob/living/member as anything in get_members())
+		member.apply_cyberpunk_inspiration_guard(bonus)
+	return TRUE
+
 /datum/cyberpunk_cohort/proc/share_status_effect(mob/living/source, datum/cyberpunk_status_effect/effect)
 	if(!source || !effect || source.cyberpunk_cohort != src || !effect.shareable || effect.effect_kind != "buff")
 		return
@@ -838,6 +894,26 @@
 		return FALSE
 	var/mob/living/leader = cyberpunk_cohort.get_leader()
 	return leader?.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 6) > 0
+
+/mob/living/proc/apply_cyberpunk_inspiration_guard(bonus)
+	if(bonus <= 0)
+		return FALSE
+	cyberpunk_inspiration_guard_bonus = max(cyberpunk_inspiration_guard_bonus, bonus)
+	to_chat(src, span_notice("Inspiration sharpens your next defensive moment."))
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_inspiration_guard_multiplier()
+	if(cyberpunk_inspiration_guard_bonus <= 0)
+		return 1
+	return 1 + cyberpunk_inspiration_guard_bonus * 0.01
+
+/mob/living/proc/consume_cyberpunk_inspiration_guard(context = "defense")
+	if(cyberpunk_inspiration_guard_bonus <= 0)
+		return 0
+	var/bonus = cyberpunk_inspiration_guard_bonus
+	cyberpunk_inspiration_guard_bonus = 0
+	to_chat(src, span_notice("Your cohort inspiration reinforces your [context]."))
+	return bonus
 
 /mob/living/verb/manage_cyberpunk_cohort()
 	set name = "Cohort"
@@ -1104,11 +1180,60 @@
 /mob/living/proc/get_cyberpunk_endurance_stamina_recovery_multiplier()
 	return 1 + (get_character_skill_level(SKILL_ENDURANCE) * 0.05)
 
+/mob/living/proc/get_cyberpunk_stamina_energy_reserve_recovery()
+	return STAMINA_ENERGY_RESERVE_RECOVERY + get_cyberpunk_skill_perk_bonus(SKILL_ATHLETICS, 5)
+
+/mob/living/proc/get_cyberpunk_stamina_regen_delay()
+	return STAMINA_REGEN_DELAY * max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_ATHLETICS, 6) * 0.01)
+
+/mob/living/proc/roll_cyberpunk_endurance_ignore_damage_pain()
+	var/ignore_chance = get_cyberpunk_skill_perk_bonus(SKILL_ENDURANCE, 4)
+	return ignore_chance > 0 && prob(ignore_chance)
+
+/mob/living/proc/apply_cyberpunk_pain_collapse()
+	var/immobilize_duration = get_cyberpunk_skill_perk_bonus(SKILL_ENDURANCE, 5)
+	if(immobilize_duration > 0)
+		Immobilize(immobilize_duration SECONDS)
+		to_chat(src, span_warning("Pain locks your muscles in place."))
+		return TRUE
+	Knockdown(5 SECONDS)
+	return FALSE
+
+/mob/living/proc/get_cyberpunk_implant_cooldown_multiplier()
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 4, "value_1")
+	return max(0.1, 1 - (reduction * 0.01))
+
+/mob/living/proc/get_cyberpunk_implant_passive_interval_multiplier()
+	var/frequency_bonus = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 4, "value_2")
+	return 1 / max(0.1, 1 + (frequency_bonus * 0.01))
+
+/mob/living/proc/get_cyberpunk_theft_search_level()
+	return round(get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 1))
+
+/mob/living/proc/get_cyberpunk_theft_protected_level()
+	return round(get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 6))
+
+/mob/living/proc/roll_cyberpunk_theft_moving_success()
+	var/move_chance = get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 5)
+	return move_chance > 0 && prob(move_chance)
+
+/mob/living/proc/get_cyberpunk_chromity_overload_pain(amount)
+	var/overload_ratio = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 5, "value_2")
+	if(overload_ratio > 0)
+		return amount / overload_ratio
+	return amount * 2
+
 /mob/living/proc/get_cyberpunk_acrobatics_move_bonus()
 	var/bonus = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 5) * 0.01
 	if(world.time <= cyberpunk_acrobatics_speed_until)
 		bonus += get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 4, "value_2") * 0.01
 	return bonus
+
+/mob/living/proc/get_cyberpunk_acrobatics_climb_duration(base_duration = 2 SECONDS)
+	var/perk_reduction = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 2)
+	var/adjusted_duration = base_duration * max(0.1, 1 - perk_reduction * 0.01)
+	adjusted_duration -= get_character_skill_level(SKILL_ACROBATICS) * (0.15 SECONDS)
+	return max((0.2 SECONDS), adjusted_duration)
 
 /mob/living/proc/apply_cyberpunk_acrobatics_speed_bonus()
 	var/duration = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 4, "value_1")

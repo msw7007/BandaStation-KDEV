@@ -123,3 +123,10 @@
 	name = "Мастер"
 	desc = "Если вас успешно атакуют, есть {value}% шанс дезориентировать противника."
 	effectiveness_values = list(20, 30, 40)
+
+// Cyberpunk build: theft perks 1 and 6 are tiered unlocks used by the strip panel.
+/datum/skill_perk/physical/charisma/theft/perk_1
+	effectiveness_values = list(1, 2, 3)
+
+/datum/skill_perk/physical/charisma/theft/perk_6
+	effectiveness_values = list(1, 2, 3)

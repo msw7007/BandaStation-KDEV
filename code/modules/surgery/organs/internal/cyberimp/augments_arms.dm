@@ -605,7 +605,7 @@
 	log_combat(source, target, "[picked_hit_type]ed", "muscle implant")
 
 	if(ishuman(target))
-		COOLDOWN_START(src, slam_cooldown, slam_cooldown_duration)
+		COOLDOWN_START(src, slam_cooldown, slam_cooldown_duration * get_cyberpunk_implant_cooldown_multiplier())
 
 	var/target_zone = living_target.get_random_valid_zone(source.zone_selected)
 	var/armor_block = living_target.run_armor_check(target_zone, MELEE, armour_penetration = potential_effectiveness)

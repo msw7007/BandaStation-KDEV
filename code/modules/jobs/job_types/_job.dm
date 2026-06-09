@@ -198,6 +198,9 @@
 		for(var/i in roundstart_experience)
 			spawned_human.mind.adjust_experience(i, roundstart_experience[i], TRUE)
 
+	if(player_client)
+		spawned_human.apply_cyberpunk_fortitude_starting_organs()
+
 	apply_cyberpunk_role_grants(spawned_human)
 
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_JOB_AFTER_SPAWN, src, spawned, player_client)

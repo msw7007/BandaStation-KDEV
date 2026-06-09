@@ -191,11 +191,15 @@
 	sleep(world.tick_lag)
 
 	apply_cyberpunk_acrobatics_speed_bonus()
-	if(long_jump)
+	if(long_jump && !roll_cyberpunk_acrobatics_skip_long_jump_step())
 		continue_long_jump(jump_dir)
 	pixel_z = original_pixel_z
 	currently_jumping = FALSE
 	return TRUE
+
+/mob/living/proc/roll_cyberpunk_acrobatics_skip_long_jump_step()
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 1)
+	return chance > 0 && prob(chance)
 
 /mob/living/proc/animate_jump_arc(step_index, total_steps, original_pixel_z)
 	var/arc_peak = total_steps > 1 ? 14 : 10
@@ -221,6 +225,10 @@
 	for(var/atom/movable/content as anything in target_turf.contents)
 		if(HAS_TRAIT(content, TRAIT_CLIMBABLE))
 			return content
+		if(get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0 && isliving(content))
+			var/mob/living/jumpable_mob = content
+			if(jumpable_mob != src && jumpable_mob.density)
+				return jumpable_mob
 	return null
 
 /mob/living/proc/handle_jump_collision(jump_dir = NONE)
@@ -649,6 +657,24 @@
 	var/turf/current_turf = get_turf(src)
 	var/turf/target_turf
 	var/turf/target_anchor
+	if(direction == UP || direction == DOWN)
+		target_turf = get_step_multiz(current_turf, direction)
+		target_anchor = get_step_multiz(vertical_anchor_turf, direction)
+	else
+		target_turf = get_step(current_turf, direction)
+		target_anchor = get_step(target_turf, vertical_anchor_dir)
+	if(!target_turf || !target_anchor)
+		return FALSE
+	if(target_turf.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+		return FALSE
+	if(!is_valid_vertical_anchor(target_anchor, target_turf))
+		return FALSE
+	var/climb_duration = get_cyberpunk_acrobatics_climb_duration(2 SECONDS)
+	if(climb_duration > 0 && !do_after(src, climb_duration, target_turf))
+		return FALSE
+	current_turf = get_turf(src)
+	if(!current_turf)
+		return FALSE
 	if(direction == UP || direction == DOWN)
 		target_turf = get_step_multiz(current_turf, direction)
 		target_anchor = get_step_multiz(vertical_anchor_turf, direction)

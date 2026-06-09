@@ -80,6 +80,50 @@
 	/// Should we give feedback messages?
 	var/show_visible_message = TRUE
 
+/datum/strippable_item/proc/get_inventory_slot()
+	return NONE
+
+/datum/strippable_item/proc/should_hide_theft_notice(atom/source, mob/user)
+	if(!isliving(user))
+		return FALSE
+	var/mob/living/living_user = user
+	var/theft_level = living_user.get_cyberpunk_theft_search_level()
+	if(theft_level <= 0)
+		return FALSE
+	var/slot = get_inventory_slot()
+	if(slot & (ITEM_SLOT_LPOCKET|ITEM_SLOT_RPOCKET|ITEM_SLOT_BELT|ITEM_SLOT_EARS|ITEM_SLOT_ID))
+		return theft_level >= 1
+	if(slot & (ITEM_SLOT_OCLOTHING|ITEM_SLOT_NECK))
+		return theft_level >= 2
+	if(slot & (ITEM_SLOT_BACK|ITEM_SLOT_MASK|ITEM_SLOT_EYES|ITEM_SLOT_HEAD))
+		return theft_level >= 3
+	return FALSE
+
+/datum/strippable_item/proc/get_visible_storage_contents(atom/source, mob/user, obj/item/item)
+	if(!item?.atom_storage || !isliving(user))
+		return null
+	var/mob/living/living_user = user
+	var/theft_level = living_user.get_cyberpunk_theft_search_level()
+	var/slot = get_inventory_slot()
+	if(slot & ITEM_SLOT_BELT)
+		if(theft_level < 1)
+			return null
+	else if(slot & (ITEM_SLOT_OCLOTHING|ITEM_SLOT_SUITSTORE))
+		if(theft_level < 2)
+			return null
+	else if(slot & ITEM_SLOT_BACK)
+		if(theft_level < 3)
+			return null
+	else
+		return null
+
+	var/list/storage_contents = list()
+	for(var/obj/item/stored_item as anything in item.atom_storage.return_inv(recursive = FALSE))
+		storage_contents += stored_item.name
+	if(!length(storage_contents))
+		return list("Empty")
+	return storage_contents
+
 /// Gets the item from the given source.
 /datum/strippable_item/proc/get_item(atom/source)
 
@@ -145,7 +189,7 @@
 	if (HAS_TRAIT(item, TRAIT_NO_STRIP))
 		return FALSE
 
-	source.visible_message(
+	if(!should_hide_theft_notice(source, user)) source.visible_message(
 		span_warning("[capitalize(user.declent_ru(NOMINATIVE))] пытается снять [item.declent_ru(ACCUSATIVE)] у [source.declent_ru(GENITIVE)]."),
 		span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] пытается снять [item.ru_p_yours(ACCUSATIVE)] [item.declent_ru(ACCUSATIVE)]."),
 		blind_message = span_hear("Вы слышите шорох."),
@@ -173,7 +217,7 @@
 /datum/strippable_item/proc/finish_unequip(atom/source, mob/user)
 
 /// Returns a STRIPPABLE_OBSCURING_* define to report on whether or not this is obscured.
-/datum/strippable_item/proc/get_obscuring(atom/source)
+/datum/strippable_item/proc/get_obscuring(atom/source, mob/user)
 	SHOULD_NOT_SLEEP(TRUE)
 	return STRIPPABLE_OBSCURING_NONE
 
@@ -213,6 +257,9 @@
 	/// The ITEM_SLOT_* to equip to.
 	var/item_slot
 
+/datum/strippable_item/mob_item_slot/get_inventory_slot()
+	return item_slot
+
 /datum/strippable_item/mob_item_slot/get_item(atom/source)
 	if (!ismob(source))
 		return null
@@ -233,6 +280,34 @@
 		return FALSE
 
 	return TRUE
+
+/datum/strippable_item/mob_item_slot/try_unequip(atom/source, mob/user)
+	. = ..()
+	if(!.)
+		return
+	if(!isliving(source) || !isliving(user) || source == user)
+		return TRUE
+	var/mob/living/living_source = source
+	if(living_source.stat != CONSCIOUS || living_source.IsSleeping() || living_source.IsUnconscious())
+		return TRUE
+
+	var/required_level = 0
+	if(item_slot & (ITEM_SLOT_GLOVES|ITEM_SLOT_FEET|ITEM_SLOT_BELT))
+		required_level = 1
+	else if(item_slot & (ITEM_SLOT_OCLOTHING|ITEM_SLOT_BRACERS|ITEM_SLOT_SHOULDER_LEFT|ITEM_SLOT_SHOULDER_RIGHT))
+		required_level = 2
+	else if(item_slot & (ITEM_SLOT_BACK|ITEM_SLOT_MASK|ITEM_SLOT_EYES|ITEM_SLOT_HEAD))
+		required_level = 3
+	if(required_level <= 0)
+		return TRUE
+
+	var/mob/living/living_user = user
+	if(living_user.get_cyberpunk_theft_protected_level() >= required_level)
+		return TRUE
+
+	var/obj/item/item = get_item(source)
+	to_chat(user, span_warning("You are not skilled enough to steal [item] from an alert target."))
+	return FALSE
 
 /datum/strippable_item/mob_item_slot/start_equip(atom/source, obj/item/equipping, mob/user)
 	. = ..()
@@ -262,7 +337,7 @@
 
 	return finish_equip_mob(equipping, source, user)
 
-/datum/strippable_item/mob_item_slot/get_obscuring(atom/source)
+/datum/strippable_item/mob_item_slot/get_obscuring(atom/source, mob/user)
 	if (!iscarbon(source))
 		return STRIPPABLE_OBSCURING_NONE
 
@@ -280,7 +355,7 @@
 	if (!.)
 		return
 
-	var/hidden_strip = FALSE
+	var/hidden_strip = should_hide_theft_notice(source, user)
 	var/mob/living/living_source = source
 	if(istype(living_source) && !living_source.in_code_fov(user, ignore_self = TRUE))
 		hidden_strip = TRUE
@@ -309,15 +384,18 @@
 /// A utility function for `/datum/strippable_item`s to start unequipping an item from a mob.
 /proc/start_unequip_mob(obj/item/item, mob/source, mob/user, strip_delay, hidden = FALSE)
 	var/final_strip_delay = strip_delay || item.strip_delay
+	var/timed_action_flags = NONE
 	if(isliving(user))
 		var/mob/living/living_user = user
 		var/theft_speed_bonus = living_user.get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 4)
 		if(theft_speed_bonus > 0)
 			final_strip_delay *= max(0.1, 1 - theft_speed_bonus * 0.01)
+		if(living_user.roll_cyberpunk_theft_moving_success())
+			timed_action_flags |= IGNORE_USER_LOC_CHANGE
 		var/hidden_chance = living_user.get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 2) + living_user.get_cyberpunk_skill_perk_bonus(SKILL_THEFT, 3)
 		if(hidden_chance > 0 && prob(min(hidden_chance, 95)))
 			hidden = TRUE
-	if (!do_after(user, final_strip_delay, source, interaction_key = REF(item), hidden = hidden))
+	if (!do_after(user, final_strip_delay, source, timed_action_flags = timed_action_flags, interaction_key = REF(item), hidden = hidden))
 		return FALSE
 
 	return TRUE
@@ -382,7 +460,7 @@
 		if(strippable_key in LAZYACCESS(interactions, user))
 			LAZYSET(result, "interacting", TRUE)
 
-		var/obscuring = item_data.get_obscuring(owner)
+		var/obscuring = item_data.get_obscuring(owner, user)
 		LAZYSET(result, "obscured", obscuring)
 		if (obscuring != STRIPPABLE_OBSCURING_NONE && obscuring != STRIPPABLE_OBSCURING_INACCESSIBLE)
 			items[strippable_key] = result
@@ -397,6 +475,7 @@
 
 		result["icon"] = icon2base64(icon(item.icon, item.icon_state, frame = 1))
 		result["name"] = item.name
+		result["contents"] = item_data.get_visible_storage_contents(owner, user, item)
 		result["alternate"] = item_data.get_alternate_actions(owner, user, item)
 		list_clear_nulls(result["alternate"])
 		var/static/list/already_cried = list()
@@ -437,7 +516,7 @@
 			if (!strippable_item.should_show(owner, user))
 				return
 
-			var/obscured = strippable_item.get_obscuring(owner)
+			var/obscured = strippable_item.get_obscuring(owner, user)
 			if (obscured == STRIPPABLE_OBSCURING_COMPLETELY || obscured == STRIPPABLE_OBSCURING_INACCESSIBLE)
 				return
 
@@ -504,7 +583,7 @@
 			if (!strippable_item.should_show(owner, user))
 				return
 
-			var/obscured = strippable_item.get_obscuring(owner)
+			var/obscured = strippable_item.get_obscuring(owner, user)
 			if (obscured == STRIPPABLE_OBSCURING_COMPLETELY || obscured == STRIPPABLE_OBSCURING_INACCESSIBLE)
 				return
 

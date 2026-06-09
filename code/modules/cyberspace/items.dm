@@ -455,7 +455,7 @@
 		return FALSE
 	return release_prepared(caster, target, deck, current_power, physical_world)
 
-/datum/cyberspace_demon/proc/release_prepared(mob/living/caster, atom/target, obj/item/clothing/gloves/cyberdeck/deck, current_power, physical_world)
+/datum/cyberspace_demon/proc/release_prepared(mob/living/caster, atom/target, obj/item/clothing/gloves/cyberdeck/deck, current_power, physical_world, activation_delay_multiplier = 1)
 	if(!caster || !target || !deck)
 		return FALSE
 	if(!deck.can_run_demons(caster))
@@ -465,7 +465,7 @@
 		to_chat(original_target, span_notice("You reflect [demon_name] back through the connection."))
 		to_chat(caster, span_warning("[demon_name] reflects back through [original_target]'s neural defense."))
 		target = caster
-	var/effective_activation_delay = get_effective_activation_delay(caster)
+	var/effective_activation_delay = round(get_effective_activation_delay(caster) * max(0, activation_delay_multiplier))
 	var/effective_stamina_cost = get_effective_stamina_cost(caster)
 	if(caster.cyberdemon_has_botanist())
 		var/free_chance = (caster.mind?.get_character_skill_level(SKILL_FAST_CODE) || 0) * 15
@@ -1783,6 +1783,7 @@
 	var/datum/cyberspace_demon/ready_demon
 	var/prepared_power = 0
 	var/prepared_physical_world = FALSE
+	var/prepared_ready_time = 0
 	var/prepare_token = 0
 	var/datum/weakref/middleclick_owner_ref
 
@@ -1875,6 +1876,7 @@
 	var/current_token = prepare_token
 	prepared_physical_world = !user.is_projected_into_cyberspace()
 	prepared_power = demon.get_effective_power(user, prepared_physical_world)
+	prepared_ready_time = 0
 	var/prepare_time = demon.get_effective_cast_time(user)
 	to_chat(user, span_notice("You start preparing [demon.demon_name]."))
 	INVOKE_ASYNC(src, PROC_REF(finish_demon_preparation), WEAKREF(user), WEAKREF(demon), current_token, prepare_time)
@@ -1893,6 +1895,7 @@
 		return TRUE
 	preparing_demon = null
 	ready_demon = demon
+	prepared_ready_time = world.time
 	to_chat(user, span_notice("[demon.demon_name] is ready. Middle-click a target to release it."))
 	return TRUE
 
@@ -1903,14 +1906,43 @@
 	var/datum/cyberspace_demon/demon = ready_demon
 	var/current_power = prepared_power
 	var/physical_world = prepared_physical_world
+	var/list/overcharge = get_prepared_demon_overcharge(user)
+	var/power_bonus = overcharge["power"]
+	var/activation_bonus = overcharge["activation"]
+	if(power_bonus > 0)
+		current_power = round(current_power * (1 + (power_bonus / 100)))
+	var/activation_delay_multiplier = max(0, 1 - (activation_bonus / 100))
+	if(power_bonus > 0 || activation_bonus > 0)
+		to_chat(user, span_notice("[demon.demon_name] releases overcharged: power +[round(power_bonus, 0.1)]%, activation delay -[round(activation_bonus, 0.1)]%."))
 	clear_prepared_demon()
-	return demon.release_prepared(user, target, src, current_power, physical_world)
+	return demon.release_prepared(user, target, src, current_power, physical_world, activation_delay_multiplier)
+
+/obj/item/clothing/gloves/cyberdeck/proc/get_prepared_demon_overcharge(mob/living/user)
+	var/list/overcharge = list(
+		"power" = 0,
+		"activation" = 0,
+	)
+	if(!istype(user) || !prepared_ready_time || world.time <= prepared_ready_time)
+		return overcharge
+	var/held_seconds = FLOOR((world.time - prepared_ready_time) / (1 SECONDS), 1)
+	if(held_seconds <= 0)
+		return overcharge
+	var/power_cap = user.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 4, "value_1") || 0
+	var/power_step = user.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 4, "value_2") || 0
+	if(power_cap > 0 && power_step > 0)
+		overcharge["power"] = min(power_cap, held_seconds * power_step)
+	var/activation_cap = user.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 4, "value_1") || 0
+	var/activation_step = user.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 4, "value_2") || 0
+	if(activation_cap > 0 && activation_step > 0)
+		overcharge["activation"] = min(activation_cap, held_seconds * activation_step)
+	return overcharge
 
 /obj/item/clothing/gloves/cyberdeck/proc/clear_prepared_demon()
 	preparing_demon = null
 	ready_demon = null
 	prepared_power = 0
 	prepared_physical_world = FALSE
+	prepared_ready_time = 0
 	prepare_token++
 
 /obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions(mob/living/user)

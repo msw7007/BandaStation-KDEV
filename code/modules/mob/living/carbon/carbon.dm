@@ -34,7 +34,6 @@
 	. = ..()
 	var/hurt = TRUE
 	var/extra_speed = 0
-	var/fall_damage_multiplier = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0 ? 0 : 1
 	var/oof_noise = FALSE //We smacked something with denisty, so play a noise
 	var/mob/thrower = throwingdatum?.get_thrower()
 	if(thrower != src)
@@ -45,12 +44,12 @@
 	if(hurt && hit_atom.density)
 		if(isturf(hit_atom))
 			Paralyze(2 SECONDS)
-			take_bodypart_damage((10 + 5 * extra_speed) * fall_damage_multiplier, check_armor = TRUE, wound_bonus = extra_speed * 5)
+			take_bodypart_damage(10 + 5 * extra_speed, check_armor = TRUE, wound_bonus = extra_speed * 5)
 		else if(isstructure(hit_atom) && extra_speed)
 			Paralyze(1 SECONDS)
-			take_bodypart_damage((5 + 5 * extra_speed) * fall_damage_multiplier, check_armor = TRUE, wound_bonus = extra_speed * 5)
+			take_bodypart_damage(5 + 5 * extra_speed, check_armor = TRUE, wound_bonus = extra_speed * 5)
 		else if(!iscarbon(hit_atom) && extra_speed)
-			take_bodypart_damage(5 * extra_speed * fall_damage_multiplier, check_armor = TRUE, wound_bonus = extra_speed * 5)
+			take_bodypart_damage(5 * extra_speed, check_armor = TRUE, wound_bonus = extra_speed * 5)
 		visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] врезается в [hit_atom.declent_ru(ACCUSATIVE)][extra_speed ? " с большой скоростью" : ""]!"),\
 			span_userdanger("Вы врезаетесь в [hit_atom.declent_ru(ACCUSATIVE)][extra_speed ? " с большой скоростью" : ""]!"))
 		log_combat(hit_atom, src, "crashes ")
@@ -138,7 +137,7 @@
 
 /mob/living/carbon/on_fall()
 	. = ..()
-	if(get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0 && vertical_fall_chain <= 1)
 		return
 	loc?.handle_fall(src) //it's loc so it doesn't call the mob's handle_fall which does nothing
 

@@ -395,8 +395,9 @@
 	give_stun_buffs(owner)
 	addtimer(CALLBACK(src, PROC_REF(remove_stun_buffs), owner), stun_resistance_time)
 
-	COOLDOWN_START(src, implant_cooldown, 60 SECONDS)
-	addtimer(CALLBACK(src, PROC_REF(implant_ready)),60 SECONDS)
+	var/reboot_interval = 60 SECONDS * get_cyberpunk_implant_passive_interval_multiplier()
+	COOLDOWN_START(src, implant_cooldown, reboot_interval)
+	addtimer(CALLBACK(src, PROC_REF(implant_ready)), reboot_interval)
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/implant_ready()
 	if(owner)

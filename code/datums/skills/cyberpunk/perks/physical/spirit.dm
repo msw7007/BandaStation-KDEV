@@ -42,7 +42,11 @@
 /datum/skill_perk/physical/spirit/endurance/perk_2
 	name = "Умелый"
 	desc = "На {value}% повышает показатель, при котором персонаж падает от боли."
-	effectiveness_values = list(30, 45, 60)
+	effectiveness_values = list(20, 30, 40)
+	effectiveness_by_key = list(
+		"value_1" = list(20, 30, 40),
+		"value_2" = list(10, 15, 20),
+	)
 
 /datum/skill_perk/physical/spirit/endurance/perk_3
 	name = "Обученный"
@@ -100,7 +104,7 @@
 /datum/skill_perk/physical/spirit/athletics/perk_6
 	name = "Мастер"
 	desc = "Таймер начала регенерации выносливости снижается на {value}%."
-	effectiveness_values = list(45, 67.5, 90)
+	effectiveness_values = list(45, 75, 90)
 
 /datum/skill_perk/physical/spirit/compatibility/perk_1
 	name = "Начинающий"
@@ -140,3 +144,11 @@
 		"value_2" = list(50, 75, 100),
 	)
 
+// Cyberpunk build: compatibility perk 4 is speed, not raw implant strength.
+/datum/skill_perk/physical/spirit/compatibility/perk_4
+	desc = "Active implant cooldown is reduced by {value_1}%; passive implant trigger frequency is increased by {value_2}%."
+	effectiveness_values = list(20, 30, 40)
+	effectiveness_by_key = list(
+		"value_1" = list(20, 30, 40),
+		"value_2" = list(10, 15, 20),
+	)

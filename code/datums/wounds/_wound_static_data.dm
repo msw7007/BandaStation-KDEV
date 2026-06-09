@@ -160,7 +160,10 @@
  * * damage_source: The source of the damage that'd cause us. Nullable.
  */
 /datum/wound_pregen_data/proc/get_threshold_for(obj/item/bodypart/part, attack_direction, damage_source)
-	return threshold_minimum
+	var/threshold = threshold_minimum
+	if(part?.owner)
+		threshold *= part.owner.get_cyberpunk_fortitude_wound_threshold_multiplier()
+	return threshold
 
 /// Returns a new instance of our wound datum.
 /datum/wound_pregen_data/proc/generate_instance(obj/item/bodypart/limb, ...)

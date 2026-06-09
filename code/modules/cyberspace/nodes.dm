@@ -272,6 +272,8 @@
 /datum/cyberspace_node/proc/start_cyberspace_attack(mob/living/user, atom/visual_anchor)
 	if(!user?.cyberspace_session || !visual_anchor)
 		return FALSE
+	if(!cyberspace_node_requires_adjacent(user, visual_anchor))
+		return FALSE
 	var/datum/cyberspace_session/session = user.cyberspace_session
 	if(session.attack_token)
 		return session.cancel_cyber_attack()
@@ -293,6 +295,8 @@
 /datum/cyberspace_node/proc/start_cyberspace_connection(mob/living/user, atom/visual_anchor)
 	if(!user?.cyberspace_session || !visual_anchor)
 		return FALSE
+	if(!cyberspace_node_requires_adjacent(user, visual_anchor))
+		return FALSE
 	var/datum/cyberspace_session/session = user.cyberspace_session
 	if(session.is_connected_to_node(src))
 		to_chat(user, span_notice("Your avatar is already connected to [visual_anchor]."))
@@ -310,6 +314,8 @@
 /datum/cyberspace_node/proc/extract_connected_net_data(mob/living/user, atom/visual_anchor)
 	if(!user?.cyberspace_session)
 		return 0
+	if(visual_anchor && !cyberspace_node_requires_adjacent(user, visual_anchor))
+		return 0
 	if(!user.cyberspace_session.is_connected_to_node(src))
 		to_chat(user, span_warning("You need an active connection to [visual_anchor || anchor] before extracting net-data."))
 		return 0
@@ -322,8 +328,10 @@
 		to_chat(user, span_warning("[visual_anchor || anchor] has no accessible net-data."))
 	return extracted_data
 
-/datum/cyberspace_node/proc/run_control_mode(mob/living/user, atom/movable/target, mode = "control")
+/datum/cyberspace_node/proc/run_control_mode(mob/living/user, atom/movable/target, mode = "control", atom/visual_anchor)
 	if(!user || !target)
+		return FALSE
+	if(visual_anchor && !cyberspace_node_requires_adjacent(user, visual_anchor))
 		return FALSE
 	if(!can_use_control_function(user, mode))
 		to_chat(user, span_warning("Cyberspace command failed: [target] refuses [mode]. Break more protection or use a valid cryptographic key."))

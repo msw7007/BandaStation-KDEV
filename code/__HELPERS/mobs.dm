@@ -254,6 +254,7 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 	var/starttime = world.time
 	var/mob/living/living_user = isliving(user) ? user : null
 	var/next_stamina_spend = world.time + 1 SECONDS
+	var/cyberpunk_action_grace_until = 0
 	. = TRUE
 	while (world.time < endtime)
 		stoplag(1)
@@ -267,12 +268,20 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 
 		if(QDELETED(user) \
 			|| (!(timed_action_flags & IGNORE_USER_LOC_CHANGE) && !drifting && user.loc != user_loc) \
-			|| (!(timed_action_flags & IGNORE_HELD_ITEM) && user.get_active_held_item() != holding) \
 			|| (!(timed_action_flags & IGNORE_INCAPACITATED) && HAS_TRAIT(user, TRAIT_INCAPACITATED)) \
-			|| ((timed_action_flags & DO_AFTER_CHECK_NEXT_MOVE) && world.time < user.next_move) \
 			|| (extra_checks && !extra_checks.Invoke()))
 			. = FALSE
 			break
+
+		var/cyberpunk_action_interrupted = (!(timed_action_flags & IGNORE_HELD_ITEM) && user.get_active_held_item() != holding) || ((timed_action_flags & DO_AFTER_CHECK_NEXT_MOVE) && world.time < user.next_move)
+		if(cyberpunk_action_interrupted)
+			if(world.time <= cyberpunk_action_grace_until)
+				continue
+			if(!user.try_cyberpunk_light_weapon_do_after_interrupt_resist(target, user_loc))
+				. = FALSE
+				break
+			holding = user.get_active_held_item()
+			cyberpunk_action_grace_until = max(world.time + 1, user.next_move)
 
 		if(target && (user != target) && \
 			(QDELETED(target) \

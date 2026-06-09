@@ -428,6 +428,34 @@
 	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 6, "value_2")
 	return chance > 0 && prob(chance)
 
+/mob/living/proc/get_cyberpunk_fortitude_organ_health_multiplier()
+	return 1 + get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 2) * 0.01
+
+/mob/living/proc/apply_cyberpunk_fortitude_starting_organs()
+	return
+
+/mob/living/carbon/apply_cyberpunk_fortitude_starting_organs()
+	if(!mind)
+		return
+	var/multiplier = get_cyberpunk_fortitude_organ_health_multiplier()
+	if(multiplier <= 1)
+		return
+	for(var/obj/item/organ/organ as anything in organs)
+		if(!HAS_TRAIT(organ, TRAIT_CLIENT_STARTING_ORGAN))
+			continue
+		if(organ.cyberpunk_fortitude_starting_health_applied)
+			continue
+		organ.maxHealth = round(organ.maxHealth * multiplier)
+		organ.high_threshold = round(organ.high_threshold * multiplier)
+		organ.low_threshold = round(organ.low_threshold * multiplier)
+		organ.cyberpunk_fortitude_starting_health_applied = TRUE
+
+/mob/living/proc/get_cyberpunk_fortitude_wound_threshold_multiplier()
+	return 1 + get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 4) * 0.01
+
+/mob/living/proc/get_cyberpunk_fortitude_incoming_grab_durability_multiplier()
+	return max(0, 1 - get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 5) * 0.01)
+
 /obj/item/proc/get_cyberpunk_weapon_skill()
 	if(cyberpunk_weapon_skill)
 		return cyberpunk_weapon_skill
@@ -443,6 +471,81 @@
 	if(item_sharpness & SHARP_EDGED)
 		return w_class >= WEIGHT_CLASS_BULKY ? SKILL_HEAVY_SLASHING : SKILL_LIGHT_SLASHING
 	return w_class >= WEIGHT_CLASS_BULKY ? SKILL_HEAVY_BLUNT : SKILL_LIGHT_BLUNT
+
+/obj/item/proc/is_cyberpunk_heavy_weapon()
+	var/weapon_skill = get_cyberpunk_weapon_skill()
+	return (weapon_skill in list(SKILL_HEAVY_RANGED, SKILL_HEAVY_SLASHING, SKILL_HEAVY_BLUNT, SKILL_HEAVY_PIERCING, SKILL_CHOPPING))
+
+/obj/item/proc/is_cyberpunk_combat_weapon()
+	return force > 0 || istype(src, /obj/item/gun)
+
+/mob/living/proc/get_cyberpunk_heavy_weapon_move_bonus()
+	if(!mind || !combat_mode)
+		return 0
+	var/bonus = get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 1)
+	if(bonus <= 0)
+		return 0
+	for(var/obj/item/held_item as anything in held_items)
+		if(!held_item || !held_item.is_cyberpunk_combat_weapon())
+			continue
+		return bonus * 0.01
+	return 0
+
+/mob/living/proc/get_cyberpunk_heavy_weapon_equipment_damage(obj/item/weapon)
+	if(!weapon || !mind || !weapon.is_cyberpunk_heavy_weapon())
+		return 0
+	var/bonus = get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 3)
+	if(bonus <= 0)
+		return 0
+	return max(0, get_attribute_value(ATTRIBUTE_STRENGTH)) * bonus * 0.01
+
+/mob/living/proc/roll_cyberpunk_heavy_weapon_wound(obj/item/weapon)
+	if(!weapon || !mind || !weapon.is_cyberpunk_heavy_weapon())
+		return FALSE
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 5)
+	return chance > 0 && prob(chance)
+
+/mob/living/proc/get_cyberpunk_wounding_type_from_hit(damagetype, sharpness, armor_flag, brute_type = null, burn_type = null)
+	if(damagetype == BURN)
+		return WOUND_BURN
+	if(brute_type == BODYPART_DAMAGE_SLASH || (sharpness & SHARP_EDGED))
+		return WOUND_SLASH
+	if(brute_type == BODYPART_DAMAGE_PIERCE || (sharpness & SHARP_POINTY) || armor_flag == BULLET)
+		return WOUND_PIERCE
+	return WOUND_BLUNT
+
+/mob/living/proc/apply_cyberpunk_heavy_weapon_armor_effects(mob/living/attacker, obj/item/weapon, def_zone, armor_flag, armour_penetration, damagetype, sharpness = NONE, brute_type = null, burn_type = null)
+	return
+
+/mob/living/carbon/human/apply_cyberpunk_heavy_weapon_armor_effects(mob/living/attacker, obj/item/weapon, def_zone, armor_flag, armour_penetration, damagetype, sharpness = NONE, brute_type = null, burn_type = null)
+	if(!attacker || attacker == src || !weapon)
+		return
+	var/obj/item/bodypart/hit_part = get_bodypart(check_hit_limb_zone_name(def_zone))
+	if(!hit_part)
+		return
+	var/equipment_damage = attacker.get_cyberpunk_heavy_weapon_equipment_damage(weapon)
+	var/can_force_wound = attacker.roll_cyberpunk_heavy_weapon_wound(weapon)
+	if(equipment_damage <= 0 && !can_force_wound)
+		return
+	if(equipment_damage > 0)
+		var/guard_bonus = consume_cyberpunk_inspiration_guard("equipment protection")
+		if(guard_bonus > 0)
+			equipment_damage *= max(0, 1 - guard_bonus * 0.01)
+	var/pierced_armor = FALSE
+	for(var/obj/item/clothing/clothes as anything in get_clothing_on_part(hit_part))
+		if(!clothes || clothes.get_integrity() <= 0)
+			continue
+		var/armor_rating = clothes.get_armor_rating(armor_flag)
+		if(armor_rating <= 0)
+			continue
+		if(equipment_damage > 0)
+			clothes.take_damage_zone(hit_part.body_zone, equipment_damage, damagetype == BURN ? BURN : BRUTE, 0)
+		if(armour_penetration > armor_rating)
+			pierced_armor = TRUE
+	if(!pierced_armor || !can_force_wound)
+		return
+	var/wounding_type = attacker.get_cyberpunk_wounding_type_from_hit(damagetype, sharpness, armor_flag, brute_type, burn_type)
+	cause_wound_of_type_and_severity(wounding_type, hit_part, WOUND_SEVERITY_MODERATE, wound_source = weapon)
 
 /mob/living/proc/get_cyberpunk_weapon_damage_multiplier(obj/item/weapon)
 	if(!weapon || !mind)
@@ -499,6 +602,27 @@
 	if(weapon.w_class > WEIGHT_CLASS_NORMAL)
 		return FALSE
 	return prob(get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 3))
+
+/mob/proc/try_cyberpunk_light_weapon_do_after_interrupt_resist(atom/target, atom/original_loc)
+	return FALSE
+
+/mob/living/try_cyberpunk_light_weapon_do_after_interrupt_resist(atom/target, atom/original_loc)
+	if(!mind || loc != original_loc)
+		return FALSE
+	if(target && target != src && !Adjacent(target))
+		return FALSE
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 6)
+	return chance > 0 && prob(chance)
+
+/mob/proc/get_cyberpunk_do_after_action_cooldown_multiplier()
+	return 1
+
+/mob/living/get_cyberpunk_do_after_action_cooldown_multiplier()
+	if(!do_after_count())
+		return 1
+	if(get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 6) <= 0)
+		return 1
+	return 0.5
 
 /mob/living/proc/get_cyberpunk_reload_time_multiplier(obj/item/gun/gun)
 	if(!gun || !mind)
@@ -623,6 +747,81 @@
 				target.Knockdown(2 SECONDS)
 	return TRUE
 
+/mob/living/proc/apply_cyberpunk_precise_unarmed_pain(mob/living/carbon/target, obj/item/bodypart/affecting, damage_done)
+	if(!target || !affecting || damage_done <= 0)
+		return FALSE
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 3)
+	if(chance <= 0)
+		return FALSE
+	var/list/pain_check = get_character_perk_check_result(SKILL_PRECISE_UNARMED, 3, probability = chance)
+	if(!pain_check?["passed"])
+		return FALSE
+	affecting.add_bodypart_pain(damage_done)
+	to_chat(src, span_notice("Your precise strike doubles the pain in [target.declent_ru(GENITIVE)] [parse_zone(affecting.body_zone)]."))
+	to_chat(target, span_warning("[capitalize(src.declent_ru(NOMINATIVE))]'s precise strike sends sharp pain through your [parse_zone(affecting.body_zone)]."))
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_fast_unarmed_attack_cooldown(charged_intent = null)
+	var/cooldown = charged_intent == "kick" ? 1.5 SECONDS : 1.3 SECONDS
+	cooldown -= get_character_skill_level(SKILL_FAST_UNARMED) * (0.1 SECONDS)
+	var/speed_bonus = get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 1)
+	if(charged_intent != "kick")
+		speed_bonus += get_attribute_value(ATTRIBUTE_DEXTERITY) * get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 2) * 0.01
+	if(speed_bonus > 0)
+		cooldown *= max(0.1, 1 - speed_bonus * 0.01)
+	return max(0.2 SECONDS, round(cooldown))
+
+/mob/living/proc/can_cyberpunk_kick()
+	return world.time >= cyberpunk_next_kick
+
+/mob/living/proc/start_cyberpunk_kick_cooldown()
+	cyberpunk_next_kick = world.time + get_cyberpunk_fast_unarmed_attack_cooldown("kick")
+
+/mob/living/proc/try_cyberpunk_fast_unarmed_ignore_kick_attack_cooldown()
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 3)
+	if(chance <= 0)
+		return FALSE
+	var/list/cooldown_check = get_character_perk_check_result(SKILL_FAST_UNARMED, 3, probability = chance)
+	if(!cooldown_check?["passed"])
+		return FALSE
+	to_chat(src, span_notice("Your kick leaves you ready to strike again."))
+	return TRUE
+
+/mob/living/proc/try_cyberpunk_fast_unarmed_prepare_free_hand_attack()
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 4)
+	if(chance <= 0)
+		return FALSE
+	var/list/stamina_check = get_character_perk_check_result(SKILL_FAST_UNARMED, 4, probability = chance)
+	if(!stamina_check?["passed"])
+		return FALSE
+	cyberpunk_fast_unarmed_free_hand_attack = TRUE
+	to_chat(src, span_notice("Your kick sets up a stamina-free hand strike."))
+	return TRUE
+
+/mob/living/proc/consume_cyberpunk_fast_unarmed_free_hand_attack()
+	if(!cyberpunk_fast_unarmed_free_hand_attack)
+		return FALSE
+	cyberpunk_fast_unarmed_free_hand_attack = FALSE
+	to_chat(src, span_notice("Your fast unarmed rhythm saves the stamina for this strike."))
+	return TRUE
+
+/mob/living/proc/apply_cyberpunk_fast_unarmed_kick_effects(mob/living/target, target_was_staggered)
+	if(!target)
+		return FALSE
+	var/stagger_chance = get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 5)
+	if(stagger_chance > 0)
+		var/list/stagger_check = get_character_perk_check_result(SKILL_FAST_UNARMED, 5, probability = stagger_chance)
+		if(stagger_check?["passed"])
+			target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+			to_chat(src, span_notice("Your kick knocks [target.declent_ru(ACCUSATIVE)] off balance."))
+	var/stun_chance = get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 6, "value_1")
+	if(target_was_staggered && stun_chance > 0)
+		var/list/stun_check = get_character_perk_check_result(SKILL_FAST_UNARMED, 6, probability = stun_chance)
+		if(stun_check?["passed"])
+			target.Stun(get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 6, "value_2") * 1 SECONDS)
+			to_chat(src, span_notice("Your kick stuns [target.declent_ru(ACCUSATIVE)]."))
+	return TRUE
+
 /mob/living/proc/apply_cyberpunk_power_unarmed_effects(mob/living/target)
 	if(!target)
 		return FALSE
@@ -635,6 +834,24 @@
 		target.Knockdown(3 SECONDS)
 		target.apply_damage(10, STAMINA)
 	return TRUE
+
+/mob/living/proc/get_cyberpunk_power_unarmed_parry_wear_damage()
+	var/wear_bonus = get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 3)
+	if(wear_bonus <= 0)
+		return 0
+	var/wear_damage = round(get_attribute_value(ATTRIBUTE_STRENGTH) * wear_bonus * 0.01)
+	if(wear_damage <= 0)
+		return 0
+	return wear_damage
+
+/mob/living/proc/apply_cyberpunk_power_unarmed_parry_wear(obj/item/blocking_item)
+	if(!blocking_item || QDELETED(blocking_item))
+		return 0
+	var/wear_damage = get_cyberpunk_power_unarmed_parry_wear_damage()
+	if(wear_damage <= 0)
+		return 0
+	blocking_item.take_damage(wear_damage, BRUTE, MELEE, FALSE)
+	return wear_damage
 
 /mob/living/proc/get_cyberpunk_grapple_control_bonus()
 	if(grab_state == GRAB_AGGRESSIVE)

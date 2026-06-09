@@ -929,8 +929,9 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			miss_chance = 0
 		else
 			miss_chance = clamp(UNARMED_MISS_CHANCE_BASE - limb_accuracy + (puncher_brute_and_burn / 2), 0, UNARMED_MISS_CHANCE_MAX) //Limb miss chance + various damage. capped at 80 so there is at least a chance to land a hit.
+	var/defense_breach_hit = target.consume_cyberpunk_defense_breach(user)
 
-	if(!damage || !affecting || prob(miss_chance))//future-proofing for species that have 0 damage/weird cases where no zone is targeted
+	if(!damage || !affecting || (!defense_breach_hit && prob(miss_chance)))//future-proofing for species that have 0 damage/weird cases where no zone is targeted
 		playsound(target.loc, attacking_bodypart.unarmed_miss_sound, 25, TRUE, -1)
 		target.visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(atk_verb, GLOB.ru_attack_verbs_unarmed)] и промахивается по [target.declent_ru(DATIVE)]!"), \
 						span_danger("[capitalize(user.declent_ru(NOMINATIVE))] [ru_attack_verb(atk_verb, GLOB.ru_attack_verbs_unarmed)] и промахивается по вам!"), span_hear("Вы слышите свист!"), COMBAT_MESSAGE_RANGE, user)
@@ -996,17 +997,23 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	var/attack_type = attacking_bodypart.attack_type
 	var/kicking = (atk_effect == ATTACK_EFFECT_KICK)
 	var/final_armor_block = armor_block
+	var/damage_done = 0
 	if(kicking || grappled) //kicks and punches when grappling bypass armor slightly.
 		if(damage >= 9)
 			target.force_say()
 		log_combat(user, target, grappled ? "grapple punched" : "kicked")
 		final_armor_block -= limb_accuracy
-		target.apply_damage(damage, attack_type, affecting, final_armor_block, attack_direction = attack_direction, sharpness = limb_sharpness)
+		damage_done = target.apply_damage(damage, attack_type, affecting, final_armor_block, attack_direction = attack_direction, sharpness = limb_sharpness)
 	else // Normal attacks do not gain the benefit of armor penetration.
-		target.apply_damage(damage, attack_type, affecting, armor_block, attack_direction = attack_direction, sharpness = limb_sharpness)
+		damage_done = target.apply_damage(damage, attack_type, affecting, armor_block, attack_direction = attack_direction, sharpness = limb_sharpness)
 		if(damage >= 9)
 			target.force_say()
 		log_combat(user, target, "punched")
+	if(damage_done > 0 && !kicking && !biting)
+		user.apply_cyberpunk_precise_unarmed_pain(target, affecting, damage_done)
+	if(damage_done > 0 && kicking)
+		user.try_cyberpunk_fast_unarmed_prepare_free_hand_attack()
+		user.apply_cyberpunk_fast_unarmed_kick_effects(target, staggered)
 	user.apply_cyberpunk_power_unarmed_effects(target)
 	user.apply_cyberpunk_unarmed_zone_effect(target, user.zone_selected)
 

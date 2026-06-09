@@ -27,7 +27,7 @@
 		synthesizing = TRUE
 		to_chat(owner, span_notice("You feel less hungry..."))
 		owner.adjust_nutrition(25 * seconds_per_tick)
-		addtimer(CALLBACK(src, PROC_REF(synth_cool)), 5 SECONDS)
+		addtimer(CALLBACK(src, PROC_REF(synth_cool)), 5 SECONDS * get_cyberpunk_implant_passive_interval_multiplier())
 
 /obj/item/organ/cyberimp/chest/nutriment/proc/synth_cool()
 	synthesizing = FALSE
@@ -76,11 +76,12 @@
 
 	if(reviving)
 		if(owner.stat == CONSCIOUS)
-			COOLDOWN_START(src, reviver_cooldown, revive_cost)
+			var/recharge_time = revive_cost * get_cyberpunk_implant_passive_interval_multiplier()
+			COOLDOWN_START(src, reviver_cooldown, recharge_time)
 			reviving = FALSE
-			to_chat(owner, span_notice("Your reviver implant shuts down and starts recharging. It will be ready again in [DisplayTimeText(revive_cost)]."))
+			to_chat(owner, span_notice("Your reviver implant shuts down and starts recharging. It will be ready again in [DisplayTimeText(recharge_time)]."))
 		else
-			addtimer(CALLBACK(src, PROC_REF(heal)), 3 SECONDS)
+			addtimer(CALLBACK(src, PROC_REF(heal)), 3 SECONDS * get_cyberpunk_implant_passive_interval_multiplier())
 		return
 
 	if(!COOLDOWN_FINISHED(src, reviver_cooldown) || HAS_TRAIT(owner, TRAIT_SUICIDED))

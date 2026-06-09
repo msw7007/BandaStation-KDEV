@@ -80,7 +80,7 @@
 /datum/skill_perk/physical/dexterity/acrobatics/perk_2
 	name = "Умелый"
 	desc = "На {value}% сокращаются долгие действия лазанья и перебирания."
-	effectiveness_values = list(25, 37.5, 50)
+	effectiveness_values = list(20, 30, 40)
 
 /datum/skill_perk/physical/dexterity/acrobatics/perk_3
 	name = "Обученный"
@@ -127,7 +127,7 @@
 /datum/skill_perk/physical/dexterity/evasion/perk_4
 	name = "Эксперт"
 	desc = "При попытке захвата на вас есть {value}% шанс, что при успешном увороте атакующий схватит сам себя."
-	effectiveness_values = list(50, 75, 100)
+	effectiveness_values = list(40, 60, 80)
 
 /datum/skill_perk/physical/dexterity/evasion/perk_5
 	name = "Профессионал"
@@ -136,9 +136,8 @@
 /datum/skill_perk/physical/dexterity/evasion/perk_6
 	name = "Мастер"
 	desc = "При успешном увороте есть {value_1}% шанс стать невидимым для противника на {value_2} секунды."
-	effectiveness_values = list(30, 45, 60)
+	effectiveness_values = list(30, 30, 30)
 	effectiveness_by_key = list(
-		"value_1" = list(30, 45, 60),
-		"value_2" = list(2, 3, 4),
+		"value_1" = list(30, 30, 30),
+		"value_2" = list(2, 4, 6),
 	)
-

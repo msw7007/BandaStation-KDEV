@@ -78,8 +78,10 @@
 			return TRUE
 	return FALSE
 
-/mob/living/carbon/human/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null)
-	. = ..(hit_by, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break)
+/mob/living/carbon/human/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null, grab_attempt = FALSE)
+	if(consume_cyberpunk_defense_breach(hit_by))
+		return FAILED_BLOCK
+	. = ..(hit_by, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break, grab_attempt)
 	if(. == SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
 	if(defense_break == "parry" || !can_parry())
@@ -98,11 +100,22 @@
 		else if(!(worn_thing in held_items))
 			continue
 
-		var/final_block_chance = worn_thing.block_chance - (clamp((armour_penetration - worn_thing.armour_penetration) / 2, 0, 100)) + block_chance_modifier + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1)
+		var/final_block_chance = round((worn_thing.block_chance - (clamp((armour_penetration - worn_thing.armour_penetration) / 2, 0, 100)) + block_chance_modifier + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1)) * get_cyberpunk_inspiration_guard_multiplier())
+		if(active_parry && (worn_thing in held_items) && fails_cyberpunk_dual_parry_penalty())
+			cyberpunk_parry_until = 0
+			return FAILED_BLOCK
 		if(worn_thing.hit_reaction(src, hit_by, attack_text, final_block_chance, damage, attack_type, damage_type))
 			cyberpunk_parry_until = 0
+			consume_cyberpunk_inspiration_guard("parry")
 			spend_stamina(STAMINA_COST_PARRY, "parry")
 			reward_character_check_experience(SKILL_CONCENTRATION, max(1, damage), FALSE, 1)
+			if(attack_type == UNARMED_ATTACK && isliving(hit_by))
+				var/mob/living/unarmed_attacker = hit_by
+				var/parry_wear = should_preserve_cyberpunk_parry_guard(worn_thing) ? 0 : unarmed_attacker.apply_cyberpunk_power_unarmed_parry_wear(worn_thing)
+				if(parry_wear > 0)
+					to_chat(unarmed_attacker, span_warning("Your blocked strike strains [worn_thing]."))
+					to_chat(src, span_warning("[unarmed_attacker]'s forceful strike wears down [worn_thing]."))
+			try_cyberpunk_parry_breach(hit_by)
 			if(prob(get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 6)) && isliving(hit_by))
 				var/mob/living/attacker = hit_by
 				var/obj/item/attacker_item = attacker.get_active_held_item()
@@ -111,15 +124,78 @@
 			return SUCCESSFUL_BLOCK
 
 	if(active_parry && attack_type != PROJECTILE_ATTACK)
-		var/bare_parry_chance = clamp(15 + get_character_skill_level(SKILL_CONCENTRATION) * 3 + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1), 5, 75)
+		var/bare_parry_chance = clamp(round((15 + get_character_skill_level(SKILL_CONCENTRATION) * 3 + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
 		if(prob(bare_parry_chance) && spend_stamina(STAMINA_COST_PARRY, "parry"))
 			cyberpunk_parry_until = 0
 			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] parries [attack_text]!"), span_notice("You parry [attack_text]."))
 			reward_character_check_experience(SKILL_CONCENTRATION, max(1, damage), FALSE, 1)
+			consume_cyberpunk_inspiration_guard("parry")
+			if(attack_type == UNARMED_ATTACK && isliving(hit_by))
+				var/mob/living/unarmed_attacker = hit_by
+				var/parry_wear = unarmed_attacker.get_cyberpunk_power_unarmed_parry_wear_damage()
+				if(parry_wear > 0)
+					if(wear_bracers && wear_bracers.get_integrity() > 0)
+						if(!should_preserve_cyberpunk_parry_guard(wear_bracers))
+							wear_bracers.take_damage(parry_wear, BRUTE, MELEE, FALSE)
+							to_chat(unarmed_attacker, span_warning("Your blocked strike strains [wear_bracers]."))
+							to_chat(src, span_warning("[unarmed_attacker]'s forceful strike wears down [wear_bracers]."))
+					else
+						var/body_damage = round(parry_wear * 0.5 * get_cyberpunk_bare_parry_damage_multiplier())
+						if(body_damage > 0)
+							var/obj/item/bodypart/parry_arm = get_active_hand()
+							apply_damage(
+								damage = body_damage,
+								damagetype = BRUTE,
+								def_zone = parry_arm || BODY_ZONE_R_ARM,
+								wound_bonus = CANT_WOUND,
+								wound_clothing = FALSE,
+							)
+							to_chat(unarmed_attacker, span_warning("Your blocked strike still bruises [src]'s arm."))
+							to_chat(src, span_warning("You absorb part of [unarmed_attacker]'s blocked strike with your arm."))
+			try_cyberpunk_parry_breach(hit_by)
 			return SUCCESSFUL_BLOCK
 		cyberpunk_parry_until = 0
 
 	return FAILED_BLOCK
+
+/mob/living/carbon/human/proc/fails_cyberpunk_dual_parry_penalty()
+	if(!get_active_held_item() || !get_inactive_held_item())
+		return FALSE
+	var/fail_chance = max(0, 30 - get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 4))
+	if(fail_chance <= 0)
+		return FALSE
+	if(!prob(fail_chance))
+		return FALSE
+	to_chat(src, span_warning("Your two-weapon guard opens for a moment."))
+	return TRUE
+
+/mob/living/carbon/human/proc/should_preserve_cyberpunk_parry_guard(obj/item/guard_item)
+	var/save_chance = get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 3)
+	if(save_chance <= 0)
+		return FALSE
+	var/list/save_check = get_character_perk_check_result(SKILL_CONCENTRATION, 3, probability = save_chance)
+	if(!save_check?["passed"])
+		return FALSE
+	to_chat(src, span_notice("Your concentration preserves [guard_item]."))
+	return TRUE
+
+/mob/living/carbon/human/proc/get_cyberpunk_bare_parry_damage_multiplier()
+	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 3)
+	if(reduction <= 0)
+		return 1
+	return max(0, 1 - reduction * 0.01)
+
+/mob/living/carbon/human/proc/try_cyberpunk_parry_breach(atom/hit_by)
+	if(!isliving(hit_by))
+		return FALSE
+	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 5)
+	if(chance <= 0)
+		return FALSE
+	var/list/breach_check = get_character_perk_check_result(SKILL_CONCENTRATION, 5, probability = chance)
+	if(!breach_check?["passed"])
+		return FALSE
+	var/mob/living/attacker = hit_by
+	return attacker.apply_cyberpunk_defense_breach(src, 5 SECONDS)
 
 /mob/living/carbon/human/grippedby(mob/living/carbon/user, instant = FALSE)
 	if(w_uniform)
@@ -677,6 +753,13 @@
 			leg_clothes = wear_suit
 		if(leg_clothes)
 			torn_items |= leg_clothes
+
+	if(length(torn_items))
+		var/guard_bonus = consume_cyberpunk_inspiration_guard("equipment protection")
+		if(guard_bonus > 0)
+			damage_amount *= max(0, 1 - guard_bonus * 0.01)
+		if(damage_amount <= 0)
+			return
 
 	for(var/obj/item/I in torn_items)
 		I.take_damage(damage_amount, damage_type, damage_flag, 0)

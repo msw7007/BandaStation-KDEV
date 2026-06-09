@@ -201,15 +201,15 @@
 		return FALSE
 	switch(action)
 		if("open_ui")
-			return node.run_control_mode(body, target, "open_ui")
+			return node.run_control_mode(body, target, "open_ui", visual_anchor)
 		if("emag_activate")
-			return node.run_control_mode(body, target, "emag_activate")
+			return node.run_control_mode(body, target, "emag_activate", visual_anchor)
 		if("emp_activate")
-			return node.run_control_mode(body, target, "emp_activate")
+			return node.run_control_mode(body, target, "emp_activate", visual_anchor)
 		if("shutdown")
-			return node.run_control_mode(body, target, "shutdown")
+			return node.run_control_mode(body, target, "shutdown", visual_anchor)
 		if("settings")
-			return node.run_control_mode(body, target, "settings")
+			return node.run_control_mode(body, target, "settings", visual_anchor)
 		else
 			return FALSE
 

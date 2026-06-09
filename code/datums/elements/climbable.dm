@@ -69,19 +69,10 @@
 	user.visible_message(span_warning("[user.declent_ru(NOMINATIVE)] начинает подниматься на [climbed_thing.declent_ru(ACCUSATIVE)]."), \
 								span_notice("Вы начинаете подниматься на [climbed_thing.declent_ru(ACCUSATIVE)]..."))
 	// Time in deciseoncds it takes to complete the climb do_after()
-	var/adjusted_climb_time = climb_time
+	var/adjusted_climb_time = user.get_cyberpunk_acrobatics_climb_duration(climb_time)
 	// Time in deciseonds that the mob is stunned after climbing successfully.
 	var/adjusted_climb_stun = climb_stun
-	// Our climbers fitness level, which removes some climb time and speeds up our climbing do_after, assuming they worked out
-	var/fitness_level = user.mind?.get_skill_level(/datum/skill/athletics) - 1
-	adjusted_climb_time = clamp(adjusted_climb_time - fitness_level, 1, climb_time) //Here we adjust the number of deciseconds we shave off per level of fitness, with a minimum of 1 decisecond and a maximum of climb_time (just in case)
-	var/acrobatics_climb_reduction = user.get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 2)
-	if(acrobatics_climb_reduction > 0)
-		adjusted_climb_time *= max(0.1, 1 - acrobatics_climb_reduction * 0.01)
-	if(user.get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0)
-		adjusted_climb_time = 0
-		adjusted_climb_stun = 0
-
+	var/fitness_level = max(1, user.mind?.get_skill_level(/datum/skill/athletics) || 1)
 	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)
 	if(istype(potential_spine))
 		adjusted_climb_time *= potential_spine.athletics_boost_multiplier

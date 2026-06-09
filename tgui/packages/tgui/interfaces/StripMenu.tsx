@@ -7,7 +7,7 @@ import { resolveAsset } from '../assets';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
 
-const ROWS = 5;
+const ROWS = 7;
 const COLUMNS = 6;
 
 const BUTTON_DIMENSIONS = '64px';
@@ -208,6 +208,36 @@ const SLOTS: Record<
     image: 'inventory-shoes.png',
   },
 
+  undershirt: {
+    displayName: 'undershirt',
+    gridSpot: getGridSpotKey([3, 0]),
+    image: 'inventory-uniform.png',
+  },
+
+  underwear: {
+    displayName: 'underwear',
+    gridSpot: getGridSpotKey([3, 1]),
+    image: 'inventory-uniform.png',
+  },
+
+  tights: {
+    displayName: 'tights',
+    gridSpot: getGridSpotKey([3, 3]),
+    image: 'inventory-uniform.png',
+  },
+
+  bracers: {
+    displayName: 'bracers',
+    gridSpot: getGridSpotKey([3, 4]),
+    image: 'inventory-gloves.png',
+  },
+
+  finger: {
+    displayName: 'finger',
+    gridSpot: getGridSpotKey([3, 5]),
+    image: 'inventory-id.png',
+  },
+
   suit_storage: {
     displayName: 'suit storage item',
     gridSpot: getGridSpotKey([4, 0]),
@@ -243,6 +273,32 @@ const SLOTS: Record<
     gridSpot: getGridSpotKey([4, 5]),
     image: 'inventory-pocket.png',
   },
+
+  shoulder_left: {
+    displayName: 'left shoulder',
+    gridSpot: getGridSpotKey([5, 1]),
+    image: 'inventory-back.png',
+    additionalComponent: <CornerText align="right">L</CornerText>,
+  },
+
+  shoulder_right: {
+    displayName: 'right shoulder',
+    gridSpot: getGridSpotKey([5, 2]),
+    image: 'inventory-back.png',
+    additionalComponent: <CornerText align="left">R</CornerText>,
+  },
+
+  pants: {
+    displayName: 'pants',
+    gridSpot: getGridSpotKey([5, 3]),
+    image: 'inventory-uniform.png',
+  },
+
+  chest: {
+    displayName: 'chest',
+    gridSpot: getGridSpotKey([5, 4]),
+    image: 'inventory-suit.png',
+  },
 };
 
 enum ObscuringLevel {
@@ -272,6 +328,7 @@ type StripMenuItem =
       | {
           icon: string;
           name: string;
+          contents?: string[];
           alternate?: string[];
           obscured: ObscuringLevel;
         }
@@ -296,8 +353,8 @@ export const StripMenu = (props) => {
 
   return (
     // (64 + 6) * 6 + 6 = 426
-    // (64 + 6) * 5 + 6 + 31 (from title) =
-    <Window title={`Stripping ${data.name}`} width={426} height={387}>
+    // (64 + 6) * 7 + 6 + 31 (from title) =
+    <Window title={`Stripping ${data.name}`} width={426} height={527}>
       <Window.Content>
         <Stack fill vertical>
           {range(0, ROWS).map((row) => (
@@ -340,7 +397,9 @@ export const StripMenu = (props) => {
                       />
                     );
 
-                    tooltip = item.name;
+                    tooltip = item.contents?.length
+                      ? `${item.name}\nContents: ${item.contents.join(', ')}`
+                      : item.name;
                     if (item.alternate?.length) {
                       alternateActions = item.alternate.map(
                         (alternateKey, idx) => {

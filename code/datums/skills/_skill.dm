@@ -143,22 +143,39 @@ GLOBAL_LIST_INIT(skill_types, valid_subtypesof(/datum/skill))
 	return isnull(effectiveness) ? 0 : effectiveness
 
 /datum/skill_perk/proc/passes_check(datum/mind/mind, required_rank = 1, probability = 100)
-	if(!has_rank(mind, required_rank))
+	var/current_rank = get_rank(mind)
+	var/normalized_required_rank = normalize_rank(required_rank)
+	if(current_rank < normalized_required_rank)
+		emit_cyberpunk_debug_check(mind, current_rank, normalized_required_rank, probability, FALSE)
 		return FALSE
-	return prob(clamp(probability, 0, 100))
+	var/passed = prob(clamp(probability, 0, 100))
+	emit_cyberpunk_debug_check(mind, current_rank, normalized_required_rank, probability, passed)
+	return passed
 
 /datum/skill_perk/proc/get_check_result(datum/mind/mind, required_rank = 1, probability = 100)
 	var/current_rank = get_rank(mind)
 	var/effectiveness = get_effectiveness(mind)
-	var/has_required_rank = current_rank >= normalize_rank(required_rank)
+	var/normalized_required_rank = normalize_rank(required_rank)
+	var/has_required_rank = current_rank >= normalized_required_rank
+	var/passed = has_required_rank && prob(clamp(probability, 0, 100))
+	emit_cyberpunk_debug_check(mind, current_rank, normalized_required_rank, probability, passed)
 	return list(
 		"has_perk" = has_required_rank,
 		"rank" = current_rank,
-		"required_rank" = normalize_rank(required_rank),
+		"required_rank" = normalized_required_rank,
 		"effectiveness" = effectiveness,
-		"description" = get_description(max(current_rank, normalize_rank(required_rank))),
-		"passed" = has_required_rank && prob(clamp(probability, 0, 100)),
+		"description" = get_description(max(current_rank, normalized_required_rank)),
+		"passed" = passed,
 	)
+
+// CYBERPUNK TESTING: Удалить перед финалом.
+/datum/skill_perk/proc/emit_cyberpunk_debug_check(datum/mind/mind, current_rank, required_rank, probability, passed)
+	var/mob/current_mob = mind?.current
+	if(!current_mob?.client)
+		return
+	var/result = passed ? "SUCCESS" : "FAIL"
+	var/skill_name = owner?.name || "[owner?.type || "unknown skill"]"
+	to_chat(current_mob, span_notice("CYBERPUNK PERK CHECK: [skill_name] / [name] #[index] rank [current_rank]/[required_rank], chance [clamp(probability, 0, 100)]% -> [result]."))
 
 /datum/skill_perk/proc/can_apply_effect(datum/mind/mind, required_rank = 1)
 	return has_rank(mind, required_rank)

@@ -18,9 +18,11 @@
 // DOES NOT EFFECT THE BASE 1 DECISECOND DELAY OF NEXT_CLICK
 
 /mob/proc/changeNext_move(num)
+	num *= get_cyberpunk_do_after_action_cooldown_multiplier()
 	next_move = world.time + ((num+next_move_adjust)*next_move_modifier)
 
 /mob/living/changeNext_move(num)
+	num *= get_cyberpunk_do_after_action_cooldown_multiplier()
 	var/mod = next_move_modifier
 	var/adj = next_move_adjust
 	for(var/datum/status_effect/effect as anything in status_effects)

@@ -39,6 +39,14 @@
 	return TRUE
 
 /mob/living/UnarmedAttack(atom/attack_target, proximity_flag, list/modifiers)
+	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
+	var/is_cyberpunk_kick = charged_intent == "kick"
+	if(is_cyberpunk_kick)
+		if(!combat_mode)
+			return FALSE
+		if(!can_cyberpunk_kick())
+			balloon_alert(src, "kick recovering")
+			return FALSE
 	// The sole reason for this signal needing to exist is making FotNS incompatible with Hulk.
 	// Note that it is send before [proc/can_unarmed_attack] is called, keep this in mind.
 	var/sigreturn = SEND_SIGNAL(src, COMSIG_LIVING_EARLY_UNARMED_ATTACK, attack_target, proximity_flag, modifiers)
@@ -47,7 +55,7 @@
 	if(sigreturn & COMPONENT_SKIP_ATTACK)
 		return FALSE
 
-	if(isliving(attack_target) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
+	if(!is_cyberpunk_kick && isliving(attack_target) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
 		var/mob/living/living_target = attack_target
 		if(try_cyberpunk_grapple_attack(living_target, modifiers))
 			return TRUE
@@ -62,8 +70,12 @@
 	if(!can_unarmed_attack())
 		return FALSE
 
+	var/apply_cyberpunk_combat_cooldown = combat_mode || isliving(attack_target)
 	if(combat_mode || isliving(attack_target))
-		spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
+		if(is_cyberpunk_kick || !consume_cyberpunk_fast_unarmed_free_hand_attack())
+			spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
+	if(is_cyberpunk_kick)
+		start_cyberpunk_kick_cooldown()
 
 	sigreturn = SEND_SIGNAL(src, COMSIG_LIVING_UNARMED_ATTACK, attack_target, proximity_flag, modifiers)
 	if(sigreturn & COMPONENT_CANCEL_ATTACK_CHAIN)
@@ -71,8 +83,13 @@
 	if(sigreturn & COMPONENT_SKIP_ATTACK)
 		return FALSE
 
-	if(!right_click_attack_chain(attack_target, modifiers))
+	if(is_cyberpunk_kick || !right_click_attack_chain(attack_target, modifiers))
 		resolve_unarmed_attack(attack_target, modifiers)
+	if(apply_cyberpunk_combat_cooldown)
+		if(is_cyberpunk_kick && try_cyberpunk_fast_unarmed_ignore_kick_attack_cooldown())
+			changeNext_move(0)
+		else
+			changeNext_move(get_cyberpunk_fast_unarmed_attack_cooldown(charged_intent))
 	return TRUE
 
 /mob/living/carbon/human/UnarmedAttack(atom/attack_target, proximity_flag, list/modifiers)

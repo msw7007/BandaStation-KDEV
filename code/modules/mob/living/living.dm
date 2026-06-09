@@ -83,6 +83,12 @@
 
 	// If you are incapped, you probably can't brace yourself
 	var/can_help_themselves = !INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS)
+	if(levels <= 1 && can_help_themselves && get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 6) > 0)
+		visible_message(
+			span_notice("[capitalize(declent_ru(NOMINATIVE))] groups up and lands without taking damage."),
+			span_notice("You group up and land without taking damage."),
+		)
+		return . | ZIMPACT_NO_MESSAGE
 	if(levels <= 1 && can_help_themselves)
 		var/obj/item/organ/wings/gliders = get_organ_by_type(/obj/item/organ/wings)
 		if(HAS_TRAIT(src, TRAIT_FREERUNNING) || gliders?.can_soften_fall()) // the power of parkour or wings allows falling short distances unscathed
@@ -469,6 +475,9 @@
 
 /mob/living/proc/reset_cyberpunk_grab_durability()
 	cyberpunk_grab_max_durability = get_cyberpunk_grab_max_durability()
+	var/mob/living/grabbed = pulling
+	if(istype(grabbed))
+		cyberpunk_grab_max_durability = round(cyberpunk_grab_max_durability * grabbed.get_cyberpunk_fortitude_incoming_grab_durability_multiplier())
 	cyberpunk_grab_durability = cyberpunk_grab_max_durability
 
 /mob/living/proc/get_cyberpunk_grab_durability_ratio()
@@ -861,6 +870,28 @@
 /mob/living/proc/mob_sleep()
 	set name = "Sleep"
 	set category = "IC"
+
+	if(IsSleeping())
+		to_chat(src, span_warning("You are already asleep!"))
+		return
+	if(cyberpunk_sleep_preparing)
+		to_chat(src, span_warning("You are already preparing to sleep."))
+		return
+	if(tgui_alert(usr, "Are you sure you want to sleep for a while?", "Sleep", list("Yes", "No")) != "Yes")
+		return
+	var/sleep_prepare_time = get_cyberpunk_sleep_prepare_time()
+	cyberpunk_sleep_preparing = TRUE
+	to_chat(src, span_notice("You prepare to sleep."))
+	if(!do_after(src, sleep_prepare_time, target = src))
+		cyberpunk_sleep_preparing = FALSE
+		to_chat(src, span_warning("You stop trying to fall asleep."))
+		return
+	cyberpunk_sleep_preparing = FALSE
+	if(IsSleeping())
+		return
+	to_chat(src, span_notice("You fall asleep."))
+	SetSleeping(400) //Short nap
+	return
 
 	if(IsSleeping())
 		to_chat(src, span_warning("Вы уже спите!"))

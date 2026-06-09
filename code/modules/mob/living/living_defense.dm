@@ -127,6 +127,7 @@
 		spend_stamina(STAMINA_COST_DODGE, "dodge")
 		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [proj.declent_ru(ACCUSATIVE)]!"), span_notice("You dodge [proj.declent_ru(ACCUSATIVE)]."))
 		reward_character_check_experience(SKILL_EVASION, max(1, proj.damage), FALSE, 1)
+		handle_cyberpunk_successful_dodge(proj.firer, proj.declent_ru(ACCUSATIVE))
 		return BULLET_ACT_BLOCK
 
 	var/hit_limb_zone = check_hit_limb_zone_name(def_zone)
@@ -168,6 +169,10 @@
 		brute_type = projectile_brute_type,
 		precise_zone = def_zone,
 	)
+	if(damage_dealt > 0 && isliving(proj.firer) && isitem(proj.fired_from))
+		var/mob/living/living_firer = proj.firer
+		var/obj/item/fired_weapon = proj.fired_from
+		apply_cyberpunk_heavy_weapon_armor_effects(living_firer, fired_weapon, def_zone, proj.armor_flag, proj.armour_penetration, proj.damage_type, proj.sharpness, projectile_brute_type)
 
 	if(proj.damage_type == BRUTE && damage_dealt >= 10 && proj.speed >= 1 && prob(0.1))
 		var/obj/item/organ/brain/a_brain = locate() in get_bodypart(def_zone)
@@ -303,7 +308,10 @@
 		FALSE,
 		thrown_item.weak_against_armour,
 	)
-	apply_damage(thrown_item.throwforce, thrown_item.damtype, zone, armor, sharpness = thrown_item.get_sharpness(), wound_bonus = (nosell_hit * CANT_WOUND), attacking_item = thrown_item, precise_zone = zone)
+	var/thrown_damage_done = apply_damage(thrown_item.throwforce, thrown_item.damtype, zone, armor, sharpness = thrown_item.get_sharpness(), wound_bonus = (nosell_hit * CANT_WOUND), attacking_item = thrown_item, precise_zone = zone)
+	var/mob/living/thrower = throwingdatum?.get_thrower()
+	if(thrown_damage_done > 0 && thrower)
+		apply_cyberpunk_heavy_weapon_armor_effects(thrower, thrown_item, zone, MELEE, thrown_item.armour_penetration, thrown_item.damtype, thrown_item.get_sharpness())
 	log_hit_combat(throwingdatum?.get_thrower(), thrown_item)
 
 	if(QDELETED(src)) //Damage can delete the mob.
@@ -351,7 +359,7 @@
 		return GRAB_SKIP
 	if(SEND_SIGNAL(src, COMSIG_LIVING_GRAB, target) & (COMPONENT_CANCEL_ATTACK_CHAIN|COMPONENT_SKIP_ATTACK))
 		return FALSE
-	if(target.check_block(src, 0, "захват [declent_ru(GENITIVE)]", UNARMED_ATTACK))
+	if(target.check_block(src, 0, "захват [declent_ru(GENITIVE)]", UNARMED_ATTACK, 0, BRUTE, null, TRUE))
 		return FALSE
 	target.grabbedby(src)
 	return GRAB_SUCCESS
@@ -913,19 +921,88 @@
 		span_userdanger("[capitalize(shover.declent_ru(NOMINATIVE))] толкает вас[weapon ? " с помощью [weapon.declent_ru(GENITIVE)]" : ""]!"), span_hear("Вы слышите агрессивное шарканье!"), COMBAT_MESSAGE_RANGE, shover)
 	to_chat(shover, span_danger("Вы толкаете [declent_ru(ACCUSATIVE)][weapon ? " с помощью [weapon.declent_ru(GENITIVE)]" : ""]!"))
 
-/mob/living/proc/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null)
+/mob/living/proc/check_block(atom/hit_by, damage, attack_text = "атаку", attack_type = MELEE_ATTACK, armour_penetration = 0, damage_type = BRUTE, defense_break = null, grab_attempt = FALSE)
 	if(SEND_SIGNAL(src, COMSIG_LIVING_CHECK_BLOCK, hit_by, damage, attack_text, attack_type, armour_penetration, damage_type) & SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
+	if(consume_cyberpunk_defense_breach(hit_by))
+		return FAILED_BLOCK
 	if(defense_break != "dodge" && has_active_cyberpunk_dodge() && can_dodge())
-		var/dodge_chance = clamp(20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1), 5, 85)
+		var/dodge_chance = clamp(round((20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
 		if(prob(dodge_chance) && spend_stamina(STAMINA_COST_DODGE, "dodge"))
 			cyberpunk_dodge_until = 0
 			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [attack_text]!"), span_notice("You dodge [attack_text]."))
 			reward_character_check_experience(SKILL_EVASION, max(1, damage), FALSE, 1)
+			consume_cyberpunk_inspiration_guard("dodge")
+			handle_cyberpunk_successful_dodge(hit_by, attack_text, grab_attempt)
 			return SUCCESSFUL_BLOCK
 		cyberpunk_dodge_until = 0
 
 	return FAILED_BLOCK
+
+/mob/living/proc/handle_cyberpunk_successful_dodge(atom/hit_by, attack_text = "attack", grab_attempt = FALSE)
+	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
+	if(attacker)
+		var/stagger_chance = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 3)
+		if(stagger_chance > 0)
+			var/list/stagger_check = get_character_perk_check_result(SKILL_EVASION, 3, probability = stagger_chance)
+			if(stagger_check?["passed"])
+				attacker.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+				visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))]'s dodge makes [attacker.declent_ru(ACCUSATIVE)] stagger!"), span_notice("Your dodge makes [attacker.declent_ru(ACCUSATIVE)] stagger."))
+
+		if(grab_attempt)
+			var/self_grab_chance = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 4)
+			if(self_grab_chance > 0)
+				var/list/self_grab_check = get_character_perk_check_result(SKILL_EVASION, 4, probability = self_grab_chance)
+				if(self_grab_check?["passed"])
+					attacker.stop_pulling()
+					attacker.changeNext_move(CLICK_CD_GRABBING)
+					attacker.adjust_staggered_up_to(1 SECONDS, 4 SECONDS)
+					visible_message(span_warning("[capitalize(attacker.declent_ru(NOMINATIVE))] misses [declent_ru(ACCUSATIVE)] and catches themselves!"), span_notice("You slip away and [attacker.declent_ru(NOMINATIVE)] catches themselves."))
+
+	var/invis_chance = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 6, "value_1")
+	if(invis_chance <= 0)
+		return
+	var/list/invis_check = get_character_perk_check_result(SKILL_EVASION, 6, probability = invis_chance)
+	if(!invis_check?["passed"])
+		return
+	var/invis_duration = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 6, "value_2")
+	if(apply_cyberpunk_evasion_invisibility(invis_duration SECONDS))
+		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] vanishes after dodging [attack_text]!"), span_notice("You vanish after dodging [attack_text]."))
+
+/mob/living/proc/apply_cyberpunk_evasion_invisibility(duration)
+	if(duration <= 0)
+		return FALSE
+	var/expire_at = world.time + duration
+	cyberpunk_evasion_invisible_until = max(cyberpunk_evasion_invisible_until, expire_at)
+	SetInvisibility(INVISIBILITY_MAXIMUM, "cyberpunk_evasion")
+	addtimer(CALLBACK(src, PROC_REF(end_cyberpunk_evasion_invisibility), expire_at), duration, TIMER_STOPPABLE)
+	return TRUE
+
+/mob/living/proc/end_cyberpunk_evasion_invisibility(expire_at)
+	if(QDELETED(src) || world.time < cyberpunk_evasion_invisible_until || expire_at < cyberpunk_evasion_invisible_until)
+		return
+	cyberpunk_evasion_invisible_until = 0
+	RemoveInvisibility("cyberpunk_evasion")
+
+/mob/living/proc/apply_cyberpunk_defense_breach(mob/living/parrier, duration = 5 SECONDS)
+	if(!parrier || duration <= 0)
+		return FALSE
+	cyberpunk_defense_breached_by = parrier
+	cyberpunk_defense_breach_until = world.time + duration
+	to_chat(src, span_warning("[capitalize(parrier.declent_ru(NOMINATIVE))] opens a breach in your defense."))
+	to_chat(parrier, span_notice("You open a breach in [declent_ru(GENITIVE)] defense."))
+	return TRUE
+
+/mob/living/proc/consume_cyberpunk_defense_breach(atom/hit_by)
+	if(world.time > cyberpunk_defense_breach_until || hit_by != cyberpunk_defense_breached_by)
+		return FALSE
+	cyberpunk_defense_breached_by = null
+	cyberpunk_defense_breach_until = 0
+	to_chat(src, span_warning("Your defense breach is exploited."))
+	if(isliving(hit_by))
+		var/mob/living/attacker = hit_by
+		to_chat(attacker, span_notice("You exploit [declent_ru(GENITIVE)] defense breach."))
+	return TRUE
 
 /mob/living/proc/hypnosis_vulnerable()
 	if(HAS_MIND_TRAIT(src, TRAIT_UNCONVERTABLE))

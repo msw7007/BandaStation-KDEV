@@ -730,28 +730,28 @@
 		switch(brute_type || infer_brute_damage_type(sharpness))
 			if(BODYPART_DAMAGE_PIERCE)
 				pierce_dam = round(pierce_dam + brute, DAMAGE_PRECISION)
-				add_bodypart_pain(brute)
+				add_bodypart_pain(brute, TRUE)
 			if(BODYPART_DAMAGE_SLASH)
 				slash_dam = round(slash_dam + brute, DAMAGE_PRECISION)
-				add_bodypart_pain(brute * 0.8)
+				add_bodypart_pain(brute * 0.8, TRUE)
 			else
 				blunt_dam = round(blunt_dam + brute, DAMAGE_PRECISION)
-				add_bodypart_pain(brute * 1.25)
+				add_bodypart_pain(brute * 1.25, TRUE)
 	if(burn)
 		switch(burn_type || BODYPART_DAMAGE_HEAT)
 			if(BODYPART_DAMAGE_COLD)
 				if(cold_trauma >= TRAUMA_MINOR)
 					burn *= 2
 				cold_dam = round(cold_dam + burn, DAMAGE_PRECISION)
-				add_bodypart_pain(burn * 0.7)
+				add_bodypart_pain(burn * 0.7, TRUE)
 			if(BODYPART_DAMAGE_ACID)
 				acid_dam = round(acid_dam + burn, DAMAGE_PRECISION)
-				add_bodypart_pain(burn * 1.4)
+				add_bodypart_pain(burn * 1.4, TRUE)
 			else
 				if(heat_trauma >= TRAUMA_MINOR)
 					burn *= 1.5
 				heat_dam = round(heat_dam + burn, DAMAGE_PRECISION)
-				add_bodypart_pain(burn * 1.2)
+				add_bodypart_pain(burn * 1.2, TRUE)
 	last_precise_zone = precise_zone
 	sync_composite_damage()
 	refresh_composite_traumas(precise_zone, damage_source)
@@ -797,8 +797,10 @@
 	sync_composite_damage()
 	return healed
 
-/obj/item/bodypart/proc/add_bodypart_pain(amount)
+/obj/item/bodypart/proc/add_bodypart_pain(amount, from_damage = FALSE)
 	if(!owner || owner.stat == DEAD || owner.get_medical_painkiller_strength())
+		return
+	if(from_damage && owner.roll_cyberpunk_endurance_ignore_damage_pain())
 		return
 	pain = round(max(pain + amount, 0), DAMAGE_PRECISION)
 
@@ -824,7 +826,7 @@
 	if(total_pain >= 100)
 		COOLDOWN_START(src, pain_collapse_cd, PAIN_CHECK_INTERVAL)
 		if(prob(max(total_pain - 150, 0)))
-			owner.Knockdown(5 SECONDS)
+			owner.apply_cyberpunk_pain_collapse()
 		if(can_be_disabled && pain > max_damage && prob(max(pain - max_damage, 0)))
 			temporary_pain_disabled = TRUE
 			set_disabled(TRUE)

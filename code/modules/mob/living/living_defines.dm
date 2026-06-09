@@ -281,6 +281,14 @@
 	var/cyberpunk_parry_until = 0
 	/// Active dodge window expiry.
 	var/cyberpunk_dodge_until = 0
+	/// Evasion perk 6 temporary invisibility expiry.
+	var/cyberpunk_evasion_invisible_until = 0
+	/// Mob whose next attack bypasses this mob's Cyberpunk parry/dodge after a successful parry.
+	var/mob/living/cyberpunk_defense_breached_by
+	/// Expiry for the current Cyberpunk defense breach.
+	var/cyberpunk_defense_breach_until = 0
+	/// One-shot defense bonus from Inspiration perk 5, consumed by dodge/parry/equipment protection.
+	var/cyberpunk_inspiration_guard_bonus = 0
 	/// Body zone currently controlled by this mob's active grab.
 	var/cyberpunk_grab_zone = BODY_ZONE_CHEST
 	/// Cooldown before this mob can attempt another Cyberpunk grab after a failed upgrade.
@@ -305,6 +313,10 @@
 	var/obj/item/cyberpunk_grab_hold/cyberpunk_grab_power_hold_item
 	/// Current basic Cyberpunk combat intent, switched by 2/3 or mouse wheel.
 	var/cyberpunk_combat_intent = "slash"
+	/// Next world time when a charged combat kick can be activated again.
+	var/cyberpunk_next_kick = 0
+	/// One-shot Fast Unarmed perk effect: the next hand strike does not spend stamina.
+	var/cyberpunk_fast_unarmed_free_hand_attack = FALSE
 	/// Whether this mob has manually extended their view to inspect distant targets.
 	var/focused_look = FALSE
 	/// Whether active listening was started by holding Shift+MMB on self.
@@ -364,6 +376,7 @@
 	var/style_update_accumulator = 0
 	var/sleep_deprivation_energy_drain_accumulator = 0
 	var/tireness_sleep_grace_until = 0
+	var/cyberpunk_sleep_preparing = FALSE
 	var/time_at_min_mood = 0
 	var/last_control_loss = 0
 	var/last_cyberpsychosis_time = 0

@@ -470,7 +470,7 @@
 			var/partial_damage_type = attacking_item.get_cyberpunk_damage_type(damage_key)
 			var/partial_armor_flag = attacking_item.get_cyberpunk_damage_armor_flag(damage_key)
 			var/partial_armor_block = partial_armor_flag == MELEE ? armor_block : min(run_armor_check(def_zone = targeting, attack_flag = partial_armor_flag, armour_penetration = effective_armour_penetration, silent = TRUE), ARMOR_MAX_BLOCK)
-			damage_done += apply_damage(
+			var/partial_damage_done = apply_damage(
 				damage = partial_force,
 				damagetype = partial_damage_type,
 				def_zone = targeting,
@@ -483,7 +483,20 @@
 				precise_zone = user.zone_selected,
 				brute_type = attacking_item.get_cyberpunk_damage_brute_type(damage_key),
 				burn_type = attacking_item.get_cyberpunk_damage_burn_type(damage_key),
-		)
+			)
+			damage_done += partial_damage_done
+			if(partial_damage_done > 0)
+				apply_cyberpunk_heavy_weapon_armor_effects(
+					user,
+					attacking_item,
+					targeting,
+					partial_armor_flag,
+					effective_armour_penetration,
+					partial_damage_type,
+					attacking_item.get_cyberpunk_damage_sharpness(damage_key),
+					attacking_item.get_cyberpunk_damage_brute_type(damage_key),
+					attacking_item.get_cyberpunk_damage_burn_type(damage_key),
+				)
 	else
 		damage_done = apply_damage(
 			damage = final_force,
@@ -497,6 +510,8 @@
 			attacking_item = attacking_item,
 			precise_zone = user.zone_selected,
 		)
+		if(damage_done > 0)
+			apply_cyberpunk_heavy_weapon_armor_effects(user, attacking_item, targeting, MELEE, effective_armour_penetration, attacking_item.damtype, attacking_item.get_sharpness())
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	attack_effects(damage_done, targeting, armor_block, attacking_item, user)

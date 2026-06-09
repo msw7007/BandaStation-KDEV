@@ -23,6 +23,8 @@
 	var/organ_condition_flags = NONE
 	/// Maximum damage the organ can take, ever.
 	var/maxHealth = STANDARD_ORGAN_THRESHOLD
+	/// Whether cyberpunk roundstart fortitude already increased this starting organ.
+	var/cyberpunk_fortitude_starting_health_applied = FALSE
 	/**
 	 * Total damage this organ has sustained.
 	 * Should only ever be modified by apply_organ_damage!
@@ -367,10 +369,22 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 		conditions += "Confusion"
 	return english_list(conditions)
 
-/obj/item/organ/proc/add_organ_pain(amount)
+/obj/item/organ/proc/add_organ_pain(amount, from_damage = FALSE)
 	if(!owner || owner.stat == DEAD || owner.get_medical_painkiller_strength())
 		return
+	if(from_damage && owner.roll_cyberpunk_endurance_ignore_damage_pain())
+		return
 	pain = round(max(pain + amount * pain_multiplier, 0), DAMAGE_PRECISION)
+
+/obj/item/organ/proc/get_cyberpunk_implant_cooldown_multiplier()
+	if(!owner || !is_implant_functional())
+		return 1
+	return owner.get_cyberpunk_implant_cooldown_multiplier()
+
+/obj/item/organ/proc/get_cyberpunk_implant_passive_interval_multiplier()
+	if(!owner || !is_implant_functional())
+		return 1
+	return owner.get_cyberpunk_implant_passive_interval_multiplier()
 
 /obj/item/organ/proc/handle_organ_pain(seconds_per_tick)
 	if(!owner)
@@ -483,7 +497,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	var/old_damage = damage
 	damage = clamp(damage + damage_amount, 0, maximum)
 	if(damage > old_damage)
-		add_organ_pain(damage - old_damage)
+		add_organ_pain(damage - old_damage, TRUE)
 	if(owner && slot == ORGAN_SLOT_EYES)
 		owner.update_code_fov()
 	SEND_SIGNAL(src, COMSIG_ORGAN_ADJUST_DAMAGE, damage_amount, maximum, required_organ_flag)

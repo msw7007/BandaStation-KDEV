@@ -183,6 +183,9 @@
 	if(LAZYACCESS(modifiers, SHIFT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || LAZYACCESS(modifiers, ALT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK))
 		return FALSE
 	var/used_button = LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
+	if(used_button == RIGHT_CLICK && !living_user.can_cyberpunk_kick())
+		living_user.balloon_alert(living_user, "kick recovering")
+		return FALSE
 	cyberpunk_charged_click_ref = WEAKREF(object)
 	cyberpunk_charged_click_started = world.time
 	cyberpunk_charged_click_button = used_button
