@@ -286,6 +286,7 @@ export type CharacterSetupImplantSlot = {
   name: string;
   zone: string;
   default_state: string;
+  capacity?: number;
 };
 
 export type CharacterSetupImplantMetrics = {

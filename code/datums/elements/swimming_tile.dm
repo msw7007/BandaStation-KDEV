@@ -88,7 +88,7 @@
 	var/gravity_modifier = floater.has_gravity() > STANDARD_GRAVITY ? 2 : 1
 
 	//If our floater has a specialized spine, include that as a factor.
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = floater.get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = floater.get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		effective_stamina_entry_cost *= potential_spine.athletics_boost_multiplier
 

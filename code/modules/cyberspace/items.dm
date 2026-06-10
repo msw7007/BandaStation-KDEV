@@ -1771,7 +1771,7 @@
 
 /obj/item/clothing/gloves/cyberdeck
 	name = "cyberdeck gloves"
-	desc = "A glove-mounted cyberdeck that stores and runs compiled demons."
+	desc = "A glove-mounted cyberdeck that stores and runs compiled demons without a neural interface."
 	icon_state = "black"
 	var/memory_capacity = CYBER_DECK_DEFAULT_MEMORY
 	var/list/demons = list()
@@ -2161,13 +2161,26 @@
 
 /obj/item/clothing/gloves/cyberdeck/cheap
 	name = "sulfur cyberdeck gloves"
-	desc = "A stripped glove-mounted cyberdeck with minimal demon memory."
+	desc = "A stripped glove-mounted cyberdeck with minimal demon memory. It works from the hands, without a neural interface."
 	memory_capacity = CYBER_DECK_MIN_MEMORY
 
 /obj/item/clothing/gloves/cyberdeck/advanced
 	name = "advanced cyberdeck gloves"
-	desc = "A high-grade glove-mounted cyberdeck with expanded demon memory."
+	desc = "A high-grade glove-mounted cyberdeck with expanded demon memory. It works from the hands, without a neural interface."
 	memory_capacity = CYBER_DECK_MAX_MEMORY
+
+/obj/item/clothing/gloves/cyberdeck/implant_proxy
+	name = "implanted cyberdeck runtime"
+	desc = "A hidden runtime for an implanted cyberdeck OS."
+	item_flags = ABSTRACT
+	invisibility = INVISIBILITY_ABSTRACT
+	memory_capacity = CYBER_DECK_DEFAULT_MEMORY
+
+/obj/item/clothing/gloves/cyberdeck/implant_proxy/equipped(mob/living/user, slot)
+	return
+
+/obj/item/clothing/gloves/cyberdeck/implant_proxy/dropped(mob/living/user)
+	return
 
 /obj/item/cyberdemon_disk
 	name = "demon disk"

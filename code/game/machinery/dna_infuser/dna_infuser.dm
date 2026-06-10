@@ -34,22 +34,58 @@
 	//dump_inventory_contents called by parent, emptying infusing_from
 	infusing_into = null
 
+/obj/machinery/dna_infuser/proc/get_analysis_level(mob/user)
+	return user?.mind?.get_character_skill_level(SKILL_ANALYSIS) || CHARACTER_SKILL_LEVEL_NONE
+
+/obj/machinery/dna_infuser/proc/get_analysis_speed_multiplier(mob/user)
+	var/level = get_analysis_level(user)
+	var/speed_bonus = max(0, level * 5)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		speed_bonus = max(speed_bonus, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 1))
+	return 1 / max(0.1, 1 + speed_bonus * 0.01)
+
+/obj/machinery/dna_infuser/proc/get_analysis_info_bonus(mob/user)
+	var/bonus = max(0, get_analysis_level(user) * 5)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		bonus = max(bonus, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
+	return bonus
+
 /obj/machinery/dna_infuser/examine(mob/user)
 	. = ..()
+	var/analysis_info = get_analysis_info_bonus(user)
 	if(!occupant)
 		. += span_notice("Requires [span_bold("a subject")].")
 	else
 		. += span_notice("\"[span_bold(occupant.name)]\" is inside the infusion chamber.")
+		if(ishuman(occupant))
+			var/mob/living/carbon/human/human_occupant = occupant
+			if(human_occupant.dna)
+				. += span_notice("Humanoidity: [round(human_occupant.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT] (raw [round(human_occupant.dna.humanoidity, 0.1)], TG stability [round(human_occupant.dna.stability, 0.1)], stabilized +[round(human_occupant.dna.humanoidity_stabilized_bonus, 0.1)]).")
 	if(!infusing_from)
 		. += span_notice("Missing [span_bold("an infusion source")].")
 	else
 		. += span_notice("[span_bold(infusing_from.name)] is in the infusion slot.")
+		var/datum/infuser_entry/source_entry = infusing_from.get_infusion_entry()
+		. += span_notice("Infusion humanoidity cost: [source_entry.get_humanoidity_cost()].")
 	. += span_notice("To operate: Obtain dead creature. Depending on size, drag or drop into the infuser slot.")
 	. += span_notice("Subject enters the chamber, someone activates the machine. Voila! One of your organs has... changed!")
 	. += span_notice("Alt-click to eject the infusion source, if one is inside.")
-	if(infusing_from && user?.mind?.get_character_skill_level(SKILL_ANALYSIS) >= CHARACTER_SKILL_LEVEL_SKILLED)
+	if(infusing_from && (analysis_info >= 20 || get_analysis_level(user) >= CHARACTER_SKILL_LEVEL_SKILLED))
 		var/datum/infuser_entry/analyzed_entry = infusing_from.get_infusion_entry()
 		. += span_notice("Analysis: [analyzed_entry.infuse_mob_name], tier [analyzed_entry.tier], genetic stability cost [analyzed_entry.get_humanoidity_cost()].")
+		if(analysis_info >= 40)
+			. += span_notice("Likely adaptation: [analyzed_entry.infusion_desc].")
+		if(analysis_info >= 60 && length(analyzed_entry.output_organs))
+			var/list/organ_names = list()
+			for(var/organ_type in analyzed_entry.output_organs)
+				var/obj/item/organ/preview_organ = new organ_type()
+				organ_names += preview_organ.name
+				qdel(preview_organ)
+			. += span_notice("Possible organ changes: [english_list(organ_names)].")
+		if(analysis_info >= 80 && analyzed_entry.threshold_desc)
+			. += span_notice("Threshold warning: [analyzed_entry.threshold_desc]")
 	if(max_tier_allowed < DNA_INFUSER_MAX_TIER)
 		. += span_boldnotice("Right now, the DNA Infuser can only infuse Tier [max_tier_allowed] entries.")
 	else
@@ -96,8 +132,7 @@
 	to_chat(human_occupant, span_danger("Little needles repeatedly prick you!"))
 	human_occupant.take_overall_damage(10)
 	human_occupant.add_mob_memory(/datum/memory/dna_infusion, protagonist = human_occupant, deuteragonist = infusing_from, mutantlike = infusing_into.infusion_desc)
-	var/analysis_bonus = user?.mind?.get_character_skill_level(SKILL_ANALYSIS) || CHARACTER_SKILL_LEVEL_NONE
-	var/infusing_time = INFUSING_TIME / max(1, 1 + (analysis_bonus * 0.05))
+	var/infusing_time = INFUSING_TIME * get_analysis_speed_multiplier(user)
 	Shake(duration = infusing_time)
 	addtimer(CALLBACK(human_occupant, TYPE_PROC_REF(/mob, emote), "scream"), max(1 SECONDS, infusing_time - 1 SECONDS))
 	addtimer(CALLBACK(src, PROC_REF(end_infuse), fail_explanation, fail_title, WEAKREF(user)), infusing_time)

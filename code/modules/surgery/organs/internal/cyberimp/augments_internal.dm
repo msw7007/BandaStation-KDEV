@@ -6,6 +6,9 @@
 	organ_flags = ORGAN_ROBOTIC
 	implant_flags = IMPLANT_REQUIRES_NEURAL
 	failing_desc = "seems to be broken."
+	chromity_overheat = 10
+	/// Cyberpunk content tier. Most old implants stay tier 1 unless a subtype overrides this.
+	var/implant_tier = 1
 	/// icon of the bodypart overlay we're going to be applying to our owner
 	var/aug_icon = 'icons/mob/human/species/misc/bodypart_overlay_augmentations.dmi'
 	/// icon_state of the bodypart overlay we're going to be applying to our owner
@@ -78,6 +81,23 @@
 	// No feeling in implants (yet?)
 	return ""
 
+/obj/item/organ/cyberimp/proc/tier_value(list/values)
+	if(!length(values))
+		return null
+	return values[clamp(implant_tier, 1, length(values))]
+
+/datum/movespeed_modifier/cyberimp_sandevistan
+	variable = TRUE
+
+/datum/movespeed_modifier/cyberimp_adrenaline
+	variable = TRUE
+
+/datum/movespeed_modifier/cyberimp_subdermal_armor
+	variable = TRUE
+
+/datum/movespeed_modifier/cyberimp_leg_speed
+	variable = TRUE
+
 //[[[[BRAIN]]]]
 
 /obj/item/organ/cyberimp/brain
@@ -108,6 +128,7 @@
 	implant_flags = IMPLANT_NEURAL_INTERFACE
 	emp_stun_duration = 0
 	chromity_overheat = 0
+	actions_types = list(/datum/action/item_action/organ_action/use)
 	var/corp_manufacturer = "independent"
 	/// Legal key used by direct interfaces to bypass this neural implant's ice.
 	var/cryptographic_key
@@ -226,6 +247,239 @@
 	session.ui_interact(hacker)
 	return session
 
+/obj/item/organ/cyberimp/brain/neural_interface/ui_action_click()
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
+		return
+
+	to_chat(owner, span_notice("You access your neural skillchip bridge."))
+	playsound(owner, 'sound/items/taperecorder/tape_flip.ogg', 20, vary = TRUE)
+
+	if(!do_after(owner, 1.5 SECONDS, owner))
+		to_chat(owner, span_warning("You were interrupted!"))
+		return
+
+	var/obj/item/skillchip/skillchip = owner.get_active_held_item()
+	if(skillchip)
+		if(!istype(skillchip))
+			to_chat(owner, span_warning("You try to insert [owner.get_active_held_item()] into [src], but it won't fit."))
+			return
+		insert_skillchip(skillchip)
+		return
+
+	var/obj/item/organ/brain/chippy_brain = owner.get_organ_by_type(/obj/item/organ/brain)
+	if(!chippy_brain)
+		to_chat(owner, span_warning("Your neural interface cannot find a living brain to access."))
+		return
+	remove_skillchip(chippy_brain)
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/insert_skillchip(obj/item/skillchip/skillchip)
+	var/fail_string = owner.implant_skillchip(skillchip, force = FALSE)
+	if(fail_string)
+		to_chat(owner, span_warning(fail_string))
+		playsound(owner, 'sound/machines/buzz/buzz-sigh.ogg', 10, vary = TRUE)
+		return
+
+	var/refail_string = skillchip.try_activate_skillchip(silent = FALSE, force = FALSE)
+	if(refail_string)
+		to_chat(owner, span_warning(refail_string))
+		playsound(owner, 'sound/machines/buzz/buzz-two.ogg', 10, vary = TRUE)
+		return
+
+	playsound(owner, 'sound/machines/chime.ogg', 10, vary = TRUE)
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/remove_skillchip(obj/item/organ/brain/chippy_brain)
+	if(!length(chippy_brain.skillchips))
+		to_chat(owner, span_warning("Your brain has no removable skillchips."))
+		return
+	var/obj/item/skillchip/skillchip = show_radial_menu(owner, owner, chippy_brain.skillchips)
+	if(!skillchip)
+		return
+	owner.remove_skillchip(skillchip, silent = FALSE)
+	skillchip.forceMove(owner.drop_location())
+	owner.put_in_hands(skillchip, del_on_fail = FALSE)
+	playsound(owner, 'sound/machines/click.ogg', 10, vary = TRUE)
+	to_chat(owner, span_notice("You take [skillchip] out through [src]."))
+
+/obj/item/organ/cyberimp/brain/operating_system
+	name = "neural operating system"
+	desc = "A brain-grade combat operating system. Only one such system should be installed into the active CNS hardpoint."
+	icon_state = "brain_implant"
+	slot = ORGAN_SLOT_OS
+	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
+	emp_stun_duration = 0
+	actions_types = list(/datum/action/item_action/organ_action/toggle)
+	var/active = FALSE
+	var/active_duration = 8 SECONDS
+	var/active_overheat_floor = 0
+	COOLDOWN_DECLARE(os_cooldown)
+
+/obj/item/organ/cyberimp/brain/operating_system/ui_action_click()
+	if(active)
+		deactivate_os()
+		return
+	activate_os()
+
+/obj/item/organ/cyberimp/brain/operating_system/proc/activate_os()
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
+		return FALSE
+	if(!COOLDOWN_FINISHED(src, os_cooldown))
+		to_chat(owner, span_warning("[capitalize(src)] is still cooling down."))
+		return FALSE
+	active = TRUE
+	COOLDOWN_START(src, os_cooldown, 45 SECONDS * get_cyberpunk_implant_cooldown_multiplier())
+	add_chromity_overheat(active_overheat_floor)
+	set_chromity_active_overheat_floor(active_overheat_floor)
+	addtimer(CALLBACK(src, PROC_REF(deactivate_os)), active_duration, TIMER_UNIQUE | TIMER_OVERRIDE)
+	to_chat(owner, span_notice("[capitalize(src)] comes online."))
+	return TRUE
+
+/obj/item/organ/cyberimp/brain/operating_system/proc/deactivate_os()
+	if(!active)
+		return
+	active = FALSE
+	set_chromity_active_overheat_floor(0)
+	if(owner)
+		to_chat(owner, span_notice("[capitalize(src)] disengages."))
+
+/obj/item/organ/cyberimp/brain/operating_system/Remove(mob/living/carbon/implant_owner, special, movement_flags)
+	deactivate_os()
+	return ..()
+
+/obj/item/organ/cyberimp/brain/operating_system/sandevistan
+	name = "\improper Sandevistan reflex OS"
+	desc = "An active neural OS that accelerates the user and leaves visual afterimages. High-tier models are brutally hot."
+	active_duration = 6 SECONDS
+	active_overheat_floor = 35
+	var/active_speed_mod = -0.25
+
+/obj/item/organ/cyberimp/brain/operating_system/sandevistan/activate_os()
+	active_speed_mod = tier_value(list(-0.25, -0.6, -1))
+	active_overheat_floor = tier_value(list(35, 55, 80))
+	. = ..()
+	if(.)
+		owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_sandevistan, multiplicative_slowdown = active_speed_mod)
+		owner.do_jitter_animation(20)
+
+/obj/item/organ/cyberimp/brain/operating_system/sandevistan/deactivate_os()
+	if(owner)
+		owner.remove_movespeed_modifier(/datum/movespeed_modifier/cyberimp_sandevistan)
+	return ..()
+
+/obj/item/organ/cyberimp/brain/operating_system/sandevistan/t2
+	name = "\improper Sandevistan reflex OS T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/brain/operating_system/sandevistan/t3
+	name = "\improper Sandevistan reflex OS T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk
+	name = "\improper Berserk motor OS"
+	desc = "An active neural OS that overdrives unarmed and strength-based combat formulas. It runs cooler than reflex acceleration."
+	active_duration = 10 SECONDS
+	active_overheat_floor = 12
+	var/unarmed_damage_multiplier = 1.5
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	RegisterSignal(organ_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK, PROC_REF(on_berserk_unarmed))
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	UnregisterSignal(organ_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK)
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk/activate_os()
+	unarmed_damage_multiplier = tier_value(list(1.5, 2, 2.5))
+	active_overheat_floor = tier_value(list(12, 18, 24))
+	return ..()
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk/proc/on_berserk_unarmed(mob/living/carbon/human/source, atom/target, proximity, modifiers)
+	SIGNAL_HANDLER
+	if(!active || !proximity || !isliving(target) || LAZYACCESS(modifiers, RIGHT_CLICK))
+		return NONE
+	var/mob/living/living_target = target
+	var/bonus_damage = max(1, round(source.get_attribute_value(ATTRIBUTE_STRENGTH) * (unarmed_damage_multiplier - 1)))
+	living_target.apply_damage(bonus_damage, BRUTE, living_target.get_random_valid_zone(source.zone_selected))
+	to_chat(source, span_danger("Berserk overdrive adds [bonus_damage] force to your hit."))
+	return NONE
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk/t2
+	name = "\improper Berserk motor OS T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/brain/operating_system/berserk/t3
+	name = "\improper Berserk motor OS T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/brain/operating_system/eagle
+	name = "\improper Kowalski Eagle targeting OS"
+	desc = "An active targeting OS that stabilizes ranged fire. Weapon hooks read its spread reduction from the user's brain implant."
+	active_duration = 12 SECONDS
+	active_overheat_floor = 30
+	var/spread_reduction = 0.33
+
+/obj/item/organ/cyberimp/brain/operating_system/eagle/activate_os()
+	spread_reduction = tier_value(list(0.33, 0.66, 1))
+	active_overheat_floor = tier_value(list(30, 45, 60))
+	. = ..()
+	if(.)
+		to_chat(owner, span_notice("Targeting solution stabilized by [round(spread_reduction * 100)]%."))
+
+/obj/item/organ/cyberimp/brain/operating_system/eagle/t2
+	name = "\improper Kowalski Eagle targeting OS T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/brain/operating_system/eagle/t3
+	name = "\improper Kowalski Eagle targeting OS T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck
+	name = "implanted cyberdeck OS"
+	desc = "An OS-slot cyberdeck implant that stores and runs compiled demons without occupying the hands."
+	icon_state = "brain_implant"
+	actions_types = list(/datum/action/item_action/organ_action/use)
+	var/obj/item/clothing/gloves/cyberdeck/implant_proxy/internal_deck
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck/Initialize(mapload)
+	. = ..()
+	ensure_internal_deck()
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck/Destroy()
+	QDEL_NULL(internal_deck)
+	return ..()
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck/on_mob_insert(mob/living/carbon/receiver, special, movement_flags)
+	. = ..()
+	ensure_internal_deck()
+	internal_deck.forceMove(receiver)
+	internal_deck.register_middleclick_owner(receiver)
+	internal_deck.sync_demon_actions(receiver)
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	if(internal_deck)
+		internal_deck.unregister_middleclick_owner(organ_owner)
+		internal_deck.clear_demon_actions(organ_owner)
+		internal_deck.forceMove(src)
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck/ui_action_click()
+	if(!is_implant_functional())
+		if(owner)
+			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
+		return
+	ensure_internal_deck()
+	internal_deck.ui_interact(owner)
+
+/obj/item/organ/cyberimp/brain/operating_system/cyberdeck/proc/ensure_internal_deck()
+	if(internal_deck)
+		return internal_deck
+	internal_deck = new(src)
+	return internal_deck
+
 /obj/item/organ/cyberimp/utility
 	name = "utility implant"
 	desc = "A simple chrome frame reserved for a future specialized implant."
@@ -236,14 +490,14 @@
 /obj/item/organ/cyberimp/utility/jaw
 	name = "iron jaw"
 	desc = "A reinforced jaw assembly. Its current model is mostly structural chrome with limited active function."
-	slot = ORGAN_SLOT_JAW_AUG
-	zone = BODY_ZONE_PRECISE_MOUTH
+	slot = ORGAN_SLOT_NECK_AUG
+	zone = BODY_ZONE_PRECISE_NECK
 
 /obj/item/organ/cyberimp/utility/skull
 	name = "reinforced skull"
 	desc = "A cranial reinforcement shell. It provides a first-pass slot occupant for skull-grade chrome."
-	slot = ORGAN_SLOT_SKULL_AUG
-	zone = BODY_ZONE_HEAD
+	slot = ORGAN_SLOT_NECK_AUG
+	zone = BODY_ZONE_PRECISE_NECK
 
 /obj/item/organ/cyberimp/utility/eyelids
 	name = "eyelid HUD mount"
@@ -276,12 +530,18 @@
 
 /obj/item/organ/cyberimp/brain/anti_drop
 	name = "anti-drop implant"
-	desc = "This cybernetic brain implant will allow you to force your hand muscles to contract, preventing item dropping. Twitch ear to toggle."
+	desc = "This cybernetic motor implant reinforces grip strength. Twitch ear to lock held items."
 	icon_state = "brain_implant_antidrop"
 	var/active = FALSE
 	var/list/stored_items = list()
-	slot = ORGAN_SLOT_BRAIN_CEREBELLUM
+	var/grip_strength_multiplier = 1.25
+	slot = ORGAN_SLOT_OS
+	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
 	actions_types = list(/datum/action/item_action/organ_action/toggle)
+
+/obj/item/organ/cyberimp/brain/anti_drop/Initialize(mapload)
+	. = ..()
+	grip_strength_multiplier = tier_value(list(1.25, 1.6, 2))
 
 /obj/item/organ/cyberimp/brain/anti_drop/ui_action_click()
 	if(!is_implant_functional())
@@ -340,11 +600,20 @@
 	UnregisterSignal(source, COMSIG_ITEM_DROPPED)
 	stored_items -= source
 
+/obj/item/organ/cyberimp/brain/anti_drop/t2
+	name = "anti-drop implant T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/brain/anti_drop/t3
+	name = "anti-drop implant T3"
+	implant_tier = 3
+
 /obj/item/organ/cyberimp/brain/anti_stun
 	name = "CNS rebooter implant"
 	desc = "This implant will automatically give you back control over your central nervous system, reducing downtime when stunned."
 	icon_state = "brain_implant_rebooter"
-	slot = ORGAN_SLOT_BRAIN_CNS
+	slot = ORGAN_SLOT_OS
+	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
 
 	var/static/list/signalCache = list(
 		COMSIG_LIVING_STATUS_STUN,
@@ -422,123 +691,17 @@
 	organ_flags &= ~ORGAN_FAILING
 	implant_ready()
 
-/obj/item/organ/cyberimp/brain/connector
-	name = "CNS skillchip connector implant"
-	desc = "This cybernetic adds a port to the back of your head, where you can remove or add skillchips at will."
-	icon_state = "brain_implant_connector"
-	slot = ORGAN_SLOT_BRAIN_CNS
-	actions_types = list(/datum/action/item_action/organ_action/use)
-
-/obj/item/organ/cyberimp/brain/connector/ui_action_click()
-	if(!is_implant_functional())
-		if(owner)
-			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
-		return
-
-	to_chat(owner, span_warning("You start fiddling around with [src]..."))
-	playsound(owner, 'sound/items/taperecorder/tape_flip.ogg', 20, vary = TRUE) // asmr
-
-	if(!do_after(owner, 1.5 SECONDS, owner)) // othwerwise it doesnt appear
-		to_chat(owner, span_warning("You were interrupted!"))
-		return
-
-	if(organ_flags & ORGAN_FAILING)
-		var/holy_shit_my_brain = remove_brain(owner.get_organ_by_type(ORGAN_SLOT_BRAIN))
-		if(holy_shit_my_brain)
-			to_chat(owner, span_warning("You take [holy_shit_my_brain] out of [src]. You stare at it for a moment in confusion."))
-		return
-
-	var/obj/item/skillchip/skillchip = owner.get_active_held_item()
-	if(skillchip)
-		if(istype(skillchip, /obj/item/skillchip))
-			insert_skillchip(skillchip)
-		else
-			to_chat(owner, span_warning("You try to insert [owner.get_active_held_item()] into [src], but it won't fit!")) // make it kill you if you shove a crayon inside or something
-	else // no inhand item, assume removal
-		var/obj/item/organ/brain/chippy_brain = owner.get_organ_by_type(/obj/item/organ/brain)
-		if(!chippy_brain)
-			CRASH("we using a brain implant wit no brain")
-		remove_skillchip(chippy_brain)
-
-/obj/item/organ/cyberimp/brain/connector/proc/insert_skillchip(obj/item/skillchip/skillchip)
-	var/fail_string = owner.implant_skillchip(skillchip, force = FALSE)
-	if(fail_string)
-		to_chat(owner, span_warning(fail_string))
-		playsound(owner, 'sound/machines/buzz/buzz-sigh.ogg', 10, vary = TRUE)
-		return
-
-	var/refail_string = skillchip.try_activate_skillchip(silent = FALSE, force = FALSE)
-	if(refail_string)
-		to_chat(owner, span_warning(fail_string))
-		playsound(owner, 'sound/machines/buzz/buzz-two.ogg', 10, vary = TRUE)
-		return
-
-	// success!
-	playsound(owner, 'sound/machines/chime.ogg', 10, vary = TRUE)
-
-/obj/item/organ/cyberimp/brain/connector/proc/remove_skillchip(obj/item/organ/brain/chippy_brain)
-	var/obj/item/skillchip/skillchip = show_radial_menu(owner, owner, chippy_brain.skillchips)
-	if(skillchip)
-		owner.remove_skillchip(skillchip, silent = FALSE)
-		skillchip.forceMove(owner.drop_location())
-		owner.put_in_hands(skillchip, del_on_fail = FALSE)
-		playsound(owner, 'sound/machines/click.ogg', 10, vary = TRUE)
-		to_chat(owner, span_warning("You take [skillchip] out of [src]."))
-		return
-
-	to_chat(owner, span_warning("Your brain is empty!")) // heh
-
-/obj/item/organ/cyberimp/brain/connector/emp_act(severity)
-	. = ..()
-	if((organ_flags & ORGAN_FAILING) || . & EMP_PROTECT_SELF)
-		return
-	organ_flags |= ORGAN_FAILING
-	var/loops = 1
-	if(severity != EMP_LIGHT)
-		loops = 2
-	for(var/i in 1 to loops)
-		// you either lose a chip or a bit of your brain
-		owner.visible_message(span_warning("Something falls to the ground from behind [owner]'s head."),\
-			span_boldwarning("You feel something fall off from behind your head."))
-		var/obj/item/organ/brain/chippy_brain = owner.get_organ_by_type(ORGAN_SLOT_BRAIN)
-		var/obj/item/skillchip/skillchip = chippy_brain?.skillchips[1]
-		if(skillchip)
-			owner.remove_skillchip(skillchip, silent = TRUE)
-			skillchip.forceMove(owner.drop_location())
-			playsound(owner, 'sound/machines/terminal/terminal_eject.ogg', 25, TRUE)
-		else
-			remove_brain(chippy_brain, severity == EMP_LIGHT ? 1 : 2)
-	addtimer(CALLBACK(src, PROC_REF(reboot)), 90 / severity)
-
-/obj/item/organ/cyberimp/brain/connector/proc/remove_brain(obj/item/organ/brain/chippy_brain, severity = 1)
-	playsound(owner, 'sound/effects/meatslap.ogg', 25, TRUE)
-	if(!chippy_brain)
-		return
-	chippy_brain.apply_organ_damage(20 * severity)
-	chippy_brain.maxHealth -= 15 * severity // a bit of your brain fell off. again.
-	if(chippy_brain.damage >= chippy_brain.maxHealth)
-		chippy_brain.forceMove(owner.drop_location())
-		owner.visible_message(span_userdanger("[owner]'s brain falls off the back of [owner.p_their()] head!!!"), span_boldwarning("You feel like you're missing something."))
-		return chippy_brain
-
-	var/gib_type = /obj/effect/decal/cleanable/blood/gibs/up
-	if (IS_ROBOTIC_ORGAN(chippy_brain))
-		gib_type = /obj/effect/decal/cleanable/blood/gibs/robot_debris/up
-	new gib_type(get_turf(owner), owner.get_static_viruses(), owner.get_blood_dna_list())
-	return FALSE
-
-/obj/item/organ/cyberimp/brain/connector/proc/reboot()
-	organ_flags &= ~ORGAN_FAILING
-
 /obj/item/organ/cyberimp/brain/surgical_processor
 	name = "surgical processor implant"
 	desc = "A cybernetic brain implant that allows you to perform advanced operations anywhere, anytime."
 	icon_state = "brain_implant_antidrop"
-	slot = ORGAN_SLOT_BRAIN_HIPPOCAMPUS
+	slot = ORGAN_SLOT_OS
+	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
 	emp_stun_duration = 0 SECONDS
 	emp_immobilize_duration = 4 SECONDS
 	/// Lazylist of surgeries this implant provides
 	var/list/loaded_surgeries
+	var/surgery_speed_multiplier = 1.15
 
 /obj/item/organ/cyberimp/brain/surgical_processor/examine(mob/user)
 	. = ..()
@@ -583,10 +746,12 @@
 /obj/item/organ/cyberimp/brain/surgical_processor/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
 	RegisterSignal(organ_owner, COMSIG_LIVING_OPERATING_ON, PROC_REF(check_surgery))
+	organ_owner.add_surgery_speed_mod(REF(src), surgery_speed_multiplier, INFINITY)
 
 /obj/item/organ/cyberimp/brain/surgical_processor/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
 	UnregisterSignal(organ_owner, COMSIG_LIVING_OPERATING_ON)
+	organ_owner.remove_surgery_speed_mod(REF(src))
 
 /obj/item/organ/cyberimp/brain/surgical_processor/proc/check_surgery(datum/source, atom/movable/operating_on, list/operations)
 	SIGNAL_HANDLER
@@ -653,6 +818,144 @@
 		/datum/surgery_operation/organ/pacify/mechanic,
 	)
 
+/obj/item/organ/cyberimp/brain/surgical_processor/t2
+	name = "surgical processor implant T2"
+	implant_tier = 2
+	surgery_speed_multiplier = 1.3
+
+/obj/item/organ/cyberimp/brain/surgical_processor/t3
+	name = "surgical processor implant T3"
+	implant_tier = 3
+	surgery_speed_multiplier = 1.5
+
+/obj/item/organ/cyberimp/brain/neurostabilizer
+	name = "\improper Samantas neurostabilizer"
+	desc = "A psychosomatic regulator that reduces the practical force of negative mood effects."
+	icon_state = "brain_implant"
+	slot = ORGAN_SLOT_OS
+	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
+	chromity_overheat = 2
+	var/negative_mood_multiplier = 0.85
+
+/obj/item/organ/cyberimp/brain/neurostabilizer/Initialize(mapload)
+	. = ..()
+	negative_mood_multiplier = tier_value(list(0.85, 0.7, 0.5))
+
+/obj/item/organ/cyberimp/brain/neurostabilizer/t2
+	name = "\improper Samantas neurostabilizer T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/brain/neurostabilizer/t3
+	name = "\improper Samantas neurostabilizer T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/brain/pain_editor
+	name = "pain editor"
+	desc = "A cranial pain gate for future pain-processing hooks."
+	icon_state = "brain_implant"
+	slot = ORGAN_SLOT_OS
+	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
+	chromity_overheat = 3
+
+/obj/item/organ/cyberimp/utility/skull/subdermal_armor
+	name = "subdermal armor lattice"
+	desc = "An external armor weave installed under the skin. Higher tiers protect more and slow more."
+	chromity_overheat = 2
+	var/armor_value = 8
+	var/speed_penalty = 0.05
+
+/obj/item/organ/cyberimp/utility/skull/subdermal_armor/Initialize(mapload)
+	. = ..()
+	armor_value = tier_value(list(8, 14, 22))
+	speed_penalty = tier_value(list(0.05, 0.1, 0.18))
+
+/obj/item/organ/cyberimp/utility/skull/subdermal_armor/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	organ_owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_subdermal_armor, multiplicative_slowdown = speed_penalty)
+
+/obj/item/organ/cyberimp/utility/skull/subdermal_armor/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	organ_owner.remove_movespeed_modifier(/datum/movespeed_modifier/cyberimp_subdermal_armor)
+
+/obj/item/organ/cyberimp/utility/skull/subdermal_armor/t2
+	name = "subdermal armor lattice T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/utility/skull/subdermal_armor/t3
+	name = "subdermal armor lattice T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/utility/skull/opticamo_surface
+	name = "opticamo surface"
+	desc = "A skin-grade optic camouflage surface. Tiers improve invisibility strength for future stealth hooks."
+	chromity_overheat = 6
+	var/invisibility_strength = 0.35
+
+/obj/item/organ/cyberimp/utility/skull/opticamo_surface/Initialize(mapload)
+	. = ..()
+	invisibility_strength = tier_value(list(0.35, 0.6, 0.85))
+
+/obj/item/organ/cyberimp/utility/skull/opticamo_surface/t2
+	name = "opticamo surface T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/utility/skull/opticamo_surface/t3
+	name = "opticamo surface T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/leg
+	name = "leg-mounted implant"
+	desc = "A cybernetic implant installed into a leg hardpoint."
+	abstract_type = /obj/item/organ/cyberimp/leg
+	zone = BODY_ZONE_R_LEG
+	slot = ORGAN_SLOT_RIGHT_LEG_AUG
+	w_class = WEIGHT_CLASS_SMALL
+	valid_zones = list(
+		BODY_ZONE_R_LEG = ORGAN_SLOT_RIGHT_LEG_AUG,
+		BODY_ZONE_L_LEG = ORGAN_SLOT_LEFT_LEG_AUG,
+	)
+
+/obj/item/organ/cyberimp/leg/speed
+	name = "leg speed actuator"
+	desc = "A leg actuator package that improves sprint and running response."
+	icon_state = "implant-toolkit"
+	chromity_overheat = 3
+	var/speed_bonus = -0.08
+
+/obj/item/organ/cyberimp/leg/speed/Initialize(mapload)
+	. = ..()
+	speed_bonus = tier_value(list(-0.08, -0.14, -0.22))
+
+/obj/item/organ/cyberimp/leg/speed/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	organ_owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_leg_speed, multiplicative_slowdown = speed_bonus)
+
+/obj/item/organ/cyberimp/leg/speed/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	organ_owner.remove_movespeed_modifier(/datum/movespeed_modifier/cyberimp_leg_speed)
+
+/obj/item/organ/cyberimp/leg/speed/t2
+	name = "leg speed actuator T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/leg/speed/t3
+	name = "leg speed actuator T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/leg/silent_step
+	name = "silent step implant"
+	desc = "A passive gait suppressor that silences all footsteps made by the body."
+	icon_state = "implant-toolkit"
+	chromity_overheat = 1
+
+/obj/item/organ/cyberimp/leg/silent_step/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	ADD_TRAIT(organ_owner, TRAIT_SILENT_FOOTSTEPS, REF(src))
+
+/obj/item/organ/cyberimp/leg/silent_step/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	REMOVE_TRAIT(organ_owner, TRAIT_SILENT_FOOTSTEPS, REF(src))
+
 //[[[[MOUTH]]]]
 /obj/item/organ/cyberimp/mouth
 	zone = BODY_ZONE_PRECISE_MOUTH
@@ -661,7 +964,8 @@
 	name = "breathing tube implant"
 	desc = "This simple implant adds an internals connector to your back, allowing you to use internals without a mask and protecting you from being choked."
 	icon_state = "implant_mask"
-	slot = ORGAN_SLOT_BREATHING_TUBE
+	slot = ORGAN_SLOT_NECK_AUG
+	zone = BODY_ZONE_PRECISE_NECK
 	w_class = WEIGHT_CLASS_TINY
 	aug_overlay = "breathing_tube"
 

@@ -282,10 +282,6 @@
 
 /// Returns the tube if a breathing tube is equipped.
 /mob/living/carbon/proc/can_breathe_tube()
-	var/obj/item/organ/breathing_tube = get_organ_slot(ORGAN_SLOT_BREATHING_TUBE)
-	if(breathing_tube)
-		return breathing_tube
-
 	var/obj/item/organ/neck_implant = get_organ_slot(ORGAN_SLOT_NECK_AUG)
 	if(istype(neck_implant, /obj/item/organ/cyberimp/mouth/breathing_tube))
 		return neck_implant

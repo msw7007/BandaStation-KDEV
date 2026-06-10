@@ -171,11 +171,10 @@
 	var/mob/living/carbon/C = owner.current
 	if (!C)
 		return ..()
-	var/obj/item/organ/cyberimp/eyes/hud/security/syndicate/S = C.get_organ_slot(ORGAN_SLOT_HUD)
-	if(!S)
-		var/obj/item/organ/eyelid_implant = C.get_organ_slot(ORGAN_SLOT_EYELID_AUG)
-		if(istype(eyelid_implant, /obj/item/organ/cyberimp/eyes/hud/security/syndicate))
-			S = eyelid_implant
+	var/obj/item/organ/eyelid_implant = C.get_organ_slot(ORGAN_SLOT_EYELID_AUG)
+	var/obj/item/organ/cyberimp/eyes/hud/security/syndicate/S
+	if(istype(eyelid_implant, /obj/item/organ/cyberimp/eyes/hud/security/syndicate))
+		S = eyelid_implant
 	if(S)
 		S.Remove(C)
 	return ..()

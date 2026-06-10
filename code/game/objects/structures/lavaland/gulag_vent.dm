@@ -33,7 +33,7 @@
 
 	var/boulder_lift_speed = 8 SECONDS
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = living_user.get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = living_user.get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		boulder_lift_speed *= potential_spine.athletics_boost_multiplier
 

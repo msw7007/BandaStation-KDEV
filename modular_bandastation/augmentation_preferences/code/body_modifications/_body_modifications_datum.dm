@@ -102,34 +102,9 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 	return FALSE
 
 /proc/get_character_setup_cyberimp_zone(obj/item/organ/cyberimp/implant, target_zone)
-	switch(implant.slot)
-		if(ORGAN_SLOT_BREATHING_TUBE)
-			return BODY_ZONE_PRECISE_NECK
-
 	return target_zone
 
 /proc/get_character_setup_cyberimp_slots(obj/item/organ/cyberimp/implant, target_zone, target_slot)
-	if(istype(implant, /obj/item/organ/cyberimp/arm))
-		switch(target_zone)
-			if(BODY_ZONE_L_ARM)
-				return list(ORGAN_SLOT_LEFT_ARM_AUG, ORGAN_SLOT_LEFT_ARM_MUSCLE)
-			if(BODY_ZONE_R_ARM)
-				return list(ORGAN_SLOT_RIGHT_ARM_AUG, ORGAN_SLOT_RIGHT_ARM_MUSCLE)
-
-	switch(target_slot)
-		if(ORGAN_SLOT_THRUSTERS)
-			return list(ORGAN_SLOT_SPINE_SECONDARY)
-		if(ORGAN_SLOT_HUD)
-			return list(ORGAN_SLOT_EYELID_AUG)
-		if(ORGAN_SLOT_HEART_AID)
-			return list(ORGAN_SLOT_CHEST_AUG)
-		if(ORGAN_SLOT_STOMACH_AID)
-			return list(ORGAN_SLOT_BELLY_AUG)
-		if(ORGAN_SLOT_BRAIN_CEREBELLUM, ORGAN_SLOT_BRAIN_HIPPOCAMPUS)
-			return list(ORGAN_SLOT_BRAIN_CNS)
-		if(ORGAN_SLOT_BREATHING_TUBE)
-			return list(ORGAN_SLOT_NECK_AUG)
-
 	return target_slot ? list(target_slot) : list()
 
 /proc/body_zone_to_character_setup_part(body_zone)

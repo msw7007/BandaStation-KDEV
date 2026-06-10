@@ -445,10 +445,10 @@
 		to pry open doors with your bare hands!"
 	icon_state = "muscle_implant"
 	zone = BODY_ZONE_R_ARM
-	slot = ORGAN_SLOT_RIGHT_ARM_MUSCLE
+	slot = ORGAN_SLOT_RIGHT_ARM_AUG
 	valid_zones = list(
-		BODY_ZONE_R_ARM = ORGAN_SLOT_RIGHT_ARM_MUSCLE,
-		BODY_ZONE_L_ARM = ORGAN_SLOT_LEFT_ARM_MUSCLE,
+		BODY_ZONE_R_ARM = ORGAN_SLOT_RIGHT_ARM_AUG,
+		BODY_ZONE_L_ARM = ORGAN_SLOT_LEFT_ARM_AUG,
 	)
 	aug_overlay = "strongarm"
 
@@ -624,6 +624,192 @@
 			crunched.crush() // again, crunch
 
 	return COMPONENT_CANCEL_ATTACK_CHAIN
+
+/obj/item/organ/cyberimp/arm/strike_effect
+	name = "strike-effect arm implant"
+	desc = "An arm implant that adds a secondary effect to unarmed strikes."
+	icon_state = "muscle_implant"
+	aug_overlay = "strongarm"
+	chromity_overheat = 3
+
+/obj/item/organ/cyberimp/arm/strike_effect/on_mob_insert(mob/living/carbon/arm_owner)
+	. = ..()
+	RegisterSignal(arm_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK, PROC_REF(on_strike))
+
+/obj/item/organ/cyberimp/arm/strike_effect/on_mob_remove(mob/living/carbon/arm_owner)
+	. = ..()
+	UnregisterSignal(arm_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK)
+
+/obj/item/organ/cyberimp/arm/strike_effect/proc/on_strike(mob/living/carbon/human/source, atom/target, proximity, modifiers)
+	SIGNAL_HANDLER
+	if(source.get_active_hand() != hand || !proximity || !source.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK) || !isliving(target))
+		return NONE
+	var/mob/living/living_target = target
+	apply_strike_effect(source, living_target)
+	return NONE
+
+/obj/item/organ/cyberimp/arm/strike_effect/proc/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
+	return
+
+/obj/item/organ/cyberimp/arm/strike_effect/shock
+	name = "shock arm implant"
+	desc = "A contact discharge implant. Punches deal stamina shock and can stagger."
+	chromity_overheat = 5
+	var/stamina_damage = 20
+
+/obj/item/organ/cyberimp/arm/strike_effect/shock/Initialize(mapload)
+	. = ..()
+	stamina_damage = tier_value(list(20, 30, 45))
+
+/obj/item/organ/cyberimp/arm/strike_effect/shock/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
+	target.apply_damage(stamina_damage, STAMINA)
+	target.adjust_staggered_up_to(1 SECONDS * implant_tier, 4 SECONDS)
+	to_chat(source, span_danger("[capitalize(src)] discharges into [target]."))
+
+/obj/item/organ/cyberimp/arm/strike_effect/shock/t2
+	name = "shock arm implant T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/arm/strike_effect/shock/t3
+	name = "shock arm implant T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/arm/strike_effect/fire
+	name = "firefingers implant"
+	desc = "Thermal fingertip emitters that ignite targets hit by unarmed attacks."
+	chromity_overheat = 4
+	var/fire_stacks = 1
+
+/obj/item/organ/cyberimp/arm/strike_effect/fire/Initialize(mapload)
+	. = ..()
+	fire_stacks = tier_value(list(1, 2, 3))
+
+/obj/item/organ/cyberimp/arm/strike_effect/fire/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
+	target.adjust_fire_stacks(fire_stacks)
+	target.ignite_mob()
+	to_chat(source, span_danger("[capitalize(src)] ignites [target]."))
+
+/obj/item/organ/cyberimp/arm/strike_effect/fire/t2
+	name = "firefingers implant T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/arm/strike_effect/fire/t3
+	name = "firefingers implant T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/arm/strike_effect/cold
+	name = "coldfingers implant"
+	desc = "Cryogenic fingertip emitters that drain stamina and body heat on unarmed hits."
+	chromity_overheat = 4
+	var/cold_amount = 25
+
+/obj/item/organ/cyberimp/arm/strike_effect/cold/Initialize(mapload)
+	. = ..()
+	cold_amount = tier_value(list(25, 45, 70))
+
+/obj/item/organ/cyberimp/arm/strike_effect/cold/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
+	target.adjust_bodytemperature(-cold_amount)
+	target.apply_damage(round(cold_amount * 0.4), STAMINA)
+	to_chat(source, span_danger("[capitalize(src)] chills [target]."))
+
+/obj/item/organ/cyberimp/arm/strike_effect/cold/t2
+	name = "coldfingers implant T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/arm/strike_effect/cold/t3
+	name = "coldfingers implant T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/arm/strike_effect/soundstrike
+	name = "\improper Soundstrike implant"
+	desc = "A rare Soundhand arm implant that blasts a target backward after an unarmed strike."
+	chromity_overheat = 8
+
+/obj/item/organ/cyberimp/arm/strike_effect/soundstrike/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
+	target.apply_damage(8 + 4 * implant_tier, BRUTE)
+	target.throw_at(get_edge_target_turf(target, source.dir), 3 + implant_tier, 1, source, gentle = TRUE)
+	to_chat(source, span_danger("[capitalize(src)] throws [target] with a pressure wave."))
+
+/obj/item/organ/cyberimp/arm/soundhand
+	name = "\improper Soundhand injector blade"
+	desc = "A right-hand Soundhand implant with a hidden piercing blade and a sensory-disrupting injector."
+	icon_state = "arm_blade"
+	zone = BODY_ZONE_R_ARM
+	slot = ORGAN_SLOT_RIGHT_ARM_AUG
+	valid_zones = list(BODY_ZONE_R_ARM = ORGAN_SLOT_RIGHT_ARM_AUG)
+	aug_overlay = "toolkit"
+	chromity_overheat = 10
+
+/obj/item/organ/cyberimp/arm/soundhand/on_mob_insert(mob/living/carbon/arm_owner)
+	. = ..()
+	RegisterSignal(arm_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK, PROC_REF(on_soundhand_strike))
+
+/obj/item/organ/cyberimp/arm/soundhand/on_mob_remove(mob/living/carbon/arm_owner)
+	. = ..()
+	UnregisterSignal(arm_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK)
+
+/obj/item/organ/cyberimp/arm/soundhand/proc/on_soundhand_strike(mob/living/carbon/human/source, atom/target, proximity, modifiers)
+	SIGNAL_HANDLER
+	if(source.get_active_hand() != hand || !proximity || !source.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK) || !ishuman(target))
+		return NONE
+	var/mob/living/carbon/human/human_target = target
+	human_target.apply_damage(10, BRUTE, BODY_ZONE_CHEST, wound_bonus = 10)
+	human_target.adjust_temp_blindness_up_to(3 SECONDS, 6 SECONDS)
+	var/obj/item/organ/ears/ears = human_target.get_organ_slot(ORGAN_SLOT_EARS)
+	ears?.adjust_temporary_deafness(6 SECONDS)
+	to_chat(source, span_danger("[capitalize(src)] pierces [human_target] and injects a sensory disruptor."))
+	return NONE
+
+/obj/item/organ/cyberimp/arm/soundray
+	name = "\improper Soundray projector"
+	desc = "A rare Soundhand emitter that fires a long piercing sonic line."
+	icon_state = "arm_laser"
+	aug_overlay = "toolkit"
+	chromity_overheat = 8
+	actions_types = list(/datum/action/item_action/organ_action/use)
+	COOLDOWN_DECLARE(soundray_cooldown)
+
+/obj/item/organ/cyberimp/arm/soundray/ui_action_click(mob/user, datum/action/source)
+	if(!is_implant_functional() || !COOLDOWN_FINISHED(src, soundray_cooldown))
+		return
+	add_chromity_overheat(20)
+	COOLDOWN_START(src, soundray_cooldown, 12 SECONDS * get_cyberpunk_implant_cooldown_multiplier())
+	var/turf/current = get_turf(owner)
+	for(var/i in 1 to 20)
+		current = get_step(current, owner.dir)
+		if(!current)
+			break
+		for(var/mob/living/victim in current)
+			if(victim == owner)
+				continue
+			victim.apply_damage(max(4, 24 - i), BRUTE)
+			victim.adjust_staggered_up_to(1 SECONDS, 4 SECONDS)
+	to_chat(owner, span_danger("[capitalize(src)] releases a piercing sonic ray."))
+
+/obj/item/organ/cyberimp/arm/soundwave
+	name = "\improper Soundwave projector"
+	desc = "A rare Soundhand emitter that fires a short, wide sonic cone."
+	icon_state = "arm_laser"
+	aug_overlay = "toolkit"
+	chromity_overheat = 9
+	actions_types = list(/datum/action/item_action/organ_action/use)
+	COOLDOWN_DECLARE(soundwave_cooldown)
+
+/obj/item/organ/cyberimp/arm/soundwave/ui_action_click(mob/user, datum/action/source)
+	if(!is_implant_functional() || !COOLDOWN_FINISHED(src, soundwave_cooldown))
+		return
+	add_chromity_overheat(25)
+	COOLDOWN_START(src, soundwave_cooldown, 15 SECONDS * get_cyberpunk_implant_cooldown_multiplier())
+	for(var/turf/checked_turf in view(7, owner))
+		if(get_dir(owner, checked_turf) != owner.dir && get_dist(owner, checked_turf) > 1)
+			continue
+		var/distance = max(1, get_dist(owner, checked_turf))
+		for(var/mob/living/victim in checked_turf)
+			if(victim == owner)
+				continue
+			victim.apply_damage(max(6, 28 - distance * 3), BRUTE)
+			victim.adjust_staggered_up_to(2 SECONDS, 5 SECONDS)
+	to_chat(owner, span_danger("[capitalize(src)] releases a crushing sonic cone."))
 
 /datum/status_effect/organ_set_bonus/strongarm
 	id = "organ_set_bonus_strongarm"

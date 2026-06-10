@@ -958,7 +958,7 @@
 	// can remove up to 2 seconds at legendary
 	carrydelay -= fitness_level * (1/3) SECONDS
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		carrydelay *= potential_spine.athletics_boost_multiplier
 		experience_reward += experience_reward * potential_spine.athletics_boost_multiplier

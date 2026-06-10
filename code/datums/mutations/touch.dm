@@ -86,7 +86,7 @@
 	name = "Mending Touch"
 	desc = "Подверженные данной мутации могут приложить свои руки на других людей, чтобы забрать себе часть их ранений."
 	quality = POSITIVE
-	locked = FALSE
+	locked = TRUE
 	difficulty = 16
 	text_gain_indication = span_notice("Твоя рука, будто бы священна!")
 	text_lose_indication = span_notice("Твоя рука снова кажется обычной.")

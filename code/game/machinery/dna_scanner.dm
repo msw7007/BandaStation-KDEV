@@ -34,6 +34,21 @@
 	. = ..()
 	if(in_range(user, src) || isobserver(user))
 		. += span_notice("The status display reads: Radiation pulse accuracy increased by factor <b>[precision_coeff**2]</b>.<br>Radiation pulse damage decreased by factor <b>[damage_coeff**2]</b>.")
+		var/analysis_info = max(0, user?.mind?.get_character_skill_level(SKILL_ANALYSIS) * 5)
+		if(isliving(user))
+			var/mob/living/living_user = user
+			analysis_info = max(analysis_info, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
+		if(analysis_info >= 20 || user?.mind?.get_character_skill_level(SKILL_ANALYSIS) >= CHARACTER_SKILL_LEVEL_SKILLED)
+			if(linked_console)
+				. += span_notice("Analysis: linked to [linked_console].")
+			else
+				. += span_notice("Analysis: no linked DNA console detected.")
+			if(ishuman(occupant))
+				var/mob/living/carbon/human/human_occupant = occupant
+				if(human_occupant.dna)
+					. += span_notice("Subject humanoidity: [round(human_occupant.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT] (raw [round(human_occupant.dna.humanoidity, 0.1)], TG stability [round(human_occupant.dna.stability, 0.1)]).")
+					if(analysis_info >= 40)
+						. += span_notice("Subject active mutations: [length(human_occupant.dna.mutations)]. Indexed mutation blocks: [length(human_occupant.dna.mutation_index)].")
 
 /obj/machinery/dna_scannernew/update_icon_state()
 	//no power or maintenance

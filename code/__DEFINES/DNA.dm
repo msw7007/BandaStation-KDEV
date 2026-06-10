@@ -168,40 +168,26 @@
 #define ORGAN_SLOT_ADAMANTINE_RESONATOR "adamantine_resonator"
 #define ORGAN_SLOT_APPENDIX "appendix"
 #define ORGAN_SLOT_BRAIN "brain"
-/// Brain implants that affect the mob's motor control (grabbing, moving, attacking)
-#define ORGAN_SLOT_BRAIN_CEREBELLUM "brain_motorcontrol"
-/// Brain implants that affect the mob's sensory systems (pain, vision, hearing, etc)
-#define ORGAN_SLOT_BRAIN_CNS "brain_cns"
-/// Brain implants that affect the mob's memory and cognition (skills, knowledge, etc)
-#define ORGAN_SLOT_BRAIN_HIPPOCAMPUS "brain_memory"
-#define ORGAN_SLOT_BREATHING_TUBE "breathing_tube"
 #define ORGAN_SLOT_BELLY_AUG "belly_device"
 #define ORGAN_SLOT_CHEST_AUG "chest_device"
 #define ORGAN_SLOT_EARS "ears"
 #define ORGAN_SLOT_EYES "eye_sight"
 #define ORGAN_SLOT_HEART "heart"
-#define ORGAN_SLOT_HEART_AID "heartdrive"
-#define ORGAN_SLOT_HUD "eye_hud"
 #define ORGAN_SLOT_LIVER "liver"
 #define ORGAN_SLOT_LUNGS "lungs"
 #define ORGAN_SLOT_PARASITE_EGG "parasite_egg"
 #define ORGAN_SLOT_MONSTER_CORE "monstercore"
 #define ORGAN_SLOT_NECK_AUG "neck_device"
 #define ORGAN_SLOT_NEURAL_IMPLANT "neural_implant"
+#define ORGAN_SLOT_OS "os_device"
+#define CYBERPUNK_OS_SLOT_CAPACITY 1
 #define ORGAN_SLOT_RIGHT_LEG_AUG "r_leg_device"
 #define ORGAN_SLOT_LEFT_LEG_AUG "l_leg_device"
 #define ORGAN_SLOT_RIGHT_ARM_AUG "r_arm_device"
 #define ORGAN_SLOT_LEFT_ARM_AUG "l_arm_device" //This one ignores alphabetical order cause the arms should be together
-#define ORGAN_SLOT_RIGHT_ARM_MUSCLE "r_arm_muscle"
-#define ORGAN_SLOT_LEFT_ARM_MUSCLE "l_arm_muscle" //same as above
 #define ORGAN_SLOT_SPINE "spine"
-#define ORGAN_SLOT_SPINE_SECONDARY "spine_secondary"
-#define ORGAN_SLOT_SKULL_AUG "skull_device"
-#define ORGAN_SLOT_JAW_AUG "jaw_device"
 #define ORGAN_SLOT_EYELID_AUG "eyelid_device"
 #define ORGAN_SLOT_STOMACH "stomach"
-#define ORGAN_SLOT_STOMACH_AID "stomach_aid"
-#define ORGAN_SLOT_THRUSTERS "thrusters"
 #define ORGAN_SLOT_TONGUE "tongue"
 #define ORGAN_SLOT_VOICE "vocal_cords"
 #define ORGAN_SLOT_ZOMBIE "zombie_infection"
@@ -254,38 +240,27 @@
 GLOBAL_LIST_INIT(organ_process_order, list(
 	ORGAN_SLOT_BRAIN,
 	ORGAN_SLOT_NEURAL_IMPLANT,
+	ORGAN_SLOT_OS,
 	ORGAN_SLOT_APPENDIX,
 	ORGAN_SLOT_RIGHT_ARM_AUG,
 	ORGAN_SLOT_LEFT_ARM_AUG,
-	ORGAN_SLOT_LEFT_ARM_MUSCLE,
-	ORGAN_SLOT_RIGHT_ARM_MUSCLE,
 	ORGAN_SLOT_RIGHT_LEG_AUG,
 	ORGAN_SLOT_LEFT_LEG_AUG,
 	ORGAN_SLOT_STOMACH,
-	ORGAN_SLOT_STOMACH_AID,
-	ORGAN_SLOT_BREATHING_TUBE,
 	ORGAN_SLOT_EARS,
 	ORGAN_SLOT_EYES,
 	ORGAN_SLOT_EYELID_AUG,
 	ORGAN_SLOT_LUNGS,
 	ORGAN_SLOT_HEART,
 	ORGAN_SLOT_ZOMBIE,
-	ORGAN_SLOT_THRUSTERS,
 	ORGAN_SLOT_CHEST_AUG,
 	ORGAN_SLOT_BELLY_AUG,
 	ORGAN_SLOT_NECK_AUG,
-	ORGAN_SLOT_SKULL_AUG,
-	ORGAN_SLOT_JAW_AUG,
-	ORGAN_SLOT_HUD,
 	ORGAN_SLOT_LIVER,
 	ORGAN_SLOT_TONGUE,
 	ORGAN_SLOT_VOICE,
 	ORGAN_SLOT_ADAMANTINE_RESONATOR,
-	ORGAN_SLOT_HEART_AID,
 	ORGAN_SLOT_SPINE,
-	ORGAN_SLOT_SPINE_SECONDARY,
-	ORGAN_SLOT_BRAIN_CEREBELLUM,
-	ORGAN_SLOT_BRAIN_CNS,
 	ORGAN_SLOT_PARASITE_EGG,
 	ORGAN_SLOT_MONSTER_CORE,
 	ORGAN_SLOT_XENO_PLASMAVESSEL,

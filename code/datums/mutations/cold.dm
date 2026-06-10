@@ -45,3 +45,11 @@
 	active_msg = "You focus your cryokinesis!"
 	deactive_msg = "You relax."
 	projectile_type = /obj/projectile/temp/cryo
+
+/datum/action/cooldown/spell/pointed/projectile/cryo/before_cast(atom/cast_on)
+	. = ..()
+	if(. & SPELL_CANCEL_CAST)
+		return
+	if(!HAS_TRAIT(owner, TRAIT_PSI_EYES))
+		to_chat(owner, span_warning("Your psionic sense cannot resolve the target without psi eyes."))
+		return . | SPELL_CANCEL_CAST

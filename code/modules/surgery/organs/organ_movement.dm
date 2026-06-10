@@ -66,7 +66,8 @@
 		stack_trace("Organ receiver is already organ owner")
 		return FALSE
 
-	var/obj/item/organ/replaced = receiver.get_organ_slot(slot)
+	var/storage_key = get_slot_storage_key()
+	var/obj/item/organ/replaced = receiver.organs_slot[storage_key]
 	if(replaced)
 		replaced.Remove(receiver, special = TRUE)
 		if(movement_flags & DELETE_IF_REPLACED)
@@ -82,7 +83,7 @@
 		organ_flags &= ~ORGAN_VIRGIN
 
 	receiver.organs |= src
-	receiver.organs_slot[slot] = src
+	receiver.organs_slot[storage_key] = src
 	owner = receiver
 
 	on_mob_insert(receiver, special, movement_flags)
@@ -169,8 +170,9 @@
 	SHOULD_NOT_OVERRIDE(TRUE)
 
 	if(organ_owner)
-		if(organ_owner.organs_slot[slot] == src)
-			organ_owner.organs_slot.Remove(slot)
+		var/storage_key = get_slot_storage_key()
+		if(organ_owner.organs_slot[storage_key] == src)
+			organ_owner.organs_slot.Remove(storage_key)
 		organ_owner.organs -= src
 
 	owner = null
@@ -323,14 +325,44 @@
 /// Proc that gets called when someone starts surgically inserting the organ
 /obj/item/organ/proc/pre_surgical_insertion(mob/living/user, mob/living/carbon/new_owner, target_zone)
 	if (valid_zones)
-		swap_zone(target_zone)
+		swap_zone(target_zone, new_owner)
 
 /// Readjusts the organ to fit into a different body zone/slot
-/obj/item/organ/proc/swap_zone(target_zone)
+/obj/item/organ/proc/swap_zone(target_zone, mob/living/carbon/new_owner)
 	if (!valid_zones[target_zone])
 		CRASH("[src]'s ([type]) swap_zone was called with invalid zone [target_zone]")
 	zone = target_zone
-	slot = valid_zones[zone]
+	var/list/available_slot = get_available_slot_for_zone(new_owner, target_zone)
+	if(length(available_slot))
+		slot = available_slot["slot"]
+		slot_index = available_slot["index"]
+		return
+	slot = get_slots_for_zone(target_zone)[1]
+	slot_index = 1
+
+/obj/item/organ/proc/get_slots_for_zone(target_zone)
+	if(!valid_zones[target_zone])
+		return list()
+	var/zone_slots = valid_zones[target_zone]
+	if(islist(zone_slots))
+		return zone_slots
+	return list(zone_slots)
+
+/obj/item/organ/proc/get_available_slot_for_zone(mob/living/carbon/new_owner, target_zone)
+	for(var/checked_slot in get_slots_for_zone(target_zone))
+		var/available_index = get_available_slot_index(new_owner, checked_slot)
+		if(!available_index)
+			continue
+		return list("slot" = checked_slot, "index" = available_index)
+
+/obj/item/organ/proc/get_available_slot_index(mob/living/carbon/new_owner, checked_slot)
+	for(var/checked_index in 1 to slot_capacity)
+		if(new_owner?.get_organ_slot(checked_slot, checked_index))
+			continue
+		return checked_index
+
+/obj/item/organ/proc/get_slot_storage_key()
+	return organ_slot_storage_key(slot, slot_index)
 
 /obj/item/organ/proc/get_organ_blood_color(obj/item/bodypart/limb)
 	var/blood_color = owner?.get_bloodtype()?.get_color()

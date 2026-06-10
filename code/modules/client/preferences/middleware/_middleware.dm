@@ -353,14 +353,11 @@
 
 /datum/preference_middleware/character_setup/proc/get_implant_slot_definitions()
 	return list(
-		list("id" = ORGAN_SLOT_LEFT_ARM_AUG, "name" = "Левая рука I", "zone" = BODY_ZONE_L_ARM, "default_state" = "empty"),
-		list("id" = ORGAN_SLOT_LEFT_ARM_MUSCLE, "name" = "Левая рука II", "zone" = BODY_ZONE_L_ARM, "default_state" = "empty"),
-		list("id" = ORGAN_SLOT_RIGHT_ARM_AUG, "name" = "Правая рука I", "zone" = BODY_ZONE_R_ARM, "default_state" = "empty"),
-		list("id" = ORGAN_SLOT_RIGHT_ARM_MUSCLE, "name" = "Правая рука II", "zone" = BODY_ZONE_R_ARM, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_LEFT_ARM_AUG, "name" = "Левая рука", "zone" = BODY_ZONE_L_ARM, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_RIGHT_ARM_AUG, "name" = "Правая рука", "zone" = BODY_ZONE_R_ARM, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_LEFT_LEG_AUG, "name" = "Левая нога", "zone" = BODY_ZONE_L_LEG, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_RIGHT_LEG_AUG, "name" = "Правая нога", "zone" = BODY_ZONE_R_LEG, "default_state" = "empty"),
-		list("id" = ORGAN_SLOT_SPINE, "name" = "Позвоночник I", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
-		list("id" = ORGAN_SLOT_SPINE_SECONDARY, "name" = "Позвоночник II / сопла", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_SPINE, "name" = "Позвоночник", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_HEART, "name" = "Сердце", "zone" = BODY_ZONE_CHEST, "default_state" = "organ"),
 		list("id" = ORGAN_SLOT_LUNGS, "name" = "Лёгкие", "zone" = BODY_ZONE_CHEST, "default_state" = "organ"),
 		list("id" = ORGAN_SLOT_STOMACH, "name" = "Желудок", "zone" = BODY_ZONE_PRECISE_GROIN, "default_state" = "organ"),
@@ -368,13 +365,11 @@
 		list("id" = ORGAN_SLOT_BELLY_AUG, "name" = "Живот", "zone" = BODY_ZONE_PRECISE_GROIN, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_CHEST_AUG, "name" = "Грудь", "zone" = BODY_ZONE_CHEST, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_NECK_AUG, "name" = "Шея", "zone" = BODY_ZONE_PRECISE_NECK, "default_state" = "empty"),
-		list("id" = ORGAN_SLOT_SKULL_AUG, "name" = "Череп", "zone" = BODY_ZONE_HEAD, "default_state" = "empty"),
+		list("id" = ORGAN_SLOT_OS, "name" = "OS", "zone" = BODY_ZONE_HEAD, "default_state" = "empty", "capacity" = CYBERPUNK_OS_SLOT_CAPACITY),
 		list("id" = ORGAN_SLOT_BRAIN, "name" = "Мозг", "zone" = BODY_ZONE_HEAD, "default_state" = "organ"),
-		list("id" = ORGAN_SLOT_BRAIN_CNS, "name" = "ЦНС", "zone" = BODY_ZONE_HEAD, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_EYES, "name" = "Глаза", "zone" = BODY_ZONE_HEAD, "default_state" = "organ"),
 		list("id" = ORGAN_SLOT_EARS, "name" = "Уши", "zone" = BODY_ZONE_HEAD, "default_state" = "organ"),
 		list("id" = ORGAN_SLOT_TONGUE, "name" = "Язык / рот", "zone" = BODY_ZONE_PRECISE_MOUTH, "default_state" = "organ"),
-		list("id" = ORGAN_SLOT_JAW_AUG, "name" = "Челюсть", "zone" = BODY_ZONE_PRECISE_MOUTH, "default_state" = "empty"),
 		list("id" = ORGAN_SLOT_EYELID_AUG, "name" = "Веки / HUD", "zone" = BODY_ZONE_HEAD, "default_state" = "empty"),
 	)
 

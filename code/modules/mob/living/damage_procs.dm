@@ -98,7 +98,7 @@
 			else
 				damage_dealt = -1 * adjust_fire_loss(damage_amount, forced = forced, burn_type = burn_type)
 			if(burn_type == BODYPART_DAMAGE_COLD && damage_dealt > 0)
-				adjust_chromity_overheat(-damage_dealt, respect_floor = TRUE)
+				adjust_chromity_overheat(-damage_dealt * 5, respect_floor = TRUE)
 		if(TOX)
 			damage_dealt = -1 * adjust_tox_loss(damage_amount, forced = forced)
 		if(OXY)

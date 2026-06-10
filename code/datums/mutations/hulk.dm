@@ -1,7 +1,7 @@
-//Hulk turns your skin green, makes you strong, and allows you to shrug off stun effect.
+// Genetic stupor makes you strong and allows you to shrug off stun effects, without changing skin color.
 /datum/mutation/hulk
-	name = "Hulk"
-	desc = "Слабо изученный геном, заставляющий мышцы своего носителя увеличиваться, подавлять речь и придавать болезненное состояние коже."
+	name = "Отупление"
+	desc = "Генная деградация, усиливающая мышцы ценой речи, мелкой моторики и рассудка."
 	quality = POSITIVE
 	locked = TRUE
 	difficulty = 16
@@ -12,7 +12,7 @@
 	conflicts = list(/datum/mutation/hulk/ork)
 	var/scream_delay = 50
 	var/last_scream = 0
-	var/bodypart_color = COLOR_DARK_LIME
+	var/bodypart_color
 	/// Determines whether or not our version of hulk breaks their arm when destroying walls.
 	var/no_recoil = TRUE
 	mutation_traits = list(
@@ -33,15 +33,16 @@
 	. = ..()
 	if(!.)
 		return
-	for(var/obj/item/bodypart/part as anything in owner.get_bodyparts())
-		if (part.bodytype & BODYTYPE_ORGANIC)
-			part.add_color_override(bodypart_color, LIMB_COLOR_HULK)
-	owner.update_body_parts()
+	if(bodypart_color)
+		for(var/obj/item/bodypart/part as anything in owner.get_bodyparts())
+			if(part.bodytype & BODYTYPE_ORGANIC)
+				part.add_color_override(bodypart_color, LIMB_COLOR_HULK)
+		owner.update_body_parts()
+		RegisterSignal(owner, COMSIG_CARBON_ATTACH_LIMB, PROC_REF(texture_limb))
+		RegisterSignal(owner, COMSIG_CARBON_REMOVE_LIMB, PROC_REF(untexture_limb))
 	owner.add_mood_event("hulk", /datum/mood_event/hulk)
 	RegisterSignal(owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK, PROC_REF(on_attack_hand))
 	RegisterSignal(owner, COMSIG_MOB_CLICKON, PROC_REF(check_swing))
-	RegisterSignal(owner, COMSIG_CARBON_ATTACH_LIMB, PROC_REF(texture_limb))
-	RegisterSignal(owner, COMSIG_CARBON_REMOVE_LIMB, PROC_REF(untexture_limb))
 	owner.add_movespeed_mod_immunities("hulk", /datum/movespeed_modifier/damage_slowdown)
 
 /datum/mutation/hulk/proc/on_attack_hand(mob/living/carbon/human/source, atom/target, proximity, modifiers)
@@ -63,7 +64,7 @@
 	return COMPONENT_CANCEL_ATTACK_CHAIN
 
 /datum/mutation/hulk/proc/scream_attack(mob/living/carbon/human/source)
-	source.say("WAAAAAAAAAAAAAAGH!", forced="hulk")
+	source.say("AAAAARGH!", forced="genetic stupor")
 
 /datum/mutation/hulk/on_life(seconds_per_tick)
 	if(owner.health < owner.crit_threshold)
@@ -74,9 +75,11 @@
 /datum/mutation/hulk/on_losing(mob/living/carbon/human/owner)
 	if(..())
 		return
-	for(var/obj/item/bodypart/part as anything in owner.get_bodyparts())
-		part.remove_color_override(LIMB_COLOR_HULK)
-	owner.update_body_parts()
+	if(bodypart_color)
+		for(var/obj/item/bodypart/part as anything in owner.get_bodyparts())
+			part.remove_color_override(LIMB_COLOR_HULK)
+		owner.update_body_parts()
+		UnregisterSignal(owner, list(COMSIG_CARBON_ATTACH_LIMB, COMSIG_CARBON_REMOVE_LIMB))
 	owner.clear_mood_event("hulk")
 	UnregisterSignal(owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK)
 	UnregisterSignal(owner, COMSIG_MOB_CLICKON)
@@ -84,12 +87,13 @@
 
 /datum/mutation/hulk/proc/texture_limb(atom/source, obj/item/bodypart/limb)
 	SIGNAL_HANDLER
-	if (limb.bodytype & BODYTYPE_ORGANIC)
+	if(bodypart_color && (limb.bodytype & BODYTYPE_ORGANIC))
 		limb.add_color_override(bodypart_color, LIMB_COLOR_HULK)
 
 /datum/mutation/hulk/proc/untexture_limb(atom/source, obj/item/bodypart/limb)
 	SIGNAL_HANDLER
-	limb.remove_color_override(LIMB_COLOR_HULK)
+	if(bodypart_color)
+		limb.remove_color_override(LIMB_COLOR_HULK)
 
 /// How many steps it takes to throw the mob
 #define HULK_TAILTHROW_STEPS 28
@@ -280,10 +284,10 @@
 	return
 
 /datum/mutation/hulk/ork
-	name = "Ork"
-	desc = "Данная мутация вызвана смешиванием генов халка. Она сильно влияет на речевые центры мозга обладателя мутации."
+	name = "Отупление (речевой распад)"
+	desc = "Усиленная форма отупления: мышцы крепнут, а речевые центры распадаются до грубых выкриков."
 	text_gain_indication = span_notice("Ты чувствуешь себя гораздно тупее!")
-	bodypart_color = COLOR_ASSISTANT_OLIVE
+	bodypart_color = null
 	conflicts = list(/datum/mutation/hulk)
 
 /datum/mutation/hulk/ork/add_speechmod()

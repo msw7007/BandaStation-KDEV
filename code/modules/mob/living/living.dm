@@ -77,7 +77,7 @@
 	// multiplier for the damage taken from falling
 	var/damage_softening_multiplier = 1
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		damage_softening_multiplier *= potential_spine.athletics_boost_multiplier
 
@@ -453,7 +453,11 @@
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_grab_power(mob/living/target, upgrade = FALSE)
-	return get_character_skill_level(SKILL_GRAPPLING)
+	var/grab_power = get_character_skill_level(SKILL_GRAPPLING)
+	var/obj/item/organ/cyberimp/brain/anti_drop/grip_implant = get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
+	if(istype(grip_implant) && grip_implant.is_implant_functional())
+		grab_power *= grip_implant.grip_strength_multiplier
+	return round(grab_power)
 
 /mob/living/proc/get_cyberpunk_grab_resistance(mob/living/grabber)
 	return get_character_skill_level(SKILL_ATHLETICS)
@@ -2273,7 +2277,7 @@
 
 	var/get_up_time = 1 SECONDS
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		get_up_time *= potential_spine.athletics_boost_multiplier
 	get_up_time = get_cyberpunk_acrobatics_get_up_duration(get_up_time)

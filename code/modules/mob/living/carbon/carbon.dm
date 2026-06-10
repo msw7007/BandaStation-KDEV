@@ -970,7 +970,12 @@
 	add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/bodypart, update = TRUE, multiplicative_slowdown = final_modification)
 
 /proc/cmp_organ_slot_asc(slot_a, slot_b)
-	return GLOB.organ_process_order.Find(slot_a) - GLOB.organ_process_order.Find(slot_b)
+	var/base_slot_a = organ_slot_base_key(slot_a)
+	var/base_slot_b = organ_slot_base_key(slot_b)
+	var/order_difference = GLOB.organ_process_order.Find(base_slot_a) - GLOB.organ_process_order.Find(base_slot_b)
+	if(order_difference)
+		return order_difference
+	return sorttext("[slot_a]", "[slot_b]")
 
 /mob/living/carbon/proc/get_footprint_sprite()
 	return FOOTPRINT_SPRITE_PAWS

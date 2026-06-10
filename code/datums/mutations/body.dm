@@ -637,6 +637,7 @@
 	name = "Rock Eater"
 	desc = "Тело субъекта становится способным переварить камни и минералы."
 	quality = POSITIVE
+	locked = TRUE
 	instability = POSITIVE_INSTABILITY_MINI
 	text_gain_indication = span_notice("Ты ощущаешь аппетит к камням.")
 	text_lose_indication = span_notice("Ты можешь вернуться к нормальной еде.")

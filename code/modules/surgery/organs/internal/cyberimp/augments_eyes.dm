@@ -10,7 +10,7 @@
 /obj/item/organ/cyberimp/eyes/hud
 	name = "HUD implant"
 	desc = "These cybernetic eyes will display a HUD over everything you see. Maybe."
-	slot = ORGAN_SLOT_HUD
+	slot = ORGAN_SLOT_EYELID_AUG
 	actions_types = list(/datum/action/item_action/organ_action/toggle_hud)
 	var/HUD_traits = list()
 	/// Whether the HUD implant is on or off
@@ -97,3 +97,58 @@
 	icon_state = "eye_implant_syndicate"
 	organ_flags = ORGAN_ROBOTIC | ORGAN_HIDDEN
 	hud_color = null
+
+/obj/item/organ/cyberimp/eyes/psi
+	name = "psi eye implant"
+	desc = "A neural optical implant that lets psionic mutation powers resolve a target."
+	icon_state = "eye_implant_diagnostic"
+	chromity_overheat = 4
+
+/obj/item/organ/cyberimp/eyes/psi/on_mob_insert(mob/living/carbon/human/eye_owner, special = FALSE, movement_flags)
+	. = ..()
+	add_organ_trait(TRAIT_PSI_EYES)
+
+/obj/item/organ/cyberimp/eyes/psi/on_mob_remove(mob/living/carbon/human/eye_owner, special, movement_flags)
+	. = ..()
+	remove_organ_trait(TRAIT_PSI_EYES)
+
+/obj/item/organ/cyberimp/eyes/laser
+	name = "laser eye implant"
+	desc = "A combat eye implant that projects focused light as a short combat beam."
+	icon_state = "eye_implant_security"
+	chromity_overheat = 6
+	var/shot_overheat = 12
+
+/obj/item/organ/cyberimp/eyes/laser/on_mob_insert(mob/living/carbon/human/eye_owner, special = FALSE, movement_flags)
+	. = ..()
+	RegisterSignal(eye_owner, COMSIG_MOB_ATTACK_RANGED, PROC_REF(on_ranged_attack))
+
+/obj/item/organ/cyberimp/eyes/laser/on_mob_remove(mob/living/carbon/human/eye_owner, special, movement_flags)
+	. = ..()
+	UnregisterSignal(eye_owner, COMSIG_MOB_ATTACK_RANGED)
+
+/obj/item/organ/cyberimp/eyes/laser/proc/on_ranged_attack(mob/living/carbon/human/source, atom/target, modifiers)
+	SIGNAL_HANDLER
+
+	if(!source.combat_mode || !is_implant_functional())
+		return
+	to_chat(source, span_warning("You shoot with your laser eye implant!"))
+	source.changeNext_move(CLICK_CD_RANGE)
+	source.newtonian_move(get_angle(source, target))
+	add_chromity_overheat(shot_overheat)
+	var/obj/projectile/beam/laser/laser_eyes/laser_beam = new(source.loc)
+	laser_beam.firer = source
+	laser_beam.def_zone = ran_zone(source.zone_selected)
+	laser_beam.aim_projectile(target, source, modifiers)
+	INVOKE_ASYNC(laser_beam, TYPE_PROC_REF(/obj/projectile, fire))
+	playsound(source, 'sound/items/weapons/taser2.ogg', 75, TRUE)
+
+/obj/item/organ/cyberimp/eyes/laser/t2
+	name = "advanced laser eye implant"
+	chromity_overheat = 8
+	shot_overheat = 10
+
+/obj/item/organ/cyberimp/eyes/laser/t3
+	name = "military laser eye implant"
+	chromity_overheat = 10
+	shot_overheat = 8

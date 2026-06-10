@@ -6,6 +6,7 @@
 	text_lose_indication = span_notice("Твоя антенна убавляется и пропадает окончательно.")
 	instability = POSITIVE_INSTABILITY_MINOR
 	difficulty = 8
+	locked = TRUE
 	var/datum/weakref/radio_weakref
 
 /obj/item/implant/radio/antenna

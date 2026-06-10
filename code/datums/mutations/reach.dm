@@ -33,6 +33,9 @@
 ///Triggers on COMSIG_MOB_ATTACK_RANGED. Usually handles stuff like picking up items at range.
 /datum/mutation/telekinesis/proc/on_ranged_attack(mob/source, atom/target)
 	SIGNAL_HANDLER
+	if(!HAS_TRAIT(source, TRAIT_PSI_EYES))
+		to_chat(source, span_warning("Your psionic sense cannot resolve the target without psi eyes."))
+		return
 	if(is_type_in_typecache(target, blacklisted_atoms))
 		return
 	if(!tkMaxRangeCheck(source, target) || source.z != target.z)

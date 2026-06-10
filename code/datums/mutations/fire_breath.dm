@@ -11,6 +11,41 @@
 	energy_coeff = 1
 	power_coeff = 1
 
+/datum/mutation/firebreath/on_acquiring(mob/living/carbon/human/owner)
+	. = ..()
+	if(!.)
+		return
+	var/obj/item/organ/stomach/fire_breath/fire_stomach = owner.get_organ_slot(ORGAN_SLOT_STOMACH)
+	if(istype(fire_stomach))
+		return
+	fire_stomach = new()
+	fire_stomach.Insert(owner, special = TRUE, movement_flags = DELETE_IF_REPLACED)
+
+/datum/mutation/firebreath/on_losing(mob/living/carbon/human/owner)
+	. = ..()
+	if(.)
+		return
+	var/obj/item/organ/stomach/fire_breath/fire_stomach = owner.get_organ_slot(ORGAN_SLOT_STOMACH)
+	if(!istype(fire_stomach))
+		return
+	var/obj/item/organ/stomach/replacement = new()
+	replacement.Insert(owner, special = TRUE, movement_flags = DELETE_IF_REPLACED)
+
+/obj/item/organ/stomach/fire_breath
+	name = "pyroclastic stomach"
+	desc = "A mutated stomach adapted to volatile fuels. Cold contents damage its lining."
+	icon_state = "stomach"
+	food_reagents = list(/datum/reagent/consumable/nutriment/organ_tissue/stomach_lining = 5)
+	hunger_modifier = 1.2
+
+/obj/item/organ/stomach/fire_breath/handle_reagent_digestion(seconds_per_tick)
+	if(owner && reagents?.total_volume && reagents.chem_temp < T0C)
+		var/cold_damage = clamp((T0C - reagents.chem_temp) / 50, 0.5, 5) * seconds_per_tick
+		apply_organ_damage(cold_damage)
+		if(SPT_PROB(15, seconds_per_tick))
+			to_chat(owner, span_warning("Your pyroclastic stomach cramps from the cold contents."))
+	return ..()
+
 /datum/mutation/firebreath/setup()
 	. = ..()
 	var/datum/action/cooldown/spell/cone/staggered/fire_breath/to_modify = .

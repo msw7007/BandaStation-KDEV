@@ -341,7 +341,11 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	return get_effective_genetic_stability()
 
 /datum/dna/proc/get_effective_genetic_stability()
-	return clamp(min(humanoidity, stability) + humanoidity_stabilized_bonus, 0, HUMANOIDITY_DEFAULT)
+	var/effective_bonus = humanoidity_stabilized_bonus
+	var/datum/mutation/biotechcompat/biotech_compatibility = get_mutation(/datum/mutation/biotechcompat)
+	if(biotech_compatibility)
+		effective_bonus += biotech_compatibility.humanoidity_bonus
+	return clamp(min(humanoidity, stability) + effective_bonus, 0, HUMANOIDITY_DEFAULT)
 
 /datum/dna/proc/get_humanoidity_chromity_multiplier()
 	var/effective_stability = get_effective_genetic_stability()

@@ -55,4 +55,4 @@
 	instability = POSITIVE_INSTABILITY_MODERATE
 	adapt_icon = "pressure"
 	mutation_traits = list(TRAIT_RESISTLOWPRESSURE, TRAIT_RESISTHIGHPRESSURE)
-	locked = FALSE
+	locked = TRUE

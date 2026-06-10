@@ -400,6 +400,8 @@ Remember to update _globalvars/traits.dm if you're adding/removing/renaming trai
 #define TRAIT_XRAY_VISION "xray_vision"
 /// Gives us mob vision through walls and slight night vision
 #define TRAIT_THERMAL_VISION "thermal_vision"
+/// Allows psionic mutation powers to resolve targets.
+#define TRAIT_PSI_EYES "psi_eyes"
 /// Gives us turf vision through walls and slight night vision
 #define TRAIT_MESON_VISION "meson_vision"
 /// Gives us Night vision

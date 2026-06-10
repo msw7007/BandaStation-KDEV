@@ -81,7 +81,7 @@
 	var/power_throw = 0
 	var/extra_throw_range = HAS_TRAIT(src, TRAIT_THROWINGARM) ? 2 : 0
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		power_throw += potential_spine.added_throw_speed
 		extra_throw_range += potential_spine.added_throw_range

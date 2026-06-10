@@ -59,7 +59,7 @@
 	if (is_heavy_gravity)
 		stamina_exhaustion *= 1.5
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		stamina_exhaustion *= potential_spine.athletics_boost_multiplier
 

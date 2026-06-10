@@ -17,6 +17,10 @@
 	 * Do NOT add slots with matching names to different zones - it will break the organs_slot list!
 	 */
 	var/slot
+	/// How many organs of this slot family can exist in the same owner. Indexed internally, but still one anatomical slot.
+	var/slot_capacity = 1
+	/// Runtime index inside a multi-capacity anatomical slot.
+	var/slot_index = 1
 	/// Random flags that describe this organ
 	var/organ_flags = ORGAN_ORGANIC | ORGAN_EDIBLE | ORGAN_VIRGIN
 	/// Treatable medical condition flags specific to organ function.

@@ -73,7 +73,7 @@
 	// Time in deciseonds that the mob is stunned after climbing successfully.
 	var/adjusted_climb_stun = climb_stun
 	var/fitness_level = max(1, user.mind?.get_skill_level(/datum/skill/athletics) || 1)
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		adjusted_climb_time *= potential_spine.athletics_boost_multiplier
 		adjusted_climb_stun *= potential_spine.athletics_boost_multiplier

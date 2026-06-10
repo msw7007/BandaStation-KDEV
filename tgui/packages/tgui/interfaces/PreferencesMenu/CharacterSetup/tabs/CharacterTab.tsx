@@ -34,13 +34,11 @@ const implantBodyParts = [
     icon: 'head-side-virus',
     slotIds: [
       'neck_device',
-      'skull_device',
+      'os_device',
       'brain',
-      'brain_cns',
       'eye_sight',
       'ears',
       'tongue',
-      'jaw_device',
       'eyelid_device',
     ],
   },
@@ -48,7 +46,7 @@ const implantBodyParts = [
     id: 'left_arm',
     label: 'Левая рука',
     icon: 'hand',
-    slotIds: ['l_arm_device', 'l_arm_muscle'],
+    slotIds: ['l_arm_device'],
   },
   {
     id: 'left_leg',
@@ -62,7 +60,6 @@ const implantBodyParts = [
     icon: 'vest',
     slotIds: [
       'spine',
-      'spine_secondary',
       'heart',
       'lungs',
       'stomach',
@@ -75,7 +72,7 @@ const implantBodyParts = [
     id: 'right_arm',
     label: 'Правая рука',
     icon: 'hand',
-    slotIds: ['r_arm_device', 'r_arm_muscle'],
+    slotIds: ['r_arm_device'],
   },
   {
     id: 'right_leg',
@@ -145,16 +142,22 @@ function toImplantBodyPartSlots(
     const bodyPartSlots = bodyPart.slotIds
       .map((slotId) => slotsById.get(slotId))
       .filter((slot): slot is CharacterSetupImplantSlot => !!slot);
-    const occupiedSlots = bodyPartSlots.filter(
-      (slot) => slot.default_state !== 'empty',
-    ).length;
+    const occupiedSlots = bodyPartSlots.reduce(
+      (sum, slot) =>
+        sum + (slot.default_state !== 'empty' ? slot.capacity || 1 : 0),
+      0,
+    );
+    const totalSlots = bodyPartSlots.reduce(
+      (sum, slot) => sum + (slot.capacity || 1),
+      0,
+    );
     const slotNames = bodyPartSlots.map((slot) => slot.name).join(', ');
 
     return {
       id: bodyPart.id,
       icon: bodyPart.icon,
       label: bodyPart.label,
-      state: `${occupiedSlots}/${bodyPartSlots.length}`,
+      state: `${occupiedSlots}/${totalSlots}`,
       warning: slotNames
         ? `Внутренние слоты: ${slotNames}. Операции установки/извлечения здесь не запускаются.`
         : 'Нет доступных внутренних слотов.',
@@ -234,7 +237,10 @@ function getBodyPartModificationSlots(
       icon: slot?.icon || bodyPart?.icon || 'microchip',
       kind: 'slot',
       slotId,
-      state: slot?.default_state === 'empty' ? '0/1' : '1/1',
+      state:
+        slot?.default_state === 'empty'
+          ? `0/${slot?.capacity || 1}`
+          : `${slot?.capacity || 1}/${slot?.capacity || 1}`,
     });
   }
 

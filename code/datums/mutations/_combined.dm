@@ -19,11 +19,6 @@
 	input_two = /datum/mutation/radioactive
 	result = /datum/mutation/hulk
 
-/datum/generecipe/mindread
-	input_one = /datum/mutation/antenna
-	input_two = /datum/mutation/paranoia
-	result = /datum/mutation/mindreader
-
 /datum/generecipe/shock
 	input_one = /datum/mutation/insulated
 	input_two = /datum/mutation/radioactive
@@ -38,11 +33,6 @@
 	input_one = /datum/mutation/cryokinesis
 	input_two = /datum/mutation/fire // fiery sweat NOT fiery breath
 	result = /datum/mutation/pyrokinesis
-
-/datum/generecipe/thermal_adaptation
-	input_one = /datum/mutation/adaptation/cold
-	input_two = /datum/mutation/adaptation/heat
-	result = /datum/mutation/adaptation/thermal
 
 /datum/generecipe/antiglow
 	input_one = /datum/mutation/glow
@@ -68,8 +58,3 @@
 	input_one = /datum/mutation/hulk
 	input_two = /datum/mutation/clumsy
 	result = /datum/mutation/hulk/ork
-
-/datum/generecipe/rock_absorber
-	input_one = /datum/mutation/rock_eater
-	input_two = /datum/mutation/stoner
-	result = /datum/mutation/rock_absorber

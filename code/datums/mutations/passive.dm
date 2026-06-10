@@ -1,18 +1,21 @@
 /datum/mutation/biotechcompat
-	name = "Biotech Compatibility"
-	desc = "Субъект становится более совместимым с биотехнологиями, такими как скилл-чипы."
+	name = "Biological Compatibility"
+	desc = "Субъект становится более совместимым с грубыми биологическими изменениями. Часть потери гуманоидности временно маскируется при расчетах совместимости с хромом."
 	quality = POSITIVE
 	instability = POSITIVE_INSTABILITY_MINI
+	var/humanoidity_bonus = 10
 
 /datum/mutation/biotechcompat/on_acquiring(mob/living/carbon/human/owner)
 	. = ..()
 	if(!.)
 		return
-	owner.adjust_skillchip_complexity_modifier(1)
+	owner.dna?.update_humanoidity(FALSE)
 
 /datum/mutation/biotechcompat/on_losing(mob/living/carbon/human/owner)
-	owner.adjust_skillchip_complexity_modifier(-1)
-	return ..()
+	. = ..()
+	if(.)
+		return
+	owner.dna?.update_humanoidity(FALSE)
 
 /datum/mutation/clever
 	name = "Clever"

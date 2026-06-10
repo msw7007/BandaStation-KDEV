@@ -25,7 +25,7 @@
  * Arguments:
  * * slot Slot to get the organs from
  */
-/mob/proc/get_organ_slot(slot)
+/mob/proc/get_organ_slot(slot, slot_index = 1)
 	return
 
 /mob/living/carbon/get_organ_by_type(typepath)
@@ -40,8 +40,17 @@
 			valid_organs += organ
 	return valid_organs
 
-/mob/living/carbon/get_organ_slot(slot)
-	. = organs_slot[slot]
+/proc/organ_slot_storage_key(slot, slot_index = 1)
+	if(slot_index <= 1)
+		return slot
+	return "[slot]#[slot_index]"
+
+/proc/organ_slot_base_key(slot)
+	var/list/split_slot = splittext("[slot]", "#")
+	return split_slot[1]
+
+/mob/living/carbon/get_organ_slot(slot, slot_index = 1)
+	. = organs_slot[organ_slot_storage_key(slot, slot_index)]
 
 /**
  * Returns a list of all missing organs this species should have

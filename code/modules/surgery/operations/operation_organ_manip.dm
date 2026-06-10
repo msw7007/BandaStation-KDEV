@@ -85,14 +85,23 @@
 	if(!organ_check(limb, organ) || (organ.organ_flags & ORGAN_UNUSABLE))
 		return FALSE
 
-	for(var/obj/item/organ/other_organ in limb)
-		if(other_organ.slot == organ.slot)
-			return FALSE
-
 	if(!zone_check(organ, limb.body_zone, operated_zone))
 		return FALSE
 
-	return TRUE
+	var/list/possible_slots = organ.valid_zones ? organ.get_slots_for_zone(limb.body_zone) : list(organ.slot)
+	for(var/checked_slot in possible_slots)
+		for(var/checked_index in 1 to organ.slot_capacity)
+			if(limb.owner?.get_organ_slot(checked_slot, checked_index))
+				continue
+			var/slot_occupied = FALSE
+			for(var/obj/item/organ/other_organ in limb)
+				if(other_organ.slot == checked_slot && other_organ.slot_index == checked_index)
+					slot_occupied = TRUE
+					break
+			if(!slot_occupied)
+				return TRUE
+
+	return FALSE
 
 /datum/surgery_operation/limb/organ_manipulation/snowflake_check_availability(obj/item/bodypart/limb, mob/living/surgeon, obj/item/tool, operated_zone)
 	return isorgan(tool) ? is_insert_available(limb, tool, operated_zone) : is_remove_available(limb, operated_zone)
@@ -141,9 +150,8 @@
 				return FALSE
 		if("insert")
 			var/obj/item/organ/organ = tool
-			for(var/obj/item/organ/existing_organ in limb)
-				if(existing_organ.slot == organ.slot)
-					return FALSE
+			if(!is_insert_available(limb, organ, limb.body_zone))
+				return FALSE
 
 	return TRUE
 

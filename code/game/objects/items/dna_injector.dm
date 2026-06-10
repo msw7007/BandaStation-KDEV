@@ -40,6 +40,48 @@
 /obj/item/dnainjector/attack_paw(mob/user, list/modifiers)
 	return attack_hand(user, modifiers)
 
+/obj/item/dnainjector/proc/get_analysis_info_bonus(mob/user)
+	var/bonus = max(0, user?.mind?.get_character_skill_level(SKILL_ANALYSIS) * 5)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		bonus = max(bonus, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
+	return bonus
+
+/obj/item/dnainjector/proc/get_mutation_payload_text(list/mutation_types)
+	var/list/mutation_names = list()
+	for(var/mutation_type in mutation_types)
+		var/datum/mutation/mutation = GET_INITIALIZED_MUTATION(mutation_type)
+		mutation_names += mutation?.name || "[mutation_type]"
+	return english_list(mutation_names)
+
+/obj/item/dnainjector/proc/get_mutation_instability_text(list/mutation_types)
+	var/list/mutation_data = list()
+	for(var/mutation_type in mutation_types)
+		var/datum/mutation/mutation = GET_INITIALIZED_MUTATION(mutation_type)
+		if(!mutation)
+			continue
+		mutation_data += "[mutation.name] ([mutation.instability >= 0 ? "+" : ""][mutation.instability] stability)"
+	return english_list(mutation_data)
+
+/obj/item/dnainjector/examine(mob/user)
+	. = ..()
+	var/analysis_info = get_analysis_info_bonus(user)
+	if(analysis_info <= 0 && user?.mind?.get_character_skill_level(SKILL_ANALYSIS) < CHARACTER_SKILL_LEVEL_TRAINED)
+		return
+	if(length(add_mutations))
+		. += span_notice("Genetic payload: adds [get_mutation_payload_text(add_mutations)].")
+	if(length(remove_mutations))
+		. += span_notice("Genetic payload: suppresses [get_mutation_payload_text(remove_mutations)].")
+	if(fields)
+		. += span_notice("Genetic payload: identity/profile rewrite data present.")
+	if(analysis_info >= 40)
+		if(length(add_mutations))
+			. += span_notice("Mutation stability load: [get_mutation_instability_text(add_mutations)].")
+		if(length(remove_mutations))
+			. += span_notice("Recovery target stability: [get_mutation_instability_text(remove_mutations)].")
+	if(analysis_info >= 60)
+		. += span_notice("Humanoidity note: injector mutations are handled through TG mutation stability; recovery injectors restore it only by removing the matching mutation source.")
+
 /obj/item/dnainjector/proc/inject(mob/living/carbon/target, mob/user)
 	if(!target.can_mutate())
 		return FALSE

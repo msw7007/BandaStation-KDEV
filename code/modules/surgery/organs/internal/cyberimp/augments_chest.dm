@@ -12,7 +12,7 @@
 	var/hunger_threshold = NUTRITION_LEVEL_STARVING
 	var/synthesizing = 0
 	var/poison_amount = 5
-	slot = ORGAN_SLOT_STOMACH_AID
+	slot = ORGAN_SLOT_BELLY_AUG
 
 /obj/item/organ/cyberimp/chest/nutriment/on_life(seconds_per_tick)
 	. = ..()
@@ -54,7 +54,7 @@
 	icon_state = "reviver_implant"
 	aug_overlay = "reviver"
 	emissive_overlay = TRUE
-	slot = ORGAN_SLOT_HEART_AID
+	slot = ORGAN_SLOT_CHEST_AUG
 	var/revive_cost = 0
 	var/reviving = FALSE
 	COOLDOWN_DECLARE(reviver_cooldown)
@@ -170,9 +170,9 @@
 
 /obj/item/organ/cyberimp/chest/thrusters
 	name = "implantable thrusters set"
-	desc = "An implantable set of thruster ports. They use the gas from environment or subject's internals for propulsion in zero-gravity areas. \
-	Unlike regular jetpacks, this device has no stabilization system."
-	slot = ORGAN_SLOT_THRUSTERS
+	desc = "An implantable set of thruster ports for zero-gravity maneuvering. They do not use fuel, but generate chrome load while active."
+	slot = ORGAN_SLOT_SPINE
+	valid_zones = list(BODY_ZONE_CHEST = ORGAN_SLOT_SPINE)
 	icon_state = "imp_jetpack"
 	base_icon_state = "imp_jetpack"
 	aug_overlay = "imp_jetpack"
@@ -180,13 +180,15 @@
 	actions_types = list(/datum/action/item_action/organ_action/toggle)
 	w_class = WEIGHT_CLASS_NORMAL
 	var/on = FALSE
+	var/thrust_power = 1.5 NEWTONS
+	var/active_overheat_floor = 10
 
 /obj/item/organ/cyberimp/chest/thrusters/Initialize(mapload)
 	. = ..()
 	AddComponent( \
 		/datum/component/jetpack, \
 		FALSE, \
-		1.5 NEWTONS, \
+		thrust_power, \
 		COMSIG_THRUSTER_ACTIVATED, \
 		COMSIG_THRUSTER_DEACTIVATED, \
 		THRUSTER_ACTIVATION_FAILED, \
@@ -228,6 +230,7 @@
 		return
 
 	on = TRUE
+	set_chromity_active_overheat_floor(active_overheat_floor)
 	owner.add_movespeed_modifier(/datum/movespeed_modifier/jetpack/cybernetic)
 	if(!silent)
 		to_chat(owner, span_notice("You turn your thrusters set on."))
@@ -238,6 +241,7 @@
 	if(!on)
 		return
 	SEND_SIGNAL(src, COMSIG_THRUSTER_DEACTIVATED, owner)
+	set_chromity_active_overheat_floor(0)
 	owner.remove_movespeed_modifier(/datum/movespeed_modifier/jetpack/cybernetic)
 	if(!silent)
 		to_chat(owner, span_notice("You turn your thrusters set off."))
@@ -250,39 +254,7 @@
 	return ..()
 
 /obj/item/organ/cyberimp/chest/thrusters/proc/allow_thrust(num, use_fuel = TRUE)
-	if(!owner)
-		return FALSE
-
-	var/turf/owner_turf = get_turf(owner)
-	if(!owner_turf) // No more runtimes from being stuck in nullspace.
-		return FALSE
-
-	// Priority 1: use air from environment.
-	var/datum/gas_mixture/environment = owner_turf.return_air()
-	if(environment && environment.return_pressure() > 30)
-		return TRUE
-
-	// Priority 2: use plasma from internal plasma storage.
-	// (just in case someone would ever use this implant system to make cyber-alien ops with jetpacks and taser arms)
-	if(owner.getPlasma() >= num * 100)
-		if(use_fuel)
-			owner.adjustPlasma(-num * 100)
-		return TRUE
-
-	// Priority 3: use internals tank.
-	var/datum/gas_mixture/internal_mix = owner.internal?.return_air()
-	if(internal_mix && internal_mix.total_moles() > num)
-		if(!use_fuel)
-			return TRUE
-		var/datum/gas_mixture/removed = internal_mix.remove(num)
-		if(removed.total_moles() > 0.005)
-			owner_turf.assume_air(removed)
-			return TRUE
-		else
-			owner_turf.assume_air(removed)
-
-	deactivate(silent = TRUE)
-	return FALSE
+	return !!owner && is_implant_functional()
 
 /obj/item/organ/cyberimp/chest/thrusters/get_overlay_state(image_layer, obj/item/bodypart/limb)
 	return "[aug_overlay][on ? "_on" : ""]"
@@ -292,12 +264,122 @@
 	for (var/image/overlay as anything in .)
 		overlay.layer = -BODYPARTS_HIGH_LAYER // makes absolutely zero sense why it would layer ontop of jumpsuits but it looks cool
 
+/obj/item/organ/cyberimp/chest/thrusters/t2
+	name = "implantable thrusters set T2"
+	implant_tier = 2
+	thrust_power = 2 NEWTONS
+	active_overheat_floor = 7
+
+/obj/item/organ/cyberimp/chest/thrusters/t3
+	name = "implantable thrusters set T3"
+	implant_tier = 3
+	thrust_power = 2.5 NEWTONS
+	active_overheat_floor = 4
+
+/obj/item/organ/cyberimp/chest/blackrock_reverse_cordial
+	name = "\improper Blackrock reverse cordial system"
+	desc = "A chest control implant that shortens debuffs, knockdowns and slow-control effects."
+	icon_state = "reviver_implant"
+	slot = ORGAN_SLOT_CHEST_AUG
+	chromity_overheat = 4
+	var/control_duration_multiplier = 0.8
+
+/obj/item/organ/cyberimp/chest/blackrock_reverse_cordial/Initialize(mapload)
+	. = ..()
+	control_duration_multiplier = tier_value(list(0.8, 0.5, 0.2))
+
+/obj/item/organ/cyberimp/chest/blackrock_reverse_cordial/t2
+	name = "\improper Blackrock reverse cordial system T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/chest/blackrock_reverse_cordial/t3
+	name = "\improper Blackrock reverse cordial system T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/chest/adrenaline_booster
+	name = "adrenaline booster"
+	desc = "An active chest implant that floods the body with combat stimulants without increasing chrome load."
+	icon_state = "reviver_implant"
+	slot = ORGAN_SLOT_CHEST_AUG
+	actions_types = list(/datum/action/item_action/organ_action/use)
+	var/boost_duration = 8 SECONDS
+	var/boost_speed = -0.15
+	COOLDOWN_DECLARE(adrenaline_cooldown)
+
+/obj/item/organ/cyberimp/chest/adrenaline_booster/Initialize(mapload)
+	. = ..()
+	boost_duration = tier_value(list(8 SECONDS, 12 SECONDS, 18 SECONDS))
+	boost_speed = tier_value(list(-0.15, -0.25, -0.35))
+
+/obj/item/organ/cyberimp/chest/adrenaline_booster/ui_action_click(mob/user, datum/action/source)
+	if(!is_implant_functional())
+		to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
+		return
+	if(!COOLDOWN_FINISHED(src, adrenaline_cooldown))
+		to_chat(owner, span_warning("[capitalize(src)] is still recharging."))
+		return
+	owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_adrenaline, multiplicative_slowdown = boost_speed)
+	owner.adjust_stamina_loss(-25 * implant_tier)
+	addtimer(CALLBACK(owner, TYPE_PROC_REF(/mob, remove_movespeed_modifier), /datum/movespeed_modifier/cyberimp_adrenaline), boost_duration, TIMER_UNIQUE | TIMER_OVERRIDE)
+	COOLDOWN_START(src, adrenaline_cooldown, 45 SECONDS * get_cyberpunk_implant_cooldown_multiplier())
+	to_chat(owner, span_notice("[capitalize(src)] floods your body with adrenaline."))
+
+/obj/item/organ/cyberimp/chest/adrenaline_booster/t2
+	name = "adrenaline booster T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/chest/adrenaline_booster/t3
+	name = "adrenaline booster T3"
+	implant_tier = 3
+
+/obj/item/organ/cyberimp/chest/biomonitor
+	name = "biomonitor implant"
+	desc = "A passive monitor that will feed detailed vitals into the neural interface once the full UI pass lands."
+	icon_state = "reviver_implant"
+	slot = ORGAN_SLOT_CHEST_AUG
+	chromity_overheat = 1
+
+/obj/item/organ/cyberimp/chest/blood_pump
+	name = "blood pump implant"
+	desc = "A passive abdominal circulation pump that gradually stabilizes oxygenation and blood loss."
+	icon_state = "nutriment_implant"
+	slot = ORGAN_SLOT_BELLY_AUG
+	chromity_overheat = 2
+
+/obj/item/organ/cyberimp/chest/blood_pump/on_life(seconds_per_tick)
+	. = ..()
+	if(!is_implant_functional())
+		return
+	owner.adjust_oxy_loss(-0.4 * seconds_per_tick, updating_health = FALSE)
+	owner.adjust_stamina_loss(-0.8 * seconds_per_tick, updating_stamina = FALSE)
+
+/obj/item/organ/cyberimp/chest/metabolism_booster
+	name = "metabolism regulator"
+	desc = "A passive abdominal implant that slows reagent metabolism. Higher tiers keep drugs and medicine stable longer."
+	icon_state = "nutriment_implant"
+	slot = ORGAN_SLOT_BELLY_AUG
+	chromity_overheat = 2
+	var/metabolism_multiplier = 0.98
+
+/obj/item/organ/cyberimp/chest/metabolism_booster/Initialize(mapload)
+	. = ..()
+	metabolism_multiplier = tier_value(list(0.98, 0.95, 0.9))
+
+/obj/item/organ/cyberimp/chest/metabolism_booster/t2
+	name = "metabolism regulator T2"
+	implant_tier = 2
+
+/obj/item/organ/cyberimp/chest/metabolism_booster/t3
+	name = "metabolism regulator T3"
+	implant_tier = 3
+
 /obj/item/organ/cyberimp/chest/spine
 	name = "\improper Herculean gravitronic spinal implant"
 	desc = "This gravitronic spinal interface is able to improve the athletics of a user, allowing them greater physical ability. \
 		Contains a slot which can be upgraded with a gravity anomaly core, improving its performance."
 	icon_state = "herculean_implant"
 	slot = ORGAN_SLOT_SPINE
+	valid_zones = list(BODY_ZONE_CHEST = ORGAN_SLOT_SPINE)
 	/// How much faster does the spinal implant improve our lifting speed, workout ability, reducing falling damage and improving climbing and standing speed
 	var/athletics_boost_multiplier = 0.8
 	/// How much additional throwing speed does our spinal implant grant us.
@@ -310,6 +392,11 @@
 	var/core_applied = FALSE
 	/// The overlay for our implant to indicate that, yes, this person has an implant inserted.
 	var/mutable_appearance/stone_overlay
+
+/mob/proc/get_cyberpunk_spine_implant()
+	var/obj/item/organ/cyberimp/chest/spine/spine_implant = get_organ_slot(ORGAN_SLOT_SPINE)
+	if(istype(spine_implant))
+		return spine_implant
 
 /obj/item/organ/cyberimp/chest/spine/emp_act(severity)
 	. = ..()

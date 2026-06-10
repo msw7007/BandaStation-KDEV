@@ -408,7 +408,7 @@
 		if(el_tail && (el_tail.wag_flags & WAG_WAGGING)) // lizard tail wagging is robust and can swat away assailants!
 			defense_mod += 1
 
-		var/obj/item/organ/cyberimp/chest/spine/potential_spine = tackle_target.get_organ_slot(ORGAN_SLOT_SPINE)
+		var/obj/item/organ/cyberimp/chest/spine/potential_spine = tackle_target.get_cyberpunk_spine_implant()
 		if(istype(potential_spine))
 			defense_mod += potential_spine.strength_bonus
 
@@ -455,7 +455,7 @@
 	if(sacker_wing)
 		attack_mod += 2
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = sacker.get_organ_slot(ORGAN_SLOT_SPINE)
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = sacker.get_cyberpunk_spine_implant()
 	if(istype(potential_spine))
 		attack_mod += potential_spine.strength_bonus
 
@@ -522,7 +522,7 @@
 	if(HAS_TRAIT(user, TRAIT_HEAD_INJURY_BLOCKED))
 		oopsie_mod -= 6
 
-	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_organ_slot(ORGAN_SLOT_SPINE) // Can't snap that spine if it's made of metal.
+	var/obj/item/organ/cyberimp/chest/spine/potential_spine = user.get_cyberpunk_spine_implant() // Can't snap that spine if it's made of metal.
 	if(istype(potential_spine))
 		oopsie_mod -= potential_spine.strength_bonus
 
