@@ -80,6 +80,7 @@
  */
 /mob/Initialize(mapload)
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_MOB_CREATED, src)
+	apply_hires_legacy_icon()
 	add_to_mob_list()
 	if(stat == DEAD)
 		add_to_dead_mob_list()

@@ -6,8 +6,9 @@
 	var/shifting = TRUE
 	/// Takes the four cardinal direction defines. Any atoms moving into this atom's tile will be allowed to from the added directions.
 	var/passthroughable = NONE
-	var/maximum_pixel_shift = 12
-	var/passable_shift_threshold = 8
+	var/maximum_pixel_shift = 12 * (ICON_SIZE_ALL / LEGACY_ICON_SIZE_ALL)
+	var/passable_shift_threshold = 8 * (ICON_SIZE_ALL / LEGACY_ICON_SIZE_ALL)
+	var/pixel_shift_step = ICON_SIZE_ALL / LEGACY_ICON_SIZE_ALL
 
 /datum/component/pixel_shift/Initialize(...)
 	. = ..()
@@ -68,19 +69,19 @@
 	switch(direct)
 		if(NORTH)
 			if(owner.pixel_z <= maximum_pixel_shift + owner.base_pixel_z)
-				owner.pixel_z++
+				owner.pixel_z = min(owner.pixel_z + pixel_shift_step, maximum_pixel_shift + owner.base_pixel_z)
 				is_shifted = TRUE
 		if(EAST)
 			if(owner.pixel_w <= maximum_pixel_shift + owner.base_pixel_w)
-				owner.pixel_w++
+				owner.pixel_w = min(owner.pixel_w + pixel_shift_step, maximum_pixel_shift + owner.base_pixel_w)
 				is_shifted = TRUE
 		if(SOUTH)
 			if(owner.pixel_z >= -maximum_pixel_shift + owner.base_pixel_z)
-				owner.pixel_z--
+				owner.pixel_z = max(owner.pixel_z - pixel_shift_step, -maximum_pixel_shift + owner.base_pixel_z)
 				is_shifted = TRUE
 		if(WEST)
 			if(owner.pixel_w >= -maximum_pixel_shift + owner.base_pixel_w)
-				owner.pixel_w--
+				owner.pixel_w = max(owner.pixel_w - pixel_shift_step, -maximum_pixel_shift + owner.base_pixel_w)
 				is_shifted = TRUE
 
 	// Yes, I know this sets it to true for everything if more than one is matched.

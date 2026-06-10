@@ -4,6 +4,7 @@ GLOBAL_LIST_EMPTY(station_turfs)
 /turf
 	icon = 'icons/turf/floors.dmi'
 	abstract_type = /turf
+	appearance_flags = TILE_BOUND|PIXEL_SCALE|LONG_GLIDE
 	datum_flags = DF_STATIC_OBJECT
 	vis_flags = VIS_INHERIT_ID // Important for interaction with and visualization of openspace.
 	luminosity = 1
@@ -134,6 +135,7 @@ GLOBAL_LIST_EMPTY(station_turfs)
 	if(flags_1 & INITIALIZED_1)
 		stack_trace("Warning: [src]([type]) initialized multiple times!")
 	flags_1 |= INITIALIZED_1
+	apply_hires_legacy_icon()
 
 	/// We do NOT use the shortcut here, because this is faster
 	if(SSmapping.max_plane_offset)

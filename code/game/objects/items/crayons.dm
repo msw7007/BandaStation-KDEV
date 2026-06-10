@@ -525,8 +525,8 @@
 	var/clicky
 
 	if(LAZYACCESS(modifiers, ICON_X) && LAZYACCESS(modifiers, ICON_Y))
-		clickx = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - 16, -(ICON_SIZE_X/2), ICON_SIZE_X/2)
-		clicky = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - 16, -(ICON_SIZE_Y/2), ICON_SIZE_Y/2)
+		clickx = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - (ICON_SIZE_X * 0.5), -(ICON_SIZE_X * 0.5), ICON_SIZE_X * 0.5)
+		clicky = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - (ICON_SIZE_Y * 0.5), -(ICON_SIZE_Y * 0.5), ICON_SIZE_Y * 0.5)
 
 	if(!instant)
 		to_chat(user, span_notice("You start drawing a [temp] on \the [target]..."))

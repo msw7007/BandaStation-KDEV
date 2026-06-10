@@ -74,6 +74,10 @@
 	var/move_delay = 0
 	///The visual delay to use for the current client.Move(), mostly used for making a client based move look like it came from some other slower source
 	var/visual_delay = 0
+	/// Temporary 64px movement diagnostics. Disabled by default.
+	var/hires_movement_debug = FALSE
+	/// Throttle for blocked-move diagnostics.
+	var/next_hires_movement_debug_time = 0
 
 		///////////////
 		//SOUND STUFF//

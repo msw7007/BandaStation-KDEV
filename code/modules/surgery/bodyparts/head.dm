@@ -195,6 +195,7 @@
 		. += get_eye_overlays(dropped)
 
 	. += get_lips_overlays(dropped)
+	apply_hires_legacy_appearances(.)
 
 /obj/item/bodypart/head/get_voice(add_id_name)
 	return "The head of [get_face_name()]"

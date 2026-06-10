@@ -8,8 +8,8 @@
 	var/list/screen_loc_params = splittext(LAZYACCESS(modifiers, SCREEN_LOC), ",")
 	var/list/screen_loc_X = splittext(screen_loc_params[1],":")
 	var/list/screen_loc_Y = splittext(screen_loc_params[2],":")
-	var/x = (text2num(screen_loc_X[1]) * 32 + text2num(screen_loc_X[2]) - 32)
-	var/y = (text2num(screen_loc_Y[1]) * 32 + text2num(screen_loc_Y[2]) - 32)
+	var/x = (text2num(screen_loc_X[1]) * ICON_SIZE_X + text2num(screen_loc_X[2]) - ICON_SIZE_X)
+	var/y = (text2num(screen_loc_Y[1]) * ICON_SIZE_Y + text2num(screen_loc_Y[2]) - ICON_SIZE_Y)
 	var/list/screenview = getviewsize(client.view)
 	var/screenviewX = screenview[1] * ICON_SIZE_X
 	var/screenviewY = screenview[2] * ICON_SIZE_Y

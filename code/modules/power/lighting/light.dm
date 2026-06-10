@@ -188,20 +188,30 @@
 	if(!on || status != LIGHT_OK)
 		return
 
-	. += emissive_appearance(overlay_icon, "[base_state]", src, alpha = src.alpha)
+	var/mutable_appearance/emissive_overlay = emissive_appearance(overlay_icon, "[base_state]", src, alpha = src.alpha)
+	apply_hires_legacy_appearance(emissive_overlay)
+	. += emissive_overlay
 
 	var/area/local_area = get_room_area()
 
 	if(flickering)
-		. += mutable_appearance(overlay_icon, "[base_state]_flickering")
+		var/mutable_appearance/flickering_overlay = mutable_appearance(overlay_icon, "[base_state]_flickering")
+		apply_hires_legacy_appearance(flickering_overlay)
+		. += flickering_overlay
 		return
 	if(low_power_mode || major_emergency || (local_area?.fire))
-		. += mutable_appearance(overlay_icon, "[base_state]_emergency")
+		var/mutable_appearance/emergency_overlay = mutable_appearance(overlay_icon, "[base_state]_emergency")
+		apply_hires_legacy_appearance(emergency_overlay)
+		. += emergency_overlay
 		return
 	if(nightshift_enabled)
-		. += mutable_appearance(overlay_icon, "[base_state]_nightshift")
+		var/mutable_appearance/nightshift_overlay = mutable_appearance(overlay_icon, "[base_state]_nightshift")
+		apply_hires_legacy_appearance(nightshift_overlay)
+		. += nightshift_overlay
 		return
-	. += mutable_appearance(overlay_icon, base_state)
+	var/mutable_appearance/lit_overlay = mutable_appearance(overlay_icon, base_state)
+	apply_hires_legacy_appearance(lit_overlay)
+	. += lit_overlay
 
 // Area sensitivity is traditionally tied directly to power use, as an optimization
 // But since we want it for fire reacting, we disregard that

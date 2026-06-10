@@ -43,8 +43,8 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/sign/poster/party_game, 32)
 	var/x_offset = 0
 	var/y_offset = 0
 	if(LAZYACCESS(modifiers, ICON_X) && LAZYACCESS(modifiers, ICON_Y))
-		x_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - 16, -(ICON_SIZE_X/2), ICON_SIZE_X/2)
-		y_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - 16, -(ICON_SIZE_Y/2), ICON_SIZE_Y/2)
+		x_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - (ICON_SIZE_X * 0.5), -(ICON_SIZE_X * 0.5), ICON_SIZE_X * 0.5)
+		y_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - (ICON_SIZE_Y * 0.5), -(ICON_SIZE_Y * 0.5), ICON_SIZE_Y * 0.5)
 	if(!user.transfer_item_to_turf(attacking_item, drop_location(), x_offset, y_offset, silent = FALSE))
 		return
 	return TRUE

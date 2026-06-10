@@ -294,9 +294,9 @@
 	var/mutable_appearance/laser = mutable_appearance('icons/obj/weapons/guns/projectiles.dmi', pointer_icon_state)
 	if(modifiers)
 		if(LAZYACCESS(modifiers, ICON_X))
-			laser.pixel_w = (text2num(LAZYACCESS(modifiers, ICON_X)) - 16)
+			laser.pixel_w = text2num(LAZYACCESS(modifiers, ICON_X)) - (ICON_SIZE_X * 0.5)
 		if(LAZYACCESS(modifiers, ICON_Y))
-			laser.pixel_z = (text2num(LAZYACCESS(modifiers, ICON_Y)) - 16)
+			laser.pixel_z = text2num(LAZYACCESS(modifiers, ICON_Y)) - (ICON_SIZE_Y * 0.5)
 	else
 		laser.pixel_w = target.pixel_w + rand(-5,5)
 		laser.pixel_z = target.pixel_z + rand(-5,5)

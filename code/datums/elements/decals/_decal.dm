@@ -74,6 +74,7 @@
 		_color = string_list(_color)
 	if(_pic)
 		pic = _pic
+		apply_hires_legacy_appearance(pic)
 	else if(!generate_appearance(_icon, _icon_state, _dir, _plane, _layer, _color, _alpha, _smoothing, target))
 		return ELEMENT_INCOMPATIBLE
 	description = _description
@@ -115,10 +116,12 @@
 
 	if(_plane == EMISSIVE_PLANE)
 		pic = emissive_appearance(_icon, isnull(_smoothing) ? _icon_state : "[_icon_state]-[_smoothing]", source, _layer, _alpha)
+		apply_hires_legacy_appearance(pic)
 		return TRUE
 
 	var/temp_image = image(_icon, null, isnull(_smoothing) ? _icon_state : "[_icon_state]-[_smoothing]", _layer, _dir)
 	pic = new(temp_image)
+	apply_hires_legacy_appearance(pic)
 	var/atom/atom_source = source
 	SET_PLANE_EXPLICIT(pic, _plane, atom_source)
 	pic.color = _color

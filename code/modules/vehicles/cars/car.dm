@@ -2621,8 +2621,8 @@
 	recalculate_vehicle_body()
 	set_glide_size(MAX_GLIDE_SIZE)
 	animate_movement = NO_STEPS
-	cy_world_px = (x - 1) * 32 + pixel_x
-	cy_world_py = (y - 1) * 32 + pixel_y
+	cy_world_px = (x - 1) * ICON_SIZE_X + pixel_x
+	cy_world_py = (y - 1) * ICON_SIZE_Y + pixel_y
 	cy_set_forward_from_dir(dir || NORTH)
 	cy_accel_x = cy_forward_x
 	cy_accel_y = cy_forward_y
@@ -3003,7 +3003,7 @@
 	cy_velocity_y = current_y * speed
 
 /obj/vehicle/sealed/car/cyberpunk_test/proc/cy_apply_world_pixel_position()
-	var/tile = 32
+	var/tile = ICON_SIZE_X
 	var/new_x = FLOOR(cy_world_px / tile, 1) + 1
 	var/new_y = FLOOR(cy_world_py / tile, 1) + 1
 	var/new_pixel_x = round(cy_world_px - ((new_x - 1) * tile))
@@ -3091,7 +3091,7 @@
 	return TRUE
 
 /obj/vehicle/sealed/car/cyberpunk_test/proc/cy_pixel_point_blocked(test_px, test_py)
-	var/tile = 32
+	var/tile = ICON_SIZE_X
 	var/check_x = FLOOR(test_px / tile, 1) + 1
 	var/check_y = FLOOR(test_py / tile, 1) + 1
 	var/turf/check_turf = locate(check_x, check_y, z)
@@ -3170,46 +3170,48 @@
 /obj/vehicle/sealed/car/cyberpunk_test/proc/apply_pixel_motion(move_x, move_y)
 	subpixel_x += move_x
 	subpixel_y += move_y
+	var/half_tile_x = ICON_SIZE_X * 0.5
+	var/half_tile_y = ICON_SIZE_Y * 0.5
 	var/tile_steps = 0
 	var/stepped_tile = FALSE
-	while(subpixel_x > 16 && tile_steps < max_tile_steps_per_tick)
+	while(subpixel_x > half_tile_x && tile_steps < max_tile_steps_per_tick)
 		if(!try_vehicle_pixel_step(EAST))
-			subpixel_x = 16
+			subpixel_x = half_tile_x
 			update_vehicle_pixel_visuals(FALSE)
 			update_visual_dir()
 			return
-		subpixel_x -= 32
+		subpixel_x -= ICON_SIZE_X
 		tile_steps++
 		stepped_tile = TRUE
-	while(subpixel_x < -16 && tile_steps < max_tile_steps_per_tick)
+	while(subpixel_x < -half_tile_x && tile_steps < max_tile_steps_per_tick)
 		if(!try_vehicle_pixel_step(WEST))
-			subpixel_x = -16
+			subpixel_x = -half_tile_x
 			update_vehicle_pixel_visuals(FALSE)
 			update_visual_dir()
 			return
-		subpixel_x += 32
+		subpixel_x += ICON_SIZE_X
 		tile_steps++
 		stepped_tile = TRUE
-	while(subpixel_y > 16 && tile_steps < max_tile_steps_per_tick)
+	while(subpixel_y > half_tile_y && tile_steps < max_tile_steps_per_tick)
 		if(!try_vehicle_pixel_step(NORTH))
-			subpixel_y = 16
+			subpixel_y = half_tile_y
 			update_vehicle_pixel_visuals(FALSE)
 			update_visual_dir()
 			return
-		subpixel_y -= 32
+		subpixel_y -= ICON_SIZE_Y
 		tile_steps++
 		stepped_tile = TRUE
-	while(subpixel_y < -16 && tile_steps < max_tile_steps_per_tick)
+	while(subpixel_y < -half_tile_y && tile_steps < max_tile_steps_per_tick)
 		if(!try_vehicle_pixel_step(SOUTH))
-			subpixel_y = -16
+			subpixel_y = -half_tile_y
 			update_vehicle_pixel_visuals(FALSE)
 			update_visual_dir()
 			return
-		subpixel_y += 32
+		subpixel_y += ICON_SIZE_Y
 		tile_steps++
 		stepped_tile = TRUE
-	subpixel_x = clamp(subpixel_x, -16, 16)
-	subpixel_y = clamp(subpixel_y, -16, 16)
+	subpixel_x = clamp(subpixel_x, -half_tile_x, half_tile_x)
+	subpixel_y = clamp(subpixel_y, -half_tile_y, half_tile_y)
 	update_vehicle_pixel_visuals(!stepped_tile)
 	update_visual_dir()
 

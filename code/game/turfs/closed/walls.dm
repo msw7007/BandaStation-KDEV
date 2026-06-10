@@ -56,6 +56,7 @@
 			underlay_appearance.icon = fixed_underlay["icon"]
 			underlay_appearance.icon_state = fixed_underlay["icon_state"]
 		fixed_underlay = string_assoc_list(fixed_underlay)
+		apply_hires_legacy_appearance(underlay_appearance)
 		underlays += underlay_appearance
 	register_context()
 

@@ -274,7 +274,7 @@ GLOBAL_LIST_EMPTY(lighting_sheets)
 	// You may notice we use squares here even though there are three components
 	// Because z diffs are so functionally small, cubes and cube roots are too aggressive
 	// The larger the distance is, the less bright our light will be
-	var/multiplier = 1 - CLAMP01(sqrt(x ** 2 + y ** 2 + z ** 2 + height) / range_divisor)
+	var/multiplier = 1 - CLAMP01(sqrt(max(0, x ** 2 + y ** 2 + z ** 2 + height)) / range_divisor)
 	if(angle >= 360 || angle <= 0)
 		return multiplier
 

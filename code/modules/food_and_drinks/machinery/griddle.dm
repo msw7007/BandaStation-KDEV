@@ -58,8 +58,8 @@
 
 	for(var/pancakes in 1 to FLOOR(reac_volume, 5) step 5) //this adds as many pancakes as you possibly could make, with 5u needed per pancake
 		var/obj/item/food/pancakes/raw/new_pancake = new(src)
-		new_pancake.pixel_x = rand(16,-16)
-		new_pancake.pixel_y = rand(16,-16)
+		new_pancake.pixel_x = rand(ICON_SIZE_X * 0.5, -(ICON_SIZE_X * 0.5))
+		new_pancake.pixel_y = rand(ICON_SIZE_Y * 0.5, -(ICON_SIZE_Y * 0.5))
 		AddToGrill(new_pancake)
 		if(griddled_objects.len >= max_items)
 			break
@@ -75,9 +75,9 @@
 	if(!LAZYACCESS(modifiers, ICON_X) || !LAZYACCESS(modifiers, ICON_Y))
 		return
 	if(user.transferItemToLoc(I, src, silent = FALSE))
-		//Clamp it so that the icon never moves more than 16 pixels in either direction (thus leaving the table turf)
-		I.pixel_x = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - 16, -(ICON_SIZE_X/2), ICON_SIZE_X/2)
-		I.pixel_y = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - 16, -(ICON_SIZE_Y/2), ICON_SIZE_Y/2)
+		//Clamp it so that the icon never moves more than half a tile in either direction.
+		I.pixel_x = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - (ICON_SIZE_X * 0.5), -(ICON_SIZE_X * 0.5), ICON_SIZE_X * 0.5)
+		I.pixel_y = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - (ICON_SIZE_Y * 0.5), -(ICON_SIZE_Y * 0.5), ICON_SIZE_Y * 0.5)
 		to_chat(user, span_notice("Вы помещаете [I.declent_ru(ACCUSATIVE)] на [declent_ru(ACCUSATIVE)]."))
 		AddToGrill(I, user)
 	else

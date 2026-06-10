@@ -504,13 +504,13 @@
 	var/dx = atom_to_face.x - x
 	var/dy = atom_to_face.y - y
 	if(!dx && !dy) // Wall items are graphically shifted but on the floor
-		if(atom_to_face.pixel_y > 16)
+		if(atom_to_face.pixel_y > ICON_SIZE_Y * 0.5)
 			setDir(NORTH)
-		else if(atom_to_face.pixel_y < -16)
+		else if(atom_to_face.pixel_y < -(ICON_SIZE_Y * 0.5))
 			setDir(SOUTH)
-		else if(atom_to_face.pixel_x > 16)
+		else if(atom_to_face.pixel_x > ICON_SIZE_X * 0.5)
 			setDir(EAST)
-		else if(atom_to_face.pixel_x < -16)
+		else if(atom_to_face.pixel_x < -(ICON_SIZE_X * 0.5))
 			setDir(WEST)
 		return
 

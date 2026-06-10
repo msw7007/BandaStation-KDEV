@@ -10,7 +10,7 @@
 	density = TRUE
 	layer = MOB_LAYER
 	abstract_type = /mob
-	animate_movement = SLIDE_STEPS
+	animate_movement = NO_STEPS
 	hud_possible = list(ANTAG_HUD)
 	pressure_resistance = 8
 	mouse_drag_pointer = MOUSE_ACTIVE_POINTER

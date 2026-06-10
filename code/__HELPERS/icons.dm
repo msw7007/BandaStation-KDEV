@@ -1307,6 +1307,54 @@ GLOBAL_LIST_EMPTY(transformation_animation_objects)
 		GLOB.icon_dimensions[icon_path] = list("width" = my_icon.Width(), "height" = my_icon.Height())
 	return GLOB.icon_dimensions[icon_path]
 
+/proc/get_hires_legacy_icon(icon_path)
+	if(!icon_path || world.icon_size <= LEGACY_ICON_SIZE_ALL)
+		return icon_path
+	var/list/icon_dimensions = get_icon_dimensions(icon_path)
+	var/icon_width = icon_dimensions["width"]
+	var/icon_height = icon_dimensions["height"]
+	if(icon_width >= ICON_SIZE_X && icon_height >= ICON_SIZE_Y)
+		return icon_path
+	if(isnull(GLOB.hires_legacy_icons[icon_path]))
+		var/icon/scaled_icon = icon(icon_path)
+		scaled_icon.Scale(ICON_SIZE_X, ICON_SIZE_Y)
+		GLOB.hires_legacy_icons[icon_path] = scaled_icon
+	return GLOB.hires_legacy_icons[icon_path]
+
+/atom/proc/apply_hires_legacy_icon()
+	if(world.icon_size <= LEGACY_ICON_SIZE_ALL || !icon)
+		return
+	var/scaled_icon = get_hires_legacy_icon(icon)
+	if(scaled_icon == icon)
+		return
+	icon = scaled_icon
+
+/proc/apply_hires_legacy_appearance(appearance)
+	if(world.icon_size <= LEGACY_ICON_SIZE_ALL)
+		return
+	var/mutable_appearance/typed_appearance
+	if(istype(appearance, /image))
+		var/image/typed_image = appearance
+		typed_appearance = typed_image
+	else if(istype(appearance, /mutable_appearance))
+		typed_appearance = appearance
+	else
+		return
+	if(!typed_appearance.icon)
+		return
+	typed_appearance.icon = get_hires_legacy_icon(typed_appearance.icon)
+	for(var/overlay as anything in typed_appearance.overlays)
+		apply_hires_legacy_appearance(overlay)
+	for(var/underlay as anything in typed_appearance.underlays)
+		apply_hires_legacy_appearance(underlay)
+
+/proc/apply_hires_legacy_appearances(target)
+	if(islist(target))
+		for(var/item as anything in target)
+			apply_hires_legacy_appearances(item)
+	else if(istype(target, /mutable_appearance) || istype(target, /image))
+		apply_hires_legacy_appearance(target)
+
 /// Fikou's fix for making toast alerts look nice - resets offsets, transforms to fit
 /proc/get_small_overlay(atom/source)
 	var/mutable_appearance/alert_overlay = new(source)
@@ -1448,4 +1496,3 @@ GLOBAL_LIST_EMPTY(transformation_animation_objects)
 	var/zero_alpha_regex = regex(@@#(?:(?!a0a0a0)([0-9]|[a-f]){6}00)@, "gi")
 	linear_pixels = replacetext(linear_pixels, zero_alpha_regex, COLOR_DMI_MASK)
 	return linear_pixels
-

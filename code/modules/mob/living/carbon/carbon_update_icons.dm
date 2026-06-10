@@ -38,6 +38,11 @@
 
 /mob/living/carbon/proc/apply_overlay(cache_index)
 	if((. = overlays_standing[cache_index]))
+		switch(cache_index)
+			if(BODYPARTS_LOW_LAYER, BODYPARTS_LAYER, BODYPARTS_HIGH_LAYER)
+				// Bodyparts are a separate migration target; do not scale their cached limb appearances here.
+			else
+				apply_hires_legacy_appearances(.)
 		add_overlay(.)
 	SEND_SIGNAL(src, COMSIG_CARBON_APPLY_OVERLAY, cache_index, .)
 
@@ -606,8 +611,9 @@ GLOBAL_LIST_EMPTY(masked_leg_icons_cache)
 
 	//in case we do not have a cached version of the two cropped icons for this key, we have to create it
 	if(!GLOB.masked_leg_icons_cache[icon_cache_key])
-		var/icon/leg_crop_mask = (body_zone == BODY_ZONE_R_LEG ? icon('icons/mob/leg_masks.dmi', "right_leg") : icon('icons/mob/leg_masks.dmi', "left_leg"))
-		var/icon/leg_crop_mask_lower = (body_zone == BODY_ZONE_R_LEG ? icon('icons/mob/leg_masks.dmi', "right_leg_lower") : icon('icons/mob/leg_masks.dmi', "left_leg_lower"))
+		var/mask_icon = get_hires_legacy_icon('icons/mob/leg_masks.dmi')
+		var/icon/leg_crop_mask = (body_zone == BODY_ZONE_R_LEG ? icon(mask_icon, "right_leg") : icon(mask_icon, "left_leg"))
+		var/icon/leg_crop_mask_lower = (body_zone == BODY_ZONE_R_LEG ? icon(mask_icon, "right_leg_lower") : icon(mask_icon, "left_leg_lower"))
 
 		new_leg_icon = icon(limb_overlay.icon, limb_overlay.icon_state)
 		new_leg_icon.Blend(leg_crop_mask, ICON_MULTIPLY)

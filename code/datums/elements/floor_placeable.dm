@@ -35,9 +35,9 @@
 	var/y_offset = 0
 	// Items are centered by default, but we move them if click ICON_X and ICON_Y are available
 	if(LAZYACCESS(modifiers, ICON_X) && LAZYACCESS(modifiers, ICON_Y))
-		// Clamp it so that the icon never moves more than 16 pixels in either direction (thus leaving the turf)
-		x_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - 16, -(ICON_SIZE_X*0.5), ICON_SIZE_X*0.5)
-		y_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - 16, -(ICON_SIZE_Y*0.5), ICON_SIZE_Y*0.5)
+		// Clamp it so that the icon never moves more than half a tile in either direction.
+		x_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_X)) - (ICON_SIZE_X * 0.5), -(ICON_SIZE_X * 0.5), ICON_SIZE_X * 0.5)
+		y_offset = clamp(text2num(LAZYACCESS(modifiers, ICON_Y)) - (ICON_SIZE_Y * 0.5), -(ICON_SIZE_Y * 0.5), ICON_SIZE_Y * 0.5)
 
 	if(!user.transfer_item_to_turf(source, interacting_with, x_offset, y_offset, silent = FALSE))
 		return ITEM_INTERACT_BLOCKING

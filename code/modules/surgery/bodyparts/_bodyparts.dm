@@ -1814,7 +1814,7 @@
 
 	// Handles invisibility (not alpha or actual invisibility but invisibility)
 	if(is_invisible)
-		. += image(icon_invisible, "invisible_[body_zone]", -BODYPARTS_LAYER, dir = image_dir)
+		. += image(get_hires_legacy_icon(icon_invisible), "invisible_[body_zone]", -BODYPARTS_LAYER, dir = image_dir)
 		SEND_SIGNAL(src, COMSIG_BODYPART_GET_LIMB_ICON, ., dropped)
 		return .
 
@@ -1823,6 +1823,7 @@
 	var/used_icon = icon_greyscale
 	if(!should_draw_greyscale || !icon_greyscale)
 		used_icon = icon_static
+	used_icon = get_hires_legacy_icon(used_icon)
 
 	var/used_state = "[limb_id]_[body_zone]"
 	if(is_dimorphic) // Does this type of limb have sexual dimorphism?
@@ -1842,14 +1843,15 @@
 	if(dropped && dmg_overlay_type)
 		if(brutestate)
 			// divided into two overlays: one that gets colored and one that doesn't.
-			var/image/brute_blood_overlay = image('icons/mob/effects/dam_mob.dmi', "[dmg_overlay_type]_[body_zone]_[brutestate]0", -DAMAGE_LAYER, dir = SOUTH)
+			var/damage_icon = get_hires_legacy_icon('icons/mob/effects/dam_mob.dmi')
+			var/image/brute_blood_overlay = image(damage_icon, "[dmg_overlay_type]_[body_zone]_[brutestate]0", -DAMAGE_LAYER, dir = SOUTH)
 			brute_blood_overlay.color = get_color_from_blood_list(blood_dna_info)
-			var/mutable_appearance/brute_damage_overlay = mutable_appearance('icons/mob/effects/dam_mob.dmi', "[dmg_overlay_type]_[body_zone]_[brutestate]0_overlay", -DAMAGE_LAYER, appearance_flags = RESET_COLOR)
+			var/mutable_appearance/brute_damage_overlay = mutable_appearance(damage_icon, "[dmg_overlay_type]_[body_zone]_[brutestate]0_overlay", -DAMAGE_LAYER, appearance_flags = RESET_COLOR)
 			if(brute_damage_overlay)
 				brute_blood_overlay.overlays += brute_damage_overlay
 			. += brute_blood_overlay
 		if(burnstate)
-			. += image('icons/mob/effects/dam_mob.dmi', "[dmg_overlay_type]_[body_zone]_0[burnstate]", -DAMAGE_LAYER, dir = SOUTH)
+			. += image(get_hires_legacy_icon('icons/mob/effects/dam_mob.dmi'), "[dmg_overlay_type]_[body_zone]_0[burnstate]", -DAMAGE_LAYER, dir = SOUTH)
 
 	if(is_husked)
 		. += huskify_image(thing_to_husk = limb)
@@ -1910,6 +1912,7 @@
 				continue
 
 			var/external_overlay = overlay.get_overlay(external_layer, src, is_husked)
+			apply_hires_legacy_appearances(external_overlay)
 			if (!dropped)
 				. += external_overlay
 				continue
@@ -1931,7 +1934,7 @@
 	var/icon/husk_icon = new(thing_to_husk.icon)
 	husk_icon.ColorTone(HUSK_COLOR_TONE)
 	thing_to_husk.icon = husk_icon
-	var/mutable_appearance/husk_blood = mutable_appearance(icon_husk, "[husk_type]_husk_[body_zone]", appearance_flags = RESET_COLOR)
+	var/mutable_appearance/husk_blood = mutable_appearance(get_hires_legacy_icon(icon_husk), "[husk_type]_husk_[body_zone]", appearance_flags = RESET_COLOR)
 	// BLEND_INSET_OVERLAY on KEEP_TOGETHER atoms masks itself with the atom, so we cannot add this as an overlay to our limb to have it automatically mask
 	husk_blood.blend_mode = BLEND_INSET_OVERLAY
 	husk_blood.dir = thing_to_husk.dir

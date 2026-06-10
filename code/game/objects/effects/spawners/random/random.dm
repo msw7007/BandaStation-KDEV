@@ -27,7 +27,7 @@
 	var/spawn_loot_chance = 100
 	/// Determines how big of a range (in tiles) we should scatter things in.
 	var/spawn_scatter_radius = 0
-	/// Whether the items should have a random pixel_x/y offset (maxium offset distance is ±16 pixels for x/y)
+	/// Whether the items should have a random pixel_x/y offset (maximum offset distance is half a tile for x/y)
 	var/spawn_random_offset = FALSE
 	/// Whether items that cannot be spawned will be removed from the loot list. Keep it TRUE unless you've a good reason.
 	var/remove_if_cant_spawn = TRUE
@@ -59,7 +59,9 @@
 
 	if(loot?.len)
 		var/loot_spawned = 0
-		var/pixel_divider = FLOOR(16 / spawn_loot_split_pixel_offsets, 1) // 16 pixels offsets is max that should be allowed in any direction
+		var/max_random_pixel_x = ICON_SIZE_X * 0.5
+		var/max_random_pixel_y = ICON_SIZE_Y * 0.5
+		var/pixel_divider = FLOOR(max_random_pixel_x / spawn_loot_split_pixel_offsets, 1)
 		while((spawn_loot_count-loot_spawned) && loot.len)
 			var/lootspawn = pick_weight_recursive(loot)
 			if(!can_spawn(lootspawn))
@@ -82,8 +84,8 @@
 					if (pixel_y != 0)
 						spawned_loot.pixel_y = pixel_y
 				else if (spawn_random_offset)
-					spawned_loot.pixel_x = rand(-16, 16)
-					spawned_loot.pixel_y = rand(-16, 16)
+					spawned_loot.pixel_x = rand(-max_random_pixel_x, max_random_pixel_x)
+					spawned_loot.pixel_y = rand(-max_random_pixel_y, max_random_pixel_y)
 				else if (spawn_loot_split)
 					if (loot_spawned)
 						var/column = FLOOR(loot_spawned / pixel_divider, 1)

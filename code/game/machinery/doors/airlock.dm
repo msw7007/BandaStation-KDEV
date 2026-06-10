@@ -28,6 +28,7 @@
 	var/base_icon_key = "[icon_state][REF(icon_file)]"
 	if(!(. = airlock_overlays[base_icon_key]))
 		. = airlock_overlays[base_icon_key] = mutable_appearance(icon_file, icon_state)
+		apply_hires_legacy_appearance(.)
 	if(isnull(em_block))
 		return
 
@@ -37,6 +38,7 @@
 	var/mutable_appearance/em_blocker = airlock_overlays[em_block_key]
 	if(!em_blocker)
 		em_blocker = airlock_overlays[em_block_key] = mutable_appearance(icon_file, icon_state, offset_spokesman = offset_spokesman, plane = EMISSIVE_PLANE, appearance_flags = EMISSIVE_APPEARANCE_FLAGS)
+		apply_hires_legacy_appearance(em_blocker)
 		em_blocker.color = em_block ? GLOB.em_block_color : GLOB.emissive_color
 
 	return list(., em_blocker)
@@ -630,19 +632,20 @@
 			if(!(unres_sides & heading))
 				continue
 			var/mutable_appearance/floorlight = mutable_appearance('icons/obj/doors/airlocks/station/overlays.dmi', "unres_[heading]", FLOAT_LAYER, src, O_LIGHTING_VISUAL_PLANE, appearance_flags = RESET_COLOR | KEEP_APART)
+			apply_hires_legacy_appearance(floorlight)
 			floorlight.color = LIGHT_COLOR_DEFAULT
 			switch (heading)
 				if (NORTH)
 					floorlight.pixel_w = 0
-					floorlight.pixel_z = 32
+					floorlight.pixel_z = ICON_SIZE_Y * 0.5
 				if (SOUTH)
 					floorlight.pixel_w = 0
-					floorlight.pixel_z = -32
+					floorlight.pixel_z = -(ICON_SIZE_Y * 0.5)
 				if (EAST)
-					floorlight.pixel_w = 32
+					floorlight.pixel_w = ICON_SIZE_X * 0.5
 					floorlight.pixel_z = 0
 				if (WEST)
-					floorlight.pixel_w = -32
+					floorlight.pixel_w = -(ICON_SIZE_X * 0.5)
 					floorlight.pixel_z = 0
 			. += floorlight
 

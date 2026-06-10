@@ -46,6 +46,9 @@
  */
 /client/Move(new_loc, direct)
 	if(world.time < move_delay) //do not move anything ahead of this check please
+		if(hires_movement_debug && world.time >= next_hires_movement_debug_time)
+			next_hires_movement_debug_time = world.time + world.tick_lag
+			to_chat(src, span_notice("HIRES MOVE blocked now=[world.time] delay=[move_delay] left=[round(move_delay - world.time, 0.01)] intended=[intended_direction] direct=[direct]"))
 		return FALSE
 	next_move_dir_add = NONE
 	next_move_dir_sub = NONE
@@ -103,7 +106,8 @@
 	var/glide_delay = add_delay
 	if(NSCOMPONENT(direct) && EWCOMPONENT(direct))
 		glide_delay = FLOOR(glide_delay * sqrt(2), world.tick_lag)
-	mob.set_glide_size(DELAY_TO_GLIDE_SIZE(glide_delay)) // set it now in case of pulled objects
+	var/before_glide = DELAY_TO_GLIDE_SIZE(glide_delay)
+	mob.set_glide_size(before_glide) // set it now in case of pulled objects
 	//If the move was recent, count using old_move_delay
 	//We want fractional behavior and all
 	if(old_move_delay + world.tick_lag > world.time)
@@ -117,6 +121,15 @@
 	//Sometimes you want to look like you're moving with a delay you don't actually have yet
 	visual_delay = 0
 	var/old_dir = mob.dir
+	var/turf/old_mob_loc = get_turf(mob)
+	var/old_mob_pixel_x = mob.pixel_x
+	var/old_mob_pixel_y = mob.pixel_y
+	var/old_client_pixel_x = pixel_x
+	var/old_client_pixel_y = pixel_y
+	var/atom/movable/old_pulling = mob.pulling
+	var/turf/old_pulling_loc = get_turf(old_pulling)
+	var/old_pulling_pixel_x = old_pulling?.pixel_x
+	var/old_pulling_pixel_y = old_pulling?.pixel_y
 
 	. = ..()
 
@@ -130,9 +143,15 @@
 		after_glide = DELAY_TO_GLIDE_SIZE(add_delay)
 
 	mob.set_glide_size(after_glide)
+	if(hires_movement_debug)
+		to_chat(src, span_notice("HIRES MOVE result=[.] now=[world.time] add=[round(add_delay, 0.01)] glide_delay=[round(glide_delay, 0.01)] before_glide=[round(before_glide, 0.01)] after_glide=[round(after_glide, 0.01)] next_delay=[round(move_delay + add_delay, 0.01)] tick=[world.tick_lag] mult=[round(GLOB.glide_size_multiplier, 0.001)]"))
 
 	move_delay += add_delay
 	if(.) // If mob is null here, we deserve the runtime
+		animate_hires_movable_step(mob, old_mob_loc, get_turf(mob), add_delay, old_mob_pixel_x, old_mob_pixel_y, old_client_pixel_x, old_client_pixel_y)
+		var/turf/new_pulling_loc = get_turf(old_pulling)
+		if(old_pulling && old_pulling_loc && new_pulling_loc != old_pulling_loc)
+			animate_hires_movable_step(old_pulling, old_pulling_loc, new_pulling_loc, add_delay, old_pulling_pixel_x, old_pulling_pixel_y)
 		if(mob.throwing)
 			mob.throwing.finalize(FALSE)
 
@@ -143,6 +162,30 @@
 	var/atom/movable/P = mob.pulling
 	if(P && !ismob(P) && P.density)
 		mob.setDir(REVERSE_DIR(mob.dir))
+
+/client/verb/toggle_hires_movement_debug()
+	set name = "Toggle Hires Movement Debug"
+	set category = "Debug"
+
+	hires_movement_debug = !hires_movement_debug
+	var/debug_state = hires_movement_debug ? "enabled" : "disabled"
+	to_chat(src, span_notice("Hires movement debug [debug_state]."))
+
+/client/proc/animate_hires_movable_step(atom/movable/moved_mob, turf/old_turf, turf/new_turf, animation_time, old_mob_pixel_x, old_mob_pixel_y, old_client_pixel_x, old_client_pixel_y)
+	if(world.icon_size <= LEGACY_ICON_SIZE_ALL)
+		return
+	if(!moved_mob || !old_turf || !new_turf)
+		return
+	var/x_offset = (old_turf.x - new_turf.x) * ICON_SIZE_X
+	var/y_offset = (old_turf.y - new_turf.y) * ICON_SIZE_Y
+	if(!x_offset && !y_offset)
+		return
+	var/step_time = max(world.tick_lag, animation_time)
+	animate(moved_mob, pixel_x = old_mob_pixel_x + x_offset, pixel_y = old_mob_pixel_y + y_offset, time = 0, flags = ANIMATION_END_NOW)
+	animate(pixel_x = old_mob_pixel_x, pixel_y = old_mob_pixel_y, time = step_time, flags = ANIMATION_END_NOW)
+	if(eye == moved_mob)
+		animate(src, pixel_x = old_client_pixel_x + x_offset, pixel_y = old_client_pixel_y + y_offset, time = 0, flags = ANIMATION_END_NOW)
+		animate(pixel_x = old_client_pixel_x, pixel_y = old_client_pixel_y, time = step_time, flags = ANIMATION_END_NOW)
 
 /**
  * Checks to see if you're being grabbed and if so attempts to break it
@@ -168,7 +211,6 @@
 		to_chat(src, span_warning("Вы сдержаны! Вы не можете двигаться!"))
 		return TRUE
 	return mob.resist_grab(TRUE)
-
 
 /**
  * Allows mobs to ignore density and phase through objects

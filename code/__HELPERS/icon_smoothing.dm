@@ -325,6 +325,7 @@ xxx xxx xxx
 						if(!get_smooth_underlay_icon(underlay_appearance, src, turned_adjacency)) //if all else fails, ask our own turf
 							underlay_appearance.icon = DEFAULT_UNDERLAY_ICON
 							underlay_appearance.icon_state = DEFAULT_UNDERLAY_ICON_STATE
+			apply_hires_legacy_appearance(underlay_appearance)
 			underlays += underlay_appearance
 		else
 			icon_state = "[base_icon_state]-[smoothing_junction]"

@@ -63,6 +63,7 @@
 		if(nulls)
 			for(var/i in 1 to nulls)
 				new_overlays -= null
+		apply_hires_legacy_appearances(new_overlays)
 
 		var/identical = FALSE
 		var/new_length = length(new_overlays)

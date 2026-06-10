@@ -1498,8 +1498,8 @@
 	if(!QDELETED(src))
 		var/turf/T = get_turf(src)
 		var/obj/effect/decal/cleanable/molten_object/MO = new(T)
-		MO.pixel_x = rand(-16,16)
-		MO.pixel_y = rand(-16,16)
+		MO.pixel_x = rand(-(ICON_SIZE_X * 0.5), ICON_SIZE_X * 0.5)
+		MO.pixel_y = rand(-(ICON_SIZE_Y * 0.5), ICON_SIZE_Y * 0.5)
 		MO.desc = "Looks like this was \an [src] some time ago."
 		..()
 

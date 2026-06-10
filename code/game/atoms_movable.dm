@@ -148,6 +148,7 @@
 		faction = string_list(faction)
 
 	. = ..()
+	apply_hires_legacy_icon()
 #ifdef UNIT_TESTS
 	if(explosion_block && !HAS_TRAIT(src, TRAIT_BLOCKING_EXPLOSIVES))
 		stack_trace("[type] blocks explosives, but does not have the managing element applied")
@@ -679,7 +680,7 @@
 		var/dz = newloc.z
 		new_locs = block(
 			dx, dy, dz,
-			dx + ceil(bound_width / 32), dy + ceil(bound_height / 32), dz
+			dx + ceil(bound_width / ICON_SIZE_X), dy + ceil(bound_height / ICON_SIZE_Y), dz
 		) // If this is a multi-tile object then we need to predict the new locs and check if they allow our entrance.
 		for(var/atom/entering_loc as anything in new_locs)
 			if(!entering_loc.Enter(src))
