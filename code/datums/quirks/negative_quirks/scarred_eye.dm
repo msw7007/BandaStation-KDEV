@@ -40,6 +40,8 @@
 		return
 
 	var/eye_side = client_source?.prefs.read_preference(/datum/preference/choiced/scarred_eye) || "Random"
+	if(eye_side == "None")
+		eye_side = "Random"
 
 	if (eye_side == "Double")
 		eyes.apply_scar(RIGHT_EYE_SCAR)

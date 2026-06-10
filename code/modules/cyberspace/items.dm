@@ -2177,9 +2177,11 @@
 	memory_capacity = CYBER_DECK_DEFAULT_MEMORY
 
 /obj/item/clothing/gloves/cyberdeck/implant_proxy/equipped(mob/living/user, slot)
+	. = ..()
 	return
 
 /obj/item/clothing/gloves/cyberdeck/implant_proxy/dropped(mob/living/user)
+	. = ..()
 	return
 
 /obj/item/cyberdemon_disk

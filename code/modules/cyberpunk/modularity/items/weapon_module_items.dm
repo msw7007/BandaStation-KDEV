@@ -197,6 +197,7 @@
 
 /obj/item/cyberpunk_item_module/shock_coating
 	name = "shock weapon coating"
+	icon = 'icons/obj/devices/stock_parts.dmi'
 	icon_state = "capacitor"
 	module_datum_type = /datum/cyberpunk_item_module/shock_coating
 
@@ -210,6 +211,7 @@
 
 /obj/item/cyberpunk_item_module/thermal_coating
 	name = "thermal weapon coating"
+	icon = 'icons/obj/devices/stock_parts.dmi'
 	icon_state = "capacitor"
 	module_datum_type = /datum/cyberpunk_item_module/thermal_coating
 

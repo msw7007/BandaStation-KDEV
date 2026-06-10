@@ -27,10 +27,8 @@
 	relevant_head_flag = HEAD_EYECOLOR
 
 /datum/preference/color/eye_color/apply_to_human(mob/living/carbon/human/target, value)
-	var/hetero = target.eye_color_heterochromatic
 	target.eye_color_left = value
-	if(!hetero)
-		target.eye_color_right = value
+	target.eye_color_right = value
 
 	var/obj/item/organ/eyes/eyes_organ = target.get_organ_by_type(/obj/item/organ/eyes)
 	if (!eyes_organ || !istype(eyes_organ))
@@ -38,9 +36,6 @@
 
 	if (!initial(eyes_organ.eye_color_left))
 		eyes_organ.eye_color_left = value
-
-	if(hetero) // Don't override the snowflakes please
-		return
 
 	if (!initial(eyes_organ.eye_color_right))
 		eyes_organ.eye_color_right = value

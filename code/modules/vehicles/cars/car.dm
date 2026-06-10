@@ -1340,6 +1340,32 @@
 		delay /= get_cyberpunk_vehicle_synergy(driver)
 	return max(world.tick_lag, round(delay, world.tick_lag))
 
+/obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_impact_speed(mob/living/driver)
+	var/impact_speed = base_collision_damage * get_cyberpunk_vehicle_stat("speed")
+	impact_speed *= sqrt(max(0.1, get_cyberpunk_vehicle_stat("acceleration")))
+	impact_speed *= max(0.25, get_current_turf_grip_multiplier())
+	impact_speed /= max(0.25, get_cyberpunk_vehicle_stat("brake"))
+	if(driver)
+		impact_speed *= driver.get_cyberpunk_driving_speed_multiplier()
+		impact_speed *= get_cyberpunk_vehicle_synergy(driver)
+	return max(1, impact_speed - base_crash_resistance)
+
+/obj/vehicle/ridden/cyberpunk/proc/eject_occupants_from_hard_crash(impact_speed)
+	if(impact_speed <= 64 || !length(buckled_mobs))
+		return
+	var/eject_range = clamp(round(impact_speed / 16), 4, 10)
+	var/eject_speed = clamp(round(impact_speed / 24), 2, 6)
+	var/list/mob/living/ejected = list()
+	for(var/mob/living/passenger as anything in buckled_mobs.Copy())
+		if(!unbuckle_mob(passenger, force = TRUE, can_fall = FALSE))
+			continue
+		ejected += passenger
+		var/eject_dir = pick(GLOB.alldirs)
+		passenger.throw_at(get_edge_target_turf(passenger, eject_dir), eject_range, eject_speed)
+		passenger.Knockdown(1 SECONDS)
+	if(length(ejected))
+		visible_message(span_danger("[src]'s crash throws [english_list(ejected)] out!"))
+
 /obj/vehicle/ridden/cyberpunk/proc/get_cyberpunk_step_cost(mob/living/driver, direction)
 	var/cost = base_step_cost * get_cyberpunk_vehicle_stat("fuel")
 	cost *= 1 + max(0, 1 - get_current_turf_grip_multiplier()) * 0.5
@@ -1720,20 +1746,32 @@
 /obj/vehicle/ridden/cyberpunk/Bump(atom/bumped)
 	. = ..()
 	var/mob/living/driver = get_primary_driver()
-	var/impact = max(2, base_collision_damage * get_cyberpunk_vehicle_stat("speed") - base_crash_resistance)
-	impact /= max(0.25, get_cyberpunk_vehicle_stat("brake"))
+	var/impact_speed = get_cyberpunk_impact_speed(driver)
+	eject_occupants_from_hard_crash(impact_speed)
+	var/impact = max(2, impact_speed)
 	if(driver)
 		impact *= driver.get_cyberpunk_driving_brake_multiplier()
+	var/impact_dir = dir || get_dir(src, bumped)
+	if(!impact_dir)
+		impact_dir = SOUTH
 	if(isliving(bumped))
 		var/mob/living/victim = bumped
 		victim.apply_damage(impact, BRUTE)
 		victim.Knockdown(1 SECONDS)
+		var/throw_range = clamp(round(impact_speed / 3), 2, 10)
+		var/throw_speed = clamp(round(impact_speed / 4), 2, 6)
+		victim.throw_at(get_edge_target_turf(victim, impact_dir), throw_range, throw_speed)
 	else if(bumped?.uses_integrity && impact > 0)
 		bumped.take_damage(impact, BRUTE, MELEE, TRUE)
-	if(impact > 0 && uses_integrity && get_integrity() > 0)
+	if(!isliving(bumped) && impact_speed > 0)
+		var/bounce_range = clamp(round(impact_speed / 2), 1, 8)
+		var/bounce_speed = clamp(round(impact_speed / 4), 1, 5)
+		throw_at(get_edge_target_turf(src, REVERSE_DIR(impact_dir)), bounce_range, bounce_speed)
+	if(impact_speed >= 5 && impact > 0 && uses_integrity && get_integrity() > 0)
 		take_damage(max(1, impact * 0.4), BRUTE, MELEE, TRUE)
 	var/datum/cyberpunk_vehicle_part/part = length(vehicle_parts) ? pick(vehicle_parts) : null
-	part?.take_damage(impact * 0.35)
+	if(impact_speed >= 5)
+		part?.take_damage(impact * 0.35)
 	visible_message(span_warning("[src] slams into [bumped]!"))
 
 /obj/vehicle/ridden/cyberpunk/hover

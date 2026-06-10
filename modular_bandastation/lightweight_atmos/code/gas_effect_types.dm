@@ -109,7 +109,7 @@
 	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.05 * seconds_per_tick
 	breather.adjust_fire_loss(dose)
 	breather.adjust_fire_stacks(0.2 * seconds_per_tick)
-	if(prob(30 * seconds_per_tick))
+	if(!breather.on_fire && amount > 20 && breather.fire_stacks >= 3 && prob(10 * seconds_per_tick))
 		breather.ignite_mob()
 
 /datum/gas_effect/fire/on_touch(atom/movable/AM, amount, seconds_per_tick)
@@ -117,7 +117,7 @@
 		return
 	var/mob/living/L = AM
 	L.adjust_fire_stacks(0.5 * seconds_per_tick)
-	if(amount > 10 && prob(40))
+	if(!L.on_fire && amount > 20 && L.fire_stacks >= 3 && prob(20 * seconds_per_tick))
 		L.ignite_mob()
 
 /datum/gas_effect/freeze
