@@ -56,6 +56,8 @@
 
 	/// Lazy assoc list of refs to mobs to refs to photos they have studied for wires
 	var/list/studied_photos
+	/// Lazy assoc list of mind refs to wire colors identified through Cyberpunk Electrics perks.
+	var/list/cyberpunk_studied_wires
 
 	/// Assoc list of possible wire colors -> their greyscale variants
 	var/static/list/default_possible_colors = list(
@@ -304,6 +306,25 @@
 /datum/wires/proc/always_reveal_wire(color)
 	return FALSE
 
+//CYBERPUNK BUILD - rebuild and delete before release
+/datum/wires/proc/can_reveal_wire_with_cyberpunk_electrics(mob/user, color)
+	if(!isliving(user) || is_dud_color(color))
+		return FALSE
+	var/mob/living/living_user = user
+	var/chance = living_user.get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 1)
+	if(chance <= 0)
+		return FALSE
+	var/user_ref = REF(user.mind || user)
+	if(color in LAZYACCESS(cyberpunk_studied_wires, user_ref))
+		return TRUE
+	if(!prob(chance))
+		return FALSE
+	LAZYOR(cyberpunk_studied_wires[user_ref], color)
+	to_chat(user, span_notice("You identify the purpose of the [color] wire in [holder]."))
+	living_user.reward_character_check_experience(SKILL_ELECTRICS, 1, FALSE, 1)
+	return TRUE
+//CYBERPUNK BUILD - rebuild and delete before release
+
 #define STUDY_INTERACTION_KEY "studying_photo"
 
 /**
@@ -360,10 +381,11 @@
 	var/colorblind = HAS_TRAIT(user, TRAIT_COLORBLIND)
 
 	for(var/color in colors)
+		var/wire_revealed = (reveal_wires || always_reveal_wire(color) || can_reveal_wire_with_cyberpunk_electrics(user, color)) && !is_dud_color(color)
 		payload.Add(list(list(
 			"color" = color,
 			"shownColor" = colorblind ? default_possible_colors[color] : color,
-			"wire" = (((reveal_wires || always_reveal_wire(color)) && !is_dud_color(color)) ? get_wire(color) : null),
+			"wire" = (wire_revealed ? get_wire(color) : null),
 			"cut" = is_color_cut(color),
 			"attached" = is_attached(color)
 		)))

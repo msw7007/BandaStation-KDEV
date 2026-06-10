@@ -452,10 +452,6 @@
 	r_pocket = /obj/item/shield/energy/advanced
 	l_hand = /obj/item/gun/energy/pulse/loyalpin
 
-	skillchips = list(
-		/obj/item/skillchip/disk_verifier,
-	)
-
 /datum/outfit/centcom/death_commando/post_equip(mob/living/carbon/human/squaddie, visuals_only = FALSE)
 	var/obj/item/organ/eyes/robotic/tacvisor/deathsquad/visor = new()
 	visor.Insert(squaddie, movement_flags = DELETE_IF_REPLACED)

@@ -11,7 +11,6 @@
 	id = /obj/item/card/id/advanced/chameleon/elite
 	belt = /obj/item/gun/ballistic/automatic/pistol/clandestine
 
-	skillchips = list(/obj/item/skillchip/disk_verifier)
 	box = /obj/item/storage/box/survival/syndie
 	/// Amount of TC to automatically store in this outfit's uplink.
 	var/tc = 25

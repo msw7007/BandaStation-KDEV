@@ -157,17 +157,3 @@
 
 /obj/item/skillchip/acrobatics/proc/charge()
 	allowed_usage++
-
-/obj/item/skillchip/acrobatics/kiss
-	name = "prototype N. 807 - K1SS skillchip"
-	desc = "An idle experiment when developing skillchips led to this catastrophe. Everyone involved swore to keep it a secret until death, but it looks like someone has let loose this mistake into the world."
-	skill_name = "ERROERERROROROEROEORROER"
-	skill_description = "NULL DESCRIPTION NOT FOUND"
-	skill_icon = FA_ICON_KISS_BEAM
-	activate_message = span_userdanger("This was a mistake.")
-	deactivate_message = span_userdanger("The mistake is over.")
-	custom_premium_price = PAYCHECK_CREW * 500
-	max_integrity = 25
-	affected_emotes = list("kiss")
-	allowed_usage = 1
-	reload_charge = 30 SECONDS

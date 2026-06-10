@@ -89,8 +89,6 @@
 		/obj/item/stamp/head/captain,
 		)
 	implants = list(/obj/item/implant/mindshield)
-	skillchips = list(/obj/item/skillchip/disk_verifier)
-
 	var/special_charter
 
 /datum/outfit/job/captain/pre_equip(mob/living/carbon/human/H, visuals_only)

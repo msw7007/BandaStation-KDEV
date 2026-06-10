@@ -42,6 +42,8 @@
 		fail_chance += SURGERY_RING_FAIL_MOD - 5
 
 	fail_chance -= surgeon.get_cyberpunk_surgery_failure_reduction(src)
+	if(patient == surgeon && HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
+		fail_chance -= 50
 
 	return fail_chance
 
