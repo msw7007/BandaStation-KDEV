@@ -1351,7 +1351,7 @@
 	return max(1, impact_speed - base_crash_resistance)
 
 /obj/vehicle/ridden/cyberpunk/proc/eject_occupants_from_hard_crash(impact_speed)
-	if(impact_speed <= 64 || !length(buckled_mobs))
+	if(impact_speed <= 50 || !length(buckled_mobs))
 		return
 	var/eject_range = clamp(round(impact_speed / 16), 4, 10)
 	var/eject_speed = clamp(round(impact_speed / 24), 2, 6)
@@ -2639,6 +2639,14 @@
 	var/cy_reverse_speed_threshold = 35
 	var/cy_reverse_max_speed_multiplier = 0.45
 	var/cy_opposite_brake_multiplier = 1.75
+	var/cy_crash_eject_threshold = 50
+	var/cy_crash_damage_threshold = 5
+	var/cy_crash_rebound_multiplier = 0.25
+	var/cy_throttle_grip_charge = 0
+	var/cy_throttle_grip_gain = 0.22
+	var/cy_throttle_grip_decay = 1.25
+	var/cy_throttle_grip_window = 4
+	var/last_control_direction = 0
 	var/drift_active = FALSE
 	var/last_drift_visual = FALSE
 	var/last_skid_time = 0
@@ -2742,6 +2750,11 @@
 			to_chat(user, span_warning("[src]'s engine has no charge."))
 		clear_control_vector()
 		return TRUE
+	if(direction == last_control_direction && world.time <= last_input_time + cy_throttle_grip_window)
+		cy_throttle_grip_charge = min(1, cy_throttle_grip_charge + cy_throttle_grip_gain)
+	else
+		cy_throttle_grip_charge *= 0.5
+	last_control_direction = direction
 	set_control_from_dir(direction)
 	last_input_time = world.time
 	return TRUE
@@ -2767,6 +2780,7 @@
 	if(!seconds_per_tick)
 		seconds_per_tick = world.tick_lag * 0.1
 	seconds_per_tick = clamp(seconds_per_tick, 0, 0.2)
+	cy_throttle_grip_charge = max(0, cy_throttle_grip_charge - cy_throttle_grip_decay * seconds_per_tick)
 	update_pixel_movement(seconds_per_tick)
 
 /obj/vehicle/sealed/car/cyberpunk_test/proc/update_pixel_movement(seconds_per_tick)
@@ -2815,6 +2829,9 @@
 	if(cy_reverse_drive)
 		max_speed *= cy_reverse_max_speed_multiplier
 
+	if(cy_reverse_drive && pre_input_speed <= 1)
+		cy_accel_x = control_x
+		cy_accel_y = control_y
 	if(has_input && (!opposite_brake_request || cy_reverse_drive))
 		cy_approach_accel_vector(control_x, control_y, clamp(maneuver * seconds_per_tick * 0.35, 0, 1))
 	else
@@ -2866,7 +2883,8 @@
 			cy_grip_world_x = vel_x
 			cy_grip_world_y = vel_y
 		if(has_accel)
-			cy_approach_grip_vector(cy_accel_x, cy_accel_y, clamp(grip_switch * turf_grip * seconds_per_tick * 0.25, 0, 1))
+			var/grip_follow = clamp(grip_switch * turf_grip * seconds_per_tick * (0.25 + cy_throttle_grip_charge * 0.65), 0, 1)
+			cy_approach_grip_vector(cy_accel_x, cy_accel_y, grip_follow)
 		else
 			cy_approach_grip_vector(vel_x, vel_y, clamp(grip_switch * turf_grip * seconds_per_tick * 0.1, 0, 1))
 
@@ -2930,11 +2948,6 @@
 		cy_world_py = next_py
 	else
 		cy_on_pixel_collision(cy_velocity_to_dir())
-		cy_velocity_x = 0
-		cy_velocity_y = 0
-		current_speed = 0
-		drift_active = FALSE
-		cy_drift_amount = 0
 		return
 
 	consume_vehicle_fuel((abs(move_x) + abs(move_y)) * base_fuel_use * fuel_multiplier * get_vehicle_stat_multiplier("fuel"))
@@ -3152,7 +3165,7 @@
 	if(speed < 1)
 		return
 	current_speed = speed
-	handle_vehicle_collision(get_step(src, direction) || get_turf(src))
+	handle_vehicle_collision(get_step(src, direction) || get_turf(src), direction, speed)
 
 /obj/vehicle/sealed/car/cyberpunk_test/proc/cy_set_forward_from_dir(direction)
 	switch(direction)
@@ -3284,18 +3297,73 @@
 	if(fuel <= 0)
 		current_speed = min(current_speed, base_brake * 0.2)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/handle_vehicle_collision(atom/collided)
-	var/impact = max(5, current_speed * 0.18)
-	current_speed *= 0.25
-	damage_random_vehicle_part(impact)
-	take_damage(impact, BRUTE, MELEE, TRUE)
+/obj/vehicle/sealed/car/cyberpunk_test/proc/handle_vehicle_collision(atom/collided, collision_dir, impact_speed = null)
+	if(isnull(impact_speed))
+		impact_speed = current_speed || cy_get_speed()
+	if(!collision_dir)
+		collision_dir = cy_velocity_to_dir()
+	var/impact = max(2, impact_speed * 0.18)
+	if(impact_speed >= cy_crash_damage_threshold)
+		damage_random_vehicle_part(impact)
+		take_damage(impact, BRUTE, MELEE, TRUE)
+	eject_occupants_from_hard_crash(impact_speed, collision_dir)
+	var/rebound_speed = max(0, impact_speed * cy_crash_rebound_multiplier)
+	var/rebound_dir = REVERSE_DIR(collision_dir)
+	cy_set_velocity_from_dir(rebound_dir, rebound_speed)
+	cy_accel_x = cy_velocity_x ? cy_velocity_x / max(rebound_speed, 1) : 0
+	cy_accel_y = cy_velocity_y ? cy_velocity_y / max(rebound_speed, 1) : 0
+	cy_grip_world_x = cy_accel_x
+	cy_grip_world_y = cy_accel_y
+	cy_forward_x = cy_accel_x
+	cy_forward_y = cy_accel_y
+	cy_normalize_forward_vector()
+	current_speed = cy_get_speed()
+	cy_drift_amount = 0
+	drift_active = current_speed > 1
 	playsound(src, 'sound/vehicles/car_crash.ogg', 65, TRUE)
 	visible_message(span_warning("[src] slams into [collided]!"))
 
 /obj/vehicle/sealed/car/cyberpunk_test/Bump(atom/bumped)
 	. = ..()
 	if(current_speed > 12)
-		handle_vehicle_collision(bumped)
+		handle_vehicle_collision(bumped, get_dir(src, bumped), current_speed)
+
+/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_set_velocity_from_dir(direction, speed)
+	var/vector_x = 0
+	var/vector_y = 0
+	if(direction & EAST)
+		vector_x += 1
+	if(direction & WEST)
+		vector_x -= 1
+	if(direction & NORTH)
+		vector_y += 1
+	if(direction & SOUTH)
+		vector_y -= 1
+	var/length = sqrt(vector_x * vector_x + vector_y * vector_y)
+	if(length <= 0 || speed <= 0)
+		cy_velocity_x = 0
+		cy_velocity_y = 0
+		return
+	cy_velocity_x = (vector_x / length) * speed
+	cy_velocity_y = (vector_y / length) * speed
+
+/obj/vehicle/sealed/car/cyberpunk_test/proc/eject_occupants_from_hard_crash(impact_speed, collision_dir)
+	if(impact_speed <= cy_crash_eject_threshold || !length(occupants))
+		return
+	var/eject_range = clamp(round(impact_speed / 12), 3, 10)
+	var/eject_speed = clamp(round(impact_speed / 18), 2, 7)
+	var/list/mob/living/ejected = list()
+	for(var/mob/living/passenger as anything in occupants.Copy())
+		remove_occupant(passenger)
+		passenger.forceMove(get_turf(src))
+		ejected += passenger
+		var/eject_dir = pick(GLOB.alldirs)
+		if(!eject_dir)
+			eject_dir = collision_dir || pick(GLOB.cardinals)
+		passenger.safe_throw_at(get_edge_target_turf(passenger, eject_dir), eject_range, eject_speed, src, force = MOVE_FORCE_STRONG)
+		passenger.Knockdown(1 SECONDS)
+	if(length(ejected))
+		visible_message(span_danger("[src]'s crash throws [english_list(ejected)] out!"))
 
 /obj/vehicle/sealed/car/cyberpunk_test/take_damage(damage_amount, damage_type = BRUTE, damage_flag = 0, sound_effect = 1, attack_dir)
 	. = ..()
