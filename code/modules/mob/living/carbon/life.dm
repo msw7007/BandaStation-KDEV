@@ -491,11 +491,23 @@
 /mob/living/carbon/proc/get_bloodstream_reagent_multiplier(methods, list/cached_reagents)
 	if(methods & INHALE)
 		return get_organ_efficiency(ORGAN_SLOT_LUNGS)
-	if(methods & (INJECT|PATCH))
+	if(methods & (INJECT|PATCH|TOUCH))
 		if(reagents_bypass_bloodstream_multiplier(cached_reagents))
 			return 1
 		return BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
 	return 1
+
+/mob/living/carbon/proc/get_reagent_metabolism_organ_multiplier()
+	if(isnull(has_dna()))
+		return 1
+
+	var/heart_efficiency = needs_heart() ? get_organ_efficiency(ORGAN_SLOT_HEART) : 1
+	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
+	var/liver_efficiency = liver?.get_efficiency() || 0
+	if(!liver && (HAS_TRAIT(src, TRAIT_STABLELIVER) || HAS_TRAIT(src, TRAIT_LIVERLESS_METABOLISM)))
+		liver_efficiency = 1
+
+	return clamp(heart_efficiency * liver_efficiency, 0, 1.25)
 
 /mob/living/carbon/proc/reagents_bypass_bloodstream_multiplier(list/cached_reagents)
 	if(!length(cached_reagents))
@@ -604,6 +616,10 @@
 	handle_low_oxygen_organ_damage(seconds_per_tick)
 
 /mob/living/carbon/proc/handle_low_oxygen_organ_damage(seconds_per_tick)
+	var/blood_percent = (BLOOD_VOLUME_NORMAL && CAN_HAVE_BLOOD(src)) ? clamp((get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL) * 100, 0, 100) : 100
+	var/heart_supply_deficit = max(40 - oxygenation, 40 - blood_percent)
+	if(heart_supply_deficit > 0)
+		adjust_organ_loss(ORGAN_SLOT_HEART, (heart_supply_deficit / 40) * 0.5 * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
 	if(oxygenation < 70)
 		adjust_organ_loss(ORGAN_SLOT_BRAIN, ((70 - oxygenation) / 70) * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
 	if(oxygenation < 10)

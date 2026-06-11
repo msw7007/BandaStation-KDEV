@@ -213,6 +213,31 @@ const BodyScanPanel = (props) => {
             >
               {part.missing ? 'Missing' : `${part.integrity}%`}
             </ProgressBar>
+            {!part.missing && (
+              <Box color="label" fontSize="10px">
+                B {part.blunt || 0} / P {part.pierce || 0} / S{' '}
+                {part.slash || 0} | H {part.heat || 0} / C {part.cold || 0} /
+                A {part.acid || 0}
+              </Box>
+            )}
+            {!part.missing &&
+              !!(
+                part.bluntTrauma ||
+                part.pierceTrauma ||
+                part.slashTrauma ||
+                part.heatTrauma ||
+                part.coldTrauma ||
+                part.acidTrauma ||
+                part.pain ||
+                part.infection
+              ) && (
+                <Box color="average" fontSize="10px">
+                  Pain {part.pain || 0}, infection {part.infection || 0}%,
+                  trauma {part.bluntTrauma || 0}/{part.pierceTrauma || 0}/
+                  {part.slashTrauma || 0}/{part.heatTrauma || 0}/
+                  {part.coldTrauma || 0}/{part.acidTrauma || 0}
+                </Box>
+              )}
           </Box>
         ))}
       </Box>

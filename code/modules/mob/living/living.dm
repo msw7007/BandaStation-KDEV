@@ -563,7 +563,7 @@
 	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] reaches for [target.declent_ru(ACCUSATIVE)]."), span_notice("You reach for [target.declent_ru(ACCUSATIVE)]."))
 	if(!do_after(src, 0.5 SECONDS, target))
 		return FALSE
-	if(!Adjacent(target) || QDELETED(target) || stat > CONSCIOUS)
+	if(!Adjacent(target) || QDELETED(target) || stat > SOFT_CRIT)
 		return FALSE
 	spend_stamina(get_cyberpunk_grab_stamina_cost(), "attack", TRUE)
 	if(!can_cyberpunk_grab_succeed(target, upgrade))
@@ -2954,7 +2954,7 @@
 	if(!istype(target))
 		CRASH("Missing target arg for can_perform_action")
 
-	if(stat != CONSCIOUS)
+	if(stat != CONSCIOUS && stat != SOFT_CRIT)
 		to_chat(src, span_warning("Вы должны быть в сознании!"))
 		return FALSE
 
@@ -4041,10 +4041,11 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 		if(CONSCIOUS)
 			if(stat >= UNCONSCIOUS)
 				ADD_TRAIT(src, TRAIT_IMMOBILIZED, TRAIT_KNOCKEDOUT)
-			add_traits(list(TRAIT_HANDS_BLOCKED, TRAIT_INCAPACITATED, TRAIT_FLOORED), STAT_TRAIT)
+				add_traits(list(TRAIT_HANDS_BLOCKED, TRAIT_INCAPACITATED, TRAIT_FLOORED), STAT_TRAIT)
 		if(SOFT_CRIT)
 			if(stat >= UNCONSCIOUS)
 				ADD_TRAIT(src, TRAIT_IMMOBILIZED, TRAIT_KNOCKEDOUT) //adding trait sources should come before removing to avoid unnecessary updates
+				add_traits(list(TRAIT_HANDS_BLOCKED, TRAIT_INCAPACITATED, TRAIT_FLOORED), STAT_TRAIT)
 			if(pulledby)
 				REMOVE_TRAIT(src, TRAIT_IMMOBILIZED, PULLED_WHILE_SOFTCRIT_TRAIT)
 		if(UNCONSCIOUS)
@@ -4617,7 +4618,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	set name = "Toggle Stealth"
 	set category = "IC"
 
-	if(stat > CONSCIOUS || INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS))
+	if(stat > SOFT_CRIT || INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS))
 		return
 	toggle_stealth_mode()
 
@@ -4625,7 +4626,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	set name = "Listen Carefully"
 	set category = "IC"
 
-	if(stat > CONSCIOUS || HAS_TRAIT(src, TRAIT_DEAF))
+	if(stat > SOFT_CRIT || HAS_TRAIT(src, TRAIT_DEAF))
 		return
 	toggle_intent_listen()
 
@@ -4633,7 +4634,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	set name = "Focus Look"
 	set category = "IC"
 
-	if(stat > CONSCIOUS || is_blind())
+	if(stat > SOFT_CRIT || is_blind())
 		return
 	toggle_focused_look()
 

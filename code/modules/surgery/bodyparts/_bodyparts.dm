@@ -991,6 +991,12 @@
 			"acid" = round(limb.acid_dam, 0.1),
 			"pain" = round(limb.pain, 0.1),
 			"infection" = round(limb.infection, 0.1),
+			"bluntTrauma" = limb.blunt_trauma,
+			"pierceTrauma" = limb.pierce_trauma,
+			"slashTrauma" = limb.slash_trauma,
+			"heatTrauma" = limb.heat_trauma,
+			"coldTrauma" = limb.cold_trauma,
+			"acidTrauma" = limb.acid_trauma,
 			"wounds" = length(limb.wounds),
 			"embedded" = length(limb.embedded_objects),
 		))
@@ -1027,12 +1033,13 @@
 		var/acid_cut = (acid_trauma == TRAUMA_CRITICAL ? 0.25 : 0.1) * seconds_per_tick
 		slash_dam = round(slash_dam + acid_cut, DAMAGE_PRECISION)
 		add_bodypart_pain(acid_cut * 1.4)
+		damage_covering_clothes(acid_cut, BURN)
 		sync_composite_damage()
 	if(pierce_trauma == TRAUMA_CRITICAL && body_zone == BODY_ZONE_CHEST)
 		internal_blood_volume += 1 * seconds_per_tick
 		var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
 		lungs?.add_internal_blood(1 * seconds_per_tick)
-	if((blunt_trauma == TRAUMA_CRITICAL || cold_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL) && (body_zone == BODY_ZONE_CHEST || last_precise_zone == BODY_ZONE_PRECISE_ABDOMEN))
+	if((blunt_trauma == TRAUMA_CRITICAL || cold_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL) && (body_zone == BODY_ZONE_CHEST || last_precise_zone == BODY_ZONE_PRECISE_ABDOMEN) && !has_cyberpunk_medical_wrap())
 		apply_organ_spill_damage(0.25 * seconds_per_tick, last_precise_zone)
 	return TRUE
 
@@ -2169,6 +2176,10 @@
 	if(current_gauze)
 		factor *= current_gauze.splint_factor
 	return factor
+
+/obj/item/bodypart/proc/has_cyberpunk_medical_wrap()
+	var/obj/item/stack/medical/wrap/current_gauze = LAZYACCESS(applied_items, LIMB_ITEM_GAUZE)
+	return !!current_gauze
 
 /**
  * Attempts to use up some of gauze applied

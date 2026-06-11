@@ -490,7 +490,7 @@
 		if((leg.blunt_trauma == TRAUMA_CRITICAL || leg.slash_trauma == TRAUMA_CRITICAL) && prob(max((leg.get_damage() / max(leg.max_damage, 1)) * 100, 0)))
 			Knockdown(2 SECONDS)
 	var/obj/item/bodypart/chest = get_bodypart(BODY_ZONE_CHEST)
-	if(chest && (chest.blunt_trauma == TRAUMA_CRITICAL || chest.cold_trauma == TRAUMA_CRITICAL || chest.acid_trauma == TRAUMA_CRITICAL))
+	if(chest && (chest.blunt_trauma == TRAUMA_CRITICAL || chest.cold_trauma == TRAUMA_CRITICAL || chest.acid_trauma == TRAUMA_CRITICAL) && !chest.has_cyberpunk_medical_wrap())
 		chest.apply_organ_spill_damage(1, chest.last_precise_zone)
 
 /mob/living/carbon/proc/handle_active_hand_medical_pain()

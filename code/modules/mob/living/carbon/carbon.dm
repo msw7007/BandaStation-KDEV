@@ -705,6 +705,7 @@
 	update_health_hud()
 	update_stamina_hud()
 	med_hud_set_status()
+	apply_body_state_effects()
 
 
 //called when we get cuffed/uncuffed

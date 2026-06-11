@@ -121,6 +121,9 @@
 		remove_movespeed_modifier(/datum/movespeed_modifier/sprint_low_stamina)
 
 /mob/living/proc/handle_sprint_step(direct)
+	if(is_cyberpunk_sprint_blocked_by_cold_trauma())
+		stop_sprinting("frozen")
+		return
 	last_sprint_dir = direct
 	update_sprint_stamina_slowdown()
 	if(stamina > 0)
@@ -144,6 +147,9 @@
 		return FALSE
 	if(!(mobility_flags & MOBILITY_MOVE) || body_position != STANDING_UP || buckled || incapacitated)
 		balloon_alert(src, "can't jump")
+		return FALSE
+	if(is_cyberpunk_jump_blocked_by_cold_trauma())
+		balloon_alert(src, "frozen")
 		return FALSE
 	if(!can_jump() || !spend_stamina(STAMINA_COST_JUMP, "jump"))
 		balloon_alert(src, "too tired")

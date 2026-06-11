@@ -175,6 +175,7 @@
 		stamina_regen_accumulator -= STAMINA_REGEN_INTERVAL
 		var/recovery = STAMINA_REGEN_AMOUNT
 		recovery *= get_cyberpunk_endurance_stamina_recovery_multiplier()
+		recovery *= get_cyberpunk_medical_stamina_recovery_multiplier()
 		if(buckled || resting)
 			recovery += 5
 		if(body_position == LYING_DOWN && (IsSleeping() || IsUnconscious()))
@@ -651,6 +652,49 @@
 		total += (effect?.move_speed_modifier || 0) * (effect?.power || 1)
 	return total
 
+/mob/living/proc/get_cyberpunk_medical_action_slowdown()
+	var/slowdown = 0
+	if(stat == SOFT_CRIT)
+		slowdown = max(slowdown, 0.7)
+	var/mob/living/carbon/carbon_mob = iscarbon(src) ? src : null
+	if(!carbon_mob)
+		return slowdown
+	for(var/obj/item/bodypart/limb as anything in carbon_mob.get_bodyparts())
+		if(limb.cold_trauma >= TRAUMA_MINOR)
+			slowdown = max(slowdown, 1)
+	return slowdown
+
+/mob/living/proc/get_cyberpunk_medical_stamina_cost_multiplier(source)
+	var/mob/living/carbon/carbon_mob = iscarbon(src) ? src : null
+	if(!carbon_mob)
+		return 1
+	for(var/obj/item/bodypart/limb as anything in carbon_mob.get_bodyparts())
+		if(limb.cold_trauma >= TRAUMA_MINOR)
+			return 2
+	return 1
+
+/mob/living/proc/get_cyberpunk_medical_stamina_recovery_multiplier()
+	var/mob/living/carbon/carbon_mob = iscarbon(src) ? src : null
+	if(!carbon_mob)
+		return 1
+	var/obj/item/bodypart/chest = carbon_mob.get_bodypart(BODY_ZONE_CHEST)
+	if(!chest || chest.blunt_trauma < TRAUMA_MINOR)
+		return 1
+	return chest.blunt_trauma == TRAUMA_CRITICAL ? 0.5 : 0.75
+
+/mob/living/proc/is_cyberpunk_sprint_blocked_by_cold_trauma()
+	var/mob/living/carbon/carbon_mob = iscarbon(src) ? src : null
+	if(!carbon_mob)
+		return FALSE
+	for(var/zone in list(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG))
+		var/obj/item/bodypart/leg = carbon_mob.get_bodypart(zone)
+		if(leg?.cold_trauma == TRAUMA_CRITICAL)
+			return TRUE
+	return FALSE
+
+/mob/living/proc/is_cyberpunk_jump_blocked_by_cold_trauma()
+	return is_cyberpunk_sprint_blocked_by_cold_trauma()
+
 /mob/living/proc/get_cyberpunk_status_experience_multiplier()
 	if(!length(cyberpunk_status_effects))
 		return 1
@@ -679,6 +723,7 @@
 
 	move_slowdown = max(move_slowdown, get_cyberpunk_needs_move_slowdown())
 	action_slowdown = max(action_slowdown, get_cyberpunk_needs_action_slowdown())
+	action_slowdown = max(action_slowdown, get_cyberpunk_medical_action_slowdown())
 	move_slowdown += get_cyberpunk_status_move_slowdown()
 	action_slowdown += get_cyberpunk_status_action_slowdown()
 	if(tireness > 450)
@@ -716,6 +761,7 @@
 	if(amount <= 0)
 		return TRUE
 	amount *= get_cyberpunk_stamina_cost_multiplier(source)
+	amount *= get_cyberpunk_medical_stamina_cost_multiplier(source)
 	amount *= get_cyberpunk_needs_stamina_cost_multiplier(source)
 	amount *= get_cyberpunk_skill_stamina_cost_multiplier(source)
 	if(!allow_negative && stamina < amount)
@@ -1012,7 +1058,7 @@
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_PARRY * threshold_multiplier && !is_exhausted_by_needs()
 
 /mob/living/proc/perform_cyberpunk_defensive_action(action = null)
-	if(stat > CONSCIOUS || INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS))
+	if(stat > SOFT_CRIT || INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS))
 		return FALSE
 	var/selected_action = action || cyberpunk_last_defensive_action || "parry"
 	switch(selected_action)

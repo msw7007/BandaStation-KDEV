@@ -171,6 +171,7 @@
 			metabolizing_out /= affected_mob.metabolism_efficiency
 		else
 			metabolizing_out *= affected_mob.metabolism_efficiency
+		metabolizing_out *= affected_mob.get_reagent_metabolism_organ_multiplier()
 
 	if(!metabolizing)
 		metabolizing = TRUE
