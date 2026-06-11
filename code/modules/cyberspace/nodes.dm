@@ -200,6 +200,36 @@
 			return has_access(user)
 		if("settings")
 			return has_access(user)
+		if("door_toggle")
+			return has_access(user)
+		if("camera_inspect")
+			return has_access(user)
+		if("camera_rotate")
+			return has_access(user)
+		if("panel_toggle")
+			return has_access(user)
+		if("power_toggle")
+			return has_access(user)
+		if("contraband_toggle")
+			return has_access(user)
+		if("apc_breaker_toggle")
+			return has_access(user)
+		if("apc_nightshift_toggle")
+			return has_access(user)
+		if("turret_power_toggle")
+			return has_access(user)
+		if("turret_lethal_toggle")
+			return has_access(user)
+		if("turret_silicon_toggle")
+			return has_access(user)
+		if("light_toggle")
+			return has_access(user)
+		if("device_toggle")
+			return has_access(user)
+		if("bolt_toggle")
+			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD || has_access(user)
+		if("electrify_toggle")
+			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD || has_access(user)
 		if("emag_activate")
 			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMAG_INTEGRITY_THRESHOLD
 		if("emp_activate")
@@ -349,6 +379,36 @@
 			return cyberspace_target_shutdown(user, target)
 		if("settings")
 			return cyberspace_target_settings(user, target)
+		if("door_toggle")
+			return cyberspace_target_toggle_door(user, target)
+		if("bolt_toggle")
+			return cyberspace_target_toggle_bolts(user, target)
+		if("electrify_toggle")
+			return cyberspace_target_toggle_electrified(user, target)
+		if("camera_inspect")
+			return cyberspace_target_inspect_camera(user, target)
+		if("camera_rotate")
+			return cyberspace_target_rotate_camera(user, target)
+		if("panel_toggle")
+			return cyberspace_target_toggle_panel(user, target)
+		if("power_toggle")
+			return cyberspace_target_toggle_power(user, target)
+		if("contraband_toggle")
+			return cyberspace_target_toggle_contraband(user, target)
+		if("apc_breaker_toggle")
+			return cyberspace_target_toggle_apc_breaker(user, target)
+		if("apc_nightshift_toggle")
+			return cyberspace_target_toggle_apc_nightshift(user, target)
+		if("turret_power_toggle")
+			return cyberspace_target_toggle_turret_power(user, target)
+		if("turret_lethal_toggle")
+			return cyberspace_target_toggle_turret_lethal(user, target)
+		if("turret_silicon_toggle")
+			return cyberspace_target_toggle_turret_silicons(user, target)
+		if("light_toggle")
+			return cyberspace_target_toggle_light(user, target)
+		if("device_toggle")
+			return cyberspace_target_toggle_device(user, target)
 		else
 			return FALSE
 	return TRUE
@@ -367,6 +427,70 @@
 
 /proc/cyberspace_target_can_shutdown(atom/movable/target)
 	return istype(target, /obj/machinery)
+
+/proc/cyberspace_target_can_toggle_door(atom/movable/target)
+	return istype(target, /obj/machinery/door)
+
+/proc/cyberspace_target_can_toggle_bolts(atom/movable/target)
+	return !isnull(target) && hascall(target, "toggle_bolt")
+
+/proc/cyberspace_target_can_toggle_electrified(atom/movable/target)
+	if(isnull(target))
+		return FALSE
+	return hascall(target, "set_electrified") || ("seconds_electrified" in target.vars)
+
+/proc/cyberspace_target_can_inspect_camera(atom/movable/target)
+	return istype(target, /obj/machinery/camera)
+
+/proc/cyberspace_target_can_rotate_camera(atom/movable/target)
+	return istype(target, /obj/machinery/camera)
+
+/proc/cyberspace_target_can_toggle_panel(atom/movable/target)
+	return istype(target, /obj/machinery)
+
+/proc/cyberspace_target_can_toggle_power(atom/movable/target)
+	return istype(target, /obj/machinery)
+
+/proc/cyberspace_target_can_toggle_contraband(atom/movable/target)
+	return istype(target, /obj/machinery/vending)
+
+/proc/cyberspace_target_can_toggle_apc_breaker(atom/movable/target)
+	return istype(target, /obj/machinery/power/apc)
+
+/proc/cyberspace_target_can_toggle_apc_nightshift(atom/movable/target)
+	return istype(target, /obj/machinery/power/apc)
+
+/proc/cyberspace_target_can_toggle_turret_power(atom/movable/target)
+	return istype(target, /obj/machinery/turretid)
+
+/proc/cyberspace_target_can_toggle_turret_lethal(atom/movable/target)
+	return istype(target, /obj/machinery/turretid)
+
+/proc/cyberspace_target_can_toggle_turret_silicons(atom/movable/target)
+	return istype(target, /obj/machinery/turretid)
+
+/proc/cyberspace_target_can_toggle_light(atom/movable/target)
+	return istype(target, /obj/machinery/light)
+
+/proc/cyberspace_target_toggle_device_proc(atom/movable/target)
+	if(isnull(target))
+		return null
+	var/static/list/toggle_procs = list(
+		"toggle",
+		"toggle_power",
+		"toggle_open",
+		"toggle_restock",
+		"toggle_disable",
+		"toggle_broadcast",
+		"toggle_feed",
+	)
+	for(var/proc_name as anything in toggle_procs)
+		if(hascall(target, proc_name))
+			return proc_name
+	return null
+
+/proc/cyberspace_target_can_toggle_device(atom/movable/target)
+	return !isnull(cyberspace_target_toggle_device_proc(target))
 
 /proc/cyberspace_target_open_ui(mob/living/user, atom/movable/target)
 	if(!cyberspace_target_can_open_ui(target))
@@ -409,6 +533,164 @@
 	var/obj/machinery/target_machine = target
 	to_chat(user, span_notice("Cyberspace command accepted: executing /proc/shutdown(target) on [target]."))
 	target_machine.set_machine_stat(target_machine.machine_stat | NOPOWER)
+	return TRUE
+
+/proc/cyberspace_target_toggle_door(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_door(target))
+		to_chat(user, span_warning("[target] does not expose a door motor channel."))
+		return FALSE
+	var/obj/machinery/door/target_door = target
+	if(target_door.density)
+		target_door.open()
+	else
+		target_door.close()
+	to_chat(user, span_notice("Cyberspace command accepted: toggling [target]'s door motor."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_bolts(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_bolts(target))
+		to_chat(user, span_warning("[target] does not expose a bolt channel."))
+		return FALSE
+	call(target, "toggle_bolt")(user)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling [target]'s bolt channel."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_electrified(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_electrified(target))
+		to_chat(user, span_warning("[target] does not expose an electrification channel."))
+		return FALSE
+	var/electrified = FALSE
+	if(hascall(target, "isElectrified"))
+		electrified = call(target, "isElectrified")()
+	else if("seconds_electrified" in target.vars)
+		electrified = target.vars["seconds_electrified"] != MACHINE_NOT_ELECTRIFIED
+	if(hascall(target, "set_electrified"))
+		call(target, "set_electrified")(electrified ? MACHINE_NOT_ELECTRIFIED : MACHINE_ELECTRIFIED_PERMANENT, user)
+	else
+		target.vars["seconds_electrified"] = electrified ? MACHINE_NOT_ELECTRIFIED : MACHINE_DEFAULT_ELECTRIFY_TIME
+	to_chat(user, span_notice("Cyberspace command accepted: [electrified ? "clearing" : "arming"] [target]'s electrification channel."))
+	return TRUE
+
+/proc/cyberspace_target_inspect_camera(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_inspect_camera(target))
+		to_chat(user, span_warning("[target] does not expose a camera diagnostics channel."))
+		return FALSE
+	var/obj/machinery/camera/target_camera = target
+	var/list/report = list(
+		"tag: [target_camera.c_tag || "untagged"]",
+		"network: [length(target_camera.network) ? english_list(target_camera.network) : "none"]",
+		"range: [target_camera.view_range]",
+		"direction: [dir2text(target_camera.dir)]",
+		"state: [target_camera.can_use() ? "online" : "offline"]",
+		"alarm: [target_camera.alarm_on ? "active" : "clear"]",
+		"xray: [target_camera.isXRay(TRUE) ? "yes" : "no"]",
+		"motion: [target_camera.isMotion() ? "yes" : "no"]",
+		"emp-shield: [target_camera.isEmpProof(TRUE) ? "yes" : "no"]",
+	)
+	to_chat(user, span_notice("Camera diagnostics for [target_camera]: [jointext(report, "; ")]."))
+	return TRUE
+
+/proc/cyberspace_target_rotate_camera(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_rotate_camera(target))
+		to_chat(user, span_warning("[target] does not expose a camera pan channel."))
+		return FALSE
+	target.setDir(turn(target.dir, 90))
+	to_chat(user, span_notice("Cyberspace command accepted: rotating [target]'s camera head to [dir2text(target.dir)]."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_panel(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_panel(target))
+		to_chat(user, span_warning("[target] does not expose a service panel channel."))
+		return FALSE
+	var/obj/machinery/target_machine = target
+	target_machine.toggle_panel_open()
+	to_chat(user, span_notice("Cyberspace command accepted: [target_machine.panel_open ? "opening" : "closing"] [target]'s service panel."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_power(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_power(target))
+		to_chat(user, span_warning("[target] does not expose a local power channel."))
+		return FALSE
+	var/obj/machinery/target_machine = target
+	var/was_offline = target_machine.machine_stat & NOPOWER
+	if(was_offline)
+		target_machine.set_machine_stat(target_machine.machine_stat & ~NOPOWER)
+	else
+		target_machine.set_machine_stat(target_machine.machine_stat | NOPOWER)
+	to_chat(user, span_notice("Cyberspace command accepted: [was_offline ? "restoring" : "cutting"] [target]'s local power channel."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_contraband(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_contraband(target))
+		to_chat(user, span_warning("[target] does not expose a contraband inventory channel."))
+		return FALSE
+	var/obj/machinery/vending/vendor = target
+	vendor.extended_inventory = !vendor.extended_inventory
+	SStgui.update_uis(vendor)
+	to_chat(user, span_notice("Cyberspace command accepted: [vendor.extended_inventory ? "opening" : "hiding"] [target]'s contraband inventory."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_apc_breaker(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_apc_breaker(target))
+		to_chat(user, span_warning("[target] does not expose an APC breaker channel."))
+		return FALSE
+	var/obj/machinery/power/apc/apc = target
+	apc.toggle_breaker(user)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling [target]'s area breaker."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_apc_nightshift(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_apc_nightshift(target))
+		to_chat(user, span_warning("[target] does not expose an APC lighting profile channel."))
+		return FALSE
+	var/obj/machinery/power/apc/apc = target
+	apc.toggle_nightshift_lights(user)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling [target]'s night lighting profile."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_turret_power(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_turret_power(target))
+		to_chat(user, span_warning("[target] does not expose a turret power channel."))
+		return FALSE
+	var/obj/machinery/turretid/turret_control = target
+	turret_control.toggle_on(user)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling linked turret power."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_turret_lethal(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_turret_lethal(target))
+		to_chat(user, span_warning("[target] does not expose a turret lethality channel."))
+		return FALSE
+	var/obj/machinery/turretid/turret_control = target
+	turret_control.toggle_lethal(user)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling linked turret lethality."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_turret_silicons(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_turret_silicons(target))
+		to_chat(user, span_warning("[target] does not expose a turret silicon targeting channel."))
+		return FALSE
+	var/obj/machinery/turretid/turret_control = target
+	turret_control.shoot_silicons(user)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling linked turret silicon targeting."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_light(mob/living/user, atom/movable/target)
+	if(!cyberspace_target_can_toggle_light(target))
+		to_chat(user, span_warning("[target] does not expose a lighting channel."))
+		return FALSE
+	var/obj/machinery/light/light = target
+	light.set_on(!light.on)
+	to_chat(user, span_notice("Cyberspace command accepted: toggling [target]'s light emitter."))
+	return TRUE
+
+/proc/cyberspace_target_toggle_device(mob/living/user, atom/movable/target)
+	var/proc_name = cyberspace_target_toggle_device_proc(target)
+	if(!proc_name)
+		to_chat(user, span_warning("[target] does not expose a safe generic toggle channel."))
+		return FALSE
+	call(target, proc_name)(user)
+	to_chat(user, span_notice("Cyberspace command accepted: executing /proc/[proc_name](target) on [target]."))
 	return TRUE
 
 /datum/cyberspace_node/proc/get_live_objects()

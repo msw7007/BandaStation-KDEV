@@ -498,6 +498,9 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 	return istype(living_speaker) && living_speaker.stealth_muffles_sound()
 
 /mob/living/send_speech(message_raw, message_range = 6, obj/source = src, bubble_type = bubble_icon, list/spans, datum/language/message_language = null, list/message_mods = list(), forced = null, tts_message, list/tts_filter)
+	var/atom/movable/speech_source = get_cyberspace_speech_source()
+	if(source == src && speech_source)
+		source = speech_source
 	var/whisper_range = 0
 	var/is_speaker_whispering = FALSE
 	if(message_mods[WHISPER_MODE]) //If we're whispering
@@ -523,7 +526,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 			listening.Remove(listening_movable)
 
 	for(var/mob/living/other_z_listener as anything in GLOB.alive_mob_list)
-		if(other_z_listener.z == z || !other_z_listener.client)
+		if(other_z_listener.z == source.z || !other_z_listener.client)
 			continue
 		if(other_z_listener.get_speech_hearing_state(source, message_range, is_speaker_whispering, null) != SPEECH_HEARING_NONE)
 			listening |= other_z_listener
@@ -539,7 +542,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 				continue //Remove if underlying cause (likely byond issue) is fixed. See TG PR #49004.
 			if(player_mob.stat != DEAD) //not dead, not important
 				continue
-			if(player_mob.z != z || get_dist(player_mob, src) > 7) //they're out of range of normal hearing
+			if(player_mob.z != source.z || get_dist(player_mob, source) > 7) //they're out of range of normal hearing
 				if(is_speaker_whispering)
 					if(!(get_chat_toggles(player_mob.client) & CHAT_GHOSTWHISPER)) //they're whispering and we have hearing whispers at any range off
 						continue
@@ -556,7 +559,7 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 			stack_trace("somehow theres a null returned from get_hearers_in_view() in send_speech!")
 			continue
 
-		if(listening_movable.Hear(src, message_language, message_raw, null, null, null, spans, message_mods, message_range))
+		if(listening_movable.Hear(speech_source, message_language, message_raw, null, null, null, spans, message_mods, message_range))
 			listened += listening_movable
 
 	//speech bubble
@@ -585,8 +588,8 @@ GLOBAL_LIST_INIT(message_modes_stat_limits, list(
 		if (!CONFIG_GET(flag/tts_no_whisper) || (CONFIG_GET(flag/tts_no_whisper) && !message_mods[WHISPER_MODE]))
 			INVOKE_ASYNC(SStts, TYPE_PROC_REF(/datum/controller/subsystem/tts, queue_tts_message), src, html_decode(tts_message_to_use), message_language, voice_to_use, filter.Join(","), listened, message_range = message_range, pitch = pitch, special_filters = special_filter.Join("|"))
 
-	var/image/say_popup = image('icons/mob/effects/talk.dmi', src, "[bubble_type][talk_icon_state]", FLY_LAYER)
-	SET_PLANE_EXPLICIT(say_popup, ABOVE_GAME_PLANE, src)
+	var/image/say_popup = image('icons/mob/effects/talk.dmi', speech_source, "[bubble_type][talk_icon_state]", FLY_LAYER)
+	SET_PLANE_EXPLICIT(say_popup, ABOVE_GAME_PLANE, speech_source)
 	say_popup.appearance_flags = APPEARANCE_UI_IGNORE_ALPHA
 	INVOKE_ASYNC(GLOBAL_PROC, GLOBAL_PROC_REF(flick_overlay_global), say_popup, speech_bubble_recipients, 3 SECONDS)
 	LAZYADD(update_on_z, say_popup)

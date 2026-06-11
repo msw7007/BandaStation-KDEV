@@ -172,7 +172,7 @@
 		return FALSE
 	if(isliving(candidate))
 		var/mob/living/living_candidate = candidate
-		return living_candidate.can_be_net_target() && !living_candidate.is_projected_into_cyberspace()
+		return living_candidate.can_be_net_target()
 	return istype(candidate, /obj/machinery/door) \
 		|| istype(candidate, /obj/machinery/camera) \
 		|| istype(candidate, /obj/machinery/light) \
@@ -181,6 +181,7 @@
 		|| istype(candidate, /obj/machinery/airalarm) \
 		|| istype(candidate, /obj/machinery/firealarm) \
 		|| istype(candidate, /obj/machinery/power/apc) \
+		|| istype(candidate, /obj/machinery/cyberspace_terminal) \
 		|| istype(candidate, /obj/machinery/requests_console) \
 		|| istype(candidate, /obj/machinery/status_display) \
 		|| istype(candidate, /obj/machinery/porta_turret) \
@@ -208,6 +209,7 @@
 		|| istype(candidate, /obj/machinery/computer/telecomms/server) \
 		|| istype(candidate, /obj/machinery/computer/rdservercontrol) \
 		|| istype(candidate, /obj/machinery/quantum_server) \
+		|| istype(candidate, /obj/machinery/cyberspace_terminal) \
 		|| istype(candidate, /obj/machinery/cyberdemon_terminal)
 
 /proc/get_cyberspace_manufacturer(atom/movable/target)

@@ -138,8 +138,9 @@
 	if(target)
 		target.visible_message(span_warning("[target] reports: intrusion detected."))
 	if(source && target)
-		source.visible_message(span_danger("A red intrusion ping links [source] to [target]."), span_danger("A red intrusion ping exposes your connection to [target]."))
-		source.Beam(target, icon_state = "rped_upgrade", time = 2 SECONDS, beam_color = "#ff334a")
+		var/atom/beam_source = source.cyberspace_session?.avatar || source
+		beam_source.visible_message(span_danger("A red intrusion ping links [beam_source] to [target]."), span_danger("A red intrusion ping exposes your connection to [target]."))
+		beam_source.Beam(target, icon_state = "rped_upgrade", time = 4 SECONDS, beam_color = "#ff334a")
 	return TRUE
 
 /datum/cyber_ice/proc/get_attack_timer(hacking_skill = 0, is_node = FALSE, object_count = 0, infinite_timer = FALSE)

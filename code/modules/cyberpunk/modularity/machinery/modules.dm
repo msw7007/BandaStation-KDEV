@@ -196,6 +196,14 @@
 	wear_multiplier = 0.88
 	tool_time_multiplier = 0.92
 
+/datum/cyberpunk_machine_module/vending_cyberspace_relay
+	name = "vending cyberspace relay"
+	id = "vending_cyberspace_relay"
+	description = "Adds a hardline cyberspace access relay to a vending machine. Right-click the vendor to enter or leave the network."
+	module_item_type = /obj/item/cyberpunk_machine_module/vending_cyberspace_relay
+	power_usage_multiplier = 1.08
+	wear_multiplier = 1.05
+
 /datum/cyberpunk_machine_module/chem_reaction_accelerator/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
 
@@ -229,6 +237,9 @@
 /datum/cyberpunk_machine_module/network_filter/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/computer) || istype(machine, /obj/machinery/modular_computer) || istype(machine, /obj/machinery/telecomms) || istype(machine, /obj/machinery/ntnet_relay) || istype(machine, /obj/machinery/quantum_server)
 
+/datum/cyberpunk_machine_module/vending_cyberspace_relay/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/vending)
+
 /proc/cyberpunk_machine_module_catalog()
 	return list(
 		/datum/cyberpunk_machine_module/power_governor,
@@ -249,6 +260,7 @@
 		/datum/cyberpunk_machine_module/medical_sterile_bus,
 		/datum/cyberpunk_machine_module/security_response_core,
 		/datum/cyberpunk_machine_module/network_filter,
+		/datum/cyberpunk_machine_module/vending_cyberspace_relay,
 	)
 
 /obj/item/cyberpunk_machine_module
@@ -373,3 +385,8 @@
 	name = "network filter"
 	icon_state = "integrated_circuit"
 	module_datum_type = /datum/cyberpunk_machine_module/network_filter
+
+/obj/item/cyberpunk_machine_module/vending_cyberspace_relay
+	name = "vending cyberspace relay"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/vending_cyberspace_relay

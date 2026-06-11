@@ -139,7 +139,11 @@ const calcMemory = (
   memory += Math.round(Math.max(0, frequency - 1) * 0.2);
   memory -= Math.round(activationDelay);
   memory -= Math.round(castTime);
-  if (['attribute', 'skill', 'move_speed', 'interaction_speed', 'blind', 'deaf', 'silence', 'block_implants', 'block_demons'].includes(effect)) {
+  if (
+    ['attribute', 'skill', 'move_speed', 'interaction_speed', 'blind', 'deaf', 'silence', 'block_implants', 'block_demons', 'cloak', 'vanish', 'engram_stun'].includes(
+      effect,
+    )
+  ) {
     memory += 1;
   }
   for (const special of specials) {
@@ -410,7 +414,7 @@ export const CyberDemonCompiler = () => {
                     <>
                       <Button
                         icon="save"
-                        disabled={demon.prebuilt || !data.disk?.present || demon.memory > (data.disk?.free_memory || 0)}
+                        disabled={!data.disk?.present || demon.memory > (data.disk?.free_memory || 0)}
                         onClick={() => act('copy_to_disk', { index: demon.index })}
                       >
                         Disk

@@ -60,6 +60,171 @@
 	playsound(src, 'sound/effects/magic/blink.ogg', 50, TRUE)
 	do_sparks(3, TRUE, loc, spark_type = /datum/effect_system/basic/spark_spread/quantum)
 
+/proc/get_redeemed_veil_reward_keys()
+	var/static/list/redeemed_keys = list()
+	return redeemed_keys
+
+/proc/is_veil_reward_key_redeemed(key)
+	if(!key)
+		return TRUE
+	return !!get_redeemed_veil_reward_keys()[key]
+
+/proc/redeem_veil_reward_key(key)
+	if(!key || is_veil_reward_key_redeemed(key))
+		return FALSE
+	get_redeemed_veil_reward_keys()[key] = TRUE
+	for(var/mob/living/living_mob as anything in GLOB.mob_living_list)
+		var/obj/item/organ/cyberimp/brain/neural_interface/interface = living_mob.get_neural_interface()
+		interface?.remove_veil_reward_key(key)
+	return TRUE
+
+/proc/generate_veil_reward_key()
+	return uppertext(copytext(md5("[world.time]-[world.realtime]-[rand(1, 999999)]-[rand(1, 999999)]"), 1, CYBERSPACE_VEIL_REWARD_KEY_LENGTH + 1))
+
+/proc/get_veil_reward_key_seed(key)
+	var/seed = 0
+	for(var/i in 1 to length(key))
+		seed += text2ascii(key, i)
+	return seed
+
+/proc/create_veil_reward_from_key(key, level, atom/output_location, mob/user)
+	if(!output_location)
+		return null
+	level = clamp(round(level), 1, CYBERSPACE_VEIL_DATA_VAULT_MAX_LEVEL)
+	var/seed = get_veil_reward_key_seed(key)
+	if(level >= 3 || (seed % 2))
+		var/obj/item/cyberdemon_disk/veil/disk = new(output_location)
+		disk.build_from_veil_key(key, level)
+		if(user)
+			to_chat(user, span_notice("[disk] materializes from the decoded Veil key."))
+		return disk
+
+	var/list/reward_types = list(
+		/obj/item/holochip,
+		/obj/item/stack/ore/gold,
+		/obj/item/stack/ore/titanium,
+		/obj/item/stock_parts/power_store/cell/high,
+	)
+	var/reward_type = reward_types[(seed % length(reward_types)) + 1]
+	var/reward_amount = max(1, level * 2)
+	if(ispath(reward_type, /obj/item/holochip))
+		reward_amount = 500 * level
+	var/obj/item/reward = new reward_type(output_location, reward_amount)
+	if(user)
+		to_chat(user, span_notice("[reward] materializes from the decoded Veil key."))
+	return reward
+
+/obj/item/cyberspace_old_data_chip
+	name = "old data chip"
+	desc = "A brittle chip torn out of an ancient Veil data vault. Use it to burn its reward key into your neural interface."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "datadisk1"
+	w_class = WEIGHT_CLASS_SMALL
+	var/reward_key
+	var/reward_level = 1
+
+/obj/item/cyberspace_old_data_chip/Initialize(mapload)
+	. = ..()
+	if(!reward_key)
+		reward_key = generate_veil_reward_key()
+	reward_level = clamp(round(reward_level), 1, CYBERSPACE_VEIL_DATA_VAULT_MAX_LEVEL)
+
+/obj/item/cyberspace_old_data_chip/proc/record_key(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(is_veil_reward_key_redeemed(reward_key))
+		to_chat(user, span_warning("[src]'s key has already been spent."))
+		return FALSE
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = user.get_neural_interface()
+	if(!interface || !interface.is_implant_functional())
+		to_chat(user, span_warning("You need a functional neural interface to remember [src]'s key."))
+		return FALSE
+	if(!interface.remember_veil_reward_key(reward_key, reward_level))
+		to_chat(user, span_warning("[src]'s key cannot be recorded."))
+		return FALSE
+	to_chat(user, span_notice("You burn Veil reward key <b>[reward_key]</b> into your neural memory."))
+	return TRUE
+
+/obj/item/cyberspace_old_data_chip/pickup(mob/user)
+	. = ..()
+	if(record_key(user))
+		qdel(src)
+
+/obj/item/cyberspace_old_data_chip/attack_self(mob/living/user, modifiers)
+	if(!istype(user))
+		return ..()
+	if(record_key(user))
+		qdel(src)
+	return TRUE
+
+/obj/machinery/veil_decipherizer
+	name = "Veil decipherizer"
+	desc = "A hardline decoder that consumes one remembered Veil reward key and prints a physical reward."
+	icon = 'icons/obj/machines/bitrunning.dmi'
+	icon_state = "byteforge"
+	base_icon_state = "byteforge"
+	density = TRUE
+	anchored = TRUE
+	circuit = null
+
+/obj/machinery/veil_decipherizer/attack_hand(mob/living/user, list/modifiers)
+	if(!istype(user))
+		return ..()
+	if(machine_stat & (BROKEN|NOPOWER))
+		to_chat(user, span_warning("[src] is offline."))
+		return TRUE
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = user.get_neural_interface()
+	if(!interface || !interface.is_implant_functional())
+		to_chat(user, span_warning("You need a functional neural interface to feed [src] a remembered Veil key."))
+		return TRUE
+	var/key = interface.choose_veil_reward_key(user)
+	if(!key)
+		return TRUE
+	var/level = interface.veil_reward_keys?[key] || 1
+	if(!redeem_veil_reward_key(key))
+		to_chat(user, span_warning("The key is already spent."))
+		return TRUE
+	flash()
+	create_veil_reward_from_key(key, level, drop_location(), user)
+	return TRUE
+
+/obj/machinery/veil_decipherizer/proc/flash()
+	flick("byteforge_prespawn", src)
+	playsound(src, 'sound/effects/magic/blink.ogg', 50, TRUE)
+	do_sparks(5, TRUE, loc, spark_type = /datum/effect_system/basic/spark_spread/quantum)
+
+/obj/machinery/cyberspace_terminal
+	name = "cyberspace access terminal"
+	desc = "A hardline terminal that lets a neural-interface user project into the local network layer."
+	icon = 'icons/obj/machines/telecomms.dmi'
+	icon_state = "comm_server"
+	base_icon_state = "comm_server"
+	density = TRUE
+	anchored = TRUE
+	circuit = null
+
+/obj/machinery/cyberspace_terminal/proc/toggle_cyberspace_access(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(machine_stat & (BROKEN|NOPOWER))
+		to_chat(user, span_warning("[src] is offline."))
+		return TRUE
+	if(user.cyberspace_session)
+		return user.stop_cyberspace_session()
+	return user.start_cyberspace_session(CYBERSPACE_MODE_AVATAR, src)
+
+/obj/machinery/cyberspace_terminal/attack_hand(mob/living/user, list/modifiers)
+	if(!istype(user))
+		return ..()
+	toggle_cyberspace_access(user)
+	return TRUE
+
+/obj/machinery/cyberspace_terminal/attack_hand_secondary(mob/living/user, list/modifiers)
+	if(!istype(user))
+		return ..()
+	toggle_cyberspace_access(user)
+	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+
 /obj/item/cyberspace_engram_chip
 	name = "engram chip"
 	desc = "A portable anchor for a digitized engram."
@@ -281,10 +446,10 @@
 	if(!islist(special_effects))
 		special_effects = list()
 
-/datum/cyberspace_demon/proc/copy()
+/datum/cyberspace_demon/proc/copy(development_copy = FALSE)
 	var/datum/cyberspace_demon/new_demon = new type
-	new_demon.demon_name = demon_name
-	new_demon.description = description
+	new_demon.demon_name = development_copy ? "[demon_name] copy" : demon_name
+	new_demon.description = development_copy ? "Editable development copy of [demon_name]." : description
 	new_demon.effect = effect
 	new_demon.effect_power = effect_power
 	new_demon.cast_time = cast_time
@@ -292,7 +457,7 @@
 	new_demon.special_effects = special_effects.Copy()
 	new_demon.memory_cost = memory_cost
 	new_demon.manufacturer = manufacturer
-	new_demon.prebuilt = prebuilt
+	new_demon.prebuilt = development_copy ? FALSE : prebuilt
 	new_demon.net_data_cost = net_data_cost
 	new_demon.psychic_damage = psychic_damage
 	new_demon.stamina_cost = stamina_cost
@@ -601,6 +766,64 @@
 		return
 	living_target.remove_actionspeed_modifier(/datum/actionspeed_modifier/cyberdemon)
 
+/proc/cyberdemon_restore_alpha(datum/weakref/target_ref, old_alpha, applied_alpha)
+	var/atom/movable/target = target_ref?.resolve()
+	if(!target)
+		return
+	if(target.alpha == applied_alpha)
+		target.alpha = old_alpha
+
+/datum/cyberspace_demon/proc/get_cyberspace_avatar_target(atom/target)
+	var/mob/eye/cyberspace_avatar/avatar_target = target
+	if(istype(avatar_target))
+		return avatar_target
+	var/mob/living/living_target = target
+	if(istype(living_target))
+		return living_target.cyberspace_session?.avatar
+	return null
+
+/datum/cyberspace_demon/proc/get_cyberspace_body_target(atom/target)
+	var/mob/living/living_target = target
+	if(istype(living_target))
+		return living_target
+	var/mob/eye/cyberspace_avatar/avatar_target = target
+	if(istype(avatar_target))
+		return avatar_target.body_ref?.resolve()
+	return null
+
+/datum/cyberspace_demon/proc/apply_visibility_alpha(atom/movable/target, new_alpha, visibility_duration)
+	if(!target || visibility_duration <= 0)
+		return FALSE
+	var/old_alpha = target.alpha
+	target.alpha = min(target.alpha, new_alpha)
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberdemon_restore_alpha), WEAKREF(target), old_alpha, target.alpha), visibility_duration)
+	return TRUE
+
+/datum/cyberspace_demon/proc/glitch_nearby_cameras(atom/center)
+	var/turf/center_turf = get_turf(center)
+	if(!center_turf)
+		return
+	for(var/obj/machinery/camera/camera in range(CYBER_DEMON_CAMERA_GLITCH_RANGE, center_turf))
+		camera.emp_act(EMP_LIGHT, CYBER_DEMON_CAMERA_GLITCH_DURATION)
+
+/datum/cyberspace_demon/proc/move_caster_projection(mob/living/caster, atom/target, announce = TRUE)
+	var/turf/target_turf = get_turf(target)
+	if(!target_turf || !caster)
+		return FALSE
+	if(caster.cyberspace_session?.avatar)
+		if(!caster.cyberspace_session.can_avatar_move_to(target_turf))
+			if(announce)
+				to_chat(caster, span_warning("[demon_name] cannot stretch your avatar that far without a node connector."))
+			return FALSE
+		caster.cyberspace_session.avatar.setLoc(target_turf)
+		if(announce)
+			to_chat(caster, span_notice("[demon_name] moves your avatar through the network."))
+		return TRUE
+	caster.forceMove(target_turf)
+	if(announce)
+		to_chat(caster, span_notice("[demon_name] moves you."))
+	return TRUE
+
 /datum/cyberspace_demon/proc/is_hostile_negative_effect(current_power)
 	if(current_power < 0)
 		return TRUE
@@ -623,6 +846,9 @@
 		CYBER_DEMON_EFFECT_WALL,
 		CYBER_DEMON_EFFECT_CRYPTOKEY,
 		CYBER_DEMON_EFFECT_MOVEMENT,
+		CYBER_DEMON_EFFECT_CLOAK,
+		CYBER_DEMON_EFFECT_VANISH,
+		CYBER_DEMON_EFFECT_ENGRAM_STUN,
 	))
 
 /datum/cyberspace_demon/proc/apply_neutralization(mob/living/caster, mob/living/target, current_power, effect_duration)
@@ -935,12 +1161,44 @@
 						to_chat(caster, span_notice("[demon_name] blocks [target]'s demon runtime for [DisplayTimeText(block_duration)]."))
 				return TRUE
 		if(CYBER_DEMON_EFFECT_MOVEMENT)
-			var/turf/target_turf = get_turf(target)
-			if(target_turf)
-				caster.forceMove(target_turf)
-				if(announce)
-					to_chat(caster, span_notice("[demon_name] moves you through the network."))
-				return TRUE
+			return move_caster_projection(caster, target, announce)
+		if(CYBER_DEMON_EFFECT_CLOAK)
+			var/applied = FALSE
+			var/mob/eye/cyberspace_avatar/avatar_target = get_cyberspace_avatar_target(target)
+			if(avatar_target)
+				applied |= apply_visibility_alpha(avatar_target, CYBER_DEMON_CLOAK_ALPHA, effect_duration)
+			var/mob/living/body_target = get_cyberspace_body_target(target)
+			if(!avatar_target && body_target)
+				applied |= apply_visibility_alpha(body_target, CYBER_DEMON_CLOAK_ALPHA, effect_duration)
+			var/atom/glitch_center = body_target ? body_target : target
+			glitch_nearby_cameras(glitch_center)
+			if(applied && announce)
+				to_chat(caster, span_notice("[demon_name] cloaks [target] and throws nearby camera feeds into static."))
+			return applied
+		if(CYBER_DEMON_EFFECT_VANISH)
+			var/applied = FALSE
+			var/mob/eye/cyberspace_avatar/avatar_target = get_cyberspace_avatar_target(target)
+			if(avatar_target)
+				applied |= apply_visibility_alpha(avatar_target, CYBER_DEMON_VANISH_ALPHA, effect_duration)
+			var/mob/living/body_target = get_cyberspace_body_target(target)
+			if(body_target)
+				applied |= apply_visibility_alpha(body_target, CYBER_DEMON_VANISH_ALPHA, effect_duration)
+			var/atom/glitch_center = body_target ? body_target : target
+			glitch_nearby_cameras(glitch_center)
+			if(applied && announce)
+				to_chat(caster, span_notice("[demon_name] vanishes [target] from sight and camera feeds."))
+			return applied
+		if(CYBER_DEMON_EFFECT_ENGRAM_STUN)
+			var/mob/eye/cyberspace_avatar/engram_target = get_cyberspace_avatar_target(target)
+			if(!engram_target || engram_target.session?.mode != CYBERSPACE_MODE_ENGRAM)
+				if(announce && caster)
+					to_chat(caster, span_warning("[demon_name] needs an active engram target."))
+				return FALSE
+			var/stun_duration = max(1 SECONDS, effect_duration || (absolute_power SECONDS))
+			engram_target.stun_from_cyberdemon(stun_duration)
+			if(announce)
+				to_chat(caster, span_notice("[demon_name] stuns [engram_target] for [DisplayTimeText(stun_duration)]."))
+			return TRUE
 		if(CYBER_DEMON_EFFECT_MOVE_SPEED)
 			var/mob/living/living_target = target
 			if(istype(living_target) && effect_duration > 0)
@@ -1107,6 +1365,8 @@
 			return istype(candidate, /mob/living) || istype(candidate, /obj/effect/cyberspace_wall_shell) || istype(candidate, /obj/effect/cyberspace_node_shell) || istype(candidate, /obj/effect/cyberspace_object_trace)
 		if(CYBER_DEMON_EFFECT_BUFF, CYBER_DEMON_EFFECT_DEBUFF, CYBER_DEMON_EFFECT_ATTRIBUTE, CYBER_DEMON_EFFECT_SKILL, CYBER_DEMON_EFFECT_STAMINA, CYBER_DEMON_EFFECT_BLIND, CYBER_DEMON_EFFECT_DEAF, CYBER_DEMON_EFFECT_SILENCE, CYBER_DEMON_EFFECT_BLOCK_IMPLANTS, CYBER_DEMON_EFFECT_BLOCK_DEMONS)
 			return istype(candidate, /mob/living)
+		if(CYBER_DEMON_EFFECT_CLOAK, CYBER_DEMON_EFFECT_VANISH, CYBER_DEMON_EFFECT_ENGRAM_STUN)
+			return istype(candidate, /mob/living) || istype(candidate, /mob/eye/cyberspace_avatar)
 		if(CYBER_DEMON_EFFECT_WALL, CYBER_DEMON_EFFECT_MOVEMENT)
 			return isturf(candidate) || istype(candidate, /obj/effect/cyberspace_wall_shell) || istype(candidate, /obj/effect/cyberspace_node_shell) || istype(candidate, /obj/effect/cyberspace_object_trace)
 		if(CYBER_DEMON_EFFECT_EMP)
@@ -1137,7 +1397,7 @@
 /datum/cyberspace_demon/cloak
 	demon_name = "Сокрытие"
 	description = "Скрывает аватара или энграмму на 120 секунд. Камеры ловят помехи."
-	effect = CYBER_DEMON_EFFECT_BUFF
+	effect = CYBER_DEMON_EFFECT_CLOAK
 	effect_power = 90
 	cast_time = 2 SECONDS
 	duration = CYBER_DEMON_CLOAK_DURATION
@@ -1150,7 +1410,7 @@
 /datum/cyberspace_demon/vanish
 	demon_name = "Исчезновение"
 	description = "Полностью скрывает аватара, энграмму и физическое тело на 30 секунд."
-	effect = CYBER_DEMON_EFFECT_BUFF
+	effect = CYBER_DEMON_EFFECT_VANISH
 	effect_power = 100
 	cast_time = 3 SECONDS
 	duration = CYBER_DEMON_VANISH_DURATION
@@ -1163,7 +1423,7 @@
 /datum/cyberspace_demon/soulcatcher
 	demon_name = "Душелов"
 	description = "Оглушает энграмму на 120 секунд."
-	effect = CYBER_DEMON_EFFECT_BLOCK_DEMONS
+	effect = CYBER_DEMON_EFFECT_ENGRAM_STUN
 	effect_power = 1
 	cast_time = 3 SECONDS
 	duration = CYBER_DEMON_SOULCATCHER_DURATION
@@ -1223,6 +1483,12 @@
 	if(get_turf(engram_avatar) != original_turf)
 		to_chat(caster, span_warning("[engram_avatar] moved before synchronization completed."))
 		return FALSE
+	if(!engram_avatar.session || engram_avatar.session.mode != CYBERSPACE_MODE_ENGRAM)
+		to_chat(caster, span_warning("[engram_avatar] is no longer an active engram."))
+		return FALSE
+	if(find_held_engram_chip(caster) != chip)
+		to_chat(caster, span_warning("[demon_name] needs the same engram chip in hand when synchronization completes."))
+		return FALSE
 	var/mob/living/bound_body = engram_avatar.body_ref?.resolve()
 	if(!bound_body)
 		return FALSE
@@ -1279,6 +1545,9 @@
 		"EMP" = CYBER_DEMON_EFFECT_EMP,
 		"Стена" = CYBER_DEMON_EFFECT_WALL,
 		"Скачок" = CYBER_DEMON_EFFECT_MOVEMENT,
+		"Сокрытие" = CYBER_DEMON_EFFECT_CLOAK,
+		"Исчезновение" = CYBER_DEMON_EFFECT_VANISH,
+		"Душелов" = CYBER_DEMON_EFFECT_ENGRAM_STUN,
 	)
 
 /proc/get_cyberdemon_special_choices()
@@ -1431,7 +1700,7 @@
 	memory_cost += round(max(0, frequency - CYBER_DEMON_DEFAULT_FREQUENCY) * 0.2)
 	memory_cost -= round(activation_seconds)
 	memory_cost -= round(cast_seconds)
-	if(effect_id in list(CYBER_DEMON_EFFECT_ATTRIBUTE, CYBER_DEMON_EFFECT_SKILL, CYBER_DEMON_EFFECT_MOVE_SPEED, CYBER_DEMON_EFFECT_INTERACTION_SPEED, CYBER_DEMON_EFFECT_BLIND, CYBER_DEMON_EFFECT_DEAF, CYBER_DEMON_EFFECT_SILENCE, CYBER_DEMON_EFFECT_BLOCK_IMPLANTS, CYBER_DEMON_EFFECT_BLOCK_DEMONS))
+	if(effect_id in list(CYBER_DEMON_EFFECT_ATTRIBUTE, CYBER_DEMON_EFFECT_SKILL, CYBER_DEMON_EFFECT_MOVE_SPEED, CYBER_DEMON_EFFECT_INTERACTION_SPEED, CYBER_DEMON_EFFECT_BLIND, CYBER_DEMON_EFFECT_DEAF, CYBER_DEMON_EFFECT_SILENCE, CYBER_DEMON_EFFECT_BLOCK_IMPLANTS, CYBER_DEMON_EFFECT_BLOCK_DEMONS, CYBER_DEMON_EFFECT_CLOAK, CYBER_DEMON_EFFECT_VANISH, CYBER_DEMON_EFFECT_ENGRAM_STUN))
 		memory_cost += 1
 	for(var/special in specials)
 		switch(special)
@@ -1669,11 +1938,8 @@
 				to_chat(user, span_warning("Invalid cyberdeck demon slot."))
 				return TRUE
 			var/datum/cyberspace_demon/demon = deck.demons[index]
-			if(demon?.prebuilt)
-				to_chat(user, span_warning("Prebuilt demons cannot be copied to disk. Use the original demon disk."))
-				return TRUE
-			if(demon && disk.store_demon(demon.copy(), user))
-				to_chat(user, span_notice("You copy [demon.demon_name] to [disk]."))
+			if(demon && disk.store_demon(demon.copy(demon.prebuilt), user))
+				to_chat(user, span_notice("You copy [demon.demon_name] to [disk][demon.prebuilt ? " as an editable development copy" : ""]."))
 			return TRUE
 		if("load_from_disk")
 			if(!deck)
@@ -1787,6 +2053,43 @@
 		return deck.release_or_prepare_demon(user, target, demon)
 	return deck.select_demon(demon, user)
 
+/datum/action/cooldown/cyberspace_deck_entry
+	name = "Enter/Exit Net"
+	desc = "Project into or collapse out of the local cyberspace layer through this cyberdeck."
+	background_icon_state = "bg_spell"
+	button_icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	button_icon_state = "datadisk1"
+	overlay_icon_state = "bg_spell_border"
+	click_to_activate = FALSE
+	unset_after_click = FALSE
+	check_flags = AB_CHECK_CONSCIOUS
+	var/obj/item/clothing/gloves/cyberdeck/deck
+
+/datum/action/cooldown/cyberspace_deck_entry/New(obj/item/clothing/gloves/cyberdeck/new_deck)
+	. = ..(new_deck)
+	deck = new_deck
+
+/datum/action/cooldown/cyberspace_deck_entry/Destroy()
+	deck = null
+	return ..()
+
+/datum/action/cooldown/cyberspace_deck_entry/IsAvailable(feedback = FALSE)
+	. = ..()
+	if(!.)
+		return FALSE
+	var/mob/living/living_owner = owner
+	if(!istype(living_owner) || QDELETED(deck) || !(deck in living_owner.contents))
+		if(feedback && owner)
+			owner.balloon_alert(owner, "no cyberdeck")
+		return FALSE
+	return TRUE
+
+/datum/action/cooldown/cyberspace_deck_entry/Activate(atom/target)
+	var/mob/living/user = owner
+	if(!istype(user) || QDELETED(deck))
+		return FALSE
+	return deck.toggle_cyberspace_access(user)
+
 /obj/item/clothing/gloves/cyberdeck
 	name = "cyberdeck gloves"
 	desc = "A glove-mounted cyberdeck that stores and runs compiled demons without a neural interface."
@@ -1804,6 +2107,7 @@
 	var/prepared_ready_time = 0
 	var/prepare_token = 0
 	var/datum/weakref/middleclick_owner_ref
+	var/datum/action/cooldown/cyberspace_deck_entry/cyberspace_entry_action
 
 /obj/item/clothing/gloves/cyberdeck/Destroy(force)
 	clear_demon_actions()
@@ -1965,6 +2269,11 @@
 
 /obj/item/clothing/gloves/cyberdeck/proc/clear_demon_actions(mob/living/user)
 	var/mob/action_owner = user
+	if(cyberspace_entry_action)
+		if(!action_owner)
+			action_owner = cyberspace_entry_action.owner
+		cyberspace_entry_action.Remove(cyberspace_entry_action.owner)
+		QDEL_NULL(cyberspace_entry_action)
 	for(var/datum/action/action as anything in demon_actions)
 		if(!action_owner)
 			action_owner = action.owner
@@ -1977,6 +2286,8 @@
 	clear_demon_actions(user)
 	if(!istype(user) || !(src in user.contents))
 		return
+	cyberspace_entry_action = new(src)
+	cyberspace_entry_action.Grant(user)
 	for(var/datum/cyberspace_demon/demon as anything in demons)
 		if(QDELETED(demon))
 			continue
@@ -1984,6 +2295,13 @@
 		demon_actions += demon_action
 		demon_action.Grant(user)
 	user.update_action_buttons(TRUE)
+
+/obj/item/clothing/gloves/cyberdeck/proc/toggle_cyberspace_access(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(user.cyberspace_session)
+		return user.stop_cyberspace_session()
+	return user.start_cyberspace_session(CYBERSPACE_MODE_AVATAR, src)
 
 /obj/item/clothing/gloves/cyberdeck/proc/get_used_memory()
 	var/used_memory = 0
@@ -2365,6 +2683,36 @@
 	for(var/demon_name in catalog)
 		var/demon_type = catalog[demon_name]
 		demons += new demon_type
+
+/obj/item/cyberdemon_disk/veil
+	name = "old Veil demon disk"
+	desc = "A decoded fragment of ancient Veil combat logic. Its contents are fixed by the spent reward key."
+	memory_capacity = CYBER_DEMON_DISK_MEMORY
+
+/obj/item/cyberdemon_disk/veil/proc/build_from_veil_key(key, level)
+	QDEL_LIST(demons)
+	level = clamp(round(level), 1, CYBERSPACE_VEIL_DATA_VAULT_MAX_LEVEL)
+	memory_capacity = CYBER_DEMON_DISK_MEMORY + max(0, level - 2) * 2
+	name = "old Veil demon disk L[level]"
+	var/seed = get_veil_reward_key_seed(key)
+	var/list/demon_types = list(
+		/datum/cyberspace_demon/wall,
+		/datum/cyberspace_demon/blink,
+		/datum/cyberspace_demon/cloak,
+		/datum/cyberspace_demon/vanish,
+		/datum/cyberspace_demon/soulcatcher,
+		/datum/cyberspace_demon/soulconduit,
+	)
+	var/list/added_types = list()
+	var/demon_count = clamp(level + 1, 2, length(demon_types))
+	for(var/i in 1 to demon_count)
+		var/demon_type = demon_types[((seed + i - 1) % length(demon_types)) + 1]
+		if(added_types[demon_type])
+			continue
+		added_types[demon_type] = TRUE
+		demons += new demon_type
+	if(!length(demons))
+		demons += new /datum/cyberspace_demon/wall
 
 /obj/item/cyberdemon_disk/proc/choose_demon(mob/user)
 	if(!length(demons))

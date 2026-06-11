@@ -138,6 +138,8 @@
 	var/cryptographic_key
 	/// Configurable digital ice bound to this neural interface.
 	var/datum/cyber_ice/neural_ice
+	/// One-use Veil reward keys remembered by this neural interface.
+	var/list/veil_reward_keys = list()
 
 /obj/item/organ/cyberimp/brain/neural_interface/Initialize(mapload)
 	. = ..()
@@ -148,6 +150,7 @@
 
 /obj/item/organ/cyberimp/brain/neural_interface/Destroy()
 	QDEL_NULL(neural_ice)
+	veil_reward_keys = null
 	return ..()
 
 /obj/item/organ/cyberimp/brain/neural_interface/requires_neural_implant()
@@ -240,6 +243,38 @@
 	if(!cryptographic_key)
 		cryptographic_key = generate_neural_cryptokey()
 	return cryptographic_key
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/remember_veil_reward_key(key, level = 1)
+	if(!key || is_veil_reward_key_redeemed(key))
+		return FALSE
+	if(!veil_reward_keys)
+		veil_reward_keys = list()
+	veil_reward_keys[key] = max(1, round(level))
+	return TRUE
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/remove_veil_reward_key(key)
+	if(!veil_reward_keys || !key)
+		return FALSE
+	if(!(key in veil_reward_keys))
+		return FALSE
+	veil_reward_keys -= key
+	return TRUE
+
+/obj/item/organ/cyberimp/brain/neural_interface/proc/choose_veil_reward_key(mob/user)
+	if(!length(veil_reward_keys))
+		to_chat(user, span_warning("[src] has no remembered Veil reward keys."))
+		return null
+	var/list/options = list()
+	for(var/key in veil_reward_keys)
+		if(is_veil_reward_key_redeemed(key))
+			veil_reward_keys -= key
+			continue
+		options["[key] (L[veil_reward_keys[key]])"] = key
+	if(!length(options))
+		to_chat(user, span_warning("[src] has no usable Veil reward keys."))
+		return null
+	var/choice = tgui_input_list(user, "Choose a Veil reward key.", "Veil reward memory", options)
+	return choice ? options[choice] : null
 
 /obj/item/organ/cyberimp/brain/neural_interface/proc/start_ice_hack(mob/living/hacker, provided_key = null)
 	if(!hacker || !is_implant_functional())

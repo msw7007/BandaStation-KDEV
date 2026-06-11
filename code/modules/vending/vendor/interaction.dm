@@ -12,6 +12,29 @@
 
 	return ..()
 
+/obj/machinery/vending/proc/has_cyberspace_relay_module()
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		if(istype(module, /datum/cyberpunk_machine_module/vending_cyberspace_relay))
+			return TRUE
+	return FALSE
+
+/obj/machinery/vending/proc/toggle_cyberspace_relay(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(!has_cyberspace_relay_module())
+		return FALSE
+	if(machine_stat & (BROKEN|NOPOWER))
+		to_chat(user, span_warning("[src]'s cyberspace relay is offline."))
+		return TRUE
+	if(user.cyberspace_session)
+		return user.stop_cyberspace_session()
+	return user.start_cyberspace_session(CYBERSPACE_MODE_AVATAR, src)
+
+/obj/machinery/vending/attack_hand_secondary(mob/living/user, list/modifiers)
+	if(toggle_cyberspace_relay(user))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	return ..()
+
 //================================TOOL ACTS==============================================
 /obj/machinery/vending/crowbar_act(mob/living/user, obj/item/attack_item)
 	if(!component_parts)

@@ -117,3 +117,9 @@
 	id = "ryaznov_network_filter"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/network_filter
+
+/datum/design/cyberpunk_machine_module/vending_cyberspace_relay
+	name = "Ryaznov Vending Cyberspace Relay"
+	id = "ryaznov_vending_cyberspace_relay"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/vending_cyberspace_relay

@@ -314,12 +314,74 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 			continue
 		var/obj/effect/cyberspace_storage_node/storage_node = new(storage_turf)
 		rendered_entities += storage_node
+	if(prob(CYBERSPACE_VEIL_DATA_VAULT_CHANCE))
+		var/turf/vault_turf = pick_veil_turf_far_from_network(CYBERSPACE_VEIL_DATA_VAULT_MIN_NETWORK_DISTANCE)
+		if(vault_turf)
+			var/obj/effect/cyberspace_old_data_vault/vault = new(vault_turf)
+			rendered_entities += vault
 	for(var/i in 1 to CYBERSPACE_VEIL_ALTERNATIVE_COUNT)
 		var/turf/alternative_turf = pick_veil_turf()
 		if(!alternative_turf)
 			continue
 		var/mob/living/basic/cyberspace_alternative/alternative = new(alternative_turf)
 		rendered_entities += alternative
+
+/datum/cyberspace_layer/proc/spawn_veil_response(mob/eye/cyberspace_avatar/target, amount = CYBERSPACE_VEIL_RESPONSE_COUNT)
+	if(!origin_turf || !target || amount <= 0)
+		return list()
+	var/list/spawned = list()
+	for(var/i in 1 to amount)
+		var/turf/alternative_turf = pick_veil_turf_near(target, CYBERSPACE_VEIL_RESPONSE_RANGE)
+		if(!alternative_turf)
+			continue
+		var/mob/living/basic/cyberspace_alternative/alternative = new(alternative_turf)
+		alternative.set_veil_target(target)
+		rendered_entities += alternative
+		spawned += alternative
+	return spawned
+
+/datum/cyberspace_layer/proc/pick_veil_turf_near(atom/center, range = CYBERSPACE_VEIL_RESPONSE_RANGE)
+	var/turf/center_turf = get_turf(center)
+	if(!center_turf)
+		return pick_veil_turf()
+	var/list/candidates = list()
+	for(var/turf/open/indestructible/cyberspace/veil/candidate in range(range, center_turf))
+		if(candidate.density)
+			continue
+		candidates += candidate
+	if(length(candidates))
+		return pick(candidates)
+	return pick_veil_turf()
+
+/datum/cyberspace_layer/proc/get_nearest_network_turf_distance(atom/center)
+	var/turf/center_turf = get_turf(center)
+	if(!center_turf || !length(network_turfs))
+		return CYBERSPACE_VEIL_FULL_RESPONSE_DISTANCE
+	var/nearest_distance = INFINITY
+	for(var/turf/network_turf as anything in network_turfs)
+		if(!network_turf || QDELETED(network_turf))
+			continue
+		nearest_distance = min(nearest_distance, get_dist(center_turf, network_turf))
+		if(nearest_distance <= 0)
+			break
+	if(nearest_distance == INFINITY)
+		return CYBERSPACE_VEIL_FULL_RESPONSE_DISTANCE
+	return nearest_distance
+
+/datum/cyberspace_layer/proc/pick_veil_turf_far_from_network(min_distance)
+	if(!origin_turf)
+		return null
+	var/list/candidates = list()
+	for(var/attempt in 1 to 200)
+		var/turf/candidate = pick_veil_turf()
+		if(!candidate || candidate.density)
+			continue
+		if(get_nearest_network_turf_distance(candidate) < min_distance)
+			continue
+		candidates += candidate
+	if(length(candidates))
+		return pick(candidates)
+	return null
 
 /datum/cyberspace_layer/proc/pick_veil_turf()
 	if(!origin_turf)
@@ -337,7 +399,7 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 		if(!object_ref)
 			continue
 		var/mob/living/net_target = object_ref.resolve()
-		if(!istype(net_target) || net_target.is_projected_into_cyberspace() || !net_target.can_be_net_target())
+		if(!istype(net_target) || !net_target.can_be_net_target())
 			continue
 		var/turf/imprint_turf = get_step(node_turf, pick(GLOB.alldirs))
 		if(!imprint_turf)

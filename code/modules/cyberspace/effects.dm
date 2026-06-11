@@ -148,6 +148,21 @@
 		"emp_activate" = node.can_use_control_function(body, "emp_activate"),
 		"shutdown" = node.can_use_control_function(body, "shutdown"),
 		"settings" = node.can_use_control_function(body, "settings"),
+		"door_toggle" = node.can_use_control_function(body, "door_toggle"),
+		"bolt_toggle" = node.can_use_control_function(body, "bolt_toggle"),
+		"electrify_toggle" = node.can_use_control_function(body, "electrify_toggle"),
+		"camera_inspect" = node.can_use_control_function(body, "camera_inspect"),
+		"camera_rotate" = node.can_use_control_function(body, "camera_rotate"),
+		"panel_toggle" = node.can_use_control_function(body, "panel_toggle"),
+		"power_toggle" = node.can_use_control_function(body, "power_toggle"),
+		"contraband_toggle" = node.can_use_control_function(body, "contraband_toggle"),
+		"apc_breaker_toggle" = node.can_use_control_function(body, "apc_breaker_toggle"),
+		"apc_nightshift_toggle" = node.can_use_control_function(body, "apc_nightshift_toggle"),
+		"turret_power_toggle" = node.can_use_control_function(body, "turret_power_toggle"),
+		"turret_lethal_toggle" = node.can_use_control_function(body, "turret_lethal_toggle"),
+		"turret_silicon_toggle" = node.can_use_control_function(body, "turret_silicon_toggle"),
+		"light_toggle" = node.can_use_control_function(body, "light_toggle"),
+		"device_toggle" = node.can_use_control_function(body, "device_toggle"),
 	)
 	data["protection"] = list(
 		"model" = ice.model,
@@ -181,6 +196,21 @@
 		"emp_activate" = TRUE,
 		"shutdown" = TRUE,
 		"settings" = TRUE,
+		"door_toggle" = TRUE,
+		"bolt_toggle" = TRUE,
+		"electrify_toggle" = TRUE,
+		"camera_inspect" = TRUE,
+		"camera_rotate" = TRUE,
+		"panel_toggle" = TRUE,
+		"power_toggle" = TRUE,
+		"contraband_toggle" = TRUE,
+		"apc_breaker_toggle" = TRUE,
+		"apc_nightshift_toggle" = TRUE,
+		"turret_power_toggle" = TRUE,
+		"turret_lethal_toggle" = TRUE,
+		"turret_silicon_toggle" = TRUE,
+		"light_toggle" = TRUE,
+		"device_toggle" = TRUE,
 	)
 	if(target_commands[action])
 		to_chat(body, span_notice("Cyberspace node receives command: [action]."))
@@ -210,6 +240,36 @@
 			return node.run_control_mode(body, target, "shutdown", visual_anchor)
 		if("settings")
 			return node.run_control_mode(body, target, "settings", visual_anchor)
+		if("door_toggle")
+			return node.run_control_mode(body, target, "door_toggle", visual_anchor)
+		if("bolt_toggle")
+			return node.run_control_mode(body, target, "bolt_toggle", visual_anchor)
+		if("electrify_toggle")
+			return node.run_control_mode(body, target, "electrify_toggle", visual_anchor)
+		if("camera_inspect")
+			return node.run_control_mode(body, target, "camera_inspect", visual_anchor)
+		if("camera_rotate")
+			return node.run_control_mode(body, target, "camera_rotate", visual_anchor)
+		if("panel_toggle")
+			return node.run_control_mode(body, target, "panel_toggle", visual_anchor)
+		if("power_toggle")
+			return node.run_control_mode(body, target, "power_toggle", visual_anchor)
+		if("contraband_toggle")
+			return node.run_control_mode(body, target, "contraband_toggle", visual_anchor)
+		if("apc_breaker_toggle")
+			return node.run_control_mode(body, target, "apc_breaker_toggle", visual_anchor)
+		if("apc_nightshift_toggle")
+			return node.run_control_mode(body, target, "apc_nightshift_toggle", visual_anchor)
+		if("turret_power_toggle")
+			return node.run_control_mode(body, target, "turret_power_toggle", visual_anchor)
+		if("turret_lethal_toggle")
+			return node.run_control_mode(body, target, "turret_lethal_toggle", visual_anchor)
+		if("turret_silicon_toggle")
+			return node.run_control_mode(body, target, "turret_silicon_toggle", visual_anchor)
+		if("light_toggle")
+			return node.run_control_mode(body, target, "light_toggle", visual_anchor)
+		if("device_toggle")
+			return node.run_control_mode(body, target, "device_toggle", visual_anchor)
 		else
 			return FALSE
 
@@ -232,8 +292,40 @@
 		functions += "emag_activate"
 	if(cyberspace_target_can_emp(target))
 		functions += "emp_activate"
+	if(cyberspace_target_can_shutdown(target))
+		functions += "shutdown"
 	if(cyberspace_target_can_settings(target))
 		functions += "settings"
+	if(cyberspace_target_can_toggle_door(target))
+		functions += "door_toggle"
+	if(cyberspace_target_can_toggle_bolts(target))
+		functions += "bolt_toggle"
+	if(cyberspace_target_can_toggle_electrified(target))
+		functions += "electrify_toggle"
+	if(cyberspace_target_can_inspect_camera(target))
+		functions += "camera_inspect"
+	if(cyberspace_target_can_rotate_camera(target))
+		functions += "camera_rotate"
+	if(cyberspace_target_can_toggle_panel(target))
+		functions += "panel_toggle"
+	if(cyberspace_target_can_toggle_power(target))
+		functions += "power_toggle"
+	if(cyberspace_target_can_toggle_contraband(target))
+		functions += "contraband_toggle"
+	if(cyberspace_target_can_toggle_apc_breaker(target))
+		functions += "apc_breaker_toggle"
+	if(cyberspace_target_can_toggle_apc_nightshift(target))
+		functions += "apc_nightshift_toggle"
+	if(cyberspace_target_can_toggle_turret_power(target))
+		functions += "turret_power_toggle"
+	if(cyberspace_target_can_toggle_turret_lethal(target))
+		functions += "turret_lethal_toggle"
+	if(cyberspace_target_can_toggle_turret_silicons(target))
+		functions += "turret_silicon_toggle"
+	if(cyberspace_target_can_toggle_light(target))
+		functions += "light_toggle"
+	if(cyberspace_target_can_toggle_device(target))
+		functions += "device_toggle"
 	return list(
 		"index" = object_index,
 		"name" = target.name,
@@ -453,3 +545,137 @@
 	else
 		to_chat(body, span_notice("[storage] materializes near your body."))
 	return TRUE
+
+/obj/effect/cyberspace_old_data_vault
+	name = "old data vault"
+	desc = "An ancient Veil data vault. Its shell resists extraction until its structure is broken."
+	icon = 'icons/effects/effects.dmi'
+	icon_state = "shield2"
+	color = "#b315ff"
+	alpha = 230
+	anchored = TRUE
+	density = TRUE
+	layer = ABOVE_MOB_LAYER
+	plane = GAME_PLANE
+	var/integrity = CYBERSPACE_VEIL_DATA_VAULT_BASE_INTEGRITY
+	var/vault_max_integrity = CYBERSPACE_VEIL_DATA_VAULT_BASE_INTEGRITY
+	var/vault_level = 1
+	var/charge = 0
+	var/claimed = FALSE
+	var/next_guard_spawn = 0
+	var/list/datum/weakref/guard_refs = list()
+
+/obj/effect/cyberspace_old_data_vault/Initialize(mapload)
+	. = ..()
+	update_vault_integrity()
+	addtimer(CALLBACK(src, PROC_REF(guard_loop)), CYBERSPACE_VEIL_DATA_VAULT_GUARD_COOLDOWN)
+
+/obj/effect/cyberspace_old_data_vault/Destroy(force)
+	guard_refs = null
+	return ..()
+
+/obj/effect/cyberspace_old_data_vault/Click(location, control, params)
+	attack_hand(usr, params2list(params))
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/attack_hand(mob/user, list/modifiers)
+	if(claimed)
+		to_chat(user, span_warning("[src] is already collapsing."))
+		return TRUE
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!istype(body))
+		to_chat(user, span_warning("You need a physical body link to crack [src]."))
+		return TRUE
+	take_vault_damage(CYBERSPACE_VEIL_DATA_VAULT_ATTACK_DAMAGE, body)
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/proc/update_vault_integrity()
+	vault_max_integrity = CYBERSPACE_VEIL_DATA_VAULT_BASE_INTEGRITY + ((vault_level - 1) * CYBERSPACE_VEIL_DATA_VAULT_LEVEL_INTEGRITY)
+	integrity = min(integrity || vault_max_integrity, vault_max_integrity)
+	name = "old data vault L[vault_level]"
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/proc/take_vault_damage(amount, mob/living/body)
+	if(amount <= 0 || claimed)
+		return FALSE
+	integrity = max(0, integrity - amount)
+	visible_message(span_warning("[src] flickers under the attack. Integrity: [integrity]/[vault_max_integrity]."))
+	if(integrity > 0)
+		return TRUE
+	release_data_chip(body)
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/proc/release_data_chip(mob/living/body)
+	if(claimed)
+		return FALSE
+	claimed = TRUE
+	var/obj/item/cyberspace_old_data_chip/chip = new(body?.drop_location() || drop_location())
+	chip.reward_level = vault_level
+	chip.reward_key = generate_veil_reward_key()
+	if(body?.put_in_hands(chip))
+		to_chat(body, span_notice("You pull [chip] from the collapsing old data vault."))
+	else if(body)
+		to_chat(body, span_notice("[chip] materializes near your body."))
+	visible_message(span_danger("[src] collapses into old data fragments."))
+	qdel(src)
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/proc/absorb_alternative(mob/living/basic/cyberspace_alternative/alternative)
+	if(claimed || !alternative || get_dist(src, alternative) > CYBERSPACE_VEIL_DATA_VAULT_GUARD_RANGE)
+		return FALSE
+	charge++
+	visible_message(span_notice("[src] absorbs a broken alternative imprint. Charge: [charge]/[CYBERSPACE_VEIL_DATA_VAULT_CHARGE_PER_LEVEL]."))
+	if(charge < CYBERSPACE_VEIL_DATA_VAULT_CHARGE_PER_LEVEL || vault_level >= CYBERSPACE_VEIL_DATA_VAULT_MAX_LEVEL)
+		return TRUE
+	charge = 0
+	vault_level++
+	var/old_max = vault_max_integrity
+	update_vault_integrity()
+	integrity += vault_max_integrity - old_max
+	visible_message(span_danger("[src] rises to level [vault_level]. More alternatives answer its call."))
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/proc/get_max_guards()
+	return CYBERSPACE_VEIL_DATA_VAULT_BASE_GUARDS + ((vault_level - 1) * CYBERSPACE_VEIL_DATA_VAULT_GUARDS_PER_LEVEL)
+
+/obj/effect/cyberspace_old_data_vault/proc/prune_guards()
+	if(!guard_refs)
+		guard_refs = list()
+	var/live_count = 0
+	for(var/i = length(guard_refs), i >= 1, i--)
+		var/datum/weakref/guard_ref = guard_refs[i]
+		var/mob/living/basic/cyberspace_alternative/guard = guard_ref?.resolve()
+		if(!guard || QDELETED(guard) || guard.stat == DEAD)
+			guard_refs.Cut(i, i + 1)
+			continue
+		live_count++
+	return live_count
+
+/obj/effect/cyberspace_old_data_vault/proc/guard_loop()
+	if(QDELETED(src) || claimed)
+		return
+	if(world.time >= next_guard_spawn)
+		next_guard_spawn = world.time + CYBERSPACE_VEIL_DATA_VAULT_GUARD_COOLDOWN
+		var/live_guards = prune_guards()
+		if(live_guards < get_max_guards())
+			spawn_guard()
+	addtimer(CALLBACK(src, PROC_REF(guard_loop)), CYBERSPACE_VEIL_DATA_VAULT_GUARD_COOLDOWN)
+
+/obj/effect/cyberspace_old_data_vault/proc/spawn_guard()
+	var/list/candidates = list()
+	for(var/turf/open/indestructible/cyberspace/veil/candidate in range(CYBERSPACE_VEIL_DATA_VAULT_GUARD_RANGE, src))
+		if(candidate.density)
+			continue
+		candidates += candidate
+	if(!length(candidates))
+		return FALSE
+	var/mob/living/basic/cyberspace_alternative/guard = new(pick(candidates))
+	guard_refs += WEAKREF(guard)
+	guard.set_veil_target(find_nearby_avatar())
+	return TRUE
+
+/obj/effect/cyberspace_old_data_vault/proc/find_nearby_avatar()
+	for(var/mob/eye/cyberspace_avatar/avatar in view(CYBERSPACE_VEIL_HUNT_RANGE, src))
+		if(avatar.session?.is_veil_target())
+			return avatar
+	return null
