@@ -679,3 +679,424 @@
 		if(avatar.session?.is_veil_target())
 			return avatar
 	return null
+
+#define APP_CRACKER_SCAN_RANGE 10
+#define APP_CRACKER_CRACK_INTERVAL (10 SECONDS)
+#define APP_CRACKER_LOG_LIMIT 80
+
+// Physical NTOS-side cyberspace access. Kept here to avoid adding a new DME include while the
+// cyberspace app pipeline is still being proven out.
+/datum/computer_file/program/app_cracker
+	filename = "appcracker"
+	filedesc = "App Cracker"
+	extended_desc = "Command-line cyberspace node scanner and ICE breaker."
+	downloader_category = PROGRAM_CATEGORY_SCIENCE
+	size = 8
+	tgui_id = "NtosAppCracker"
+	program_icon = "terminal"
+	always_update_ui = TRUE
+	alert_able = TRUE
+	var/list/terminal_log = list()
+	var/datum/cyberspace_node/connected_node
+	var/atom/movable/selected_object
+	var/datum/weakref/operator_ref
+	var/crack_active = FALSE
+	var/next_crack_at = 0
+	var/crack_ticks = 0
+
+/datum/computer_file/program/app_cracker/New()
+	. = ..()
+	append_log("App Cracker booted. Type help.")
+
+/datum/computer_file/program/app_cracker/Destroy()
+	terminal_log = null
+	connected_node = null
+	selected_object = null
+	operator_ref = null
+	return ..()
+
+/datum/computer_file/program/app_cracker/on_start(mob/living/user)
+	. = ..()
+	if(!.)
+		return FALSE
+	operator_ref = WEAKREF(user)
+	append_log("Local endpoint: [computer || "unknown"].")
+	return TRUE
+
+/datum/computer_file/program/app_cracker/process_tick(seconds_per_tick)
+	. = ..()
+	if(!crack_active || world.time < next_crack_at)
+		return TRUE
+	var/mob/living/operator = operator_ref?.resolve()
+	if(!operator || !connected_node)
+		stop_crack("Crack stopped: operator or node lost.")
+		return TRUE
+	run_crack_tick(operator)
+	return TRUE
+
+/datum/computer_file/program/app_cracker/ui_data(mob/user)
+	var/list/data = list()
+	data["log"] = terminal_log || list()
+	data["connected"] = !!connected_node
+	data["connectedName"] = connected_node ? app_cracker_node_name(connected_node) : "none"
+	data["connectedDns"] = connected_node ? app_cracker_dns(connected_node, "N") : ""
+	data["selected"] = !!selected_object
+	data["selectedName"] = selected_object ? selected_object.name : "none"
+	data["selectedDns"] = selected_object ? app_cracker_dns(selected_object, "O") : ""
+	data["cracking"] = crack_active
+	data["nextCrack"] = crack_active ? max(0, round((next_crack_at - world.time) / 10)) : 0
+	data["integrity"] = connected_node ? connected_node.get_protection_integrity_percent() : 0
+	return data
+
+/datum/computer_file/program/app_cracker/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	var/mob/living/user = ui?.user || usr
+	if(istype(user))
+		operator_ref = WEAKREF(user)
+	switch(action)
+		if("submit")
+			return run_command(user, params?["command"])
+		if("clear")
+			terminal_log = list()
+			append_log("Screen cleared.")
+			return TRUE
+	return FALSE
+
+/datum/computer_file/program/app_cracker/proc/append_log(message)
+	LAZYINITLIST(terminal_log)
+	terminal_log += "[time_stamp()] [message]"
+	if(length(terminal_log) > APP_CRACKER_LOG_LIMIT)
+		terminal_log.Cut(1, length(terminal_log) - APP_CRACKER_LOG_LIMIT + 1)
+
+/datum/computer_file/program/app_cracker/proc/time_stamp()
+	return time2text(world.timeofday, "hh:mm:ss")
+
+/datum/computer_file/program/app_cracker/proc/run_command(mob/living/user, command)
+	if(!user)
+		append_log("ERR: no operator.")
+		return FALSE
+	var/raw_command = trim("[command]", 120)
+	if(!length(raw_command))
+		return FALSE
+	append_log("> [raw_command]")
+	var/list/parts = app_cracker_command_parts(raw_command)
+	if(!length(parts))
+		return FALSE
+	var/verb = LOWER_TEXT(parts[1])
+	var/arg = length(parts) >= 2 ? parts[2] : null
+	switch(verb)
+		if("help")
+			print_help()
+		if("status")
+			print_status(user)
+		if("clear")
+			terminal_log = list()
+			append_log("Screen cleared.")
+		if("ls")
+			run_ls(arg)
+		if("ping")
+			run_ping(arg)
+		if("connect")
+			run_connect(arg)
+		if("disconnect")
+			connected_node = null
+			selected_object = null
+			stop_crack("Disconnected.")
+		if("select")
+			run_select(arg)
+		if("crack")
+			run_crack(user, arg)
+		if("stop")
+			stop_crack("Crack stopped.")
+		if("key")
+			run_key()
+		else
+			if(findtext(verb, "proc/") == 1)
+				run_proc_command(user, verb)
+			else
+				append_log("ERR: unknown command. Type help.")
+	return TRUE
+
+/datum/computer_file/program/app_cracker/proc/app_cracker_command_parts(raw_command)
+	var/list/parts = list()
+	for(var/segment in splittext(raw_command, " "))
+		segment = trim(segment)
+		if(length(segment))
+			parts += segment
+	return parts
+
+/datum/computer_file/program/app_cracker/proc/print_help()
+	append_log("Core: help, status, ls -node, ls -trace, ls -objs, ping <id>, connect <id>, select <id>, crack id, stop, key, disconnect.")
+	append_log("Procs: proc/emp, proc/shut, proc/hack, proc/setting. Selected objects also accept proc/function, e.g. proc/camera_rotate.")
+	append_log("Crack repeats every 10 seconds. Hacking skill improves ICE damage and lowers detection chance.")
+	if(connected_node)
+		append_log("Connected node functions depend on selected object type.")
+
+/datum/computer_file/program/app_cracker/proc/print_status(mob/living/user)
+	append_log("Scan range: [APP_CRACKER_SCAN_RANGE] tiles. Hacking skill: [user.get_cyber_hacking_skill()].")
+	if(!connected_node)
+		append_log("No active node connection.")
+		return
+	append_log("Node [app_cracker_dns(connected_node, "N")] [app_cracker_node_name(connected_node)] integrity [connected_node.get_protection_integrity_percent()]%, access [connected_node.has_access(user) ? "open" : "locked"].")
+	if(selected_object)
+		append_log("Selected [app_cracker_dns(selected_object, "O")] [selected_object.name].")
+
+/datum/computer_file/program/app_cracker/proc/run_ls(arg)
+	switch(LOWER_TEXT("[arg]"))
+		if("-node", "-nodes", "node", "nodes")
+			var/list/nodes = get_scanned_nodes()
+			append_log("Nodes in range: [length(nodes)].")
+			for(var/datum/cyberspace_node/node as anything in nodes)
+				append_log("[app_cracker_dns(node, "N")] [app_cracker_node_name(node)]")
+		if("-trace", "-traces", "trace", "traces")
+			var/count = 0
+			for(var/datum/cyberspace_node/node as anything in get_scanned_nodes())
+				for(var/atom/movable/object as anything in node.get_live_objects())
+					if(!object_in_scan_range(object))
+						continue
+					count++
+					append_log("[app_cracker_dns(object, "T")] trace:[object.name] node:[app_cracker_dns(node, "N")]")
+			if(!count)
+				append_log("No traces in scan range.")
+		if("-objs", "-obj", "objs", "obj")
+			if(!connected_node)
+				append_log("ERR: connect to a node first.")
+				return
+			var/index = 1
+			for(var/atom/movable/object as anything in connected_node.get_live_objects())
+				var/list/object_data = cyberspace_node_object_ui_data(object, index)
+				append_log("[app_cracker_dns(object, "O")] [object.name] functions:[english_list(object_data["functions"] || list(), "none")]")
+				index++
+			if(index == 1)
+				append_log("Node has no live objects.")
+		else
+			append_log("Usage: ls -node | ls -trace | ls -objs")
+
+/datum/computer_file/program/app_cracker/proc/run_ping(arg)
+	if(!length(arg))
+		append_log("Usage: ping <dns>")
+		return
+	var/datum/cyberspace_node/node = find_node_by_dns(arg)
+	if(node)
+		append_log("PING [app_cracker_dns(node, "N")]: [app_cracker_node_name(node)] integrity [node.get_protection_integrity_percent()]%, objects [node.get_object_count()], net-data [node.net_data].")
+		return
+	var/atom/movable/object = find_object_by_dns(arg)
+	if(object)
+		var/list/object_data = cyberspace_node_object_ui_data(object, 1)
+		append_log("PING [app_cracker_dns(object, "O")]: [object.name] [object_data["category"]] functions:[english_list(object_data["functions"] || list(), "none")]")
+		return
+	append_log("ERR: no node, trace, or object matches [arg].")
+
+/datum/computer_file/program/app_cracker/proc/run_connect(arg)
+	var/datum/cyberspace_node/node = find_node_by_dns(arg)
+	if(!node)
+		append_log("ERR: node not found. Use ls -node or connect by trace dns.")
+		return
+	connected_node = node
+	selected_object = null
+	append_log("Connected to [app_cracker_dns(node, "N")] [app_cracker_node_name(node)]. Integrity [node.get_protection_integrity_percent()]%.")
+
+/datum/computer_file/program/app_cracker/proc/run_select(arg)
+	if(!connected_node)
+		append_log("ERR: connect to a node first.")
+		return
+	var/atom/movable/object = find_connected_object_by_dns(arg)
+	if(!object)
+		append_log("ERR: object not found in connected node. Use ls -objs.")
+		return
+	selected_object = object
+	var/list/object_data = cyberspace_node_object_ui_data(object, 1)
+	append_log("Selected [app_cracker_dns(object, "O")] [object.name]. Functions: [english_list(object_data["functions"] || list(), "none")].")
+
+/datum/computer_file/program/app_cracker/proc/run_crack(mob/living/user, arg)
+	if(length(arg))
+		var/datum/cyberspace_node/node = find_node_by_dns(arg)
+		if(node)
+			connected_node = node
+		else
+			append_log("ERR: crack target not found.")
+			return
+	if(!connected_node)
+		append_log("ERR: connect to a node or pass node dns.")
+		return
+	if(connected_node.has_access(user))
+		append_log("Node already open.")
+		return
+	crack_active = TRUE
+	crack_ticks = 0
+	next_crack_at = world.time
+	append_log("Crack started against [app_cracker_dns(connected_node, "N")].")
+	run_crack_tick(user)
+
+/datum/computer_file/program/app_cracker/proc/run_crack_tick(mob/living/user)
+	if(!connected_node || !user)
+		stop_crack("Crack stopped: endpoint lost.")
+		return FALSE
+	if(connected_node.has_access(user))
+		stop_crack("Crack complete: node access is open.")
+		return TRUE
+	var/damage = connected_node.get_cyber_attack_damage(user)
+	connected_node.get_ice().apply_reserve_damage(damage)
+	crack_ticks++
+	var/alarmed = connected_node.roll_connection_alarm(user, computer, TRUE)
+	if(alarmed)
+		ping_laptop("TRACE DETECTED: node pinged this terminal endpoint.")
+	if(connected_node.get_ice().is_breached())
+		stop_crack("Crack complete: ICE reserve broken.")
+		return TRUE
+	append_log("Crack tick [crack_ticks]: -[damage] reserve, [connected_node.get_ice().current_reserve] left, integrity [connected_node.get_protection_integrity_percent()]%.")
+	next_crack_at = world.time + APP_CRACKER_CRACK_INTERVAL
+	return TRUE
+
+/datum/computer_file/program/app_cracker/proc/stop_crack(message)
+	crack_active = FALSE
+	next_crack_at = 0
+	if(length(message))
+		append_log(message)
+
+/datum/computer_file/program/app_cracker/proc/ping_laptop(message)
+	append_log(message)
+	alert_pending = TRUE
+	if(computer)
+		computer.visible_message(span_warning("[computer] emits a sharp intrusion warning ping."))
+
+/datum/computer_file/program/app_cracker/proc/run_key()
+	if(!connected_node)
+		append_log("ERR: connect to a node first.")
+		return
+	if(!connected_node.has_access(operator_ref?.resolve()))
+		append_log("ERR: node keys are encrypted. Break protection first.")
+		return
+	if(!length(connected_node.cryptokeys))
+		append_log("No cryptokeys cached.")
+		return
+	for(var/datum/cyberspace_cryptokey/cryptokey as anything in connected_node.cryptokeys)
+		append_log("KEY [cryptokey.key] rights:[english_list(cryptokey.rights || list(), "none")]")
+
+/datum/computer_file/program/app_cracker/proc/run_proc_command(mob/living/user, command)
+	if(!connected_node)
+		append_log("ERR: connect to a node first.")
+		return
+	var/function_id = proc_command_to_function(command)
+	if(!function_id)
+		append_log("ERR: unknown proc command.")
+		return
+	if(function_id == "extract")
+		var/extracted = connected_node.extract_net_data(user)
+		append_log(extracted > 0 ? "Extracted [extracted] net-data." : "No net-data extracted.")
+		return
+	if(!selected_object)
+		append_log("ERR: select an object first.")
+		return
+	var/list/object_data = cyberspace_node_object_ui_data(selected_object, 1)
+	if(!(function_id in object_data["functions"]))
+		append_log("ERR: [selected_object.name] has no [function_id] endpoint.")
+		return
+	var/success = connected_node.run_control_mode(user, selected_object, function_id, computer)
+	append_log(success ? "OK: [function_id] executed." : "ERR: [function_id] rejected.")
+
+/datum/computer_file/program/app_cracker/proc/proc_command_to_function(command)
+	switch(command)
+		if("proc/emp")
+			return "emp_activate"
+		if("proc/shut", "proc/shutdown")
+			return "shutdown"
+		if("proc/hack")
+			return "open_ui"
+		if("proc/setting", "proc/settings")
+			return "settings"
+		if("proc/key", "proc/extract")
+			return "extract"
+	var/function_id = copytext(command, 6)
+	if(length(function_id))
+		return function_id
+	return null
+
+/datum/computer_file/program/app_cracker/proc/get_scanned_nodes()
+	var/list/results = list()
+	var/datum/cyberspace_layer/layer = SScyberspace.ensure_ready()
+	if(!layer || !computer)
+		return results
+	for(var/datum/cyberspace_node/node as anything in layer.nodes)
+		if(node_in_range(node))
+			results += node
+	return results
+
+/datum/computer_file/program/app_cracker/proc/get_scan_origin_turf()
+	if(connected_node)
+		var/turf/cyber_point = locate(connected_node.cyber_x, connected_node.cyber_y, connected_node.source_z)
+		if(cyber_point)
+			return cyber_point
+		var/turf/anchor_turf = get_turf(connected_node.anchor)
+		if(anchor_turf)
+			return anchor_turf
+	return get_turf(computer)
+
+/datum/computer_file/program/app_cracker/proc/turf_in_scan_range(turf/target_turf)
+	var/turf/source_turf = get_scan_origin_turf()
+	if(!source_turf || !target_turf || source_turf.z != target_turf.z)
+		return FALSE
+	return get_dist(source_turf, target_turf) <= APP_CRACKER_SCAN_RANGE
+
+/datum/computer_file/program/app_cracker/proc/object_in_scan_range(atom/movable/object)
+	return turf_in_scan_range(get_turf(object))
+
+/datum/computer_file/program/app_cracker/proc/node_in_range(datum/cyberspace_node/node)
+	if(!node)
+		return FALSE
+	var/turf/anchor_turf = get_turf(node.anchor)
+	if(turf_in_scan_range(anchor_turf))
+		return TRUE
+	for(var/atom/movable/object as anything in node.get_live_objects())
+		if(object_in_scan_range(object))
+			return TRUE
+	return FALSE
+
+/datum/computer_file/program/app_cracker/proc/find_node_by_dns(dns)
+	var/query = uppertext(trim("[dns]"))
+	for(var/datum/cyberspace_node/node as anything in get_scanned_nodes())
+		if(uppertext(app_cracker_dns(node, "N")) == query)
+			return node
+		for(var/atom/movable/object as anything in node.get_live_objects())
+			if(!object_in_scan_range(object))
+				continue
+			if(uppertext(app_cracker_dns(object, "T")) == query)
+				return node
+	return null
+
+/datum/computer_file/program/app_cracker/proc/find_object_by_dns(dns)
+	var/query = uppertext(trim("[dns]"))
+	if(connected_node)
+		var/atom/movable/connected_match = find_connected_object_by_dns(query)
+		if(connected_match)
+			return connected_match
+	for(var/datum/cyberspace_node/node as anything in get_scanned_nodes())
+		for(var/atom/movable/object as anything in node.get_live_objects())
+			if(!object_in_scan_range(object))
+				continue
+			if(uppertext(app_cracker_dns(object, "T")) == query || uppertext(app_cracker_dns(object, "O")) == query)
+				return object
+	return null
+
+/datum/computer_file/program/app_cracker/proc/find_connected_object_by_dns(dns)
+	var/query = uppertext(trim("[dns]"))
+	for(var/atom/movable/object as anything in connected_node?.get_live_objects())
+		if(uppertext(app_cracker_dns(object, "O")) == query || uppertext(app_cracker_dns(object, "T")) == query || LOWER_TEXT(object.name) == LOWER_TEXT(query))
+			return object
+	return null
+
+/proc/app_cracker_dns(datum/target, prefix = "X")
+	if(!target)
+		return ""
+	var/static/list/dns_cache = list()
+	var/key = "[prefix]-[REF(target)]"
+	if(!dns_cache[key])
+		dns_cache[key] = "[prefix]-[uppertext(copytext(md5("[key]-[GLOB.round_id]"), 1, 7))]"
+	return dns_cache[key]
+
+/proc/app_cracker_node_name(datum/cyberspace_node/node)
+	return node?.physical_area?.name || "unmapped node"
+
+#undef APP_CRACKER_SCAN_RANGE
+#undef APP_CRACKER_CRACK_INTERVAL
+#undef APP_CRACKER_LOG_LIMIT

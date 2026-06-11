@@ -122,6 +122,138 @@ export const CyberNode = () => {
   const hasFunction = (functionId: string) =>
     !!selectedObject?.functions?.includes(functionId);
   const canShowAction = (functionId: string) => hasTarget && hasFunction(functionId);
+  const actionDefinitions = [
+    {
+      functionId: 'interface',
+      action: 'open_ui',
+      label: 'open_ui - key / 0%',
+      disabled: !selectedObject?.has_ui || !permissions.open_ui,
+    },
+    {
+      functionId: 'shutdown',
+      action: 'shutdown',
+      label: 'shutdown - <=10%',
+      danger: true,
+      disabled: !permissions.shutdown,
+    },
+    {
+      functionId: 'emp_activate',
+      action: 'emp_activate',
+      label: 'EMP - <=40%',
+      danger: true,
+      disabled: !permissions.emp_activate,
+    },
+    {
+      functionId: 'emag_activate',
+      action: 'emag_activate',
+      label: 'EMAG - <=70%',
+      danger: true,
+      disabled: !permissions.emag_activate,
+    },
+    {
+      functionId: 'settings',
+      action: 'settings',
+      label: 'settings - key / 0%',
+      disabled: !selectedObject?.has_ui || !permissions.settings,
+    },
+    {
+      functionId: 'door_toggle',
+      action: 'door_toggle',
+      label: 'door motor - key / 0%',
+      disabled: !permissions.door_toggle,
+    },
+    {
+      functionId: 'bolt_toggle',
+      action: 'bolt_toggle',
+      label: 'bolts - key / <=40%',
+      danger: true,
+      disabled: !permissions.bolt_toggle,
+    },
+    {
+      functionId: 'electrify_toggle',
+      action: 'electrify_toggle',
+      label: 'electrify - key / <=40%',
+      danger: true,
+      disabled: !permissions.electrify_toggle,
+    },
+    {
+      functionId: 'camera_inspect',
+      action: 'camera_inspect',
+      label: 'camera diagnostics',
+      disabled: !permissions.camera_inspect,
+    },
+    {
+      functionId: 'camera_rotate',
+      action: 'camera_rotate',
+      label: 'rotate camera',
+      disabled: !permissions.camera_rotate,
+    },
+    {
+      functionId: 'panel_toggle',
+      action: 'panel_toggle',
+      label: 'service panel',
+      disabled: !permissions.panel_toggle,
+    },
+    {
+      functionId: 'power_toggle',
+      action: 'power_toggle',
+      label: 'local power',
+      danger: true,
+      disabled: !permissions.power_toggle,
+    },
+    {
+      functionId: 'contraband_toggle',
+      action: 'contraband_toggle',
+      label: 'contraband',
+      disabled: !permissions.contraband_toggle,
+    },
+    {
+      functionId: 'apc_breaker_toggle',
+      action: 'apc_breaker_toggle',
+      label: 'APC breaker',
+      danger: true,
+      disabled: !permissions.apc_breaker_toggle,
+    },
+    {
+      functionId: 'apc_nightshift_toggle',
+      action: 'apc_nightshift_toggle',
+      label: 'night lights',
+      disabled: !permissions.apc_nightshift_toggle,
+    },
+    {
+      functionId: 'turret_power_toggle',
+      action: 'turret_power_toggle',
+      label: 'turret power',
+      danger: true,
+      disabled: !permissions.turret_power_toggle,
+    },
+    {
+      functionId: 'turret_lethal_toggle',
+      action: 'turret_lethal_toggle',
+      label: 'turret lethal',
+      danger: true,
+      disabled: !permissions.turret_lethal_toggle,
+    },
+    {
+      functionId: 'turret_silicon_toggle',
+      action: 'turret_silicon_toggle',
+      label: 'turret silicon',
+      danger: true,
+      disabled: !permissions.turret_silicon_toggle,
+    },
+    {
+      functionId: 'light_toggle',
+      action: 'light_toggle',
+      label: 'light toggle',
+      disabled: !permissions.light_toggle,
+    },
+    {
+      functionId: 'device_toggle',
+      action: 'device_toggle',
+      label: 'device toggle',
+      disabled: !permissions.device_toggle,
+    },
+  ];
 
   return (
     <Window title="Cyberspace node" width={860} height={600}>
@@ -368,330 +500,88 @@ export const CyberNode = () => {
             >
               {selectedObject ? (
                 <>
-                  <div
-                    style={{
-                      marginBottom: '8px',
-                      padding: '8px',
-                      border: `1px solid ${cy.cyanSoft}`,
-                      background: cy.panelSoft,
-                    }}
-                  >
+	                  <div
+	                    style={{
+	                      marginBottom: '6px',
+	                      padding: '6px 8px',
+	                      border: `1px solid ${cy.cyanSoft}`,
+	                      background: cy.panelSoft,
+	                    }}
+	                  >
                     <div style={{ color: cy.cyan, fontWeight: 800 }}>
                       {selectedObject.name}
                     </div>
                     <div
                       style={{
-                        color: cy.muted,
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    >
-                      {selectedObject.type}
-                    </div>
-                    <div style={{ marginTop: '5px' }}>
-                      <span style={{ color: cy.muted }}>Functions: </span>
-                      <span style={{ color: cy.text }}>
-                        {selectedObject.functions?.join(', ') || 'inspect only'}
+	                        color: cy.muted,
+	                        fontFamily: 'monospace',
+	                        fontSize: '10px',
+	                        overflow: 'hidden',
+	                        textOverflow: 'ellipsis',
+	                        whiteSpace: 'nowrap',
+	                      }}
+	                    >
+	                      {selectedObject.type}
+	                    </div>
+	                    <div
+	                      style={{
+	                        marginTop: '4px',
+	                        fontSize: '11px',
+	                        lineHeight: 1.25,
+	                      }}
+	                    >
+	                      <span style={{ color: cy.muted }}>Functions: </span>
+	                      <span style={{ color: cy.text }}>
+	                        {selectedObject.functions?.join(', ') || 'inspect only'}
                       </span>
                     </div>
                     {selectedObject.critical_ice && (
                       <div style={{ color: cy.red, marginTop: '5px' }}>
                         Critical ICE endpoint. Use ICE breach for full intrusion.
-                      </div>
-                    )}
-                  </div>
-                  {canShowAction('interface') && (
-                    <Button
-                      fluid
-                      color="transparent"
-                      style={cyberButtonStyle(
-                        false,
-                        !selectedObject.has_ui || !permissions.open_ui,
-                      )}
-                      disabled={!selectedObject.has_ui || !permissions.open_ui}
-                      onClick={() => act('open_ui', { target_index: targetIndex })}
-                    >
-                      open_ui(target) - key / 0%
-                    </Button>
-                  )}
-                  {canShowAction('shutdown') && (
-                    <Button
-                      fluid
-                      color="transparent"
-                      style={cyberButtonStyle(true, !permissions.shutdown)}
-                      disabled={!permissions.shutdown}
-                      onClick={() => act('shutdown', { target_index: targetIndex })}
-                    >
-                      /proc/shutdown(target) - &lt;=10%
-                    </Button>
-                  )}
-                  {canShowAction('emp_activate') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(true, !permissions.emp_activate)}
-                    disabled={!permissions.emp_activate}
-                    onClick={() =>
-                      act('emp_activate', { target_index: targetIndex })
-                    }
-                  >
-                    /proc/emp_activate(target) - &lt;=40%
-                  </Button>
-                  )}
-                  {canShowAction('emag_activate') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(true, !permissions.emag_activate)}
-                    disabled={!permissions.emag_activate}
-                    onClick={() =>
-                      act('emag_activate', { target_index: targetIndex })
-                    }
-                  >
-                    /proc/emag_activate(target) - &lt;=70%
-                  </Button>
-                  )}
-                  {canShowAction('settings') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      false,
-                      !selectedObject.has_ui || !permissions.settings,
-                    )}
-                    disabled={!selectedObject.has_ui || !permissions.settings}
-                    onClick={() => act('settings', { target_index: targetIndex })}
-                  >
-                    /proc/settings(target) - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('door_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(false, !permissions.door_toggle)}
-                    disabled={!permissions.door_toggle}
-                    onClick={() =>
-                      act('door_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    door motor toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('bolt_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(true, !permissions.bolt_toggle)}
-                    disabled={!permissions.bolt_toggle}
-                    onClick={() =>
-                      act('bolt_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    bolt channel toggle - key / &lt;=40%
-                  </Button>
-                  )}
-                  {canShowAction('electrify_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      true,
-                      !permissions.electrify_toggle,
-                    )}
-                    disabled={!permissions.electrify_toggle}
-                    onClick={() =>
-                      act('electrify_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    electrification toggle - key / &lt;=40%
-                  </Button>
-                  )}
-                  {canShowAction('camera_inspect') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(false, !permissions.camera_inspect)}
-                    disabled={!permissions.camera_inspect}
-                    onClick={() =>
-                      act('camera_inspect', { target_index: targetIndex })
-                    }
-                  >
-                    camera diagnostics - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('camera_rotate') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(false, !permissions.camera_rotate)}
-                    disabled={!permissions.camera_rotate}
-                    onClick={() =>
-                      act('camera_rotate', { target_index: targetIndex })
-                    }
-                  >
-                    rotate camera - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('panel_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(false, !permissions.panel_toggle)}
-                    disabled={!permissions.panel_toggle}
-                    onClick={() =>
-                      act('panel_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    service panel toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('power_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(true, !permissions.power_toggle)}
-                    disabled={!permissions.power_toggle}
-                    onClick={() =>
-                      act('power_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    local power toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('contraband_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      false,
-                      !permissions.contraband_toggle,
-                    )}
-                    disabled={!permissions.contraband_toggle}
-                    onClick={() =>
-                      act('contraband_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    vending contraband toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('apc_breaker_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      true,
-                      !permissions.apc_breaker_toggle,
-                    )}
-                    disabled={!permissions.apc_breaker_toggle}
-                    onClick={() =>
-                      act('apc_breaker_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    APC breaker toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('apc_nightshift_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      false,
-                      !permissions.apc_nightshift_toggle,
-                    )}
-                    disabled={!permissions.apc_nightshift_toggle}
-                    onClick={() =>
-                      act('apc_nightshift_toggle', {
-                        target_index: targetIndex,
-                      })
-                    }
-                  >
-                    APC night lights toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('turret_power_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      true,
-                      !permissions.turret_power_toggle,
-                    )}
-                    disabled={!permissions.turret_power_toggle}
-                    onClick={() =>
-                      act('turret_power_toggle', {
-                        target_index: targetIndex,
-                      })
-                    }
-                  >
-                    linked turrets power - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('turret_lethal_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      true,
-                      !permissions.turret_lethal_toggle,
-                    )}
-                    disabled={!permissions.turret_lethal_toggle}
-                    onClick={() =>
-                      act('turret_lethal_toggle', {
-                        target_index: targetIndex,
-                      })
-                    }
-                  >
-                    linked turrets lethal mode - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('turret_silicon_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(
-                      true,
-                      !permissions.turret_silicon_toggle,
-                    )}
-                    disabled={!permissions.turret_silicon_toggle}
-                    onClick={() =>
-                      act('turret_silicon_toggle', {
-                        target_index: targetIndex,
-                      })
-                    }
-                  >
-                    linked turrets silicon target - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('light_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(false, !permissions.light_toggle)}
-                    disabled={!permissions.light_toggle}
-                    onClick={() =>
-                      act('light_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    light emitter toggle - key / 0%
-                  </Button>
-                  )}
-                  {canShowAction('device_toggle') && (
-                    <Button
-                    fluid
-                    color="transparent"
-                    style={cyberButtonStyle(false, !permissions.device_toggle)}
-                    disabled={!permissions.device_toggle}
-                    onClick={() =>
-                      act('device_toggle', { target_index: targetIndex })
-                    }
-                  >
-                    device toggle - key / 0%
-                  </Button>
-                  )}
-                  {selectedObject.functions?.length === 0 && (
-                    <div style={{ color: cy.muted }}>No exposed control functions.</div>
-                  )}
+	                      </div>
+	                    )}
+	                  </div>
+	                  <div
+	                    style={{
+	                      display: 'grid',
+	                      gridTemplateColumns: '1fr 1fr',
+	                      gap: '5px',
+	                    }}
+	                  >
+	                    {actionDefinitions
+	                      .filter((actionDefinition) =>
+	                        canShowAction(actionDefinition.functionId),
+	                      )
+	                      .map((actionDefinition) => (
+	                        <Button
+	                          key={actionDefinition.functionId}
+	                          fluid
+	                          color="transparent"
+	                          style={{
+	                            ...cyberButtonStyle(
+	                              !!actionDefinition.danger,
+	                              !!actionDefinition.disabled,
+	                            ),
+	                            marginBottom: 0,
+	                            padding: '5px 7px',
+	                            minHeight: '28px',
+	                            fontSize: '11px',
+	                            lineHeight: 1.15,
+	                          }}
+	                          disabled={!!actionDefinition.disabled}
+	                          onClick={() =>
+	                            act(actionDefinition.action, {
+	                              target_index: targetIndex,
+	                            })
+	                          }
+	                        >
+	                          {actionDefinition.label}
+	                        </Button>
+	                      ))}
+	                  </div>
+	                  {selectedObject.functions?.length === 0 && (
+	                    <div style={{ color: cy.muted }}>No exposed control functions.</div>
+	                  )}
                 </>
               ) : (
                 <div style={{ color: cy.muted }}>Select a linked object.</div>
