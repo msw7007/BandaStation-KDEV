@@ -2,13 +2,13 @@
  * # Counter Overlay Component
  *
  * Shows an counter overlay.
- * Requires a BCI shell.
+ * Requires an integral brain connector shell.
  */
 
 /obj/item/circuit_component/counter_overlay
 	display_name = "Counter Overlay"
-	desc = "A component that shows a three-digit counter. Requires a BCI shell."
-	category = "BCI"
+	desc = "A component that shows a three-digit counter. Requires an integral brain connector shell."
+	category = "Brain Connector"
 
 	required_shells = list(/obj/item/organ/cyberimp/bci)
 

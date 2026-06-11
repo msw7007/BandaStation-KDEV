@@ -291,22 +291,12 @@
 		return
 	if(!has_neural_implant())
 		return
-	var/overload_pain = get_cyberpunk_chromity_overload_pain(amount)
-	if(overload_pain > 0)
-		var/obj/item/organ/brain_for_pain = get_organ_slot(ORGAN_SLOT_BRAIN)
-		brain_for_pain?.add_organ_pain(overload_pain)
-	var/damage_cap = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 3)
-	if(damage_cap > 0)
-		amount = min(amount, damage_cap)
-	var/master_reduction = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 6, "value_2")
-	if(master_reduction > 0)
-		amount *= max(0, 1 - master_reduction * 0.01)
-	if(amount <= 0)
-		return
-	adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
 	switch(rand(1, 100))
 		if(1 to 40)
-			return
+			var/overload_pain = get_cyberpunk_chromity_overload_pain(amount)
+			if(overload_pain > 0)
+				var/obj/item/organ/brain_for_pain = get_organ_slot(ORGAN_SLOT_BRAIN)
+				brain_for_pain?.add_organ_pain(overload_pain)
 		if(41 to 55)
 			var/obj/item/organ/implant = pick_working_chrome_implant()
 			implant?.disable_implant(IMPLANT_OVERHEAT_SHUTDOWN_TIME, "overheat")
@@ -314,7 +304,14 @@
 			var/obj/item/organ/implant = pick_working_chrome_implant()
 			implant?.on_implant_erroneous_activation()
 		if(61 to 100)
-			return
+			var/damage_cap = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 3)
+			if(damage_cap > 0)
+				amount = min(amount, damage_cap)
+			var/master_reduction = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 6, "value_2")
+			if(master_reduction > 0)
+				amount *= max(0, 1 - master_reduction * 0.01)
+			if(amount > 0)
+				adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
 
 /mob/living/proc/trigger_cyberpsychosis()
 	if(world.time < last_cyberpsychosis_time + CYBERPSYCHOSIS_COOLDOWN)

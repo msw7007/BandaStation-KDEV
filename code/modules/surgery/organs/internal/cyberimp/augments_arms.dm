@@ -262,18 +262,21 @@
 /obj/item/organ/cyberimp/arm/toolkit/gun/laser
 	name = "arm-mounted laser implant"
 	desc = "A variant of the arm cannon implant that fires lethal laser beams. The cannon emerges from the subject's arm and remains inside when not in use."
+	corp_manufacturer = "Benn"
 	icon_state = "arm_laser"
 	items_to_create = list(/obj/item/gun/energy/laser/mounted/augment)
 
 /obj/item/organ/cyberimp/arm/toolkit/gun/taser
 	name = "arm-mounted taser implant"
 	desc = "A variant of the arm cannon implant that fires electrodes and disabler shots. The cannon emerges from the subject's arm and remains inside when not in use."
+	corp_manufacturer = "Starlight"
 	icon_state = "arm_taser"
 	items_to_create = list(/obj/item/gun/energy/e_gun/advtaser/mounted)
 
 /obj/item/organ/cyberimp/arm/toolkit/toolset
 	name = "integrated toolset implant"
 	desc = "A stripped-down version of the engineering cyborg toolset, designed to be installed on subject's arm. Contain advanced versions of every tool."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "toolkit_engineering"
 	aug_overlay = "toolkit_engi"
 	actions_types = list(/datum/action/item_action/organ_action/toggle/toolkit)
@@ -328,6 +331,7 @@
 /obj/item/organ/cyberimp/arm/toolkit/esword
 	name = "arm-mounted energy blade"
 	desc = "An illegal and highly dangerous cybernetic implant that can project a deadly blade of concentrated energy."
+	corp_manufacturer = "Ryaznov"
 	items_to_create = list(/obj/item/melee/energy/blade/hardlight)
 
 /obj/item/organ/cyberimp/arm/toolkit/medibeam
@@ -365,12 +369,14 @@
 /obj/item/organ/cyberimp/arm/toolkit/baton
 	name = "arm electrification implant"
 	desc = "An illegal combat implant that allows the user to administer disabling shocks from their arm."
+	corp_manufacturer = "Starlight"
 	aug_overlay = "toolkit"
 	items_to_create = list(/obj/item/borg/stun)
 
 /obj/item/organ/cyberimp/arm/toolkit/combat
 	name = "combat cybernetics implant"
 	desc = "A powerful cybernetic implant that contains combat modules built into the user's arm."
+	corp_manufacturer = "Ryaznov"
 	aug_overlay = "toolkit"
 	items_to_create = list(
 		/obj/item/melee/energy/blade/hardlight,
@@ -443,6 +449,7 @@
 	name = "\proper Strong-Arm empowered musculature implant"
 	desc = "When implanted, this cybernetic implant will enhance the muscles of the arm to deliver more power-per-action. Install one in each arm \
 		to pry open doors with your bare hands!"
+	corp_manufacturer = "Ryaznov"
 	icon_state = "muscle_implant"
 	zone = BODY_ZONE_R_ARM
 	slot = ORGAN_SLOT_RIGHT_ARM_AUG
@@ -478,6 +485,10 @@
 	var/slam_cooldown_duration = 5 SECONDS
 	/// Tracks how soon we can perform another slam attack
 	COOLDOWN_DECLARE(slam_cooldown)
+	var/applied_lower_punch_damage = 0
+	var/applied_upper_punch_damage = 0
+	var/applied_punch_effectiveness = 0
+	var/applied_grab_damage = 0
 
 /obj/item/organ/cyberimp/arm/strongarm/Initialize(mapload)
 	. = ..()
@@ -494,17 +505,26 @@
 
 /obj/item/organ/cyberimp/arm/strongarm/on_bodypart_insert(obj/item/bodypart/arm)
 	. = ..()
-	arm.unarmed_damage_low += lower_punch_damage
-	arm.unarmed_damage_high += upper_punch_damage
-	arm.unarmed_effectiveness += punch_effectiveness_added
-	arm.unarmed_grab_damage_bonus += bonus_grab_damage
+	var/synergy = get_corporate_synergy_multiplier()
+	applied_lower_punch_damage = lower_punch_damage * synergy
+	applied_upper_punch_damage = upper_punch_damage * synergy
+	applied_punch_effectiveness = punch_effectiveness_added * synergy
+	applied_grab_damage = bonus_grab_damage * synergy
+	arm.unarmed_damage_low += applied_lower_punch_damage
+	arm.unarmed_damage_high += applied_upper_punch_damage
+	arm.unarmed_effectiveness += applied_punch_effectiveness
+	arm.unarmed_grab_damage_bonus += applied_grab_damage
 
 /obj/item/organ/cyberimp/arm/strongarm/on_bodypart_remove(obj/item/bodypart/arm)
 	. = ..()
-	arm.unarmed_damage_low += lower_punch_damage
-	arm.unarmed_damage_high += upper_punch_damage
-	arm.unarmed_effectiveness += punch_effectiveness_added
-	arm.unarmed_grab_damage_bonus += bonus_grab_damage
+	arm.unarmed_damage_low -= applied_lower_punch_damage
+	arm.unarmed_damage_high -= applied_upper_punch_damage
+	arm.unarmed_effectiveness -= applied_punch_effectiveness
+	arm.unarmed_grab_damage_bonus -= applied_grab_damage
+	applied_lower_punch_damage = 0
+	applied_upper_punch_damage = 0
+	applied_punch_effectiveness = 0
+	applied_grab_damage = 0
 
 /obj/item/organ/cyberimp/arm/strongarm/emp_act(severity)
 	. = ..()
@@ -654,6 +674,7 @@
 /obj/item/organ/cyberimp/arm/strike_effect/shock
 	name = "shock arm implant"
 	desc = "A contact discharge implant. Punches deal stamina shock and can stagger."
+	corp_manufacturer = "Starlight"
 	chromity_overheat = 5
 	var/stamina_damage = 20
 
@@ -662,7 +683,7 @@
 	stamina_damage = tier_value(list(20, 30, 45))
 
 /obj/item/organ/cyberimp/arm/strike_effect/shock/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
-	target.apply_damage(stamina_damage, STAMINA)
+	target.apply_damage(stamina_damage * get_corporate_synergy_multiplier(), STAMINA)
 	target.adjust_staggered_up_to(1 SECONDS * implant_tier, 4 SECONDS)
 	to_chat(source, span_danger("[capitalize(src)] discharges into [target]."))
 
@@ -677,6 +698,7 @@
 /obj/item/organ/cyberimp/arm/strike_effect/fire
 	name = "firefingers implant"
 	desc = "Thermal fingertip emitters that ignite targets hit by unarmed attacks."
+	corp_manufacturer = "Ryaznov"
 	chromity_overheat = 4
 	var/fire_stacks = 1
 
@@ -685,7 +707,7 @@
 	fire_stacks = tier_value(list(1, 2, 3))
 
 /obj/item/organ/cyberimp/arm/strike_effect/fire/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
-	target.adjust_fire_stacks(fire_stacks)
+	target.adjust_fire_stacks(fire_stacks * get_corporate_synergy_multiplier())
 	target.ignite_mob()
 	to_chat(source, span_danger("[capitalize(src)] ignites [target]."))
 
@@ -700,6 +722,7 @@
 /obj/item/organ/cyberimp/arm/strike_effect/cold
 	name = "coldfingers implant"
 	desc = "Cryogenic fingertip emitters that drain stamina and body heat on unarmed hits."
+	corp_manufacturer = "Ryaznov"
 	chromity_overheat = 4
 	var/cold_amount = 25
 
@@ -708,8 +731,9 @@
 	cold_amount = tier_value(list(25, 45, 70))
 
 /obj/item/organ/cyberimp/arm/strike_effect/cold/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
-	target.adjust_bodytemperature(-cold_amount)
-	target.apply_damage(round(cold_amount * 0.4), STAMINA)
+	var/synergy = get_corporate_synergy_multiplier()
+	target.adjust_bodytemperature(-cold_amount * synergy)
+	target.apply_damage(round(cold_amount * 0.4 * synergy), STAMINA)
 	to_chat(source, span_danger("[capitalize(src)] chills [target]."))
 
 /obj/item/organ/cyberimp/arm/strike_effect/cold/t2
@@ -723,16 +747,19 @@
 /obj/item/organ/cyberimp/arm/strike_effect/soundstrike
 	name = "\improper Soundstrike implant"
 	desc = "A rare Soundhand arm implant that blasts a target backward after an unarmed strike."
+	corp_manufacturer = "Starlight"
 	chromity_overheat = 8
 
 /obj/item/organ/cyberimp/arm/strike_effect/soundstrike/apply_strike_effect(mob/living/carbon/human/source, mob/living/target)
-	target.apply_damage(8 + 4 * implant_tier, BRUTE)
-	target.throw_at(get_edge_target_turf(target, source.dir), 3 + implant_tier, 1, source, gentle = TRUE)
+	var/synergy = get_corporate_synergy_multiplier()
+	target.apply_damage((8 + 4 * implant_tier) * synergy, BRUTE)
+	target.throw_at(get_edge_target_turf(target, source.dir), (3 + implant_tier) * synergy, 1, source, gentle = TRUE)
 	to_chat(source, span_danger("[capitalize(src)] throws [target] with a pressure wave."))
 
 /obj/item/organ/cyberimp/arm/soundhand
 	name = "\improper Soundhand injector blade"
 	desc = "A right-hand Soundhand implant with a hidden piercing blade and a sensory-disrupting injector."
+	corp_manufacturer = "Starlight"
 	icon_state = "arm_blade"
 	zone = BODY_ZONE_R_ARM
 	slot = ORGAN_SLOT_RIGHT_ARM_AUG
@@ -753,7 +780,8 @@
 	if(source.get_active_hand() != hand || !proximity || !source.combat_mode || LAZYACCESS(modifiers, RIGHT_CLICK) || !ishuman(target))
 		return NONE
 	var/mob/living/carbon/human/human_target = target
-	human_target.apply_damage(10, BRUTE, BODY_ZONE_CHEST, wound_bonus = 10)
+	var/synergy = get_corporate_synergy_multiplier()
+	human_target.apply_damage(10 * synergy, BRUTE, BODY_ZONE_CHEST, wound_bonus = 10 * synergy)
 	human_target.adjust_temp_blindness_up_to(3 SECONDS, 6 SECONDS)
 	var/obj/item/organ/ears/ears = human_target.get_organ_slot(ORGAN_SLOT_EARS)
 	ears?.adjust_temporary_deafness(6 SECONDS)
@@ -763,6 +791,7 @@
 /obj/item/organ/cyberimp/arm/soundray
 	name = "\improper Soundray projector"
 	desc = "A rare Soundhand emitter that fires a long piercing sonic line."
+	corp_manufacturer = "Starlight"
 	icon_state = "arm_laser"
 	aug_overlay = "toolkit"
 	chromity_overheat = 8
@@ -782,13 +811,14 @@
 		for(var/mob/living/victim in current)
 			if(victim == owner)
 				continue
-			victim.apply_damage(max(4, 24 - i), BRUTE)
+			victim.apply_damage(max(4, 24 - i) * get_corporate_synergy_multiplier(), BRUTE)
 			victim.adjust_staggered_up_to(1 SECONDS, 4 SECONDS)
 	to_chat(owner, span_danger("[capitalize(src)] releases a piercing sonic ray."))
 
 /obj/item/organ/cyberimp/arm/soundwave
 	name = "\improper Soundwave projector"
 	desc = "A rare Soundhand emitter that fires a short, wide sonic cone."
+	corp_manufacturer = "Starlight"
 	icon_state = "arm_laser"
 	aug_overlay = "toolkit"
 	chromity_overheat = 9
@@ -807,7 +837,7 @@
 		for(var/mob/living/victim in checked_turf)
 			if(victim == owner)
 				continue
-			victim.apply_damage(max(6, 28 - distance * 3), BRUTE)
+			victim.apply_damage(max(6, 28 - distance * 3) * get_corporate_synergy_multiplier(), BRUTE)
 			victim.adjust_staggered_up_to(2 SECONDS, 5 SECONDS)
 	to_chat(owner, span_danger("[capitalize(src)] releases a crushing sonic cone."))
 

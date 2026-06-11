@@ -9,6 +9,8 @@
 	chromity_overheat = 10
 	/// Cyberpunk content tier. Most old implants stay tier 1 unless a subtype overrides this.
 	var/implant_tier = 1
+	/// Cyberpunk implant manufacturer used for neural-interface corporate synergy.
+	var/corp_manufacturer = "independent"
 	/// icon of the bodypart overlay we're going to be applying to our owner
 	var/aug_icon = 'icons/mob/human/species/misc/bodypart_overlay_augmentations.dmi'
 	/// icon_state of the bodypart overlay we're going to be applying to our owner
@@ -81,10 +83,13 @@
 	// No feeling in implants (yet?)
 	return ""
 
-/obj/item/organ/cyberimp/proc/tier_value(list/values)
+/obj/item/organ/cyberimp/proc/tier_value(list/values, use_synergy = FALSE)
 	if(!length(values))
 		return null
-	return values[clamp(implant_tier, 1, length(values))]
+	var/value = values[clamp(implant_tier, 1, length(values))]
+	if(use_synergy && isnum(value))
+		return value * get_corporate_synergy_multiplier()
+	return value
 
 /datum/movespeed_modifier/cyberimp_sandevistan
 	variable = TRUE
@@ -129,7 +134,6 @@
 	emp_stun_duration = 0
 	chromity_overheat = 0
 	actions_types = list(/datum/action/item_action/organ_action/use)
-	var/corp_manufacturer = "independent"
 	/// Legal key used by direct interfaces to bypass this neural implant's ice.
 	var/cryptographic_key
 	/// Configurable digital ice bound to this neural interface.
@@ -352,12 +356,13 @@
 /obj/item/organ/cyberimp/brain/operating_system/sandevistan
 	name = "\improper Sandevistan reflex OS"
 	desc = "An active neural OS that accelerates the user and leaves visual afterimages. High-tier models are brutally hot."
+	corp_manufacturer = "Benn"
 	active_duration = 6 SECONDS
 	active_overheat_floor = 35
 	var/active_speed_mod = -0.25
 
 /obj/item/organ/cyberimp/brain/operating_system/sandevistan/activate_os()
-	active_speed_mod = tier_value(list(-0.25, -0.6, -1))
+	active_speed_mod = tier_value(list(-0.25, -0.6, -1), TRUE)
 	active_overheat_floor = tier_value(list(35, 55, 80))
 	. = ..()
 	if(.)
@@ -380,6 +385,7 @@
 /obj/item/organ/cyberimp/brain/operating_system/berserk
 	name = "\improper Berserk motor OS"
 	desc = "An active neural OS that overdrives unarmed and strength-based combat formulas. It runs cooler than reflex acceleration."
+	corp_manufacturer = "Ryaznov"
 	active_duration = 10 SECONDS
 	active_overheat_floor = 12
 	var/unarmed_damage_multiplier = 1.5
@@ -393,7 +399,7 @@
 	UnregisterSignal(organ_owner, COMSIG_LIVING_EARLY_UNARMED_ATTACK)
 
 /obj/item/organ/cyberimp/brain/operating_system/berserk/activate_os()
-	unarmed_damage_multiplier = tier_value(list(1.5, 2, 2.5))
+	unarmed_damage_multiplier = tier_value(list(1.5, 2, 2.5), TRUE)
 	active_overheat_floor = tier_value(list(12, 18, 24))
 	return ..()
 
@@ -418,12 +424,13 @@
 /obj/item/organ/cyberimp/brain/operating_system/eagle
 	name = "\improper Kowalski Eagle targeting OS"
 	desc = "An active targeting OS that stabilizes ranged fire. Weapon hooks read its spread reduction from the user's brain implant."
+	corp_manufacturer = "Ryaznov"
 	active_duration = 12 SECONDS
 	active_overheat_floor = 30
 	var/spread_reduction = 0.33
 
 /obj/item/organ/cyberimp/brain/operating_system/eagle/activate_os()
-	spread_reduction = tier_value(list(0.33, 0.66, 1))
+	spread_reduction = min(1, tier_value(list(0.33, 0.66, 1), TRUE))
 	active_overheat_floor = tier_value(list(30, 45, 60))
 	. = ..()
 	if(.)
@@ -440,6 +447,7 @@
 /obj/item/organ/cyberimp/brain/operating_system/cyberdeck
 	name = "implanted cyberdeck OS"
 	desc = "An OS-slot cyberdeck implant that stores and runs compiled demons without occupying the hands."
+	corp_manufacturer = "Benn"
 	icon_state = "brain_implant"
 	actions_types = list(/datum/action/item_action/organ_action/use)
 	var/obj/item/clothing/gloves/cyberdeck/implant_proxy/internal_deck
@@ -531,6 +539,7 @@
 /obj/item/organ/cyberimp/brain/anti_drop
 	name = "anti-drop implant"
 	desc = "This cybernetic motor implant reinforces grip strength. Twitch ear to lock held items."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "brain_implant_antidrop"
 	var/active = FALSE
 	var/list/stored_items = list()
@@ -542,6 +551,10 @@
 /obj/item/organ/cyberimp/brain/anti_drop/Initialize(mapload)
 	. = ..()
 	grip_strength_multiplier = tier_value(list(1.25, 1.6, 2))
+
+/obj/item/organ/cyberimp/brain/anti_drop/on_mob_insert(mob/living/carbon/receiver, special, movement_flags)
+	. = ..()
+	grip_strength_multiplier = tier_value(list(1.25, 1.6, 2), TRUE)
 
 /obj/item/organ/cyberimp/brain/anti_drop/ui_action_click()
 	if(!is_implant_functional())
@@ -611,6 +624,7 @@
 /obj/item/organ/cyberimp/brain/anti_stun
 	name = "CNS rebooter implant"
 	desc = "This implant will automatically give you back control over your central nervous system, reducing downtime when stunned."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "brain_implant_rebooter"
 	slot = ORGAN_SLOT_OS
 	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
@@ -694,6 +708,7 @@
 /obj/item/organ/cyberimp/brain/surgical_processor
 	name = "surgical processor implant"
 	desc = "A cybernetic brain implant that allows you to perform advanced operations anywhere, anytime."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "brain_implant_antidrop"
 	slot = ORGAN_SLOT_OS
 	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
@@ -746,7 +761,7 @@
 /obj/item/organ/cyberimp/brain/surgical_processor/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
 	RegisterSignal(organ_owner, COMSIG_LIVING_OPERATING_ON, PROC_REF(check_surgery))
-	organ_owner.add_surgery_speed_mod(REF(src), surgery_speed_multiplier, INFINITY)
+	organ_owner.add_surgery_speed_mod(REF(src), surgery_speed_multiplier * get_corporate_synergy_multiplier(), INFINITY)
 
 /obj/item/organ/cyberimp/brain/surgical_processor/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
@@ -831,6 +846,7 @@
 /obj/item/organ/cyberimp/brain/neurostabilizer
 	name = "\improper Samantas neurostabilizer"
 	desc = "A psychosomatic regulator that reduces the practical force of negative mood effects."
+	corp_manufacturer = "Starlight"
 	icon_state = "brain_implant"
 	slot = ORGAN_SLOT_OS
 	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
@@ -840,6 +856,10 @@
 /obj/item/organ/cyberimp/brain/neurostabilizer/Initialize(mapload)
 	. = ..()
 	negative_mood_multiplier = tier_value(list(0.85, 0.7, 0.5))
+
+/obj/item/organ/cyberimp/brain/neurostabilizer/on_mob_insert(mob/living/carbon/receiver, special, movement_flags)
+	. = ..()
+	negative_mood_multiplier = max(0.1, 1 - ((1 - tier_value(list(0.85, 0.7, 0.5))) * get_corporate_synergy_multiplier()))
 
 /obj/item/organ/cyberimp/brain/neurostabilizer/t2
 	name = "\improper Samantas neurostabilizer T2"
@@ -860,6 +880,8 @@
 /obj/item/organ/cyberimp/utility/skull/subdermal_armor
 	name = "subdermal armor lattice"
 	desc = "An external armor weave installed under the skin. Higher tiers protect more and slow more."
+	corp_manufacturer = "Ryaznov"
+	implant_flags = IMPLANT_REQUIRES_NEURAL | IMPLANT_PASSIVE | IMPLANT_EXTERNAL
 	chromity_overheat = 2
 	var/armor_value = 8
 	var/speed_penalty = 0.05
@@ -871,6 +893,7 @@
 
 /obj/item/organ/cyberimp/utility/skull/subdermal_armor/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
+	armor_value = tier_value(list(8, 14, 22), TRUE)
 	organ_owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_subdermal_armor, multiplicative_slowdown = speed_penalty)
 
 /obj/item/organ/cyberimp/utility/skull/subdermal_armor/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
@@ -888,12 +911,17 @@
 /obj/item/organ/cyberimp/utility/skull/opticamo_surface
 	name = "opticamo surface"
 	desc = "A skin-grade optic camouflage surface. Tiers improve invisibility strength for future stealth hooks."
+	corp_manufacturer = "Benn"
 	chromity_overheat = 6
 	var/invisibility_strength = 0.35
 
 /obj/item/organ/cyberimp/utility/skull/opticamo_surface/Initialize(mapload)
 	. = ..()
-	invisibility_strength = tier_value(list(0.35, 0.6, 0.85))
+	invisibility_strength = min(1, tier_value(list(0.35, 0.6, 0.85)))
+
+/obj/item/organ/cyberimp/utility/skull/opticamo_surface/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	invisibility_strength = min(1, tier_value(list(0.35, 0.6, 0.85), TRUE))
 
 /obj/item/organ/cyberimp/utility/skull/opticamo_surface/t2
 	name = "opticamo surface T2"
@@ -918,6 +946,7 @@
 /obj/item/organ/cyberimp/leg/speed
 	name = "leg speed actuator"
 	desc = "A leg actuator package that improves sprint and running response."
+	corp_manufacturer = "Benn"
 	icon_state = "implant-toolkit"
 	chromity_overheat = 3
 	var/speed_bonus = -0.08
@@ -928,6 +957,7 @@
 
 /obj/item/organ/cyberimp/leg/speed/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
+	speed_bonus = tier_value(list(-0.08, -0.14, -0.22), TRUE)
 	organ_owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_leg_speed, multiplicative_slowdown = speed_bonus)
 
 /obj/item/organ/cyberimp/leg/speed/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
@@ -945,6 +975,7 @@
 /obj/item/organ/cyberimp/leg/silent_step
 	name = "silent step implant"
 	desc = "A passive gait suppressor that silences all footsteps made by the body."
+	corp_manufacturer = "Benn"
 	icon_state = "implant-toolkit"
 	chromity_overheat = 1
 

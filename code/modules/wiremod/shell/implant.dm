@@ -5,7 +5,7 @@
 	implant_info = "Functions as a shell for integrated circuits. Activation conditions and effects are defined by the installed circuit."
 
 	implant_lore = "The Subdermal Circuit Housing is a common implant design manufactured primarily by DIY electronics enthusiasts. \
-	Similar in concept to Brain-Computer Interfaces, these devices accept an integrated circuit, and support components that allow the \
+	Similar in concept to integral brain connectors, these devices accept an integrated circuit, and support components that allow the \
 	user to trigger other installed components. What it gains in the ability to be implanted in non-humanoid hosts, it loses in physical \
 	capacity and support for various neural interfacing capabilities."
 

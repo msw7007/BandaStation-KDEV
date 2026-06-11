@@ -617,6 +617,14 @@
 		CYBER_DEMON_EFFECT_DEBUFF,
 	)
 
+/datum/cyberspace_demon/proc/requires_neural_living_target()
+	return !(effect in list(
+		CYBER_DEMON_EFFECT_PROTECTION,
+		CYBER_DEMON_EFFECT_WALL,
+		CYBER_DEMON_EFFECT_CRYPTOKEY,
+		CYBER_DEMON_EFFECT_MOVEMENT,
+	))
+
 /datum/cyberspace_demon/proc/apply_neutralization(mob/living/caster, mob/living/target, current_power, effect_duration)
 	var/list/result = list(
 		"blocked" = FALSE,
@@ -778,6 +786,10 @@
 		return TRUE
 	var/mob/living/neutralized_target = istype(target, /mob/living) ? target : null
 	if(neutralized_target)
+		if(requires_neural_living_target() && !neutralized_target.has_neural_implant())
+			if(announce && caster)
+				to_chat(caster, span_warning("[target] has no neural interface for [demon_name] to bind to."))
+			return FALSE
 		var/list/neutralized = apply_neutralization(caster, neutralized_target, current_power, effect_duration)
 		if(neutralized["blocked"])
 			if(announce && caster)
@@ -1087,6 +1099,9 @@
 /datum/cyberspace_demon/proc/can_apply_secondary_effect(mob/living/caster, atom/origin, atom/candidate)
 	if(!candidate || QDELETED(candidate) || candidate == origin || candidate == caster)
 		return FALSE
+	var/mob/living/living_candidate = candidate
+	if(istype(living_candidate) && requires_neural_living_target() && !living_candidate.has_neural_implant())
+		return FALSE
 	switch(effect)
 		if(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX, CYBER_DEMON_EFFECT_OVERHEAT_DELTA, CYBER_DEMON_EFFECT_PROTECTION)
 			return istype(candidate, /mob/living) || istype(candidate, /obj/effect/cyberspace_wall_shell) || istype(candidate, /obj/effect/cyberspace_node_shell) || istype(candidate, /obj/effect/cyberspace_object_trace)
@@ -1183,6 +1198,9 @@
 
 	var/mob/living/living_target = target
 	if(istype(living_target))
+		if(!living_target.has_neural_implant())
+			to_chat(caster, span_warning("[living_target] has no neural interface for [demon_name] to bind to."))
+			return FALSE
 		var/obj/item/cyberspace_engram_chip/held_chip = find_held_engram_chip(caster)
 		if(!held_chip)
 			to_chat(caster, span_warning("[demon_name] needs an engram chip in hand to bind a physical target."))

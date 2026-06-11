@@ -2,15 +2,15 @@
  * # Object Overlay Component
  *
  * Shows an overlay ontop of an object. Toggleable.
- * Requires a BCI shell.
+ * Requires an integral brain connector shell.
  */
 
 #define OBJECT_OVERLAY_LIMIT 10
 
 /obj/item/circuit_component/object_overlay
 	display_name = "Object Overlay"
-	desc = "Requires a BCI shell. A component that shows an overlay on top of an object."
-	category = "BCI"
+	desc = "Requires an integral brain connector shell. A component that shows an overlay on top of an object."
+	category = "Brain Connector"
 
 	required_shells = list(/obj/item/organ/cyberimp/bci)
 

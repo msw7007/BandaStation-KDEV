@@ -454,7 +454,10 @@
 
 /mob/living/proc/get_cyberpunk_grab_power(mob/living/target, upgrade = FALSE)
 	var/grab_power = get_character_skill_level(SKILL_GRAPPLING)
-	var/obj/item/organ/cyberimp/brain/anti_drop/grip_implant = get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT)
+	var/obj/item/organ/cyberimp/brain/anti_drop/grip_implant
+	if(iscarbon(src))
+		var/mob/living/carbon/carbon_owner = src
+		grip_implant = locate(/obj/item/organ/cyberimp/brain/anti_drop) in carbon_owner.organs
 	if(istype(grip_implant) && grip_implant.is_implant_functional())
 		grab_power *= grip_implant.grip_strength_multiplier
 	return round(grab_power)
@@ -979,7 +982,6 @@
 		new /datum/cyberpunk_npc_shop_item("cigarettes", "Cigarettes", "A disposable pack of smokes.", /obj/item/storage/fancy/cigarettes, "cigarettes", 45, 8, 6),
 		new /datum/cyberpunk_npc_shop_item("toy_ball", "Toy", "Cheap distraction.", /obj/item/toy/basketball, "toys", 70, 15, 2),
 		new /datum/cyberpunk_npc_shop_item("jumpsuit", "Equipment", "Basic clothes.", /obj/item/clothing/under/color/grey, "equipment", 90, 20, 3),
-		new /datum/cyberpunk_npc_shop_item("interface", "Implant", "Basic neural interface.", /obj/item/organ/cyberimp/bci, "implants", 900, 180, 1),
 		new /datum/cyberpunk_npc_shop_item("parts", "Machine parts", "Generic stock part.", /obj/item/stock_parts/scanning_module, "parts", 120, 25, 4),
 	)
 	var/list/services = list(
@@ -1121,7 +1123,6 @@
 		new /datum/cyberpunk_npc_shop_item("cigarettes", "Cigarettes", "A disposable pack of smokes.", /obj/item/storage/fancy/cigarettes, "cigarettes", 45, 8, 6),
 		new /datum/cyberpunk_npc_shop_item("toy_ball", "Toy", "Cheap distraction.", /obj/item/toy/basketball, "toys", 70, 15, 2),
 		new /datum/cyberpunk_npc_shop_item("jumpsuit", "Equipment", "Basic clothes.", /obj/item/clothing/under/color/grey, "equipment", 90, 20, 3),
-		new /datum/cyberpunk_npc_shop_item("interface", "Implant", "Basic neural interface.", /obj/item/organ/cyberimp/bci, "implants", 900, 180, 1),
 		new /datum/cyberpunk_npc_shop_item("parts", "Machine parts", "Generic stock part.", /obj/item/stock_parts/scanning_module, "parts", 120, 25, 4),
 	)
 	if(!length(categories))

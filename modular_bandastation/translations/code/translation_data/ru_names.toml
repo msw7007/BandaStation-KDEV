@@ -16135,14 +16135,7 @@ instrumental = "Геркулесным гравитронным спинномо
 prepositional = "Геркулесном гравитронном спинномозговом импланте"
 gender = "male"
 
-["CNS skillchip connector implant"]
-nominative = "имплант подключения скилл-чипов к ЦНС"
-genitive = "импланта подключения скилл-чипов к ЦНС"
-dative = "импланту подключения скилл-чипов к ЦНС"
-accusative = "имплант подключения скилл-чипов к ЦНС"
-instrumental = "имплантом подключения скилл-чипов к ЦНС"
-prepositional = "импланте подключения скилл-чипов к ЦНС"
-gender = "male"
+
 
 ["nutriment pump implant"]
 nominative = "имплант питающей помпы"
@@ -16226,14 +16219,7 @@ instrumental = "дубликатором модулей"
 prepositional = "дубликаторе модулей"
 gender = "male"
 
-["brain-computer interface manipulation chamber"]
-nominative = "камера манипуляции интерфейсом мозг-компьютер"
-genitive = "камеры манипуляции интерфейсом мозг-компьютер"
-dative = "камере манипуляции интерфейсом мозг-компьютер"
-accusative = "камеру манипуляции интерфейсом мозг-компьютер"
-instrumental = "камерой манипуляции интерфейсом мозг-компьютер"
-prepositional = "камере манипуляции интерфейсом мозг-компьютер"
-gender = "female"
+
 
 ["R&D Console"]
 nominative = "консоль R&D"
@@ -17593,14 +17579,7 @@ instrumental = "сборкой схемного раздатчика"
 prepositional = "сборке схемного раздатчика"
 gender = "female"
 
-["brain-computer interface assembly"]
-nominative = "сборка интерфейса мозг-компьютер"
-genitive = "сборки интерфейса мозг-компьютер"
-dative = "сборке интерфейса мозг-компьютер"
-accusative = "сборку интерфейса мозг-компьютер"
-instrumental = "сборкой интерфейса мозг-компьютер"
-prepositional = "сборке интерфейса мозг-компьютер"
-gender = "female"
+
 
 ["scanner gate assembly"]
 nominative = "сборка шлюза сканера"
@@ -28332,14 +28311,7 @@ instrumental = "скилл-чипом \"Ле С46Р4Ж\""
 prepositional = "скилл-чипе \"Ле С46Р4Ж\""
 gender = "male"
 
-["Skillchip adapter"]
-nominative = "адаптер для скилл-чипов"
-genitive = "адаптера для скилл-чипов"
-dative = "адаптеру для скилл-чипов"
-accusative = "адаптер для скилл-чипов"
-instrumental = "адаптером для скилл-чипов"
-prepositional = "адаптере для скилл-чипов"
-gender = "male"
+
 
 ["WINE skillchip"]
 nominative = "скилл-чип \"ВИНО\""

@@ -26,7 +26,7 @@
 
 	/// Allow camera range to be set or not
 	var/camera_range_settable = TRUE
-	/// Used only for the BCI shell type, as the COMSIG_MOVABLE_MOVED signal need to be assigned to the user mob, not the shell circuit
+	/// Used only for the integral brain connector shell type, as the COMSIG_MOVABLE_MOVED signal need to be assigned to the user mob, not the shell circuit
 	var/camera_signal_move_override = FALSE
 
 	/// Camera object
@@ -279,13 +279,13 @@
 		shell_camera.toggle_cam(null, 0)
 
 /obj/item/circuit_component/remotecam/bci
-	display_name = "BCI Camera"
+	display_name = "Brain Connector Camera"
 	desc = "Digitizes user's sight for surveillance-on-the-go. User must have fully functional eyes for digitizer to work. Camera range input is either 0 (near) or 1 (far). Network field is used for camera network."
-	category = "BCI"
-	camera_prefix = "BCI"
+	category = "Brain Connector"
+	camera_prefix = "Brain Connector"
 	required_shells = list(/obj/item/organ/cyberimp/bci)
 
-	/// BCIs are organs, and thus the signal must be assigned ONLY when the shell has been installed in a mob - otherwise the camera will never update position
+	/// Integral brain connectors are organs, and thus the signal must be assigned ONLY when the shell has been installed in a mob - otherwise the camera will never update position
 	camera_signal_move_override = TRUE
 
 	/// Store the BCI owner as a variable, so we can remove the move signal if the user was gibbed/destroyed while the BCI is still installed

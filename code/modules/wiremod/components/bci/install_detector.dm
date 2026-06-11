@@ -1,8 +1,8 @@
 /**
  * # Install Detector Component
  *
- * Detects when a BCI, implant, or similar such circuit is installed/removed.
- * Requires a shell that gets inserted into a mob, such as a BCI or implant.
+ * Detects when an integral brain connector, implant, or similar circuit is installed/removed.
+ * Requires a shell that gets inserted into a mob, such as an integral brain connector or implant.
  */
 
 /obj/item/circuit_component/install_detector

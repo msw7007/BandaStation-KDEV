@@ -62,7 +62,7 @@
 	shell_to_spawn = /obj/structure/dispenser_bot
 
 /obj/item/shell/bci
-	name = "brain-computer interface assembly"
+	name = "integral brain connector assembly"
 	icon_state = "bci-open"
 	shell_to_spawn = /obj/item/organ/cyberimp/bci
 	w_class = WEIGHT_CLASS_TINY

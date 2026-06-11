@@ -2,13 +2,13 @@
  * # VOX Announcement Component
  *
  * These play a VOX announcement with inputed words from either a string or a list.
- * Requires a BCI shell.
+ * Requires an integral brain connector shell.
  */
 
 /obj/item/circuit_component/vox
 	display_name = "VOX Announcement"
-	desc = "A component that plays a local VOX Announcement for the user. Requires a BCI shell."
-	category = "BCI"
+	desc = "A component that plays a local VOX Announcement for the user. Requires an integral brain connector shell."
+	category = "Brain Connector"
 
 	required_shells = list(/obj/item/organ/cyberimp/bci)
 

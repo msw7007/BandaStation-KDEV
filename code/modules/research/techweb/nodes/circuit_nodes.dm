@@ -117,8 +117,8 @@
 
 /datum/techweb_node/bci
 	id = TECHWEB_NODE_BCI
-	display_name = "Нейрокомпьютерный интерфейс"
-	description = "Встраиваемый нейрокомпьютерный интерфейс для прямого взаимодействия между центральной нервной системой и электронными устройствами."
+	display_name = "Integral Brain Connector"
+	description = "An implanted Wiremod connector for running integrated circuits through a user's brain. This is not a neural interface."
 	prereq_ids = list(TECHWEB_NODE_CIRCUIT_SHELLS, TECHWEB_NODE_PASSIVE_IMPLANTS)
 	design_ids = list(
 		"bci_implanter",

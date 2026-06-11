@@ -1,6 +1,6 @@
 /obj/item/organ/cyberimp/bci
-	name = "brain-computer interface"
-	desc = "An implant that can be placed in a user's head to control circuits using their brain."
+	name = "integral brain connector"
+	desc = "An implanted connector socket for running integrated circuits through the user's brain. It is a Wiremod circuit interface, not a neural interface."
 	icon = 'icons/obj/science/circuits.dmi'
 	icon_state = "bci"
 	zone = BODY_ZONE_HEAD
@@ -56,8 +56,8 @@
 	QDEL_LIST_ASSOC_VAL(action_comp.granted_to)
 
 /obj/item/circuit_component/bci_core
-	display_name = "BCI Core"
-	desc = "Controls the core operations of the BCI."
+	display_name = "Integral Brain Connector Core"
+	desc = "Controls the core operations of the integral brain connector."
 
 	/// A reference to the action button to look at charge/get info
 	var/datum/action/innate/bci_charge_action/charge_action
@@ -195,7 +195,7 @@
 		parent.attack_ghost(usr)
 
 /datum/action/innate/bci_charge_action
-	name = "Check BCI Charge"
+	name = "Check Connector Charge"
 	check_flags = NONE
 	button_icon = 'icons/obj/machines/cell_charger.dmi'
 	button_icon_state = "cell"
@@ -245,8 +245,8 @@
 	button.maptext = cell ? MAPTEXT("[cell.percent()]%") : ""
 
 /obj/machinery/bci_implanter
-	name = "brain-computer interface manipulation chamber"
-	desc = "A machine that, when given a brain-computer interface, will implant it into an occupant. Otherwise, will remove any brain-computer interfaces they already have."
+	name = "integral brain connector manipulation chamber"
+	desc = "A machine that, when given an integral brain connector, will implant it into an occupant. Otherwise, it will remove any integral brain connector they already have."
 	circuit = /obj/item/circuitboard/machine/bci_implanter
 	icon = 'icons/obj/machines/bci_implanter.dmi'
 	icon_state = "bci_implanter"
@@ -278,9 +278,9 @@
 /obj/machinery/bci_implanter/examine(mob/user)
 	. = ..()
 	if (isnull(bci_to_implant))
-		. += span_notice("There is no BCI inserted.")
+		. += span_notice("There is no integral brain connector inserted.")
 	else
-		. += span_notice("Right-click to remove current BCI.")
+		. += span_notice("Right-click to remove current integral brain connector.")
 
 /obj/machinery/bci_implanter/proc/set_busy(status, working_icon)
 	busy = status
@@ -327,10 +327,10 @@
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 
 	if (isnull(bci_to_implant))
-		balloon_alert(user, "no bci inserted!")
+		balloon_alert(user, "no connector inserted!")
 	else
 		user.put_in_hands(bci_to_implant)
-		balloon_alert(user, "ejected bci")
+		balloon_alert(user, "ejected connector")
 
 	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 
@@ -340,16 +340,16 @@
 
 	var/obj/item/organ/cyberimp/bci/new_bci = tool
 	if (!(locate(/obj/item/integrated_circuit) in new_bci))
-		balloon_alert(user, "bci has no circuit!")
+		balloon_alert(user, "connector has no circuit!")
 		return ITEM_INTERACT_BLOCKING
 
 	var/obj/item/organ/cyberimp/bci/previous_bci_to_implant = bci_to_implant
 	user.transferItemToLoc(new_bci, src)
 	bci_to_implant = new_bci
 	if (isnull(previous_bci_to_implant))
-		balloon_alert(user, "inserted bci")
+		balloon_alert(user, "inserted connector")
 	else
-		balloon_alert(user, "swapped bci")
+		balloon_alert(user, "swapped connector")
 		user.put_in_hands(previous_bci_to_implant)
 	return ITEM_INTERACT_SUCCESS
 
@@ -394,11 +394,11 @@
 		bci_organ.Remove(carbon_occupant)
 
 		if (isnull(bci_to_implant))
-			say("Occupant's previous brain-computer interface has been transferred to internal storage unit.")
+			say("Occupant's previous integral brain connector has been transferred to internal storage unit.")
 			carbon_occupant.transferItemToLoc(bci_organ, src)
 			bci_to_implant = bci_organ
 		else
-			say("Occupant's previous brain-computer interface has been ejected.")
+			say("Occupant's previous integral brain connector has been ejected.")
 			bci_organ.forceMove(drop_location())
 	else if (!isnull(bci_to_implant))
 		say("Occupant has been injected with [bci_to_implant].")
@@ -422,7 +422,7 @@
 	if (istype(occupant))
 		var/obj/item/organ/cyberimp/bci/bci_organ = carbon_occupant.get_organ_by_type(/obj/item/organ/cyberimp/bci)
 		if (isnull(bci_organ) && isnull(bci_to_implant))
-			say("No brain-computer interface inserted, and occupant does not have one. Insert a BCI to implant one.")
+			say("No integral brain connector inserted, and occupant does not have one. Insert a connector to implant one.")
 			playsound(src, 'sound/machines/buzz/buzz-sigh.ogg', 30, TRUE)
 			return FALSE
 
@@ -472,7 +472,7 @@
 	return ..()
 
 /obj/item/circuitboard/machine/bci_implanter
-	name = "Brain-Computer Interface Manipulation Chamber"
+	name = "Integral Brain Connector Manipulation Chamber"
 	greyscale_colors = CIRCUIT_COLOR_SCIENCE
 	build_path = /obj/machinery/bci_implanter
 	req_components = list(

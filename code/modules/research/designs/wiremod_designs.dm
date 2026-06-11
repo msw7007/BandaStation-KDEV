@@ -408,7 +408,7 @@
 	build_path = /obj/item/circuit_component/thought_listener
 
 /datum/design/component/bci/target_intercept
-	name = "BCI Target Interceptor"
+	name = "Brain Connector Target Interceptor"
 	id = "comp_target_intercept"
 	build_path = /obj/item/circuit_component/target_intercept
 
@@ -498,7 +498,7 @@
 	build_path = /obj/item/circuit_component/list_literal/wirenet_send
 
 /datum/design/component/bci/bci_camera
-	name = "BCI Camera"
+	name = "Brain Connector Camera"
 	id = "comp_camera_bci"
 	build_path = /obj/item/circuit_component/remotecam/bci
 
@@ -638,8 +638,8 @@
 	)
 
 /datum/design/bci_shell
-	name = "Brain-Computer Interface Shell"
-	desc = "An implant that can be placed in a user's head to control circuits using their brain."
+	name = "Integral Brain Connector Shell"
+	desc = "An implanted connector socket for running integrated circuits through the user's brain."
 	id = "bci_shell"
 	materials = list(
 		/datum/material/glass =SHEET_MATERIAL_AMOUNT,
@@ -666,8 +666,8 @@
 	)
 
 /datum/design/board/bci_implanter
-	name = "Brain-Computer Interface Manipulation Chamber"
-	desc = "A machine that, when given a brain-computer interface, will implant it into an occupant. Otherwise, will remove any brain-computer interfaces they already have."
+	name = "Integral Brain Connector Manipulation Chamber"
+	desc = "A machine that, when given an integral brain connector, will implant it into an occupant. Otherwise, it will remove any integral brain connector they already have."
 	id = "bci_implanter"
 	build_path = /obj/item/circuitboard/machine/bci_implanter
 	build_type = COMPONENT_PRINTER

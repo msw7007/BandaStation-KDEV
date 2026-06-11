@@ -383,12 +383,24 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 /obj/item/organ/proc/get_cyberpunk_implant_cooldown_multiplier()
 	if(!owner || !is_implant_functional())
 		return 1
-	return owner.get_cyberpunk_implant_cooldown_multiplier()
+	var/multiplier = owner.get_cyberpunk_implant_cooldown_multiplier()
+	multiplier /= get_corporate_synergy_multiplier()
+	return max(0.05, multiplier)
 
 /obj/item/organ/proc/get_cyberpunk_implant_passive_interval_multiplier()
 	if(!owner || !is_implant_functional())
 		return 1
-	return owner.get_cyberpunk_implant_passive_interval_multiplier()
+	var/multiplier = owner.get_cyberpunk_implant_passive_interval_multiplier()
+	multiplier /= get_corporate_synergy_multiplier()
+	return max(0.05, multiplier)
+
+/obj/item/organ/proc/get_corporate_synergy_multiplier()
+	if(!owner || !("corp_manufacturer" in vars))
+		return 1
+	var/manufacturer = vars["corp_manufacturer"]
+	if(!manufacturer || manufacturer == "independent")
+		return 1
+	return owner.get_corporate_synergy_multiplier(manufacturer)
 
 /obj/item/organ/proc/handle_organ_pain(seconds_per_tick)
 	if(!owner)

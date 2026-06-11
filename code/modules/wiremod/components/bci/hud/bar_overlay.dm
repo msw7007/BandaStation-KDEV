@@ -5,13 +5,13 @@
  * # Bar Overlay Component
  *
  * Basically an advanced verion of object overlay component that shows a horizontal/vertical bar.
- * Requires a BCI shell.
+ * Requires an integral brain connector shell.
  */
 
 /obj/item/circuit_component/object_overlay/bar
 	display_name = "Bar Overlay"
-	desc = "Requires a BCI shell. A component that shows a bar overlay atop an object, ranging from 0 to 100."
-	category = "BCI"
+	desc = "Requires an integral brain connector shell. A component that shows a bar overlay atop an object, ranging from 0 to 100."
+	category = "Brain Connector"
 
 	var/datum/port/input/option/bar_overlay_options
 	var/datum/port/input/bar_number

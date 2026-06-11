@@ -70,7 +70,7 @@
 
 /obj/item/skillchip/musical/examine(mob/user)
 	. = ..()
-	. += span_tinynoticeital("Huh, looks like it'd fit in a skillchip adapter.")
+	. += span_tinynoticeital("Huh, looks like it'd interface with a neural implant.")
 
 /obj/item/skillchip/musical/examine_more(mob/user)
 	. = ..()

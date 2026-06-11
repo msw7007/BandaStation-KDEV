@@ -10,6 +10,7 @@
 /obj/item/organ/cyberimp/eyes/hud
 	name = "HUD implant"
 	desc = "These cybernetic eyes will display a HUD over everything you see. Maybe."
+	corp_manufacturer = "Benn"
 	slot = ORGAN_SLOT_EYELID_AUG
 	actions_types = list(/datum/action/item_action/organ_action/toggle_hud)
 	var/HUD_traits = list()
@@ -101,6 +102,7 @@
 /obj/item/organ/cyberimp/eyes/psi
 	name = "psi eye implant"
 	desc = "A neural optical implant that lets psionic mutation powers resolve a target."
+	corp_manufacturer = "Benn"
 	icon_state = "eye_implant_diagnostic"
 	chromity_overheat = 4
 
@@ -115,6 +117,7 @@
 /obj/item/organ/cyberimp/eyes/laser
 	name = "laser eye implant"
 	desc = "A combat eye implant that projects focused light as a short combat beam."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "eye_implant_security"
 	chromity_overheat = 6
 	var/shot_overheat = 12
@@ -135,9 +138,10 @@
 	to_chat(source, span_warning("You shoot with your laser eye implant!"))
 	source.changeNext_move(CLICK_CD_RANGE)
 	source.newtonian_move(get_angle(source, target))
-	add_chromity_overheat(shot_overheat)
+	add_chromity_overheat(round(shot_overheat / get_corporate_synergy_multiplier()))
 	var/obj/projectile/beam/laser/laser_eyes/laser_beam = new(source.loc)
 	laser_beam.firer = source
+	laser_beam.damage *= get_corporate_synergy_multiplier()
 	laser_beam.def_zone = ran_zone(source.zone_selected)
 	laser_beam.aim_projectile(target, source, modifiers)
 	INVOKE_ASYNC(laser_beam, TYPE_PROC_REF(/obj/projectile, fire))

@@ -7,6 +7,7 @@
 /obj/item/organ/cyberimp/chest/nutriment
 	name = "nutriment pump implant"
 	desc = "This implant will synthesize and pump into your bloodstream a small amount of nutriment when you are starving."
+	corp_manufacturer = "Starlight"
 	icon_state = "nutriment_implant"
 	aug_overlay = "nutripump"
 	var/hunger_threshold = NUTRITION_LEVEL_STARVING
@@ -51,6 +52,7 @@
 /obj/item/organ/cyberimp/chest/reviver
 	name = "reviver implant"
 	desc = "This implant will attempt to revive and heal you if you lose consciousness. For the faint of heart!"
+	corp_manufacturer = "Ryaznov"
 	icon_state = "reviver_implant"
 	aug_overlay = "reviver"
 	emissive_overlay = TRUE
@@ -171,6 +173,7 @@
 /obj/item/organ/cyberimp/chest/thrusters
 	name = "implantable thrusters set"
 	desc = "An implantable set of thruster ports for zero-gravity maneuvering. They do not use fuel, but generate chrome load while active."
+	corp_manufacturer = "Benn"
 	slot = ORGAN_SLOT_SPINE
 	valid_zones = list(BODY_ZONE_CHEST = ORGAN_SLOT_SPINE)
 	icon_state = "imp_jetpack"
@@ -230,7 +233,7 @@
 		return
 
 	on = TRUE
-	set_chromity_active_overheat_floor(active_overheat_floor)
+	set_chromity_active_overheat_floor(round(active_overheat_floor / get_corporate_synergy_multiplier()))
 	owner.add_movespeed_modifier(/datum/movespeed_modifier/jetpack/cybernetic)
 	if(!silent)
 		to_chat(owner, span_notice("You turn your thrusters set on."))
@@ -279,6 +282,7 @@
 /obj/item/organ/cyberimp/chest/blackrock_reverse_cordial
 	name = "\improper Blackrock reverse cordial system"
 	desc = "A chest control implant that shortens debuffs, knockdowns and slow-control effects."
+	corp_manufacturer = "Starlight"
 	icon_state = "reviver_implant"
 	slot = ORGAN_SLOT_CHEST_AUG
 	chromity_overheat = 4
@@ -287,6 +291,10 @@
 /obj/item/organ/cyberimp/chest/blackrock_reverse_cordial/Initialize(mapload)
 	. = ..()
 	control_duration_multiplier = tier_value(list(0.8, 0.5, 0.2))
+
+/obj/item/organ/cyberimp/chest/blackrock_reverse_cordial/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	control_duration_multiplier = max(0.05, 1 - ((1 - tier_value(list(0.8, 0.5, 0.2))) * get_corporate_synergy_multiplier()))
 
 /obj/item/organ/cyberimp/chest/blackrock_reverse_cordial/t2
 	name = "\improper Blackrock reverse cordial system T2"
@@ -299,6 +307,7 @@
 /obj/item/organ/cyberimp/chest/adrenaline_booster
 	name = "adrenaline booster"
 	desc = "An active chest implant that floods the body with combat stimulants without increasing chrome load."
+	corp_manufacturer = "Benn"
 	icon_state = "reviver_implant"
 	slot = ORGAN_SLOT_CHEST_AUG
 	actions_types = list(/datum/action/item_action/organ_action/use)
@@ -318,8 +327,10 @@
 	if(!COOLDOWN_FINISHED(src, adrenaline_cooldown))
 		to_chat(owner, span_warning("[capitalize(src)] is still recharging."))
 		return
+	boost_duration = tier_value(list(8 SECONDS, 12 SECONDS, 18 SECONDS), TRUE)
+	boost_speed = tier_value(list(-0.15, -0.25, -0.35), TRUE)
 	owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberimp_adrenaline, multiplicative_slowdown = boost_speed)
-	owner.adjust_stamina_loss(-25 * implant_tier)
+	owner.adjust_stamina_loss(-25 * implant_tier * get_corporate_synergy_multiplier())
 	addtimer(CALLBACK(owner, TYPE_PROC_REF(/mob, remove_movespeed_modifier), /datum/movespeed_modifier/cyberimp_adrenaline), boost_duration, TIMER_UNIQUE | TIMER_OVERRIDE)
 	COOLDOWN_START(src, adrenaline_cooldown, 45 SECONDS * get_cyberpunk_implant_cooldown_multiplier())
 	to_chat(owner, span_notice("[capitalize(src)] floods your body with adrenaline."))
@@ -335,6 +346,7 @@
 /obj/item/organ/cyberimp/chest/biomonitor
 	name = "biomonitor implant"
 	desc = "A passive monitor that will feed detailed vitals into the neural interface once the full UI pass lands."
+	corp_manufacturer = "Starlight"
 	icon_state = "reviver_implant"
 	slot = ORGAN_SLOT_CHEST_AUG
 	chromity_overheat = 1
@@ -342,6 +354,7 @@
 /obj/item/organ/cyberimp/chest/blood_pump
 	name = "blood pump implant"
 	desc = "A passive abdominal circulation pump that gradually stabilizes oxygenation and blood loss."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "nutriment_implant"
 	slot = ORGAN_SLOT_BELLY_AUG
 	chromity_overheat = 2
@@ -350,12 +363,14 @@
 	. = ..()
 	if(!is_implant_functional())
 		return
-	owner.adjust_oxy_loss(-0.4 * seconds_per_tick, updating_health = FALSE)
-	owner.adjust_stamina_loss(-0.8 * seconds_per_tick, updating_stamina = FALSE)
+	var/synergy = get_corporate_synergy_multiplier()
+	owner.adjust_oxy_loss(-0.4 * synergy * seconds_per_tick, updating_health = FALSE)
+	owner.adjust_stamina_loss(-0.8 * synergy * seconds_per_tick, updating_stamina = FALSE)
 
 /obj/item/organ/cyberimp/chest/metabolism_booster
 	name = "metabolism regulator"
 	desc = "A passive abdominal implant that slows reagent metabolism. Higher tiers keep drugs and medicine stable longer."
+	corp_manufacturer = "Starlight"
 	icon_state = "nutriment_implant"
 	slot = ORGAN_SLOT_BELLY_AUG
 	chromity_overheat = 2
@@ -364,6 +379,10 @@
 /obj/item/organ/cyberimp/chest/metabolism_booster/Initialize(mapload)
 	. = ..()
 	metabolism_multiplier = tier_value(list(0.98, 0.95, 0.9))
+
+/obj/item/organ/cyberimp/chest/metabolism_booster/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
+	. = ..()
+	metabolism_multiplier = max(0.05, 1 - ((1 - tier_value(list(0.98, 0.95, 0.9))) * get_corporate_synergy_multiplier()))
 
 /obj/item/organ/cyberimp/chest/metabolism_booster/t2
 	name = "metabolism regulator T2"
@@ -377,6 +396,7 @@
 	name = "\improper Herculean gravitronic spinal implant"
 	desc = "This gravitronic spinal interface is able to improve the athletics of a user, allowing them greater physical ability. \
 		Contains a slot which can be upgraded with a gravity anomaly core, improving its performance."
+	corp_manufacturer = "Ryaznov"
 	icon_state = "herculean_implant"
 	slot = ORGAN_SLOT_SPINE
 	valid_zones = list(BODY_ZONE_CHEST = ORGAN_SLOT_SPINE)

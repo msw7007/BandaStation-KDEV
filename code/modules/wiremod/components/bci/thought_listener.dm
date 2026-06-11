@@ -2,13 +2,13 @@
  * # Thought Listener Component
  *
  * Allows user to input a string.
- * Requires a BCI shell.
+ * Requires an integral brain connector shell.
  */
 
 /obj/item/circuit_component/thought_listener
 	display_name = "Thought Listener"
-	desc = "A component that allows the user to input a string using their mind. Requires a BCI shell."
-	category = "BCI"
+	desc = "A component that allows the user to input a string using their mind. Requires an integral brain connector shell."
+	category = "Brain Connector"
 
 	required_shells = list(/obj/item/organ/cyberimp/bci)
 
