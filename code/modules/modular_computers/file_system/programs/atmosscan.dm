@@ -40,7 +40,8 @@
 /datum/computer_file/program/atmosscan/proc/on_analyze(datum/source, atom/target)
 	var/mixture = target.return_analyzable_air()
 	if(!mixture)
-		return FALSE
+		last_gasmix_data = list(lightweight_atmos_scan_parser(target, capitalize(LOWER_TEXT(target.name))))
+		return TRUE
 	var/list/airs = islist(mixture) ? mixture : list(mixture)
 	var/list/new_gasmix_data = list()
 	for(var/datum/gas_mixture/air as anything in airs)
@@ -60,8 +61,7 @@
 	data["clickAtmozphereCompatible"] = (computer.hardware_flag & PROGRAM_PDA)
 	switch (atmozphere_mode) //Null air wont cause errors, don't worry.
 		if(ATMOZPHERE_SCAN_ENV)
-			var/datum/gas_mixture/air = turf?.return_air()
-			data["gasmixes"] = list(gas_mixture_parser(air, "Location Reading"))
+			data["gasmixes"] = list(lightweight_atmos_scan_parser(turf, "Location Reading"))
 		if(ATMOZPHERE_SCAN_CLICK)
 			LAZYINITLIST(last_gasmix_data)
 			data["gasmixes"] = last_gasmix_data
@@ -81,7 +81,7 @@
 			atmozphere_mode = ATMOZPHERE_SCAN_CLICK
 			RegisterSignal(computer, COMSIG_ITEM_ATTACK_SELF_SECONDARY, PROC_REF(turf_analyze))
 			var/turf/turf = get_turf(computer)
-			last_gasmix_data = list(gas_mixture_parser(turf?.return_air(), "Location Reading"))
+			last_gasmix_data = list(lightweight_atmos_scan_parser(turf, "Location Reading"))
 			return TRUE
 
 #undef ATMOZPHERE_SCAN_ENV

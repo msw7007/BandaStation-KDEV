@@ -15,4 +15,5 @@
 #include "code/alarms.dm"
 #include "code/outdoor_traits.dm"
 #include "code/area_air.dm"
+#include "code/pressure_hazard.dm"
 #include "code/vent_pump_lite.dm"

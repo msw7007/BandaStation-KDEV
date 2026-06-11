@@ -152,9 +152,7 @@
 
 	if (local_turf)
 		local_turf = get_step(local_turf, REVERSE_DIR(dir))
-		tile_air_pressure = 0
-		if (local_turf)
-			tile_air_pressure = max(0, local_turf.return_air().return_pressure())
+		tile_air_pressure = get_lightweight_tile_pressure(local_turf)
 		on_dock_request(tile_air_pressure)
 
 /obj/machinery/atmospherics/components/unary/airlock_pump/on_deconstruction(disassembled)
@@ -200,8 +198,8 @@
 		return //Couldn't complete the cycle before timeout
 
 	var/datum/gas_mixture/distro_air = airs[1]
-	var/datum/gas_mixture/tile_air = loc.return_air()
-	var/tile_air_pressure = tile_air.return_pressure()
+	var/turf/local_turf = get_turf(src)
+	var/tile_air_pressure = get_lightweight_tile_pressure(local_turf)
 
 	if(pump_direction == ATMOS_DIRECTION_RELEASING) //distro node -> tile
 		var/pressure_delta = cycle_pressure_target - tile_air_pressure
@@ -212,7 +210,7 @@
 		var/total_tiles = adjacent_turfs.len + 1
 		var/split_moles = QUANTIZE(available_moles / total_tiles)
 
-		fill_tile(loc, split_moles, pressure_delta)
+		fill_tile(location, split_moles, pressure_delta)
 		for(var/turf/tile as anything in adjacent_turfs)
 			fill_tile(tile, split_moles, pressure_delta)
 	else //tile -> waste node
@@ -220,7 +218,7 @@
 		if(pressure_delta <= allowed_pressure_error && stop_cycle("Decompression complete."))
 			return //External target pressure reached
 
-		siphon_tile(loc)
+		siphon_tile(location)
 		for(var/turf/tile as anything in adjacent_turfs)
 			siphon_tile(tile)
 
@@ -229,7 +227,7 @@
 /obj/machinery/atmospherics/components/unary/airlock_pump/proc/fill_tile(turf/tile, moles, pressure_delta)
 	var/datum/pipeline/distro_pipe = parents[1]
 	var/datum/gas_mixture/distro_air = airs[1]
-	var/datum/gas_mixture/tile_air = tile.return_air()
+	var/datum/gas_mixture/tile_air = lightweight_atmos_scan_gasmix(tile)
 	var/transfer_moles = (volume_rate / tile_air.volume) * (pressure_delta * tile_air.volume) / (distro_air.temperature * R_IDEAL_GAS_EQUATION)
 	moles = min(moles, transfer_moles)
 
@@ -238,24 +236,30 @@
 	if(!removed_air)
 		return //No air in distro
 
-	tile.assume_air(removed_air)
-	distro_pipe.update = TRUE
+	dump_gas_mixture_as_cloud(tile, removed_air)
+	if(distro_pipe)
+		distro_pipe.update = TRUE
 
 
 /// Siphon air from the tile to the waste node within the volume rate limit
 /obj/machinery/atmospherics/components/unary/airlock_pump/proc/siphon_tile(turf/tile)
 	var/datum/pipeline/waste_pipe = parents[2]
 	var/datum/gas_mixture/waste_air = airs[2]
-	var/datum/gas_mixture/tile_air = tile.return_air()
+	var/datum/gas_mixture/tile_air = lightweight_atmos_scan_gasmix(tile)
+	var/transfer_amount = max(5, tile_air.total_moles() * (volume_rate / max(tile_air.volume, 1)) * 0.2)
 
-	var/transfer_moles = tile_air.total_moles() * (volume_rate / tile_air.volume)
-	var/datum/gas_mixture/removed_air = tile.remove_air(transfer_moles)
-
-	if(!removed_air)
+	if(!collect_lightweight_atmos_to_gas_mixture(tile, waste_air, transfer_amount))
 		return //No air on the tile
 
-	waste_air.merge(removed_air)
-	waste_pipe.update = TRUE
+	if(waste_pipe)
+		waste_pipe.update = TRUE
+
+/// Current pressure for the lightweight atmosphere at a tile.
+/obj/machinery/atmospherics/components/unary/airlock_pump/proc/get_lightweight_tile_pressure(turf/tile)
+	if(!tile)
+		return 0
+	var/datum/gas_mixture/tile_air = lightweight_atmos_scan_gasmix(tile)
+	return max(0, tile_air?.return_pressure() || 0)
 
 
 /// Proc for triggering cycle by clicking on a bolted airlock that has a pump assigned
@@ -276,7 +280,7 @@
 			if (external_tile == null || is_space_or_openspace(external_tile))
 				airlock.run_animation(DOOR_DENY_ANIMATION)
 				return
-			var/tile_air_pressure = max(0, external_tile.return_air().return_pressure())
+			var/tile_air_pressure = get_lightweight_tile_pressure(external_tile)
 			var/pressure_delta = docked_side_pressure - tile_air_pressure
 			if (pressure_delta > 0 ? (pressure_delta > allowed_pressure_error*10) : (pressure_delta*-1 > allowed_pressure_error*10))
 				// Disabled to avoid airlocks close-open spam
@@ -306,7 +310,7 @@
 	cycle_start_time = world.time
 
 	var/turf/local_turf = get_turf(src)
-	var/tile_air_pressure = max(0, local_turf.return_air().return_pressure())
+	var/tile_air_pressure = get_lightweight_tile_pressure(local_turf)
 
 	if(pump_direction == ATMOS_DIRECTION_RELEASING)
 		cycle_pressure_target = internal_pressure_target
@@ -392,7 +396,7 @@
 
 	// Check if we need cycle in
 	var/turf/local_turf = get_turf(src)
-	var/tile_air_pressure = max(0, local_turf.return_air().return_pressure())
+	var/tile_air_pressure = get_lightweight_tile_pressure(local_turf)
 	var/pressure_delta = internal_pressure_target - tile_air_pressure
 	if(pressure_delta <= allowed_pressure_error)
 		// We fine
@@ -416,7 +420,7 @@
 		return FALSE
 
 	var/turf/local_turf = get_turf(src)
-	var/tile_air_pressure = max(0, local_turf.return_air().return_pressure())
+	var/tile_air_pressure = get_lightweight_tile_pressure(local_turf)
 	pressure_delta = internal_pressure_target - tile_air_pressure
 	// Chamber is not pressurised
 	if(pressure_delta > allowed_pressure_error)
@@ -430,7 +434,7 @@
 			if (local_turf == null || is_space_or_openspace(local_turf))
 				continue
 
-			tile_air_pressure = max(0, local_turf.return_air().return_pressure())
+			tile_air_pressure = get_lightweight_tile_pressure(local_turf)
 			pressure_delta = docked_side_pressure - tile_air_pressure
 			// Do not open airlocks leading in space
 			// If docked entity now has pressure lower or higher then was declared on docking
@@ -470,7 +474,11 @@
 /obj/machinery/atmospherics/components/unary/airlock_pump/proc/check_turfs()
 	adjacent_turfs.Cut()
 	var/turf/local_turf = get_turf(src)
-	adjacent_turfs = local_turf.get_atmos_adjacent_turfs(alldir = TRUE)
+	for(var/turf/tile in RANGE_TURFS(1, local_turf))
+		if(tile == local_turf || tile.density)
+			continue
+		if(cloud_can_pass(local_turf, tile))
+			adjacent_turfs += tile
 
 
 ///Find airlocks and link up with them

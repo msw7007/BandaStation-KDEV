@@ -237,7 +237,7 @@ GLOBAL_LIST_INIT(raptor_colors, init_raptor_colors())
 	if (!istype(location))
 		return FALSE
 
-	var/datum/gas_mixture/environment = location.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(location)
 	if (environment?.return_pressure() >= HAZARD_LOW_PRESSURE + 10)
 		return TRUE
 

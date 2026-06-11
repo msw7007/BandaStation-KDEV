@@ -160,14 +160,14 @@ GLOBAL_LIST_EMPTY_TYPED(air_alarms, /obj/machinery/airalarm)
 
 /obj/machinery/airalarm/proc/check_enviroment()
 	var/turf/our_turf = connected_sensor ? get_turf(connected_sensor) : get_turf(src)
-	var/datum/gas_mixture/environment = our_turf.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(our_turf)
 	if(isnull(environment))
 		return
 	check_danger(our_turf, environment, environment.temperature)
 
 /obj/machinery/airalarm/proc/get_enviroment()
 	var/turf/our_turf = connected_sensor ? get_turf(connected_sensor) : get_turf(src)
-	return our_turf.return_air()
+	return lightweight_atmos_scan_gasmix(our_turf)
 
 /obj/machinery/airalarm/power_change()
 	check_enviroment()

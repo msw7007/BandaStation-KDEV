@@ -60,6 +60,7 @@ SUBSYSTEM_DEF(air)
 
 	var/list/reaction_handbook
 	var/list/gas_handbook
+	var/legacy_linda_enabled = FALSE
 
 
 /datum/controller/subsystem/air/stat_entry(msg)
@@ -93,15 +94,14 @@ SUBSYSTEM_DEF(air)
 
 /datum/controller/subsystem/air/Initialize()
 	map_loading = FALSE
-	gas_reactions = init_gas_reactions()
-	hotspot_reactions = init_hotspot_reactions()
-
-	setup_allturfs()
+	// LIGHTWEIGHT ATMOS: LINDA turf simulation and gas reactions are disabled.
+	// SSair remains as a compatibility shell for gas mixtures, tanks, pipes,
+	// portable atmospherics, area vent lists and legacy machinery APIs.
+	gas_reactions = list()
+	hotspot_reactions = list()
 	setup_atmos_machinery()
 	setup_pipenets()
-	setup_turf_visuals()
 	process_adjacent_rebuild()
-	atmos_handbooks_init()
 	return SS_INIT_SUCCESS
 
 
@@ -203,6 +203,8 @@ SUBSYSTEM_DEF(air)
 				break
 
 /datum/controller/subsystem/air/proc/process_pipenets(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	if (!resumed)
 		src.currentrun = networks.Copy()
 	//cache for sanic speed (lists are references anyways)
@@ -235,6 +237,8 @@ SUBSYSTEM_DEF(air)
 			return
 
 /datum/controller/subsystem/air/proc/process_atoms(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	if(!resumed)
 		src.currentrun = atom_process.Copy()
 	//cache for sanic speed (lists are references anyways)
@@ -265,6 +269,8 @@ SUBSYSTEM_DEF(air)
 
 
 /datum/controller/subsystem/air/proc/process_super_conductivity(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	if (!resumed)
 		src.currentrun = active_super_conductivity.Copy()
 	//cache for sanic speed (lists are references anyways)
@@ -277,6 +283,8 @@ SUBSYSTEM_DEF(air)
 			return
 
 /datum/controller/subsystem/air/proc/process_hotspots(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	if (!resumed)
 		src.currentrun = hotspots.Copy()
 	//cache for sanic speed (lists are references anyways)
@@ -292,6 +300,8 @@ SUBSYSTEM_DEF(air)
 			return
 
 /datum/controller/subsystem/air/proc/process_high_pressure_delta(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	while (high_pressure_delta.len)
 		var/turf/open/T = high_pressure_delta[high_pressure_delta.len]
 		high_pressure_delta.len--
@@ -301,6 +311,8 @@ SUBSYSTEM_DEF(air)
 			return
 
 /datum/controller/subsystem/air/proc/process_active_turfs(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	//cache for sanic speed
 	var/fire_count = times_fired
 	if (!resumed)
@@ -316,6 +328,8 @@ SUBSYSTEM_DEF(air)
 			return
 
 /datum/controller/subsystem/air/proc/process_excited_groups(resumed = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	if (!resumed)
 		src.currentrun = excited_groups.Copy()
 	//cache for sanic speed (lists are references anyways)
@@ -403,6 +417,8 @@ SUBSYSTEM_DEF(air)
 
 ///Removes a turf from processing, and causes its excited group to clean up so things properly adapt to the change
 /datum/controller/subsystem/air/proc/remove_from_active(turf/open/T)
+	if(!legacy_linda_enabled)
+		return
 	active_turfs -= T
 	if(currentpart == SSAIR_ACTIVETURFS)
 		currentrun -= T
@@ -418,6 +434,8 @@ SUBSYSTEM_DEF(air)
 
 ///Puts an active turf to sleep so it doesn't process. Do this without cleaning up its excited group.
 /datum/controller/subsystem/air/proc/sleep_active_turf(turf/open/T)
+	if(!legacy_linda_enabled)
+		return
 	active_turfs -= T
 	if(currentpart == SSAIR_ACTIVETURFS)
 		currentrun -= T
@@ -429,6 +447,8 @@ SUBSYSTEM_DEF(air)
 
 ///Adds a turf to active processing, handles duplicates. Call this with blockchanges == TRUE if you want to nuke the assoc excited group
 /datum/controller/subsystem/air/proc/add_to_active(turf/open/activate, blockchanges = FALSE)
+	if(!legacy_linda_enabled)
+		return
 	if(istype(activate) && activate.air)
 		activate.significant_share_ticker = 0
 		if(blockchanges && activate.excited_group) //This is used almost exclusivly for shuttles, so the excited group doesn't stay behind
@@ -455,11 +475,22 @@ SUBSYSTEM_DEF(air)
 
 /datum/controller/subsystem/air/StopLoadingMap()
 	map_loading = FALSE
+	if(!legacy_linda_enabled)
+		queued_for_activation?.Cut()
+		return
 	for(var/T in queued_for_activation)
 		add_to_active(T, TRUE)
 	queued_for_activation.Cut()
 
 /datum/controller/subsystem/air/proc/setup_allturfs()
+	if(!legacy_linda_enabled)
+		src.active_turfs.Cut()
+		hotspots.Cut()
+		excited_groups.Cut()
+		high_pressure_delta.Cut()
+		active_super_conductivity.Cut()
+		atom_process.Cut()
+		return
 	var/list/active_turfs = src.active_turfs
 	times_fired++
 

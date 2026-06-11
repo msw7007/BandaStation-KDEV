@@ -215,59 +215,39 @@
 			scrub(tile)
 	return TRUE
 
+/obj/machinery/atmospherics/components/unary/vent_scrubber/process_atmos()
+	if(welded || !is_operational)
+		return
+	if(!nodes[1] || !on)
+		set_on(FALSE)
+		return
+	var/turf/us = get_turf(src)
+	scrub(us)
+	if(widenet)
+		if(COOLDOWN_FINISHED(src, check_turfs_cooldown))
+			check_turfs()
+			COOLDOWN_START(src, check_turfs_cooldown, 2 SECONDS)
+		for(var/turf/tile in adjacent_turfs)
+			scrub(tile)
+
 ///filtered gases at or below this amount automatically get removed from the mix
 #define MINIMUM_MOLES_TO_SCRUB (MOLAR_ACCURACY*100)
 
 /obj/machinery/atmospherics/components/unary/vent_scrubber/proc/scrub(turf/tile)
 	if(!istype(tile))
 		return FALSE
-	var/datum/gas_mixture/environment = tile.return_air()
 	var/datum/gas_mixture/air_contents = airs[1]
-	var/list/env_gases = environment.gases
 
 	if(air_contents.return_pressure() >= 50 * ONE_ATMOSPHERE)
 		return FALSE
 
 	if(scrubbing == ATMOS_DIRECTION_SCRUBBING)
-		if(length(env_gases & filter_types))
-			///contains all of the gas we're sucking out of the tile, gets put into our parent pipenet
-			var/datum/gas_mixture/filtered_out = new
-			var/list/filtered_gases = filtered_out.gases
-			filtered_out.temperature = environment.temperature
-
-			///maximum percentage of the turfs gas we can filter
-			var/removal_ratio =  min(1, volume_rate / environment.volume)
-
-			var/total_moles_to_remove = 0
-			for(var/gas in filter_types & env_gases)
-				total_moles_to_remove += env_gases[gas][MOLES]
-
-			if(total_moles_to_remove == 0)//sometimes this gets non gc'd values
-				environment.garbage_collect()
-				return FALSE
-
-			for(var/gas in filter_types & env_gases)
-				filtered_out.add_gas(gas)
-				//take this gases portion of removal_ratio of the turfs air, or all of that gas if less than or equal to MINIMUM_MOLES_TO_SCRUB
-				var/transferred_moles = max(QUANTIZE(env_gases[gas][MOLES] * removal_ratio * (env_gases[gas][MOLES] / total_moles_to_remove)), min(MINIMUM_MOLES_TO_SCRUB, env_gases[gas][MOLES]))
-
-				filtered_gases[gas][MOLES] = transferred_moles
-				env_gases[gas][MOLES] -= transferred_moles
-
-			environment.garbage_collect()
-
-			//Remix the resulting gases
-			air_contents.merge(filtered_out)
+		if(collect_lightweight_atmos_to_gas_mixture(tile, air_contents, clamp(volume_rate / 20, 5, 100), filter_types))
 			update_parents()
 
 	else //Just siphoning all air
-
-		var/transfer_moles = environment.total_moles() * (volume_rate / environment.volume)
-
-		var/datum/gas_mixture/removed = tile.remove_air(transfer_moles)
-
-		air_contents.merge(removed)
-		update_parents()
+		if(collect_lightweight_atmos_to_gas_mixture(tile, air_contents, clamp(volume_rate / 20, 5, 100)))
+			update_parents()
 
 	return TRUE
 
@@ -278,7 +258,12 @@
 /obj/machinery/atmospherics/components/unary/vent_scrubber/proc/check_turfs()
 	adjacent_turfs.Cut()
 	var/turf/local_turf = get_turf(src)
-	adjacent_turfs = local_turf.get_atmos_adjacent_turfs(alldir = TRUE)
+	for(var/turf/T as anything in RANGE_TURFS(1, local_turf))
+		if(T == local_turf)
+			continue
+		if(!cloud_can_pass(local_turf, T))
+			continue
+		adjacent_turfs += T
 
 /obj/machinery/atmospherics/components/unary/vent_scrubber/power_change()
 	. = ..()

@@ -73,11 +73,17 @@ SUBSYSTEM_DEF(gas_effects)
 		A = null
 	var/old_amount = cloud.amount
 
+	effect.on_process_cloud(cloud, T, A, seconds_per_tick)
+	if(QDELETED(cloud))
+		return
+
 	var/decay = effect.decay_rate
+	if(A?.is_outdoor_air())
+		decay *= effect.outdoor_decay_multiplier
 	if(effect.scrubbable && A?.air_scrubbers?.len)
 		var/scrub_total = 0
 		for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrub as anything in A.air_scrubbers)
-			if(QDELETED(scrub) || !scrub.is_operational)
+			if(QDELETED(scrub) || !scrub.on || !scrub.is_operational)
 				continue
 			if(scrub.scrubbing != ATMOS_DIRECTION_SCRUBBING)
 				continue
@@ -100,7 +106,7 @@ SUBSYSTEM_DEF(gas_effects)
 			if(cloud.amount > 50 && effect.visibility_modifier >= 2)
 				C.adjust_temp_blindness((1 SECONDS) * seconds_per_tick)
 
-	if(cloud.amount >= effect.spread_threshold && world.time >= cloud.next_spread_at)
+	if(cloud.amount >= effect.spread_threshold && cloud.get_pressure() >= effect.pressure_spread_threshold && world.time >= cloud.next_spread_at)
 		cloud.spread_to_neighbour()
 		cloud.next_spread_at = world.time + (1 SECONDS)
 

@@ -105,6 +105,45 @@
 	visibility_modifier = 1
 	scrubbable = FALSE
 
+/datum/gas_effect/fire/on_process_cloud(obj/effect/gas_cloud/cloud, turf/T, area/A, seconds_per_tick)
+	if(is_water_turf(T))
+		cloud.amount -= 8 * seconds_per_tick
+		return
+	var/fire_power = min(cloud.amount, GAS_EFFECT_PER_TICK_MAX)
+	var/oxygen_need = fire_power * AREA_AIR_O2_PER_FIRE_POWER * seconds_per_tick
+	var/oxygen_taken = A ? A.consume_oxygen(oxygen_need) : oxygen_need
+	var/fuel = get_turf_fire_fuel(T)
+	if(oxygen_taken < oxygen_need * 0.5 || fuel <= 0)
+		cloud.amount -= 5 * seconds_per_tick
+		return
+	A?.release_co2(fire_power * AREA_AIR_CO2_PER_FIRE_POWER * seconds_per_tick)
+	cloud.amount = min(cloud.amount + min(fuel, 4) * seconds_per_tick, tile_capacity * 2)
+	for(var/atom/movable/AM in T)
+		if(AM == cloud || QDELETED(AM))
+			continue
+		if(AM.resistance_flags & FIRE_PROOF)
+			continue
+		AM.fire_act(cloud.temperature + temperature_delta, fire_power)
+	if(cloud.amount >= 35 && world.time >= cloud.next_secondary_effect_at)
+		cloud.next_secondary_effect_at = world.time + (2 SECONDS)
+		spawn_gas_cloud(T, /datum/gas_effect/smoke, max(5, cloud.amount * 0.08), cloud.temperature)
+
+/datum/gas_effect/fire/proc/get_turf_fire_fuel(turf/T)
+	. = 0
+	if(!T || T.resistance_flags & FIRE_PROOF)
+		return
+	if(T.resistance_flags & FLAMMABLE)
+		. += 2
+	for(var/atom/movable/AM in T)
+		if(istype(AM, /obj/effect/gas_cloud))
+			continue
+		if(AM.resistance_flags & FIRE_PROOF)
+			continue
+		if(AM.resistance_flags & FLAMMABLE)
+			. += 3
+		else if(!AM.anchored)
+			. += 0.5
+
 /datum/gas_effect/fire/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.05 * seconds_per_tick
 	breather.adjust_fire_loss(dose)
@@ -245,3 +284,20 @@
 	breather.adjust_tox_loss(dose)
 	if(prob(8 * seconds_per_tick))
 		breather.emote("cough")
+
+/datum/gas_effect/pressure
+	id = "pressure"
+	name = "pressure distortion"
+	color = "#88b8ff"
+	icon_state = "cloud"
+	density_type = GAS_DENSITY_NEUTRAL
+	spread_threshold = 6
+	spread_rate = 0.55
+	decay_rate = 2
+	visible = TRUE
+	scrubbable = FALSE
+	pressure_override = HAZARD_HIGH_PRESSURE * 1.15
+	visibility_modifier = 1
+
+/datum/gas_effect/pressure/on_process_cloud(obj/effect/gas_cloud/cloud, turf/T, area/A, seconds_per_tick)
+	T.set_lightweight_pressure_hazard(pressure_override, LIGHTWEIGHT_ATMOS_PRESSURE_HAZARD_EXPIRE)

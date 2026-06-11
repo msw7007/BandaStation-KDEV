@@ -83,7 +83,7 @@
 
 	set_state(POPPED)
 	playsound(src, 'sound/items/balloon_pop.ogg', 75, TRUE)
-	loc.assume_air(air_contents)
+	dump_gas_mixture_as_cloud(get_turf(src), air_contents)
 
 /obj/item/latexballoon/ex_act(severity, target)
 	burst()

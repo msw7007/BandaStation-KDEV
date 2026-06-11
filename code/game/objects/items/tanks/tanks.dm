@@ -182,10 +182,7 @@
 /obj/item/tank/atom_deconstruct(disassembled = TRUE)
 	var/atom/location = loc
 	if(location)
-		// LIGHTWEIGHT ATMOS: spawn a visible vapour cloud when a tank
-		// is dismantled, in addition to the (now no-op) assume_air call.
 		dump_gas_mixture_as_cloud(get_turf(location), air_contents, 0.3)
-		location.assume_air(air_contents)
 		playsound(location, 'sound/effects/spray.ogg', 10, TRUE, -3)
 	return ..()
 
@@ -345,7 +342,7 @@
 	if(!location)
 		return
 	var/datum/gas_mixture/leaked_gas = air_contents.remove_ratio(0.25)
-	location.assume_air(leaked_gas)
+	dump_gas_mixture_as_cloud(get_turf(location), leaked_gas)
 
 /**
  * Handles the minimum and maximum pressure tolerances of the tank.
@@ -539,7 +536,7 @@
 		else if(strength >= 0.2)
 			explosion(ground_zero, devastation_range = -1, light_impact_range = 1, flash_range = 2, explosion_cause = src)
 		else
-			ground_zero.assume_air(bomb_mixture)
+			dump_gas_mixture_as_cloud(ground_zero, bomb_mixture)
 			ground_zero.hotspot_expose(igniter_temperature, 125)
 
 	else if(bomb_mixture.temperature > (T0C + 250))
@@ -550,7 +547,7 @@
 		else if(strength >= 0.5)
 			explosion(ground_zero, devastation_range = -1, light_impact_range = 1, flash_range = 2, explosion_cause = src)
 		else
-			ground_zero.assume_air(bomb_mixture)
+			dump_gas_mixture_as_cloud(ground_zero, bomb_mixture)
 			ground_zero.hotspot_expose(igniter_temperature, 125)
 
 	else if(bomb_mixture.temperature > (T0C + 100))
@@ -559,11 +556,11 @@
 		if(strength >= 1)
 			explosion(ground_zero, devastation_range = -1, light_impact_range = round(strength,1), flash_range = round(strength*3,1), explosion_cause = src)
 		else
-			ground_zero.assume_air(bomb_mixture)
+			dump_gas_mixture_as_cloud(ground_zero, bomb_mixture)
 			ground_zero.hotspot_expose(igniter_temperature, 125)
 
 	else
-		ground_zero.assume_air(bomb_mixture)
+		dump_gas_mixture_as_cloud(ground_zero, bomb_mixture)
 		ground_zero.hotspot_expose(igniter_temperature, 125)
 
 	qdel(src)
@@ -576,7 +573,7 @@
 	if(!T)
 		return
 	log_atmos("[type] released its contents of ", removed)
-	T.assume_air(removed)
+	dump_gas_mixture_as_cloud(T, removed)
 
 #undef ASSEMBLY_BOMB_BASE
 #undef ASSEMBLY_BOMB_COEFFICIENT

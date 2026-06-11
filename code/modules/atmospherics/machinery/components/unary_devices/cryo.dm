@@ -279,7 +279,7 @@
 	var/datum/gas_mixture/inside_air = internal_connector.gas_connector.airs[1]
 	if(inside_air.total_moles() > 0)
 		if(!node || internal_pressure > 0)
-			var/datum/gas_mixture/environment_air = loc.return_air()
+			var/datum/gas_mixture/environment_air = lightweight_atmos_scan_gasmix(src)
 			internal_pressure = inside_air.return_pressure() - environment_air.return_pressure()
 
 	var/unsafe_release = FALSE

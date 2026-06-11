@@ -162,4 +162,4 @@
 	mix_to_spawn.gases[active_gas][MOLES] = possible_gases[active_gas] * seconds_per_tick
 	mix_to_spawn.temperature = T20C
 	var/turf/open/our_turf = get_turf(owner)
-	our_turf.assume_air(mix_to_spawn)
+	dump_gas_mixture_as_cloud(our_turf, mix_to_spawn)

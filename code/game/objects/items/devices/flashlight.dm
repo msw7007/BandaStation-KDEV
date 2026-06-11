@@ -1207,7 +1207,7 @@
 	if(!installed_pyro_core)
 		user.balloon_alert(user, "core missing!")
 		return FALSE
-	var/datum/gas_mixture/environment = loc?.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(src)
 	var/affected_pressure = environment.return_pressure()
 	if(!light_on && (affected_pressure < ONE_ATMOSPHERE - 1))
 		user.balloon_alert(user, "[affected_pressure < HAZARD_LOW_PRESSURE? "no" : "low"] pressure!")

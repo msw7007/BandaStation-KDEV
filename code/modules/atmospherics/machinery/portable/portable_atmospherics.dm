@@ -97,7 +97,7 @@
 	if(severity == EXPLODE_DEVASTATE || target == src)
 		//This explosion will destroy the can, release its air.
 		var/turf/local_turf = get_turf(src)
-		local_turf.assume_air(air_contents)
+		dump_gas_mixture_as_cloud(local_turf, air_contents)
 
 	return ..()
 

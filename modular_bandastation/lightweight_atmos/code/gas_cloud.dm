@@ -15,6 +15,7 @@
 	var/last_spread = 0
 	var/next_spread_at = 0
 	var/list/chemicals = null
+	var/next_secondary_effect_at = 0
 
 /obj/effect/gas_cloud/Initialize(mapload, datum/gas_effect/effect_singleton, start_amount = 25, start_temperature = T20C, list/start_chemicals = null)
 	. = ..()
@@ -94,12 +95,20 @@
 		chemicals[reagent_path] -= portion
 	return out
 
+/obj/effect/gas_cloud/proc/get_pressure()
+	if(!effect)
+		return 0
+	return amount / max(effect.tile_capacity, 1)
+
 /obj/effect/gas_cloud/proc/spread_to_neighbour()
-	if(amount < effect.spread_threshold)
+	if(amount < effect.spread_threshold || get_pressure() < effect.pressure_spread_threshold)
 		return 0
 	var/turf/T = loc
 	if(!isturf(T))
 		return 0
+	var/area/source_area = T.loc
+	if(!isarea(source_area))
+		source_area = null
 	var/list/candidates = list()
 	for(var/dir in GLOB.cardinals)
 		var/turf/N = get_step(T, dir)
@@ -107,7 +116,9 @@
 			continue
 		if(!cloud_can_pass(T, N))
 			continue
-		candidates += N
+		var/flow_weight = get_cloud_flow_weight(T, N, source_area, effect)
+		for(var/i in 1 to flow_weight)
+			candidates += N
 	if(effect.density_type != GAS_DENSITY_NEUTRAL)
 		var/dz = (effect.density_type == GAS_DENSITY_LIGHT) ? 1 : -1
 		var/turf/V = locate(T.x, T.y, T.z + dz)
@@ -117,7 +128,8 @@
 	if(!length(candidates))
 		return 0
 	var/turf/target = pick(candidates)
-	var/chunk = amount * effect.spread_rate
+	var/pressure_excess = max(get_pressure() - effect.pressure_spread_threshold, 0.1)
+	var/chunk = amount * effect.spread_rate * min(pressure_excess, 1)
 	if(chunk <= 0)
 		return 0
 	var/old_amount = amount
@@ -131,6 +143,27 @@
 		return chunk
 	spawn_gas_cloud(target, effect.type, chunk, temperature, chunk_chems)
 	return chunk
+
+/proc/get_cloud_flow_weight(turf/source, turf/target, area/source_area, datum/gas_effect/effect)
+	. = 1
+	if(!source || !target || !source_area || !effect?.vent_flow_weight)
+		return
+	var/source_dist
+	var/target_dist
+	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrub as anything in source_area.air_scrubbers)
+		if(QDELETED(scrub) || !scrub.on || !scrub.is_operational)
+			continue
+		source_dist = get_dist(source, scrub)
+		target_dist = get_dist(target, scrub)
+		if(target_dist < source_dist)
+			. += effect.vent_flow_weight
+	for(var/obj/machinery/atmospherics/components/unary/vent_pump/pump as anything in source_area.air_vents)
+		if(QDELETED(pump) || !pump.on || !pump.is_operational)
+			continue
+		source_dist = get_dist(source, pump)
+		target_dist = get_dist(target, pump)
+		if(target_dist < source_dist)
+			. += max(1, round(effect.vent_flow_weight * 0.5))
 
 /proc/cloud_can_pass(turf/source, turf/target)
 	if(!target || target.density)

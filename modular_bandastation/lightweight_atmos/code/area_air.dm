@@ -2,6 +2,7 @@
 	var/oxygen_level = AREA_AIR_O2_DEFAULT
 	var/co2_level = AREA_AIR_CO2_DEFAULT
 	var/cached_outdoor_state = null
+	var/pressure_hazard_enabled = FALSE
 
 /area/proc/is_outdoor_air()
 	if(cached_outdoor_state != null)

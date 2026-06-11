@@ -23,7 +23,7 @@
 		result.set_output(null)
 		return
 	//Get environment info
-	var/datum/gas_mixture/environment = location.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(location)
 	var/total_moles = environment.total_moles()
 	var/pressure = environment.return_pressure()
 	if(total_moles)

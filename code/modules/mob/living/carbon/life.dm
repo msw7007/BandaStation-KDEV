@@ -93,11 +93,7 @@
 	else
 		end_water_breath()
 
-	breathe_from_area(seconds_per_tick)
-
-	var/datum/gas_mixture/environment
-	if(loc)
-		environment = loc.return_air()
+	var/area_breath_success = breathe_from_area(seconds_per_tick)
 
 	var/datum/gas_mixture/breath
 
@@ -109,6 +105,24 @@
 
 		else if(health <= crit_threshold)
 			losebreath += 0.25 //You're having trouble breathing in soft crit, so you'll miss a breath one in four times
+
+	// LIGHTWEIGHT ATMOS: external turf breathing uses Area oxygen only.
+	// Internals, tanks and object-contained atmos keep the old gas mixture path.
+	if(isturf(loc) && !internal && !external)
+		if(!lungs)
+			failed_last_breath = TRUE
+			adjust_oxy_loss(2 * seconds_per_tick)
+			throw_alert(ALERT_NOT_ENOUGH_OXYGEN, /atom/movable/screen/alert/not_enough_oxy)
+			return
+		if(losebreath >= 1)
+			losebreath--
+			failed_last_breath = TRUE
+			adjust_oxy_loss(1.5 * seconds_per_tick)
+			if(prob(10))
+				emote("gasp")
+			return
+		failed_last_breath = !area_breath_success
+		return
 
 	//Suffocate
 	if(losebreath >= 1) //You've missed a breath, take oxy damage
@@ -127,13 +141,6 @@
 			if(isobj(loc)) //Breathe from loc as object
 				var/obj/loc_as_obj = loc
 				breath = loc_as_obj.handle_internal_lifeform(src, BREATH_VOLUME)
-
-			else if(isturf(loc)) //Breathe from loc as turf
-				var/breath_moles = 0
-				if(environment)
-					breath_moles = environment.total_moles()*BREATH_PERCENTAGE
-
-				breath = loc.remove_air(breath_moles)
 		else //Breathe from loc as obj again
 			is_on_internals = TRUE
 
@@ -147,7 +154,10 @@
 			breathing_loop.start()
 
 	if(breath)
-		loc.assume_air(breath)
+		if(isturf(loc))
+			dump_gas_mixture_as_cloud(loc, breath)
+		else
+			loc.assume_air(breath)
 
 /mob/living/carbon/proc/has_smoke_protection()
 	if(HAS_TRAIT(src, TRAIT_NOBREATH))

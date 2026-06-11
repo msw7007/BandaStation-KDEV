@@ -51,4 +51,4 @@
 		if(affected_mob.stat == CONSCIOUS)
 			to_chat(affected_mob, span_warning("Your throat feels hot!"))
 	affected_mob.visible_message("burps out green gas.", visible_message_flags = EMOTE_MESSAGE)
-	affected_mob.loc.assume_air(burp)
+	dump_gas_mixture_as_cloud(get_turf(affected_mob), burp)

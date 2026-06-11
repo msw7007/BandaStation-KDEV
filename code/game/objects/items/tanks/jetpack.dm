@@ -145,7 +145,7 @@
 		return FALSE
 
 	var/turf/T = get_turf(src)
-	T.assume_air(removed)
+	dump_gas_mixture_as_cloud(T, removed)
 	return TRUE
 
 /obj/item/tank/jetpack/suicide_act(mob/living/user)

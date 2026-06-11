@@ -30,14 +30,20 @@
 	if(isclosedturf(location))
 		return
 
-	var/datum/gas_mixture/external = location.return_air()
+	var/datum/gas_mixture/external = lightweight_atmos_scan_gasmix(location)
 	var/datum/gas_mixture/internal = airs[1]
 
 	if(!internal.volume || !external.volume)
 		return
 
-	if(internal.equalize(external))
-		air_update_turf(FALSE, FALSE)
+	var/internal_pressure = internal.return_pressure()
+	var/external_pressure = external.return_pressure()
+	if(internal_pressure > external_pressure)
+		if(release_gas_mixture_to_lightweight_atmos(location, internal, external_pressure, 0.5))
+			update_parents()
+	else if(external_pressure > internal_pressure)
+		if(collect_lightweight_atmos_to_gas_mixture(location, internal, 10))
+			update_parents()
 		update_parents()
 
 /obj/machinery/atmospherics/components/unary/passive_vent/layer2

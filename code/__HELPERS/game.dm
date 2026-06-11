@@ -253,7 +253,7 @@
 	. = FALSE
 	if(!istype(turf_to_check))
 		return
-	var/datum/gas_mixture/environment = turf_to_check.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(turf_to_check)
 	if(!istype(environment))
 		return
 	var/pressure = environment.return_pressure()

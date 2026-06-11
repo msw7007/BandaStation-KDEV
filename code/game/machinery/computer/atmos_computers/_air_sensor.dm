@@ -94,7 +94,7 @@
 /obj/machinery/air_sensor/return_air()
 	if(!on)
 		return
-	. = ..()
+	. = lightweight_atmos_scan_gasmix(src)
 	use_energy(active_power_usage) //use power for analyzing gases
 
 /obj/machinery/air_sensor/process()

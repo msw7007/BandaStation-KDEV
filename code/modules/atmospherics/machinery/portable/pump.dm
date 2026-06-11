@@ -14,7 +14,7 @@
 
 /obj/machinery/portable_atmospherics/pump/on_deconstruction(disassembled)
 	var/turf/local_turf = get_turf(src)
-	local_turf.assume_air(air_contents)
+	release_gas_mixture_to_lightweight_atmos(local_turf, air_contents, target_pressure, 10)
 	return ..()
 
 /obj/machinery/portable_atmospherics/pump/update_icon_state()
@@ -40,20 +40,19 @@
 
 	var/turf/local_turf = get_turf(src)
 
-	var/datum/gas_mixture/sending
-	var/datum/gas_mixture/receiving
-
 	if (holding) //Work with tank when inserted, otherwise - with area
-		sending = (direction == PUMP_IN ? holding.return_air() : air_contents)
-		receiving = (direction == PUMP_IN ? air_contents : holding.return_air())
+		var/datum/gas_mixture/sending = (direction == PUMP_IN ? holding.return_air() : air_contents)
+		var/datum/gas_mixture/receiving = (direction == PUMP_IN ? air_contents : holding.return_air())
+		sending.pump_gas_to(receiving, target_pressure)
+	else if(direction == PUMP_IN)
+		collect_lightweight_atmos_to_gas_mixture(local_turf, air_contents, volume_rate_to_cloud_amount(target_pressure))
 	else
-		sending = (direction == PUMP_IN ? local_turf.return_air() : air_contents)
-		receiving = (direction == PUMP_IN ? air_contents : local_turf.return_air())
-
-	if(sending.pump_gas_to(receiving, target_pressure) && !holding)
-		air_update_turf(FALSE, FALSE) // Update the environment if needed.
+		release_gas_mixture_to_lightweight_atmos(local_turf, air_contents, target_pressure)
 
 	return ..()
+
+/obj/machinery/portable_atmospherics/pump/proc/volume_rate_to_cloud_amount(pressure)
+	return clamp((pressure / max(ONE_ATMOSPHERE, 1)) * 20, 5, 80)
 
 /obj/machinery/portable_atmospherics/pump/emp_act(severity)
 	. = ..()

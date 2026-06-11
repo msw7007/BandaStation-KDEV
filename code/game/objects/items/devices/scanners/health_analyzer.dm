@@ -87,7 +87,7 @@
 		var/floor_text = "<span class='info'>Анализ результатов для <b>[scan_turf.declent_ru(GENITIVE)]</b> ([round_timestamp()]):</span><br>"
 		floor_text += "<span class='info ml-1'>Общее состояние: <i>Неизвестно</i></span><br>"
 		floor_text += "<span class='alert ml-1'>У субъекта отсутствует мозг.</span><br>"
-		floor_text += "<span class='info ml-1'>Температура тела: [scan_turf?.return_air()?.return_temperature() || "???"]</span><br>"
+		floor_text += "<span class='info ml-1'>Температура тела: [lightweight_atmos_scan_gasmix(scan_turf)?.return_temperature() || "???"]</span><br>"
 
 		if(user.can_read(src) && !user.is_blind())
 			to_chat(user, custom_boxed_message("blue_box", floor_text))

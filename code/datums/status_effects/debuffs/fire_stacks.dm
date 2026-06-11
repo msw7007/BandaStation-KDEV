@@ -182,7 +182,7 @@
 		qdel(src)
 		return TRUE
 
-	var/datum/gas_mixture/air = owner.loc.return_air()
+	var/datum/gas_mixture/air = lightweight_atmos_scan_gasmix(owner)
 	if(!air.gases[/datum/gas/oxygen] || air.gases[/datum/gas/oxygen][MOLES] < 1)
 		qdel(src)
 		return TRUE

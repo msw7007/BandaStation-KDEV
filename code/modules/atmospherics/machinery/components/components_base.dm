@@ -258,7 +258,7 @@
 
 	var/unsafe_wrenching = FALSE
 	var/filled_pipe = FALSE
-	var/datum/gas_mixture/environment_air = loc.return_air()
+	var/datum/gas_mixture/environment_air = lightweight_atmos_scan_gasmix(src)
 
 	for(var/i in 1 to device_type)
 		var/datum/gas_mixture/inside_air = airs[i]
@@ -380,4 +380,4 @@
 		var/datum/gas_mixture/parents_air = parents[i].air
 		parents_air.merge(air)
 	if(to_release)
-		local_turf.assume_air(to_release)
+		dump_gas_mixture_as_cloud(local_turf, to_release)

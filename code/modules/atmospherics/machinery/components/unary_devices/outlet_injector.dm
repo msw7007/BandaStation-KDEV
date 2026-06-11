@@ -106,7 +106,7 @@
 
 		var/datum/gas_mixture/removed = air_contents.remove(transfer_moles)
 
-		location.assume_air(removed)
+		dump_gas_mixture_as_cloud(location, removed)
 
 		update_parents()
 

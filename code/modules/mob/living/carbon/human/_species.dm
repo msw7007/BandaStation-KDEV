@@ -1192,7 +1192,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	humi.adjust_coretemperature(skin_core_change)
 
 	// get the enviroment details of where the mob is standing
-	var/datum/gas_mixture/environment = humi.loc?.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(humi)
 	if(!environment) // if there is no environment (nullspace) drop out here.
 		return
 
@@ -1398,6 +1398,10 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 /// Handle the air pressure of the environment
 /datum/species/proc/handle_environment_pressure(mob/living/carbon/human/H, datum/gas_mixture/environment, seconds_per_tick)
+	if(!has_lightweight_pressure_hazard(H))
+		H.clear_alert(ALERT_PRESSURE)
+		H.seconds_in_low_pressure = 0
+		return
 	var/pressure = environment.return_pressure()
 	var/adjusted_pressure = H.calculate_affecting_pressure(pressure)
 

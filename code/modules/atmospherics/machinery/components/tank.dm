@@ -381,7 +381,7 @@
 	. = TRUE
 	to_chat(user, span_notice("You begin cutting open the gas tank..."))
 	var/turf/current_location = get_turf(src)
-	var/datum/gas_mixture/airmix = current_location.return_air()
+	var/datum/gas_mixture/airmix = lightweight_atmos_scan_gasmix(current_location)
 
 	var/time_taken = 4 SECONDS
 	var/unsafe = FALSE
@@ -403,7 +403,7 @@
 /obj/machinery/atmospherics/components/tank/on_deconstruction(disassembled)
 	var/turf/location = drop_location()
 	. = ..()
-	location.assume_air(air_contents)
+	dump_gas_mixture_as_cloud(location, air_contents)
 	if(!disassembled)
 		return
 	var/obj/structure/tank_frame/frame = new(location)

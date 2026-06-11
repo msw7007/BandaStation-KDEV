@@ -40,8 +40,8 @@
 /obj/machinery/portable_atmospherics/pipe_scrubber/atom_deconstruct(disassembled)
 	. = ..()
 	var/turf/my_turf = get_turf(src)
-	my_turf.assume_air(air_contents)
-	my_turf.assume_air(internal_tank.air_contents)
+	dump_gas_mixture_as_cloud(my_turf, air_contents)
+	dump_gas_mixture_as_cloud(my_turf, internal_tank.air_contents)
 	SSair.stop_processing_machine(internal_tank)
 	qdel(internal_tank)
 

@@ -34,7 +34,7 @@
 
 /obj/machinery/portable_atmospherics/scrubber/on_deconstruction(disassembled)
 	var/turf/local_turf = get_turf(src)
-	local_turf.assume_air(air_contents)
+	release_gas_mixture_to_lightweight_atmos(local_turf, air_contents, ONE_ATMOSPHERE, 10)
 	return ..()
 
 /obj/machinery/portable_atmospherics/scrubber/update_icon_state()
@@ -65,10 +65,13 @@
 		return ..()
 
 	var/turf/epicentre = get_turf(src)
-	if(isopenturf(epicentre))
-		scrub(epicentre.return_air())
-	for(var/turf/open/openturf as anything in epicentre.get_atmos_adjacent_turfs(alldir = TRUE))
-		scrub(openturf.return_air())
+	scrub_lightweight_atmos(epicentre)
+	for(var/turf/openturf as anything in RANGE_TURFS(1, epicentre))
+		if(openturf == epicentre)
+			continue
+		if(!cloud_can_pass(epicentre, openturf))
+			continue
+		scrub_lightweight_atmos(openturf)
 	return ..()
 
 /**
@@ -109,6 +112,11 @@
 
 	//Remix the resulting gases
 	air_contents.merge(filtered_out)
+
+/obj/machinery/portable_atmospherics/scrubber/proc/scrub_lightweight_atmos(turf/T)
+	if(air_contents.return_pressure() >= overpressure_m * ONE_ATMOSPHERE)
+		return
+	collect_lightweight_atmos_to_gas_mixture(T, air_contents, clamp(volume_rate / 25, 10, 120), scrubbing)
 
 /obj/machinery/portable_atmospherics/scrubber/emp_act(severity)
 	. = ..()
@@ -228,8 +236,13 @@
 
 	if(!holding)
 		var/turf/T = get_turf(src)
-		for(var/turf/AT in T.get_atmos_adjacent_turfs(alldir = TRUE))
-			scrub(AT.return_air())
+		scrub_lightweight_atmos(T)
+		for(var/turf/AT as anything in RANGE_TURFS(1, T))
+			if(AT == T)
+				continue
+			if(!cloud_can_pass(T, AT))
+				continue
+			scrub_lightweight_atmos(AT)
 
 	return ..()
 

@@ -158,7 +158,7 @@
 
 /obj/item/analyzer/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	if(!HAS_TRAIT(interacting_with, TRAIT_COMBAT_MODE_SKIP_INTERACTION) && can_see(user, interacting_with, ranged_scan_distance))
-		atmos_scan(user, (interacting_with.return_analyzable_air() ? interacting_with : get_turf(interacting_with)))
+		atmos_scan(user, interacting_with.return_analyzable_air() ? interacting_with : get_turf(interacting_with))
 	return NONE // Non-blocking
 
 /// Called when our analyzer is used on something
@@ -166,7 +166,8 @@
 	SIGNAL_HANDLER
 	var/mixture = target.return_analyzable_air()
 	if(!mixture)
-		return FALSE
+		last_gasmix_data = list(lightweight_atmos_scan_parser(target, capitalize(LOWER_TEXT(target.name))))
+		return TRUE
 	var/list/airs = islist(mixture) ? mixture : list(mixture)
 	var/list/new_gasmix_data = list()
 	for(var/datum/gas_mixture/air as anything in airs)
@@ -184,8 +185,6 @@
  */
 /proc/atmos_scan(mob/user, atom/target, silent=FALSE)
 	var/mixture = target.return_analyzable_air()
-	if(!mixture)
-		return FALSE
 
 	var/icon = target
 	var/message = list()
@@ -194,7 +193,7 @@
 		user.visible_message(span_notice("[user] uses the analyzer on [icon2html(icon, viewers(user))] [target]."), span_notice("You use the analyzer on [icon2html(icon, user)] [target]."))
 	message += span_boldnotice("Results of analysis of [icon2html(icon, user)] [target].")
 
-	var/list/airs = islist(mixture) ? mixture : list(mixture)
+	var/list/airs = mixture ? (islist(mixture) ? mixture : list(mixture)) : list(lightweight_atmos_scan_gasmix(target))
 	for(var/datum/gas_mixture/air as anything in airs)
 		var/mix_name = capitalize(LOWER_TEXT(target.name))
 		if(airs.len > 1) //not a unary gas mixture

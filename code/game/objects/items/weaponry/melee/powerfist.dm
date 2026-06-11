@@ -124,7 +124,7 @@
 		return
 
 	if(!molar_cmp_equals(gas_used.total_moles(), gas_per_fist * fist_pressure_setting))
-		our_turf.assume_air(gas_used)
+		dump_gas_mixture_as_cloud(our_turf, gas_used)
 		to_chat(user, span_warning("\The [src]'s piston-ram lets out a weak hiss, it needs more gas!"))
 		playsound(loc, 'sound/items/weapons/punch4.ogg', 50, TRUE)
 		target.apply_damage((force / 2), BRUTE)
@@ -148,7 +148,7 @@
 
 	user.changeNext_move(CLICK_CD_MELEE * click_delay)
 
-	our_turf.assume_air(gas_used)
+	dump_gas_mixture_as_cloud(our_turf, gas_used)
 
 #undef LOW_PRESSURE
 #undef MID_PRESSURE

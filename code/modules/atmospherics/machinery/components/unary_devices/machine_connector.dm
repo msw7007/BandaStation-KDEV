@@ -135,12 +135,12 @@
 	var/datum/gas_mixture/inside_air = gas_connector.airs[1]
 	if(inside_air.total_moles() > 0)
 		if(!gas_connector.nodes[1])
-			local_turf.assume_air(inside_air)
+			dump_gas_mixture_as_cloud(local_turf, inside_air)
 			return
 		var/datum/gas_mixture/parents_air = gas_connector.parents[1].air
 		if(istype(gas_connector.nodes[1], /obj/machinery/atmospherics/components/unary/portables_connector))
 			var/obj/machinery/atmospherics/components/unary/portables_connector/portable_devices_connector = gas_connector.nodes[1]
 			if(!portable_devices_connector.connected_device)
-				local_turf.assume_air(inside_air)
+				dump_gas_mixture_as_cloud(local_turf, inside_air)
 				return
 		parents_air.merge(inside_air)

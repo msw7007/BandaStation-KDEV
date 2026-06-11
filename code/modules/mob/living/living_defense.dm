@@ -48,7 +48,7 @@
 	SEND_SIGNAL(src, COMSIG_LIVING_GET_EAR_PROTECTION, sig_protection)
 	var/protection = sig_protection[EAR_PROTECTION_ARG]
 	var/turf/current_turf = get_turf(src)
-	var/datum/gas_mixture/environment = current_turf.return_air()
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(current_turf)
 	var/pressure = environment?.return_pressure()
 	if(pressure < SOUND_MINIMUM_PRESSURE) //space is empty
 		protection += EAR_PROTECTION_VACUUM

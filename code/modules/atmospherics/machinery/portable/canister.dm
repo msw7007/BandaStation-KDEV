@@ -478,7 +478,7 @@
 	disconnect()
 	var/datum/gas_mixture/expelled_gas = air_contents.remove(air_contents.total_moles())
 	var/turf/T = get_turf(src)
-	T.assume_air(expelled_gas)
+	dump_gas_mixture_as_cloud(T, expelled_gas)
 
 	atom_break()
 
@@ -546,12 +546,12 @@
 	// Handle gas transfer.
 	if(valve_open)
 		var/turf/location = get_turf(src)
-		var/datum/gas_mixture/target_air = holding?.return_air() || location.return_air()
 		excited = TRUE
 
-		if(air_contents.release_gas_to(target_air, release_pressure))
-			if(!holding)
-				air_update_turf(FALSE, FALSE)
+		if(holding)
+			air_contents.release_gas_to(holding.return_air(), release_pressure)
+		else
+			release_gas_mixture_to_lightweight_atmos(location, air_contents, release_pressure)
 
 	// A bit different than other atmos devices. Wont stop if currently taking damage.
 	if(take_atmos_damage())

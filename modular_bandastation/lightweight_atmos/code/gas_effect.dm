@@ -10,6 +10,10 @@
 	var/spread_rate = 0.4
 	var/decay_rate = 1
 	var/temperature_delta = 0
+	var/tile_capacity = LIGHTWEIGHT_ATMOS_TILE_CAPACITY
+	var/pressure_spread_threshold = LIGHTWEIGHT_ATMOS_PRESSURE_SPREAD_THRESHOLD
+	var/outdoor_decay_multiplier = LIGHTWEIGHT_ATMOS_OUTDOOR_DECAY_MULTIPLIER
+	var/vent_flow_weight = LIGHTWEIGHT_ATMOS_VENT_FLOW_WEIGHT
 
 	var/list/filter_tags
 
@@ -23,6 +27,7 @@
 	var/visibility_modifier = 0
 
 	var/scrubbable = TRUE
+	var/pressure_override = null
 
 	var/list/default_chemicals = null
 
@@ -38,6 +43,9 @@
 	return
 
 /datum/gas_effect/proc/on_decay(turf/T, amount)
+	return
+
+/datum/gas_effect/proc/on_process_cloud(obj/effect/gas_cloud/cloud, turf/T, area/A, seconds_per_tick)
 	return
 
 /datum/gas_effect/proc/is_filtered_by(list/tags)
