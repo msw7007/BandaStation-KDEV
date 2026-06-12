@@ -33,6 +33,23 @@
 	data["sustain_indefinitely"] = full_sustain_held_note
 	data["playing"] = playing
 	data["repeat"] = repeat
+	data["midi_start_delay_ticks"] = midi_start_delay_ticks
+	data["midi_start_pending"] = !!midi_start_timer
+	data["auto_repeat"] = auto_repeat
+	data["playback_mode"] = playback_mode
+	data["file_track_name"] = file_track_name
+	data["file_track_length"] = file_track_length ? DisplayTimeText(file_track_length) : null
+	data["file_track_length_seconds"] = max(1, round(file_track_length / (1 SECONDS)))
+	data["can_load_file_tracks"] = (user?.mind?.get_skill_level(SKILL_MUSIC) >= 2)
+	data["preset_file_tracks"] = list()
+	data["loaded_file_tracks"] = list()
+	for(var/list/track as anything in loaded_file_tracks)
+		data["loaded_file_tracks"] += list(list(
+			"name" = track["name"],
+			"length" = track["length"] ? DisplayTimeText(track["length"]) : null,
+			"length_seconds" = max(1, round((track["length"] || 1 SECONDS) / (1 SECONDS))),
+			"selected" = (track["name"] == file_track_name),
+		))
 	data["bpm"] = bpm // BANDASTATION EDIT - BPM unlock
 	data["lines"] = list()
 	var/linecount
@@ -132,6 +149,33 @@
 						break
 			while(length_char(song_text) > MUSIC_MAXLINES * MUSIC_MAXLINECHARS)
 			ParseSong(user, song_text)
+			set_playback_mode("midi")
+			return TRUE
+		if("import_file_song")
+			if(user.mind?.get_skill_level(SKILL_MUSIC) < 2)
+				to_chat(user, span_warning("You need Music skill 2 or higher to load external OGG files."))
+				return TRUE
+			var/new_file = input(user, "Select an OGG file to play through this instrument.", name) as sound|null
+			if(!new_file || !in_range(parent, user))
+				return TRUE
+			set_file_track(new_file, user)
+			return TRUE
+		if("clear_file_song")
+			clear_file_track()
+			return TRUE
+		if("set_playback_mode")
+			set_playback_mode(params["mode"])
+			return TRUE
+		if("select_loaded_file_track")
+			if(select_loaded_file_track(params["track"]) && params["play"])
+				INVOKE_ASYNC(src, PROC_REF(start_playing), user)
+			return TRUE
+		if("set_file_track_length")
+			var/length_seconds = text2num(params["seconds"])
+			set_file_track_length(length_seconds SECONDS)
+			return TRUE
+		if("set_auto_repeat")
+			set_auto_repeat(params["enabled"])
 			return TRUE
 		if("start_new_song")
 			name = ""
@@ -195,12 +239,16 @@
 			full_sustain_held_note = !full_sustain_held_note
 			return TRUE
 		if("set_repeat_amount")
-			if(playing)
-				return
 			var/repeat_amount = params["amount"]
 			if(!isnum(repeat_amount))
 				return FALSE
 			set_repeats(repeat_amount)
+			return TRUE
+		if("set_midi_start_delay")
+			var/new_delay = params["amount"]
+			if(!isnum(new_delay))
+				return FALSE
+			midi_start_delay_ticks = clamp(round(new_delay), 0, 6000)
 			return TRUE
 		if("edit_sustain_mode")
 			var/sustain_amount = params["amount"]

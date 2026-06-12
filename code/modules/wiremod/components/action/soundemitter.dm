@@ -112,3 +112,320 @@
 	playsound(src, sound_to_play, actual_volume, TRUE, frequency = actual_frequency)
 
 	TIMER_COOLDOWN_START(parent.shell, COOLDOWN_CIRCUIT_SOUNDEMITTER, sound_cooldown)
+
+/**
+ * # Concert Speaker Receiver Component
+ *
+ * Turns the current integrated-circuit shell into a positional jukebox emitter.
+ */
+/obj/item/circuit_component/concert_listener
+	display_name = "Concert Speaker Receiver"
+	desc = "Links the circuit shell as an additional music source for a jukebox."
+	category = "Action"
+	required_shells = list(/obj/structure/concertspeaker)
+	circuit_size = 2
+
+	/// Jukebox to relay.
+	var/datum/port/input/jukebox_target
+	/// Connect this shell to the jukebox in Target Jukebox.
+	var/datum/port/input/link_input
+	/// Disconnect this shell from its current jukebox.
+	var/datum/port/input/unlink_input
+	/// Whether the linked jukebox is currently playing.
+	var/datum/port/output/is_playing
+	/// Fired when the linked jukebox starts.
+	var/datum/port/output/started_playing
+	/// Fired when the linked jukebox stops.
+	var/datum/port/output/stopped_playing
+
+	/// Currently linked jukebox.
+	var/obj/machinery/jukebox/linked_jukebox
+	/// Whether this receiver currently exposes its shell as an active speaker.
+	var/playing = FALSE
+
+/obj/item/circuit_component/concert_listener/populate_ports()
+	jukebox_target = add_input_port("Target Jukebox", PORT_TYPE_ATOM, order = 1)
+	link_input = add_input_port("Link", PORT_TYPE_SIGNAL, order = 2, trigger = PROC_REF(link_to_target))
+	unlink_input = add_input_port("Unlink", PORT_TYPE_SIGNAL, order = 3, trigger = PROC_REF(unlink))
+	is_playing = add_output_port("Is Playing", PORT_TYPE_BOOLEAN)
+	started_playing = add_output_port("Started Playing", PORT_TYPE_SIGNAL)
+	stopped_playing = add_output_port("Stopped Playing", PORT_TYPE_SIGNAL)
+
+/obj/item/circuit_component/concert_listener/get_ui_notices()
+	. = ..()
+	if(linked_jukebox)
+		. += create_ui_notice("Linked to: [linked_jukebox.name]", "green", "music")
+	else
+		. += create_ui_notice("No jukebox linked.", "orange", "music")
+
+/obj/item/circuit_component/concert_listener/register_shell(atom/movable/shell)
+	. = ..()
+	if(!linked_jukebox)
+		return
+	linked_jukebox.music_player?.register_music_source(shell)
+	if(linked_jukebox.music_player?.active_song_sound)
+		play_track()
+
+/obj/item/circuit_component/concert_listener/unregister_shell(atom/movable/shell)
+	if(linked_jukebox)
+		linked_jukebox.music_player?.unregister_music_source(shell)
+	stop_playback()
+	return ..()
+
+/obj/item/circuit_component/concert_listener/Destroy()
+	unlink()
+	return ..()
+
+/obj/item/circuit_component/concert_listener/proc/link_to_target()
+	var/obj/machinery/jukebox/target_jukebox = jukebox_target.value
+	if(!istype(target_jukebox) || QDELETED(target_jukebox) || !target_jukebox.music_player)
+		return
+	link_jukebox(target_jukebox)
+
+/obj/item/circuit_component/concert_listener/proc/link_jukebox(obj/machinery/jukebox/new_jukebox)
+	if(linked_jukebox == new_jukebox)
+		return
+	unlink()
+	linked_jukebox = new_jukebox
+	RegisterSignal(linked_jukebox, COMSIG_INSTRUMENT_START, PROC_REF(on_song_start))
+	RegisterSignal(linked_jukebox, COMSIG_INSTRUMENT_END, PROC_REF(on_song_end))
+	RegisterSignal(linked_jukebox, COMSIG_QDELETING, PROC_REF(on_jukebox_deleted))
+	if(parent?.shell)
+		linked_jukebox.music_player?.register_music_source(parent.shell)
+	update_parent()
+	if(linked_jukebox.music_player?.active_song_sound)
+		play_track()
+	if(parent)
+		SStgui.update_uis(parent)
+
+/obj/item/circuit_component/concert_listener/proc/unlink()
+	if(!linked_jukebox)
+		return
+	if(parent?.shell)
+		linked_jukebox.music_player?.unregister_music_source(parent.shell)
+	UnregisterSignal(linked_jukebox, list(COMSIG_INSTRUMENT_START, COMSIG_INSTRUMENT_END, COMSIG_QDELETING))
+	linked_jukebox = null
+	stop_playback()
+	update_parent(TRUE)
+	if(parent)
+		SStgui.update_uis(parent)
+
+/obj/item/circuit_component/concert_listener/proc/play_track()
+	if(playing)
+		return
+	playing = TRUE
+	is_playing.set_output(TRUE)
+	started_playing.set_output(COMPONENT_SIGNAL)
+	update_parent()
+
+/obj/item/circuit_component/concert_listener/proc/stop_playback()
+	if(!playing)
+		return
+	playing = FALSE
+	is_playing.set_output(FALSE)
+	stopped_playing.set_output(COMPONENT_SIGNAL)
+	update_parent()
+
+/obj/item/circuit_component/concert_listener/proc/update_parent(unreg = FALSE)
+	var/atom/movable/shell = parent?.shell
+	var/obj/structure/concertspeaker/speaker = shell
+	if(!istype(speaker))
+		return
+	speaker.set_concert_state(playing && speaker.anchored, !unreg && !isnull(linked_jukebox))
+
+/obj/item/circuit_component/concert_listener/proc/on_song_start(datum/source, datum/track/starting_song)
+	SIGNAL_HANDLER
+	play_track()
+
+/obj/item/circuit_component/concert_listener/proc/on_song_end()
+	SIGNAL_HANDLER
+	stop_playback()
+
+/obj/item/circuit_component/concert_listener/proc/on_jukebox_deleted()
+	SIGNAL_HANDLER
+	unlink()
+
+/obj/item/circuit_component/concert_master
+	display_name = "Concert Master"
+	desc = "Controls a concert DJ deck and relays track state to linked speaker receivers."
+	category = "Action"
+	required_shells = list(/obj/machinery/jukebox/concertspeaker)
+	circuit_size = 2
+
+	var/datum/port/output/track_name_out
+	var/datum/port/output/is_playing
+	var/datum/port/output/started_playing
+	var/datum/port/output/stopped_playing
+
+	/// Concert deck hosting this component.
+	var/obj/machinery/jukebox/concertspeaker/linked_jukebox
+	/// Remote used to link listener components into speaker circuits.
+	var/obj/item/concert_remote/remote
+
+/obj/item/circuit_component/concert_master/Initialize(mapload)
+	. = ..()
+	if(!remote)
+		remote = new(src)
+
+/obj/item/circuit_component/concert_master/populate_ports()
+	track_name_out = add_output_port("Track Name", PORT_TYPE_STRING)
+	is_playing = add_output_port("Is Playing", PORT_TYPE_BOOLEAN)
+	started_playing = add_output_port("Started Playing", PORT_TYPE_SIGNAL)
+	stopped_playing = add_output_port("Stopped Playing", PORT_TYPE_SIGNAL)
+
+/obj/item/circuit_component/concert_master/Destroy()
+	QDEL_NULL(remote)
+	return ..()
+
+/obj/item/circuit_component/concert_master/attack_self(mob/user, modifiers)
+	if(!remote || remote.loc != src)
+		to_chat(user, span_warning("The link remote is already removed."))
+		return
+	if(!user.put_in_active_hand(remote))
+		remote.forceMove(drop_location())
+	to_chat(user, span_notice("You remove the concert link remote."))
+
+/obj/item/circuit_component/concert_master/attackby(obj/item/tool, mob/user, params)
+	if(istype(tool, /obj/item/concert_remote))
+		if(tool != remote)
+			to_chat(user, span_warning("This remote is paired with another concert master."))
+			return TRUE
+		tool.forceMove(src)
+		to_chat(user, span_notice("You insert the concert link remote."))
+		return TRUE
+	return ..()
+
+/obj/item/circuit_component/concert_master/register_shell(atom/movable/shell)
+	. = ..()
+	var/obj/machinery/jukebox/concertspeaker/concert_deck = shell
+	if(!istype(concert_deck))
+		return
+	linked_jukebox = concert_deck
+	linked_jukebox.master_component = src
+	linked_jukebox.remote_installed = TRUE
+	RegisterSignal(linked_jukebox, COMSIG_INSTRUMENT_START, PROC_REF(on_song_start))
+	RegisterSignal(linked_jukebox, COMSIG_INSTRUMENT_END, PROC_REF(on_song_end))
+	if(linked_jukebox.music_player?.active_song_sound)
+		on_song_start(linked_jukebox, linked_jukebox.music_player.selection)
+
+/obj/item/circuit_component/concert_master/unregister_shell(atom/movable/shell)
+	if(linked_jukebox)
+		UnregisterSignal(linked_jukebox, list(COMSIG_INSTRUMENT_START, COMSIG_INSTRUMENT_END))
+		linked_jukebox.master_component = null
+		linked_jukebox.remote_installed = FALSE
+		on_song_end()
+	linked_jukebox = null
+	return ..()
+
+/obj/item/circuit_component/concert_master/proc/on_song_start(datum/source, datum/track/starting_song)
+	SIGNAL_HANDLER
+	if(!starting_song || !remote)
+		return
+	track_name_out.set_output(starting_song.song_name)
+	is_playing.set_output(TRUE)
+	started_playing.set_output(COMPONENT_SIGNAL)
+	for(var/obj/item/circuit_component/concert_listener/listener as anything in remote.takers)
+		if(QDELETED(listener))
+			continue
+		listener.link_jukebox(linked_jukebox)
+		listener.play_track()
+
+/obj/item/circuit_component/concert_master/proc/on_song_end()
+	SIGNAL_HANDLER
+	track_name_out.set_output("")
+	is_playing.set_output(FALSE)
+	stopped_playing.set_output(COMPONENT_SIGNAL)
+	if(!remote)
+		return
+	for(var/obj/item/circuit_component/concert_listener/listener as anything in remote.takers)
+		if(QDELETED(listener))
+			continue
+		listener.stop_playback()
+
+/obj/item/concert_remote
+	name = "concert link remote"
+	desc = "A paired remote that installs or removes speaker receiver components in integrated circuits."
+	icon = 'icons/obj/devices/remote.dmi'
+	icon_state = "shuttleremote"
+	w_class = WEIGHT_CLASS_SMALL
+	/// Linked speaker receiver components.
+	var/list/obj/item/circuit_component/concert_listener/takers
+
+/obj/item/concert_remote/Initialize(mapload)
+	. = ..()
+	takers = list()
+
+/obj/item/concert_remote/Destroy()
+	for(var/obj/item/circuit_component/concert_listener/listener as anything in takers)
+		remove_taker(listener)
+	takers = null
+	return ..()
+
+/obj/item/concert_remote/afterattack(atom/target, mob/user, list/modifiers, list/attack_modifiers)
+	. = ..()
+	if(!target)
+		return
+	try_toggle_on(target, user)
+
+/obj/item/concert_remote/proc/add_taker(obj/item/circuit_component/concert_listener/listener)
+	if(!listener || takers[listener])
+		return
+	takers[listener] = TRUE
+	RegisterSignal(listener, COMSIG_CIRCUIT_COMPONENT_REMOVED, PROC_REF(on_component_removed))
+	RegisterSignal(listener, COMSIG_QDELETING, PROC_REF(on_component_deleted))
+
+/obj/item/concert_remote/proc/remove_taker(obj/item/circuit_component/concert_listener/listener)
+	if(!listener || !takers[listener])
+		return
+	takers -= listener
+	UnregisterSignal(listener, list(COMSIG_CIRCUIT_COMPONENT_REMOVED, COMSIG_QDELETING))
+	listener.unlink()
+
+/obj/item/concert_remote/proc/on_component_removed(datum/source, obj/item/integrated_circuit/old_circuit)
+	SIGNAL_HANDLER
+	remove_taker(source)
+
+/obj/item/concert_remote/proc/on_component_deleted(datum/source)
+	SIGNAL_HANDLER
+	remove_taker(source)
+
+/obj/item/concert_remote/proc/find_linked_listener_in_circuit(obj/item/integrated_circuit/circuit)
+	if(!circuit)
+		return null
+	for(var/obj/item/circuit_component/concert_listener/listener in circuit.attached_components)
+		return listener
+	return null
+
+/obj/item/concert_remote/proc/try_toggle_on(atom/target, mob/user)
+	var/obj/item/integrated_circuit/circuit = find_circuit(target)
+	if(!circuit)
+		to_chat(user, span_warning("There is no integrated circuit here."))
+		return
+	var/obj/item/circuit_component/concert_listener/existing = find_linked_listener_in_circuit(circuit)
+	if(existing)
+		circuit.remove_component(existing)
+		remove_taker(existing)
+		qdel(existing)
+		to_chat(user, span_notice("Speaker unlinked. Total linked: [length(takers)]."))
+		return
+	if(length(takers) >= 16)
+		to_chat(user, span_warning("The remote cannot link more speakers."))
+		return
+	var/obj/item/circuit_component/concert_listener/listener = new()
+	if(!circuit.add_component(listener))
+		qdel(listener)
+		to_chat(user, span_warning("The receiver does not fit into this circuit."))
+		return
+	add_taker(listener)
+	to_chat(user, span_notice("Speaker linked. Total linked: [length(takers)]."))
+
+/obj/item/concert_remote/proc/find_circuit(atom/target)
+	var/obj/item/integrated_circuit/circuit = target
+	if(istype(circuit))
+		return circuit
+	var/datum/component/shell/shell = target.GetComponent(/datum/component/shell)
+	if(shell?.attached_circuit)
+		return shell.attached_circuit
+	for(var/obj/item/integrated_circuit/contained_circuit in target.contents)
+		return contained_circuit
+	return null

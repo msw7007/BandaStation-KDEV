@@ -251,6 +251,16 @@
 	id = "comp_soundemitter"
 	build_path = /obj/item/circuit_component/soundemitter
 
+/datum/design/component/concert_listener
+	name = "Concert Speaker Receiver Component"
+	id = "comp_concert_listener"
+	build_path = /obj/item/circuit_component/concert_listener
+
+/datum/design/component/concert_master
+	name = "Concert Master Component"
+	id = "comp_concert_master"
+	build_path = /obj/item/circuit_component/concert_master
+
 /datum/design/component/mmi
 	name = "MMI Component"
 	id = "comp_mmi"

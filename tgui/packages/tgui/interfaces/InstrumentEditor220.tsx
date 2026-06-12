@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
 import type { BooleanLike } from 'tgui-core/react';
+import '../styles/interfaces/CyberpunkPanel.scss';
 import {
   Box,
   Button,
@@ -13,12 +14,17 @@ import {
   NumberInput,
   Section,
   Stack,
-  Table,
+  Tabs,
 } from 'tgui-core/components';
 
-type TrackRow = { target_id?: string | null; delay_beats?: number };
 type InstrumentData = { name: string; id: string };
 type LineData = { line_count: number; line_text: string };
+type LoadedFileTrack = {
+  name: string;
+  length?: string | null;
+  length_seconds: number;
+  selected?: BooleanLike;
+};
 
 type Data = {
   id: string;
@@ -47,6 +53,16 @@ type Data = {
   playing: BooleanLike;
   max_repeats: number;
   repeat: number;
+  midi_start_delay_ticks: number;
+  midi_start_pending: BooleanLike;
+  auto_repeat: BooleanLike;
+  playback_mode: string;
+  file_track_name?: string | null;
+  file_track_length?: string | null;
+  file_track_length_seconds: number;
+  can_load_file_tracks: BooleanLike;
+  preset_file_tracks: string[];
+  loaded_file_tracks: LoadedFileTrack[];
 
   bpm: number;
   lines: LineData[];
@@ -57,21 +73,41 @@ type Data = {
   max_line_chars: number;
   max_lines: number;
 
-  auto_unison_enabled?: BooleanLike;
-  multi_sync_enabled?: BooleanLike;
-  multi_tracks?: TrackRow[];
+  group_prepare_pending?: BooleanLike;
+  group_prepare_seconds?: number;
 };
 
 export function InstrumentEditor220() {
   const [showHelp, setShowHelp] = useState(false);
+  const [tab, setTab] = useState<'main' | 'library'>('main');
   return (
-    <Window width={500} height={430}>
-      <Window.Content scrollable>
+    <Window width={560} height={460}>
+      <Window.Content scrollable className="CyberpunkPanel">
         <TopBar showHelp={showHelp} setShowHelp={setShowHelp} />
+        <Tabs>
+          <Tabs.Tab
+            icon="music"
+            selected={tab === 'main'}
+            onClick={() => setTab('main')}
+          >
+            Instrument
+          </Tabs.Tab>
+          <Tabs.Tab
+            icon="compact-disc"
+            selected={tab === 'library'}
+            onClick={() => setTab('library')}
+          >
+            Library
+          </Tabs.Tab>
+        </Tabs>
         {showHelp && <HelpInline />}
-        <MainPanel />
-        <SyncTracks />
-        <MusicEditor />
+        {tab === 'main' && (
+          <>
+            <MainPanel />
+            <MusicEditor />
+          </>
+        )}
+        {tab === 'library' && <LibraryPanel />}
       </Window.Content>
     </Window>
   );
@@ -84,7 +120,19 @@ type TopBarProps = {
 
 function TopBar(props: TopBarProps) {
   const { act, data } = useBackend<Data>();
-  const { playing, instrument_ready, auto_unison_enabled, repeat, max_repeats, lines } = data;
+  const {
+    playing,
+    instrument_ready,
+    repeat,
+    max_repeats,
+    auto_repeat,
+    midi_start_pending,
+    group_prepare_pending,
+    group_prepare_seconds,
+    lines,
+    file_track_name,
+    file_track_length,
+  } = data;
   const { showHelp, setShowHelp } = props;
 
   return (
@@ -94,11 +142,11 @@ function TopBar(props: TopBarProps) {
           <Stack align="center">
             <Stack.Item>
               <Button
-                icon={playing ? 'stop' : 'play'}
-                color={playing ? 'average' : 'good'}
+                icon={playing || midi_start_pending ? 'stop' : group_prepare_pending ? 'clock' : 'play'}
+                color={playing || midi_start_pending ? 'average' : group_prepare_pending ? 'yellow' : 'good'}
                 onClick={() => act('play_music')}
               >
-                {playing ? 'Stop' : 'Start'}
+                {playing || midi_start_pending ? 'Stop' : group_prepare_pending ? 'Prepare' : 'Start'}
               </Button>
             </Stack.Item>
             <Stack.Item ml={1}>
@@ -115,24 +163,25 @@ function TopBar(props: TopBarProps) {
         <Stack.Item>
           <Stack align="center">
             <Stack.Item>
+              <Button
+                icon={auto_repeat ? 'repeat' : 'rotate-right'}
+                color={auto_repeat ? 'good' : 'default'}
+                selected={!!auto_repeat}
+                onClick={() => act('set_auto_repeat', { enabled: !auto_repeat })}
+              >
+                {auto_repeat ? 'Loop ON' : 'Loop'}
+              </Button>
+            </Stack.Item>
+            <Stack.Item ml={1}>
               Repeats:
               <NumberInput
                 ml={0.5}
                 step={1}
                 minValue={0}
                 maxValue={max_repeats}
-                disabled={!!playing}
                 value={repeat}
                 onChange={(v) => act('set_repeat_amount', { amount: v })}
               />
-            </Stack.Item>
-            <Stack.Item ml={1}>
-              <Button
-                selected={!!auto_unison_enabled}
-                onClick={() => act('toggle_auto_unison')}
-              >
-                Auto-unison
-              </Button>
             </Stack.Item>
             <Stack.Item ml={1}>
               <Button icon="question" onClick={() => setShowHelp(!showHelp)}>
@@ -143,9 +192,19 @@ function TopBar(props: TopBarProps) {
         </Stack.Item>
       </Stack>
 
-      {lines.length === 0 && (
+      {lines.length === 0 && !file_track_name && (
         <Box mt={1} color="average">
           Load or type a song below to enable playback.
+        </Box>
+      )}
+      {!!file_track_name && (
+        <Box mt={1} className="CyberpunkPanel__Muted">
+          Loaded file: {file_track_name} ({file_track_length})
+        </Box>
+      )}
+      {!!group_prepare_pending && (
+        <Box mt={1} color="average">
+          Group invite pending: choose a track and press Prepare ({group_prepare_seconds}s).
         </Box>
       )}
     </Section>
@@ -190,17 +249,154 @@ const MainPanel = () => {
   );
 };
 
+const LibraryPanel = () => {
+  const { act, data } = useBackend<Data>();
+  const {
+    playing,
+    file_track_name,
+    file_track_length,
+    file_track_length_seconds,
+    can_load_file_tracks,
+    preset_file_tracks = [],
+    loaded_file_tracks = [],
+    volume,
+    min_volume,
+    max_volume,
+  } = data;
+  const volVal = Math.max(0, Math.min(100, volume));
+  const handleVolume = (...args: any[]) => {
+    let value: number | undefined;
+    if (typeof args[1] === 'number') value = args[1];
+    else if (typeof args[0] === 'number') value = args[0];
+    else if (args[0]?.target?.value != null) value = Number(args[0].target.value);
+    else if (args[0]?.currentTarget?.value != null) value = Number(args[0].currentTarget.value);
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+      act('set_volume', {
+        amount: Math.max(min_volume, Math.min(max_volume, Math.round(value))),
+      });
+    }
+  };
+  const commitLength = (value: string) => {
+    const seconds = Number(value);
+    if (!Number.isNaN(seconds)) {
+      act('set_file_track_length', {
+        seconds: Math.max(1, Math.min(1800, Math.round(seconds))),
+      });
+    }
+  };
+
+  return (
+    <Section title="Track Library">
+      <Stack>
+        <Stack.Item grow basis="50%">
+          <Section title="Loaded Tracks">
+            <Button
+              fluid
+              icon="folder-open"
+              disabled={!!playing || !can_load_file_tracks}
+              tooltip={
+                can_load_file_tracks
+                  ? 'Load an OGG file'
+                  : 'Requires Music skill 2'
+              }
+              onClick={() => act('import_file_song')}
+            >
+              Load OGG
+            </Button>
+            {loaded_file_tracks.length === 0 ? (
+              <Box mt={1} className="CyberpunkPanel__Muted">
+                No OGG tracks loaded.
+              </Box>
+            ) : (
+              loaded_file_tracks.map((track) => (
+                <Button
+                  key={track.name}
+                  fluid
+                  mb={0.5}
+                  mt={0.5}
+                  selected={!!track.selected}
+                  onClick={() => act('select_loaded_file_track', { track: track.name })}
+                >
+                  <Box
+                    title={track.name}
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {track.name}
+                  </Box>
+                </Button>
+              ))
+            )}
+            <Box mt={1} className="CyberpunkPanel__Muted">
+              Prepared presets: {preset_file_tracks.length || 0}
+            </Box>
+          </Section>
+        </Stack.Item>
+        <Stack.Item grow basis="50%">
+          <Section title="Loaded Track">
+            {file_track_name ? (
+              <>
+                <Box className="CyberpunkPanel__Title">{file_track_name}</Box>
+                <Box mt={0.5} className="CyberpunkPanel__Muted">
+                  Detected: {file_track_length}
+                </Box>
+                <Stack align="center" mt={1}>
+                  <Stack.Item>Length:</Stack.Item>
+                  <Stack.Item>
+                    <Input
+                      width="5rem"
+                      value={`${file_track_length_seconds}`}
+                      disabled={!!playing}
+                      onBlur={commitLength}
+                      onEnter={commitLength}
+                    />
+                  </Stack.Item>
+                  <Stack.Item>sec</Stack.Item>
+                </Stack>
+              </>
+            ) : (
+              <Box className="CyberpunkPanel__Muted">
+                No OGG loaded.
+              </Box>
+            )}
+
+            <Stack align="center" mt={1.5}>
+              <Stack.Item grow textAlign="center">
+                <Knob
+                  size={1.8}
+                  value={volVal}
+                  minValue={0}
+                  maxValue={100}
+                  step={1}
+                  stepPixelSize={6}
+                  onChange={handleVolume}
+                  onDrag={handleVolume}
+                />
+                <Box mt={0.3}>
+                  Volume <Box as="span" color="label">({volVal}%)</Box>
+                </Box>
+              </Stack.Item>
+            </Stack>
+          </Section>
+        </Stack.Item>
+      </Stack>
+    </Section>
+  );
+};
+
 const LeftColumn = () => {
   const { act, data } = useBackend<Data>();
   const {
-    id,
     using_instrument,
     can_switch_instrument,
     possible_instruments = [],
     sustain_modes,
     sustain_mode,
     sustain_indefinitely,
-    multi_sync_enabled,
+    midi_start_delay_ticks,
   } = data;
 
   const instrument_id_by_name = (name: string) =>
@@ -242,23 +438,18 @@ const LeftColumn = () => {
       </Box>
 
       <Stack align="center" mt={1}>
+        <Stack.Item className="CyberpunkPanel__Muted">
+          MIDI delay:
+        </Stack.Item>
         <Stack.Item grow>
           <Input
             width="100%"
-            placeholder="Sync ID"
-            value={id}
-            maxLength={20}
-            onChange={(v) => act('set_instrument_id', { id: v })}
+            value={`${midi_start_delay_ticks}`}
+            onBlur={(value) => act('set_midi_start_delay', { amount: Number(value) })}
+            onEnter={(value) => act('set_midi_start_delay', { amount: Number(value) })}
           />
         </Stack.Item>
-        <Stack.Item ml={1}>
-          <Button
-            selected={!!multi_sync_enabled}
-            onClick={() => act('toggle_multi_sync')}
-          >
-            Detailed Sync
-          </Button>
-        </Stack.Item>
+        <Stack.Item>ticks</Stack.Item>
       </Stack>
     </Section>
   );
@@ -273,7 +464,7 @@ const RightKnobs = () => {
     sustain_mode_duration,
   } = data;
 
-  const VOL_MAX = 75;
+  const VOL_MAX = 100;
   const DROP_MIN = 0;
   const DROP_MAX = 100;
   const PITCH_MIN = -100;
@@ -382,61 +573,6 @@ const RightKnobs = () => {
         </Stack.Item>
       </Stack>
     </Section>
-  );
-};
-
-const SyncTracks = () => {
-  const { act, data } = useBackend<Data>();
-  const tracks = data.multi_tracks ?? [];
-
-  return (
-    <Collapsible open={!!data.multi_sync_enabled} title="Detailed Sync Tracks" icon="waveform">
-      <Section>
-        <Table>
-          <Table.Row header>
-            <Table.Cell>#</Table.Cell>
-            <Table.Cell>Target ID</Table.Cell>
-            <Table.Cell>Delay (beats)</Table.Cell>
-            <Table.Cell />
-          </Table.Row>
-          {tracks.map((t, i) => {
-            const idx = i + 1;
-            return (
-              <Table.Row key={idx}>
-                <Table.Cell>{idx}</Table.Cell>
-                <Table.Cell>
-                  <Input
-                    width={16}
-                    value={t?.target_id ?? ''}
-                    placeholder="insert_id"
-                    onChange={(value) => act('ms_set', { idx, field: 'target_id', value })}
-                  />
-                </Table.Cell>
-                <Table.Cell>
-                  <NumberInput
-                    step={1}
-                    minValue={0}
-                    maxValue={4096}
-                    value={t?.delay_beats ?? 0}
-                    onChange={(value) => act('ms_set', { idx, field: 'delay_beats', value })}
-                  />
-                </Table.Cell>
-                <Table.Cell>
-                  <Button color="bad" onClick={() => act('ms_del', { idx })}>
-                    Del
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            );
-          })}
-        </Table>
-        <Box mt={1}>
-          <Button icon="plus" onClick={() => act('ms_add')}>
-            Add Track
-          </Button>
-        </Box>
-      </Section>
-    </Collapsible>
   );
 };
 

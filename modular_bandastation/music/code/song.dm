@@ -1,4 +1,11 @@
 #define AUTO_UNISON_RADIUS 5
+#define GROUP_PERFORMANCE_RADIUS 5
+#define GROUP_PERFORMANCE_TIMEOUT (30 SECONDS)
+
+#define GROUP_PERFORMANCE_PENDING "pending"
+#define GROUP_PERFORMANCE_ACCEPTED "accepted"
+#define GROUP_PERFORMANCE_READY "ready"
+#define GROUP_PERFORMANCE_SKIPPED "skipped"
 
 /datum/song
 	var/auto_unison_enabled = FALSE
@@ -6,6 +13,10 @@
 	var/list/multi_tracks = list()
 	var/multi_sync_enabled = FALSE
 	var/ignore_play_checks = FALSE
+	var/datum/song/group_start_leader
+	var/group_start_deadline = 0
+	var/list/group_start_candidates
+	var/atom/group_start_player
 
 /datum/song/proc/ds_per_beat()
 	return max(1, round(600 / max(1, bpm)))
@@ -13,6 +24,132 @@
 /datum/song/proc/force_start_playing()
 	ignore_play_checks = TRUE
 	start_playing(parent)
+
+/datum/song/proc/start_without_prompt(atom/player, skip_sync = TRUE)
+	suppress_next_sync = skip_sync
+	start_playing(player)
+
+/datum/song/proc/find_group_player()
+	var/atom/player = find_sync_player()
+	return ismob(player) ? player : null
+
+/datum/song/handheld/find_group_player()
+	if(!istype(parent, /obj/item/instrument))
+		return null
+	var/obj/item/instrument/instrument = parent
+	var/mob/living/player = instrument.loc
+	if(!istype(player) || !(instrument in player.held_items))
+		return null
+	return instrument.can_play(player) ? player : null
+
+/datum/song/stationary/find_group_player()
+	return find_sync_player()
+
+/datum/song/proc/get_nearby_group_candidates(atom/leader_player)
+	var/list/candidates = list()
+	var/turf/leader_turf = get_turf(leader_player || parent)
+	if(!leader_turf)
+		return candidates
+	for(var/datum/song/S as anything in SSinstruments.songs)
+		if(S == src || S.playing || S.group_start_leader)
+			continue
+		var/mob/candidate_player = S.find_group_player()
+		if(!candidate_player || candidate_player.incapacitated || !candidate_player.client)
+			continue
+		var/turf/candidate_turf = get_turf(candidate_player)
+		if(!candidate_turf || candidate_turf.z != leader_turf.z)
+			continue
+		if(get_dist(candidate_turf, leader_turf) > GROUP_PERFORMANCE_RADIUS)
+			continue
+		candidates[S] = candidate_player
+	return candidates
+
+/datum/song/proc/try_start_group_performance(mob/user)
+	if(playing)
+		stop_playing()
+		return TRUE
+	if(cancel_delayed_midi_start())
+		return TRUE
+	if(group_start_leader)
+		prepare_group_performance(user)
+		return TRUE
+	if(!istype(user))
+		start_without_prompt(user, FALSE)
+		return TRUE
+	var/list/candidates = get_nearby_group_candidates(user)
+	if(!length(candidates))
+		start_without_prompt(user, FALSE)
+		return TRUE
+	group_start_candidates = list()
+	group_start_deadline = world.time + GROUP_PERFORMANCE_TIMEOUT
+	group_start_player = user
+	for(var/datum/song/candidate as anything in candidates)
+		group_start_candidates[candidate] = GROUP_PERFORMANCE_PENDING
+		INVOKE_ASYNC(src, PROC_REF(prompt_group_candidate), candidate, candidates[candidate])
+	to_chat(user, span_notice("You invite nearby musicians to join. Performance starts when they prepare or after [DisplayTimeText(GROUP_PERFORMANCE_TIMEOUT)]."))
+	addtimer(CALLBACK(src, PROC_REF(finalize_group_performance)), GROUP_PERFORMANCE_TIMEOUT, TIMER_UNIQUE)
+	return TRUE
+
+/datum/song/proc/prompt_group_candidate(datum/song/candidate, mob/player)
+	if(!istype(candidate) || !istype(player))
+		return
+	var/mob/leader = group_start_player
+	var/answer = tgui_alert(player, "[leader ? leader : parent] is starting a group performance. Join?", "Group Performance", list("Yes", "No"))
+	if(!group_start_candidates || world.time > group_start_deadline || !(candidate in group_start_candidates))
+		return
+	if(answer != "Yes")
+		group_start_candidates[candidate] = GROUP_PERFORMANCE_SKIPPED
+		check_group_performance_ready()
+		return
+	group_start_candidates[candidate] = GROUP_PERFORMANCE_ACCEPTED
+	candidate.group_start_leader = src
+	candidate.group_start_deadline = group_start_deadline
+	to_chat(player, span_notice("Choose your track and press Prepare within [DisplayTimeText(max(0, group_start_deadline - world.time))]."))
+	candidate.ui_interact(player)
+	check_group_performance_ready()
+
+/datum/song/proc/prepare_group_performance(mob/user)
+	if(!group_start_leader || world.time > group_start_deadline)
+		clear_group_prepare()
+		return FALSE
+	var/datum/song/leader = group_start_leader
+	if(!leader.group_start_candidates || !(src in leader.group_start_candidates))
+		clear_group_prepare()
+		return FALSE
+	leader.group_start_candidates[src] = GROUP_PERFORMANCE_READY
+	to_chat(user, span_notice("You are ready for the group performance."))
+	leader.check_group_performance_ready()
+	return TRUE
+
+/datum/song/proc/check_group_performance_ready()
+	if(!group_start_candidates)
+		return FALSE
+	for(var/datum/song/candidate as anything in group_start_candidates)
+		var/status = group_start_candidates[candidate]
+		if(status == GROUP_PERFORMANCE_PENDING || status == GROUP_PERFORMANCE_ACCEPTED)
+			return FALSE
+	finalize_group_performance()
+	return TRUE
+
+/datum/song/proc/finalize_group_performance()
+	if(!group_start_candidates)
+		return
+	var/list/ready_songs = list(src)
+	for(var/datum/song/candidate as anything in group_start_candidates)
+		if(group_start_candidates[candidate] == GROUP_PERFORMANCE_READY)
+			ready_songs += candidate
+		candidate.clear_group_prepare()
+	group_start_candidates = null
+	group_start_deadline = 0
+	var/atom/player = group_start_player
+	group_start_player = null
+	for(var/datum/song/S as anything in ready_songs)
+		var/atom/start_player = (S == src) ? player : S.find_group_player()
+		S.start_without_prompt(start_player || S.parent, TRUE)
+
+/datum/song/proc/clear_group_prepare()
+	group_start_leader = null
+	group_start_deadline = 0
 
 /datum/song/proc/transmit_song_to(datum/song/other)
 	if(!istype(other))
@@ -22,7 +159,14 @@
 	other.tempo = tempo
 	other.bpm = bpm
 	other.max_repeats = max_repeats
-	other.compile_chords()
+	other.auto_repeat = auto_repeat
+	other.playback_mode = playback_mode
+	other.file_track = file_track
+	other.file_track_name = file_track_name
+	other.file_track_length = file_track_length
+	other.loaded_file_tracks = islist(loaded_file_tracks) ? loaded_file_tracks.Copy() : list()
+	if(other.playback_mode != "file")
+		other.compile_chords()
 
 /datum/song/proc/receive_song_from(datum/song/master)
 	if(!istype(master))
@@ -32,7 +176,14 @@
 	tempo = master.tempo
 	bpm = master.bpm
 	max_repeats = master.max_repeats
-	compile_chords()
+	auto_repeat = master.auto_repeat
+	playback_mode = master.playback_mode
+	file_track = master.file_track
+	file_track_name = master.file_track_name
+	file_track_length = master.file_track_length
+	loaded_file_tracks = islist(master.loaded_file_tracks) ? master.loaded_file_tracks.Copy() : list()
+	if(playback_mode != "file")
+		compile_chords()
 
 /datum/song/proc/songs_by_id(target_id as text, require_in_view = TRUE)
 	var/list/out = list()
@@ -85,9 +236,10 @@
 	if(!playing)
 		return
 
-	current_chord = clamp(master.current_chord, 1, length(compiled_chords))
-	elapsed_delay = 0
-	delay_by = 0
+	if(playback_mode != "file")
+		current_chord = clamp(master.current_chord, 1, length(compiled_chords))
+		elapsed_delay = 0
+		delay_by = 0
 
 /datum/song/handheld/should_stop_playing(atom/player)
 	if(ignore_play_checks)
@@ -115,55 +267,26 @@
 
 /datum/song/ui_data(mob/user)
 	var/list/data = ..()
-	data["auto_unison_enabled"] = auto_unison_enabled
-	data["multi_sync_enabled"] = multi_sync_enabled
-	var/list/out = list()
-	for(var/i in 1 to multi_tracks.len)
-		var/list/T = multi_tracks[i]
-		out += list(list("target_id" = T["target_id"], "delay_beats" = T["delay_beats"]))
-
-	data["multi_tracks"] = out
+	data["group_prepare_pending"] = !!group_start_leader && world.time <= group_start_deadline
+	data["group_prepare_seconds"] = data["group_prepare_pending"] ? max(0, round((group_start_deadline - world.time) / (1 SECONDS))) : 0
 	return data
 
 /datum/song/ui_act(action, list/params)
 	switch(action)
-		if("toggle_auto_unison")
-			auto_unison_enabled = !auto_unison_enabled
-			if(auto_unison_enabled)
-				START_PROCESSING(SSinstruments, src)
-			return TRUE
-		if("toggle_multi_sync")
-			multi_sync_enabled = !multi_sync_enabled
-			return TRUE
-		if("ms_add")
-			multi_tracks += list(list("target_id"=null, "delay_beats"=0))
-			return TRUE
-		if("ms_del")
-			var/idx = max(1, round(text2num(params["idx"])))
-			if(idx <= multi_tracks.len)
-				multi_tracks.Cut(idx, idx+1)
-			return TRUE
-		if("ms_set")
-			var/idx2 = max(1, round(text2num(params["idx"])))
-			if(idx2 > multi_tracks.len) return FALSE
-			var/list/T = multi_tracks[idx2]
-			var/field = "[params["field"]]"
-			if(field == "target_id")
-				var/t = isnull(params["value"]) ? "" : "[params["value"]]"
-				T["target_id"] = length(t) ? t : null
-				return TRUE
-			if(field == "delay_beats")
-				T["delay_beats"] = max(0, round(text2num(params["value"])))
-				return TRUE
-			return FALSE
-
-		if("set_instrument_id")
-			var/new_id = "[params["id"]]"
-			new_id = trim(new_id)
-			id = length(new_id) ? new_id : ""
-			return TRUE
+		if("play_music")
+			var/mob/user = usr
+			if(!istype(user))
+				return FALSE
+			return try_start_group_performance(user)
 
 	return ..()
+
+#undef GROUP_PERFORMANCE_RADIUS
+#undef GROUP_PERFORMANCE_TIMEOUT
+#undef GROUP_PERFORMANCE_PENDING
+#undef GROUP_PERFORMANCE_ACCEPTED
+#undef GROUP_PERFORMANCE_READY
+#undef GROUP_PERFORMANCE_SKIPPED
 
 /datum/song/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)

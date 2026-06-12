@@ -600,6 +600,8 @@ GLOBAL_LIST_INIT(canvas_dimensions, init_canvas_dimensions())
 /obj/structure/sign/painting/atom_deconstruct(disassembled)
 	var/turf/drop_turf = drop_location()
 	current_canvas?.forceMove(drop_turf)
+	if(!disassembled)
+		return
 	var/obj/item/wallframe/frame = new wallframe_type(drop_turf)
 	frame.update_integrity(get_integrity()) //Transfer how damaged it is.
 

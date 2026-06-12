@@ -37,6 +37,9 @@ type Data = {
   playing: BooleanLike;
   max_repeats: number;
   repeat: number;
+  playback_mode: string;
+  file_track_name?: string | null;
+  file_track_length?: string | null;
   bpm: number;
   lines: LineData[];
   can_switch_instrument: BooleanLike;
@@ -100,6 +103,9 @@ const InstrumentSettings = (props) => {
     max_volume,
     volume_dropoff_threshold,
     lines,
+    playback_mode,
+    file_track_name,
+    file_track_length,
   } = data;
 
   const instrument_id_by_name = (name) => {
@@ -109,13 +115,36 @@ const InstrumentSettings = (props) => {
 
   return (
     <Section title="Settings">
-      {lines.length > 0 && (
+      {(lines.length > 0 || !!file_track_name) && (
         <Box fontSize="16px" mb={1}>
           <Button onClick={() => act('play_music')}>
             {playing ? 'Stop Music' : 'Start Playing'}
           </Button>
         </Box>
       )}
+      <Box mb={1}>
+        Playback:
+        <Button
+          ml={1}
+          selected={playback_mode === 'midi'}
+          disabled={!!playing}
+          onClick={() => act('set_playback_mode', { mode: 'midi' })}
+        >
+          MIDI
+        </Button>
+        <Button
+          selected={playback_mode === 'file'}
+          disabled={!!playing || !file_track_name}
+          onClick={() => act('set_playback_mode', { mode: 'file' })}
+        >
+          File
+        </Button>
+        {!!file_track_name && (
+          <Box inline ml={1} color="label">
+            {file_track_name} ({file_track_length})
+          </Box>
+        )}
+      </Box>
       <Box>
         <Box
           inline
@@ -286,6 +315,8 @@ const EditingSettings = (props) => {
       <Box>
         <Button onClick={() => act('start_new_song')}>Start a New Song</Button>
         <Button onClick={() => act('import_song')}>Import a Song</Button>
+        <Button onClick={() => act('import_file_song')}>Load OGG File</Button>
+        <Button onClick={() => act('clear_file_song')}>Clear OGG</Button>
       </Box>
       <Box>
         Tempo:{' '}

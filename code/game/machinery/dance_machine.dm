@@ -140,6 +140,7 @@
 		return FALSE
 
 	music_player.start_music()
+	SEND_SIGNAL(src, COMSIG_INSTRUMENT_START, music_player.selection)
 	update_use_power(ACTIVE_POWER_USE)
 	update_appearance(UPDATE_ICON_STATE)
 	if(!music_player.sound_loops)
@@ -150,6 +151,7 @@
 	if(!isnull(song_timerid))
 		deltimer(song_timerid)
 
+	SEND_SIGNAL(src, COMSIG_INSTRUMENT_END, src)
 	music_player.unlisten_all()
 
 	if(!QDELING(src))
@@ -165,6 +167,204 @@
 
 /obj/machinery/jukebox/no_access
 	req_access = null
+
+/obj/structure/concertspeaker
+	name = "concert speaker"
+	desc = "A speaker shell for a Soundhand concert setup."
+	icon = 'icons/obj/machines/music.dmi'
+	icon_state = "jukebox"
+	base_icon_state = "jukebox"
+	anchored = FALSE
+	density = FALSE
+	max_integrity = 250
+	integrity_failure = 25
+	/// Whether the linked concert system is currently playing through this shell.
+	var/active = FALSE
+	/// Whether a concert remote has installed a receiver component into this shell.
+	var/is_synced = FALSE
+
+/obj/structure/concertspeaker/Initialize(mapload)
+	. = ..()
+	AddComponent(/datum/component/shell, null, SHELL_CAPACITY_SMALL, SHELL_FLAG_REQUIRE_ANCHOR|SHELL_FLAG_USB_PORT)
+
+/obj/structure/concertspeaker/examine(mob/user)
+	. = ..()
+	. += span_notice("Use a wrench to secure it for playback or unsecure it for transport.")
+
+/obj/structure/concertspeaker/wrench_act(mob/living/user, obj/item/tool)
+	if(resistance_flags & INDESTRUCTIBLE)
+		return NONE
+	tool.play_tool_sound(src)
+	if(!anchored && !isinspace())
+		set_anchored(TRUE)
+		density = TRUE
+		balloon_alert(user, "secured")
+	else if(anchored)
+		set_anchored(FALSE)
+		density = FALSE
+		force_stop_all_listeners()
+		balloon_alert(user, "unsecured")
+	return ITEM_INTERACT_SUCCESS
+
+/obj/structure/concertspeaker/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(istype(tool, /obj/item/concert_master))
+		if(!anchored)
+			balloon_alert(user, "secure it first!")
+			return ITEM_INTERACT_BLOCKING
+		convert_to_master(user)
+		qdel(tool)
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/structure/concertspeaker/proc/set_concert_state(new_active, new_synced = is_synced)
+	active = new_active
+	is_synced = new_synced
+
+/obj/structure/concertspeaker/proc/force_stop_all_listeners()
+	for(var/obj/item/integrated_circuit/circuit in contents)
+		for(var/obj/item/circuit_component/concert_listener/listener in circuit.attached_components)
+			listener.stop_playback()
+
+/obj/structure/concertspeaker/proc/convert_to_master(mob/user)
+	var/turf/target_turf = get_turf(src)
+	if(!target_turf)
+		return
+	var/obj/machinery/jukebox/concertspeaker/master = new(target_turf)
+	master.dir = dir
+	master.set_anchored(TRUE)
+	for(var/obj/item/integrated_circuit/circuit in contents)
+		circuit.forceMove(master)
+		var/datum/component/shell/master_shell = master.GetComponent(/datum/component/shell)
+		master_shell?.attach_circuit(circuit)
+	to_chat(user, span_notice("You install the DJ controller. The speaker becomes a concert deck."))
+	qdel(src)
+
+/obj/item/packed_concertspeaker
+	name = "packed concert speaker"
+	desc = "A packed speaker shell for a Soundhand concert setup."
+	icon = 'icons/obj/machines/music.dmi'
+	icon_state = "jukebox"
+	w_class = WEIGHT_CLASS_BULKY
+
+/obj/item/packed_concertspeaker/attack_self(mob/user, modifiers)
+	var/turf/target_turf = get_turf(user)
+	if(!target_turf)
+		return
+	var/obj/structure/concertspeaker/speaker = new(target_turf)
+	speaker.dir = user.dir
+	to_chat(user, span_notice("You unpack the concert speaker."))
+	qdel(src)
+
+/obj/item/concert_master
+	name = "concert controller kit"
+	desc = "A controller module that converts a secured concert speaker into a DJ deck."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "component"
+	w_class = WEIGHT_CLASS_NORMAL
+
+/obj/item/disk/concert
+	name = "concert disk"
+	desc = "A single-track concert disk for the DJ deck."
+	icon_state = "datadisk0"
+	w_class = WEIGHT_CLASS_SMALL
+	/// Track data; intentionally uses existing audio content.
+	var/track_name = "Tintin on the Moon"
+	var/track_path = 'sound/music/lobby_music/title3.ogg'
+	var/track_length = 3 MINUTES + 52 SECONDS
+	var/track_beat_deciseconds = 1 SECONDS
+
+/obj/machinery/jukebox/concertspeaker
+	name = "concert DJ deck"
+	desc = "A Soundhand DJ deck. It plays a loaded concert disk through linked circuit speakers."
+	req_access = null
+	anchored = TRUE
+	density = TRUE
+	max_integrity = 250
+	integrity_failure = 25
+	/// Whether the master component is installed in the internal circuit.
+	var/remote_installed = FALSE
+	/// Installed master component.
+	var/obj/item/circuit_component/concert_master/master_component
+	/// Currently loaded disk.
+	var/obj/item/disk/concert/inserted_disk
+
+/obj/machinery/jukebox/concertspeaker/Initialize(mapload)
+	. = ..()
+	QDEL_NULL(music_player)
+	music_player = new /datum/jukebox/concertspeaker(src)
+	AddComponent(/datum/component/shell, null, SHELL_CAPACITY_SMALL, SHELL_FLAG_REQUIRE_ANCHOR|SHELL_FLAG_USB_PORT)
+
+/obj/machinery/jukebox/concertspeaker/examine(mob/user)
+	. = ..()
+	if(!inserted_disk)
+		. += span_warning("Insert a concert disk to load a track.")
+	if(master_component?.remote?.loc == master_component)
+		. += span_notice("Use right click with an empty hand to take the link remote.")
+
+/obj/machinery/jukebox/concertspeaker/wrench_act(mob/living/user, obj/item/tool)
+	if(!anchored)
+		return ..()
+	tool.play_tool_sound(src)
+	convert_to_regular(user)
+	return ITEM_INTERACT_SUCCESS
+
+/obj/machinery/jukebox/concertspeaker/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(istype(tool, /obj/item/disk/concert))
+		insert_disk(tool, user)
+		return ITEM_INTERACT_SUCCESS
+	return ..()
+
+/obj/machinery/jukebox/concertspeaker/attack_hand_secondary(mob/user, list/modifiers)
+	if(inserted_disk)
+		eject_disk(user)
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	if(master_component?.remote?.loc == master_component)
+		var/obj/item/concert_remote/remote = master_component.remote
+		if(!user.put_in_active_hand(remote))
+			remote.forceMove(drop_location())
+		to_chat(user, span_notice("You take the concert link remote."))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	return ..()
+
+/obj/machinery/jukebox/concertspeaker/proc/convert_to_regular(mob/user)
+	var/turf/target_turf = get_turf(src)
+	if(!target_turf)
+		return
+	eject_disk(user)
+	stop_music()
+	var/obj/structure/concertspeaker/speaker = new(target_turf)
+	speaker.dir = dir
+	speaker.set_anchored(TRUE)
+	speaker.density = TRUE
+	for(var/obj/item/integrated_circuit/circuit in contents)
+		circuit.forceMove(speaker)
+		var/datum/component/shell/speaker_shell = speaker.GetComponent(/datum/component/shell)
+		speaker_shell?.attach_circuit(circuit)
+	new /obj/item/concert_master(target_turf)
+	qdel(src)
+
+/obj/machinery/jukebox/concertspeaker/proc/insert_disk(obj/item/disk/concert/disk, mob/user)
+	if(inserted_disk)
+		balloon_alert(user, "disk already loaded!")
+		return
+	if(!user.transferItemToLoc(disk, src))
+		return
+	inserted_disk = disk
+	var/datum/jukebox/concertspeaker/concert_player = music_player
+	concert_player.load_concert_disk(disk)
+	to_chat(user, span_notice("You load [disk]."))
+
+/obj/machinery/jukebox/concertspeaker/proc/eject_disk(mob/user)
+	if(!inserted_disk)
+		return
+	var/datum/jukebox/concertspeaker/concert_player = music_player
+	concert_player.clear_concert_disk()
+	var/obj/item/disk/concert/disk = inserted_disk
+	inserted_disk = null
+	if(user && user.put_in_active_hand(disk))
+		to_chat(user, span_notice("You eject [disk]."))
+	else
+		disk.forceMove(drop_location())
 
 /obj/machinery/jukebox/disco
 	name = "radiant dance machine mark IV"

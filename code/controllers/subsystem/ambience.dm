@@ -56,6 +56,8 @@ SUBSYSTEM_DEF(ambience)
 	var/sound/new_sound = override_sound || pick(ambientsounds)
 	if(!new_sound) // Dont try to play a sound if we dont have any.
 		return 1 MINUTES
+	if(length(GLOB.active_jukebox_music_listeners[M]))
+		return rand(min_ambience_cooldown, max_ambience_cooldown)
 	/// volume modifier for ambience as set by the player in preferences.
 	var/volume_modifier = (M.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_ambience_volume))/100
 	new_sound = sound(new_sound, repeat = 0, wait = 0, volume = volume*volume_modifier, channel = CHANNEL_AMBIENCE)
@@ -122,6 +124,11 @@ SUBSYSTEM_DEF(ambience)
 	var/volume_modifier = client.prefs.read_preference(/datum/preference/numeric/volume/sound_ship_ambience_volume)
 
 	if(!sound_to_use || !(client.prefs.read_preference(/datum/preference/numeric/volume/sound_ship_ambience_volume)))
+		SEND_SOUND(src, sound(null, repeat = 0, wait = 0, channel = CHANNEL_BUZZ))
+		client.current_ambient_sound = null
+		return
+
+	if(length(GLOB.active_jukebox_music_listeners[src]))
 		SEND_SOUND(src, sound(null, repeat = 0, wait = 0, channel = CHANNEL_BUZZ))
 		client.current_ambient_sound = null
 		return

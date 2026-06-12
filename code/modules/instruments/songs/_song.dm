@@ -30,13 +30,27 @@
 	var/repeat = 0
 	/// Maximum times we can repeat
 	var/max_repeats = 10
+	/// Whether playback should loop until manually stopped.
+	var/auto_repeat = FALSE
 
 	/// Our volume
-	var/volume = 35
+	var/volume = 75
 	/// Max volume
-	var/max_volume = 75
+	var/max_volume = 100
 	/// Min volume - This is so someone doesn't decide it's funny to set it to 0 and play invisible songs.
 	var/min_volume = 1
+	/// Current playback mode: "midi" uses the text note editor, "file" plays a loaded OGG as one sound.
+	var/playback_mode = "midi"
+	/// Uploaded sound file for file playback mode.
+	var/file_track
+	/// Display name for the uploaded sound file.
+	var/file_track_name
+	/// Cached file track duration.
+	var/file_track_length = 0
+	/// World time when current file playback should finish.
+	var/file_track_finish_time = 0
+	/// Uploaded OGG tracks available in this editor session.
+	var/list/loaded_file_tracks = list()
 
 	/// What instruments our built in picker can use. The picker won't show unless this is longer than one.
 	var/list/allowed_instrument_ids = list("r3grand")
@@ -88,6 +102,16 @@
 	var/using_sound_channels = 0
 	/// Last channel to play. text.
 	var/last_channel_played
+	/// Last world time process() ran; used to catch up small MIDI timing stalls.
+	var/last_process_time = 0
+	/// If TRUE, the next direct start will not invoke ID/multi-sync.
+	var/suppress_next_sync = FALSE
+	/// MIDI start delay in subsystem ticks, used for manual/group synchronization.
+	var/midi_start_delay_ticks = 0
+	/// Timer id for a delayed MIDI start.
+	var/midi_start_timer
+	/// If TRUE, the next direct start ignores midi_start_delay_ticks.
+	var/ignore_midi_start_delay = FALSE
 	/// Should we not decay our last played note?
 	var/full_sustain_held_note = TRUE
 
@@ -152,6 +176,7 @@
 		using_instrument.songs_using -= src
 		using_instrument = null
 	allowed_instrument_ids = null
+	loaded_file_tracks = null
 	parent = null
 	return ..()
 
@@ -206,12 +231,25 @@
 /datum/song/proc/start_playing(atom/user)
 	if(playing)
 		return
+	if(midi_start_timer)
+		return
 	if(!using_instrument?.ready())
 		to_chat(user, span_warning("An error has occured with [src]. Please reset the instrument."))
+		ignore_midi_start_delay = FALSE
+		suppress_next_sync = FALSE
 		return
+	if(playback_mode == "file")
+		start_file_playing(user)
+		return
+	if(midi_start_delay_ticks > 0 && !ignore_midi_start_delay)
+		midi_start_timer = addtimer(CALLBACK(src, PROC_REF(delayed_midi_start), user), midi_start_delay_ticks * SSinstruments.wait, TIMER_STOPPABLE)
+		return
+	ignore_midi_start_delay = FALSE
 	compile_chords()
 	if(!length(compiled_chords))
 		to_chat(user, span_warning("Song is empty."))
+		ignore_midi_start_delay = FALSE
+		suppress_next_sync = FALSE
 		return
 	playing = TRUE
 	//we can not afford to runtime, since we are going to be doing sound channel reservations and if we runtime it means we have a channel allocation leak.
@@ -224,53 +262,29 @@
 	delay_residual = 0.0 // BANDASTATION ADDITION - BPM unlock
 	current_chord = 1
 	music_player = user
+	last_process_time = world.time
 	START_PROCESSING(SSinstruments, src)
-	if(id)
-		sync_play(user)
+	// Manual/group MIDI start delay replaces old ID-based sync.
+	suppress_next_sync = FALSE
+
+/datum/song/proc/delayed_midi_start(atom/user)
+	midi_start_timer = null
+	ignore_midi_start_delay = TRUE
+	start_playing(user)
+
+/datum/song/proc/cancel_delayed_midi_start()
+	if(!midi_start_timer)
+		return FALSE
+	deltimer(midi_start_timer)
+	midi_start_timer = null
+	ignore_midi_start_delay = FALSE
+	return TRUE
 
 /**
  * Attempts to find other instruments with the same ID and syncs them to our song.
  */
 /datum/song/proc/sync_play()
-	// BANDASTATION EDIT START - New Musical Sync
-	// for(var/datum/song/other_instrument as anything in SSinstruments.songs)
-	// 	if(other_instrument == src || other_instrument.id != id)
-	// 		continue
-	// 	if(other_instrument.playing)
-	// 		continue
-	// 	var/atom/other_player = other_instrument.find_sync_player()
-	// 	if(isnull(other_player) || !(other_player in view(parent)))
-	// 		continue
-	// 	// copies the main song info to target songs
-	// 	other_instrument.lines = lines.Copy()
-	// 	other_instrument.max_repeats = max_repeats
-	// 	other_instrument.tempo = tempo
-	// 	other_instrument.start_playing(other_player)
-
-	if(!multi_sync_enabled)
-		var/list/targets = songs_by_id(id, TRUE)
-		for(var/datum/song/other in targets)
-			if(other.playing)
-				continue
-			transmit_song_to(other)
-			other.force_start_playing()
-		return
-
-	if(!length(multi_tracks))
-		return
-
-	for(var/list/T in multi_tracks)
-		var/target = T["target_id"]
-		if(!istext(target) || !length(target))
-			continue
-		var/delay_beats = max(0, round(T["delay_beats"] || 0))
-		var/delay_ds = delay_beats * ds_per_beat()
-		var/list/targets2 = songs_by_id(target, TRUE)
-		for(var/datum/song/other2 in targets2)
-			if(other2.playing)
-				continue
-			addtimer(CALLBACK(other2, /datum/song/proc/force_start_playing), delay_ds)
-	// BANDASTATION EDIT End - New Musical Sync
+	return
 
 /**
  * Finds a player which would reasonably be able to play this song.
@@ -287,6 +301,7 @@
 /datum/song/proc/stop_playing(finished = FALSE)
 	ignore_play_checks = FALSE // BANDASTATION ADDITION - New Musical Sync
 
+	cancel_delayed_midi_start()
 	if(!playing)
 		return
 	playing = FALSE
@@ -297,18 +312,24 @@
 	terminate_all_sounds(TRUE)
 	hearing_mobs.len = 0
 	music_player = null
+	file_track_finish_time = 0
+	last_process_time = 0
+	suppress_next_sync = FALSE
+	ignore_midi_start_delay = FALSE
 
 	// BANDASTATION ADDITION START - New Musical Sync
-	if(auto_unison_enabled)
-		START_PROCESSING(SSinstruments, src)
 	// BANDASTATION ADDITION END - New Musical Sync
 
 /**
  * Processes our song.
  */
-#define AUTO_UNISON_PERIOD_TICKS 10 // BANDASTATION ADDITION - New Musical Sync
-
 /datum/song/proc/process_song(wait)
+	if(playback_mode == "file")
+		if(playing)
+			process_file_playing()
+			return
+		return PROCESS_KILL
+
 	if(playing) // BANDASTATION ADDITION - New Musical Sync
 		if(!length(compiled_chords))
 			stop_playing(TRUE)
@@ -326,23 +347,16 @@
 		current_chord++
 		if(current_chord <= length(compiled_chords))
 			return
-		if(!repeat)
+		if(!repeat && !auto_repeat)
 			stop_playing(TRUE)
 			return
-		repeat--
+		if(!auto_repeat)
+			repeat--
 		current_chord = 1
 		SEND_SIGNAL(parent, COMSIG_INSTRUMENT_REPEAT, TRUE)
 
-	// BANDASTATION ADDITION START - New Musical Sync
-	if(auto_unison_enabled)
-		if(world.time >= (last_unison_check + AUTO_UNISON_PERIOD_TICKS))
-			last_unison_check = world.time
-			try_auto_unison_once()
-		return
-
 	return PROCESS_KILL
 
-#undef AUTO_UNISON_PERIOD_TICKS
 	// BANDASTATION ADDITION END- New Musical Sync
 
 /**
@@ -389,8 +403,6 @@
 
 /// Sets and sanitizes the repeats variable.
 /datum/song/proc/set_repeats(new_repeats_value)
-	if(playing)
-		return //So that people cant keep adding to repeat. If the do it intentionally, it could result in the server crashing.
 	repeat = round(new_repeats_value)
 	if(repeat < 0)
 		repeat = 0
@@ -436,11 +448,20 @@
 	return max(1, round((60 SECONDS) / world.tick_lag))
 
 /datum/song/process(wait)
-	if(!playing && !auto_unison_enabled) // BANDASTATION ADDITION END- New Musical Sync
+	if(!playing)
 		return PROCESS_KILL
-	// it's expected this ticks at every world.tick_lag. if it lags, do not attempt to catch up.
+	if(playing && playback_mode != "file")
+		var/elapsed = last_process_time ? max(world.tick_lag, world.time - last_process_time) : world.tick_lag
+		last_process_time = world.time
+		var/steps = clamp(round(elapsed / world.tick_lag), 1, 4)
+		for(var/i in 1 to steps)
+			if(!playing)
+				break
+			process_song(world.tick_lag)
+			process_decay(world.tick_lag)
+		return
+	last_process_time = world.time
 	process_song(world.tick_lag)
-	process_decay(world.tick_lag)
 
 /**
  * Updates our cached linear/exponential falloff stuff, saving calculations down the line.
@@ -458,8 +479,178 @@
  * Setter for setting output volume.
  */
 /datum/song/proc/set_volume(volume)
-	src.volume = clamp(round(volume, 1), max(0, min_volume), min(100, max_volume))
+	src.volume = clamp(round(volume, 1), max(0, min_volume), max_volume)
 	update_sustain()
+	if(playing && playback_mode == "file")
+		update_file_playback_volume()
+
+/// Returns the actual sound volume sent to clients. UI stays 0-100, output has headroom for quiet tracks.
+/datum/song/proc/get_output_volume(base_volume = volume)
+	return base_volume * INSTRUMENT_OUTPUT_GAIN
+
+/// File-backed OGG playback needs more headroom than MIDI notes.
+/datum/song/proc/get_file_output_volume(base_volume = volume)
+	return base_volume * INSTRUMENT_FILE_OUTPUT_GAIN
+
+/// Keeps falloff valid for short-range instruments and circuits.
+/datum/song/proc/get_sound_falloff_distance()
+	if(instrument_range <= 1)
+		return 0
+	return min(INSTRUMENT_FALLOFF_DISTANCE, instrument_range - 1)
+
+/datum/song/proc/set_playback_mode(new_mode)
+	if(!(new_mode in list("midi", "file")))
+		return
+	if(playing)
+		stop_playing()
+	playback_mode = new_mode
+
+/datum/song/proc/set_file_track(new_file, mob/user)
+	if(!new_file || !IS_OGG_FILE(new_file))
+		if(user)
+			to_chat(user, span_warning("Only OGG files are supported for file playback."))
+		return FALSE
+	if(playing)
+		stop_playing()
+	file_track = new_file
+	file_track_name = SANITIZE_FILENAME("[new_file]")
+	file_track_length = SSsounds.get_sound_length(new_file)
+	if(!file_track_length)
+		file_track_length = 270 SECONDS
+	store_loaded_file_track(file_track_name, file_track, file_track_length)
+	playback_mode = "file"
+	return TRUE
+
+/datum/song/proc/store_loaded_file_track(track_name, track_file, track_length)
+	for(var/list/track as anything in loaded_file_tracks)
+		if(track["name"] == track_name)
+			track["file"] = track_file
+			track["length"] = track_length
+			return
+	loaded_file_tracks += list(list(
+		"name" = track_name,
+		"file" = track_file,
+		"length" = track_length,
+	))
+
+/datum/song/proc/select_loaded_file_track(track_name)
+	for(var/list/track as anything in loaded_file_tracks)
+		if(track["name"] != track_name)
+			continue
+		if(playing)
+			stop_playing()
+		file_track = track["file"]
+		file_track_name = track["name"]
+		file_track_length = track["length"] || 270 SECONDS
+		playback_mode = "file"
+		return TRUE
+	return FALSE
+
+/datum/song/proc/set_file_track_length(new_length)
+	new_length = round(text2num("[new_length]"))
+	if(!isnum(new_length))
+		return FALSE
+	file_track_length = clamp(new_length, 1 SECONDS, 30 MINUTES)
+	for(var/list/track as anything in loaded_file_tracks)
+		if(track["name"] == file_track_name)
+			track["length"] = file_track_length
+			break
+	if(playing && playback_mode == "file")
+		file_track_finish_time = world.time + file_track_length
+	return TRUE
+
+/datum/song/proc/set_auto_repeat(new_auto_repeat)
+	auto_repeat = !!new_auto_repeat
+
+/datum/song/proc/update_file_playback_volume()
+	for(var/channel in channels_playing)
+		var/channel_number = text2num(channel)
+		for(var/i in hearing_mobs)
+			var/mob/listener = i
+			listener.set_sound_channel_volume(channel_number, get_file_output_volume() * get_listener_volume_multiplier(listener))
+
+/datum/song/proc/clear_file_track()
+	if(playing && playback_mode == "file")
+		stop_playing()
+	file_track = null
+	file_track_name = null
+	file_track_length = 0
+	if(playback_mode == "file")
+		playback_mode = "midi"
+
+/datum/song/proc/start_file_playing(atom/user)
+	if(!file_track)
+		to_chat(user, span_warning("No OGG file loaded."))
+		return
+	playing = TRUE
+	do_hearcheck()
+	SEND_SIGNAL(parent, COMSIG_INSTRUMENT_START, src, user)
+	SEND_SIGNAL(user, COMSIG_ATOM_STARTING_INSTRUMENT, src)
+	music_player = user
+	last_process_time = world.time
+	play_file_to_current_listeners(user)
+	file_track_finish_time = world.time + file_track_length
+	START_PROCESSING(SSinstruments, src)
+	// File playback also uses explicit group starts now, not old ID-based sync.
+	suppress_next_sync = FALSE
+
+/datum/song/proc/play_file_to_current_listeners(atom/player)
+	var/channel = pop_channel()
+	if(isnull(channel))
+		return FALSE
+	var/channel_text = num2text(channel)
+	channels_playing[channel_text] = 100
+	last_channel_played = channel_text
+	var/turf/source = get_turf(parent)
+	var/sound/music_played = sound(file_track)
+	music_played.channel = channel
+	music_played.volume = get_file_output_volume()
+	for(var/i in hearing_mobs)
+		var/mob/listener = i
+		if(player && HAS_TRAIT(player, TRAIT_MUSICIAN) && isliving(listener))
+			var/mob/living/living_listener = listener
+			living_listener.apply_status_effect(/datum/status_effect/good_music)
+		var/listener_volume = get_listener_volume_multiplier(listener)
+		if(!listener_volume)
+			continue
+		listener.playsound_local(source, null, get_file_output_volume() * listener_volume, sound_to_use = music_played, channel = channel, pressure_affected = FALSE, max_distance = instrument_range, falloff_distance = get_sound_falloff_distance(), falloff_exponent = INSTRUMENT_FALLOFF_EXPONENT)
+	return TRUE
+
+/datum/song/proc/process_file_playing()
+	if(should_stop_playing(music_player) == STOP_PLAYING)
+		stop_playing(FALSE)
+		return
+	if(world.time < file_track_finish_time)
+		return
+	if(repeat > 0 || auto_repeat)
+		repeat--
+		if(auto_repeat)
+			repeat = max(repeat, 0)
+		terminate_all_sounds(TRUE)
+		do_hearcheck()
+		play_file_to_current_listeners(music_player)
+		file_track_finish_time = world.time + file_track_length
+		SEND_SIGNAL(parent, COMSIG_INSTRUMENT_REPEAT, TRUE)
+		return
+	stop_playing(TRUE)
+
+/// Returns the listener-specific volume multiplier for instrument notes.
+/datum/song/proc/get_listener_volume_multiplier(mob/listener)
+	var/instrument_volume = listener?.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_instruments)
+	if(!instrument_volume)
+		return 0
+
+	if(isliving(listener))
+		var/mob/living/living_listener = listener
+		if(living_listener.combat_mode)
+			var/combat_volume = listener.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_combat_music)
+			if(combat_volume > 0 && combat_volume <= instrument_volume)
+				instrument_volume = min(instrument_volume, combat_volume * 0.5)
+
+	if(length(GLOB.active_jukebox_music_listeners[listener]))
+		instrument_volume *= 0.25
+
+	return instrument_volume / 100
 
 /**
  * Setter for setting how low the volume has to get before a note is considered "dead" and dropped

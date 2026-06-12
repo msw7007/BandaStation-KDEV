@@ -56,6 +56,14 @@ export const sound_instruments: Feature<number> = {
   component: FeatureSliderInput,
 };
 
+export const sound_combat_music: Feature<number> = {
+  name: 'Громкость боевой музыки',
+  category: 'Звук',
+  description:
+    'Громкость боевой музыки и ее приоритет над музыкальными инструментами.',
+  component: FeatureSliderInput,
+};
+
 export const sound_jukebox: Feature<number> = {
   name: 'Громкость музыкальных автоматов',
   category: 'Звук',

@@ -18,3 +18,6 @@ GLOBAL_LIST_INIT(scarySounds, list(
 	'sound/items/weapons/thudswoosh.ogg',
 	'sound/items/weapons/shove.ogg',
 ))
+
+/// Mobs currently hearing a jukebox-class source. Value is a list of /datum/jukebox sources.
+GLOBAL_LIST_EMPTY(active_jukebox_music_listeners)

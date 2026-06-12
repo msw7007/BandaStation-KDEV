@@ -18,6 +18,15 @@
 /// Minimum volume for when the sound is considered dead.
 #define INSTRUMENT_MIN_SUSTAIN_DROPOFF 0
 
+/// Internal gain applied after the user-facing 0-100 volume slider.
+#define INSTRUMENT_OUTPUT_GAIN 2
+/// OGG tracks are mastered very differently, so file playback gets extra headroom.
+#define INSTRUMENT_FILE_OUTPUT_GAIN 3
+/// Instrument sounds should keep full volume for a few tiles before falling off.
+#define INSTRUMENT_FALLOFF_DISTANCE 4
+/// Softer than generic one-shot sound falloff; music should carry around the source.
+#define INSTRUMENT_FALLOFF_EXPONENT 3
+
 #define SUSTAIN_LINEAR "Linear"
 #define SUSTAIN_EXPONENTIAL "Exponential"
 

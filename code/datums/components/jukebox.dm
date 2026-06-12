@@ -5,6 +5,8 @@
 #define MUTE_PREF (1<<1)
 /// The mob is out of range of the jukebox
 #define MUTE_RANGE (1<<2)
+/// Internal jukebox gain. UI volume remains 0-100, output gets headroom for quiet OGGs.
+#define JUKEBOX_OUTPUT_GAIN 3
 
 /**
  * ## Jukebox datum
@@ -25,10 +27,14 @@
 
 	/// Assoc list of all mobs listening to the jukebox to their sound status.
 	VAR_PRIVATE/list/mob/listeners = list()
+	/// Additional atoms that emit this jukebox's music, such as linked speakers.
+	VAR_PRIVATE/list/atom/extra_sources = list()
+	/// connect_range components attached to extra emitters.
+	VAR_PRIVATE/list/source_range_components = list()
 
 	/// Volume of the songs played. Also serves as the max volume.
 	/// Do not set directly, use set_new_volume() instead.
-	VAR_PROTECTED/volume = 50
+	VAR_PROTECTED/volume = 100
 
 	/// Range at which the sound plays to players, can also be a view "XxY" string
 	VAR_PROTECTED/sound_range
@@ -68,9 +74,13 @@
 
 /datum/jukebox/Destroy()
 	unlisten_all()
+	for(var/atom/source as anything in extra_sources)
+		unregister_music_source(source)
 	parent = null
 	selection = null
 	songs.Cut()
+	extra_sources.Cut()
+	source_range_components.Cut()
 	active_song_sound = null
 	return ..()
 
@@ -172,7 +182,7 @@
 	volume = new_vol
 	if(!active_song_sound)
 		return
-	active_song_sound.volume = volume
+	active_song_sound.volume = get_output_volume()
 	update_all()
 
 /// Sets volume to the maximum possible value, the initial volume value.
@@ -195,6 +205,56 @@
 		deregister_listener(listening)
 	active_song_sound = null
 
+/// Returns all atoms that currently emit this jukebox.
+/datum/jukebox/proc/get_music_sources()
+	var/list/sources = list(parent)
+	for(var/atom/source as anything in extra_sources)
+		if(!QDELETED(source))
+			sources += source
+	return sources
+
+/// Returns the actual sound volume sent to clients. UI stays 0-100.
+/datum/jukebox/proc/get_output_volume(base_volume = volume)
+	return base_volume * JUKEBOX_OUTPUT_GAIN
+
+/// BYOND sound falloff should cover the whole jukebox range, otherwise music drops too hard near speakers.
+/datum/jukebox/proc/get_sound_falloff()
+	return max(1, x_cutoff, z_cutoff)
+
+/// Adds an external music emitter to this jukebox.
+/datum/jukebox/proc/register_music_source(atom/source)
+	if(!source || QDELETED(source) || (source == parent) || (source in extra_sources))
+		return FALSE
+	extra_sources += source
+	RegisterSignal(source, COMSIG_MOVABLE_MOVED, PROC_REF(on_moved))
+	RegisterSignal(source, COMSIG_QDELETING, PROC_REF(music_source_deleted))
+	if(requires_range_check)
+		var/static/list/connections = list(COMSIG_ATOM_ENTERED = PROC_REF(check_new_listener))
+		source_range_components[source] = AddComponent(/datum/component/connect_range, source, connections, max(x_cutoff, z_cutoff))
+	if(active_song_sound)
+		for(var/mob/nearby in hearers(sound_range, source))
+			if(!(nearby in listeners))
+				register_listener(nearby)
+		update_all()
+	return TRUE
+
+/// Removes an external music emitter from this jukebox.
+/datum/jukebox/proc/unregister_music_source(atom/source)
+	if(!(source in extra_sources))
+		return FALSE
+	extra_sources -= source
+	UnregisterSignal(source, list(COMSIG_MOVABLE_MOVED, COMSIG_QDELETING))
+	var/datum/component/range_component = source_range_components[source]
+	qdel(range_component)
+	source_range_components -= source
+	update_all()
+	return TRUE
+
+/// Removes deleted external music emitters.
+/datum/jukebox/proc/music_source_deleted(atom/source)
+	SIGNAL_HANDLER
+	unregister_music_source(source)
+
 /// Helper to update all mobs currently listening to the music.
 /datum/jukebox/proc/update_all()
 	for(var/mob/listening as anything in listeners)
@@ -202,8 +262,11 @@
 
 /// Helper to kickstart the music for all mobs in hearing range of the jukebox.
 /datum/jukebox/proc/start_music()
-	for(var/mob/nearby in hearers(sound_range, parent))
-		register_listener(nearby)
+	for(var/atom/source as anything in get_music_sources())
+		for(var/mob/nearby in hearers(sound_range, source))
+			if(nearby in listeners)
+				continue
+			register_listener(nearby)
 
 /// Helper to get all mobs currently, ACTIVELY listening to the jukebox.
 /datum/jukebox/proc/get_active_listeners()
@@ -236,8 +299,8 @@
 		active_song_sound = sound(selection.song_path)
 		active_song_sound.channel = CHANNEL_JUKEBOX
 		active_song_sound.priority = 255
-		active_song_sound.falloff = 2
-		active_song_sound.volume = volume * (pref_volume/100)
+		active_song_sound.falloff = get_sound_falloff()
+		active_song_sound.volume = get_output_volume() * (pref_volume/100)
 		active_song_sound.y = 1
 		active_song_sound.environment = juke_area.sound_environment || SOUND_ENVIRONMENT_NONE
 		active_song_sound.repeat = sound_loops
@@ -249,6 +312,27 @@
 	// so we only add this status AFTER the first update, which plays the first sound.
 	// and after that it's fine to keep it on the sound so it updates as the x/z does.
 	listeners[new_listener] |= SOUND_UPDATE
+
+/// Tracks whether this jukebox currently has audible priority over a listener.
+/datum/jukebox/proc/set_listener_music_priority(mob/listener, active)
+	if(!listener)
+		return
+	var/list/active_jukeboxes = GLOB.active_jukebox_music_listeners[listener]
+	var/had_priority = length(active_jukeboxes)
+	if(active)
+		if(isnull(active_jukeboxes))
+			active_jukeboxes = list()
+			GLOB.active_jukebox_music_listeners[listener] = active_jukeboxes
+		active_jukeboxes[src] = TRUE
+		if(!had_priority)
+			listener.refresh_looping_ambience()
+		return
+	if(!isnull(active_jukeboxes))
+		active_jukeboxes -= src
+		if(!length(active_jukeboxes))
+			GLOB.active_jukebox_music_listeners -= listener
+			if(had_priority)
+				listener.refresh_looping_ambience()
 
 /// Deregisters mobs on deletion.
 /datum/jukebox/proc/listener_deleted(mob/source)
@@ -295,15 +379,21 @@
 		return FALSE
 
 	if(reason & MUTE_RANGE)
-		var/turf/sound_turf = get_turf(parent)
 		var/turf/listener_turf = get_turf(listener)
-		if(isnull(sound_turf) || isnull(listener_turf))
+		if(isnull(listener_turf))
 			return FALSE
-		if(sound_turf.z != listener_turf.z)
-			return FALSE
-		if(abs(sound_turf.x - listener_turf.x) > x_cutoff)
-			return FALSE
-		if(abs(sound_turf.y - listener_turf.y) > z_cutoff)
+		var/source_in_range = FALSE
+		for(var/atom/source as anything in get_music_sources())
+			var/turf/sound_turf = get_turf(source)
+			if(isnull(sound_turf) || sound_turf.z != listener_turf.z)
+				continue
+			if(abs(sound_turf.x - listener_turf.x) > x_cutoff)
+				continue
+			if(abs(sound_turf.y - listener_turf.y) > z_cutoff)
+				continue
+			source_in_range = TRUE
+			break
+		if(!source_in_range)
 			return FALSE
 
 	listeners[listener] &= ~SOUND_MUTE
@@ -313,6 +403,7 @@
 /datum/jukebox/proc/deregister_listener(mob/no_longer_listening)
 	PROTECTED_PROC(TRUE)
 
+	set_listener_music_priority(no_longer_listening, FALSE)
 	listeners -= no_longer_listening
 	no_longer_listening.stop_sound_channel(CHANNEL_JUKEBOX)
 	UnregisterSignal(no_longer_listening, list(
@@ -330,11 +421,29 @@
 
 	active_song_sound.status = listeners[listener] || NONE
 
-	var/turf/sound_turf = get_turf(parent)
+	var/turf/sound_turf
 	var/turf/listener_turf = get_turf(listener)
+	var/best_distance = INFINITY
+	for(var/atom/source as anything in get_music_sources())
+		var/turf/source_turf = get_turf(source)
+		if(isnull(source_turf) || isnull(listener_turf))
+			continue
+		if(source_turf.z != listener_turf.z)
+			continue
+		var/source_x = source_turf.x - listener_turf.x
+		var/source_z = source_turf.y - listener_turf.y
+		if(abs(source_x) > x_cutoff || abs(source_z) > z_cutoff)
+			continue
+		var/source_distance = abs(source_x) + abs(source_z)
+		if(source_distance >= best_distance)
+			continue
+		best_distance = source_distance
+		sound_turf = source_turf
+
 	if(isnull(sound_turf) || isnull(listener_turf)) // ??
 		active_song_sound.x = 0
 		active_song_sound.z = 0
+		listeners[listener] |= SOUND_MUTE
 
 	else if(sound_turf.z != listener_turf.z) // Could MAYBE model multi-z jukeboxes but that's too complex for now
 		listeners[listener] |= SOUND_MUTE
@@ -358,8 +467,11 @@
 			listeners[listener] |= SOUND_MUTE
 		else
 			unmute_listener(listener, MUTE_PREF)
-			active_song_sound.volume = volume * (pref_volume/100)
+			active_song_sound.falloff = get_sound_falloff()
+			active_song_sound.volume = get_output_volume() * (pref_volume/100)
 
+	active_song_sound.status = listeners[listener] || NONE
+	set_listener_music_priority(listener, !(listeners[listener] & SOUND_MUTE))
 	SEND_SOUND(listener, active_song_sound)
 
 /// When the jukebox moves, we need to update all listeners.
@@ -395,9 +507,34 @@
 /datum/jukebox/single_mob/start_music(mob/solo_listener)
 	register_listener(solo_listener)
 
+/datum/jukebox/concertspeaker
+
+/datum/jukebox/concertspeaker/init_songs()
+	return list()
+
+/datum/jukebox/concertspeaker/proc/load_concert_disk(obj/item/disk/concert/disk)
+	unlisten_all()
+	songs.Cut()
+	if(!disk)
+		selection = null
+		return
+	var/datum/track/disk_track = new()
+	disk_track.song_name = disk.track_name
+	disk_track.song_path = disk.track_path
+	disk_track.song_length = disk.track_length
+	disk_track.song_beat_deciseconds = disk.track_beat_deciseconds
+	songs[disk_track.song_name] = disk_track
+	selection = disk_track
+
+/datum/jukebox/concertspeaker/proc/clear_concert_disk()
+	unlisten_all()
+	songs.Cut()
+	selection = null
+
 #undef MUTE_DEAF
 #undef MUTE_PREF
 #undef MUTE_RANGE
+#undef JUKEBOX_OUTPUT_GAIN
 
 /// Track datums, used in jukeboxes
 /datum/track

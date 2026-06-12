@@ -95,6 +95,9 @@ GLOBAL_LIST_INIT(metal_recipes, list ( \
 	null, \
 	new/datum/stack_recipe("computer frame", /obj/structure/frame/computer, 5, time = 2.5 SECONDS, crafting_flags = CRAFT_CHECK_DENSITY | CRAFT_ONE_PER_TURF | CRAFT_ON_SOLID_GROUND, category = CAT_STRUCTURE), \
 	new/datum/stack_recipe("modular console", /obj/machinery/modular_computer, 10, time = 2.5 SECONDS, crafting_flags = CRAFT_CHECK_DENSITY | CRAFT_ONE_PER_TURF | CRAFT_ON_SOLID_GROUND, category = CAT_STRUCTURE), \
+	new/datum/stack_recipe("packed concert speaker", /obj/item/packed_concertspeaker, 5, time = 2.5 SECONDS, category = CAT_ENTERTAINMENT), \
+	new/datum/stack_recipe("concert controller kit", /obj/item/concert_master, 3, time = 2.5 SECONDS, category = CAT_ENTERTAINMENT), \
+	new/datum/stack_recipe("concert disk", /obj/item/disk/concert, 1, time = 1 SECONDS, category = CAT_ENTERTAINMENT), \
 	new/datum/stack_recipe("machine frame", /obj/structure/frame/machine, 5, time = 2.5 SECONDS, crafting_flags = CRAFT_CHECK_DENSITY | CRAFT_ONE_PER_TURF | CRAFT_ON_SOLID_GROUND, category = CAT_STRUCTURE), \
 	null, \
 	new /datum/stack_recipe_list("airlock assemblies", list( \

@@ -43,6 +43,12 @@
 	savefile_key = "sound_instruments"
 	savefile_identifier = PREFERENCE_PLAYER
 
+/// Controls combat music volume and music ducking priority
+/datum/preference/numeric/volume/sound_combat_music
+	category = PREFERENCE_CATEGORY_GAME_PREFERENCES
+	savefile_key = "sound_combat_music"
+	savefile_identifier = PREFERENCE_PLAYER
+
 /// Controls jukebox track volume
 /datum/preference/numeric/volume/sound_jukebox
 	category = PREFERENCE_CATEGORY_GAME_PREFERENCES
