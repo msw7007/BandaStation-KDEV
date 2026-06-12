@@ -240,6 +240,7 @@
 			t_amount++
 			if(t_prod.seed)
 				t_prod.seed.set_instability(round(instability * 0.5))
+			t_prod.apply_cyberpunk_botany_quality(living_user, parent)
 			continue
 		else
 			// Create a descendent seed so we can modify our offspring before creating a grown from it.
@@ -256,6 +257,7 @@
 		t_prod.seed.name = parent.myseed.name
 		t_prod.seed.desc = parent.myseed.desc
 		t_prod.seed.plantname = parent.myseed.plantname
+		t_prod.apply_cyberpunk_botany_quality(living_user, parent)
 		result.Add(t_prod) // User gets a consumable
 		if(!t_prod)
 			return

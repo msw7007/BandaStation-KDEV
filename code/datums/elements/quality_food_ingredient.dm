@@ -56,6 +56,9 @@
 	//The target of the food quality and the source are the same, there's no need to re-add the whole element.
 	RegisterSignal(source, COMSIG_FOOD_GET_EXTRA_COMPLEXITY, PROC_REF(add_complexity), TRUE)
 	ADD_TRAIT(source, TRAIT_QUALITY_FOOD_INGREDIENT, REF(src))
+	var/obj/item/food/food_source = source
+	if(istype(food_source))
+		food_source.cyberpunk_update_quality_effects()
 
 /datum/element/quality_food_ingredient/proc/used_as_ingredient(datum/source, atom/container)
 	SIGNAL_HANDLER
@@ -65,6 +68,9 @@
 	target.AddElement(/datum/element/quality_food_ingredient, complexity_increase)
 	RegisterSignal(target, COMSIG_FOOD_GET_EXTRA_COMPLEXITY, PROC_REF(add_complexity), TRUE)
 	ADD_TRAIT(target, TRAIT_QUALITY_FOOD_INGREDIENT, REF(src))
+	var/obj/item/food/food_target = target
+	if(istype(food_target))
+		food_target.cyberpunk_update_quality_effects()
 
 /datum/element/quality_food_ingredient/proc/add_complexity(datum/source, list/extra_complexity)
 	SIGNAL_HANDLER

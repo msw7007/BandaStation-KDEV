@@ -637,6 +637,10 @@
 	update_appearance()
 	update_weight()
 
+/// Hook for modular systems that track per-unit stack metadata.
+/obj/item/stack/proc/on_stack_merged(obj/item/stack/source_stack, transfer_amount, previous_amount)
+	return
+
 /** Checks whether this stack can merge itself into another stack.
  *
  * Arguments:
@@ -713,8 +717,10 @@
 		pulledby.start_pulling(target_stack)
 
 	target_stack.copy_evidences(src)
+	var/target_previous_amount = target_stack.get_amount()
 	use(transfer, transfer = TRUE, check = FALSE)
 	target_stack.add(transfer)
+	target_stack.on_stack_merged(src, transfer, target_previous_amount)
 	if(target_stack.mats_per_unit != mats_per_unit) // We get the average value of mats_per_unit between two stacks getting merged
 		var/list/temp_mats_list = list() // mats_per_unit is passed by ref into this coil, and that same ref is used in other places. If we didn't make a new list here we'd end up contaminating those other places, which leads to batshit behavior
 		for(var/mat_type in target_stack.mats_per_unit)
@@ -772,9 +778,14 @@
 		return null
 	var/obj/item/stack/new_stack = new type(null, amount, FALSE, mats_per_unit)
 	new_stack.copy_evidences(src)
+	on_stack_split(new_stack, amount)
 	loc.atom_storage?.refresh_views()
 	is_zero_amount(delete_if_zero = TRUE)
 	return new_stack
+
+/// Hook for modular systems that track per-unit stack metadata.
+/obj/item/stack/proc/on_stack_split(obj/item/stack/new_stack, split_amount)
+	return
 
 /**
  * Splits amount items from stack, attempts to place new stack in user's hands.

@@ -327,7 +327,7 @@
 			if(isnull(target))
 				return FALSE
 
-			return move_buffer(/datum/reagent/reaction_agent/acidic_buffer, target)
+			return move_buffer(/datum/reagent/reaction_agent/acidic_buffer, target, ui.user)
 		if("basicBuffer")
 			var/target = params["target"]
 			if(!target)
@@ -337,7 +337,7 @@
 			if(isnull(target))
 				return FALSE
 
-			return move_buffer(/datum/reagent/reaction_agent/basic_buffer, target)
+			return move_buffer(/datum/reagent/reaction_agent/basic_buffer, target, ui.user)
 		if("disp_vol")
 			var/target = params["target"]
 			if(!target)
@@ -356,7 +356,7 @@
  * * datum/reagent/buffer_type - the type of buffer[acid, base] to inject/withdraw
  * * volume - how much to volume to inject -ve values means withdraw
  */
-/obj/machinery/chem_heater/proc/move_buffer(datum/reagent/buffer_type, volume)
+/obj/machinery/chem_heater/proc/move_buffer(datum/reagent/buffer_type, volume, mob/user)
 	PRIVATE_PROC(TRUE)
 
 	//no beaker
@@ -370,11 +370,11 @@
 			var/name = initial(buffer_type.name)
 			say("Unable to find [name] in beaker to draw from! Please insert a beaker containing [name].")
 			return FALSE
-		beaker.reagents.trans_to(src, (reagents.maximum_volume / 2) - reagents.get_reagent_amount(buffer_type), target_id = buffer_type)
+		beaker.reagents.trans_to(src, (reagents.maximum_volume / 2) - reagents.get_reagent_amount(buffer_type), target_id = buffer_type, transferred_by = user)
 		return TRUE
 
 	//trying to inject buffer into currently inserted beaker
-	reagents.trans_to(beaker, dispense_volume, target_id = buffer_type)
+	reagents.trans_to(beaker, dispense_volume, target_id = buffer_type, transferred_by = user)
 	return TRUE
 
 //Has a lot of buffer and is upgraded

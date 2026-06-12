@@ -56,6 +56,7 @@
 		return null
 
 	. = new target.type(target.drop_location(), amount, FALSE, target.mats_per_unit)
+	target.on_stack_split(., amount)
 
 /**
  * divides a list of materials uniformly among all contents of the target_object recursively

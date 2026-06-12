@@ -483,6 +483,8 @@
 	if(isliving(transferred_by))
 		last_reaction_user = WEAKREF(transferred_by)
 		target_holder.last_reaction_user = WEAKREF(transferred_by)
+	else if(last_reaction_user)
+		target_holder.last_reaction_user = last_reaction_user
 
 	var/trans_data = null
 	var/list/r_to_send = methods ? list() : null // Validated list of reagents to be exposed

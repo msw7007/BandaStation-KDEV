@@ -887,11 +887,16 @@
 		var/target = myseed ? myseed.plantname : src
 		var/visi_msg = ""
 		var/transfer_amount
+		var/compost_quality = 0
 
 		if(IS_EDIBLE(reagent_source))
 			if(HAS_TRAIT(reagent_source, TRAIT_UNCOMPOSTABLE))
 				to_chat(user, "[reagent_source] cannot be composted in its current state")
 				return
+			var/obj/item/food/compost_food = reagent_source
+			var/datum/component/edible/edible = compost_food.GetComponent(/datum/component/edible)
+			if(edible)
+				compost_quality = edible.get_recipe_complexity()
 			visi_msg="[user] composts [reagent_source], spreading it through [target]"
 			transfer_amount = reagent_source.reagents.total_volume
 			SEND_SIGNAL(reagent_source, COMSIG_ITEM_ON_COMPOSTED, user)
@@ -929,6 +934,13 @@
 					reagent_source.reagents.trans_to(H.reagents, transfer_me_to_tray, target_id = not_water_reagent.type)
 			else
 				reagent_source.reagents.trans_to(H.reagents, transfer_amount, transferred_by = user)
+			if(compost_quality > 0)
+				H.reagents.add_reagent(/datum/reagent/plantnutriment/eznutriment, compost_quality * 2)
+				H.adjust_plant_health(compost_quality)
+				H.adjust_weedlevel(-compost_quality)
+				H.adjust_pestlevel(-round(compost_quality / 2))
+			else if(compost_quality < 0)
+				H.adjust_toxic(abs(compost_quality))
 			lastuser = WEAKREF(user)
 			cyberpunk_gardener = WEAKREF(user)
 			var/mob/living/living_user = isliving(user) ? user : null

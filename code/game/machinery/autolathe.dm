@@ -394,6 +394,7 @@
 		say("Unable to continue production, missing materials.")
 		finalize_build()
 		return
+	var/build_resource_quality = materials.get_materials_resource_quality(materials_needed, material_cost_coefficient, is_stack ? items_remaining : 1)
 	materials.use_materials(materials_needed, material_cost_coefficient, is_stack ? items_remaining : 1)
 
 	var/atom/movable/created
@@ -403,6 +404,9 @@
 		var/number_to_make = (initial(stack_item.amount) * items_remaining)
 		while(number_to_make > max_stack_amount)
 			created = design.create_result(target, materials_needed, amount = max_stack_amount)
+			if(build_resource_quality && isitem(created))
+				var/obj/item/created_stack_item = created
+				created_stack_item.set_resource_quality(build_resource_quality)
 			if(isitem(created))
 				created.pixel_x = created.base_pixel_x + rand(-6, 6)
 				created.pixel_y = created.base_pixel_y + rand(-6, 6)
@@ -414,6 +418,9 @@
 		if (length(slots_chosen))
 			created.set_material_slots(slots_chosen)
 		split_materials_uniformly(materials_needed, material_cost_coefficient, created)
+	if(build_resource_quality && isitem(created))
+		var/obj/item/created_item_with_quality = created
+		created_item_with_quality.set_resource_quality(build_resource_quality)
 
 	if(isitem(created))
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)

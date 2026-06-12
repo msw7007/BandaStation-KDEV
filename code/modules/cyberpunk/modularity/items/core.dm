@@ -436,6 +436,27 @@
 				composite_gun.spread = max(0, composite_gun.spread - 2)
 				composite_gun.projectile_speed_multiplier += 0.05
 
+/obj/item/proc/apply_cyberpunk_weapon_resource_quality()
+	var/quality = vars["resource_quality"]
+	if(!quality)
+		return
+	var/quality_multiplier = get_resource_quality_multiplier(quality)
+	if(quality_multiplier == 1)
+		return
+	force *= quality_multiplier
+	throwforce *= quality_multiplier
+	armour_penetration = round(armour_penetration * quality_multiplier)
+	if(uses_integrity)
+		modify_max_integrity(max(1, round(max_integrity * quality_multiplier)), FALSE)
+	var/obj/item/gun/gun = src
+	if(!istype(gun))
+		return
+	gun.projectile_damage_multiplier *= quality_multiplier
+	gun.projectile_wound_bonus = round(gun.projectile_wound_bonus * quality_multiplier)
+	gun.projectile_speed_multiplier *= max(0.25, sqrt(quality_multiplier))
+	gun.fire_delay = max(1, round(gun.fire_delay / max(0.25, sqrt(quality_multiplier))))
+	gun.spread = max(0, round(gun.spread / max(0.25, quality_multiplier)))
+
 /obj/item/proc/capture_cyberpunk_weapon_baseline()
 	if(cyberpunk_weapon_baseline_ready)
 		return
@@ -497,6 +518,7 @@
 	apply_cyberpunk_weapon_material_stats()
 	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
 		module.apply_weapon_stats(src)
+	apply_cyberpunk_weapon_resource_quality()
 	update_cyberpunk_weapon_identity()
 
 /obj/item/proc/setup_cyberpunk_weapon(form_id, list/base_slots, list/required_slots, assembled = FALSE, material_id = "steel")
@@ -684,6 +706,20 @@
 			return list("mobility" = 1, "utility" = 1)
 	return list()
 
+/obj/item/proc/apply_cyberpunk_equipment_resource_quality(list/final_armor, list/final_values)
+	var/quality = vars["resource_quality"]
+	if(!quality)
+		return
+	var/quality_multiplier = get_resource_quality_multiplier(quality)
+	if(quality_multiplier == 1)
+		return
+	for(var/armor_key in final_armor)
+		final_armor[armor_key] = round(final_armor[armor_key] * quality_multiplier)
+	final_values["integrity"] = max(1, round(final_values["integrity"] * quality_multiplier))
+	final_values["weight"] += round((1 - quality_multiplier) * 2)
+	if(!isnull(final_values["slowdown"]))
+		final_values["slowdown"] = max(0, final_values["slowdown"] * max(0.25, 2 - quality_multiplier))
+
 /obj/item/proc/capture_cyberpunk_modular_baseline()
 	if(cyberpunk_modular_baseline_ready)
 		return
@@ -732,6 +768,15 @@
 	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_active_module_slowdown)
 		if(!isnull(final_slowdown))
 			final_slowdown += cyberpunk_active_module_slowdown[module]
+	var/list/final_values = list(
+		"weight" = final_weight,
+		"integrity" = final_integrity,
+		"slowdown" = final_slowdown,
+	)
+	apply_cyberpunk_equipment_resource_quality(final_armor, final_values)
+	final_weight = final_values["weight"]
+	final_integrity = final_values["integrity"]
+	final_slowdown = final_values["slowdown"]
 	w_class = clamp(final_weight, WEIGHT_CLASS_TINY, WEIGHT_CLASS_GIGANTIC)
 	if(uses_integrity)
 		modify_max_integrity(max(1, final_integrity), FALSE)

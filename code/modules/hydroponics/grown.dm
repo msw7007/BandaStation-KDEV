@@ -21,6 +21,9 @@
 	resistance_flags = FLAMMABLE
 	/// type path, gets converted to item on New(). It's safe to assume it's always a seed item.
 	var/obj/item/seeds/seed = null
+	/// CP13 botany quality is applied in separate passes so harvest bonuses do not duplicate base seed quality.
+	var/cyberpunk_botany_base_quality_applied = FALSE
+	var/cyberpunk_botany_gardener_quality_applied = FALSE
 	///Name of the plant
 	var/plantname = ""
 	/// The modifier applied to the plant's bite size. If a plant has a large amount of reagents naturally, this should be increased to match.
@@ -81,8 +84,61 @@
 
 	reagents.clear_reagents()
 	seed.prepare_result(src)
+	apply_cyberpunk_botany_quality()
 	transform *= TRANSFORM_USING_VARIABLE(seed.potency, 100) + 0.5 //Makes the resulting produce's sprite larger or smaller based on potency!
 	ADD_TRAIT(src, TRAIT_VALID_DNA_INFUSION, INNATE_TRAIT)
+
+/obj/item/food/grown/proc/get_cyberpunk_seed_quality()
+	if(!seed)
+		return 0
+	var/quality = 0
+	if(seed.potency >= 100)
+		quality += 4
+	else if(seed.potency >= 85)
+		quality += 3
+	else if(seed.potency >= 70)
+		quality += 2
+	else if(seed.potency >= 50)
+		quality += 1
+	else if(seed.potency < 25)
+		quality -= 1
+
+	var/reagent_purity = seed.get_reagent_purity()
+	if(reagent_purity >= 0.85)
+		quality += 1
+	else if(reagent_purity < 0.55)
+		quality -= 1
+
+	if(seed.instability >= 90)
+		quality -= 2
+	else if(seed.instability >= 60)
+		quality -= 1
+	return clamp(quality, -3, 5)
+
+/obj/item/food/grown/proc/get_cyberpunk_gardener_quality(mob/living/gardener, obj/machinery/hydroponics/tray)
+	if(!istype(gardener))
+		return 0
+	var/care_multiplier = gardener.get_cyberpunk_gardening_care_multiplier()
+	var/quality = min(2, FLOOR(max(0, care_multiplier - 1) * 10, 1))
+	if(tray)
+		if(tray.pestlevel <= 0 && tray.weedlevel <= 0 && tray.toxic <= 0)
+			quality += 1
+		if(tray.myseed && tray.plant_health >= tray.myseed.endurance)
+			quality += 1
+	return clamp(quality, 0, 3)
+
+/obj/item/food/grown/proc/apply_cyberpunk_botany_quality(mob/living/gardener = null, obj/machinery/hydroponics/tray = null)
+	if(!cyberpunk_botany_base_quality_applied)
+		var/base_quality = get_cyberpunk_seed_quality()
+		if(base_quality)
+			AddElement(/datum/element/quality_food_ingredient, base_quality)
+		cyberpunk_botany_base_quality_applied = TRUE
+	if(gardener && !cyberpunk_botany_gardener_quality_applied)
+		var/gardener_quality = get_cyberpunk_gardener_quality(gardener, tray)
+		if(gardener_quality)
+			AddElement(/datum/element/quality_food_ingredient, gardener_quality)
+		cyberpunk_botany_gardener_quality_applied = TRUE
+	cyberpunk_update_quality_effects()
 
 /obj/item/food/grown/Destroy()
 	if(isatom(seed))

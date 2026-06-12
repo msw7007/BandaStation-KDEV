@@ -1788,6 +1788,12 @@
 		deck = locate(/obj/item/clothing/gloves/cyberdeck) in user.contents
 	return deck
 
+#define CYBERPUNK_DATA_PAYLOAD_DEMON "demon"
+#define CYBERPUNK_DATA_PAYLOAD_CRYPTOKEY "cryptokey"
+#define CYBERPUNK_DATA_PAYLOAD_MUTATION "mutation"
+#define CYBERPUNK_DATA_PAYLOAD_GENE_SEQUENCE "gene_sequence"
+#define CYBERPUNK_DATA_PAYLOAD_REWARD_KEY "reward_key"
+
 /proc/find_held_cyberdemon_disk(mob/user)
 	if(!user)
 		return null
@@ -1820,6 +1826,7 @@
 
 	var/list/disk_demons = list()
 	if(disk)
+		disk.rebuild_demon_index()
 		var/disk_index = 1
 		for(var/datum/cyberspace_demon/demon as anything in disk.demons)
 			disk_demons += list(cyberdemon_to_ui_data(demon, disk_index++))
@@ -1889,6 +1896,30 @@
 	qdel(demon)
 	return TRUE
 
+/obj/item/cyberdemon_disk/proc/delete_demon_by_index(index, mob/user)
+	rebuild_demon_index()
+	index = cyberdemon_parse_ui_index(index)
+	if(index < 1 || index > length(demons))
+		to_chat(user, span_warning("Invalid demon index for [src]."))
+		return FALSE
+	var/datum/cyberspace_demon/demon = demons[index]
+	if(!demon)
+		to_chat(user, span_warning("No demon exists in that [src] slot."))
+		return FALSE
+	if(demon.prebuilt)
+		to_chat(user, span_warning("Prebuilt demons cannot be deleted from [src]."))
+		return FALSE
+	for(var/datum/cyberpunk_data_payload/demon/payload as anything in get_data_payloads(CYBERPUNK_DATA_PAYLOAD_DEMON))
+		if(payload.contained_datum != demon)
+			continue
+		data_payloads -= payload
+		qdel(payload)
+		rebuild_demon_index()
+		to_chat(user, span_notice("You delete [demon.demon_name] from [src]."))
+		return TRUE
+	to_chat(user, span_warning("[demon.demon_name] has no matching data payload on [src]."))
+	return FALSE
+
 /proc/handle_cyberdemon_compiler_action(action, list/params, mob/living/user, obj/item/clothing/gloves/cyberdeck/deck, obj/item/cyberdemon_disk/disk, obj/machinery/cyberdemon_terminal/terminal)
 	if(!istype(user))
 		return FALSE
@@ -1924,7 +1955,7 @@
 			return TRUE
 		if("delete_disk")
 			if(disk)
-				delete_cyberdemon_from_list(disk.demons, params["index"], user, disk)
+				disk.delete_demon_by_index(params["index"], user)
 			return TRUE
 		if("copy_to_disk")
 			if(!deck)
@@ -1948,6 +1979,7 @@
 			if(!disk)
 				to_chat(user, span_warning("No demon disk is available."))
 				return TRUE
+			disk.rebuild_demon_index()
 			var/index = cyberdemon_parse_ui_index(params["index"])
 			if(index < 1 || index > length(disk.demons))
 				to_chat(user, span_warning("Invalid demon disk slot."))
@@ -2520,24 +2552,124 @@
 	. = ..()
 	return
 
+/datum/cyberpunk_data_payload
+	/// Generic payload type. Demons use CYBERPUNK_DATA_PAYLOAD_DEMON now; genetics will reuse this datum later.
+	var/payload_type = "generic"
+	var/payload_id
+	var/payload_name = "data payload"
+	var/list/payload_data = list()
+	var/integrity = 100
+	var/encrypted = FALSE
+	var/datum/contained_datum
+
+/datum/cyberpunk_data_payload/Destroy(force)
+	QDEL_NULL(contained_datum)
+	payload_data = null
+	return ..()
+
+/datum/cyberpunk_data_payload/proc/copy()
+	var/datum/cyberpunk_data_payload/new_payload = new type
+	new_payload.payload_type = payload_type
+	new_payload.payload_id = payload_id
+	new_payload.payload_name = payload_name
+	new_payload.payload_data = payload_data?.Copy() || list()
+	new_payload.integrity = integrity
+	new_payload.encrypted = encrypted
+	if(contained_datum)
+		var/datum/cyberspace_demon/demon = contained_datum
+		if(istype(demon))
+			new_payload.contained_datum = demon.copy()
+	return new_payload
+
+/datum/cyberpunk_data_payload/demon
+	payload_type = CYBERPUNK_DATA_PAYLOAD_DEMON
+
+/datum/cyberpunk_data_payload/demon/New(datum/cyberspace_demon/demon)
+	. = ..()
+	if(!demon)
+		return
+	contained_datum = demon
+	payload_id = replacetext("[demon.type]", "/", "_")
+	payload_name = demon.demon_name
+	payload_data = list(
+		"description" = demon.description,
+		"manufacturer" = demon.manufacturer,
+		"memory_cost" = demon.memory_cost,
+		"effect" = demon.effect,
+		"effect_power" = demon.effect_power,
+		"prebuilt" = demon.prebuilt,
+	)
+
+/datum/cyberpunk_data_payload/cryptokey
+	payload_type = CYBERPUNK_DATA_PAYLOAD_CRYPTOKEY
+
+/datum/cyberpunk_data_payload/cryptokey/New(datum/cyberspace_cryptokey/cryptokey)
+	. = ..()
+	if(!cryptokey)
+		return
+	payload_id = cryptokey.key
+	payload_name = "cryptokey [cryptokey.key]"
+	payload_data = list(
+		"key" = cryptokey.key,
+		"manufacturer" = cryptokey.manufacturer,
+		"object_type" = cryptokey.object_type,
+		"area_type" = cryptokey.area_type,
+		"rights" = cryptokey.rights?.Copy(),
+	)
+
 /obj/item/cyberdemon_disk
 	name = "demon disk"
-	desc = "A removable storage disk for compiled demons."
+	desc = "A removable data disk for compiled demons and other net payloads."
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "skillchip"
 	inhand_icon_state = "electronic"
 	w_class = WEIGHT_CLASS_SMALL
 	var/memory_capacity = CYBER_DEMON_DISK_MEMORY
+	var/list/datum/cyberpunk_data_payload/data_payloads = list()
+	/// Runtime index for old demon UI/deck code. The authoritative storage is data_payloads.
 	var/list/demons = list()
 	var/stored_net_data = 0
 	var/list/stored_cryptokeys = list()
 
 /obj/item/cyberdemon_disk/Destroy(force)
-	QDEL_LIST(demons)
+	QDEL_LIST(data_payloads)
+	demons = null
 	stored_cryptokeys = null
 	return ..()
 
+/obj/item/cyberdemon_disk/proc/add_data_payload(datum/cyberpunk_data_payload/payload)
+	if(!payload)
+		return FALSE
+	if(!data_payloads)
+		data_payloads = list()
+	data_payloads += payload
+	var/datum/cyberpunk_data_payload/demon/demon_payload = payload
+	if(istype(demon_payload))
+		var/datum/cyberspace_demon/demon = demon_payload.contained_datum
+		if(istype(demon))
+			if(!demons)
+				demons = list()
+			demons += demon
+	return TRUE
+
+/obj/item/cyberdemon_disk/proc/get_data_payloads(payload_type)
+	var/list/found_payloads = list()
+	for(var/datum/cyberpunk_data_payload/payload as anything in data_payloads)
+		if(payload.payload_type == payload_type)
+			found_payloads += payload
+	return found_payloads
+
+/obj/item/cyberdemon_disk/proc/rebuild_demon_index()
+	if(!demons)
+		demons = list()
+	demons.Cut()
+	for(var/datum/cyberpunk_data_payload/demon/payload as anything in get_data_payloads(CYBERPUNK_DATA_PAYLOAD_DEMON))
+		var/datum/cyberspace_demon/demon = payload.contained_datum
+		if(istype(demon))
+			demons += demon
+
 /obj/item/cyberdemon_disk/proc/get_used_memory()
+	rebuild_demon_index()
 	var/used_memory = 0
 	for(var/datum/cyberspace_demon/demon as anything in demons)
 		used_memory += demon.memory_cost
@@ -2557,8 +2689,7 @@
 /obj/item/cyberdemon_disk/proc/store_demon(datum/cyberspace_demon/demon, mob/user)
 	if(!can_store_demon(demon, user))
 		return FALSE
-	demons += demon
-	return TRUE
+	return add_data_payload(new /datum/cyberpunk_data_payload/demon(demon))
 
 /obj/item/cyberdemon_disk/proc/get_stored_cryptokey_count()
 	return length(stored_cryptokeys)
@@ -2618,6 +2749,7 @@
 			if(stored_cryptokeys[key])
 				continue
 			stored_cryptokeys[key] = user.mind.cyber_cryptokeys[key]
+			add_data_payload(new /datum/cyberpunk_data_payload/cryptokey(stored_cryptokeys[key]))
 			copied++
 	if(length(user.memory_holder))
 		for(var/memory_title in user.memory_holder)
@@ -2627,6 +2759,7 @@
 			if(!cryptokey || stored_cryptokeys[cryptokey.key])
 				continue
 			stored_cryptokeys[cryptokey.key] = cryptokey
+			add_data_payload(new /datum/cyberpunk_data_payload/cryptokey(cryptokey))
 			copied++
 	to_chat(user, span_notice("You write [copied] cryptographic key[copied == 1 ? "" : "s"] to [src]."))
 	return TRUE
@@ -2660,7 +2793,22 @@
 /obj/item/cyberdemon_disk/prebuilt/Initialize(mapload)
 	. = ..()
 	for(var/demon_type in prebuilt_demon_types)
-		demons += new demon_type
+		store_demon(new demon_type)
+
+/obj/item/cyberdemon_disk/primary
+	name = "primary demon data disk"
+	desc = "A general-purpose CP13 data disk carrying the primary demon payloads. Later the same storage format can carry genetic data."
+	var/list/primary_demon_types = list(
+		/datum/cyberspace_demon/wall,
+		/datum/cyberspace_demon/blink,
+		/datum/cyberspace_demon/cloak,
+		/datum/cyberspace_demon/vanish,
+	)
+
+/obj/item/cyberdemon_disk/primary/Initialize(mapload)
+	. = ..()
+	for(var/demon_type in primary_demon_types)
+		store_demon(new demon_type)
 
 /obj/item/cyberdemon_disk/prebuilt/soul
 	name = "prebuilt soul demon disk"
@@ -2678,11 +2826,12 @@
 
 /obj/item/cyberdemon_disk/prebuilt/debug_all/Initialize(mapload)
 	. = ..()
-	QDEL_LIST(demons)
+	QDEL_LIST(data_payloads)
+	demons.Cut()
 	var/list/catalog = get_cyberdemon_catalog()
 	for(var/demon_name in catalog)
 		var/demon_type = catalog[demon_name]
-		demons += new demon_type
+		store_demon(new demon_type)
 
 /obj/item/cyberdemon_disk/veil
 	name = "old Veil demon disk"
@@ -2690,7 +2839,8 @@
 	memory_capacity = CYBER_DEMON_DISK_MEMORY
 
 /obj/item/cyberdemon_disk/veil/proc/build_from_veil_key(key, level)
-	QDEL_LIST(demons)
+	QDEL_LIST(data_payloads)
+	demons.Cut()
 	level = clamp(round(level), 1, CYBERSPACE_VEIL_DATA_VAULT_MAX_LEVEL)
 	memory_capacity = CYBER_DEMON_DISK_MEMORY + max(0, level - 2) * 2
 	name = "old Veil demon disk L[level]"
@@ -2710,11 +2860,12 @@
 		if(added_types[demon_type])
 			continue
 		added_types[demon_type] = TRUE
-		demons += new demon_type
+		store_demon(new demon_type)
 	if(!length(demons))
-		demons += new /datum/cyberspace_demon/wall
+		store_demon(new /datum/cyberspace_demon/wall)
 
 /obj/item/cyberdemon_disk/proc/choose_demon(mob/user)
+	rebuild_demon_index()
 	if(!length(demons))
 		to_chat(user, span_warning("[src] has no stored demons."))
 		return null

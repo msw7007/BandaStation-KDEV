@@ -3,6 +3,17 @@
 /proc/is_cold_zone(atom/checked_atom)
 	if(!checked_atom)
 		return FALSE
+	for(var/atom/location = checked_atom; location; location = location.loc)
+		if(istype(location, /obj/machinery/smartfridge))
+			return TRUE
+		if(istype(location, /obj/structure/closet/crate/freezer))
+			return TRUE
+		if(istype(location, /obj/structure/closet/crate/secure/freezer))
+			return TRUE
+		if(istype(location, /obj/structure/closet/secure_closet/freezer))
+			return TRUE
+		if(istype(location, /obj/structure/closet/mini_fridge))
+			return TRUE
 	var/area/our_area = get_area(checked_atom)
 	if(!our_area)
 		return FALSE
@@ -20,3 +31,8 @@
 #define COMPAT_ANTAGONISM_PENALTY -1
 #define COMPAT_BONUS_CAP 2
 #define COMPAT_PENALTY_CAP -2
+
+#define CY_FOOD_INHERITED_QUALITY_CAP 4
+#define CY_FOOD_QUALITY_EFFECT_PER_POINT 0.08
+#define CY_FOOD_QUALITY_EFFECT_MIN 0.5
+#define CY_FOOD_QUALITY_EFFECT_MAX 1.6

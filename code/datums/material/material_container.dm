@@ -19,6 +19,8 @@
 	var/max_amount
 	/// Map of material ref -> amount
 	var/list/materials //Map of key = material ref | Value = amount
+	/// Map of material ref -> resource quality. Zero/null means untracked.
+	var/list/material_resource_quality
 	/// The list of materials that this material container can accept
 	var/list/allowed_materials
 	/// The typecache of things that this material container can accept
@@ -88,8 +90,46 @@
 
 /datum/material_container/Destroy(force)
 	materials = null
+	material_resource_quality = null
 	allowed_materials = null
 	return ..()
+
+/datum/material_container/proc/get_material_resource_quality(datum/material/mat)
+	return material_resource_quality?[mat] || 0
+
+/datum/material_container/proc/merge_material_resource_quality(datum/material/mat, quality, inserted_amount, previous_amount)
+	if(!mat || inserted_amount <= 0)
+		return
+	if(!material_resource_quality && !quality)
+		return
+	material_resource_quality ||= list()
+	var/old_quality = material_resource_quality[mat] || 3
+	quality ||= 3
+	var/total_amount = max(1, previous_amount + inserted_amount)
+	material_resource_quality[mat] = clamp(round(((old_quality * previous_amount) + (quality * inserted_amount)) / total_amount), 1, 5)
+
+/datum/material_container/proc/get_materials_resource_quality(list/mats, coefficient = 1, multiplier = 1)
+	if(!mats || !length(mats) || !material_resource_quality)
+		return 0
+	var/total = 0
+	var/total_weight = 0
+	for(var/material_key in mats)
+		var/datum/material/material
+		if(istype(material_key, /datum/material))
+			material = material_key
+		else
+			material = SSmaterials.get_material(material_key)
+		if(!material)
+			continue
+		var/quality = material_resource_quality[material]
+		if(!quality)
+			continue
+		var/weight = OPTIMAL_COST(mats[material_key] * coefficient) * multiplier
+		total += quality * weight
+		total_weight += weight
+	if(!total_weight)
+		return 0
+	return clamp(round(total / total_weight), 1, 5)
 
 /datum/material_container/proc/drop_sheets()
 	SIGNAL_HANDLER
@@ -157,7 +197,9 @@
 		if(!can_hold_material(MAT))
 			continue
 		var/mat_amount = OPTIMAL_COST(item_materials[MAT] * multiplier)
+		var/previous_amount = materials[MAT]
 		materials[MAT] += mat_amount
+		merge_material_resource_quality(MAT, source.vars["resource_quality"], mat_amount, previous_amount)
 		if(item_materials[MAT] > max_mat_value)
 			max_mat_value = item_materials[MAT]
 			primary_mat = MAT
@@ -189,7 +231,9 @@
 	if(mat)
 		if(!istype(mat))
 			mat = SSmaterials.get_material(mat)
+		var/previous_amount = materials[mat]
 		materials[mat] += amt
+		merge_material_resource_quality(mat, null, amt, previous_amount)
 	else
 		var/num_materials = length(materials)
 		if(!num_materials)
@@ -197,7 +241,9 @@
 
 		amt /= num_materials
 		for(var/i in materials)
+			var/previous_amount = materials[i]
 			materials[i] += amt
+			merge_material_resource_quality(i, null, amt, previous_amount)
 	return (total_amount() - total_amount_saved)
 
 /**
@@ -646,6 +692,8 @@
 
 	//consume & return amount consumed
 	materials[mat] -= amt
+	if(materials[mat] <= 0 && material_resource_quality)
+		material_resource_quality -= mat
 	return amt
 //==============================================================================================
 
@@ -706,6 +754,9 @@
 		var/type_to_retrieve = material.sheet_type || material.ore_type
 		//don't merge yet. we need to do stuff with it first
 		var/obj/item/stack/new_stack = new type_to_retrieve(target, min(stack_amt, MAX_STACK_SIZE), FALSE)
+		var/quality = get_material_resource_quality(material)
+		if(quality)
+			new_stack.set_resource_quality(quality)
 		if(istype(new_stack, /obj/item/stack/sheet))
 			var/obj/item/stack/sheet/new_sheets = new_stack
 			new_sheets.manufactured = TRUE
@@ -724,6 +775,8 @@
 				continue
 			//speed merge
 			var/merge_amount = min(item_stack.amount, new_stack.max_amount - new_stack.get_amount())
+			var/new_stack_previous_amount = new_stack.get_amount()
+			new_stack.on_stack_merged(item_stack, merge_amount, new_stack_previous_amount)
 			item_stack.use(merge_amount)
 			new_stack.add(merge_amount)
 			break

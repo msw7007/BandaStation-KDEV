@@ -77,7 +77,10 @@
 				continue
 
 			//do we have the required ph? in range of min - ph_range & max + ph_range
-			if(ph < reaction.optimal_ph_min - reaction.determin_ph_range && ph > reaction.optimal_ph_max + reaction.determin_ph_range)
+			var/mob/living/operator = last_reaction_user?.resolve()
+			var/ph_range_bonus = operator?.get_cyberpunk_chemistry_purity_range_bonus() || 0
+			var/effective_ph_range = reaction.determin_ph_range * (1 + ph_range_bonus * 0.01)
+			if(ph < reaction.optimal_ph_min - effective_ph_range || ph > reaction.optimal_ph_max + effective_ph_range)
 				continue
 
 			//user defined checks
@@ -226,6 +229,8 @@
 
 	//average purity to be used in scaling the yield of products formed
 	var/average_purity = get_average_purity()
+	var/mob/living/operator = last_reaction_user?.resolve()
+	var/yield_multiplier = operator?.get_cyberpunk_chemistry_yield_multiplier() || 1
 
 	//remove the required reagents
 	for(var/datum/reagent/requirement as anything in cached_required_reagents)//this is not an object
@@ -234,7 +239,7 @@
 	//add the result reagents whose yield depend on the average purity
 	var/yield
 	for(var/datum/reagent/product as anything in cached_results)
-		yield = cached_results[product] * multiplier * average_purity
+		yield = cached_results[product] * multiplier * average_purity * yield_multiplier
 		SSblackbox.record_feedback("tally", "chemical_reaction", yield, product)
 		add_reagent(product, yield, null, chem_temp, average_purity)
 

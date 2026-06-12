@@ -289,18 +289,13 @@
 	return 1 / max(0.1, 1 + speed_bonus * 0.01)
 
 /mob/living/proc/get_cyberpunk_surgery_failure_reduction(datum/surgery_operation/operation)
-	var/tier = 1
-	if(operation)
-		if(operation.time >= 10 SECONDS || (operation.operation_flags & OPERATION_LOCKED))
-			tier = 3
-		else if(operation.time >= 4 SECONDS || (operation.operation_flags & OPERATION_NOTABLE))
-			tier = 2
+	var/tier = operation?.get_cyberpunk_step_severity() || SURGERY_STEP_SEVERITY_BASIC
 	switch(tier)
-		if(1)
+		if(SURGERY_STEP_SEVERITY_BASIC)
 			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_1")
-		if(2)
+		if(SURGERY_STEP_SEVERITY_ADVANCED)
 			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_2")
-		if(3)
+		if(SURGERY_STEP_SEVERITY_RARE)
 			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_3")
 	return 0
 
@@ -308,18 +303,13 @@
 	return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 4)
 
 /mob/living/proc/get_cyberpunk_self_surgery_success_chance(datum/surgery_operation/operation)
-	var/tier = 1
-	if(operation)
-		if(operation.time >= 10 SECONDS || (operation.operation_flags & OPERATION_LOCKED))
-			tier = 3
-		else if(operation.time >= 4 SECONDS || (operation.operation_flags & OPERATION_NOTABLE))
-			tier = 2
+	var/tier = operation?.get_cyberpunk_step_severity() || SURGERY_STEP_SEVERITY_BASIC
 	switch(tier)
-		if(1)
+		if(SURGERY_STEP_SEVERITY_BASIC)
 			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 5, "value_1")
-		if(2)
+		if(SURGERY_STEP_SEVERITY_ADVANCED)
 			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 5, "value_2")
-		if(3)
+		if(SURGERY_STEP_SEVERITY_RARE)
 			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 5, "value_3")
 	return 0
 

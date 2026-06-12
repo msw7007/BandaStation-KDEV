@@ -96,8 +96,8 @@
  */
 /mob/living/proc/get_available_operations(atom/movable/operating_on, potential_tool = IMPLEMENT_HAND, operating_zone = zone_selected)
 	// List of typepaths of operations we *can* do
-	var/list/possible_operations = GLOB.operations.unlocked.Copy()
-	// Signals can add operation types to the list to unlock special ones
+	var/list/possible_operations = GLOB.operations.get_public_operation_typepaths()
+	// Signals can add hidden/special operation types to the list.
 	SEND_SIGNAL(src, COMSIG_LIVING_OPERATING_ON, operating_on, possible_operations)
 	SEND_SIGNAL(operating_on, COMSIG_ATOM_BEING_OPERATED_ON, src, possible_operations)
 
@@ -346,6 +346,17 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		result += operation
 	return result
 
+/// Returns all operations that are generally knowable without research.
+/// Hidden operation variants are still added through signals by their owning systems.
+/datum/operation_holder/proc/get_public_operation_typepaths()
+	var/list/result = unlocked.Copy()
+	for(var/datum/surgery_operation/operation_type as anything in locked)
+		var/datum/surgery_operation/operation = operations_by_typepath[operation_type]
+		if(isnull(operation) || (operation.operation_flags & OPERATION_NO_WIKI))
+			continue
+		result += operation_type
+	return result
+
 /// Check if the passed operation has been replaced by a typepath in the provided operation pool
 /datum/operation_holder/proc/is_replaced(datum/surgery_operation/operation, list/operation_pool)
 	if(isnull(operation.replaced_by) || !length(operation_pool))
@@ -425,6 +436,8 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	var/list/implements
 	/// Base time to perform this operation
 	var/time = 1 SECONDS
+	/// Cyberpunk surgery skill severity: 1 basic, 2 advanced, 3 rare/disk-grade.
+	var/cyberpunk_step_severity = SURGERY_STEP_SEVERITY_BASIC
 
 	/// Flags modifying the behavior of this operation
 	var/operation_flags = NONE
@@ -813,6 +826,88 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	for(var/obj/thingy in operation_turf)
 		mod = min(mod, modifiers[thingy.type] || 2.0)
 	return mod
+
+#define SURGERY_TOOL_MOD_GHETTO 10
+#define SURGERY_TOOL_MOD_ADVANCED 0
+#define SURGERY_TOOL_MOD_ALIEN 1
+#define SURGERY_TOOL_MOD_AUGMENT 0
+#define SURGERY_TOOL_MOD_BASIC 5
+#define SURGERY_RING_FAIL_MOD 10
+
+/datum/surgery_operation/proc/get_modified_failure_chance(operation_time, mob/living/patient, mob/living/surgeon, tool, list/operation_args)
+	var/speed_modifier = operation_args[OPERATION_SPEED] || 1
+	var/fail_chance = max(0, (speed_modifier - SURGERY_MODIFIER_FAILURE_THRESHOLD) * FAILURE_CHANCE_PER_SECOND)
+
+	if(iscarbon(patient))
+		var/mob/living/carbon/carbon_patient = patient
+		fail_chance += carbon_patient.get_total_pain() / 5
+
+	if(!(surgeon.has_nightvision() || isabductor(surgeon)))
+		var/turf/patient_turf = get_turf(patient)
+		if(patient_turf)
+			var/light_amount = min(1, patient_turf.get_lumcount())
+			if(light_amount < 0.5)
+				fail_chance += (0.5 - light_amount) * 40
+
+	var/tool_mod = 0
+	if(isitem(tool))
+		var/obj/item/realtool = tool
+		var/tool_type = realtool.type
+		if(implements[tool] > 1.15)
+			tool_mod = SURGERY_TOOL_MOD_GHETTO
+		else if(findtext("[tool_type]", "/advanced"))
+			tool_mod = SURGERY_TOOL_MOD_ADVANCED
+		else if(findtext("[tool_type]", "/alien"))
+			tool_mod = SURGERY_TOOL_MOD_ALIEN
+		else if(findtext("[tool_type]", "/augment"))
+			tool_mod = SURGERY_TOOL_MOD_AUGMENT
+		else
+			tool_mod = SURGERY_TOOL_MOD_BASIC
+
+	fail_chance += tool_mod
+
+	var/obj/item/clothing/gloves/worn_gloves = surgeon.get_item_by_slot(ITEM_SLOT_GLOVES)
+	if(istype(worn_gloves) && locate(/obj/item/clothing/accessory/gloves_accessory/ring) in worn_gloves.attached_accessories)
+		fail_chance += SURGERY_RING_FAIL_MOD - 5
+
+	//CYBERPUNK BUILD - rebuild and delete before release
+	fail_chance -= surgeon.get_cyberpunk_surgery_failure_reduction(src)
+	fail_chance -= surgeon.get_cyberpunk_surgical_processor_failure_reduction()
+	//CYBERPUNK BUILD - rebuild and delete before release
+	if(patient == surgeon && HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
+		fail_chance -= 50
+
+	return fail_chance
+
+/mob/living/proc/get_cyberpunk_surgical_processor_failure_reduction()
+	return 0
+
+/mob/living/carbon/get_cyberpunk_surgical_processor_failure_reduction()
+	. = ..()
+	var/obj/item/organ/cyberimp/brain/surgical_processor/processor = get_organ_slot(ORGAN_SLOT_OS)
+	if(!istype(processor) || (processor.organ_flags & (ORGAN_FAILING|ORGAN_EMP)))
+		return
+	. += processor.surgery_failure_reduction * processor.get_corporate_synergy_multiplier()
+
+/datum/surgery_operation/proc/get_cyberpunk_step_severity()
+	if(cyberpunk_step_severity != SURGERY_STEP_SEVERITY_BASIC)
+		return clamp(cyberpunk_step_severity, SURGERY_STEP_SEVERITY_BASIC, SURGERY_STEP_SEVERITY_RARE)
+	if(operation_flags & OPERATION_LOCKED)
+		return SURGERY_STEP_SEVERITY_RARE
+	if(operation_flags & OPERATION_NOTABLE)
+		return SURGERY_STEP_SEVERITY_ADVANCED
+	if(time >= 20 SECONDS)
+		return SURGERY_STEP_SEVERITY_RARE
+	if(time >= 10 SECONDS)
+		return SURGERY_STEP_SEVERITY_ADVANCED
+	return SURGERY_STEP_SEVERITY_BASIC
+
+#undef SURGERY_TOOL_MOD_GHETTO
+#undef SURGERY_TOOL_MOD_ADVANCED
+#undef SURGERY_TOOL_MOD_ALIEN
+#undef SURGERY_TOOL_MOD_AUGMENT
+#undef SURGERY_TOOL_MOD_BASIC
+#undef SURGERY_RING_FAIL_MOD
 
 /**
  * Gets what movable is being operated on by a surgeon during this operation

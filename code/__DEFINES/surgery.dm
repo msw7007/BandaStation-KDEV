@@ -203,6 +203,11 @@ DEFINE_BITFIELD(operation_flags, list(
 #define OPERATION_BRUTE_MULTIPLIER "brute_multiplier"
 #define OPERATION_BURN_MULTIPLIER "burn_multiplier"
 
+// Cyberpunk surgery step severity. Used by Surgery skill perk checks.
+#define SURGERY_STEP_SEVERITY_BASIC 1
+#define SURGERY_STEP_SEVERITY_ADVANCED 2
+#define SURGERY_STEP_SEVERITY_RARE 3
+
 /// Used in string formatting to print a limb as "John's right arm" or "the human right arm"
 #define FORMAT_LIMB_OWNER(limb) (limb.owner ? "[limb.owner]'s [limb.plaintext_zone]" : limb)
 /// Used in string formatting to print an organ's location as "John" or "the human chest"

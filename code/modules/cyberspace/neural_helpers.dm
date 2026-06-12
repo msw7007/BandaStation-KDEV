@@ -2,17 +2,17 @@
 
 /mob/living/var/tmp/datum/cyberdemon_debug_compiler/cyberdemon_debug_compiler
 
-/proc/create_debug_cyberdemon_disk(mob/living/user, disk_label = "Core: wall / blink / cloak / vanish")
+/proc/create_debug_cyberdemon_disk(mob/living/user, disk_label = "Primary: wall / blink / cloak / vanish")
 	if(!istype(user))
 		return null
 	var/list/disk_types = list(
-		"Core: wall / blink / cloak / vanish" = /obj/item/cyberdemon_disk/prebuilt,
+		"Primary: wall / blink / cloak / vanish" = /obj/item/cyberdemon_disk/primary,
 		"Soul: soulcatcher / soulconduit / wall / blink" = /obj/item/cyberdemon_disk/prebuilt/soul,
 		"Debug: all prebuilt demons" = /obj/item/cyberdemon_disk/prebuilt/debug_all,
 	)
 	var/selected_label = disk_label
 	if(!(selected_label in disk_types))
-		selected_label = "Core: wall / blink / cloak / vanish"
+		selected_label = "Primary: wall / blink / cloak / vanish"
 	var/disk_type = disk_types[selected_label]
 	var/obj/item/cyberdemon_disk/disk = new disk_type(get_turf(user))
 	if(user.put_in_hands(disk, forced = TRUE))

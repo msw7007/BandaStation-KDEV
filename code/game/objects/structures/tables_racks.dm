@@ -1115,20 +1115,11 @@
 		COMSIG_ATOM_SURGERY_FINISHED,
 		COMSIG_LIVING_UPDATING_SURGERY_STATE,
 	), PROC_REF(on_surgery_change))
-	RegisterSignal(patient, COMSIG_ATOM_BEING_OPERATED_ON, PROC_REF(get_surgeries))
 
 /obj/structure/table/optable/proc/on_surgery_change(datum/source)
 	SIGNAL_HANDLER
 	update_appearance()
 	computer?.update_static_data_batched()
-
-/obj/structure/table/optable/proc/get_surgeries(datum/source, mob/living/surgeon, list/operations)
-	SIGNAL_HANDLER
-
-	if(isnull(computer))
-		return
-
-	operations |= computer.advanced_surgeries
 
 /obj/structure/table/optable/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if (istype(tool, /obj/item/clothing/mask/breath))

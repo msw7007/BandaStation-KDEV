@@ -742,43 +742,26 @@
 
 /obj/item/organ/cyberimp/brain/surgical_processor
 	name = "surgical processor implant"
-	desc = "A cybernetic brain implant that allows you to perform advanced operations anywhere, anytime."
+	desc = "A cybernetic brain implant that assists surgical motion, timing, and procedure recall."
 	corp_manufacturer = "Ryaznov"
 	icon_state = "brain_implant_antidrop"
 	slot = ORGAN_SLOT_OS
 	slot_capacity = CYBERPUNK_OS_SLOT_CAPACITY
 	emp_stun_duration = 0 SECONDS
 	emp_immobilize_duration = 4 SECONDS
-	/// Lazylist of surgeries this implant provides
+	/// Legacy storage for old preloaded variants. Surgery access is no longer gated by this.
 	var/list/loaded_surgeries
 	var/surgery_speed_multiplier = 1.15
+	var/surgery_failure_reduction = 5
 
 /obj/item/organ/cyberimp/brain/surgical_processor/examine(mob/user)
 	. = ..()
-	if(length(loaded_surgeries))
-		. += span_info("Load surgeries from an operating compuer or a disk containing surgery data. Loaded surgeries:")
-		for(var/datum/surgery_operation/downloaded_surgery as anything in GLOB.operations.get_instances_from(loaded_surgeries))
-			if(!(downloaded_surgery.operation_flags & OPERATION_LOCKED))
-				continue
-			// for simplicitly, filters out mechanical subtypes of normal surgeries
-			if((downloaded_surgery.operation_flags & OPERATION_MECHANIC) && (downloaded_surgery.parent_type in loaded_surgeries))
-				continue
-			. += span_info("&bull; [capitalize(downloaded_surgery.rnd_name || downloaded_surgery.name)]")
-
-	else
-		. += span_info("Load surgeries from an operating compuer or a disk containing surgery data.")
-		. += span_info("No surgeries loaded. Surgeries must be loaded <i>before</i> installation.")
+	. += span_info("It does not unlock procedures. It improves surgical speed and reduces step failure chance.")
 
 /obj/item/organ/cyberimp/brain/surgical_processor/proc/load_surgeries(mob/living/user, obj/design_holder)
-	balloon_alert(user, "copying designs...")
+	balloon_alert(user, "indexing procedures...")
 	playsound(src, 'sound/machines/terminal/terminal_processing.ogg', 25, TRUE)
 	if(do_after(user, 1 SECONDS, target = design_holder))
-		if(istype(design_holder, /obj/item/disk/surgery))
-			var/obj/item/disk/surgery/surgery_disk = design_holder
-			LAZYOR(loaded_surgeries, surgery_disk.surgeries)
-		else
-			var/obj/machinery/computer/operating/surgery_computer = design_holder
-			LAZYOR(loaded_surgeries, surgery_computer.advanced_surgeries)
 		playsound(src, 'sound/machines/terminal/terminal_success.ogg', 25, TRUE)
 		return ITEM_INTERACT_SUCCESS
 	return ITEM_INTERACT_BLOCKING
@@ -795,21 +778,11 @@
 
 /obj/item/organ/cyberimp/brain/surgical_processor/on_mob_insert(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
-	RegisterSignal(organ_owner, COMSIG_LIVING_OPERATING_ON, PROC_REF(check_surgery))
 	organ_owner.add_surgery_speed_mod(REF(src), surgery_speed_multiplier * get_corporate_synergy_multiplier(), INFINITY)
 
 /obj/item/organ/cyberimp/brain/surgical_processor/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
-	UnregisterSignal(organ_owner, COMSIG_LIVING_OPERATING_ON)
 	organ_owner.remove_surgery_speed_mod(REF(src))
-
-/obj/item/organ/cyberimp/brain/surgical_processor/proc/check_surgery(datum/source, atom/movable/operating_on, list/operations)
-	SIGNAL_HANDLER
-
-	if(organ_flags & (ORGAN_FAILING|ORGAN_EMP))
-		return
-
-	operations |= loaded_surgeries
 
 /obj/item/organ/cyberimp/brain/surgical_processor/emp_act(severity)
 	. = ..()
@@ -872,11 +845,13 @@
 	name = "surgical processor implant T2"
 	implant_tier = 2
 	surgery_speed_multiplier = 1.3
+	surgery_failure_reduction = 10
 
 /obj/item/organ/cyberimp/brain/surgical_processor/t3
 	name = "surgical processor implant T3"
 	implant_tier = 3
 	surgery_speed_multiplier = 1.5
+	surgery_failure_reduction = 15
 
 /obj/item/organ/cyberimp/brain/neurostabilizer
 	name = "\improper Samantas neurostabilizer"

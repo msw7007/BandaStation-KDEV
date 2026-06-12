@@ -342,15 +342,15 @@
 	icon = 'icons/mob/silicon/robot_items.dmi'
 	icon_state = "toolkit_medborg_surgicaldrapes"
 
-/obj/item/surgical_processor //allows medical cyborgs to scan and initiate advanced surgeries
+/obj/item/surgical_processor
 	name = "surgical processor"
-	desc = "A device for scanning and initiating surgeries from a disk or operating computer."
+	desc = "A device for scanning surgery procedures and assisting with field surgery."
 	icon = 'icons/obj/devices/scanner.dmi'
 	icon_state = "surgical_processor"
 	item_flags = NOBLUDGEON
-	// List of surgeries downloaded into the device.
+	// Legacy storage for preloaded map/module variants. Surgery access is no longer gated by this.
 	var/list/loaded_surgeries = list()
-	// If a surgery has been downloaded in. Will cause the display to have a noticeable effect - helps to realize you forgot to load anything in.
+	// If procedure data has been indexed. This is visual only.
 	var/downloaded = TRUE
 
 /obj/item/surgical_processor/Initialize(mapload)
@@ -359,37 +359,14 @@
 
 /obj/item/surgical_processor/examine(mob/user)
 	. = ..()
-	. += span_notice("Equip the processor in one of your active modules to access downloaded advanced surgeries.")
-	. += span_boldnotice("Advanced surgeries available:")
-	//list of downloaded surgeries' names
-	var/list/surgeries_names = list()
-	for(var/datum/surgery_operation/downloaded_surgery as anything in GLOB.operations.get_instances_from(loaded_surgeries))
-		surgeries_names += "[capitalize(downloaded_surgery.name)]"
-	. += span_notice("[english_list(surgeries_names)]")
-
-/obj/item/surgical_processor/equipped(mob/user, slot, initial)
-	. = ..()
-	if(!(slot & ITEM_SLOT_HANDS))
-		UnregisterSignal(user, COMSIG_LIVING_OPERATING_ON)
-		return
-	RegisterSignal(user, COMSIG_LIVING_OPERATING_ON, PROC_REF(check_surgery), override = TRUE)
-
-/obj/item/surgical_processor/dropped(mob/user, silent)
-	. = ..()
-	UnregisterSignal(user, COMSIG_LIVING_OPERATING_ON)
+	. += span_notice("It indexes known procedures and acts as a surgical aid. Procedure access is determined by surgical skill, not stored designs.")
 
 /obj/item/surgical_processor/interact_with_atom(atom/design_holder, mob/living/user, list/modifiers)
 	if(!istype(design_holder, /obj/item/disk/surgery) && !istype(design_holder, /obj/machinery/computer/operating))
 		return NONE
-	balloon_alert(user, "copying designs...")
+	balloon_alert(user, "indexing procedures...")
 	playsound(src, 'sound/machines/terminal/terminal_processing.ogg', 25, TRUE)
 	if(do_after(user, 1 SECONDS, target = design_holder))
-		if(istype(design_holder, /obj/item/disk/surgery))
-			var/obj/item/disk/surgery/surgery_disk = design_holder
-			loaded_surgeries |= surgery_disk.surgeries
-		else
-			var/obj/machinery/computer/operating/surgery_computer = design_holder
-			loaded_surgeries |= surgery_computer.advanced_surgeries
 		playsound(src, 'sound/machines/terminal/terminal_success.ogg', 25, TRUE)
 		downloaded = TRUE
 		update_appearance(UPDATE_OVERLAYS)
@@ -400,11 +377,6 @@
 	. = ..()
 	if(downloaded)
 		. += mutable_appearance(src.icon, "+downloaded")
-
-/obj/item/surgical_processor/proc/check_surgery(datum/source, atom/movable/operating_on, list/operations)
-	SIGNAL_HANDLER
-
-	operations |= loaded_surgeries
 
 /obj/item/scalpel/advanced
 	name = "laser scalpel"
