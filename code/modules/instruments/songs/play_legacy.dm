@@ -80,11 +80,9 @@
 	if((world.time - MUSICIAN_HEARCHECK_MINDELAY) > last_hearcheck)
 		do_hearcheck()
 	var/sound/music_played = sound(soundfile)
+	pulse_cyberpunk_music_perks(player)
 	for(var/i in hearing_mobs)
 		var/mob/M = i
-		if(player && HAS_TRAIT(player, TRAIT_MUSICIAN) && isliving(M))
-			var/mob/living/L = M
-			L.apply_status_effect(/datum/status_effect/good_music)
 		var/listener_volume = get_listener_volume_multiplier(M)
 		if(!listener_volume)
 			continue

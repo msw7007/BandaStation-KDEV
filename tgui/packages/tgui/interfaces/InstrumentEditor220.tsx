@@ -27,7 +27,6 @@ type LoadedFileTrack = {
 };
 
 type Data = {
-  id: string;
   using_instrument: string;
 
   note_shift_min: number;

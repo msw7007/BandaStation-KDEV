@@ -273,6 +273,15 @@
 	timeout = 60 SECONDS
 	event_flags = MOOD_EVENT_ART
 
+/datum/mood_event/cyberpunk_music
+	description = "Живое выступление поднимает мне настроение."
+	mood_change = 2
+	timeout = 10 SECONDS
+	event_flags = MOOD_EVENT_ART
+
+/datum/mood_event/cyberpunk_music/add_effects(music_mood = 2)
+	mood_change = max(1, music_mood)
+
 /datum/mood_event/chemical_euphoria
 	description = "Хех... Хехехе... Хехе..."
 	mood_change = 4

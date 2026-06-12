@@ -41,6 +41,14 @@
 /obj/item/instrument/ui_interact(mob/user, datum/tgui/ui)
 	return song.ui_interact(user)
 
+/obj/item/instrument/pre_attack(atom/target, mob/living/user, list/modifiers, list/attack_modifiers)
+	. = ..()
+	if(.)
+		return
+	var/damage_bonus = user.get_cyberpunk_skill_perk_bonus(SKILL_MUSIC, 3)
+	if(damage_bonus > 0)
+		MODIFY_ATTACK_FORCE_MULTIPLIER(attack_modifiers, 1 + damage_bonus * 0.01)
+
 /obj/item/instrument/violin
 	name = "space violin"
 	desc = "A wooden musical instrument with four strings and a bow. \"The devil went down to space, he was looking for an assistant to grief.\""

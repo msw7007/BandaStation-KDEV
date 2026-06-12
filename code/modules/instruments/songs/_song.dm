@@ -8,9 +8,6 @@
 	/// Name of the song
 	var/name = "Untitled"
 
-	/// ID for syncing songs together
-	var/id = ""
-
 	/// The atom we're attached to/playing from
 	var/atom/parent
 
@@ -104,8 +101,6 @@
 	var/last_channel_played
 	/// Last world time process() ran; used to catch up small MIDI timing stalls.
 	var/last_process_time = 0
-	/// If TRUE, the next direct start will not invoke ID/multi-sync.
-	var/suppress_next_sync = FALSE
 	/// MIDI start delay in subsystem ticks, used for manual/group synchronization.
 	var/midi_start_delay_ticks = 0
 	/// Timer id for a delayed MIDI start.
@@ -236,7 +231,6 @@
 	if(!using_instrument?.ready())
 		to_chat(user, span_warning("An error has occured with [src]. Please reset the instrument."))
 		ignore_midi_start_delay = FALSE
-		suppress_next_sync = FALSE
 		return
 	if(playback_mode == "file")
 		start_file_playing(user)
@@ -249,7 +243,6 @@
 	if(!length(compiled_chords))
 		to_chat(user, span_warning("Song is empty."))
 		ignore_midi_start_delay = FALSE
-		suppress_next_sync = FALSE
 		return
 	playing = TRUE
 	//we can not afford to runtime, since we are going to be doing sound channel reservations and if we runtime it means we have a channel allocation leak.
@@ -264,8 +257,6 @@
 	music_player = user
 	last_process_time = world.time
 	START_PROCESSING(SSinstruments, src)
-	// Manual/group MIDI start delay replaces old ID-based sync.
-	suppress_next_sync = FALSE
 
 /datum/song/proc/delayed_midi_start(atom/user)
 	midi_start_timer = null
@@ -281,15 +272,9 @@
 	return TRUE
 
 /**
- * Attempts to find other instruments with the same ID and syncs them to our song.
- */
-/datum/song/proc/sync_play()
-	return
-
-/**
  * Finds a player which would reasonably be able to play this song.
  */
-/datum/song/proc/find_sync_player()
+/datum/song/proc/find_available_player()
 	return null
 
 /**
@@ -314,7 +299,6 @@
 	music_player = null
 	file_track_finish_time = 0
 	last_process_time = 0
-	suppress_next_sync = FALSE
 	ignore_midi_start_delay = FALSE
 
 	// BANDASTATION ADDITION START - New Musical Sync
@@ -591,8 +575,6 @@
 	play_file_to_current_listeners(user)
 	file_track_finish_time = world.time + file_track_length
 	START_PROCESSING(SSinstruments, src)
-	// File playback also uses explicit group starts now, not old ID-based sync.
-	suppress_next_sync = FALSE
 
 /datum/song/proc/play_file_to_current_listeners(atom/player)
 	var/channel = pop_channel()
@@ -607,9 +589,6 @@
 	music_played.volume = get_file_output_volume()
 	for(var/i in hearing_mobs)
 		var/mob/listener = i
-		if(player && HAS_TRAIT(player, TRAIT_MUSICIAN) && isliving(listener))
-			var/mob/living/living_listener = listener
-			living_listener.apply_status_effect(/datum/status_effect/good_music)
 		var/listener_volume = get_listener_volume_multiplier(listener)
 		if(!listener_volume)
 			continue
@@ -620,6 +599,7 @@
 	if(should_stop_playing(music_player) == STOP_PLAYING)
 		stop_playing(FALSE)
 		return
+	pulse_cyberpunk_music_perks(music_player)
 	if(world.time < file_track_finish_time)
 		return
 	if(repeat > 0 || auto_repeat)
@@ -696,7 +676,7 @@
 	var/obj/item/instrument/I = parent
 	return I.can_play(player) ? NONE : STOP_PLAYING
 
-/datum/song/handheld/find_sync_player()
+/datum/song/handheld/find_available_player()
 	var/obj/item/instrument/instrument = parent
 	var/mob/living/player = get(parent, /mob/living)
 	if(instrument.can_play(player))
@@ -713,7 +693,7 @@
 	var/obj/structure/musician/M = parent
 	return M.can_play(player) ? NONE : STOP_PLAYING
 
-/datum/song/stationary/find_sync_player()
+/datum/song/stationary/find_available_player()
 	var/obj/structure/musician/piano = parent
 	for(var/mob/living/player in view(parent, 1))
 		if(piano.can_play(player))

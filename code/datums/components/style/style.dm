@@ -19,6 +19,7 @@
 #define ACTION_MARK_DETONATED "MARK DETONATED"
 #define ACTION_GEYSER_MARKED "GEYSER MARKED"
 #define ACTION_VENT_TAPPED "VENT TAPPED"
+#define ACTION_MUSIC "MUSIC"
 
 /datum/component/style
 	/// Amount of style we have.
@@ -302,6 +303,8 @@
 			return "#364866"
 		if(ACTION_VENT_TAPPED)
 			return "#366b55"
+		if(ACTION_MUSIC)
+			return "#00d7ff"
 
 /// A proc that lets a user, when their rank >= `hotswap_rank`, swap items in storage with what's in their hands, simply by clicking on the stored item with a held item
 /datum/component/style/proc/hotswap(mob/living/source, obj/item/weapon, atom/target, list/modifiers)
@@ -477,3 +480,4 @@
 #undef ACTION_MARK_DETONATED
 #undef ACTION_GEYSER_MARKED
 #undef ACTION_VENT_TAPPED
+#undef ACTION_MUSIC

@@ -539,6 +539,27 @@
 	check_modifier = 5
 	experience_multiplier = 1.05
 
+/datum/cyberpunk_status_effect/music_cohort
+	id = "music_cohort"
+	name = "Cohort Rhythm"
+	desc = "A live performance keeps the cohort in sync."
+	effect_kind = "buff"
+	check_modifier = 1
+	action_speed_modifier = -0.01
+	move_speed_modifier = -0.005
+	experience_multiplier = 1.01
+	shareable = FALSE
+
+/datum/cyberpunk_status_effect/music_discord
+	id = "music_discord"
+	name = "Discordant Rhythm"
+	desc = "A hostile performance breaks your rhythm."
+	effect_kind = "debuff"
+	check_modifier = -1
+	action_speed_modifier = 0.01
+	move_speed_modifier = 0.005
+	shareable = FALSE
+
 /mob/living/proc/apply_cyberpunk_status_effect(effect_type, duration = 0, power = 1, source = null, share_cohort = TRUE)
 	if(!ispath(effect_type, /datum/cyberpunk_status_effect))
 		return null

@@ -1,4 +1,3 @@
-#define AUTO_UNISON_RADIUS 5
 #define GROUP_PERFORMANCE_RADIUS 5
 #define GROUP_PERFORMANCE_TIMEOUT (30 SECONDS)
 
@@ -7,30 +6,23 @@
 #define GROUP_PERFORMANCE_READY "ready"
 #define GROUP_PERFORMANCE_SKIPPED "skipped"
 
+#define CYBERPUNK_MUSIC_PERK_PULSE_INTERVAL (1 SECONDS)
+#define CYBERPUNK_MUSIC_EFFECT_DURATION (6 SECONDS)
+#define CYBERPUNK_MUSIC_STYLE_ACTION "MUSIC"
+
 /datum/song
-	var/auto_unison_enabled = FALSE
-	var/last_unison_check = 0
-	var/list/multi_tracks = list()
-	var/multi_sync_enabled = FALSE
 	var/ignore_play_checks = FALSE
 	var/datum/song/group_start_leader
 	var/group_start_deadline = 0
 	var/list/group_start_candidates
 	var/atom/group_start_player
+	var/last_cyberpunk_music_perk_pulse = 0
 
-/datum/song/proc/ds_per_beat()
-	return max(1, round(600 / max(1, bpm)))
-
-/datum/song/proc/force_start_playing()
-	ignore_play_checks = TRUE
-	start_playing(parent)
-
-/datum/song/proc/start_without_prompt(atom/player, skip_sync = TRUE)
-	suppress_next_sync = skip_sync
+/datum/song/proc/start_without_prompt(atom/player)
 	start_playing(player)
 
 /datum/song/proc/find_group_player()
-	var/atom/player = find_sync_player()
+	var/atom/player = find_available_player()
 	return ismob(player) ? player : null
 
 /datum/song/handheld/find_group_player()
@@ -43,7 +35,7 @@
 	return instrument.can_play(player) ? player : null
 
 /datum/song/stationary/find_group_player()
-	return find_sync_player()
+	return find_available_player()
 
 /datum/song/proc/get_nearby_group_candidates(atom/leader_player)
 	var/list/candidates = list()
@@ -74,11 +66,11 @@
 		prepare_group_performance(user)
 		return TRUE
 	if(!istype(user))
-		start_without_prompt(user, FALSE)
+		start_without_prompt(user)
 		return TRUE
 	var/list/candidates = get_nearby_group_candidates(user)
 	if(!length(candidates))
-		start_without_prompt(user, FALSE)
+		start_without_prompt(user)
 		return TRUE
 	group_start_candidates = list()
 	group_start_deadline = world.time + GROUP_PERFORMANCE_TIMEOUT
@@ -145,101 +137,53 @@
 	group_start_player = null
 	for(var/datum/song/S as anything in ready_songs)
 		var/atom/start_player = (S == src) ? player : S.find_group_player()
-		S.start_without_prompt(start_player || S.parent, TRUE)
+		S.start_without_prompt(start_player || S.parent)
 
 /datum/song/proc/clear_group_prepare()
 	group_start_leader = null
 	group_start_deadline = 0
 
-/datum/song/proc/transmit_song_to(datum/song/other)
-	if(!istype(other))
-		return
-
-	other.lines = islist(lines) ? lines.Copy() : list()
-	other.tempo = tempo
-	other.bpm = bpm
-	other.max_repeats = max_repeats
-	other.auto_repeat = auto_repeat
-	other.playback_mode = playback_mode
-	other.file_track = file_track
-	other.file_track_name = file_track_name
-	other.file_track_length = file_track_length
-	other.loaded_file_tracks = islist(loaded_file_tracks) ? loaded_file_tracks.Copy() : list()
-	if(other.playback_mode != "file")
-		other.compile_chords()
-
-/datum/song/proc/receive_song_from(datum/song/master)
-	if(!istype(master))
-		return
-
-	lines = islist(master.lines) ? master.lines.Copy() : list()
-	tempo = master.tempo
-	bpm = master.bpm
-	max_repeats = master.max_repeats
-	auto_repeat = master.auto_repeat
-	playback_mode = master.playback_mode
-	file_track = master.file_track
-	file_track_name = master.file_track_name
-	file_track_length = master.file_track_length
-	loaded_file_tracks = islist(master.loaded_file_tracks) ? master.loaded_file_tracks.Copy() : list()
-	if(playback_mode != "file")
-		compile_chords()
-
-/datum/song/proc/songs_by_id(target_id as text, require_in_view = TRUE)
-	var/list/out = list()
-	if(!istext(target_id) || !length(target_id))
-		return out
-
-	for(var/datum/song/S as anything in SSinstruments.songs)
-		if(S == src)
+/datum/song/proc/pulse_cyberpunk_music_perks(atom/player)
+	if(world.time < last_cyberpunk_music_perk_pulse + CYBERPUNK_MUSIC_PERK_PULSE_INTERVAL)
+		return FALSE
+	last_cyberpunk_music_perk_pulse = world.time
+	if(!isliving(player) || !length(hearing_mobs))
+		return FALSE
+	var/mob/living/performer = player
+	var/mood_bonus = performer.get_cyberpunk_skill_perk_bonus(SKILL_MUSIC, 1)
+	var/cohort_buff_level = performer.get_cyberpunk_skill_perk_bonus(SKILL_MUSIC, 2)
+	var/outsider_debuff_level = performer.get_cyberpunk_skill_perk_bonus(SKILL_MUSIC, 4)
+	var/style_bonus = performer.get_cyberpunk_skill_perk_bonus(SKILL_MUSIC, 5)
+	var/has_music_effect = mood_bonus || cohort_buff_level || outsider_debuff_level || style_bonus || HAS_TRAIT(performer, TRAIT_MUSICIAN)
+	if(!has_music_effect)
+		return FALSE
+	for(var/listener_ref in hearing_mobs)
+		if(!isliving(listener_ref))
 			continue
-		if(S.id != target_id)
+		var/mob/living/listener = listener_ref
+		if(HAS_TRAIT(listener, TRAIT_DEAF))
 			continue
-		if(require_in_view)
-			var/atom/other_player = S.find_sync_player()
-			if(isnull(other_player) || !(other_player in view(parent)))
-				continue
-		out += S
-	return out
+		listener.apply_status_effect(/datum/status_effect/good_music)
+		if(mood_bonus)
+			listener.add_mood_event("cyberpunk_music", /datum/mood_event/cyberpunk_music, mood_bonus)
+		var/same_cohort = performer.is_cyberpunk_music_cohort_listener(listener)
+		if(cohort_buff_level && same_cohort)
+			listener.apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/music_cohort, CYBERPUNK_MUSIC_EFFECT_DURATION, cohort_buff_level, performer, FALSE)
+		if(outsider_debuff_level && !same_cohort)
+			listener.apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/music_discord, CYBERPUNK_MUSIC_EFFECT_DURATION, outsider_debuff_level, performer, FALSE)
+		if(style_bonus)
+			listener.apply_cyberpunk_music_style(style_bonus)
+	return TRUE
 
-/datum/song/proc/try_auto_unison_once()
-	if(playing)
-		return
+/mob/living/proc/is_cyberpunk_music_cohort_listener(mob/living/listener)
+	return listener == src || (cyberpunk_cohort && listener?.cyberpunk_cohort == cyberpunk_cohort)
 
-	var/turf/src_turf = get_turf(parent)
-	if(!src_turf)
-		return
-
-	var/datum/song/master
-
-	for(var/datum/song/S as anything in SSinstruments.songs)
-		if(S == src)
-			continue
-		if(!S.playing)
-			continue
-		if(S.auto_unison_enabled)
-			continue
-		var/turf/obj_turf = get_turf(S.parent)
-		if(!obj_turf)
-			continue
-		if(get_dist(src_turf, obj_turf) > AUTO_UNISON_RADIUS)
-			continue
-		master = S
-		break
-
-	if(!master)
-		return
-
-	receive_song_from(master)
-	force_start_playing()
-
-	if(!playing)
-		return
-
-	if(playback_mode != "file")
-		current_chord = clamp(master.current_chord, 1, length(compiled_chords))
-		elapsed_delay = 0
-		delay_by = 0
+/mob/living/proc/apply_cyberpunk_music_style(style_bonus)
+	var/datum/component/style/style_component = GetComponent(/datum/component/style)
+	if(!style_component)
+		return FALSE
+	style_component.add_action(CYBERPUNK_MUSIC_STYLE_ACTION, max(1, style_bonus))
+	return TRUE
 
 /datum/song/handheld/should_stop_playing(atom/player)
 	if(ignore_play_checks)
@@ -287,6 +231,9 @@
 #undef GROUP_PERFORMANCE_ACCEPTED
 #undef GROUP_PERFORMANCE_READY
 #undef GROUP_PERFORMANCE_SKIPPED
+#undef CYBERPUNK_MUSIC_PERK_PULSE_INTERVAL
+#undef CYBERPUNK_MUSIC_EFFECT_DURATION
+#undef CYBERPUNK_MUSIC_STYLE_ACTION
 
 /datum/song/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
