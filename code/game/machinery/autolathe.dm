@@ -346,7 +346,7 @@
 			if(!istype(material, /datum/material/glass) && !istype(material, /datum/material/iron))
 				ui.user.client.give_award(/datum/award/achievement/misc/getting_an_upgrade, ui.user)
 				break
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, build_count, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target_location, slots_chosen, cyberpunk_material_choice), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, build_count, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target_location, slots_chosen, cyberpunk_material_choice, ui.user), build_time_per_item)
 
 	return TRUE
 
@@ -362,7 +362,7 @@
  * * list/materials_needed - the list of materials to print 1 item
  * * turf/target - the location to drop the printed item on
 */
-/obj/machinery/autolathe/proc/do_make_item(datum/design/design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, list/materials_needed, turf/target, list/slots_chosen, cyberpunk_material_choice)
+/obj/machinery/autolathe/proc/do_make_item(datum/design/design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, list/materials_needed, turf/target, list/slots_chosen, cyberpunk_material_choice, mob/living/fabricator)
 	PROTECTED_PROC(TRUE)
 
 	if(items_remaining <= 0) // how
@@ -407,6 +407,7 @@
 			if(build_resource_quality && isitem(created))
 				var/obj/item/created_stack_item = created
 				created_stack_item.set_resource_quality(build_resource_quality)
+				fabricator?.apply_cyberpunk_invention_quality_bonus(created_stack_item)
 			if(isitem(created))
 				created.pixel_x = created.base_pixel_x + rand(-6, 6)
 				created.pixel_y = created.base_pixel_y + rand(-6, 6)
@@ -421,8 +422,12 @@
 	if(build_resource_quality && isitem(created))
 		var/obj/item/created_item_with_quality = created
 		created_item_with_quality.set_resource_quality(build_resource_quality)
+		fabricator?.apply_cyberpunk_invention_quality_bonus(created_item_with_quality)
 
 	if(isitem(created))
+		if(!build_resource_quality)
+			var/obj/item/created_item = created
+			fabricator?.apply_cyberpunk_invention_quality_bonus(created_item)
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
 		created.pixel_y = created.base_pixel_y + rand(-6, 6)
 	SSblackbox.record_feedback("nested tally", "lathe_printed_items", 1, list("[type]", "[created.type]"))
@@ -435,7 +440,7 @@
 	if(items_remaining <= 0)
 		finalize_build()
 		return
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target, slots_chosen, cyberpunk_material_choice), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, materials_needed, target, slots_chosen, cyberpunk_material_choice, fabricator), build_time_per_item)
 
 /**
  * Resets the icon state and busy flag

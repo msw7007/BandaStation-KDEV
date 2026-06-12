@@ -19,6 +19,8 @@
 	var/rating_amount = 1
 	///Lazylist of items to be blended
 	var/list/processor_contents
+	/// Last living user who started the current processing cycle. Used by CP13 cooking skill hooks.
+	var/tmp/mob/living/cyberpunk_processor_user
 	/*
 	 * Static, nested list. The first layer contains all food processor types.
 	 * The second layer contains input typepaths (key) and the associated food_processor_process datums (assoc) the processor can access.
@@ -65,6 +67,7 @@
 *	If the input was a mob, gibs them, otherwise, deletes the item
 */
 /obj/machinery/processor/proc/process_food(datum/food_processor_process/recipe, atom/movable/what)
+	var/list/components = list(what)
 	if(recipe.output && loc && !QDELETED(src))
 		var/list/cached_mats = recipe.preserve_materials && what.custom_materials
 		var/cached_multiplier = (recipe.food_multiplier * rating_amount)
@@ -75,12 +78,19 @@
 				what.reagents.trans_to(processed_food, what.reagents.total_volume, multiplier = 1 / cached_multiplier, copy_only = TRUE)
 			if(cached_mats)
 				processed_food.set_custom_materials(cached_mats, 1 / cached_multiplier)
+			if(istype(processed_food, /obj/item/food))
+				var/obj/item/food/processed_food_item = processed_food
+				cyberpunk_apply_food_pipeline(processed_food_item, cyberpunk_processor_user, components)
 
 	if(isliving(what))
 		var/mob/living/themob = what
 		themob.gib()
 	else
-		qdel(what)
+		if(cyberpunk_processor_user && prob(cyberpunk_processor_user.get_cyberpunk_cooking_resource_save_chance()))
+			what.forceMove(drop_location())
+			to_chat(cyberpunk_processor_user, span_notice("Р’С‹ СЌРєРѕРЅРѕРјРёС‚Рµ [what.declent_ru(ACCUSATIVE)] РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ."))
+		else
+			qdel(what)
 	LAZYREMOVE(processor_contents, what)
 
 /obj/machinery/processor/wrench_act(mob/living/user, obj/item/tool)
@@ -164,11 +174,12 @@
 	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] включает [declent_ru(ACCUSATIVE)]."), \
 		span_notice("Вы включаете [declent_ru(ACCUSATIVE)]."), \
 		span_hear("Вы слышите кухонный комбайн."))
-	processing()
+	processing(user)
 
 
-/obj/machinery/processor/proc/processing()
+/obj/machinery/processor/proc/processing(mob/user)
 	processing = TRUE
+	cyberpunk_processor_user = isliving(user) ? user : null
 	playsound(src.loc, 'sound/machines/blender.ogg', 50, TRUE)
 	use_energy(active_power_usage)
 	var/total_time = 0
@@ -180,6 +191,7 @@
 		total_time += recipe.time
 
 	var/duration = (total_time / rating_speed)
+	duration *= cyberpunk_processor_user?.get_cyberpunk_cooking_machine_time_multiplier() || 1
 	INVOKE_ASYNC(src, TYPE_PROC_REF(/atom, Shake), 1, 0, duration)
 	addtimer(CALLBACK(src, PROC_REF(complete_processing)), duration)
 
@@ -191,6 +203,7 @@
 			continue
 		process_food(recipe, content_item)
 	processing = FALSE
+	cyberpunk_processor_user = null
 	visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] заканчивает обработку."))
 
 /obj/machinery/processor/verb/eject()

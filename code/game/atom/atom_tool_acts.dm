@@ -149,6 +149,9 @@
 				SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "diagnostics", 1, 0, "field repair telemetry")
 			if(SScyberpunk_corporations.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_route_registry"))
 				SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "infrastructure", 1, 0, "serviced infrastructure: [src]")
+
+	if(is_left_clicking && tool_type == TOOL_WELDER)
+		user.roll_cyberpunk_construction_welding_hazard(src, tool)
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	// A tooltype_act has completed successfully

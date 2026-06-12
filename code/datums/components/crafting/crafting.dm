@@ -303,10 +303,23 @@
 	result.on_craft_completion(stuff_to_use, recipe, crafter)
 	if(set_materials)
 		result.set_custom_materials(total_materials)
+	var/list/saved_cooking_components
 	if(isliving(crafter))
 		var/mob/living/living_crafter = crafter
 		living_crafter.reward_cyberpunk_crafting_experience(recipe)
+		if(ispath(recipe.result, /obj/item/food) || istype(recipe, /datum/crafting_recipe/food))
+			var/save_chance = living_crafter.get_cyberpunk_cooking_resource_save_chance()
+			if(save_chance > 0)
+				for(var/atom/movable/component as anything in stuff_to_use)
+					var/obj/item/item_component = component
+					if(!istype(item_component) || item_component.tool_behaviour || component.loc == result || isturf(result))
+						continue
+					if(prob(save_chance))
+						LAZYADD(saved_cooking_components, component)
+						to_chat(living_crafter, span_notice("Р’С‹ СЌРєРѕРЅРѕРјРёС‚Рµ [item_component.declent_ru(ACCUSATIVE)] РІ РїСЂРѕС†РµСЃСЃРµ РіРѕС‚РѕРІРєРё."))
 	for(var/atom/movable/component as anything in stuff_to_use) //delete anything that wasn't stored inside the object
+		if(component in saved_cooking_components)
+			continue
 		if(component.loc != result || isturf(result))
 			qdel(component)
 	if(!PERFORM_ALL_TESTS(crafting))

@@ -718,6 +718,47 @@
 		return 1
 	return clamp(chain_safety * 0.01, 0.1, 1)
 
+/mob/living/proc/get_cyberpunk_electric_wire_stun_cap()
+	var/wire_stun = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 2)
+	if(wire_stun <= 0)
+		return 0
+	return wire_stun * 1 SECONDS
+
+/mob/living/proc/get_cyberpunk_construction_welding_hazard_chance()
+	var/hazard_chance = get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 4)
+	if(hazard_chance <= 0)
+		return 100
+	return clamp(hazard_chance, 0, 100)
+
+/mob/living/proc/roll_cyberpunk_construction_welding_hazard(atom/target, obj/item/tool)
+	if(!target || !tool || get_eye_protection() >= FLASH_PROTECTION_WELDER)
+		return FALSE
+	if(!prob(get_cyberpunk_construction_welding_hazard_chance()))
+		return FALSE
+	if(prob(50))
+		flash_act(FLASH_PROTECTION_WELDER, visual = TRUE, length = 2 SECONDS)
+		to_chat(src, span_warning("РЇСЂРєР°СЏ РІСЃРїС‹С€РєР° СЃРІР°СЂРєРё Р±СЊРµС‚ РїРѕ РіР»Р°Р·Р°Рј."))
+	else
+		apply_damage(4, BURN, get_active_hand(), wound_bonus = CANT_WOUND)
+		to_chat(src, span_warning("Р“РѕСЂСЏС‡Р°СЏ РёСЃРєСЂР° РѕР±Р¶РёРіР°РµС‚ СЂСѓРєСѓ."))
+	return TRUE
+
+/mob/living/proc/get_cyberpunk_invention_quality_bonus()
+	var/quality_bonus = get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 4)
+	if(quality_bonus <= 0)
+		return 0
+	return round(quality_bonus / 25)
+
+/mob/living/proc/apply_cyberpunk_invention_quality_bonus(obj/item/created)
+	if(!created)
+		return FALSE
+	var/quality_bonus = get_cyberpunk_invention_quality_bonus()
+	if(quality_bonus <= 0)
+		return FALSE
+	var/base_quality = created.resource_quality || 3
+	created.set_resource_quality(clamp(base_quality + quality_bonus, 1, 5))
+	return TRUE
+
 /mob/living/proc/get_cyberpunk_unarmed_damage_multiplier()
 	var/power_bonus = get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 1)
 	power_bonus += get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 2)

@@ -1158,9 +1158,10 @@
 	part_tier = 3
 
 /obj/vehicle/ridden/cyberpunk
-	name = "Starlight tech bike"
-	desc = "A modular Starlight rideable vehicle platform."
+	name = "abstract Starlight rideable vehicle"
+	desc = "A technical base for non-player Starlight vehicle platforms."
 	icon_state = "atv"
+	abstract_type = /obj/vehicle/ridden/cyberpunk
 	max_integrity = 160
 	max_occupants = 1
 	key_type = null
@@ -1336,7 +1337,8 @@
 	delay /= sqrt(max(0.1, get_cyberpunk_vehicle_stat("acceleration")))
 	delay /= max(0.35, grip)
 	if(driver)
-		delay *= driver.get_cyberpunk_driving_speed_multiplier()
+		delay /= driver.get_cyberpunk_driving_speed_multiplier()
+		delay /= sqrt(max(0.1, driver.get_cyberpunk_driving_reaction_multiplier()))
 		delay /= get_cyberpunk_vehicle_synergy(driver)
 	return max(world.tick_lag, round(delay, world.tick_lag))
 
@@ -1347,6 +1349,7 @@
 	impact_speed /= max(0.25, get_cyberpunk_vehicle_stat("brake"))
 	if(driver)
 		impact_speed *= driver.get_cyberpunk_driving_speed_multiplier()
+		impact_speed /= driver.get_cyberpunk_driving_brake_multiplier()
 		impact_speed *= get_cyberpunk_vehicle_synergy(driver)
 	return max(1, impact_speed - base_crash_resistance)
 
@@ -1560,7 +1563,7 @@
 	slip_chance /= max(0.25, get_cyberpunk_vehicle_stat("maneuver"))
 	slip_chance /= max(0.25, get_cyberpunk_vehicle_stat("grip_switch"))
 	if(driver)
-		slip_chance *= driver.get_cyberpunk_driving_maneuver_multiplier()
+		slip_chance /= driver.get_cyberpunk_driving_maneuver_multiplier()
 	if(!prob(slip_chance))
 		return direction
 	var/slip_direction = pick(turn(direction, 45), turn(direction, -45), direction)
@@ -1749,8 +1752,6 @@
 	var/impact_speed = get_cyberpunk_impact_speed(driver)
 	eject_occupants_from_hard_crash(impact_speed)
 	var/impact = max(2, impact_speed)
-	if(driver)
-		impact *= driver.get_cyberpunk_driving_brake_multiplier()
 	var/impact_dir = dir || get_dir(src, bumped)
 	if(!impact_dir)
 		impact_dir = SOUTH
@@ -1773,18 +1774,6 @@
 	if(impact_speed >= 5)
 		part?.take_damage(impact * 0.35)
 	visible_message(span_warning("[src] slams into [bumped]!"))
-
-/obj/vehicle/ridden/cyberpunk/hover
-	name = "Starlight hover courier"
-	desc = "A compact hover platform with a gravitic drive."
-	icon_state = "hoverboard_red"
-	max_fuel = 220
-	fuel = 220
-	base_move_delay = 1.1
-	base_z_cost = 6
-	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/bike
-	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/grav
-	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine
 
 /obj/vehicle/ridden/cyberpunk/avi
 	name = "Starlight AVI courier"
@@ -2467,14 +2456,10 @@
 /datum/design/cyberpunk_vehicle/ridden
 	name = "Starlight Tech Bike"
 	id = "starlight_vehicle_tech_bike"
+	build_type = NONE
+	category = list()
 	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 8, /datum/material/glass = SHEET_MATERIAL_AMOUNT)
 	build_path = /obj/vehicle/ridden/cyberpunk
-
-/datum/design/cyberpunk_vehicle/ridden/hover
-	name = "Starlight Hover Courier"
-	id = "starlight_vehicle_hover_courier"
-	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 10, /datum/material/glass = SHEET_MATERIAL_AMOUNT, /datum/material/silver = SHEET_MATERIAL_AMOUNT)
-	build_path = /obj/vehicle/ridden/cyberpunk/hover
 
 /datum/design/cyberpunk_vehicle/ridden/avi
 	name = "Starlight AVI Courier"

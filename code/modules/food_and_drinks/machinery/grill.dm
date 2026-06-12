@@ -22,6 +22,8 @@
 	var/grill_time = 0
 	///Sound loop for the sizzling sound
 	var/datum/looping_sound/grill/grill_loop
+	/// Last living user who placed the current item. Used by CP13 cooking skill hooks.
+	var/tmp/mob/living/cyberpunk_grill_user
 
 /obj/machinery/grill/Initialize(mapload)
 	. = ..()
@@ -96,6 +98,7 @@
 		grill_time = 0
 		grill_loop.stop()
 		grilled_item = null
+		cyberpunk_grill_user = null
 
 /obj/machinery/grill/attack_hand(mob/living/user, list/modifiers)
 	if(!QDELETED(grilled_item))
@@ -227,6 +230,10 @@
 		//add the item on the grill
 		grill_time = 0
 		grilled_item = weapon
+		cyberpunk_grill_user = isliving(user) ? user : null
+		var/quality_bonus = cyberpunk_grill_user?.get_cyberpunk_cooking_quality_bonus() || 0
+		if(quality_bonus > 0)
+			grilled_item.AddElement(/datum/element/quality_food_ingredient, quality_bonus)
 		var/datum/component/sizzle/sizzle = grilled_item.GetComponent(/datum/component/sizzle)
 		if(!isnull(sizzle))
 			grill_time = sizzle.time_elapsed()
@@ -278,7 +285,8 @@
 
 		//grill the item
 		var/last_grill_time = grill_time
-		grill_time += seconds_per_tick * 10 //convert to deciseconds
+		var/cyberpunk_time_multiplier = cyberpunk_grill_user?.get_cyberpunk_cooking_machine_time_multiplier() || 1
+		grill_time += (seconds_per_tick * 10) / cyberpunk_time_multiplier //convert to deciseconds
 		grilled_item.reagents.add_reagent(/datum/reagent/consumable/char, 0.5 * seconds_per_tick)
 		grilled_item.AddComponent(/datum/component/sizzle, grill_time)
 

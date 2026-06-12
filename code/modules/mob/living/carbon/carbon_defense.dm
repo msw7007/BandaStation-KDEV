@@ -285,6 +285,10 @@
 	var/should_stun = (!(flags & SHOCK_TESLA) || siemens_coeff > 0.5) && !(flags & SHOCK_NOSTUN)
 	var/stun = !(flags & SHOCK_KNOCKDOWN)
 	var/immediately_stun = should_stun && !(flags & SHOCK_DELAY_STUN)
+	if(istype(source, /obj/structure/cable))
+		var/wire_stun_cap = get_cyberpunk_electric_wire_stun_cap()
+		if(wire_stun_cap > 0)
+			stun_duration = min(stun_duration, wire_stun_cap)
 	if (immediately_stun)
 		if (stun)
 			// intended effect here is to floor you immediately if you are shocked twice in quick succession

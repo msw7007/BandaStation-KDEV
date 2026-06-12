@@ -98,6 +98,9 @@
 
 	step(movable_parent, direction)
 	var/move_delay = vehicle_move_delay
+	var/mob/living/living_user = user
+	if(istype(living_user) && !istype(src, /datum/component/riding/vehicle/cyberpunk))
+		move_delay /= living_user.get_cyberpunk_driving_speed_multiplier()
 	if(NSCOMPONENT(direction) && EWCOMPONENT(direction))
 		move_delay = FLOOR(move_delay * sqrt(2), world.tick_lag)
 	COOLDOWN_START(src, vehicle_move_cooldown, modified_move_delay(move_delay)) // BANDASTATION EDIT - Vehicle speed
@@ -503,7 +506,9 @@
 	. = ..()
 	var/obj/vehicle/ridden/wheelchair/motorized/our_chair = parent
 	if(istype(our_chair) && our_chair.power_cell)
-		our_chair.power_cell.use(our_chair.energy_usage / max(our_chair.power_efficiency, 1) * 0.05)
+		var/mob/living/living_user = user
+		var/fuel_multiplier = istype(living_user) ? living_user.get_cyberpunk_driving_fuel_multiplier() : 1
+		our_chair.power_cell.use(our_chair.energy_usage / max(our_chair.power_efficiency, 1) * 0.05 * fuel_multiplier)
 
 /datum/component/riding/vehicle/golfcart
 	ride_check_flags = RIDER_NEEDS_ARMS | UNBUCKLE_DISABLED_RIDER

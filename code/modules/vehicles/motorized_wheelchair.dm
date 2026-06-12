@@ -84,7 +84,8 @@
 		canmove = FALSE
 		addtimer(VARSET_CALLBACK(src, canmove, TRUE), 2 SECONDS)
 		return FALSE
-	if(power_cell.charge < energy_usage / max(power_efficiency, 1))
+	var/fuel_multiplier = user.get_cyberpunk_driving_fuel_multiplier()
+	if(power_cell.charge < energy_usage / max(power_efficiency, 1) * fuel_multiplier)
 		to_chat(user, span_warning("The display on [src] blinks 'Out of Power'."))
 		canmove = FALSE
 		addtimer(VARSET_CALLBACK(src, canmove, TRUE), 2 SECONDS)

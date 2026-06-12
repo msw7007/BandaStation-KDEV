@@ -58,6 +58,9 @@
 		total_weight += weight
 	if(total_weight)
 		set_resource_quality(clamp(round(total / total_weight), RESOURCE_QUALITY_DISGUSTING, RESOURCE_QUALITY_EXCELLENT))
+	if(isliving(crafter))
+		var/mob/living/living_crafter = crafter
+		living_crafter.apply_cyberpunk_invention_quality_bonus(src)
 
 /obj/item/stack/on_stack_merged(obj/item/stack/source_stack, transfer_amount, previous_amount)
 	. = ..()

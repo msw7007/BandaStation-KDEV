@@ -44,6 +44,8 @@ GLOBAL_LIST_INIT(oilfry_blacklisted_items, typecacheof(list(
 
 	/// Our sound loop for the frying sounde effect.
 	var/datum/looping_sound/deep_fryer/fry_loop
+	/// Last living user who placed the current item. Used by CP13 cooking skill hooks.
+	var/tmp/mob/living/cyberpunk_fryer_user
 	/// Static typecache of things we can't fry.
 	var/static/list/deepfry_blacklisted_items = typecacheof(list(
 		/obj/item/screwdriver,
@@ -153,7 +155,8 @@ GLOBAL_LIST_INIT(oilfry_blacklisted_items, typecacheof(list(
 	reagents.trans_to(frying, oil_use * seconds_per_tick, multiplier = fry_speed * 3) //Fried foods gain more of the reagent thanks to space magic
 	grease_level += prob(grease_increase_chance) * grease_Increase_amount
 
-	cook_time += fry_speed * seconds_per_tick SECONDS
+	var/cyberpunk_time_multiplier = cyberpunk_fryer_user?.get_cyberpunk_cooking_machine_time_multiplier() || 1
+	cook_time += (fry_speed * seconds_per_tick SECONDS) / cyberpunk_time_multiplier
 	if(cook_time >= FRYING_TIME_PERFECT && !frying_fried)
 		frying_fried = TRUE //frying... frying... fried
 		playsound(src.loc, 'sound/machines/ding.ogg', 50, TRUE)
@@ -178,6 +181,7 @@ GLOBAL_LIST_INIT(oilfry_blacklisted_items, typecacheof(list(
 		frying.AddElement(/datum/element/fried_item, cook_time)
 
 	frying = null
+	cyberpunk_fryer_user = null
 	frying_fried = FALSE
 	frying_burnt = FALSE
 	fry_loop.stop()
@@ -200,6 +204,10 @@ GLOBAL_LIST_INIT(oilfry_blacklisted_items, typecacheof(list(
 		frying.create_reagents(50, INJECTABLE)
 	if(user.mind)
 		ADD_TRAIT(frying, TRAIT_FOOD_CHEF_MADE, REF(user.mind))
+	cyberpunk_fryer_user = isliving(user) ? user : null
+	var/quality_bonus = cyberpunk_fryer_user?.get_cyberpunk_cooking_quality_bonus() || 0
+	if(quality_bonus > 0)
+		frying.AddElement(/datum/element/quality_food_ingredient, quality_bonus)
 	SEND_SIGNAL(frying, COMSIG_ITEM_ENTERED_FRYER)
 
 	update_appearance()

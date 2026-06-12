@@ -379,7 +379,7 @@
 					target_location = get_turf(src)
 			else
 				target_location = get_turf(src)
-			addtimer(CALLBACK(src, PROC_REF(do_make_item), design, print_quantity, build_time_per_item, coefficient, charge_per_item, target_location, ID_DATA(usr), cyberpunk_material_choice, design_materials), build_time_per_item)
+			addtimer(CALLBACK(src, PROC_REF(do_make_item), design, print_quantity, build_time_per_item, coefficient, charge_per_item, target_location, ID_DATA(usr), cyberpunk_material_choice, design_materials, ui.user), build_time_per_item)
 
 			return TRUE
 
@@ -404,7 +404,8 @@
 		turf/target,
 		alist/user_data,
 		cyberpunk_material_choice,
-		list/build_materials)
+		list/build_materials,
+		mob/living/fabricator)
 	PROTECTED_PROC(TRUE)
 
 	if(!items_remaining) // how
@@ -454,6 +455,7 @@
 			if(build_resource_quality && isitem(created))
 				var/obj/item/created_stack_item = created
 				created_stack_item.set_resource_quality(build_resource_quality)
+				fabricator?.apply_cyberpunk_invention_quality_bonus(created_stack_item)
 			if(isitem(created))
 				created.pixel_x = created.base_pixel_x + rand(-6, 6)
 				created.pixel_y = created.base_pixel_y + rand(-6, 6)
@@ -467,9 +469,12 @@
 	if(build_resource_quality && isitem(created))
 		var/obj/item/created_item_with_quality = created
 		created_item_with_quality.set_resource_quality(build_resource_quality)
+		fabricator?.apply_cyberpunk_invention_quality_bonus(created_item_with_quality)
 
 	if(isitem(created))
 		var/obj/item/created_item = created
+		if(!build_resource_quality)
+			fabricator?.apply_cyberpunk_invention_quality_bonus(created_item)
 		var/manufacturer = get_cyberspace_manufacturer(src)
 		created_item.set_cyberpunk_manufacturer(manufacturer)
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
@@ -482,6 +487,7 @@
 				var/obj/item/bonus_item = bonus_created
 				if(build_resource_quality)
 					bonus_item.set_resource_quality(build_resource_quality)
+				fabricator?.apply_cyberpunk_invention_quality_bonus(bonus_item)
 				bonus_item.set_cyberpunk_manufacturer(manufacturer)
 				bonus_item.pixel_x = bonus_item.base_pixel_x + rand(-6, 6)
 				bonus_item.pixel_y = bonus_item.base_pixel_y + rand(-6, 6)
@@ -496,7 +502,7 @@
 	if(!items_remaining)
 		finalize_build()
 		return
-	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, target, user_data, cyberpunk_material_choice, design_materials), build_time_per_item)
+	addtimer(CALLBACK(src, PROC_REF(do_make_item), design, items_remaining, build_time_per_item, material_cost_coefficient, charge_per_item, target, user_data, cyberpunk_material_choice, design_materials, fabricator), build_time_per_item)
 
 /// Resets the busy flag
 /// Called at the end of do_make_item's timer loop
