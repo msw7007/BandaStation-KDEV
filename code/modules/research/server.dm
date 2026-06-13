@@ -39,9 +39,16 @@
 			var/datum/techweb/science_web = locate(/datum/techweb/science) in SSresearch.techwebs
 			connect_techweb(science_web)
 	stored_research.techweb_servers |= src
+	var/corporation_id = SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(src))
+	var/access_id = cyberpunk_corporation_access_id(corporation_id)
+	if(access_id)
+		add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key(access_id))
 	name += " [num2hex(rand(1,65535), -1)]" //gives us a random four-digit hex number as part of the name. Y'know, for fluff.
 
 /obj/machinery/rnd/server/Destroy()
+	if(inserted_corporate_data_disk)
+		inserted_corporate_data_disk.forceMove(drop_location())
+		inserted_corporate_data_disk = null
 	if(stored_research)
 		stored_research.techweb_servers -= src
 	if(CONFIG_GET(flag/no_default_techweb_link))

@@ -4,8 +4,8 @@
 	var/name = "generic machinery module"
 	var/id = "generic"
 	var/description = "A generic machinery module."
-	var/manufacturer = "Р В РЎРЏР В·Р Р…Р С•Р Р†"
-	var/corp_manufacturer = "Р В РЎРЏР В·Р Р…Р С•Р Р†"
+	var/manufacturer = "Ryaznov"
+	var/corp_manufacturer = "Ryaznov"
 	var/obj/item/module_item_type = /obj/item/cyberpunk_machine_module
 	var/power_usage_multiplier = 1
 	var/wear_multiplier = 1
@@ -99,9 +99,40 @@
 	id = "corporate_vending_bus"
 	description = "A vending module for corporate stock routing and slightly cleaner service cycles."
 	module_item_type = /obj/item/cyberpunk_machine_module/corporate_vending_bus
+	manufacturer = "Starlight"
+	corp_manufacturer = "Starlight"
 	power_usage_multiplier = 0.95
 	wear_multiplier = 0.9
 	vending_stock_multiplier = 1.1
+
+/datum/cyberpunk_machine_module/corporate_vending_bus/on_install(obj/machinery/machine, mob/living/user)
+	. = ..()
+	if(hascall(machine, "set_cyberpunk_corporate_vendor"))
+		call(machine, "set_cyberpunk_corporate_vendor")(corp_manufacturer, user)
+
+/datum/cyberpunk_machine_module/corporate_vending_bus/benn
+	name = "Benn corporate vending bus"
+	id = "benn_corporate_vending_bus"
+	description = "Links a vending machine to Benn subscription, service and medical stock tracking."
+	module_item_type = /obj/item/cyberpunk_machine_module/corporate_vending_bus/benn
+	manufacturer = "Benn"
+	corp_manufacturer = "Benn"
+
+/datum/cyberpunk_machine_module/corporate_vending_bus/ryaznov
+	name = "Ryaznov corporate vending bus"
+	id = "ryaznov_corporate_vending_bus"
+	description = "Links a vending machine to Ryaznov industrial subscription and service tracking."
+	module_item_type = /obj/item/cyberpunk_machine_module/corporate_vending_bus/ryaznov
+	manufacturer = "Ryaznov"
+	corp_manufacturer = "Ryaznov"
+
+/datum/cyberpunk_machine_module/corporate_vending_bus/starlight
+	name = "Starlight corporate vending bus"
+	id = "starlight_corporate_vending_bus"
+	description = "Links a vending machine to Starlight logistics subscription and service tracking."
+	module_item_type = /obj/item/cyberpunk_machine_module/corporate_vending_bus/starlight
+	manufacturer = "Starlight"
+	corp_manufacturer = "Starlight"
 
 /datum/cyberpunk_machine_module/business_vending_bus
 	name = "business vending bus"
@@ -276,7 +307,9 @@
 		/datum/cyberpunk_machine_module/material_optimizer,
 		/datum/cyberpunk_machine_module/chem_reaction_accelerator,
 		/datum/cyberpunk_machine_module/chem_yield_regulator,
-		/datum/cyberpunk_machine_module/corporate_vending_bus,
+		/datum/cyberpunk_machine_module/corporate_vending_bus/benn,
+		/datum/cyberpunk_machine_module/corporate_vending_bus/ryaznov,
+		/datum/cyberpunk_machine_module/corporate_vending_bus/starlight,
 		/datum/cyberpunk_machine_module/business_vending_bus,
 		/datum/cyberpunk_machine_module/vendor_stock_router,
 		/datum/cyberpunk_machine_module/vendor_security_cage,
@@ -290,12 +323,12 @@
 
 /obj/item/cyberpunk_machine_module
 	name = "machine module"
-	desc = "A Р В РЎРЏР В·Р Р…Р С•Р Р†-produced Cyberpunk 13 machinery module shell."
+	desc = "A Ryaznov-produced Cyberpunk 13 machinery module shell."
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "integrated_circuit"
 	w_class = WEIGHT_CLASS_SMALL
-	var/manufacturer = "Р В РЎРЏР В·Р Р…Р С•Р Р†"
-	var/corp_manufacturer = "Р В РЎРЏР В·Р Р…Р С•Р Р†"
+	var/manufacturer = "Ryaznov"
+	var/corp_manufacturer = "Ryaznov"
 	var/module_datum_type = /datum/cyberpunk_machine_module
 
 /obj/item/cyberpunk_machine_module/proc/create_module_datum()
@@ -360,6 +393,24 @@
 	name = "corporate vending bus"
 	icon_state = "harddisk"
 	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus
+
+/obj/item/cyberpunk_machine_module/corporate_vending_bus/benn
+	name = "Benn corporate vending bus"
+	manufacturer = "Benn"
+	corp_manufacturer = "Benn"
+	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus/benn
+
+/obj/item/cyberpunk_machine_module/corporate_vending_bus/ryaznov
+	name = "Ryaznov corporate vending bus"
+	manufacturer = "Ryaznov"
+	corp_manufacturer = "Ryaznov"
+	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus/ryaznov
+
+/obj/item/cyberpunk_machine_module/corporate_vending_bus/starlight
+	name = "Starlight corporate vending bus"
+	manufacturer = "Starlight"
+	corp_manufacturer = "Starlight"
+	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus/starlight
 
 /obj/item/cyberpunk_machine_module/business_vending_bus
 	name = "business vending bus"

@@ -46,6 +46,9 @@
 		"ryaznov_service_bus",
 		"ryaznov_salvage_router",
 		"ryaznov_corporate_vending_bus",
+		"benn_corporate_vending_bus",
+		"starlight_corporate_vending_bus",
+		"business_vending_bus",
 	)
 	research_costs = list(TECHWEB_POINT_TYPE_GENERIC = TECHWEB_TIER_2_POINTS)
 	announce_channels = list(RADIO_CHANNEL_ENGINEERING)
@@ -66,6 +69,12 @@
 		"ryaznov_chem_reaction_accelerator",
 		"ryaznov_chem_yield_regulator",
 		"ryaznov_apc_efficiency_core",
+		"ryaznov_emergency_battery",
+		"ryaznov_arc_suppressor",
+		"ryaznov_vendor_stock_router",
+		"ryaznov_vendor_security_cage",
+		"ryaznov_medical_sterile_bus",
+		"ryaznov_network_filter",
 	)
 	research_costs = list(TECHWEB_POINT_TYPE_GENERIC = TECHWEB_TIER_3_POINTS)
 	discount_experiments = list(/datum/experiment/scanning/points/machinery_tiered_scan/tier2_any = TECHWEB_TIER_3_POINTS)
@@ -86,6 +95,11 @@
 		"triphasic_scanning",
 		"bluespace_battery",
 		"bluespace_cell",
+		"ryaznov_production_overclocker",
+		"ryaznov_material_optimizer",
+		"ryaznov_security_response_core",
+		"ryaznov_vending_cyberspace_relay",
+		"ryaznov_vending_contract_terminal",
 	)
 	research_costs = list(TECHWEB_POINT_TYPE_GENERIC = TECHWEB_TIER_4_POINTS)
 	discount_experiments = list(/datum/experiment/scanning/points/machinery_tiered_scan/tier3_any = TECHWEB_TIER_4_POINTS)

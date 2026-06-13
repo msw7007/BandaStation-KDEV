@@ -113,7 +113,7 @@
 	for(var/design_id in stored_research.researched_designs)
 		var/datum/design/design = SSresearch.techweb_design_by_id(design_id)
 
-		if((isnull(allowed_department_flags) || (design.departmental_flags & allowed_department_flags)) && (design.build_type & allowed_buildtypes))
+		if((isnull(allowed_department_flags) || (design.departmental_flags & allowed_department_flags)) && (design.build_type & allowed_buildtypes) && design.can_build_cyberpunk_corporate_technology(src, silent = TRUE))
 			cached_designs |= design
 
 	var/design_delta = cached_designs.len - previous_design_count
@@ -269,6 +269,9 @@
 			"desc" = design.get_description(),
 			"cost" = cost,
 			"id" = design.id,
+			"cyberpunkRequiredTechnology" = design.cyberpunk_required_technology_id,
+			"cyberpunkTechnologyCorporation" = design.cyberpunk_technology_corporation_id,
+			"cyberpunkRequiredTechnologyName" = design.get_cyberpunk_required_technology_name(),
 			"categories" = design.category,
 			"icon" = "[icon_size == size32x32 ? "" : "[icon_size] "][design.id]"
 		)
@@ -333,6 +336,10 @@
 				return FALSE
 			if(design.build_type && !(design.build_type & allowed_buildtypes))
 				say("This fabricator does not have the necessary manipulation systems for this design.")
+				return FALSE
+			if(!design.can_build_cyberpunk_corporate_technology(src, ui.user))
+				say("Corporate technology lock rejected this design.")
+				update_designs()
 				return FALSE
 			var/cyberpunk_material_choice = design.select_cyberpunk_material(ui.user, src)
 			if(length(design.cyberpunk_material_options) && !cyberpunk_material_choice)

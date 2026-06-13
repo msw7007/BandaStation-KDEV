@@ -217,6 +217,8 @@
 		return "independent"
 	if("corp_manufacturer" in target.vars)
 		return target.vars["corp_manufacturer"] || "independent"
+	if("cyberpunk_manufacturer" in target.vars)
+		return target.vars["cyberpunk_manufacturer"] || "independent"
 	if("manufacturer" in target.vars)
 		return target.vars["manufacturer"] || "independent"
 	return "independent"

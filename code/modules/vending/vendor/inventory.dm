@@ -288,6 +288,7 @@
 	credits_contained += round(price_to_use * VENDING_CREDITS_COLLECTION_AMOUNT)
 	//CYBERPUNK BUILD - rebuild and delete before release
 	cyberpunk_business_record_sale(price_to_use, product_to_vend.name)
+	cyberpunk_corporate_record_sale(price_to_use, product_to_vend.name)
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity("starlight", "market", 1, max(0, round(price_to_use * 0.02)), "vending purchase: [product_to_vend.name]")
 	var/vendor_corporation_id = SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(src))
 	if(vendor_corporation_id && vendor_corporation_id != "starlight")

@@ -189,6 +189,9 @@
 		if(mob_thing.stat != DEAD)
 			mob_thing.investigate_log("has been killed by a destructive analyzer.", INVESTIGATE_DEATHS)
 		mob_thing.death()
+	var/datum/cyberpunk_corporation/research_corporation = SScyberpunk_corporations.get_cyberpunk_corporation_by_techweb(stored_research)
+	if(research_corporation)
+		SScyberpunk_corporations.record_cyberpunk_reverse_engineering(research_corporation.id, thing, "destructive analyzer")
 	var/list/point_value = techweb_item_point_check(thing)
 	if(point_value && !stored_research.deconstructed_items[thing.type])
 		stored_research.deconstructed_items[thing.type] = TRUE
