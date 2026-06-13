@@ -31,6 +31,8 @@
 	return user.start_cyberspace_session(CYBERSPACE_MODE_AVATAR, src)
 
 /obj/machinery/vending/attack_hand_secondary(mob/living/user, list/modifiers)
+	if(open_cyberpunk_contract_terminal(user))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	if(toggle_cyberspace_relay(user))
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	return ..()

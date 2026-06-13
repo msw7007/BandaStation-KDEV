@@ -103,6 +103,15 @@
 	wear_multiplier = 0.9
 	vending_stock_multiplier = 1.1
 
+/datum/cyberpunk_machine_module/business_vending_bus
+	name = "business vending bus"
+	id = "business_vending_bus"
+	description = "Lets a player business link this vending machine to its warehouse stock, pricing and sale account."
+	module_item_type = /obj/item/cyberpunk_machine_module/business_vending_bus
+	power_usage_multiplier = 0.97
+	wear_multiplier = 0.92
+	vending_stock_multiplier = 1.05
+
 /datum/cyberpunk_machine_module/apc_efficiency_core
 	name = "APC efficiency core"
 	id = "apc_efficiency_core"
@@ -204,6 +213,14 @@
 	power_usage_multiplier = 1.08
 	wear_multiplier = 1.05
 
+/datum/cyberpunk_machine_module/vending_contract_terminal
+	name = "vending contract terminal"
+	id = "vending_contract_terminal"
+	description = "Adds contract cargo turn-in and private mail routing to a vending machine. Right-click the vendor to access the terminal."
+	module_item_type = /obj/item/cyberpunk_machine_module/vending_contract_terminal
+	power_usage_multiplier = 1.04
+	wear_multiplier = 1.03
+
 /datum/cyberpunk_machine_module/chem_reaction_accelerator/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
 
@@ -211,6 +228,9 @@
 	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
 
 /datum/cyberpunk_machine_module/corporate_vending_bus/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/vending)
+
+/datum/cyberpunk_machine_module/business_vending_bus/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/vending)
 
 /datum/cyberpunk_machine_module/apc_efficiency_core/can_install(obj/machinery/machine, mob/living/user)
@@ -240,6 +260,9 @@
 /datum/cyberpunk_machine_module/vending_cyberspace_relay/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/vending)
 
+/datum/cyberpunk_machine_module/vending_contract_terminal/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/vending)
+
 /proc/cyberpunk_machine_module_catalog()
 	return list(
 		/datum/cyberpunk_machine_module/power_governor,
@@ -254,6 +277,7 @@
 		/datum/cyberpunk_machine_module/chem_reaction_accelerator,
 		/datum/cyberpunk_machine_module/chem_yield_regulator,
 		/datum/cyberpunk_machine_module/corporate_vending_bus,
+		/datum/cyberpunk_machine_module/business_vending_bus,
 		/datum/cyberpunk_machine_module/vendor_stock_router,
 		/datum/cyberpunk_machine_module/vendor_security_cage,
 		/datum/cyberpunk_machine_module/apc_efficiency_core,
@@ -261,6 +285,7 @@
 		/datum/cyberpunk_machine_module/security_response_core,
 		/datum/cyberpunk_machine_module/network_filter,
 		/datum/cyberpunk_machine_module/vending_cyberspace_relay,
+		/datum/cyberpunk_machine_module/vending_contract_terminal,
 	)
 
 /obj/item/cyberpunk_machine_module
@@ -336,6 +361,11 @@
 	icon_state = "harddisk"
 	module_datum_type = /datum/cyberpunk_machine_module/corporate_vending_bus
 
+/obj/item/cyberpunk_machine_module/business_vending_bus
+	name = "business vending bus"
+	icon_state = "harddisk"
+	module_datum_type = /datum/cyberpunk_machine_module/business_vending_bus
+
 /obj/item/cyberpunk_machine_module/apc_efficiency_core
 	name = "APC efficiency core"
 	icon_state = "circuit_board"
@@ -390,3 +420,8 @@
 	name = "vending cyberspace relay"
 	icon_state = "integrated_circuit"
 	module_datum_type = /datum/cyberpunk_machine_module/vending_cyberspace_relay
+
+/obj/item/cyberpunk_machine_module/vending_contract_terminal
+	name = "vending contract terminal"
+	icon_state = "harddisk"
+	module_datum_type = /datum/cyberpunk_machine_module/vending_contract_terminal

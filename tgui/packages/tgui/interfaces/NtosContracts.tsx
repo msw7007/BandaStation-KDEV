@@ -25,6 +25,23 @@ type ContractStats = {
   completed: number;
   failed: number;
   cancelled: number;
+  open?: number;
+  success_percent?: number;
+};
+
+type TerminalOption = {
+  label: string;
+  name: string;
+  area: string;
+  x: number;
+  y: number;
+  z: number;
+};
+
+type FundingOption = {
+  id: number;
+  name: string;
+  balance: number;
 };
 
 type Contract = {
@@ -47,9 +64,11 @@ type Contract = {
   corporation?: string;
   generated: BooleanLike;
   creatorConfirmRequired: BooleanLike;
+  directAccessCode?: string;
   requiredAmount: number;
   deliveredAmount: number;
   requiredPercent: number;
+  conditions?: ContractCondition[];
   deadline: string;
   canAccept: BooleanLike;
   canRefuse: BooleanLike;
@@ -57,6 +76,27 @@ type Contract = {
   canAct: BooleanLike;
   contractorStats?: ContractStats;
   history?: string[];
+};
+
+type ContractCondition = {
+  id: string;
+  name: string;
+  description?: string;
+  target?: string;
+  targetArea?: string;
+  targetX?: number;
+  targetY?: number;
+  targetZ?: number;
+  targetRadius?: number;
+  requiredAmount?: number;
+  deliveredAmount?: number;
+  requiredPercent?: number;
+  minimumQuality?: number;
+  minimumRarity?: number;
+  destinationKind?: string;
+  destination?: string;
+  sabotageMode?: string;
+  partialPayment?: BooleanLike;
 };
 
 type Data = {
@@ -68,6 +108,8 @@ type Data = {
   ownedContracts: Contract[];
   acceptedContracts: Contract[];
   directContract?: Contract;
+  terminalOptions?: TerminalOption[];
+  fundingOptions?: FundingOption[];
 };
 
 const contractTypes = [
@@ -115,7 +157,8 @@ export const NtosContracts = () => {
               <Box className="CyberpunkPanel__Muted">Stats</Box>
               <Box>
                 C {userStats?.created || 0} / A {userStats?.accepted || 0} / D{' '}
-                {userStats?.completed || 0} / F {userStats?.failed || 0}
+                {userStats?.completed || 0} / F {userStats?.failed || 0} / O{' '}
+                {userStats?.open || 0} / {userStats?.success_percent || 0}%
               </Box>
             </Stack.Item>
           </Stack>
@@ -161,17 +204,15 @@ export const NtosContracts = () => {
 
 const DirectContract = (props: { contract?: Contract }) => {
   const { act } = useBackend<Data>();
-  const [contractId, setContractId] = useState(1);
+  const [contractId, setContractId] = useState('');
   return (
     <Section title="Direct contract access">
       <Stack align="center">
-        <Stack.Item>
-          Contract #
-          <NumberInput
+        <Stack.Item grow>
+          <Input
+            fluid
+            placeholder="Contract ID or private access code"
             value={contractId}
-            minValue={1}
-            maxValue={999999}
-            step={1}
             onChange={setContractId}
           />
         </Stack.Item>
@@ -194,7 +235,10 @@ const DirectContract = (props: { contract?: Contract }) => {
 };
 
 const ContractCreation = (props: { disabled: boolean }) => {
-  const { act } = useBackend<Data>();
+  const { act, data } = useBackend<Data>();
+  const terminalOptions = data.terminalOptions || [];
+  const fundingOptions = data.fundingOptions || [];
+  const [fundingBusinessId, setFundingBusinessId] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
@@ -206,11 +250,27 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const [duration, setDuration] = useState(30);
   const [requiredAmount, setRequiredAmount] = useState(1);
   const [requiredPercent, setRequiredPercent] = useState(75);
+  const [targetArea, setTargetArea] = useState('');
+  const [targetX, setTargetX] = useState(0);
+  const [targetY, setTargetY] = useState(0);
+  const [targetZ, setTargetZ] = useState(0);
+  const [targetRadius, setTargetRadius] = useState(0);
+  const [minimumQuality, setMinimumQuality] = useState(0);
+  const [minimumRarity, setMinimumRarity] = useState(0);
+  const [destinationKind, setDestinationKind] = useState('creator');
+  const [destination, setDestination] = useState('');
+  const [sabotageMode, setSabotageMode] = useState('damage');
   const [legal, setLegal] = useState(true);
   const [isPublic, setPublic] = useState(true);
   const [poolContract, setPoolContract] = useState(false);
   const [poolCorporation, setPoolCorporation] = useState('');
   const [creatorConfirm, setCreatorConfirm] = useState(false);
+  const [reserveHeld, setReserveHeld] = useState(false);
+  const [partialGuardPayment, setPartialGuardPayment] = useState(false);
+  const terminalDropdownOptions = terminalOptions.map((terminal) => ({
+    value: terminal.label,
+    displayText: `${terminal.name} / ${terminal.area} / ${terminal.x}:${terminal.y}:${terminal.z}`,
+  }));
 
   return (
     <Section title="Create contract">
@@ -266,6 +326,20 @@ const ContractCreation = (props: { disabled: boolean }) => {
         </Stack.Item>
         <Stack.Item>
           <Section title="Terms">
+            {!!fundingOptions.length && (
+              <Stack mb={1} wrap>
+                {fundingOptions.map((option) => (
+                  <Stack.Item key={option.id}>
+                    <Button
+                      selected={fundingBusinessId === option.id}
+                      onClick={() => setFundingBusinessId(option.id)}
+                    >
+                      {option.name} ({formatMoney(option.balance)} cr)
+                    </Button>
+                  </Stack.Item>
+                ))}
+              </Stack>
+            )}
             <Table>
               <Table.Row>
                 <Table.Cell>Payment</Table.Cell>
@@ -301,6 +375,85 @@ const ContractCreation = (props: { disabled: boolean }) => {
           </Section>
         </Stack.Item>
         <Stack.Item>
+          <Section title="Condition">
+            <Stack vertical>
+              <Stack.Item>
+                <Input
+                  fluid
+                  placeholder="Target area (optional)"
+                  value={targetArea}
+                  onChange={setTargetArea}
+                />
+              </Stack.Item>
+              <Stack.Item>
+                <Table>
+                  <Table.Row>
+                    <Table.Cell>X</Table.Cell>
+                    <Table.Cell>
+                      <NumberInput value={targetX} minValue={0} maxValue={999} step={1} onChange={setTargetX} />
+                    </Table.Cell>
+                    <Table.Cell>Y</Table.Cell>
+                    <Table.Cell>
+                      <NumberInput value={targetY} minValue={0} maxValue={999} step={1} onChange={setTargetY} />
+                    </Table.Cell>
+                    <Table.Cell>Z</Table.Cell>
+                    <Table.Cell>
+                      <NumberInput value={targetZ} minValue={0} maxValue={50} step={1} onChange={setTargetZ} />
+                    </Table.Cell>
+                    <Table.Cell>Radius</Table.Cell>
+                    <Table.Cell>
+                      <NumberInput value={targetRadius} minValue={0} maxValue={20} step={1} onChange={setTargetRadius} />
+                    </Table.Cell>
+                  </Table.Row>
+                  <Table.Row>
+                    <Table.Cell>Min quality</Table.Cell>
+                    <Table.Cell>
+                      <NumberInput value={minimumQuality} minValue={0} maxValue={100} step={1} onChange={setMinimumQuality} />
+                    </Table.Cell>
+                    <Table.Cell>Min rarity</Table.Cell>
+                    <Table.Cell>
+                      <NumberInput value={minimumRarity} minValue={0} maxValue={10} step={1} onChange={setMinimumRarity} />
+                    </Table.Cell>
+                    <Table.Cell>Delivery</Table.Cell>
+                    <Table.Cell>
+                      <Dropdown
+                        selected={destinationKind}
+                        options={['creator', 'recipient', 'terminal', 'coordinates']}
+                        onSelected={setDestinationKind}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>Sabotage</Table.Cell>
+                    <Table.Cell>
+                      <Dropdown
+                        selected={sabotageMode}
+                        options={['damage', 'disabled', 'unpowered', 'broken', 'hacked', 'emagged', 'destroyed']}
+                        onSelected={setSabotageMode}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                </Table>
+              </Stack.Item>
+              <Stack.Item>
+                <Input
+                  fluid
+                  placeholder="Recipient, terminal, or destination label"
+                  value={destination}
+                  onChange={setDestination}
+                />
+              </Stack.Item>
+              {!!terminalDropdownOptions.length && destinationKind === 'terminal' && (
+                <Stack.Item>
+                  <Dropdown
+                    selected={destination}
+                    options={terminalDropdownOptions}
+                    onSelected={setDestination}
+                  />
+                </Stack.Item>
+              )}
+            </Stack>
+          </Section>
+        </Stack.Item>
+        <Stack.Item>
           <Section title="Visibility">
             <Stack wrap>
               <Stack.Item>
@@ -321,6 +474,16 @@ const ContractCreation = (props: { disabled: boolean }) => {
               <Stack.Item>
                 <Button.Checkbox checked={creatorConfirm} onClick={() => setCreatorConfirm(!creatorConfirm)}>
                   Manual confirm
+                </Button.Checkbox>
+              </Stack.Item>
+              <Stack.Item>
+                <Button.Checkbox checked={reserveHeld} onClick={() => setReserveHeld(!reserveHeld)}>
+                  Reserve held cargo
+                </Button.Checkbox>
+              </Stack.Item>
+              <Stack.Item>
+                <Button.Checkbox checked={partialGuardPayment} onClick={() => setPartialGuardPayment(!partialGuardPayment)}>
+                  Guard partial payout
                 </Button.Checkbox>
               </Stack.Item>
             </Stack>
@@ -354,11 +517,24 @@ const ContractCreation = (props: { disabled: boolean }) => {
                 duration_minutes: duration,
                 required_amount: requiredAmount,
                 required_percent: requiredPercent,
+                target_area: targetArea,
+                target_x: targetX,
+                target_y: targetY,
+                target_z: targetZ,
+                target_radius: targetRadius,
+                minimum_quality: minimumQuality,
+                minimum_rarity: minimumRarity,
+                destination_kind: destinationKind,
+                destination,
+                sabotage_mode: sabotageMode,
                 legal: legal ? 1 : 0,
                 public_contract: isPublic ? 1 : 0,
                 pool_contract: poolContract ? 1 : 0,
                 pool_corporation: poolCorporation,
                 creator_confirm_required: creatorConfirm ? 1 : 0,
+                reserve_held: reserveHeld ? 1 : 0,
+                partial_guard_payment: partialGuardPayment ? 1 : 0,
+                funding_business_id: fundingBusinessId,
               })
             }
           >
@@ -447,12 +623,35 @@ const ContractDetails = (props: { contract: Contract }) => {
         <LabeledList.Item label="Tax paid">
           {formatMoney(contract.taxPaid || 0)} cr
         </LabeledList.Item>
+        {!!contract.directAccessCode && (
+          <LabeledList.Item label="Private access">
+            {contract.directAccessCode}
+          </LabeledList.Item>
+        )}
         <LabeledList.Item label="Deadline">{contract.deadline}</LabeledList.Item>
         <LabeledList.Item label="Requirement">
           {contract.deliveredAmount}/{contract.requiredAmount}, threshold{' '}
           {contract.requiredPercent}%
         </LabeledList.Item>
       </LabeledList>
+      {!!contract.conditions?.length && (
+        <Box mt={1}>
+          {contract.conditions.map((condition, index) => (
+            <Box key={`${condition.id}-${index}`} className="CyberpunkPanel__Muted">
+              {condition.name}: {condition.deliveredAmount || 0}/
+              {condition.requiredAmount || 1}
+              {!!condition.requiredPercent && `, threshold ${condition.requiredPercent}%`}
+              {!!condition.targetArea && `, area ${condition.targetArea}`}
+              {!!condition.targetX && !!condition.targetY && `, coords ${condition.targetX}:${condition.targetY}:${condition.targetZ || 0}`}
+              {!!condition.minimumQuality && `, quality ${condition.minimumQuality}+`}
+              {!!condition.minimumRarity && `, rarity ${condition.minimumRarity}+`}
+              {!!condition.destinationKind && `, destination ${condition.destination || condition.destinationKind}`}
+              {!!condition.sabotageMode && `, mode ${condition.sabotageMode}`}
+              {!!condition.partialPayment && ', partial guard payout'}
+            </Box>
+          ))}
+        </Box>
+      )}
       {!!contract.description && <Box mt={1}>{contract.description}</Box>}
       <Collapsible title="History">
         {(contract.history || []).map((entry, index) => (

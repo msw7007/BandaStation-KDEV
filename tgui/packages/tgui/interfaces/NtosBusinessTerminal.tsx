@@ -40,6 +40,15 @@ type Delivery = {
   eta: string;
 };
 
+type WarehouseOption = {
+  id: number;
+  name: string;
+  label: string;
+  stock: number;
+  canBuy: BooleanLike;
+  canSell: BooleanLike;
+};
+
 type Business = {
   id: number;
   name: string;
@@ -93,6 +102,7 @@ type Data = {
   terminalAnchored: BooleanLike;
   businesses: Business[];
   business?: Business;
+  warehouseOptions?: WarehouseOption[];
 };
 
 const accessLabels = [
@@ -371,8 +381,9 @@ const BusinessFinance = (props: { business: Business }) => {
 };
 
 const BusinessWarehouse = (props: { business: Business }) => {
-  const { act } = useBackend<Data>();
+  const { act, data } = useBackend<Data>();
   const { business } = props;
+  const warehouseOptions = data.warehouseOptions || [];
   const [enabled, setEnabled] = useState(!!business.warehouse.enabled);
   const [autoRestock, setAutoRestock] = useState(!!business.warehouse.autoRestock);
   const [surplus, setSurplus] = useState(business.warehouse.surplusPercent || 0);
@@ -383,6 +394,17 @@ const BusinessWarehouse = (props: { business: Business }) => {
   const [item, setItem] = useState('goods');
   const [source, setSource] = useState('external supplier');
   const [amount, setAmount] = useState(1);
+  const appendLink = (current: string, option: WarehouseOption) => {
+    const existing = current
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    const next = `${option.id}`;
+    if (!existing.includes(next) && !existing.includes(option.name)) {
+      existing.push(next);
+    }
+    return existing.join(', ');
+  };
 
   return (
     <Collapsible title="Warehouse and logistics">
@@ -452,6 +474,34 @@ const BusinessWarehouse = (props: { business: Business }) => {
             </Stack.Item>
           </Stack>
         </Stack.Item>
+        {!!warehouseOptions.length && (
+          <Stack.Item>
+            <Section title="Available warehouse links">
+              <Stack wrap>
+                {warehouseOptions.map((option) => (
+                  <Stack.Item key={option.id}>
+                    <Button
+                      icon="arrow-down"
+                      disabled={!business.canStock || !option.canBuy}
+                      tooltip={`Add ${option.label} as buy source. Stock entries: ${option.stock}`}
+                      onClick={() => setBuyLinks(appendLink(buyLinks, option))}
+                    >
+                      Buy {option.label}
+                    </Button>
+                    <Button
+                      icon="arrow-up"
+                      disabled={!business.canStock || !option.canSell}
+                      tooltip={`Add ${option.label} as sell destination. Stock entries: ${option.stock}`}
+                      onClick={() => setSellLinks(appendLink(sellLinks, option))}
+                    >
+                      Sell
+                    </Button>
+                  </Stack.Item>
+                ))}
+              </Stack>
+            </Section>
+          </Stack.Item>
+        )}
         <Stack.Item>
           <LabeledList>
             <LabeledList.Item label="Premises validator">
@@ -556,7 +606,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
                   })
                 }
               >
-                Request AVI
+                Request delivery
               </Button>
             </Stack.Item>
           </Stack>

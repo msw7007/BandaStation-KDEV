@@ -54,8 +54,14 @@ SUBSYSTEM_DEF(economy)
 	var/next_cyberpunk_contract_id = 1
 	/// Lightweight reputation stats keyed by round character name/account, not client ckey.
 	var/list/cyberpunk_contract_stats = list()
+	/// Persistent reputation stats keyed by character/account name.
+	var/datum/json_database/cyberpunk_contract_stats_database
 	/// Whether the round-local corporate pool was filled with starter contracts.
 	var/cyberpunk_contract_pool_seeded = FALSE
+	/// Round-local mail and cargo held by CP13 contract terminals.
+	var/list/cyberpunk_contract_mail = list()
+	/// Next id for CP13 contract terminal mail.
+	var/next_cyberpunk_contract_mail_id = 1
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Number of mail items generated.
@@ -83,6 +89,7 @@ SUBSYSTEM_DEF(economy)
 			new /datum/bank_account/department(dep_id, 0, player_account = FALSE)
 			continue
 		new /datum/bank_account/department(dep_id, budget_to_hand_out, player_account = FALSE)
+	load_cyberpunk_contract_stats()
 	return SS_INIT_SUCCESS
 
 /datum/controller/subsystem/economy/Recover()
@@ -93,7 +100,10 @@ SUBSYSTEM_DEF(economy)
 	cyberpunk_contracts = SSeconomy.cyberpunk_contracts
 	next_cyberpunk_contract_id = SSeconomy.next_cyberpunk_contract_id
 	cyberpunk_contract_stats = SSeconomy.cyberpunk_contract_stats
+	cyberpunk_contract_stats_database = SSeconomy.cyberpunk_contract_stats_database
 	cyberpunk_contract_pool_seeded = SSeconomy.cyberpunk_contract_pool_seeded
+	cyberpunk_contract_mail = SSeconomy.cyberpunk_contract_mail
+	next_cyberpunk_contract_mail_id = SSeconomy.next_cyberpunk_contract_mail_id
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /// Processing step defines, to track what we've done so far

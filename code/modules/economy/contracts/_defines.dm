@@ -1,0 +1,18 @@
+//CYBERPUNK BUILD - rebuild and delete before release
+
+#define CYBERPUNK_CONTRACT_CREATED "created"
+#define CYBERPUNK_CONTRACT_OFFERED "offered"
+#define CYBERPUNK_CONTRACT_ACCEPTED "accepted"
+#define CYBERPUNK_CONTRACT_COMPLETED "completed"
+#define CYBERPUNK_CONTRACT_FAILED "failed"
+#define CYBERPUNK_CONTRACT_CANCELLED "cancelled"
+
+#define CYBERPUNK_CONTRACT_DELIVERY "delivery"
+#define CYBERPUNK_CONTRACT_REPAIR "repair"
+#define CYBERPUNK_CONTRACT_BUILD "build"
+#define CYBERPUNK_CONTRACT_GUARD "guard"
+#define CYBERPUNK_CONTRACT_MINING "mining"
+#define CYBERPUNK_CONTRACT_SABOTAGE "sabotage"
+#define CYBERPUNK_CONTRACT_ELIMINATION "elimination"
+
+#define CYBERPUNK_CONTRACT_TAX_RATE 0.05

@@ -58,6 +58,12 @@
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/corporate_vending_bus
 
+/datum/design/cyberpunk_machine_module/business_vending_bus
+	name = "Ryaznov Business Vending Bus"
+	id = "ryaznov_business_vending_bus"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/business_vending_bus
+
 /datum/design/cyberpunk_machine_module/apc_efficiency_core
 	name = "Р В Р’В Р вЂ™Р’В Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’В·Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В  APC Efficiency Core"
 	id = "ryaznov_apc_efficiency_core"
@@ -123,3 +129,9 @@
 	id = "ryaznov_vending_cyberspace_relay"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/vending_cyberspace_relay
+
+/datum/design/cyberpunk_machine_module/vending_contract_terminal
+	name = "Ryaznov Vending Contract Terminal"
+	id = "ryaznov_vending_contract_terminal"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/vending_contract_terminal

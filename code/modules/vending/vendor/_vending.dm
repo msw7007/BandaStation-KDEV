@@ -304,6 +304,7 @@
 				canister_list[record.product_path] = stock
 
 /obj/machinery/vending/Destroy()
+	QDEL_NULL(cyberpunk_contract_terminal_ui)
 	QDEL_LIST(product_records)
 	QDEL_LIST(hidden_records)
 	QDEL_LIST(coin_records)
