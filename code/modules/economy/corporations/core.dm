@@ -50,7 +50,9 @@
 				list("id" = "benn_medtech", "name" = "Medical service lattice", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Medical kiosks, analyzers, insurance goods, and treatment automation."),
 				list("id" = "benn_genetics", "name" = "Genetic stabilization", "tier" = 2, "cost" = 45, "prereq" = "benn_medtech", "description" = "Genetic consoles, infusers, stabilizers, and mutation rollback support."),
 				list("id" = "benn_chemistry", "name" = "Combat chemistry", "tier" = 3, "cost" = 65, "prereq" = "benn_genetics", "description" = "Composite reagents, toxins, acid mixtures, and chemical demon payloads."),
+				list("id" = "benn_chemical_teg", "name" = "Chemical thermoelectric generation", "tier" = 3, "cost" = 70, "prereq" = "benn_chemistry", "description" = "Reagent-driven TEG blocks, hot/cold cartridges, and chemistry-controlled grid support."),
 				list("id" = "benn_stealthware", "name" = "Stealthware implants", "tier" = 4, "cost" = 85, "prereq" = "benn_chemistry", "description" = "Stealth, speed, precision and surgical implant branches."),
+				list("id" = "benn_bioreactor", "name" = "Biomass reactor", "tier" = 5, "cost" = 120, "prereq" = "benn_chemical_teg", "description" = "Organic matter disassembly, biohazard containment, and high-yield biological generation."),
 				list("id" = "benn_bioarchive", "name" = "DNA archive", "tier" = 5, "cost" = 110, "prereq" = "benn_stealthware", "description" = "Bio-data storage, foreign technology scanning, and recovery research.")
 			)
 			edicts = cyberpunk_benn_edicts()
@@ -68,7 +70,9 @@
 				list("id" = "ryaznov_tools", "name" = "Industrial toolchain", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Engineering tools, analyzers, repair stations, and construction gear."),
 				list("id" = "ryaznov_fortification", "name" = "Fortification grid", "tier" = 2, "cost" = 45, "prereq" = "ryaznov_tools", "description" = "Barriers, shields, barricades, plating, and reinforced structures."),
 				list("id" = "ryaznov_power", "name" = "Power and shield systems", "tier" = 3, "cost" = 65, "prereq" = "ryaznov_fortification", "description" = "Generators, shield emitters, chargers, and emergency energy modules."),
+				list("id" = "ryaznov_nuclear_block", "name" = "Nuclear energy block", "tier" = 3, "cost" = 75, "prereq" = "ryaznov_power", "description" = "Uranium energy blocks, coolant rods, reactor consoles, and city-grade industrial generation."),
 				list("id" = "ryaznov_robotics", "name" = "Robotic industry", "tier" = 4, "cost" = 85, "prereq" = "ryaznov_power", "description" = "Drones, turrets, mech docks, exoskeletons, and mobile workshops."),
+				list("id" = "ryaznov_cold_fusion", "name" = "Cold fusion collider", "tier" = 5, "cost" = 130, "prereq" = "ryaznov_nuclear_block", "description" = "High-density fusion generation and anomaly-prone collider infrastructure."),
 				list("id" = "ryaznov_blueprints", "name" = "Blueprint archive", "tier" = 5, "cost" = 110, "prereq" = "ryaznov_robotics", "description" = "Engineering data archive and foreign technology reverse engineering.")
 			)
 			edicts = cyberpunk_ryaznov_edicts()
@@ -85,8 +89,10 @@
 			technologies = list(
 				list("id" = "starlight_market", "name" = "Market routing", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Contracts, vending, subscriptions, and stock telemetry."),
 				list("id" = "starlight_delivery", "name" = "Delivery network", "tier" = 2, "cost" = 45, "prereq" = "starlight_market", "description" = "Cargo drones, delivery beacons, route data, and business logistics."),
+				list("id" = "starlight_kinetic_reactor", "name" = "Kinetic reactor train", "tier" = 3, "cost" = 65, "prereq" = "starlight_delivery", "description" = "Wheel-shaft-motor reactor assemblies, inertia storage, and cold-room maintenance loops."),
 				list("id" = "starlight_vehicle", "name" = "Transport platforms", "tier" = 3, "cost" = 65, "prereq" = "starlight_delivery", "description" = "Ground and air vehicles, route registration, and cargo movement."),
 				list("id" = "starlight_phase", "name" = "Phase logistics", "tier" = 4, "cost" = 85, "prereq" = "starlight_vehicle", "description" = "Teleportation, recall, phase suits, and blink delivery."),
+				list("id" = "starlight_energy_portal", "name" = "Energy portal lattice", "tier" = 5, "cost" = 135, "prereq" = "starlight_phase", "description" = "Crystal portals, emitter containment, and high-risk extradimensional power import."),
 				list("id" = "starlight_route_archive", "name" = "Route archive", "tier" = 5, "cost" = 110, "prereq" = "starlight_phase", "description" = "Market intelligence, foreign tech scanning, and route optimization.")
 			)
 			edicts = cyberpunk_starlight_edicts()

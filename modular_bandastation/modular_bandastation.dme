@@ -54,6 +54,7 @@
 #include "jukebox/_jukebox.dme"
 #include "language_improvements/_language_improvements.dme"
 #include "lightweight_atmos/_lightweight_atmos.dme"
+#include "energy/_energy.dme"
 #include "loadout/_loadout.dme"
 #include "mapping/_mapping.dme"
 #include "martial_arts/_martial_arts.dme"
