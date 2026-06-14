@@ -17,6 +17,7 @@ type CityAIRecord = {
   ref: string;
   name: string;
   type: string;
+  managed: BooleanLike;
   role: string;
   capabilities: number;
   task: string;
@@ -40,6 +41,7 @@ const orderButtons = [
   ['evacuate', 'Evacuate'],
   ['escort', 'Escort'],
   ['deliver', 'Deliver'],
+  ['avi_delivery', 'Starlight Delivery'],
   ['patrol', 'Patrol'],
 ] as const;
 
@@ -53,7 +55,7 @@ export const CyberpunkCityAI = () => {
     <Window width={980} height={620} theme="cyberpunk">
       <Window.Content scrollable>
         <Section
-          title="City AI Command"
+          title="AI Debug Command"
           buttons={
             <Button icon="sync" onClick={() => act('refresh')}>
               Refresh
@@ -102,7 +104,7 @@ export const CyberpunkCityAI = () => {
           </Stack>
           <Box mt={1} color="label">
             Orders use the selected AI. Auto dispatch picks an available matching
-            city NPC.
+            city NPC; unprofiled AI is listed for debugging.
           </Box>
         </Section>
 
@@ -111,6 +113,7 @@ export const CyberpunkCityAI = () => {
             <Table.Row header>
               <Table.Cell collapsing />
               <Table.Cell>Name</Table.Cell>
+              <Table.Cell>Managed</Table.Cell>
               <Table.Cell>Role</Table.Cell>
               <Table.Cell>Task</Table.Cell>
               <Table.Cell>State</Table.Cell>
@@ -133,6 +136,9 @@ export const CyberpunkCityAI = () => {
                   </Button>
                 </Table.Cell>
                 <Table.Cell bold>{entry.name}</Table.Cell>
+                <Table.Cell color={entry.managed ? 'good' : 'label'}>
+                  {entry.managed ? 'city' : 'debug'}
+                </Table.Cell>
                 <Table.Cell>{entry.role}</Table.Cell>
                 <Table.Cell>{entry.task}</Table.Cell>
                 <Table.Cell>{entry.state}</Table.Cell>

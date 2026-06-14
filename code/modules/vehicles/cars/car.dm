@@ -1787,6 +1787,146 @@
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/cargo_minivan
 	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/flight_nozzles
 	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/performance
+	var/avi_state = null
+	var/turf/avi_pickup_turf
+	var/turf/avi_dropoff_turf
+	var/turf/avi_exit_turf
+	var/list/avi_cargo = list()
+	var/avi_started_at = 0
+	var/avi_timeout = 5 MINUTES
+
+/obj/vehicle/ridden/cyberpunk/avi/Destroy(force)
+	STOP_PROCESSING(SSobj, src)
+	avi_pickup_turf = null
+	avi_dropoff_turf = null
+	avi_exit_turf = null
+	avi_cargo = null
+	return ..()
+
+/obj/vehicle/ridden/cyberpunk/avi/process(seconds_per_tick)
+	if(!avi_state)
+		STOP_PROCESSING(SSobj, src)
+		return
+	if(world.time > avi_started_at + avi_timeout)
+		visible_message(span_warning("[src] aborts its route and leaves the area."))
+		qdel(src)
+		return
+	switch(avi_state)
+		if("pickup")
+			if(cyberpunk_avi_step_towards(avi_pickup_turf))
+				return
+			cyberpunk_avi_load_cargo()
+			avi_state = "dropoff"
+		if("dropoff")
+			if(cyberpunk_avi_step_towards(avi_dropoff_turf))
+				return
+			cyberpunk_avi_unload_cargo()
+			avi_exit_turf = cyberpunk_avi_find_exit_turf(avi_dropoff_turf)
+			avi_state = avi_exit_turf ? "exit" : "despawn"
+		if("exit")
+			if(cyberpunk_avi_step_towards(avi_exit_turf))
+				return
+			qdel(src)
+		if("despawn")
+			qdel(src)
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/start_cyberpunk_avi_delivery(atom/pickup, atom/dropoff, list/cargo_atoms)
+	avi_pickup_turf = get_turf(pickup)
+	avi_dropoff_turf = get_turf(dropoff)
+	if(!avi_pickup_turf || !avi_dropoff_turf)
+		return FALSE
+	avi_cargo = list()
+	for(var/atom/movable/cargo as anything in cargo_atoms)
+		if(cargo && !QDELETED(cargo))
+			avi_cargo += cargo
+	if(!length(avi_cargo))
+		return FALSE
+	avi_started_at = world.time
+	avi_state = "pickup"
+	START_PROCESSING(SSobj, src)
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_load_cargo()
+	for(var/atom/movable/cargo as anything in avi_cargo.Copy())
+		if(QDELETED(cargo))
+			avi_cargo -= cargo
+			continue
+		if(get_dist(cargo, src) > 1)
+			continue
+		cargo.forceMove(src)
+	visible_message(span_notice("[src] secures its cargo."))
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_unload_cargo()
+	for(var/atom/movable/cargo as anything in avi_cargo.Copy())
+		if(QDELETED(cargo))
+			avi_cargo -= cargo
+			continue
+		cargo.forceMove(avi_dropoff_turf)
+	avi_cargo.Cut()
+	visible_message(span_notice("[src] unloads its cargo."))
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_step_towards(turf/target)
+	if(!target || get_turf(src) == target)
+		return FALSE
+	var/turf/current = get_turf(src)
+	if(!current)
+		return FALSE
+	if(current.z != target.z)
+		var/z_dir = current.z < target.z ? 1 : -1
+		var/turf/z_turf = locate(current.x, current.y, current.z + z_dir)
+		if(cyberpunk_avi_can_occupy(z_turf))
+			forceMove(z_turf)
+			return TRUE
+	var/step_dir = get_dir(current, target)
+	var/turf/next = get_step(current, step_dir)
+	if(cyberpunk_avi_try_move_or_climb(next))
+		return TRUE
+	var/list/side_dirs = list(turn(step_dir, 45), turn(step_dir, -45), turn(step_dir, 90), turn(step_dir, -90))
+	for(var/side_dir as anything in side_dirs)
+		var/turf/side = get_step(current, side_dir)
+		if(cyberpunk_avi_try_move_or_climb(side))
+			return TRUE
+	return FALSE
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_try_move_or_climb(turf/target)
+	if(cyberpunk_avi_can_occupy(target))
+		forceMove(target)
+		return TRUE
+	if(!target)
+		return FALSE
+	for(var/check_z in (target.z + 1) to world.maxz)
+		var/turf/high_turf = locate(target.x, target.y, check_z)
+		if(cyberpunk_avi_can_occupy(high_turf))
+			forceMove(high_turf)
+			return TRUE
+	for(var/check_z in (z + 1) to world.maxz)
+		var/turf/current_high_turf = locate(x, y, check_z)
+		if(cyberpunk_avi_can_occupy(current_high_turf))
+			forceMove(current_high_turf)
+			return TRUE
+	return FALSE
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_can_occupy(turf/target)
+	if(!target || target.density || isclosedturf(target))
+		return FALSE
+	for(var/atom/movable/content as anything in target)
+		if(content == src || content.loc == src)
+			continue
+		if(content.density)
+			return FALSE
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_find_exit_turf(turf/origin)
+	if(!origin)
+		return null
+	var/target_z = world.maxz
+	var/list/candidates = list()
+	for(var/turf/candidate in range(20, locate(origin.x, origin.y, target_z)))
+		if(get_dist(candidate, locate(origin.x, origin.y, target_z)) < 18)
+			continue
+		if(cyberpunk_avi_can_occupy(candidate))
+			candidates += candidate
+	return length(candidates) ? pick(candidates) : locate(origin.x, origin.y, target_z)
 
 /obj/vehicle/ridden/cyberpunk/cargo
 	name = "Starlight cargo mule"
@@ -1799,6 +1939,123 @@
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/cargo_truck
 	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks
 	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/heavy
+	var/mule_state = null
+	var/turf/mule_pickup_turf
+	var/turf/mule_dropoff_turf
+	var/turf/mule_exit_turf
+	var/list/mule_cargo = list()
+	var/mule_started_at = 0
+	var/mule_timeout = 5 MINUTES
+
+/obj/vehicle/ridden/cyberpunk/cargo/Destroy(force)
+	STOP_PROCESSING(SSobj, src)
+	mule_pickup_turf = null
+	mule_dropoff_turf = null
+	mule_exit_turf = null
+	mule_cargo = null
+	return ..()
+
+/obj/vehicle/ridden/cyberpunk/cargo/process(seconds_per_tick)
+	if(!mule_state)
+		STOP_PROCESSING(SSobj, src)
+		return
+	if(world.time > mule_started_at + mule_timeout)
+		visible_message(span_warning("[src] aborts its route and leaves."))
+		qdel(src)
+		return
+	switch(mule_state)
+		if("pickup")
+			if(cyberpunk_mule_step_towards(mule_pickup_turf))
+				return
+			cyberpunk_mule_load_cargo()
+			mule_state = "dropoff"
+		if("dropoff")
+			if(cyberpunk_mule_step_towards(mule_dropoff_turf))
+				return
+			cyberpunk_mule_unload_cargo()
+			mule_exit_turf = cyberpunk_mule_find_exit_turf(mule_dropoff_turf)
+			mule_state = mule_exit_turf ? "exit" : "despawn"
+		if("exit")
+			if(cyberpunk_mule_step_towards(mule_exit_turf))
+				return
+			qdel(src)
+		if("despawn")
+			qdel(src)
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/start_cyberpunk_mule_delivery(atom/pickup, atom/dropoff, list/cargo_atoms)
+	mule_pickup_turf = get_turf(pickup)
+	mule_dropoff_turf = get_turf(dropoff)
+	if(!mule_pickup_turf || !mule_dropoff_turf)
+		return FALSE
+	mule_cargo = list()
+	for(var/atom/movable/cargo_atom as anything in cargo_atoms)
+		if(cargo_atom && !QDELETED(cargo_atom))
+			mule_cargo += cargo_atom
+	if(!length(mule_cargo))
+		return FALSE
+	mule_started_at = world.time
+	mule_state = "pickup"
+	START_PROCESSING(SSobj, src)
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_load_cargo()
+	for(var/atom/movable/cargo_atom as anything in mule_cargo.Copy())
+		if(QDELETED(cargo_atom))
+			mule_cargo -= cargo_atom
+			continue
+		if(get_dist(cargo_atom, src) > 1)
+			continue
+		cargo_atom.forceMove(src)
+	visible_message(span_notice("[src] secures its cargo."))
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_unload_cargo()
+	for(var/atom/movable/cargo_atom as anything in mule_cargo.Copy())
+		if(QDELETED(cargo_atom))
+			mule_cargo -= cargo_atom
+			continue
+		cargo_atom.forceMove(mule_dropoff_turf)
+	mule_cargo.Cut()
+	visible_message(span_notice("[src] unloads its cargo."))
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_step_towards(turf/target)
+	if(!target || get_turf(src) == target)
+		return FALSE
+	if(z != target.z)
+		return FALSE
+	var/step_dir = get_dir(src, target)
+	if(cyberpunk_mule_try_move(get_step(src, step_dir)))
+		return TRUE
+	for(var/side_dir as anything in list(turn(step_dir, 45), turn(step_dir, -45), turn(step_dir, 90), turn(step_dir, -90)))
+		if(cyberpunk_mule_try_move(get_step(src, side_dir)))
+			return TRUE
+	return FALSE
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_try_move(turf/target)
+	if(!cyberpunk_mule_can_occupy(target))
+		return FALSE
+	forceMove(target)
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_can_occupy(turf/target)
+	if(!target || target.density || isclosedturf(target) || isspaceturf(target))
+		return FALSE
+	for(var/atom/movable/content as anything in target)
+		if(content == src || content.loc == src)
+			continue
+		if(content.density)
+			return FALSE
+	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_find_exit_turf(turf/origin)
+	if(!origin)
+		return null
+	var/list/candidates = list()
+	for(var/turf/candidate in range(20, origin))
+		if(get_dist(candidate, origin) < 18)
+			continue
+		if(cyberpunk_mule_can_occupy(candidate))
+			candidates += candidate
+	return length(candidates) ? pick(candidates) : null
 
 /obj/effect/temp_visual/cyberpunk_vehicle_skid
 	icon = 'icons/effects/effects.dmi'
