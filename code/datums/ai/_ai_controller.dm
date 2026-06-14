@@ -329,6 +329,11 @@ multiple modular subtrees with behaviors
 	var/turf/target_turf = get_turf(route_target)
 	if(target_turf)
 		turfs_to_check |= target_turf
+	for(var/route_key in list(BB_CP_CARGO_SOURCE, BB_CP_CARGO_RECEIVER, BB_CP_ROUTE_RETURN_POINT, BB_CP_ROUTE_Z_TRANSITION))
+		var/atom/route_atom = blackboard[route_key]
+		var/turf/route_turf = get_turf(route_atom)
+		if(route_turf)
+			turfs_to_check |= route_turf
 	return turfs_to_check
 
 /// Finds a nearby vertical transition that can move toward target_z.
@@ -456,6 +461,18 @@ multiple modular subtrees with behaviors
 			set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
 			cyberpunk_prepare_phantom_route(BB_CP_CARGO_RECEIVER)
 		if(CP_AI_TASK_DROPOFF)
+			var/atom/cargo = blackboard[BB_CP_CARGO]
+			var/obj/item/cargo_item = cargo
+			var/atom/receiver = blackboard[BB_CP_CARGO_RECEIVER] || blackboard[BB_CP_ROUTE_TARGET]
+			if(istype(cargo_item) && receiver)
+				cargo_item.forceMove(get_turf(receiver))
+				var/mob/living/living_pawn = pawn
+				cyberpunk_notify_ai_cargo_delivered(cargo_item, living_pawn)
+			else if(isliving(cargo) && receiver)
+				var/mob/living/cargo_mob = cargo
+				cargo_mob.forceMove(get_turf(receiver))
+				var/mob/living/living_pawn = pawn
+				cyberpunk_notify_ai_cargo_delivered(cargo_mob, living_pawn)
 			set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_DELIVERED)
 			cyberpunk_complete_city_task("phantom cargo delivered")
 	return TRUE

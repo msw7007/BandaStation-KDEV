@@ -37,6 +37,7 @@ type Delivery = {
   destination: string;
   cost: number;
   status: string;
+  aiCourierStatus?: string;
   eta: string;
 };
 
@@ -631,6 +632,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
               <Table.Cell>Delivery</Table.Cell>
               <Table.Cell collapsing>Cost</Table.Cell>
               <Table.Cell>Status</Table.Cell>
+              <Table.Cell>Courier</Table.Cell>
               <Table.Cell collapsing>ETA</Table.Cell>
             </Table.Row>
             {business.deliveries.map((delivery) => (
@@ -641,6 +643,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
                 </Table.Cell>
                 <Table.Cell>{formatMoney(delivery.cost)} cr</Table.Cell>
                 <Table.Cell>{delivery.status}</Table.Cell>
+                <Table.Cell>{delivery.aiCourierStatus || 'not requested'}</Table.Cell>
                 <Table.Cell>{delivery.eta}</Table.Cell>
               </Table.Row>
             ))}

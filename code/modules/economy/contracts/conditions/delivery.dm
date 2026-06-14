@@ -42,6 +42,25 @@
 	return recipient && get_dist(get_turf(recipient), get_turf(item)) <= 1
 
 
+/datum/cyberpunk_contract_condition/delivery/proc/get_ai_destination(datum/cyberpunk_contract/contract, obj/machinery/vending/source_terminal)
+	if(destination_kind == "coordinates")
+		if(!target_x || !target_y || !target_z)
+			return null
+		return locate(target_x, target_y, target_z)
+	if(destination_kind == "terminal")
+		for(var/obj/machinery/vending/vendor as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/vending))
+			if(!vendor.has_contract_terminal_module())
+				continue
+			if(source_terminal && vendor == source_terminal)
+				continue
+			if(terminal_matches(vendor))
+				return vendor
+		return null
+	if(destination_kind == "recipient" && destination_text)
+		return SSeconomy.find_cyberpunk_contract_person(destination_text)
+	return contract?.find_creator_mob()
+
+
 /datum/cyberpunk_contract_condition/delivery/record_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item)
 	if(!contract || !item || item.cyberpunk_contract_id != contract.id)
 		return FALSE

@@ -382,6 +382,17 @@
 			living_pawn.dropItemToGround(living_pawn.get_active_held_item())
 		if(!living_pawn.put_in_hands(cargo_item))
 			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+	else if(isliving(cargo))
+		var/mob/living/cargo_mob = cargo
+		if(living_pawn.pulling == cargo_mob)
+			controller.set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_CARRIED)
+			controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
+			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+		if(!controller.cyberpunk_has_capability(CP_AI_CAP_HANDS) || !cargo_mob.Adjacent(living_pawn))
+			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+		living_pawn.start_pulling(cargo_mob, supress_message = TRUE)
+		if(living_pawn.pulling != cargo_mob)
+			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 	else if(!controller.cyberpunk_has_capability(CP_AI_CAP_CARGO_SLOT))
 		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 
@@ -420,6 +431,15 @@
 		SSeconomy?.record_cyberpunk_contract_item_in_hands(living_pawn, cargo_item)
 		if(istype(receiver_mob))
 			SSeconomy?.record_cyberpunk_contract_item_in_hands(receiver_mob, cargo_item)
+		cyberpunk_notify_ai_cargo_delivered(cargo_item, living_pawn)
+	else if(isliving(cargo))
+		var/mob/living/cargo_mob = cargo
+		if(living_pawn.pulling == cargo_mob)
+			living_pawn.stop_pulling()
+		var/turf/receiver_turf = get_turf(receiver)
+		if(receiver_turf && get_dist(cargo_mob, receiver_turf) > 1)
+			cargo_mob.forceMove(receiver_turf)
+		cyberpunk_notify_ai_cargo_delivered(cargo_mob, living_pawn)
 
 	var/datum/cyberpunk_contract/contract = controller.blackboard[BB_CP_CONTRACT_REF]
 	if(!contract && contract_id)
@@ -474,6 +494,18 @@
 	action_cooldown = 1 SECONDS
 
 /datum/ai_behavior/cyberpunk_work_task/perform(seconds_per_tick, datum/ai_controller/controller)
+	if(controller.blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_REPAIR)
+		var/atom/repair_target = controller.blackboard[BB_CP_ROUTE_TARGET]
+		if(!repair_target?.uses_integrity)
+			controller.cyberpunk_fail_city_task("repair target invalid")
+			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+		if(repair_target.get_integrity() < repair_target.max_integrity)
+			repair_target.repair_damage(max(5, round(repair_target.max_integrity * 0.05)))
+			if(repair_target.get_integrity() < repair_target.max_integrity)
+				return AI_BEHAVIOR_DELAY
+		controller.cyberpunk_complete_city_task("repair completed")
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+
 	var/finish_at = controller.blackboard[BB_CP_CITY_TASK_FINISH_AT]
 	if(finish_at && world.time < finish_at)
 		var/atom/target = controller.blackboard[BB_CP_ROUTE_TARGET]

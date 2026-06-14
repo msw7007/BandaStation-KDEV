@@ -121,6 +121,10 @@
 	cyberpunk_business_deliveries["[delivery.id]"] = delivery
 	business.deliveries += delivery
 	business.add_history("delivery #[delivery.id] requested: [amount]x [item_label] from [delivery.source_label]; cost [total_cost][MONEY_SYMBOL]")
+	if(supplier?.terminal && business.terminal)
+		if(delivery.dispatch_ai_courier(supplier.terminal, business.terminal))
+			business.add_history("delivery #[delivery.id] assigned to city courier from [supplier.name]")
+			supplier.add_history("delivery #[delivery.id] courier pickup requested for [business.name]")
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "market", max(1, round(amount / 2)), max(0, round(total_cost * 0.03)), "business delivery #[delivery.id]")
 	if(SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_cargo_tracking"))
 		SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "cargo tracking: delivery #[delivery.id]")

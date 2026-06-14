@@ -21,6 +21,7 @@ type TerminalContract = {
   target: string;
   progress: string;
   compatible: BooleanLike;
+  canDispatchCourier?: BooleanLike;
 };
 
 type TerminalMail = {
@@ -157,6 +158,7 @@ export const CyberpunkContractTerminal = () => {
                 <Table.Cell>Type</Table.Cell>
                 <Table.Cell>Target</Table.Cell>
                 <Table.Cell collapsing>Progress</Table.Cell>
+                <Table.Cell collapsing />
               </Table.Row>
               {contracts.map((contract) => (
                 <Table.Row key={contract.id}>
@@ -165,6 +167,15 @@ export const CyberpunkContractTerminal = () => {
                   <Table.Cell>{contract.type}</Table.Cell>
                   <Table.Cell>{contract.target}</Table.Cell>
                   <Table.Cell collapsing>{contract.progress}</Table.Cell>
+                  <Table.Cell collapsing>
+                    <Button
+                      icon="truck"
+                      disabled={!online || !heldItem || !contract.canDispatchCourier}
+                      onClick={() => act('dispatch_ai_courier', { id: contract.id })}
+                    >
+                      Courier
+                    </Button>
+                  </Table.Cell>
                 </Table.Row>
               ))}
             </Table>

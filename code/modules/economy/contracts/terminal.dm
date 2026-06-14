@@ -233,6 +233,7 @@
 				"target" = contract.target_text,
 				"progress" = "[contract.delivered_amount]/[contract.required_amount]",
 				"compatible" = TRUE,
+				"canDispatchCourier" = FALSE,
 			))
 			continue
 		if(contract.contract_type != CYBERPUNK_CONTRACT_DELIVERY)
@@ -251,6 +252,7 @@
 			"target" = contract.target_text,
 			"progress" = "[contract.delivered_amount]/[contract.required_amount]",
 			"compatible" = TRUE,
+			"canDispatchCourier" = !!held,
 		))
 	return data
 
@@ -276,6 +278,50 @@
 		if("claim_mail")
 			var/datum/cyberpunk_contract_mail/mail = cyberpunk_contract_mail["[params["id"]]"]
 			return claim_cyberpunk_contract_mail(living_user, mail)
+		if("dispatch_ai_courier")
+			var/datum/cyberpunk_contract/contract = get_cyberpunk_contract(params["id"])
+			return dispatch_cyberpunk_contract_ai_courier(living_user, terminal, contract, living_user.get_active_held_item())
 		if("relay")
 			return terminal.toggle_cyberspace_relay(living_user)
 	return FALSE
+
+
+/datum/controller/subsystem/economy/proc/dispatch_cyberpunk_contract_ai_courier(mob/living/user, obj/machinery/vending/terminal, datum/cyberpunk_contract/contract, obj/item/item)
+	if(!user || !terminal || !contract || !item)
+		return FALSE
+	if(contract.status != CYBERPUNK_CONTRACT_ACCEPTED || contract.contract_type != CYBERPUNK_CONTRACT_DELIVERY || !contract.can_act_as_contractor(user))
+		to_chat(user, span_warning("This contract cannot use your courier request."))
+		return TRUE
+	var/datum/cyberpunk_contract_condition/delivery/delivery_condition
+	for(var/datum/cyberpunk_contract_condition/delivery/condition as anything in contract.completion_conditions)
+		if(!istype(condition))
+			continue
+		delivery_condition = condition
+		break
+	if(!delivery_condition)
+		to_chat(user, span_warning("This contract has no delivery route."))
+		return TRUE
+	if(item.cyberpunk_contract_id && item.cyberpunk_contract_id != contract.id)
+		to_chat(user, span_warning("[item] is marked for another contract."))
+		return TRUE
+	if(item.cyberpunk_contract_id != contract.id && !contract.matches_target(item))
+		to_chat(user, span_warning("[item] does not match contract target."))
+		return TRUE
+	var/atom/destination = delivery_condition.get_ai_destination(contract, terminal)
+	if(!destination)
+		to_chat(user, span_warning("No valid courier destination was found."))
+		return TRUE
+	if(!user.transferItemToLoc(item, get_turf(terminal)))
+		to_chat(user, span_warning("[terminal] fails to hand off your cargo."))
+		return TRUE
+	item.cyberpunk_contract_id = contract.id
+	contract.track_delivery_item(item)
+	if(!cyberpunk_request_ai_delivery(terminal, destination, item, contract.id, terminal, CP_AI_CAP_HANDS))
+		item.forceMove(get_turf(user))
+		user.put_in_hands(item)
+		to_chat(user, span_warning("No available courier accepted the task."))
+		contract.add_history("[user.real_name || user.name] requested AI courier; no courier available")
+		return TRUE
+	contract.add_history("[user.real_name || user.name] dispatched AI courier from [terminal.get_cyberpunk_contract_terminal_label()]")
+	to_chat(user, span_notice("Courier task dispatched for contract #[contract.id]."))
+	return TRUE

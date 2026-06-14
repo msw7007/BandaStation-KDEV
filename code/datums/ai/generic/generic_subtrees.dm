@@ -139,7 +139,7 @@
 			else if(target_turf && target_route_pawn_turf && target_turf.z != target_route_pawn_turf.z && controller.cyberpunk_prepare_z_transition(CP_AI_TASK_ROUTE_TO_TARGET))
 				return SUBTREE_RETURN_FINISH_PLANNING
 			else if(get_dist(controller.pawn, target) <= 1)
-				controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_DROPOFF)
+				controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, controller.blackboard[BB_CP_CARGO] ? CP_AI_TASK_DROPOFF : CP_AI_TASK_WORKING)
 			else
 				controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, controller.blackboard[BB_CP_CARGO_RECEIVER] ? BB_CP_CARGO_RECEIVER : BB_CP_ROUTE_TARGET)
 			return SUBTREE_RETURN_FINISH_PLANNING
@@ -177,3 +177,33 @@
 		if(CP_AI_TASK_CREATED)
 			controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_WORKING)
 			return SUBTREE_RETURN_FINISH_PLANNING
+
+/datum/ai_planning_subtree/cyberpunk_security_response
+
+/datum/ai_planning_subtree/cyberpunk_security_response/SelectBehaviors(datum/ai_controller/controller, seconds_per_tick)
+	if(!controller.cyberpunk_has_capability(CP_AI_CAP_COMBAT))
+		return
+	var/mob/living/living_pawn = controller.pawn
+	if(!istype(living_pawn) || living_pawn.stat == DEAD)
+		return
+	var/atom/threat = controller.blackboard[BB_CP_THREAT_TARGET]
+	if(QDELETED(threat))
+		controller.clear_blackboard_key(BB_CP_THREAT_TARGET)
+		controller.clear_blackboard_key(BB_CP_THREAT_LEVEL)
+		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+		controller.clear_blackboard_key(BB_BASIC_MOB_FLEE_TARGET)
+		return
+	if(living_pawn.maxHealth > 0 && living_pawn.health <= living_pawn.maxHealth * 0.2)
+		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
+		controller.set_blackboard_key(BB_BASIC_MOB_FLEE_TARGET, threat)
+		return
+	controller.clear_blackboard_key(BB_BASIC_MOB_FLEE_TARGET)
+	if(living_pawn.maxHealth > 0 && living_pawn.health <= living_pawn.maxHealth * 0.5)
+		controller.cyberpunk_call_for_help(threat, "wounded")
+	var/mob/living/threat_mob = threat
+	if(istype(threat_mob) && HAS_TRAIT(threat_mob, TRAIT_RESTRAINED) && !istype(get_area(threat_mob), /area/station/security))
+		var/turf/security_turf = cyberpunk_find_security_delivery_turf()
+		if(security_turf && !controller.blackboard_key_exists(BB_CP_CITY_TASK))
+			controller.cyberpunk_assign_city_task(CP_AI_TASK_GUARD, threat_mob, security_turf, threat_mob, null, 2 MINUTES, security_turf)
+			return SUBTREE_RETURN_FINISH_PLANNING
+	controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, threat)

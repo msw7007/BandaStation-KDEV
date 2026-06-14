@@ -1014,6 +1014,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	if(damage_done > 0 && kicking)
 		user.try_cyberpunk_fast_unarmed_prepare_free_hand_attack()
 		user.apply_cyberpunk_fast_unarmed_kick_effects(target, staggered)
+	if(damage_done > 0)
+		target.cyberpunk_report_violence_by(user)
 	user.apply_cyberpunk_power_unarmed_effects(target)
 	user.apply_cyberpunk_unarmed_zone_effect(target, user.zone_selected)
 

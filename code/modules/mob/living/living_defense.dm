@@ -184,6 +184,9 @@
 		var/obj/item/organ/brain/a_brain = locate() in get_bodypart(def_zone)
 		a_brain?.cure_trauma_type(resilience = TRAUMA_RESILIENCE_LOBOTOMY)
 
+	if(damage_dealt > 0 && isliving(proj.firer))
+		cyberpunk_report_violence_by(proj.firer, 3)
+
 	apply_effects(
 		stun = proj.stun,
 		knockdown = proj.knockdown,

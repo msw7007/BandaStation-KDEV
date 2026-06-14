@@ -133,7 +133,7 @@
 /datum/ai_controller/basic_controller/simple/cyberpunk_city/worker
 	blackboard = list(
 		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_WORKER,
-		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_CARGO_SLOT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS,
+		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_CARGO_SLOT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS | CP_AI_CAP_REPAIR,
 		BB_CP_AI_LEVEL = 2,
 		BB_CP_PHANTOM_ENABLED = TRUE,
 		BB_CP_PHANTOM_PROFILE = CP_AI_PHANTOM_PROFILE_LIGHT,
@@ -152,6 +152,13 @@
 	)
 
 /datum/ai_controller/basic_controller/simple/cyberpunk_city/security
+	planning_subtrees = list(
+		/datum/ai_planning_subtree/generic_resist,
+		/datum/ai_planning_subtree/cyberpunk_security_response,
+		/datum/ai_planning_subtree/flee_target/from_flee_key,
+		/datum/ai_planning_subtree/basic_melee_attack_subtree,
+		/datum/ai_planning_subtree/cyberpunk_city_task,
+	)
 	blackboard = list(
 		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CORP_SECURITY,
 		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_COMBAT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS,
