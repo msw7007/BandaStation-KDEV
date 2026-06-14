@@ -31,6 +31,12 @@
 
 	var/list/default_chemicals = null
 
+	/// Minimum cloud temperature needed to turn this effect into a fire cloud.
+	/// Null means this effect itself is not flammable; chemical clouds can still
+	/// ignite from their reagent contents.
+	var/ignition_temperature = null
+	var/ignition_amount_multiplier = 1
+
 /datum/gas_effect/New()
 	. = ..()
 	if(!filter_tags)
@@ -47,6 +53,42 @@
 
 /datum/gas_effect/proc/on_process_cloud(obj/effect/gas_cloud/cloud, turf/T, area/A, seconds_per_tick)
 	return
+
+/datum/gas_effect/proc/get_ignition_temperature(obj/effect/gas_cloud/cloud)
+	. = ignition_temperature
+	var/list/chem_pool = cloud?.chemicals || default_chemicals
+	if(!length(chem_pool))
+		return
+	for(var/reagent_path in chem_pool)
+		var/datum/reagent/reagent = GLOB.chemical_reagents_list[reagent_path]
+		if(!reagent || isnull(reagent.burning_temperature))
+			continue
+		if(isnull(.) || reagent.burning_temperature < .)
+			. = reagent.burning_temperature
+
+/datum/gas_effect/proc/get_ignition_strength(obj/effect/gas_cloud/cloud)
+	. = max(cloud?.amount * ignition_amount_multiplier, 0)
+	var/list/chem_pool = cloud?.chemicals || default_chemicals
+	if(!length(chem_pool))
+		return
+	for(var/reagent_path in chem_pool)
+		var/datum/reagent/reagent = GLOB.chemical_reagents_list[reagent_path]
+		if(!reagent || isnull(reagent.burning_temperature))
+			continue
+		. += chem_pool[reagent_path] * max(reagent.burning_volume, 0.1)
+
+/datum/gas_effect/proc/try_ignite_cloud(obj/effect/gas_cloud/cloud)
+	if(!cloud || cloud.effect != src || istype(src, /datum/gas_effect/fire))
+		return FALSE
+	var/cloud_ignition_temperature = get_ignition_temperature(cloud)
+	if(isnull(cloud_ignition_temperature) || cloud.temperature < cloud_ignition_temperature)
+		return FALSE
+	var/fire_amount = get_ignition_strength(cloud)
+	if(fire_amount <= 0)
+		return FALSE
+	cloud.amount = max(cloud.amount, min(fire_amount, tile_capacity * 2))
+	cloud.chemicals = null
+	return cloud.change_effect(/datum/gas_effect/fire)
 
 /datum/gas_effect/proc/is_filtered_by(list/tags)
 	if(!length(tags) || !length(filter_tags))

@@ -40,6 +40,7 @@
 	var/turf/T = loc
 	if(isturf(T))
 		RegisterSignal(T, COMSIG_ATOM_ENTERED, PROC_REF(on_turf_entered))
+	effect.try_ignite_cloud(src)
 
 /obj/effect/gas_cloud/Destroy()
 	if(SSgas_effects)
@@ -61,6 +62,31 @@
 /obj/effect/gas_cloud/proc/can_merge(datum/gas_effect/incoming)
 	return effect == incoming
 
+/obj/effect/gas_cloud/proc/change_effect(effect_path)
+	if(!ispath(effect_path, /datum/gas_effect))
+		return FALSE
+	var/datum/gas_effect/new_effect = SSgas_effects.get_effect_singleton(effect_path)
+	if(!new_effect)
+		return FALSE
+	remove_atom_colour(FIXED_COLOUR_PRIORITY)
+	effect = new_effect
+	name = effect.name
+	desc = "A swirling cloud of [effect.name]."
+	if(effect.visible)
+		alpha = initial(alpha)
+		icon_state = effect.icon_state
+		add_atom_colour(effect.color, FIXED_COLOUR_PRIORITY)
+	else
+		alpha = 0
+	return TRUE
+
+/obj/effect/gas_cloud/proc/heat_from_hotspot(exposed_temperature, exposed_volume)
+	if(exposed_temperature < TCMB || exposed_volume <= 0)
+		return FALSE
+	var/heat_amount = clamp(exposed_volume * 0.5, 1, max(amount, 1))
+	temperature = ((temperature * max(amount, 1)) + (exposed_temperature * heat_amount)) / (max(amount, 1) + heat_amount)
+	return effect?.try_ignite_cloud(src)
+
 /obj/effect/gas_cloud/proc/merge(amount_to_add, temperature_to_blend = T20C, list/chems_to_add = null)
 	if(amount_to_add <= 0)
 		return
@@ -72,6 +98,7 @@
 			chemicals = list()
 		for(var/reagent_path in chems_to_add)
 			chemicals[reagent_path] = (chemicals[reagent_path] || 0) + chems_to_add[reagent_path]
+	effect?.try_ignite_cloud(src)
 
 /obj/effect/gas_cloud/proc/shrink_chemicals(new_amount, old_amount)
 	if(!length(chemicals) || old_amount <= 0)

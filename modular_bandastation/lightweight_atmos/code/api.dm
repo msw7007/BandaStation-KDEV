@@ -49,6 +49,26 @@
 		return null
 	return spawn_gas_cloud(T, effect_path, amount, temperature, chemicals)
 
+/proc/apply_lightweight_hotspot(turf/T, exposed_temperature, exposed_volume)
+	if(!isturf(T))
+		T = get_turf(T)
+	if(!isturf(T) || T.density || exposed_temperature < TCMB)
+		return FALSE
+	var/touched_cloud = FALSE
+	var/ignited_cloud = FALSE
+	for(var/obj/effect/gas_cloud/cloud in T)
+		if(QDELETED(cloud) || !cloud.effect)
+			continue
+		touched_cloud = TRUE
+		if(cloud.heat_from_hotspot(exposed_temperature, exposed_volume))
+			ignited_cloud = TRUE
+	if(touched_cloud)
+		return ignited_cloud
+	if(exposed_temperature < 200)
+		var/amount = clamp(exposed_volume * 0.5, 5, 40)
+		return !!spawn_gas_cloud(T, /datum/gas_effect/freeze, amount, exposed_temperature)
+	return FALSE
+
 /proc/clear_gas_clouds(turf/T, effect_path = null)
 	for(var/obj/effect/gas_cloud/C in T)
 		if(!effect_path || istype(C.effect, effect_path))

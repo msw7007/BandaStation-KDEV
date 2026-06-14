@@ -192,6 +192,7 @@
 	filter_tags = list(GAS_FILTER_TOXIC, GAS_FILTER_CHEMICAL)
 	alarm_flags = CLOUD_ALARM_TOXIC | CLOUD_ALARM_CHEMICAL
 	visibility_modifier = 1
+	ignition_temperature = 450
 
 /datum/gas_effect/plasma/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	var/dose = min(amount, GAS_EFFECT_PER_TICK_MAX) * 0.06 * seconds_per_tick

@@ -76,6 +76,8 @@ SUBSYSTEM_DEF(gas_effects)
 	effect.on_process_cloud(cloud, T, A, seconds_per_tick)
 	if(QDELETED(cloud))
 		return
+	effect.try_ignite_cloud(cloud)
+	effect = cloud.effect
 
 	var/decay = effect.decay_rate
 	if(A?.is_outdoor_air())

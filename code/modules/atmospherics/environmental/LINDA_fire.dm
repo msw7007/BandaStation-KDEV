@@ -21,17 +21,10 @@
  * is handled by the hotspot itself, specifically perform_exposure().
  */
 /turf/open/hotspot_expose(exposed_temperature, exposed_volume, soh)
-	// LIGHTWEIGHT ATMOS: hotspot reactions no longer exist. Any ignition
-	// source above FIRE_MINIMUM_TEMPERATURE_TO_EXIST spawns a fire gas cloud
-	// directly; freon/cold ignition goes through the freeze effect.
-	if(exposed_temperature < TCMB)
-		return
-	if(exposed_temperature >= FIRE_MINIMUM_TEMPERATURE_TO_EXIST)
-		var/amount = clamp(exposed_volume * 0.5, 5, 80)
-		spawn_gas_cloud(src, /datum/gas_effect/fire, amount, exposed_temperature)
-	else if(exposed_temperature < 200) // below cold ignition threshold
-		var/amount = clamp(exposed_volume * 0.5, 5, 40)
-		spawn_gas_cloud(src, /datum/gas_effect/freeze, amount, exposed_temperature)
+	// LIGHTWEIGHT ATMOS: hotspots are now only ignition/temperature sources.
+	// They heat existing gas clouds; clouds switch to fire only if their own
+	// effect or reagent contents are above ignition temperature.
+	apply_lightweight_hotspot(src, exposed_temperature, exposed_volume)
 
 /**
  * Hotspot objects interfaces with the temperature of turf gasmixtures while also providing visual effects.
@@ -73,56 +66,14 @@
 
 /obj/effect/hotspot/Initialize(mapload, starting_volume, starting_temperature)
 	. = ..()
-	SSair.hotspots += src
 	if(!isnull(starting_volume))
 		volume = starting_volume
 	if(!isnull(starting_temperature))
 		temperature = starting_temperature
-		if(temperature <= FREON_MAXIMUM_BURN_TEMPERATURE)
-			cold_fire = TRUE
-
-	var/turf/open/our_turf = loc
-	//on creation we check adjacent turfs for hot spot to start grouping, if surrounding do not have hot spots we create our own
-	for(var/turf/open/to_check as anything in our_turf.atmos_adjacent_turfs)
-		if(!to_check.active_hotspot)
-			continue
-		var/obj/effect/hotspot/enemy_spot = to_check.active_hotspot
-		// Safeguard to prevent infectious init runtimes for hotspots if we somehow end up with a hotspot without a group
-		if(!enemy_spot.our_hot_group)
-			continue
-		if(!our_hot_group)
-			enemy_spot.our_hot_group.add_to_group(src)
-		else if(our_hot_group != enemy_spot.our_hot_group) //if we belongs to a hot group from prior loop and we encounter another hot spot with a group then we merge
-			our_hot_group.merge_hot_groups(enemy_spot.our_hot_group)
-
-	if(QDELETED(our_hot_group))//if after loop through all the adjacents turfs and we havent belong to a group yet, make our own
-		our_hot_group = new
-		our_hot_group.add_to_group(src)
-
-	// If our hotspot gets created on a turf with existing hotspots on it that just got spawned, abort
-	if(!perform_exposure())
-		if (QDELETED(src))
-			return
-		return INITIALIZE_HINT_QDEL
-
-	if(QDELETED(src)) // It is actually possible for this hotspot to become qdeleted in perform_exposure() if another hotspot gets created (for example in fire_act() of fuel pools)
-		return // In this case, we want to just leave and let the new hotspot take over.
-
-	setDir(pick(GLOB.cardinals))
-	air_update_turf(FALSE, FALSE)
-	var/static/list/loc_connections = list(
-		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
-		COMSIG_ATOM_ABSTRACT_ENTERED = PROC_REF(on_entered),
-	)
-	AddElement(/datum/element/connect_loc, loc_connections)
-
-	if(COOLDOWN_FINISHED(our_turf, fire_puff_cooldown))
-		playsound(our_turf, 'sound/effects/fire_puff.ogg', 30)
-		COOLDOWN_START(our_turf, fire_puff_cooldown, 5 SECONDS)
-
-	// Remove just_spawned protection if no longer processing the parent cell
-	just_spawned = (our_turf.current_cycle < SSair.times_fired)
-	update_color()
+	var/turf/open/lightweight_turf = loc
+	if(istype(lightweight_turf))
+		apply_lightweight_hotspot(lightweight_turf, temperature, volume)
+	return INITIALIZE_HINT_QDEL
 
 /obj/effect/hotspot/set_smoothed_icon_state(new_junction)
 
