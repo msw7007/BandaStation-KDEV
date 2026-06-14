@@ -269,8 +269,8 @@
 			"desc" = design.get_description(),
 			"cost" = cost,
 			"id" = design.id,
-			"cyberpunkRequiredTechnology" = design.cyberpunk_required_technology_id,
-			"cyberpunkTechnologyCorporation" = design.cyberpunk_technology_corporation_id,
+			"cyberpunkRequiredTechnology" = design.get_cyberpunk_required_technology_id(),
+			"cyberpunkTechnologyCorporation" = design.get_cyberpunk_technology_corporation_id(),
 			"cyberpunkRequiredTechnologyName" = design.get_cyberpunk_required_technology_name(),
 			"categories" = design.category,
 			"icon" = "[icon_size == size32x32 ? "" : "[icon_size] "][design.id]"
