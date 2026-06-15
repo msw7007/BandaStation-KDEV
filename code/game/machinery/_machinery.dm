@@ -219,7 +219,7 @@
 		to_chat(src, span_notice("- [key_datum.name] / [key_datum.owner]: [key_datum.code]"))
 
 /mob/living/verb/write_cyberpunk_crypto_key_to_held_item()
-	set name = "Р В РІР‚вЂќР В Р’В°Р В РЎвЂ”Р В РЎвЂР РЋР С“Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂќР РЋР вЂљР В РЎвЂР В РЎвЂ”Р РЋРІР‚С™Р В РЎвЂўР В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋ Р В Р вЂ¦Р В Р’В° Р В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В РЎВР В Р’ВµР РЋРІР‚С™"
+	set name = "Write Cryptokey To Held Item"
 	set category = "IC"
 
 	var/obj/item/held_item = get_active_held_item()

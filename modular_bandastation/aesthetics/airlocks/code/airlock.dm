@@ -1,3 +1,7 @@
+/obj/machinery/door
+	/// Mapper flag: keep the mapped dir on roundstart instead of letting CP13 visual auto-orientation adjust it.
+	var/prebuilt_direction = FALSE
+
 /obj/machinery/door/airlock
 	doorOpen = 'modular_bandastation/aesthetics/airlocks/sound/open.ogg'
 	doorClose = 'modular_bandastation/aesthetics/airlocks/sound/close.ogg'
@@ -7,7 +11,7 @@
 	var/mapload_dir_follows_passage = FALSE
 
 /obj/machinery/door/airlock/Initialize(mapload)
-	if(mapload)
+	if(mapload && !prebuilt_direction)
 		normalize_mapload_dir()
 	return ..()
 

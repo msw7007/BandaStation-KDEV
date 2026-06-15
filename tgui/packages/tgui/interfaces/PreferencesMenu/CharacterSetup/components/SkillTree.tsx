@@ -54,6 +54,14 @@ export function SkillTree(props: SkillTreeProps) {
         const runtime = runtimeSkills?.[skill.id];
         const disabledReason = runtime?.disabled_reason;
         const isWeaponSkill = skill.kind === 'weapon';
+        const convertedExperience = runtime?.converted_experience || 0;
+        const pendingExperience = runtime?.pending_experience || 0;
+        const experienceGoal = runtime?.experience_goal || 100;
+        const totalExperience = convertedExperience + pendingExperience;
+        const experienceProgress = Math.min(
+          100,
+          Math.round((totalExperience / Math.max(experienceGoal, 1)) * 100),
+        );
         return (
           <div key={skill.id} className="SkillTree__branch" title={disabledReason}>
             <header>
@@ -62,6 +70,14 @@ export function SkillTree(props: SkillTreeProps) {
                 {runtime?.level || 0}/{skill.max_character_level}
               </span>
             </header>
+            <div className="SkillTree__xp">
+              <div className="SkillTree__xpTrack">
+                <span style={{ width: `${experienceProgress}%` }} />
+              </div>
+              <small>
+                XP {Math.round(totalExperience)}/{experienceGoal}
+              </small>
+            </div>
             {skill.perks.length ? (
               <div className="SkillTree__perks">
                 {skill.perks.map((perk) => {

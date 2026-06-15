@@ -187,3 +187,449 @@
   font-family: monospace;
   word-break: break-all;
 }
+
+.SkillInterface {
+  &.CharacterSetup .CharacterSetup__topbar {
+    grid-template-columns: minmax(18rem, 0.8fr) minmax(32rem, 1.4fr);
+    grid-template-areas:
+      "brand actions"
+      "metrics metrics"
+      "general-xp general-xp";
+    align-items: start;
+    gap: 0.45rem 0.75rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .CharacterSetup__brand {
+    grid-area: brand;
+  }
+
+  .CharacterSetup__topActions {
+    grid-area: actions;
+    align-items: start;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .CharacterSetup__content {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  &__layout {
+    flex: 0 0 auto;
+    min-height: 42rem;
+    overflow: visible;
+    grid-template-columns: minmax(21rem, 0.82fr) minmax(35rem, 1.35fr) minmax(25rem, 1fr);
+  }
+
+  .CyberPanel {
+    min-height: 0;
+  }
+
+  .CyberPanel__content {
+    min-height: 0;
+  }
+
+  .CharacterSetup__biometricsPanel .CyberPanel__content {
+    display: grid;
+    align-content: start;
+    gap: 0.55rem;
+    overflow: visible;
+  }
+
+  &__topMetrics {
+    grid-area: metrics;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(10rem, 1fr));
+    gap: 0.45rem;
+
+    span {
+      min-width: 0;
+      padding: 0.35rem 0.5rem;
+      overflow: hidden;
+      color: var(--cy-cyan);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid var(--cy-border);
+      background: rgba(24, 216, 255, 0.05);
+    }
+  }
+
+  &__generalXp {
+    grid-area: general-xp;
+    display: grid;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  &__generalXpLabel {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--cy-cyan);
+
+    b,
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__generalXpTrack {
+    height: 0.55rem;
+    border: 1px solid var(--cy-border);
+    background: rgba(5, 8, 13, 0.75);
+
+    span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--cy-cyan), var(--cy-red));
+    }
+  }
+
+  &__skillList,
+  &__perkList,
+  &__chipList,
+  &__implantList {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  &__skillRow,
+  &__weaponRow,
+  &__selectedCard,
+  &__perkCard,
+  &__implantCard,
+  &__attributeRow {
+    color: var(--cy-text);
+    text-align: left;
+    background: rgba(11, 20, 26, 0.86);
+    border: 1px solid var(--cy-danger-border);
+  }
+
+  &__skillRow,
+  &__weaponRow,
+  &__attributeRow {
+    cursor: pointer;
+
+    &.selected,
+    &:hover {
+      border-color: var(--cy-cyan);
+      box-shadow: inset 0 0 0.75rem rgba(24, 216, 255, 0.08);
+    }
+  }
+
+  &__attributeRow {
+    width: 100%;
+    min-height: 1.9rem;
+    padding: 0.3rem 0.45rem;
+    color: var(--cy-cyan);
+    text-align: left;
+  }
+
+  &__skillRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 2rem;
+    padding: 0.3rem 0.45rem;
+
+    span {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--cy-cyan);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    b {
+      flex: 0 0 auto;
+      color: var(--cy-cyan);
+    }
+  }
+
+  &__detailPanel .CyberPanel__content {
+    overflow: hidden;
+  }
+
+  &__selectedCard {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.65rem;
+  }
+
+  &__selectedHeader,
+  &__weaponTitle,
+  &__perkCard,
+  &__perkControls,
+  &__chipActions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  &__selectedHeader {
+    justify-content: space-between;
+
+    b {
+      display: block;
+      color: var(--cy-cyan);
+      font-size: 1.05rem;
+    }
+
+    span {
+      display: block;
+      margin-top: 0.25rem;
+      color: var(--cy-text);
+      line-height: 1.25;
+    }
+  }
+
+  &__weaponControls,
+  &__perkControls {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    strong {
+      min-width: 2.8rem;
+      color: var(--cy-cyan);
+      text-align: center;
+    }
+  }
+
+  &__xpGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+
+    span {
+      padding: 0.25rem 0.35rem;
+      overflow: hidden;
+      color: var(--cy-muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid rgba(24, 216, 255, 0.22);
+      background: rgba(5, 8, 13, 0.45);
+    }
+  }
+
+  &__perkList {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+
+  &__perkCard {
+    min-height: 4.1rem;
+    padding: 0.5rem;
+  }
+
+  &__perkText {
+    flex: 1;
+    min-width: 0;
+
+    b {
+      display: block;
+      color: var(--cy-cyan);
+    }
+
+    span {
+      display: block;
+      margin-top: 0.15rem;
+      color: var(--cy-muted);
+      line-height: 1.2;
+    }
+  }
+
+  &__weaponRow {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.45rem;
+  }
+
+  &__weaponTitle {
+    justify-content: space-between;
+
+    span,
+    b {
+      color: var(--cy-cyan);
+    }
+  }
+
+  &__chipActions {
+    align-items: stretch;
+  }
+
+  &__chipList span {
+    display: block;
+    padding: 0.35rem 0.45rem;
+    color: var(--cy-cyan);
+    border: 1px solid var(--cy-border);
+    background: rgba(24, 216, 255, 0.05);
+  }
+
+  &__implantList {
+    margin-top: 0.55rem;
+  }
+
+  &__implantCard {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 4.4rem;
+    padding: 0.55rem;
+
+    &.active {
+      border-color: var(--cy-green);
+      background: rgba(66, 215, 125, 0.1);
+    }
+
+    &.neural {
+      border-color: var(--cy-cyan);
+      background: rgba(24, 216, 255, 0.08);
+    }
+  }
+
+  &__implantInfo {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    gap: 0.18rem;
+
+    b {
+      overflow: hidden;
+      color: var(--cy-cyan);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span,
+    small {
+      overflow: hidden;
+      color: var(--cy-muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__implantActions {
+    flex: 0 0 auto;
+  }
+
+  &__implantBadge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.8rem;
+    padding: 0 0.55rem;
+    color: var(--cy-cyan);
+    border: 1px solid var(--cy-border);
+    background: rgba(24, 216, 255, 0.08);
+  }
+
+  .CyberPanel.scrollable .CyberPanel__content {
+    min-height: 0;
+    overflow-y: visible;
+    padding-right: 0.25rem;
+  }
+
+  .SkillTree {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .SkillTree.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .SkillTree__branch {
+    min-width: 0;
+    border: 1px solid var(--cy-danger-border);
+    background: rgba(11, 20, 26, 0.86);
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.35rem;
+      align-items: center;
+      padding: 0.25rem 0.35rem;
+      color: var(--cy-cyan);
+
+      b {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .SkillTree__xp {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0 0.35rem 0.3rem;
+
+    small {
+      color: var(--cy-muted);
+      font-size: 0.72rem;
+      line-height: 1.1;
+    }
+  }
+
+  .SkillTree__xpTrack,
+  .SkillTree__weaponTrack {
+    min-width: 0;
+    height: 0.45rem;
+    border: 1px solid var(--cy-border);
+    background: #030609;
+
+    span {
+      display: block;
+      height: 100%;
+      background: var(--cy-cyan);
+    }
+  }
+
+  .SkillTree__perks {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(1.8rem, 1fr));
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+
+  .SkillTree__weapon {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.3rem 0.35rem 0.45rem;
+
+    small {
+      color: var(--cy-muted);
+      line-height: 1.15;
+    }
+  }
+
+  .SkillTree__weaponControl {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    gap: 0.35rem;
+    align-items: center;
+
+    > b {
+      min-width: 2.6rem;
+      color: var(--cy-cyan);
+      text-align: center;
+      white-space: nowrap;
+    }
+  }
+
+  .SkillTree__missing {
+    padding: 0.35rem;
+    color: var(--cy-muted);
+  }
+}

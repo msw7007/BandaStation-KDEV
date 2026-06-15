@@ -279,6 +279,9 @@ export type CharacterSetupRuntimeSkill = {
   can_decrease: BooleanLike;
   editable: BooleanLike;
   disabled_reason?: string;
+  converted_experience?: number;
+  pending_experience?: number;
+  experience_goal?: number;
 };
 
 export type CharacterSetupImplantSlot = {

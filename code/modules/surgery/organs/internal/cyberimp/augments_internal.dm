@@ -91,6 +91,27 @@
 		return value * get_corporate_synergy_multiplier()
 	return value
 
+/obj/item/organ/cyberimp/proc/can_skill_interface_toggle()
+	if(istype(src, /obj/item/organ/cyberimp/brain/neural_interface))
+		return FALSE
+	return length(actions_types) > 0
+
+/obj/item/organ/cyberimp/proc/get_skill_interface_active()
+	if("active" in vars)
+		return !!vars["active"]
+	return FALSE
+
+/obj/item/organ/cyberimp/proc/skill_interface_toggle(mob/living/user)
+	if(!can_skill_interface_toggle())
+		return FALSE
+	if(owner != user)
+		return FALSE
+	if(!is_implant_functional())
+		to_chat(user, span_warning("[capitalize(src)] doesn't respond."))
+		return FALSE
+	ui_action_click(user, null)
+	return TRUE
+
 /datum/movespeed_modifier/cyberimp_sandevistan
 	variable = TRUE
 
@@ -140,6 +161,8 @@
 	var/datum/cyber_ice/neural_ice
 	/// One-use Veil reward keys remembered by this neural interface.
 	var/list/veil_reward_keys = list()
+	/// Whether the user-facing skill interface is currently enabled.
+	var/skill_interface_enabled = TRUE
 
 /obj/item/organ/cyberimp/brain/neural_interface/Initialize(mapload)
 	. = ..()
