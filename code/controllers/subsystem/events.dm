@@ -40,7 +40,6 @@ SUBSYSTEM_DEF(events)
 	if(CONFIG_GET(flag/events_config_enabled))
 		setup_config()
 
-	reschedule()
 	// Instantiate our holidays list if it hasn't been already
 	if(isnull(GLOB.holidays))
 		fill_holidays()
@@ -66,7 +65,6 @@ SUBSYSTEM_DEF(events)
 
 /datum/controller/subsystem/events/fire(resumed = FALSE)
 	if(!resumed)
-		checkEvent() //only check these if we aren't resuming a paused fire
 		src.currentrun = running.Copy()
 
 	//cache for sanic speed (lists are references anyways)
@@ -84,17 +82,8 @@ SUBSYSTEM_DEF(events)
 
 //checks if we should select a random event yet, and reschedules if necessary
 /datum/controller/subsystem/events/proc/checkEvent()
-	if(scheduled <= world.time)
-		if(SScyberpunk_round?.cyberpunk_storyteller_controls_random_events())
-			SScyberpunk_round.cyberpunk_storyteller_consider_random_event()
-			reschedule()
-			return
-#ifdef MAP_TEST
-		message_admins("Random event skipped (Game is compiled in MAP_TEST mode)")
-#else
-		spawnEvent()
-#endif
-		reschedule()
+	// CP13: automatic random event selection is owned by SScyberpunk_round/storyteller.
+	return
 
 //decides which world.time we should select another random event at.
 /datum/controller/subsystem/events/proc/reschedule()

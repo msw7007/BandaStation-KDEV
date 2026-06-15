@@ -97,8 +97,7 @@
 	sleep(RANDOM_EVENT_ADMIN_INTERVENTION_TIME)
 	var/players_amt = get_active_player_count(alive_check = TRUE, afk_check = TRUE, human_check = TRUE)
 	if(!can_spawn_event(players_amt))
-		message_admins("Second pre-condition check for [name] failed, rerolling...")
-		SSevents.spawnEvent(excluded_event = src)
+		message_admins("Second pre-condition check for [name] failed, event interrupted.")
 		return EVENT_INTERRUPTED
 
 	if(!triggering)
@@ -124,7 +123,7 @@
 		message_admins("[key_name_admin(usr)] chose to have event [name] rolled into a different event.")
 		log_admin_private("[key_name(usr)] rerolled event [name].")
 		SSblackbox.record_feedback("tally", "event_admin_rerolled", 1, typepath)
-		SSevents.spawnEvent(excluded_event = src)
+		SScyberpunk_round?.cyberpunk_storyteller_consider_random_event()
 
 /*
 Runs the event

@@ -1,6 +1,6 @@
 SUBSYSTEM_DEF(dynamic)
 	name = "Dynamic"
-	ss_flags = SS_NO_INIT
+	ss_flags = SS_NO_INIT | SS_NO_FIRE
 	wait = 5 MINUTES
 
 	// These vars just exist for admins interfacing with dynamic
@@ -58,22 +58,6 @@ SUBSYSTEM_DEF(dynamic)
 	var/list/datum/dynamic_ruleset/unreported_rulesets = list()
 	/// Whether random events that spawn antagonists or modify dynamic are enabled
 	var/antag_events_enabled = TRUE
-
-/datum/controller/subsystem/dynamic/fire(resumed)
-	if(!COOLDOWN_FINISHED(src, midround_cooldown) || EMERGENCY_PAST_POINT_OF_NO_RETURN)
-		return
-
-	if(SScyberpunk_round?.cyberpunk_storyteller_controls_dynamic_rules())
-		SScyberpunk_round.cyberpunk_storyteller_consider_dynamic_rules()
-		return
-
-	if(COOLDOWN_FINISHED(src, light_ruleset_start))
-		if(try_spawn_midround(LIGHT_MIDROUND))
-			return
-
-	if(COOLDOWN_FINISHED(src, heavy_ruleset_start))
-		if(try_spawn_midround(HEAVY_MIDROUND))
-			return
 
 /datum/controller/subsystem/dynamic/proc/get_config()
 	if(!length(dynamic_config))
@@ -144,11 +128,15 @@ SUBSYSTEM_DEF(dynamic)
 	// put rulesets in the queue (if admins didn't)
 	// this will even handle the case in which the tier wants 0 roundstart rulesets
 	if(!length(queued_rulesets))
-		var/list/storyteller_rulesets = SScyberpunk_round?.cyberpunk_storyteller_pick_roundstart_rulesets(antag_candidates)
-		if(isnull(storyteller_rulesets))
-			storyteller_rulesets = pick_roundstart_rulesets(antag_candidates)
-		for(var/ruleset in storyteller_rulesets)
-			queue_ruleset(ruleset)
+		SScyberpunk_round?.cyberpunk_storyteller_pick_roundstart_rulesets(antag_candidates)
+		for(var/category in rulesets_to_spawn)
+			rulesets_to_spawn[category] = 0
+			base_rulesets_to_spawn[category] = 0
+		SSjob.reset_occupations()
+		COOLDOWN_START(src, light_ruleset_start, current_tier.ruleset_type_settings[LIGHT_MIDROUND][TIME_THRESHOLD])
+		COOLDOWN_START(src, heavy_ruleset_start, current_tier.ruleset_type_settings[HEAVY_MIDROUND][TIME_THRESHOLD])
+		COOLDOWN_START(src, latejoin_ruleset_start, current_tier.ruleset_type_settings[LATEJOIN][TIME_THRESHOLD])
+		return TRUE
 	// we got what we needed, reset so we can do real job selection later
 	// reset only happens AFTER roundstart selection so we can verify stuff like "can we get 3 heads of staff for revs?"
 	SSjob.reset_occupations()
@@ -474,9 +462,6 @@ SUBSYSTEM_DEF(dynamic)
 		queued.execute()
 		return
 
-	if(COOLDOWN_FINISHED(src, latejoin_ruleset_start) && COOLDOWN_FINISHED(src, latejoin_cooldown))
-		if(try_spawn_latejoin(latejoiner))
-			return
 
 /**
  * Invoked by SSdynamic to try to spawn a latejoin ruleset

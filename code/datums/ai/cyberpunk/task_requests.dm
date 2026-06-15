@@ -231,20 +231,146 @@
 /area
 	/// City AI uses this to decide whether violence should trigger a broad security response.
 	var/cyberpunk_safe_zone = FALSE
+	/// Stable CP13 district id used by the storyteller and city systems.
+	var/cyberpunk_district_id
+	/// Display name for CP13 district analytics. Defaults to area name.
+	var/cyberpunk_district_name
+	/// Coarse district kind: street, safe, security, wasteland, corporate, etc.
+	var/cyberpunk_district_kind = "generic"
+	/// Numeric district bucket. The city core expects 1-9 until final map names are assigned.
+	var/cyberpunk_district_index = 0
+	/// Grid direction inside a city z-level: nw, n, ne, w, c, e, sw, s, se.
+	var/cyberpunk_district_direction
+	/// Passive danger added to storyteller district pressure.
+	var/cyberpunk_district_base_danger = 0
+	/// Round-local violence score reported by city AI and combat hooks.
+	var/cyberpunk_round_violence_score = 0
+	/// Round-local damage amount associated with violent incidents in this area.
+	var/cyberpunk_round_damage_taken = 0
+	/// Round-local severe incident counter.
+	var/cyberpunk_round_critical_events = 0
+	/// World time of last recorded violent incident.
+	var/cyberpunk_round_last_violence_at = 0
 
 /area/cyberpunk_city
 	name = "Cyberpunk City"
+	cyberpunk_district_id = "city"
+	cyberpunk_district_name = "Cyberpunk City"
+	cyberpunk_district_kind = "city"
 
 /area/cyberpunk_city/street
 	name = "Cyberpunk City Street"
+	cyberpunk_district_id = "street"
+	cyberpunk_district_name = "Cyberpunk City Street"
+	cyberpunk_district_kind = "street"
+	cyberpunk_district_base_danger = 5
 
 /area/cyberpunk_city/safe
 	name = "Cyberpunk City Safe Zone"
 	cyberpunk_safe_zone = TRUE
+	cyberpunk_district_id = "safe"
+	cyberpunk_district_name = "Cyberpunk City Safe Zone"
+	cyberpunk_district_kind = "safe"
 
 /area/cyberpunk_city/security
 	name = "Cyberpunk City Security"
 	cyberpunk_safe_zone = TRUE
+	cyberpunk_district_id = "security"
+	cyberpunk_district_name = "Cyberpunk City Security"
+	cyberpunk_district_kind = "security"
+
+/area/cyberpunk_city/wasteland
+	name = "Cyberpunk City Wasteland"
+	cyberpunk_district_id = "wasteland"
+	cyberpunk_district_name = "Wasteland"
+	cyberpunk_district_kind = "wasteland"
+	cyberpunk_district_base_danger = 20
+
+/area/cyberpunk_city/district
+	name = "Cyberpunk City District"
+	cyberpunk_district_kind = "district"
+	cyberpunk_district_base_danger = 8
+
+/area/cyberpunk_city/district/district_01
+	name = "Аква Квин"
+	cyberpunk_district_id = "aqua_queen"
+	cyberpunk_district_name = "Аква Квин"
+	cyberpunk_district_kind = "marine"
+	cyberpunk_district_index = 1
+	cyberpunk_district_direction = "nw"
+	cyberpunk_district_base_danger = 7
+
+/area/cyberpunk_city/district/district_02
+	name = "Нортфилд"
+	cyberpunk_district_id = "northfield"
+	cyberpunk_district_name = "Нортфилд"
+	cyberpunk_district_kind = "port"
+	cyberpunk_district_index = 2
+	cyberpunk_district_direction = "n"
+	cyberpunk_district_base_danger = 9
+
+/area/cyberpunk_city/district/district_03
+	name = "Чейсвинд"
+	cyberpunk_district_id = "chasewind"
+	cyberpunk_district_name = "Чейсвинд"
+	cyberpunk_district_kind = "slums"
+	cyberpunk_district_index = 3
+	cyberpunk_district_direction = "ne"
+	cyberpunk_district_base_danger = 18
+
+/area/cyberpunk_city/district/district_04
+	name = "Гранд Плаза"
+	cyberpunk_district_id = "grand_plaza"
+	cyberpunk_district_name = "Гранд Плаза"
+	cyberpunk_district_kind = "government"
+	cyberpunk_district_index = 4
+	cyberpunk_district_direction = "w"
+	cyberpunk_district_base_danger = 4
+
+/area/cyberpunk_city/district/district_05
+	name = "Даунтаун"
+	cyberpunk_district_id = "downtown"
+	cyberpunk_district_name = "Даунтаун"
+	cyberpunk_district_kind = "residential"
+	cyberpunk_district_index = 5
+	cyberpunk_district_direction = "c"
+	cyberpunk_district_base_danger = 6
+
+/area/cyberpunk_city/district/district_06
+	name = "Истбук"
+	cyberpunk_district_id = "eastbook"
+	cyberpunk_district_name = "Истбук"
+	cyberpunk_district_kind = "slums"
+	cyberpunk_district_index = 6
+	cyberpunk_district_direction = "e"
+	cyberpunk_district_base_danger = 18
+
+/area/cyberpunk_city/district/district_07
+	name = "Чайнатаун"
+	cyberpunk_district_id = "chinatown"
+	cyberpunk_district_name = "Чайнатаун"
+	cyberpunk_district_kind = "ben"
+	cyberpunk_district_index = 7
+	cyberpunk_district_direction = "sw"
+	cyberpunk_district_base_danger = 10
+
+/area/cyberpunk_city/district/district_08
+	name = "Блайтфорт"
+	cyberpunk_district_id = "blightfort"
+	cyberpunk_district_name = "Блайтфорт"
+	cyberpunk_district_kind = "slums"
+	cyberpunk_district_index = 8
+	cyberpunk_district_direction = "s"
+	cyberpunk_district_base_danger = 18
+
+/area/cyberpunk_city/district/district_09
+	name = "Веллрок"
+	cyberpunk_district_id = "wellrock"
+	cyberpunk_district_name = "Веллрок"
+	cyberpunk_district_kind = "industrial"
+	cyberpunk_district_index = 9
+	cyberpunk_district_direction = "se"
+	cyberpunk_district_base_danger = 12
 
 /proc/cyberpunk_is_safe_zone(atom/location)
 	var/area/current_area = get_area(location)
@@ -526,6 +652,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		return FALSE
 	var/handled = FALSE
 	var/threat_level = isnull(level) ? (safe_zone ? 3 : 2) : level
+	SScyberpunk_round?.record_cyberpunk_district_violence(location || threat, threat_level, safe_zone ? "safe-zone violence" : "street violence")
 	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
 		var/datum/ai_controller/controller = candidate.ai_controller
 		if(!controller?.cyberpunk_has_capability(CP_AI_CAP_COMBAT))

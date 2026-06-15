@@ -13,6 +13,7 @@ SUBSYSTEM_DEF(blackbox)
 							"time_dilation_current" = 3,
 							"science_techweb_unlock" = 2,
 							"round_end_stats" = 2,
+							"cyberpunk_round_summary" = 1,
 							"testmerged_prs" = 2,
 							"dynamic_threat" = 2,
 							"bitrunning_domain_loaded" = 2,

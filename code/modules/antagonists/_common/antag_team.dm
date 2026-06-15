@@ -1,5 +1,86 @@
 GLOBAL_LIST_EMPTY(antagonist_teams)
 
+/datum/cyberpunk_faction_resources
+	/// Display/debug name of the faction resource pool owner.
+	var/name = "Faction resources"
+	/// Generic pressure/action currency for future gang/corporate/antag spending.
+	var/influence = 0
+	/// Liquid spendable credits or black-budget value not tied to a player bank account.
+	var/funds = 0
+	/// Abstract manpower/operative reserve.
+	var/manpower = 0
+	/// Supplies, contraband, hardware, or other physical reserve.
+	var/supplies = 0
+	/// Optional typed resources for future content-specific costs.
+	var/list/custom_resources = list()
+
+/datum/cyberpunk_faction_resources/New(resource_name)
+	. = ..()
+	if(resource_name)
+		name = resource_name
+
+/datum/cyberpunk_faction_resources/Destroy(force)
+	custom_resources = null
+	return ..()
+
+/datum/cyberpunk_faction_resources/proc/get_resource(resource_key)
+	switch(resource_key)
+		if("influence")
+			return influence
+		if("funds")
+			return funds
+		if("manpower")
+			return manpower
+		if("supplies")
+			return supplies
+	return custom_resources?[resource_key] || 0
+
+/datum/cyberpunk_faction_resources/proc/add_resource(resource_key, amount)
+	amount = round(amount || 0)
+	if(!amount)
+		return get_resource(resource_key)
+	switch(resource_key)
+		if("influence")
+			influence = max(influence + amount, 0)
+			return influence
+		if("funds")
+			funds = max(funds + amount, 0)
+			return funds
+		if("manpower")
+			manpower = max(manpower + amount, 0)
+			return manpower
+		if("supplies")
+			supplies = max(supplies + amount, 0)
+			return supplies
+	custom_resources[resource_key] = max((custom_resources[resource_key] || 0) + amount, 0)
+	return custom_resources[resource_key]
+
+/datum/cyberpunk_faction_resources/proc/can_afford(list/costs)
+	if(!length(costs))
+		return TRUE
+	for(var/resource_key in costs)
+		if(get_resource(resource_key) < (costs[resource_key] || 0))
+			return FALSE
+	return TRUE
+
+/datum/cyberpunk_faction_resources/proc/spend_resources(list/costs)
+	if(!can_afford(costs))
+		return FALSE
+	for(var/resource_key in costs)
+		add_resource(resource_key, -(costs[resource_key] || 0))
+	return TRUE
+
+/datum/cyberpunk_faction_resources/proc/to_snapshot()
+	return list(
+		"name" = name,
+		"influence" = influence,
+		"funds" = funds,
+		"manpower" = manpower,
+		"supplies" = supplies,
+		"custom" = custom_resources.Copy(),
+		"total" = influence + funds + manpower + supplies,
+	)
+
 //A barebones antagonist team.
 /datum/team
 	///Name of the entire Team
@@ -15,9 +96,12 @@ GLOBAL_LIST_EMPTY(antagonist_teams)
 	var/list/datum/objective/objectives = list()
 	///List of players in a team, mainly used to make sure someone cant spawn ghost roll more then once in a row
 	var/list/players_spawned = list()
+	/// CP13 round-local faction resource pool used by storyteller and later antag spending hooks.
+	var/datum/cyberpunk_faction_resources/cyberpunk_faction_resources
 
 /datum/team/New(starting_members)
 	. = ..()
+	cyberpunk_faction_resources = new(name)
 	GLOB.antagonist_teams += src
 	if(starting_members)
 		if(islist(starting_members))
@@ -28,9 +112,15 @@ GLOBAL_LIST_EMPTY(antagonist_teams)
 
 /datum/team/Destroy(force)
 	GLOB.antagonist_teams -= src
+	QDEL_NULL(cyberpunk_faction_resources)
 	members = null
 	objectives = null
 	return ..()
+
+/datum/team/proc/get_cyberpunk_faction_resources()
+	if(!cyberpunk_faction_resources)
+		cyberpunk_faction_resources = new(name)
+	return cyberpunk_faction_resources
 
 /datum/team/proc/add_member(datum/mind/new_member)
 	members |= new_member

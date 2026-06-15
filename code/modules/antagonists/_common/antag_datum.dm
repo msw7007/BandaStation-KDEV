@@ -69,8 +69,11 @@ GLOBAL_LIST_EMPTY(antagonists)
 
 	/// A weakref to the HUD shown to teammates, created by `add_team_hud`
 	var/datum/weakref/team_hud_ref
+	/// CP13 fallback round-local resource pool for solo antagonist/faction spending.
+	var/datum/cyberpunk_faction_resources/cyberpunk_faction_resources
 
 /datum/antagonist/New()
+	cyberpunk_faction_resources = new(name)
 	GLOB.antagonists += src
 
 /datum/antagonist/Destroy()
@@ -78,8 +81,17 @@ GLOBAL_LIST_EMPTY(antagonists)
 	if(owner)
 		LAZYREMOVE(owner.antag_datums, src)
 	QDEL_NULL(team_hud_ref)
+	QDEL_NULL(cyberpunk_faction_resources)
 	owner = null
 	return ..()
+
+/datum/antagonist/proc/get_cyberpunk_faction_resources()
+	var/datum/team/team = get_team()
+	if(team)
+		return team.get_cyberpunk_faction_resources()
+	if(!cyberpunk_faction_resources)
+		cyberpunk_faction_resources = new(name)
+	return cyberpunk_faction_resources
 
 /datum/antagonist/Topic(href,href_list)
 	if(!check_rights(R_ADMIN))
