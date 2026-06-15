@@ -175,7 +175,7 @@
 
 /proc/cyberpunk_find_security_delivery_turf()
 	for(var/area/security_area as anything in GLOB.areas)
-		if(!istype(security_area, /area/station/security))
+		if(!istype(security_area, /area/cyberpunk_city/security))
 			continue
 		for(var/turf/security_turf as anything in cyberpunk_area_turfs(security_area))
 			if(security_turf && !isclosedturf(security_turf) && !isspaceturf(security_turf))
