@@ -4,6 +4,7 @@
 	var/cyberpunk_corporate_vendor_id
 	var/cyberpunk_corporate_vendor_sales = 0
 	var/cyberpunk_corporate_vendor_revenue = 0
+	var/corp_manufacturer
 
 /obj/machinery/vending/proc/has_corporate_vending_module()
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
@@ -16,7 +17,7 @@
 	if(!corporation_id)
 		return FALSE
 	cyberpunk_corporate_vendor_id = corporation_id
-	vars["corp_manufacturer"] = manufacturer
+	corp_manufacturer = manufacturer
 	SScyberpunk_corporations.register_cyberpunk_corporate_vendor(src, corporation_id, user)
 	return TRUE
 
@@ -42,7 +43,7 @@
 		"z" = z,
 		"sales" = cyberpunk_corporate_vendor_sales,
 		"revenue" = cyberpunk_corporate_vendor_revenue,
-		"manufacturer" = vars["corp_manufacturer"],
+		"manufacturer" = corp_manufacturer,
 	)
 
 /obj/machinery/vending/cyberpunk_corporate
@@ -55,7 +56,12 @@
 /obj/machinery/vending/cyberpunk_corporate/Initialize(mapload)
 	. = ..()
 	if(!has_corporate_vending_module())
-		install_cyberpunk_module(new preloaded_module_type, null, FALSE)
+		var/datum/cyberpunk_machine_module/module = new preloaded_module_type
+		if(can_install_cyberpunk_module(module, null))
+			LAZYADD(cyberpunk_machine_modules, module)
+			module.on_install(src, null)
+		else
+			qdel(module)
 	set_cyberpunk_corporate_vendor(preloaded_corporate_manufacturer)
 
 /obj/machinery/vending/cyberpunk_corporate/benn
@@ -122,4 +128,3 @@
 			vendor_data["lastProduct"] = sales["lastProduct"]
 		vendors += list(vendor_data)
 	return vendors
-

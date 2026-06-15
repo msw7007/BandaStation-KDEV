@@ -642,10 +642,13 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	console.ui_interact(src)
 
 /mob/living/verb/cyberpunk_issue_city_ai_order()
-	set name = "Issue AI Debug Order"
-	set desc = "Open the AI debug command panel."
+	set name = "Test Starlight Beacon"
+	set desc = "Create and activate a Starlight delivery beacon for testing."
 	set category = "IC"
-	cyberpunk_city_ai_panel()
+
+	var/obj/item/cyberpunk_delivery_beacon/beacon = new(get_turf(src))
+	put_in_hands(beacon)
+	beacon.open_cyberpunk_delivery_menu(src)
 
 /proc/cyberpunk_report_city_violence(atom/threat, atom/location, safe_zone = FALSE, level = null)
 	if(!threat)

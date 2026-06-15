@@ -10,3 +10,21 @@
 		plane_master.show_to(client.mob)
 	for(var/atom/movable/screen/plane_master/plane_master as anything in client.mob?.hud_used?.get_true_plane_masters(RUNECHAT_PLANE))
 		plane_master.show_to(client.mob)
+
+/// How intense ambient occlusion is when enabled.
+/datum/preference/numeric/ambient_occlusion_strength
+	category = PREFERENCE_CATEGORY_GAME_PREFERENCES
+	savefile_key = "ambient_occlusion_strength"
+	savefile_identifier = PREFERENCE_PLAYER
+
+	minimum = 1
+	maximum = 10
+
+/datum/preference/numeric/ambient_occlusion_strength/create_default_value()
+	return 10
+
+/datum/preference/numeric/ambient_occlusion_strength/apply_to_client(client/client, value)
+	for(var/atom/movable/screen/plane_master/plane_master as anything in client.mob?.hud_used?.get_true_plane_masters(RENDER_PLANE_GAME_WORLD))
+		plane_master.show_to(client.mob)
+	for(var/atom/movable/screen/plane_master/plane_master as anything in client.mob?.hud_used?.get_true_plane_masters(RUNECHAT_PLANE))
+		plane_master.show_to(client.mob)

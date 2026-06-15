@@ -15,7 +15,7 @@
 	for(var/obj/machinery/rnd/production/fabricator as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/rnd/production))
 		if(cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(fabricator)) != corporation_id)
 			continue
-		fabricator.update_designs()
+		fabricator.refresh_designs()
 
 /datum/design/proc/get_cyberpunk_technology_search_text()
 	var/search_text = lowertext("[id] [name] [desc] [build_path]")

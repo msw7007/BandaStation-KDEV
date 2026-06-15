@@ -124,6 +124,9 @@
 
 	update_static_data_for_all_viewers()
 
+/obj/machinery/rnd/production/proc/refresh_designs()
+	update_designs()
+
 /obj/machinery/rnd/production/proc/on_techweb_update()
 	SIGNAL_HANDLER
 

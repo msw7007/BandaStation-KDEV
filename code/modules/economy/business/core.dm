@@ -37,6 +37,7 @@
 	var/list/history = list()
 
 /datum/cyberpunk_business/proc/get_account()
+	RETURN_TYPE(/datum/bank_account)
 	return SSeconomy.bank_accounts_by_id["[account_id]"]
 
 /datum/cyberpunk_business/proc/user_key(mob/living/user)

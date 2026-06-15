@@ -144,12 +144,12 @@
 			qdel(cloud)
 	amount *= 0.2
 	var/area/A = T.loc
-	if(isarea(A) && (!length(filter_gases) || /datum/gas/oxygen in filter_gases))
+	if(isarea(A) && (!length(filter_gases) || (/datum/gas/oxygen in filter_gases)))
 		var/taken_o2 = A.consume_oxygen(min(A.oxygen_level, amount * 0.001))
 		if(taken_o2 > 0)
 			target.adjust_gas(/datum/gas/oxygen, taken_o2 / AREA_AIR_O2_PER_BREATH)
 			transferred = TRUE
-	if(isarea(A) && (!length(filter_gases) || /datum/gas/carbon_dioxide in filter_gases))
+	if(isarea(A) && (!length(filter_gases) || (/datum/gas/carbon_dioxide in filter_gases)))
 		var/taken_co2 = min(A.co2_level, amount * 0.001)
 		if(taken_co2 > 0)
 			A.scrub_co2(taken_co2)
@@ -158,6 +158,7 @@
 	return transferred
 
 /proc/lightweight_atmos_scan_gasmix(atom/target)
+	RETURN_TYPE(/datum/gas_mixture)
 	var/turf/T = get_turf(target)
 	if(!T)
 		return null

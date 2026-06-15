@@ -60,7 +60,12 @@
 		return
 	remove_filter("AO")
 	if(istype(mymob) && mymob.canon_client?.prefs?.read_preference(/datum/preference/toggle/ambient_occlusion))
-		add_filter("AO", 1, drop_shadow_filter(x = 0, y = -2, size = 4, color = "#04080FAA"))
+		var/ao_strength = mymob.canon_client.prefs.read_preference(/datum/preference/numeric/ambient_occlusion_strength)
+		if(isnull(ao_strength))
+			ao_strength = 3
+		if(ao_strength > 0)
+			var/ao_alpha = clamp(65 + ao_strength * 14, 0, 205)
+			add_filter("AO", 1, drop_shadow_filter(x = 0, y = -2, size = 1 + round(ao_strength * 0.8), color = rgb(4, 8, 15, ao_alpha)))
 
 /atom/movable/screen/plane_master/rendering_plate/unlit_game_plate
 	name = "Unlit Game rendering plate"
@@ -144,6 +149,23 @@
 	// 0 disables the bloom
 	if (bloom_scale)
 		add_filter("emissive_bloom", 2, bloom_filter(threshold = COLOR_BLACK, size = bloom_scale, offset = ceil(bloom_scale / 2)))
+	update_light_glare(hud_owner?.mymob)
+
+/atom/movable/screen/plane_master/rendering_plate/emissive_bloom/proc/update_light_glare(mob/mymob)
+	remove_filter("cp13_light_glare")
+	if(!istype(mymob))
+		return
+
+	var/glare_strength = mymob.canon_client?.prefs?.read_preference(/datum/preference/numeric/light_glare)
+	if(isnull(glare_strength))
+		glare_strength = 2
+	if(glare_strength <= 0)
+		return
+
+	var/glare_size = 3 + round(glare_strength * 1.2)
+	var/glare_offset = max(1, ceil(glare_size / 3))
+	var/glare_alpha = clamp(35 + glare_strength * 8, 0, 125)
+	add_filter("cp13_light_glare", 3, bloom_filter(threshold = COLOR_BLACK, size = glare_size, offset = glare_offset, alpha = glare_alpha))
 
 /atom/movable/screen/plane_master/rendering_plate/specular_mask
 	name = "Specular mask plate"

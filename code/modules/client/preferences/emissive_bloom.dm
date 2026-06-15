@@ -26,3 +26,23 @@
 			bloom.modify_filter("emissive_bloom", list("size" = value, "offset" = ceil(value / 2)))
 		else
 			bloom.remove_filter("emissive_bloom")
+
+/// Additional soft glare applied over emissive bloom. This creates the Paradise-like haze around lit objects.
+/datum/preference/numeric/light_glare
+	category = PREFERENCE_CATEGORY_GAME_PREFERENCES
+	savefile_key = "light_glare"
+	savefile_identifier = PREFERENCE_PLAYER
+
+	minimum = 1
+	maximum = 10
+
+/datum/preference/numeric/light_glare/create_default_value()
+	return 10
+
+/datum/preference/numeric/light_glare/apply_to_client(client/client, value)
+	var/datum/hud/my_hud = client.mob?.hud_used
+	if(!my_hud)
+		return
+
+	for(var/atom/movable/screen/plane_master/rendering_plate/emissive_bloom/bloom as anything in my_hud.get_true_plane_masters(RENDER_PLANE_EMISSIVE_BLOOM))
+		bloom.update_light_glare(client.mob)

@@ -125,6 +125,7 @@
 	return account
 
 /datum/cyberpunk_corporation/proc/get_account()
+	RETURN_TYPE(/datum/bank_account)
 	return SSeconomy.bank_accounts_by_id["[account_id]"]
 
 /datum/cyberpunk_corporation/proc/add_history(message)
