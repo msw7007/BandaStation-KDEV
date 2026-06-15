@@ -1,6 +1,7 @@
 /turf/closed
 	layer = CLOSED_TURF_LAYER
 	plane = WALL_PLANE
+	appearance_flags = LONG_GLIDE
 	abstract_type = /turf/closed
 	turf_flags = IS_SOLID
 	opacity = TRUE
@@ -9,6 +10,8 @@
 	init_air = FALSE
 	rad_insulation = RAD_MEDIUM_INSULATION
 	pass_flags_self = PASSCLOSEDTURF
+	/// Suffix used by diagonal bitmask smoothing states.
+	var/diagonal_smoothing_suffix = "diagonal"
 
 /turf/closed/AfterChange()
 	. = ..()

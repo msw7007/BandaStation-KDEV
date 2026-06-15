@@ -1,7 +1,7 @@
 /turf/closed/wall/mineral/cult
 	name = "runed metal wall"
 	desc = "A cold metal wall engraved with indecipherable symbols. Studying them causes your head to pound."
-	icon = 'icons/turf/walls/cult_wall.dmi'
+	icon = 'icons/turf/walls/32x40cult_wall.dmi'
 	icon_state = "cult_wall-0"
 	base_icon_state = "cult_wall"
 	turf_flags = IS_SOLID
@@ -76,7 +76,7 @@
 /turf/closed/wall/mineral/bronze
 	name = "clockwork wall"
 	desc = "A huge chunk of bronze, decorated like gears and cogs."
-	icon = 'icons/turf/walls/clockwork_wall.dmi'
+	icon = 'icons/turf/walls/32x40clockwork_wall.dmi'
 	icon_state = "clockwork_wall-0"
 	base_icon_state = "clockwork_wall"
 	turf_flags = IS_SOLID
@@ -128,7 +128,7 @@
 /turf/closed/wall/tomb
 	name = "tomb wall"
 	desc = "The carved surface of a dusty tomb. It's not clear who built this."
-	icon = 'icons/turf/walls/boss_wall.dmi'
+	icon = 'icons/turf/walls/32x40boss_wall.dmi'
 	icon_state = "boss_wall-0"
 	base_icon_state = "boss_wall"
 	smoothing_flags = SMOOTH_BITMASK

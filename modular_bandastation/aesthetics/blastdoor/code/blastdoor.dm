@@ -1,3 +1,3 @@
 /obj/machinery/door/poddoor
-	icon = 'modular_bandastation/aesthetics/blastdoor/icons/blastdoor.dmi'
+	icon = 'icons/obj/doors/blastdoor.dmi'
 	animation_sound = 'modular_bandastation/aesthetics/blastdoor/sound/blastdoor.ogg'

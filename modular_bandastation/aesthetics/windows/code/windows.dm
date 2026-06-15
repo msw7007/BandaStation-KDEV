@@ -4,10 +4,14 @@
 #define EDGE_OVERLAY_COLOR "#4f4f4f"
 
 // MARK: Windows
+/obj/structure/grille
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
+
 /obj/structure/window
-	icon = 'modular_bandastation/aesthetics/windows/icons/directional.dmi'
+	icon = 'icons/obj/structures_paradise.dmi'
 	icon_state = "window"
-	color = WINDOW_COLOR
+	color = null
 	layer = ABOVE_WINDOW_LAYER + 0.05
 	/// Used to define what file the edging sprite is contained within
 	var/edge_overlay_file
@@ -25,30 +29,30 @@
 	. += edge_overlay
 
 /obj/structure/window/reinforced
-	icon_state = "r_window"
+	icon_state = "rwindow"
 
 /obj/structure/window/reinforced/tinted
-	icon_state = "r_window"
-	color = TINTED_WINDOW_COLOR
+	icon_state = "twindow"
+	color = null
 
 /obj/structure/window/reinforced/tinted/frosted
-	icon_state = "r_window"
+	icon_state = "twindow"
 
 /obj/structure/window/reinforced/tinted/Initialize(mapload, direct)
 	. = ..()
 	flags_1 |= UNPAINTABLE_1
 
 /obj/structure/window/plasma
-	icon_state = "window"
-	color = PLASMA_WINDOW_COLOR
+	icon_state = "plasmawindow"
+	color = null
 
 /obj/structure/window/plasma/Initialize(mapload, direct)
 	. = ..()
 	flags_1 |= UNPAINTABLE_1
 
 /obj/structure/window/reinforced/plasma
-	icon_state = "r_window"
-	color = PLASMA_WINDOW_COLOR
+	icon_state = "plasmarwindow"
+	color = null
 
 /obj/structure/window/reinforced/plasma/Initialize(mapload, direct)
 	. = ..()
@@ -62,13 +66,36 @@
 	color = null
 
 /obj/structure/window/reinforced/shuttle
+	icon = 'icons/obj/smooth_structures/windows/32x40shuttle_window.dmi'
+	icon_state = "shuttle_window-0"
+	base_icon_state = "shuttle_window"
 	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
+
+/obj/structure/window/reinforced/shuttle/survival_pod
+	icon = 'icons/obj/smooth_structures/windows/32x40pod_window.dmi'
+	icon_state = "pod_window-0"
+	base_icon_state = "pod_window"
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/reinforced/survival_pod
+	icon = 'icons/obj/smooth_structures/windows/32x40pod_window.dmi'
+	icon_state = "pod_window-0"
+	base_icon_state = "pod_window"
 	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/reinforced/plasma/plastitanium
+	icon = 'icons/obj/smooth_structures/windows/32x40plastitanium_window.dmi'
+	icon_state = "plastitanium_window-0"
+	base_icon_state = "plastitanium_window"
 	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /**
  * Рамки окон но как отдельный объект.
@@ -78,55 +105,65 @@
  */
 /obj/structure/window/fulltile/frame
 	name = "DONT USE THIS"
-	icon = 'icons/bandastation/windows/window_edges.dmi'
+	icon = 'icons/obj/smooth_structures/windows/window_edges.dmi'
 	icon_state = "edge-0"
 	base_icon_state = "edge"
 	color = EDGE_OVERLAY_COLOR
 
 /obj/structure/window/reinforced/fulltile/frame
 	name = "DONT USE THIS"
-	icon = 'icons/bandastation/windows/reinforced_window_edges.dmi'
+	icon = 'icons/obj/smooth_structures/windows/reinforced_window_edges.dmi'
 	icon_state = "edge-0"
 	base_icon_state = "edge"
 	color = EDGE_OVERLAY_COLOR
 
 /obj/structure/window/fulltile
-	icon = 'icons/bandastation/windows/window.dmi'
-	edge_overlay_file = 'icons/bandastation/windows/window_edges.dmi'
+	icon = 'icons/obj/smooth_structures/windows/32x40window.dmi'
+	edge_overlay_file = null
 	icon_state = "window-0"
 	base_icon_state = "window"
-	color = WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/reinforced/fulltile
-	icon = 'icons/bandastation/windows/reinforced_window.dmi'
-	edge_overlay_file = 'icons/bandastation/windows/reinforced_window_edges.dmi'
+	icon = 'icons/obj/smooth_structures/windows/32x40reinforced_window.dmi'
+	edge_overlay_file = null
 	icon_state = "reinforced_window-0"
 	base_icon_state = "reinforced_window"
-	color = WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/reinforced/tinted/fulltile
-	icon = 'icons/bandastation/windows/reinforced_window.dmi'
-	edge_overlay_file = 'icons/bandastation/windows/reinforced_window_edges.dmi'
-	icon_state = "reinforced_window-0"
-	base_icon_state = "reinforced_window"
+	icon = 'icons/obj/smooth_structures/windows/32x40tinted_window.dmi'
+	edge_overlay_file = null
+	icon_state = "tinted_window-0"
+	base_icon_state = "tinted_window"
 	flags_1 = UNPAINTABLE_1
-	color = TINTED_WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/plasma/fulltile
-	icon = 'icons/bandastation/windows/window.dmi'
-	edge_overlay_file = 'icons/bandastation/windows/window_edges.dmi'
-	icon_state = "window-0"
-	base_icon_state = "window"
+	icon = 'icons/obj/smooth_structures/windows/32x40plasma_window.dmi'
+	edge_overlay_file = null
+	icon_state = "plasma_window-0"
+	base_icon_state = "plasma_window"
 	flags_1 = UNPAINTABLE_1
-	color = PLASMA_WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/reinforced/plasma/fulltile
-	icon = 'icons/bandastation/windows/reinforced_window.dmi'
-	edge_overlay_file = 'icons/bandastation/windows/reinforced_window_edges.dmi'
-	icon_state = "reinforced_window-0"
-	base_icon_state = "reinforced_window"
+	icon = 'icons/obj/smooth_structures/windows/32x40rplasma_window.dmi'
+	edge_overlay_file = null
+	icon_state = "rplasma_window-0"
+	base_icon_state = "rplasma_window"
 	flags_1 = UNPAINTABLE_1
-	color = PLASMA_WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /obj/structure/window/reinforced/fulltile/ice
 	edge_overlay_file = null
@@ -174,12 +211,14 @@
 
 // MARK: Indestructible windows
 /turf/closed/indestructible/fakeglass
-	icon = 'icons/bandastation/windows/reinforced_window.dmi'
+	icon = 'icons/obj/smooth_structures/windows/32x40reinforced_window.dmi'
 	icon_state = "reinforced_window-0"
 	base_icon_state = "reinforced_window"
-	color = WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 	/// Used to define what file the edging sprite is contained within
-	var/edge_overlay_file = 'icons/bandastation/windows/reinforced_window_edges.dmi'
+	var/edge_overlay_file
 	/// Tracks the edging appearence sprite
 	var/mutable_appearance/edge_overlay
 
@@ -200,15 +239,27 @@
 	. += edge_overlay
 
 /turf/closed/indestructible/fakeglass/plasma
+	icon = 'icons/obj/smooth_structures/windows/32x40rplasma_window.dmi'
+	icon_state = "rplasma_window-0"
+	base_icon_state = "rplasma_window"
 	flags_1 = UNPAINTABLE_1
-	color = PLASMA_WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /turf/closed/indestructible/fakeglass/unreinforced
-	icon = 'icons/bandastation/windows/window.dmi'
-	edge_overlay_file = 'icons/bandastation/windows/window_edges.dmi'
+	icon = 'icons/obj/smooth_structures/windows/32x40window.dmi'
+	edge_overlay_file = null
 	icon_state = "window-0"
 	base_icon_state = "window"
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER
 
 /turf/closed/indestructible/fakeglass/unreinforced/plasma
+	icon = 'icons/obj/smooth_structures/windows/32x40plasma_window.dmi'
+	icon_state = "plasma_window-0"
+	base_icon_state = "plasma_window"
 	flags_1 = UNPAINTABLE_1
-	color = PLASMA_WINDOW_COLOR
+	color = null
+	plane = WALL_PLANE
+	layer = BELOW_CLOSED_TURF_LAYER

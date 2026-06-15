@@ -390,11 +390,11 @@
 /obj/structure/bed/double/post_buckle_mob(mob/living/target)
 	. = ..()
 	if(buckled_mobs.len > 1 && !goldilocks) // Push the second buckled mob a bit higher from the normal lying position
-		target.pixel_y += 6
+		target.add_offsets(type, y_add = 6)
 		goldilocks = target
 
 /obj/structure/bed/double/post_unbuckle_mob(mob/living/target)
 	. = ..()
 	if(target == goldilocks)
-		target.pixel_y -= 6
+		target.remove_offsets(type)
 		goldilocks = null

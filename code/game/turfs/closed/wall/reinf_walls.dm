@@ -1,7 +1,7 @@
 /turf/closed/wall/r_wall
 	name = "reinforced wall"
 	desc = "Массивный блок укреплённого металла, используемый для разделения отсеков."
-	icon = 'icons/turf/walls/reinforced_wall.dmi'
+	icon = 'icons/turf/walls/32x40reinforced_wall.dmi'
 	icon_state = "reinforced_wall-0"
 	base_icon_state = "reinforced_wall"
 	opacity = TRUE
@@ -207,7 +207,7 @@
 		icon = 'modular_bandastation/aesthetics/walls/icons/reinforced_states.dmi' // BANDASTATION EDIT - AESTHETICS
 		icon_state = "[base_decon_state]-[d_state]"
 	else
-		icon = 'icons/bandastation/walls/reinforced_wall.dmi' // BANDASTATION EDIT - AESTHETICS
+		icon = 'icons/turf/walls/32x40reinforced_wall.dmi' // BANDASTATION EDIT - AESTHETICS
 		icon_state = "[base_icon_state]-[smoothing_junction]"
 	return ..()
 
@@ -238,9 +238,10 @@
 /turf/closed/wall/r_wall/plastitanium
 	name = /turf/closed/wall/mineral/plastitanium::name
 	desc = "Особо прочная стена из сплава плазмы и титана, укреплённая пласталевыми стержнями."
-	icon = 'icons/turf/walls/plastitanium_wall.dmi'
+	icon = 'icons/turf/walls/32x40plastitanium_wall.dmi'
 	icon_state = "plastitanium_wall-0"
 	base_icon_state = "plastitanium_wall"
+	diagonal_smoothing_suffix = "d"
 	sheet_type = /obj/item/stack/sheet/mineral/plastitanium
 	hardness = 25 //plastitanium
 	turf_flags = IS_SOLID
@@ -250,12 +251,12 @@
 	rust_resistance = RUST_RESISTANCE_TITANIUM
 
 /turf/closed/wall/r_wall/plastitanium/nodiagonal
-	icon = MAP_SWITCH('icons/turf/walls/plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
+	icon = MAP_SWITCH('icons/turf/walls/32x40plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
 	icon_state = MAP_SWITCH("plastitanium_wall-0", "plastitanium_nd")
 	smoothing_flags = SMOOTH_BITMASK
 
 /turf/closed/wall/r_wall/plastitanium/overspace
-	icon = MAP_SWITCH('icons/turf/walls/plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
+	icon = MAP_SWITCH('icons/turf/walls/32x40plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
 	icon_state = MAP_SWITCH("plastitanium_wall-0", "plastitanium_overspace")
 	fixed_underlay = list("space" = TRUE)
 
@@ -268,11 +269,11 @@
 	return FALSE
 
 /turf/closed/wall/r_wall/plastitanium/syndicate/nodiagonal
-	icon = MAP_SWITCH('icons/turf/walls/plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
+	icon = MAP_SWITCH('icons/turf/walls/32x40plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
 	icon_state = MAP_SWITCH("plastitanium_wall-0", "plastitanium_nd")
 	smoothing_flags = SMOOTH_BITMASK
 
 /turf/closed/wall/r_wall/plastitanium/syndicate/overspace
-	icon = MAP_SWITCH('icons/turf/walls/plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
+	icon = MAP_SWITCH('icons/turf/walls/32x40plastitanium_wall.dmi', 'icons/turf/walls/misc_wall.dmi')
 	icon_state = MAP_SWITCH("plastitanium_wall-0", "plastitanium_overspace")
 	fixed_underlay = list("space" = TRUE)

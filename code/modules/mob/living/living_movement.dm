@@ -578,8 +578,7 @@
 
 /mob/living/proc/clear_vertical_anchor()
 	if(vertical_anchor_pixel_x || vertical_anchor_pixel_y)
-		pixel_x -= vertical_anchor_pixel_x
-		pixel_y -= vertical_anchor_pixel_y
+		remove_offsets(VERTICAL_STATE_TRAIT)
 		vertical_anchor_pixel_x = 0
 		vertical_anchor_pixel_y = 0
 	vertical_anchor_turf = null
@@ -642,8 +641,7 @@
 		new_pixel_y = -8
 	vertical_anchor_pixel_x = new_pixel_x
 	vertical_anchor_pixel_y = new_pixel_y
-	pixel_x += vertical_anchor_pixel_x
-	pixel_y += vertical_anchor_pixel_y
+	add_offsets(VERTICAL_STATE_TRAIT, x_add = vertical_anchor_pixel_x, y_add = vertical_anchor_pixel_y)
 
 /mob/living/proc/can_vertical_anchor_move(direction)
 	if(vertical_state != VERTICAL_STATE_HANGING && vertical_state != VERTICAL_STATE_CLIMBING)

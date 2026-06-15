@@ -1,13 +1,25 @@
 /obj/machinery/door/airlock
-	icon = 'modular_bandastation/aesthetics/airlocks/icons/station/public.dmi'
-	overlays_file = 'modular_bandastation/aesthetics/airlocks/icons/station/overlays.dmi'
-	note_overlay_file = 'modular_bandastation/aesthetics/airlocks/icons/station/overlays.dmi'
-
 	doorOpen = 'modular_bandastation/aesthetics/airlocks/sound/open.ogg'
 	doorClose = 'modular_bandastation/aesthetics/airlocks/sound/close.ogg'
 	boltUp = 'modular_bandastation/aesthetics/airlocks/sound/bolts_up.ogg'
 	boltDown = 'modular_bandastation/aesthetics/airlocks/sound/bolts_down.ogg'
-	var/has_open_lights = TRUE
+	var/has_open_lights = FALSE
+
+/obj/machinery/door/airlock/Initialize(mapload)
+	if(mapload)
+		normalize_mapload_dir()
+	return ..()
+
+/obj/machinery/door/airlock/proc/normalize_mapload_dir()
+	var/north_south_passable = is_adjacent_turf_passable(NORTH) && is_adjacent_turf_passable(SOUTH)
+	var/east_west_passable = is_adjacent_turf_passable(EAST) && is_adjacent_turf_passable(WEST)
+	if(north_south_passable == east_west_passable)
+		return
+	setDir(north_south_passable ? SOUTH : EAST)
+
+/obj/machinery/door/airlock/proc/is_adjacent_turf_passable(direction)
+	var/turf/adjacent_turf = get_step(src, direction)
+	return adjacent_turf && !adjacent_turf.density
 
 /obj/machinery/door/airlock/update_overlays()
 	. = ..()

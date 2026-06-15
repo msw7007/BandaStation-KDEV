@@ -989,7 +989,7 @@
 	reinforced = TRUE
 
 /obj/structure/firelock_frame/border_only
-	icon = 'icons/obj/doors/edge_Doorfire.dmi'
+	icon = 'icons/obj/doors/doorfire.dmi'
 	flags_1 = ON_BORDER_1
 	obj_flags = CAN_BE_HIT | IGNORE_DENSITY
 	directional = TRUE
