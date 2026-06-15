@@ -4,6 +4,7 @@
 	boltUp = 'modular_bandastation/aesthetics/airlocks/sound/bolts_up.ogg'
 	boltDown = 'modular_bandastation/aesthetics/airlocks/sound/bolts_down.ogg'
 	var/has_open_lights = FALSE
+	var/mapload_dir_follows_passage = FALSE
 
 /obj/machinery/door/airlock/Initialize(mapload)
 	if(mapload)
@@ -15,11 +16,20 @@
 	var/east_west_passable = is_adjacent_turf_passable(EAST) && is_adjacent_turf_passable(WEST)
 	if(north_south_passable == east_west_passable)
 		return
-	setDir(north_south_passable ? SOUTH : EAST)
+	if(mapload_dir_follows_passage)
+		setDir(north_south_passable ? SOUTH : EAST)
+	else
+		setDir(north_south_passable ? EAST : SOUTH)
 
 /obj/machinery/door/airlock/proc/is_adjacent_turf_passable(direction)
 	var/turf/adjacent_turf = get_step(src, direction)
-	return adjacent_turf && !adjacent_turf.density
+	return adjacent_turf && !adjacent_turf.is_blocked_turf(exclude_mobs = TRUE, source_atom = src, ignore_atoms = list(src))
+
+/obj/machinery/door/airlock/external
+	mapload_dir_follows_passage = TRUE
+
+/obj/machinery/door/airlock/shuttle
+	mapload_dir_follows_passage = TRUE
 
 /obj/machinery/door/airlock/update_overlays()
 	. = ..()
