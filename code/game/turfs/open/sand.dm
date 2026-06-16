@@ -60,6 +60,14 @@
 	if(prob(15))
 		icon_state = "sand[rand(1,4)]"
 
+/turf/open/misc/beach/sand/attackby(obj/item/attack_item, mob/user, list/modifiers)
+	. = ..()
+	if(.)
+		return TRUE
+	if(attack_item.tool_behaviour != TOOL_SHOVEL)
+		return
+	return dig_down_to_mineral(user, attack_item)
+
 /turf/open/misc/beach/coast
 	name = "coastline"
 	desc = "Tide's high tonight. Charge your batons."
@@ -109,6 +117,14 @@
 
 /turf/open/misc/sandy_dirt/broken_states()
 	return list("sand_damaged")
+
+/turf/open/misc/sandy_dirt/attackby(obj/item/attack_item, mob/user, list/modifiers)
+	. = ..()
+	if(.)
+		return TRUE
+	if(attack_item.tool_behaviour != TOOL_SHOVEL)
+		return
+	return dig_down_to_mineral(user, attack_item)
 
 /turf/open/misc/ironsand
 	gender = PLURAL

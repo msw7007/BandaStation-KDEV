@@ -36,6 +36,8 @@
 	VAR_PRIVATE/footprint_entrance_dirs = NONE
 	/// All dirs from which footprints have exited this turf
 	VAR_PRIVATE/footprint_exit_dirs = NONE
+	/// Whether this turf has already been loosened for a downward shovel shaft.
+	var/cyberpunk_dig_down_prepared = FALSE
 
 /// Returns a list of every turf state considered "broken".
 /// Will be randomly chosen if a turf breaks at runtime.
@@ -185,6 +187,64 @@
 /turf/open/proc/CanBuildHere()
 	if(destination_z)
 		return FALSE
+	return TRUE
+
+/turf/open/proc/can_dig_down_to_mineral()
+	var/turf/below = GET_TURF_BELOW(src)
+	return ismineralturf(below)
+
+/turf/open/proc/dig_down_to_mineral(mob/user, obj/item/digging_tool, dig_time = 5 SECONDS)
+	if(!digging_tool || digging_tool.tool_behaviour != TOOL_SHOVEL)
+		return FALSE
+	if(!user || !isturf(user.loc))
+		return TRUE
+	if(isgroundlessturf(src))
+		balloon_alert(user, "already open!")
+		return TRUE
+
+	var/turf/below = GET_TURF_BELOW(src)
+	if(!below)
+		balloon_alert(user, "nothing below!")
+		return TRUE
+	if(!ismineralturf(below))
+		balloon_alert(user, "no rock below!")
+		return TRUE
+
+	if(!cyberpunk_dig_down_prepared)
+		return prepare_dig_down_to_mineral(user, digging_tool, dig_time)
+
+	balloon_alert(user, "digging down...")
+	if(!digging_tool.use_tool(src, user, dig_time, volume = 50))
+		return TRUE
+
+	below = GET_TURF_BELOW(src)
+	if(!ismineralturf(below))
+		balloon_alert(user, "rock shifted!")
+		return TRUE
+
+	user.visible_message(
+		span_notice("[user] digs a shaft through [src]."),
+		span_notice("You dig a shaft through [src]."),
+	)
+	playsound(src, 'sound/effects/shovel_dig.ogg', 50, TRUE)
+	ChangeTurf(/turf/open/openspace, flags = CHANGETURF_INHERIT_AIR)
+	return TRUE
+
+/turf/open/proc/prepare_dig_down_to_mineral(mob/user, obj/item/digging_tool, dig_time = 4 SECONDS)
+	balloon_alert(user, "loosening ground...")
+	if(!digging_tool.use_tool(src, user, dig_time, volume = 50))
+		return TRUE
+	if(!can_dig_down_to_mineral())
+		balloon_alert(user, "rock shifted!")
+		return TRUE
+
+	cyberpunk_dig_down_prepared = TRUE
+	add_overlay(mutable_appearance('icons/turf/floors.dmi', "asteroid_dug"))
+	user.visible_message(
+		span_notice("[user] loosens [src]."),
+		span_notice("You loosen [src]."),
+	)
+	playsound(src, 'sound/effects/shovel_dig.ogg', 50, TRUE)
 	return TRUE
 
 /turf/open/is_transition_turf()

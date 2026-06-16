@@ -17,10 +17,32 @@
 
 /turf/open/misc/snow/Initialize(mapload)
 	. = ..()
-	AddElement(/datum/element/diggable, /obj/item/stack/sheet/mineral/snow, 2)
 
 /turf/open/misc/snow/broken_states()
 	return list("snow_dug")
+
+/turf/open/misc/snow/attackby(obj/item/attack_item, mob/user, list/modifiers)
+	. = ..()
+	if(.)
+		return TRUE
+	if(attack_item.tool_behaviour != TOOL_SHOVEL)
+		return
+	if(can_dig_down_to_mineral())
+		return dig_down_to_mineral(user, attack_item)
+	return dig_snow(user)
+
+/turf/open/misc/snow/proc/dig_snow(mob/user)
+	for(var/i in 1 to 2)
+		new /obj/item/stack/sheet/mineral/snow(src)
+	if(prob(30))
+		new /obj/item/food/bait/worm(src)
+	user.visible_message(
+		span_notice("[user] digs up [src]."),
+		span_notice("You dig up [src]."),
+	)
+	playsound(src, 'sound/effects/shovel_dig.ogg', 50, TRUE)
+	ScrapeAway(flags = CHANGETURF_INHERIT_AIR)
+	return TRUE
 
 /turf/open/misc/snow/add_footprint(mob/living/carbon/human/walker, movement_direction)
 	if(HAS_TRAIT(walker, TRAIT_NO_SNOWPRINTS))

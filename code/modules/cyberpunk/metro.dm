@@ -32,10 +32,14 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	return stops
 
 /proc/cyberpunk_metro_interior_landmark(route_id)
+	var/list/interiors = list()
 	for(var/obj/effect/landmark/cyberpunk_metro_interior/interior as anything in GLOB.cyberpunk_metro_interiors)
-		if(!QDELETED(interior) && interior.route_id == route_id)
-			return interior
-	return null
+		if(QDELETED(interior) || interior.route_id != route_id)
+			continue
+		interiors += interior
+	if(!length(interiors))
+		return null
+	return pick(interiors)
 
 /proc/cyberpunk_metro_train_for_route(route_id)
 	for(var/obj/structure/cyberpunk_metro_train/train as anything in GLOB.cyberpunk_metro_trains)
@@ -294,6 +298,14 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		return
 	if(!istype(user))
 		return
+	try_exit(user)
+
+/obj/structure/cyberpunk_metro_door/Crossed(atom/movable/crossed_atom, oldloc)
+	. = ..()
+	if(isliving(crossed_atom))
+		try_exit(crossed_atom)
+
+/obj/structure/cyberpunk_metro_door/proc/try_exit(mob/living/user)
 	if(!opened)
 		user.balloon_alert(user, "doors closed")
 		return
