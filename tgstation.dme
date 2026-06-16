@@ -2275,6 +2275,7 @@
 #include "code\game\gamemodes\objective.dm"
 #include "code\game\gamemodes\objective_items.dm"
 #include "code\game\machinery\_machinery.dm"
+#include "code\modules\cyberpunk\metro.dm"
 #include "code\modules\cyberpunk\modularity\machinery\modules.dm"
 #include "code\modules\cyberpunk\modularity\machinery\designs.dm"
 #include "code\game\machinery\ai_slipper.dm"

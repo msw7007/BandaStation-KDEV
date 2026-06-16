@@ -231,6 +231,12 @@
 /area
 	/// City AI uses this to decide whether violence should trigger a broad security response.
 	var/cyberpunk_safe_zone = FALSE
+	/// CP13 world tags used by the storyteller, contracts, NPCs and map tooling.
+	var/list/cyberpunk_world_tags
+	/// Optional owner key for corporate/government territory logic.
+	var/cyberpunk_world_owner
+	/// Coarse violence response: none, weak, normal, high.
+	var/cyberpunk_violence_control = "normal"
 	/// Stable CP13 district id used by the storyteller and city systems.
 	var/cyberpunk_district_id
 	/// Display name for CP13 district analytics. Defaults to area name.
@@ -264,6 +270,7 @@
 	cyberpunk_district_name = "Cyberpunk City Street"
 	cyberpunk_district_kind = "street"
 	cyberpunk_district_base_danger = 5
+	cyberpunk_world_tags = list("road")
 
 /area/cyberpunk_city/safe
 	name = "Cyberpunk City Safe Zone"
@@ -271,6 +278,7 @@
 	cyberpunk_district_id = "safe"
 	cyberpunk_district_name = "Cyberpunk City Safe Zone"
 	cyberpunk_district_kind = "safe"
+	cyberpunk_violence_control = "high"
 
 /area/cyberpunk_city/security
 	name = "Cyberpunk City Security"
@@ -278,6 +286,9 @@
 	cyberpunk_district_id = "security"
 	cyberpunk_district_name = "Cyberpunk City Security"
 	cyberpunk_district_kind = "security"
+	cyberpunk_world_tags = list("government")
+	cyberpunk_world_owner = "government"
+	cyberpunk_violence_control = "high"
 
 /area/cyberpunk_city/wasteland
 	name = "Cyberpunk City Wasteland"
@@ -285,6 +296,7 @@
 	cyberpunk_district_name = "Wasteland"
 	cyberpunk_district_kind = "wasteland"
 	cyberpunk_district_base_danger = 20
+	cyberpunk_violence_control = "none"
 
 /area/cyberpunk_city/district
 	name = "Cyberpunk City District"
@@ -371,6 +383,102 @@
 	cyberpunk_district_index = 9
 	cyberpunk_district_direction = "se"
 	cyberpunk_district_base_danger = 12
+
+/area/cyberpunk_city/metro
+	name = "Cyberpunk City Metro"
+	cyberpunk_district_id = "metro"
+	cyberpunk_district_name = "Metro"
+	cyberpunk_district_kind = "metro"
+	cyberpunk_world_tags = list("metro", "underground")
+	cyberpunk_district_base_danger = 8
+
+/area/cyberpunk_city/road
+	name = "Cyberpunk City Road"
+	cyberpunk_district_id = "road"
+	cyberpunk_district_name = "Road"
+	cyberpunk_district_kind = "road"
+	cyberpunk_world_tags = list("road")
+	cyberpunk_district_base_danger = 6
+
+/area/cyberpunk_city/canals
+	name = "Cyberpunk City Canals"
+	cyberpunk_district_id = "canals"
+	cyberpunk_district_name = "Canals"
+	cyberpunk_district_kind = "canals"
+	cyberpunk_world_tags = list("canals", "underground")
+	cyberpunk_district_base_danger = 12
+
+/area/cyberpunk_city/warehouse
+	name = "Cyberpunk City Warehouse"
+	cyberpunk_district_id = "warehouse"
+	cyberpunk_district_name = "Warehouse"
+	cyberpunk_district_kind = "warehouse"
+	cyberpunk_world_tags = list("warehouse")
+	cyberpunk_district_base_danger = 10
+
+/area/cyberpunk_city/corporate
+	name = "Corporate Territory"
+	cyberpunk_district_id = "corporate"
+	cyberpunk_district_name = "Corporate Territory"
+	cyberpunk_district_kind = "corporate"
+	cyberpunk_world_tags = list("corporate")
+	cyberpunk_violence_control = "high"
+	cyberpunk_district_base_danger = 5
+
+/area/cyberpunk_city/corporate/benn
+	name = "Benn Territory"
+	cyberpunk_district_id = "benn"
+	cyberpunk_district_name = "Benn Territory"
+	cyberpunk_world_owner = "benn"
+
+/area/cyberpunk_city/corporate/ryaznov
+	name = "Ryaznov Territory"
+	cyberpunk_district_id = "ryaznov"
+	cyberpunk_district_name = "Ryaznov Territory"
+	cyberpunk_world_owner = "ryaznov"
+
+/area/cyberpunk_city/corporate/starlight
+	name = "Starlight Territory"
+	cyberpunk_district_id = "starlight"
+	cyberpunk_district_name = "Starlight Territory"
+	cyberpunk_world_owner = "starlight"
+
+/area/cyberpunk_city/government
+	name = "Government Territory"
+	cyberpunk_safe_zone = TRUE
+	cyberpunk_district_id = "government"
+	cyberpunk_district_name = "Government Territory"
+	cyberpunk_district_kind = "government"
+	cyberpunk_world_tags = list("government")
+	cyberpunk_world_owner = "government"
+	cyberpunk_violence_control = "high"
+	cyberpunk_district_base_danger = 3
+
+/area/cyberpunk_city/slums
+	name = "Cyberpunk City Slums"
+	cyberpunk_district_id = "slums"
+	cyberpunk_district_name = "Slums"
+	cyberpunk_district_kind = "slums"
+	cyberpunk_world_tags = list("slums")
+	cyberpunk_violence_control = "weak"
+	cyberpunk_district_base_danger = 18
+
+/area/cyberpunk_city/roof
+	name = "Cyberpunk City Roof"
+	cyberpunk_district_id = "roof"
+	cyberpunk_district_name = "Roof"
+	cyberpunk_district_kind = "roof"
+	cyberpunk_world_tags = list("roof")
+	cyberpunk_district_base_danger = 11
+
+/area/cyberpunk_city/underground
+	name = "Cyberpunk City Underground"
+	cyberpunk_district_id = "underground"
+	cyberpunk_district_name = "Underground"
+	cyberpunk_district_kind = "underground"
+	cyberpunk_world_tags = list("underground")
+	cyberpunk_violence_control = "weak"
+	cyberpunk_district_base_danger = 14
 
 /proc/cyberpunk_is_safe_zone(atom/location)
 	var/area/current_area = get_area(location)
