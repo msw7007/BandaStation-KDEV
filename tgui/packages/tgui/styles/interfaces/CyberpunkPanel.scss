@@ -188,6 +188,920 @@
   word-break: break-all;
 }
 
+.StyleGuide {
+  --sg-cyan: #14c6ee;
+  --sg-cyan-dim: #7edcf0;
+  --sg-cyan-dark: #032833;
+  --sg-cyan-light: #245f80;
+  --sg-red: #f02c42;
+  --sg-red-dark: #28050a;
+  --sg-red-light: #24050b;
+  --sg-panel: #071016;
+  --sg-black: #02070b;
+  --sg-cut: 0.55rem;
+
+  .StyleGuide__header {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 51, 74, 0.75);
+  }
+
+  .StyleGuide__layout {
+    display: grid;
+    grid-template-columns: minmax(22rem, 0.78fr) minmax(34rem, 1.22fr);
+    gap: 0.75rem;
+    min-height: 39rem;
+  }
+
+  .StyleGuide__topTabs {
+    display: flex;
+    gap: 0.35rem;
+    margin: 0.45rem 0 0.75rem;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-width: 7rem;
+      padding: 0.38rem 0.8rem;
+      border: 1px solid rgba(24, 216, 255, 0.28);
+      border-bottom-color: rgba(255, 51, 74, 0.5);
+      clip-path: polygon(0.55rem 0, 100% 0, calc(100% - 0.55rem) 100%, 0 100%);
+      color: var(--sg-cyan);
+      background: rgba(3, 18, 25, 0.92);
+      font-weight: 800;
+      text-transform: uppercase;
+      cursor: pointer;
+
+      &.active {
+        color: #fff;
+        border-color: rgba(255, 51, 74, 0.82);
+        background:
+          linear-gradient(90deg, rgba(255, 51, 74, 0.36), transparent 78%),
+          rgba(25, 5, 10, 0.94);
+      }
+    }
+  }
+
+  .StyleGuide__leftPanel .CyberPanel__content,
+  .StyleGuide__blockPanel .CyberPanel__content {
+    overflow-y: auto;
+  }
+
+  .StyleGuide__rightStack {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+  }
+
+  .StyleGuide__buttonGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .StyleGuide__cutButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid currentColor;
+    border-radius: 0;
+    clip-path: polygon(
+      var(--sg-cut) 0,
+      100% 0,
+      100% calc(100% - var(--sg-cut)),
+      calc(100% - var(--sg-cut)) 100%,
+      0 100%,
+      0 var(--sg-cut)
+    );
+    color: var(--sg-cyan);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+  }
+
+  .StyleGuide__numberedControl {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.35rem;
+    align-items: center;
+
+    > .StyleGuide__cutButton,
+    > .StyleGuide__switch {
+      width: 100%;
+    }
+  }
+
+  .StyleGuide__numberedControl--block {
+    align-items: start;
+
+    > .StyleGuide__elementNumber {
+      margin-top: 0.1rem;
+    }
+  }
+
+  .StyleGuide__cutButton--cyan-dark {
+    background:
+      linear-gradient(135deg, rgba(24, 216, 255, 0.12), transparent 55%),
+      var(--sg-cyan-dark);
+    color: var(--sg-cyan);
+    box-shadow: inset 0 0 0 1px rgba(24, 216, 255, 0.22);
+  }
+
+  .StyleGuide__cutButton--cyan-light {
+    background:
+      linear-gradient(135deg, rgba(24, 216, 255, 0.16), transparent 55%),
+      var(--sg-cyan-light);
+    color: var(--sg-cyan);
+    box-shadow: inset 0 0 0 1px rgba(24, 216, 255, 0.36);
+  }
+
+  .StyleGuide__cutButton--red-dark {
+    background:
+      linear-gradient(135deg, rgba(255, 51, 74, 0.18), transparent 55%),
+      var(--sg-red-dark);
+    color: var(--sg-red);
+    box-shadow: inset 0 0 0 1px rgba(255, 51, 74, 0.32);
+  }
+
+  .StyleGuide__cutButton--red-light {
+    background:
+      linear-gradient(135deg, rgba(255, 51, 74, 0.38), transparent 58%),
+      var(--sg-red-light);
+    color: var(--sg-red);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 51, 74, 0.55),
+      inset 0 -0.12rem 0 rgba(255, 51, 74, 0.34);
+  }
+
+  .StyleGuide__switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 1.75rem;
+    padding: 0.35rem 0.5rem 0.35rem 0.7rem;
+    border: 1px solid rgba(24, 216, 255, 0.42);
+    background: rgba(5, 53, 67, 0.62);
+    color: var(--sg-cyan);
+    clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+
+    &.active {
+      border-color: var(--sg-cyan);
+      background: rgba(24, 216, 255, 0.2);
+      color: #fff;
+    }
+
+    > span:first-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+  }
+
+  .StyleGuide__elementNumber {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.18rem;
+    border: 1px solid rgba(20, 198, 238, 0.55);
+    background: rgba(2, 7, 11, 0.8);
+    color: var(--sg-cyan);
+    font-size: 0.72rem;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: none;
+  }
+
+  .StyleGuide__numberedSwitchRow {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .StyleGuide__iconButtonGrid,
+  .StyleGuide__iconButtonRowCompact {
+    display: grid;
+    grid-template-columns: repeat(4, 2.4rem);
+    gap: 0.45rem;
+    align-items: center;
+  }
+
+  .StyleGuide__iconButtonRowCompact {
+    grid-template-columns: repeat(2, 2.4rem);
+    margin-top: 0.45rem;
+  }
+
+  .StyleGuide__iconButtonGrid--large {
+    grid-template-columns: repeat(4, 4.2rem);
+    gap: 0.55rem;
+    margin-top: 0.75rem;
+  }
+
+  .StyleGuide__iconButtonRowCompact--large {
+    grid-template-columns: repeat(2, 4.2rem);
+    gap: 0.55rem;
+  }
+
+  .StyleGuide__iconButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 1px solid currentColor;
+    border-radius: 0;
+    background:
+      linear-gradient(135deg, currentColor 0, transparent 30%),
+      rgba(2, 7, 11, 0.92);
+    background-blend-mode: soft-light, normal;
+    clip-path: polygon(0.45rem 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%, 0 0.45rem);
+    color: var(--sg-cyan);
+    cursor: pointer;
+    font-size: 1.05rem;
+    box-shadow: inset 0 0 0 1px rgba(2, 7, 11, 0.72);
+
+    &:hover {
+      filter: brightness(1.18);
+    }
+  }
+
+  .StyleGuide__iconButton--red {
+    color: var(--sg-red);
+  }
+
+  .StyleGuide__iconButton--cyan {
+    color: var(--sg-cyan);
+  }
+
+  .StyleGuide__iconButton--yellow {
+    color: #f2c94c;
+  }
+
+  .StyleGuide__iconButton--green {
+    color: #47d878;
+  }
+
+  .StyleGuide__iconButton--compact {
+    height: 1.8rem;
+    font-size: 0.9rem;
+  }
+
+  .StyleGuide__iconButton--large {
+    width: 4.2rem;
+    height: 4.2rem;
+    clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem);
+    font-size: 1.75rem;
+  }
+
+  .StyleGuide__iconButton--large.StyleGuide__iconButton--compact {
+    height: 3.15rem;
+    font-size: 1.35rem;
+  }
+
+  .StyleGuide__dataControls {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .StyleGuide__fieldSample {
+    display: grid;
+    gap: 0.28rem;
+    min-width: 0;
+
+    > span {
+      color: var(--sg-red);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .Input,
+    .Dropdown,
+    .NumberInput {
+      min-height: 1.55rem;
+      border: 1px solid rgba(20, 198, 238, 0.62);
+      border-radius: 0;
+      background:
+        linear-gradient(90deg, rgba(20, 198, 238, 0.08), transparent 70%),
+        rgba(2, 7, 11, 0.86);
+      color: #e9fbff;
+      box-shadow: inset 0 -0.12rem 0 rgba(20, 198, 238, 0.18);
+    }
+
+    .StyleGuide__textInput--cyan {
+      color: var(--sg-cyan);
+    }
+
+    .StyleGuide__textInput--red {
+      border-color: rgba(240, 44, 66, 0.64);
+      color: var(--sg-red);
+      background:
+        linear-gradient(90deg, rgba(240, 44, 66, 0.12), transparent 72%),
+        rgba(14, 2, 6, 0.88);
+      box-shadow: inset 0 -0.12rem 0 rgba(240, 44, 66, 0.2);
+    }
+
+    .StyleGuide__inputVariants {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .Dropdown {
+      clip-path: polygon(0 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
+    }
+
+    .NumberInput {
+      color: var(--sg-cyan);
+      font-weight: 800;
+      text-align: center;
+    }
+  }
+
+  .StyleGuide__dragValueRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: start;
+
+    .StyleGuide__thinProgress {
+      margin-bottom: 0;
+    }
+  }
+
+  .StyleGuide__dragField {
+    position: relative;
+    min-height: 2rem;
+    overflow: hidden;
+    border: 1px solid rgba(20, 198, 238, 0.56);
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.04), transparent 72%),
+      var(--sg-black);
+    clip-path: polygon(0.9rem 0, 100% 0, calc(100% - 0.9rem) 100%, 0 100%);
+    cursor: ew-resize;
+    user-select: none;
+  }
+
+  .StyleGuide__dragFieldHandle {
+    position: absolute;
+    top: 0.28rem;
+    bottom: 0.28rem;
+    width: 50px;
+    background: var(--sg-red);
+    transform: translateX(-50%);
+    box-shadow:
+      0 0 0.4rem rgba(240, 44, 66, 0.55),
+      0 0 0 1px rgba(240, 44, 66, 0.18);
+  }
+
+  .StyleGuide__dragFieldContent {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 2rem;
+    padding: 0.25rem 1rem;
+    color: var(--sg-cyan);
+    font-weight: 900;
+    text-transform: uppercase;
+
+    b {
+      color: #e9fbff;
+      font-weight: 900;
+    }
+  }
+
+  .StyleGuide__dropdown {
+    position: relative;
+    z-index: 3;
+  }
+
+  .StyleGuide__dropdownControl,
+  .StyleGuide__dropdownMenu button {
+    width: 100%;
+    min-height: 1.65rem;
+    border: 1px solid rgba(20, 198, 238, 0.62);
+    border-radius: 0;
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.08), transparent 70%),
+      rgba(2, 7, 11, 0.9);
+    color: var(--sg-cyan);
+    text-align: left;
+  }
+
+  .StyleGuide__dropdownControl {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.2rem 0.55rem;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
+    cursor: pointer;
+  }
+
+  .StyleGuide__dropdownMenu {
+    position: absolute;
+    top: calc(100% + 0.1rem);
+    right: 0;
+    left: 0;
+    padding: 0.25rem;
+    border: 1px solid rgba(240, 44, 66, 0.78);
+    background: rgba(10, 2, 5, 0.98);
+    box-shadow:
+      inset 0 0 0 1px rgba(240, 44, 66, 0.18),
+      0 0.35rem 1rem rgba(0, 0, 0, 0.45);
+
+    button {
+      margin-bottom: 0.16rem;
+      padding: 0.25rem 0.45rem;
+      border-color: transparent;
+      color: var(--sg-red);
+      background: transparent;
+      cursor: pointer;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &:hover,
+      &.selected {
+        border-color: rgba(20, 198, 238, 0.5);
+        color: var(--sg-cyan);
+        background: rgba(20, 198, 238, 0.18);
+      }
+    }
+  }
+
+  .StyleGuide__stepperField {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+    gap: 0;
+
+    button {
+      min-height: 1.65rem;
+      border: 1px solid rgba(20, 198, 238, 0.55);
+      background:
+        linear-gradient(135deg, rgba(20, 198, 238, 0.14), transparent 58%),
+        rgba(3, 40, 51, 0.8);
+      color: var(--sg-cyan);
+      clip-path: polygon(0.35rem 0, 100% 0, calc(100% - 0.35rem) 100%, 0 100%);
+      font-size: 1.1rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    button:first-child {
+      border-right: 0;
+      clip-path: polygon(0.42rem 0, 100% 0, 100% 100%, 0 100%, 0 0.42rem);
+    }
+
+    button:last-child {
+      border-left: 0;
+      clip-path: polygon(0 0, calc(100% - 0.42rem) 0, 100% 0.42rem, 100% 100%, 0 100%);
+    }
+
+    .Input {
+      border-right-width: 1px;
+      border-left-width: 1px;
+      clip-path: none;
+      text-align: center;
+    }
+  }
+
+  .StyleGuide__knobGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .StyleGuide__digitalKnob {
+    position: relative;
+    cursor: ew-resize;
+    user-select: none;
+  }
+
+  .StyleGuide__digitalKnobDial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.85rem;
+    height: 3.85rem;
+    border: 0.12rem solid rgba(20, 198, 238, 0.82);
+    border-radius: 50%;
+    background:
+      conic-gradient(var(--sg-cyan) var(--sg-knob-value), rgba(20, 198, 238, 0.13) 0),
+      rgba(2, 7, 11, 0.94);
+    box-shadow:
+      0 0 0 1px rgba(2, 7, 11, 0.9) inset,
+      0 0 0.55rem rgba(20, 198, 238, 0.22);
+
+    span {
+      width: 2.35rem;
+      height: 2.35rem;
+      border-radius: 50%;
+      background: rgba(2, 7, 11, 0.98);
+      box-shadow: inset 0 0 0 1px rgba(20, 198, 238, 0.28);
+    }
+  }
+
+  .StyleGuide__digitalReadout {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.16rem;
+    margin-top: 0.35rem;
+    color: var(--sg-cyan);
+    font-size: 0.95rem;
+    font-weight: 900;
+    text-transform: uppercase;
+
+    span {
+      color: #9ec5d1;
+      font-size: 0.72rem;
+    }
+  }
+
+  .StyleGuide__switchMark {
+    width: 0.82rem;
+    height: 0.82rem;
+    border: 1px solid currentColor;
+    background: rgba(0, 0, 0, 0.35);
+    transform: skewX(-18deg);
+  }
+
+  .StyleGuide__switch.active .StyleGuide__switchMark {
+    background: var(--sg-cyan);
+    box-shadow: 0 0 0.45rem rgba(24, 216, 255, 0.6);
+  }
+
+  .StyleGuide__tabSwitch {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .StyleGuide__topTabSwitch {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.28rem;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.28rem;
+      min-height: 1.55rem;
+      padding: 0.25rem 0.4rem;
+      border: 1px solid rgba(24, 216, 255, 0.22);
+      clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
+      color: var(--sg-cyan);
+      background:
+        linear-gradient(90deg, rgba(24, 216, 255, 0.08), transparent 72%),
+        rgba(3, 18, 25, 0.92);
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+
+      &.active {
+        color: #fff;
+        border-color: rgba(255, 51, 74, 0.72);
+        background:
+          linear-gradient(90deg, rgba(255, 51, 74, 0.32), transparent 80%),
+          rgba(34, 6, 12, 0.95);
+      }
+    }
+  }
+
+  .StyleGuide__textSwitch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+
+    button {
+      position: relative;
+      min-height: 1.7rem;
+      padding: 0.2rem 0.35rem 0.5rem;
+      border: 0;
+      color: #9ec5d1;
+      background: transparent;
+      font-weight: 800;
+      text-transform: uppercase;
+      cursor: pointer;
+
+      &::after {
+        content: '';
+        position: absolute;
+        right: 0.2rem;
+        bottom: 0.18rem;
+        left: 0.2rem;
+        height: 0.12rem;
+        background: rgba(255, 51, 74, 0.65);
+      }
+
+      &.active {
+        color: var(--sg-cyan);
+        text-shadow: 0 0 0.45rem rgba(20, 198, 238, 0.75);
+
+        &::after {
+          background: rgba(20, 198, 238, 0.85);
+          box-shadow: 0 0 0.35rem rgba(20, 198, 238, 0.65);
+        }
+      }
+    }
+  }
+
+  .StyleGuide__switch--tabs {
+    justify-content: center;
+    min-height: 1.45rem;
+    padding: 0.25rem 0.4rem;
+
+    .StyleGuide__switchMark {
+      display: none;
+    }
+  }
+
+  .StyleGuide__thinProgress {
+    margin-bottom: 0.85rem;
+  }
+
+  .StyleGuide__thinProgressMeta {
+    display: flex;
+    justify-content: space-between;
+    color: var(--sg-cyan);
+    font-weight: 700;
+    text-transform: uppercase;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+  }
+
+  .StyleGuide__thinProgressTrack {
+    height: 0.42rem;
+    margin-top: 0.25rem;
+    border: 1px solid rgba(24, 216, 255, 0.7);
+    background: var(--sg-black);
+
+    div {
+      height: 100%;
+      background: linear-gradient(90deg, var(--sg-cyan), #79efff);
+    }
+  }
+
+  .StyleGuide__thinProgress--hover .StyleGuide__thinProgressTrack {
+    cursor: help;
+  }
+
+  .StyleGuide__trapezoidNote {
+    width: 92%;
+    min-height: 1.65rem;
+    padding: 0.35rem 0.55rem;
+    color: #9ec5d1;
+    background: rgba(5, 53, 67, 0.54);
+    border: 1px solid rgba(24, 216, 255, 0.28);
+    border-top: 0;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 0.65rem) 100%, 0.65rem 100%);
+  }
+
+  .StyleGuide__trapezoidNote--meta {
+    display: flex;
+    justify-content: space-between;
+    min-height: 1.35rem;
+    color: var(--sg-cyan);
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: help;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+  }
+
+  .StyleGuide__segmentProgress {
+    margin-bottom: 0.85rem;
+  }
+
+  .StyleGuide__segments {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-top: 0.3rem;
+
+    span {
+      height: 1.55rem;
+      border: 1px solid rgba(24, 216, 255, 0.35);
+      background:
+        linear-gradient(135deg, rgba(24, 216, 255, 0.1), transparent 55%),
+        rgba(3, 12, 17, 0.95);
+      clip-path: polygon(0.35rem 0, 100% 0, calc(100% - 0.35rem) 100%, 0 100%);
+    }
+
+    span.filled {
+      border-color: rgba(20, 198, 238, 0.7);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 55%),
+        rgba(20, 198, 238, 0.34);
+    }
+
+    span.warning {
+      border-color: rgba(201, 40, 58, 0.72);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 55%),
+        rgba(201, 40, 58, 0.36);
+    }
+  }
+
+  .StyleGuide__blockShell {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(24, 216, 255, 0.45);
+    clip-path: polygon(0.7rem 0, 100% 0, 100% calc(100% - 0.7rem), calc(100% - 0.7rem) 100%, 0 100%, 0 0.7rem);
+    background:
+      linear-gradient(135deg, rgba(24, 216, 255, 0.08), transparent 30%),
+      rgba(2, 7, 11, 0.8);
+  }
+
+  .StyleGuide__blockShell--compact {
+    min-height: 15rem;
+  }
+
+  .StyleGuide__outputShell {
+    min-height: 13rem;
+
+    .LabeledList__label {
+      color: #8f1f2e;
+    }
+
+    .Table__row--header,
+    .Table__cell--header,
+    .Table tr:first-child,
+    .Table tr:first-child .Table__cell,
+    .Table tr:first-child td {
+      color: var(--sg-cyan);
+    }
+  }
+
+  .StyleGuide__stateBad {
+    color: #ff334a;
+    font-weight: 800;
+  }
+
+  .StyleGuide__stateGood {
+    color: #47d878;
+    font-weight: 800;
+  }
+
+  .StyleGuide__blockTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--sg-cyan);
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .StyleGuide__blockMetrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+
+    span {
+      padding: 0.35rem 0.5rem;
+      border: 1px solid rgba(24, 216, 255, 0.35);
+      color: var(--sg-cyan);
+      background: rgba(24, 216, 255, 0.05);
+    }
+  }
+
+  .StyleGuide__blockActions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .StyleGuide__placeholder {
+    min-height: 12rem;
+    padding: 0.65rem;
+    border: 1px dashed rgba(24, 216, 255, 0.32);
+    color: #9ec5d1;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  .StyleGuide__dataCard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.55rem;
+    border: 1px solid rgba(24, 216, 255, 0.36);
+    background: rgba(3, 18, 25, 0.72);
+
+    b {
+      display: block;
+      color: var(--sg-cyan);
+    }
+
+    span {
+      display: block;
+      color: #9ec5d1;
+      font-size: 0.82rem;
+    }
+  }
+
+  .StyleGuide__dataCard--enabled {
+    border-color: rgba(20, 198, 238, 0.56);
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.08), transparent 72%),
+      rgba(3, 18, 25, 0.72);
+  }
+
+  .StyleGuide__dataCard--disabled {
+    border-color: rgba(240, 44, 66, 0.62);
+    background:
+      linear-gradient(90deg, rgba(240, 44, 66, 0.1), transparent 72%),
+      rgba(14, 2, 6, 0.78);
+
+    b {
+      color: var(--sg-red);
+    }
+  }
+}
+
+body:has(.StyleGuide) {
+  .Dropdown__menu,
+  .Dropdown__dropdown,
+  .Dropdown__options,
+  .Dropdown__popper {
+    border: 1px solid rgba(240, 44, 66, 0.72) !important;
+    border-radius: 0 !important;
+    background: rgba(10, 2, 5, 0.96) !important;
+    box-shadow:
+      inset 0 0 0 1px rgba(240, 44, 66, 0.18),
+      0 0.35rem 1rem rgba(0, 0, 0, 0.45) !important;
+  }
+
+  .Dropdown__menuEntry,
+  .Dropdown__option,
+  .Dropdown__item,
+  .Dropdown__menuItem,
+  .Dropdown__menu button,
+  .Dropdown__dropdown button,
+  .Dropdown__options button,
+  .Dropdown__popper button,
+  .Dropdown__menu .Button,
+  .Dropdown__dropdown .Button,
+  .Dropdown__options .Button,
+  .Dropdown__popper .Button {
+    border-radius: 0 !important;
+    color: var(--sg-red, #f02c42) !important;
+    background: transparent !important;
+
+    &:hover,
+    &.active,
+    &.selected,
+    &.Dropdown__menuEntry--highlighted,
+    &.Dropdown__option--selected,
+    &.Button--selected,
+    &[aria-selected='true'] {
+      color: var(--sg-cyan, #14c6ee) !important;
+      background: rgba(20, 198, 238, 0.18) !important;
+    }
+  }
+
+  .Dropdown__menuEntry:not(.Dropdown__menuEntry--highlighted):not(.selected),
+  .Dropdown__option:not(.Dropdown__option--selected):not(.selected),
+  .Dropdown__item:not(.selected),
+  .Dropdown__menuItem:not(.selected),
+  .Dropdown__menu button:not(:hover):not(.Button--selected):not([aria-selected='true']),
+  .Dropdown__dropdown button:not(:hover):not(.Button--selected):not([aria-selected='true']),
+  .Dropdown__options button:not(:hover):not(.Button--selected):not([aria-selected='true']),
+  .Dropdown__popper button:not(:hover):not(.Button--selected):not([aria-selected='true']) {
+    color: var(--sg-red, #f02c42) !important;
+  }
+}
+
 .SkillInterface {
   &.CharacterSetup .CharacterSetup__topbar {
     grid-template-columns: minmax(18rem, 0.8fr) minmax(32rem, 1.4fr);

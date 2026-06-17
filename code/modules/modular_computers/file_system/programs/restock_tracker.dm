@@ -115,6 +115,30 @@
 		return
 	return cyberpunk_pc_interface_ui_act(action, params, ui.user)
 
+/datum/cyberpunk_tgui_style_guide_ui/ui_state(mob/user)
+	return GLOB.always_state
+
+/datum/cyberpunk_tgui_style_guide_ui/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkUiStyleGuide", "TGUI Style Guide")
+		ui.open()
+
+/datum/cyberpunk_tgui_style_guide_ui/ui_data(mob/user)
+	return list(
+		"user_name" = user?.real_name || user?.name || "Unknown",
+		"build_label" = "Cyberpunk UI reference",
+		"progress_value" = 62,
+		"danger_value" = 24,
+		"options" = list("Primary", "Secondary", "Disabled", "Warning"),
+	)
+
+/datum/cyberpunk_tgui_style_guide_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	return TRUE
+
 //CYBERPUNK BUILD - rebuild and delete before release
 /datum/cyberpunk_contracts_verb_ui
 	var/direct_contract_id
@@ -291,6 +315,14 @@
 	set category = "IC"
 
 	var/datum/cyberpunk_pc_interface_verb_ui/interface = new
+	interface.ui_interact(src)
+
+/mob/living/verb/open_cyberpunk_tgui_style_guide()
+	set name = "TGUI Style Guide"
+	set desc = "Open a bare cyberpunk TGUI component reference window."
+	set category = "IC"
+
+	var/datum/cyberpunk_tgui_style_guide_ui/interface = new
 	interface.ui_interact(src)
 
 /obj/machinery/computer/diagnostic_analysis
