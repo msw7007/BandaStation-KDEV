@@ -332,6 +332,7 @@ export type CharacterSetupRuntimeData = {
 };
 
 export type PreferencesMenuData = {
+  character_preview_icon?: string;
   character_preview_view: string;
   character_profiles: (string | null)[];
 

@@ -14,6 +14,7 @@ import { PreferenceList } from '../../CharacterPreferences/MainPage';
 import { CyberSearch } from '../components/CyberInput';
 import { CyberPanel, CyberSectionHeader } from '../components/CyberPanel';
 import { QuirkCard } from '../components/QuirkCard';
+import { numberValue } from '../helpers';
 
 function personalityIcon(personality: Personality) {
   const text = `${personality.name} ${(personality.groups || []).join(' ')}`.toLowerCase();
@@ -33,13 +34,13 @@ function personalityIcon(personality: Personality) {
 }
 
 function quirkValueClass(quirk: Quirk) {
-  if (quirk.value > 0) {
-    return 'positive';
-  }
   if (quirk.value < 0) {
-    return 'negative';
+    return 'cost-bad';
   }
-  return 'neutral';
+  if (quirk.value > 0) {
+    return 'cost-good';
+  }
+  return 'cost-mid';
 }
 
 function getCustomizationPreferences(
@@ -62,6 +63,7 @@ function PersonalityTooltip(props: { personality: Personality }) {
   return (
     <div className="CharacterSetup__personalityTooltip">
       <b>{personality.name}</b>
+      <PersonalityEffects personality={personality} />
       <p>{personality.description || 'Описание черты пока не заполнено.'}</p>
     </div>
   );
@@ -73,6 +75,24 @@ function QuirkTooltip(props: { quirk: Quirk }) {
     <div className="CharacterSetup__personalityTooltip">
       <b>{quirk.name}</b>
       <p>{quirk.description || 'Описание квирка пока не заполнено.'}</p>
+      <em className={quirkValueClass(quirk)}>{quirk.value}</em>
+    </div>
+  );
+}
+
+function PersonalityEffects(props: { personality: Personality }) {
+  const { personality } = props;
+  return (
+    <div className="CharacterSetup__selectedEffects">
+      {!!personality.pos_gameplay_description && (
+        <em className="good">+ {personality.pos_gameplay_description}</em>
+      )}
+      {!!personality.neg_gameplay_description && (
+        <em className="bad">- {personality.neg_gameplay_description}</em>
+      )}
+      {!!personality.neut_gameplay_description && (
+        <em className="neutral">В± {personality.neut_gameplay_description}</em>
+      )}
     </div>
   );
 }
@@ -109,6 +129,12 @@ export function CharacterTraitsTab() {
   const quirkEntries = Object.entries(quirks).filter(([, quirk]) => {
     const query = quirkSearch.toLowerCase();
     return `${quirk.name} ${quirk.description}`.toLowerCase().includes(query);
+  }).sort(([, firstQuirk], [, secondQuirk]) => {
+    const valueDifference = firstQuirk.value - secondQuirk.value;
+    if (valueDifference !== 0) {
+      return valueDifference;
+    }
+    return firstQuirk.name.localeCompare(secondQuirk.name);
   });
 
   const selectedPersonalityDetails = selectedPersonalities
@@ -246,6 +272,10 @@ export function CharacterTraitsTab() {
             <CharacterPreview
               height="230px"
               id={data.character_preview_view}
+              imageBase64={data.character_preview_icon}
+              scale={numberValue(data, 'sprite_size', 1)}
+              scaleX={numberValue(data, 'sprite_width', 1)}
+              scaleY={numberValue(data, 'sprite_height', 1)}
               transparent
             />
           </div>
@@ -287,6 +317,10 @@ export function CharacterTraitsTab() {
                           ×
                         </button>
                       </div>
+                      <p className="CharacterSetup__selectedDescription">
+                        {personality.description || 'Описание черты пока не заполнено.'}
+                      </p>
+                      <PersonalityEffects personality={personality} />
                     </div>
                   </Tooltip>
                 ))
@@ -338,6 +372,9 @@ export function CharacterTraitsTab() {
                           </button>
                         </div>
                       </Tooltip>
+                      <p className="CharacterSetup__selectedDescription">
+                        {quirk.description || 'Описание квирка пока не заполнено.'}
+                      </p>
                       {hasCustomization && (
                         <div className="CharacterSetup__quirkCustomization">
                           <CyberSectionHeader>Настройки квирка</CyberSectionHeader>

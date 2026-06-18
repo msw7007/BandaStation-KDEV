@@ -13,6 +13,7 @@ import {
   CyberButton,
   CyberColorButton,
   CyberInput,
+  CyberNumberInput,
   CyberSelect,
   CyberSlider,
   CyberTextarea,
@@ -662,7 +663,11 @@ export function DataTab() {
         <CharacterPaperdollHub
           compact
           key={`${data.character_preview_view}-${currentSpeciesKey}`}
+          previewImage={data.character_preview_icon}
           previewId={data.character_preview_view}
+          previewScale={numberValue(data, 'sprite_size', 1)}
+          previewScaleX={numberValue(data, 'sprite_width', 1)}
+          previewScaleY={numberValue(data, 'sprite_height', 1)}
           selectedSlot={selectedCategory}
           slots={visibleAppearanceCategories}
           onSelectSlot={setSelectedCategory}
@@ -681,30 +686,30 @@ export function DataTab() {
         scrollable
       >
         <CyberSectionHeader>Масштаб спрайта</CyberSectionHeader>
-        <CyberSlider
+        <CyberNumberInput
           icon="expand"
           label="Размер спрайта"
           max={spriteSizeConfig.maximum}
           min={spriteSizeConfig.minimum}
-          step={spriteSizeConfig.step}
+          step={0.025}
           value={numberValue(data, 'sprite_size', 1)}
           onChange={(newValue) => setPreference(act, 'sprite_size', newValue)}
         />
-        <CyberSlider
+        <CyberNumberInput
           icon="arrows-up-down"
           label="Высота спрайта"
           max={spriteHeightConfig.maximum}
           min={spriteHeightConfig.minimum}
-          step={spriteHeightConfig.step}
+          step={0.025}
           value={numberValue(data, 'sprite_height', 1)}
           onChange={(newValue) => setPreference(act, 'sprite_height', newValue)}
         />
-        <CyberSlider
+        <CyberNumberInput
           icon="arrows-left-right"
           label="Ширина спрайта"
           max={spriteWidthConfig.maximum}
           min={spriteWidthConfig.minimum}
-          step={spriteWidthConfig.step}
+          step={0.025}
           value={numberValue(data, 'sprite_width', 1)}
           onChange={(newValue) => setPreference(act, 'sprite_width', newValue)}
         />

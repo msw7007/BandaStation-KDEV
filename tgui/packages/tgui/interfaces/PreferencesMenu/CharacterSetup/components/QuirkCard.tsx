@@ -10,11 +10,21 @@ type QuirkCardProps = {
   onClick?: () => void;
 };
 
+function quirkCostClass(value: number) {
+  if (value < 0) {
+    return 'cost-bad';
+  }
+  if (value > 0) {
+    return 'cost-good';
+  }
+  return 'cost-mid';
+}
+
 export function QuirkCard(props: QuirkCardProps) {
   const { disabled, onClick, quirk, reason, selected } = props;
 
   return (
-    <div title={reason}>
+    <div className={`QuirkCard ${quirkCostClass(quirk.value)}`} title={reason}>
       <TraitCard
         disabled={disabled}
         icon={quirk.icon}

@@ -13,7 +13,11 @@ export type PaperdollSlot = {
 };
 
 type CharacterPaperdollHubProps = {
+  previewImage?: string;
   previewId: string;
+  previewScale?: number;
+  previewScaleX?: number;
+  previewScaleY?: number;
   slots: PaperdollSlot[];
   selectedSlot?: string;
   compact?: boolean;
@@ -34,7 +38,11 @@ export function CharacterPaperdollHub(props: CharacterPaperdollHubProps) {
     actionLabel,
     onAction,
     onSelectSlot,
+    previewImage,
     previewId,
+    previewScale,
+    previewScaleX,
+    previewScaleY,
     selectedSlot,
     slots,
   } = props;
@@ -65,6 +73,10 @@ export function CharacterPaperdollHub(props: CharacterPaperdollHubProps) {
         <CharacterPreview
           height={compact ? '260px' : '360px'}
           id={previewId}
+          imageBase64={previewImage}
+          scale={previewScale}
+          scaleX={previewScaleX}
+          scaleY={previewScaleY}
           transparent
           width={compact ? '200px' : undefined}
         />

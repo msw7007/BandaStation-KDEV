@@ -11,6 +11,7 @@ type SkillTreeProps = {
   skills: CharacterSetupSkill[];
   runtimeSkills?: Record<string, CharacterSetupRuntimeSkill>;
   attributeId?: string;
+  className?: string;
   compact?: boolean;
   onAdjustPerk?: (skillId: string, perkIndex: number, delta: number) => void;
   onAdjustSkillLevel?: (skillId: string, delta: number) => void;
@@ -38,6 +39,7 @@ function getRuntimePerk(
 export function SkillTree(props: SkillTreeProps) {
   const {
     attributeId,
+    className,
     compact,
     onAdjustPerk,
     onAdjustSkillLevel,
@@ -49,7 +51,15 @@ export function SkillTree(props: SkillTreeProps) {
     : skills;
 
   return (
-    <div className={compact ? 'SkillTree compact' : 'SkillTree'}>
+    <div
+      className={[
+        'SkillTree',
+        compact ? 'compact' : '',
+        className || '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {shownSkills.map((skill) => {
         const runtime = runtimeSkills?.[skill.id];
         const disabledReason = runtime?.disabled_reason;
@@ -62,13 +72,25 @@ export function SkillTree(props: SkillTreeProps) {
           100,
           Math.round((totalExperience / Math.max(experienceGoal, 1)) * 100),
         );
+        const skillLevel = runtime?.level || 0;
+        const weaponDamageBonus = Math.round(
+          (skill.weapon_damage_bonus_per_level || 0) * skillLevel * 100,
+        );
+        const weaponCooldownBonus = Math.round(
+          (skill.weapon_cooldown_reduction_per_level || 0) * skillLevel * 100,
+        );
+        const branchTooltip = isWeaponSkill
+          ? `Суммарный бонус: +${weaponDamageBonus}% урона, -${weaponCooldownBonus}% отката.`
+          : disabledReason;
         return (
-          <div key={skill.id} className="SkillTree__branch" title={disabledReason}>
+          <div key={skill.id} className="SkillTree__branch" title={branchTooltip}>
             <header>
               <b>{skill.name}</b>
-              <span>
-                {runtime?.level || 0}/{skill.max_character_level}
-              </span>
+              {!isWeaponSkill && (
+                <span>
+                  {skillLevel}/{skill.max_character_level}
+                </span>
+              )}
             </header>
             <div className="SkillTree__xp">
               <div className="SkillTree__xpTrack">
@@ -113,50 +135,41 @@ export function SkillTree(props: SkillTreeProps) {
               </div>
             ) : isWeaponSkill ? (
               <div className="SkillTree__weapon">
-                <div className="SkillTree__weaponControl">
+                <div className="SkillTree__weaponTrack">
+                  <span
+                    style={{
+                      width: `${Math.round(
+                        (skillLevel / Math.max(skill.max_character_level, 1)) *
+                          100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <b className="SkillTree__weaponLevel">
                   <Button
                     icon="minus"
                     disabled={
                       !runtime?.editable ||
                       !onAdjustSkillLevel ||
                       !runtime?.can_decrease ||
-                      (runtime?.level || 0) <= 0
+                      skillLevel <= 0
                     }
                     onClick={() => onAdjustSkillLevel?.(skill.id, -1)}
                   />
-                  <div className="SkillTree__weaponTrack">
-                    <span
-                      style={{
-                        width: `${Math.round(
-                          ((runtime?.level || 0) /
-                            Math.max(skill.max_character_level, 1)) *
-                            100,
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                  <b>
-                    {runtime?.level || 0}/{skill.max_character_level}
-                  </b>
+                  <span>
+                    {skillLevel}/{skill.max_character_level}
+                  </span>
                   <Button
                     icon="plus"
                     disabled={
                       !runtime?.editable ||
                       !onAdjustSkillLevel ||
                       !runtime?.can_increase ||
-                      (runtime?.level || 0) >= skill.max_character_level
+                      skillLevel >= skill.max_character_level
                     }
                     onClick={() => onAdjustSkillLevel?.(skill.id, 1)}
                   />
-                </div>
-                <small>
-                  +{Math.round((skill.weapon_damage_bonus_per_level || 0) * 100)}%
-                  урона, -
-                  {Math.round(
-                    (skill.weapon_cooldown_reduction_per_level || 0) * 100,
-                  )}
-                  % отката за уровень
-                </small>
+                </b>
               </div>
             ) : (
               <div className="SkillTree__missing">

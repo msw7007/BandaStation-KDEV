@@ -908,6 +908,10 @@ $department_map: (
     }
   }
 
+  &__spent {
+    margin-bottom: 0.75rem;
+  }
+
   &__attribute {
     cursor: pointer;
     margin-bottom: 0.4rem;
@@ -941,6 +945,21 @@ $department_map: (
     &:hover:not(:disabled) {
       color: var(--cy-cyan);
       border-color: var(--cy-cyan);
+    }
+  }
+
+  &__segmented--roleFilter {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    button {
+      min-width: 0;
+      height: 1.65rem;
+      padding: 0 0.55rem;
+      clip-path: polygon(0.35rem 0, 100% 0, calc(100% - 0.35rem) 100%, 0 100%);
+      font-size: 0.8rem;
+      line-height: 1;
+      text-align: center;
     }
   }
 
@@ -1082,17 +1101,23 @@ $department_map: (
 
   &__equipmentPreview {
     position: absolute;
-    top: 5.55rem;
-    right: 15rem;
-    left: 15rem;
+    top: 5rem;
+    right: 10.5rem;
+    left: 10.5rem;
     z-index: 0;
     display: flex;
-    height: 10rem;
+    height: 11.5rem;
     min-height: 0;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     pointer-events: none;
+  }
+
+  &__equipmentPreview .CharacterPreview--image img {
+    width: auto;
+    height: 100%;
+    max-height: 11.5rem;
   }
 
   &__equipmentSlotGridWrap {
@@ -1241,6 +1266,8 @@ $department_map: (
   }
 
   &__appearanceEditor {
+    position: relative;
+    z-index: 2;
     flex: 1;
     min-height: 0;
     align-content: start;
@@ -1315,6 +1342,10 @@ $department_map: (
     display: grid;
     flex: 0 0 auto;
     gap: 0.35rem;
+
+    > .CharacterSetup__localNote {
+      display: none;
+    }
   }
 
   &__implantScroll {
@@ -1697,6 +1728,19 @@ $department_map: (
       &.bad {
         color: var(--cy-red);
       }
+
+      &.neutral,
+      &.cost-mid {
+        color: #ffd54a;
+      }
+
+      &.cost-good {
+        color: #56ff75;
+      }
+
+      &.cost-bad {
+        color: var(--cy-red);
+      }
     }
   }
 
@@ -1798,12 +1842,21 @@ $department_map: (
     background-color: rgba(5, 8, 13, 0.58);
     border: 1px solid var(--cy-border);
 
-    &.positive {
-      border-color: rgba(140, 255, 155, 0.42);
+    &.positive,
+    &.cost-good {
+      border-color: rgba(86, 255, 117, 0.5);
+      box-shadow: inset 0 0 0.7rem rgba(86, 255, 117, 0.06);
     }
 
-    &.negative {
+    &.cost-mid {
+      border-color: rgba(255, 213, 74, 0.54);
+      box-shadow: inset 0 0 0.7rem rgba(255, 213, 74, 0.055);
+    }
+
+    &.negative,
+    &.cost-bad {
       border-color: var(--cy-danger-border);
+      box-shadow: inset 0 0 0.7rem rgba(255, 51, 74, 0.06);
     }
 
     p {
@@ -1811,6 +1864,12 @@ $department_map: (
       color: #c2d5dc;
       line-height: 1.25;
     }
+  }
+
+  &__selectedDescription {
+    margin: 0;
+    color: #c2d5dc;
+    line-height: 1.25;
   }
 
   &__selectedDetailHeader {
@@ -1861,6 +1920,10 @@ $department_map: (
 
       &.bad {
         color: var(--cy-red);
+      }
+
+      &.neutral {
+        color: #ffd54a;
       }
     }
   }
@@ -2080,14 +2143,125 @@ $department_map: (
 }
 
 .CyberSlider {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 3.8rem;
-  gap: 0.6rem;
-  align-items: center;
+  position: relative;
+  min-height: 2rem;
+  overflow: hidden;
+  border: 1px solid var(--cy-border);
+  background: var(--cy-bg);
+  clip-path: polygon(0.9rem 0, 100% 0, calc(100% - 0.9rem) 100%, 0 100%);
+  cursor: ew-resize;
+  user-select: none;
+
+  &__handle {
+    position: absolute;
+    top: 0.28rem;
+    bottom: 0.28rem;
+    width: 10px;
+    background: var(--cy-red);
+    transform: translateX(-50%);
+    box-shadow:
+      0 0 0.4rem rgba(240, 44, 66, 0.55),
+      0 0 0 1px rgba(240, 44, 66, 0.18);
+  }
 
   b {
-    color: var(--cy-cyan);
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 2rem;
+    padding: 0.25rem 1rem;
+    color: var(--cy-text);
+    font-weight: 900;
     text-align: right;
+  }
+}
+
+.CharacterPreview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+
+  .ByondUi {
+    position: relative;
+    z-index: 0;
+    background-color: transparent !important;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+
+  &--image {
+    background: transparent;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      pointer-events: none;
+    }
+  }
+}
+
+.CyberStepperField {
+  display: grid;
+  grid-template-columns: 1.65rem minmax(0, 1fr) 1.65rem;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 1.65rem;
+  height: 1.65rem;
+
+  button {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.65rem;
+    width: 1.65rem;
+    min-height: 1.65rem;
+    height: 1.65rem;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(20, 198, 238, 0.62);
+    border-radius: 0;
+    background:
+      linear-gradient(135deg, rgba(20, 198, 238, 0.14), transparent 58%),
+      rgba(3, 40, 51, 0.8);
+    color: var(--cy-cyan);
+    font-size: 0.82rem;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.45;
+    }
+
+    &:first-child {
+      border-right: 0;
+      clip-path: polygon(0.42rem 0, 100% 0, 100% 100%, 0 100%, 0 0.42rem);
+    }
+
+    &:last-child {
+      border-left: 0;
+      clip-path: polygon(0 0, calc(100% - 0.42rem) 0, 100% 0.42rem, 100% 100%, 0 100%);
+    }
+  }
+
+  .Input {
+    min-width: 0;
+    min-height: 1.65rem;
+    height: 1.65rem;
+    border-right: 0;
+    border-left: 0;
+    clip-path: none;
+    text-align: center;
   }
 }
 
@@ -2103,6 +2277,8 @@ $department_map: (
   white-space: nowrap;
   background-color: rgba(24, 216, 255, 0.08);
   border: 1px solid var(--cy-border);
+  border-radius: 0;
+  clip-path: polygon(0.42rem 0, 100% 0, 100% calc(100% - 0.42rem), calc(100% - 0.42rem) 100%, 0 100%, 0 0.42rem);
   cursor: pointer;
 
   &:disabled {
@@ -2121,6 +2297,7 @@ $department_map: (
 }
 
 .CharacterPaperdollHub {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(6.8rem, 8.2rem) minmax(15rem, 21rem) minmax(6.8rem, 8.2rem);
   gap: 0.65rem;
@@ -2129,6 +2306,8 @@ $department_map: (
 
   &__slots {
     display: grid;
+    position: relative;
+    z-index: 2;
     grid-template-columns: 1fr;
     gap: 0.45rem;
     align-content: start;
@@ -2144,19 +2323,33 @@ $department_map: (
   }
 
   &__preview {
+    position: relative;
+    z-index: 0;
     grid-column: 2;
     display: flex;
     justify-content: center;
     min-height: 22rem;
+    pointer-events: none;
+
+    .CharacterPreview {
+      position: relative;
+      z-index: 0;
+      pointer-events: none;
+    }
 
     .ByondUi {
+      position: relative;
+      z-index: 0;
       background-color: transparent !important;
       image-rendering: pixelated;
       mix-blend-mode: screen;
+      pointer-events: none;
     }
   }
 
   &__action {
+    position: relative;
+    z-index: 2;
     grid-column: 2;
   }
 
@@ -2332,6 +2525,7 @@ $department_map: (
   color: var(--cy-text);
   background-color: rgba(11, 20, 26, 0.88);
   border: 1px solid var(--cy-danger-border);
+  clip-path: polygon(0.55rem 0, 100% 0, 100% calc(100% - 0.55rem), calc(100% - 0.55rem) 100%, 0 100%, 0 0.55rem);
   cursor: pointer;
 
   &.selected,
@@ -2363,6 +2557,11 @@ $department_map: (
     place-items: center;
     color: var(--cy-cyan);
     min-height: 2.75rem;
+    overflow: hidden;
+
+    .ImageButton {
+      clip-path: none;
+    }
   }
 
   &__footer {
@@ -2455,6 +2654,35 @@ $department_map: (
 
   &.negative {
     border-color: var(--cy-danger-border);
+  }
+}
+
+.QuirkCard {
+  &.cost-good .TraitCard {
+    border-color: rgba(86, 255, 117, 0.48);
+
+    .TraitCard__value,
+    .TraitCard__icon {
+      color: #56ff75;
+    }
+  }
+
+  &.cost-mid .TraitCard {
+    border-color: rgba(255, 213, 74, 0.5);
+
+    .TraitCard__value,
+    .TraitCard__icon {
+      color: #ffd54a;
+    }
+  }
+
+  &.cost-bad .TraitCard {
+    border-color: rgba(255, 51, 74, 0.62);
+
+    .TraitCard__value,
+    .TraitCard__icon {
+      color: var(--cy-red);
+    }
   }
 }
 
@@ -2603,6 +2831,12 @@ $department_map: (
     min-height: 13.5rem;
   }
 
+  &__doll .CharacterPreview--image img {
+    width: auto;
+    height: 100%;
+    max-height: 10.8rem;
+  }
+
   &__body {
     flex: 1 1 auto;
     display: grid;
@@ -2620,21 +2854,29 @@ $department_map: (
 
   &__summaryStrip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-    gap: 0.4rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
 
     > span {
       display: grid;
-      gap: 0.15rem;
+      grid-template-columns: minmax(9rem, 1fr) auto;
+      gap: 0.75rem;
+      align-items: center;
       color: var(--cy-cyan);
       border: 1px solid var(--cy-border);
       background: rgba(0, 58, 70, 0.35);
-      padding: 0.4rem 0.5rem;
+      padding: 0.35rem 0.55rem;
 
       b {
         color: var(--cy-red);
         font-size: 0.75rem;
         text-transform: uppercase;
+      }
+
+      em {
+        color: var(--cy-text);
+        font-style: normal;
+        text-align: right;
       }
     }
   }
@@ -2662,6 +2904,7 @@ $department_map: (
 
   &__expectations {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.35rem;
 
     span {
@@ -2709,10 +2952,51 @@ $department_map: (
 
 .SkillTree {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.42rem;
 
   &.compact {
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(12.25rem, 1fr));
+    gap: 0.2rem 0.26rem;
+
+    .SkillTree__xp {
+      display: none;
+    }
+  }
+
+  &--professional.compact,
+  &--physical.compact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.24rem;
+
+    .SkillTree__branch {
+      gap: 0.08rem;
+    }
+
+    .SkillTree__perks {
+      gap: 0.06rem;
+    }
+
+    .PerkNode {
+      aspect-ratio: 3.15;
+      padding-block: 0.08rem;
+    }
+  }
+
+  &--physical.compact {
+    gap: 0.72rem;
+
+    .SkillTree__branch {
+      gap: 0.24rem;
+    }
+
+    .SkillTree__perks {
+      gap: 0.16rem;
+    }
+
+    .PerkNode {
+      aspect-ratio: 3.55;
+      padding-block: 0.2rem;
+    }
   }
 
   &__pool {
@@ -2730,30 +3014,57 @@ $department_map: (
 
   &__branch {
     display: grid;
-    gap: 0.4rem;
+    gap: 0.1rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
 
     header {
       display: flex;
       justify-content: space-between;
       color: var(--cy-cyan);
-      border-bottom: 1px solid var(--cy-border);
-      padding-bottom: 0.25rem;
+      border-bottom: 1px solid rgba(20, 198, 238, 0.5);
+      padding-bottom: 0.08rem;
+
+      b,
+      span {
+        color: var(--cy-cyan);
+        line-height: 1;
+      }
     }
   }
 
   &__perks {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 0.35rem;
+    gap: 0.08rem;
   }
 
-  &__weapon,
   &__missing {
     display: grid;
     gap: 0.25rem;
     color: var(--cy-muted);
     padding: 0.5rem;
     border: 1px solid var(--cy-border);
+  }
+
+  &__weapon {
+    display: grid;
+    gap: 0.18rem;
+    color: var(--cy-muted);
+    padding: 0;
+    border: 0;
+    background: transparent;
+
+    small {
+      display: none;
+    }
+
+    .SkillTree__weaponTrack {
+      height: 0.32rem;
+      border: 0;
+      background: rgba(2, 7, 11, 0.96);
+    }
   }
 
   &__missing {
@@ -2769,6 +3080,43 @@ $department_map: (
       min-width: 2.25rem;
       color: var(--cy-cyan);
       text-align: right;
+    }
+  }
+
+  &__weaponLevel {
+    display: grid;
+    grid-template-columns: minmax(2.15rem, 1fr) auto minmax(2.15rem, 1fr);
+    gap: 0.22rem;
+    align-items: center;
+    justify-self: stretch;
+    color: var(--cy-cyan);
+    font-size: 0.88rem;
+    line-height: 1;
+    text-shadow:
+      -1px -1px 0 rgba(2, 7, 11, 0.95),
+      1px -1px 0 rgba(2, 7, 11, 0.95),
+      -1px 1px 0 rgba(2, 7, 11, 0.95),
+      1px 1px 0 rgba(2, 7, 11, 0.95),
+      0 0 0.42rem rgba(20, 198, 238, 0.28);
+
+    .Button {
+      min-height: 1.35rem;
+      padding: 0;
+      border-color: rgba(20, 198, 238, 0.38);
+      background: rgba(0, 68, 84, 0.72);
+      clip-path: polygon(0.32rem 0, 100% 0, 100% calc(100% - 0.32rem), calc(100% - 0.32rem) 100%, 0 100%, 0 0.32rem);
+
+      &:disabled {
+        color: var(--cy-red);
+        border-color: rgba(240, 44, 66, 0.5);
+        background: rgba(65, 7, 17, 0.78);
+        opacity: 1;
+      }
+    }
+
+    span {
+      min-width: 2.8rem;
+      text-align: center;
     }
   }
 
@@ -2788,30 +3136,78 @@ $department_map: (
 }
 
 .PerkNode {
-  aspect-ratio: 1;
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 2.15;
   min-height: 0;
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: 0.25rem;
+  gap: 0.06rem;
+  overflow: hidden;
   color: var(--cy-muted);
-  background-color: rgba(5, 8, 13, 0.72);
-  border: 1px solid rgba(255, 51, 74, 0.25);
-  padding: 0.35rem 0.25rem;
+  background:
+    linear-gradient(180deg, rgba(240, 44, 66, 0.32), rgba(76, 8, 18, 0.9)),
+    rgba(82, 8, 19, 0.92);
+  border: 0;
+  clip-path: polygon(0.48rem 0, 100% 0, calc(100% - 0.48rem) 100%, 0 100%);
+  padding: 0.12rem 0.16rem;
   text-align: center;
 
-  &__icon {
-    width: 1.15rem;
-    height: 1.15rem;
-    border: 1px solid var(--cy-border);
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0 auto 0 0;
+    width: var(--perk-fill, 0%);
     background:
-      linear-gradient(135deg, transparent 30%, rgba(24, 216, 255, 0.25) 31%, rgba(24, 216, 255, 0.25) 69%, transparent 70%),
-      rgba(5, 8, 13, 0.9);
-    transform: rotate(45deg);
+      linear-gradient(90deg, rgba(239, 196, 67, 0.62), rgba(239, 196, 67, 0.2)),
+      rgba(239, 196, 67, 0.34);
+    box-shadow:
+      inset 0 0 0.65rem rgba(239, 196, 67, 0.16),
+      0 0 0.42rem rgba(239, 196, 67, 0.12);
+    transition: width 120ms ease-out;
+  }
+
+  &.full::before {
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.7), rgba(20, 198, 238, 0.28)),
+      rgba(20, 198, 238, 0.38);
+    box-shadow:
+      inset 0 0 0.65rem rgba(20, 198, 238, 0.22),
+      0 0 0.42rem rgba(20, 198, 238, 0.16);
+  }
+
+  &.partial b {
+    color: #f5d469;
+    text-shadow:
+      -1px -1px 0 rgba(2, 7, 11, 0.95),
+      1px -1px 0 rgba(2, 7, 11, 0.95),
+      -1px 1px 0 rgba(2, 7, 11, 0.95),
+      1px 1px 0 rgba(2, 7, 11, 0.95),
+      0 0 0.35rem rgba(239, 196, 67, 0.26);
+  }
+
+  &__icon {
+    display: none;
   }
 
   b {
+    position: relative;
+    z-index: 1;
+    min-width: 2.2rem;
+    padding: 0.05rem 0.22rem;
+    border: 0;
+    background: transparent;
     color: var(--cy-cyan);
+    font-size: 0.76rem;
+    line-height: 1;
+    text-shadow:
+      -1px -1px 0 rgba(2, 7, 11, 0.95),
+      1px -1px 0 rgba(2, 7, 11, 0.95),
+      -1px 1px 0 rgba(2, 7, 11, 0.95),
+      1px 1px 0 rgba(2, 7, 11, 0.95),
+      0 0 0.35rem rgba(20, 198, 238, 0.3);
   }
 
   &__tooltip {
@@ -2923,7 +3319,7 @@ $department_map: (
 
   &__middle {
     display: grid;
-    grid-template-columns: minmax(7.5rem, 10rem) minmax(11rem, 1fr) minmax(7.5rem, 10rem);
+    grid-template-columns: 1fr minmax(11rem, 14rem) 1fr;
     gap: 0.55rem;
     align-items: center;
     min-height: 15.5rem;
@@ -2932,14 +3328,17 @@ $department_map: (
   &__side {
     display: grid;
     gap: 0.4rem;
+    width: min(10rem, 100%);
   }
 
   &__side--left {
     grid-column: 1;
+    justify-self: end;
   }
 
   &__side--right {
     grid-column: 3;
+    justify-self: start;
   }
 
   &__row--bottom {
@@ -2983,5 +3382,736 @@ $department_map: (
 
   .Dropdown {
     margin: 0;
+  }
+}
+
+// Cyberpunk character setup visual pass.
+// Keep this isolated: it is a style-only layer over the existing character setup logic.
+.CharacterSetup {
+  --cy-bg: #02070b;
+  --cy-panel: #071016;
+  --cy-panel-soft: #031219;
+  --cy-red: #f02c42;
+  --cy-red-dark: #28050a;
+  --cy-cyan: #14c6ee;
+  --cy-cyan-soft: #032833;
+  --cy-text: #e9fbff;
+  --cy-muted: #9ec5d1;
+  --cy-green: #42d77d;
+  --cy-border: rgba(20, 198, 238, 0.45);
+  --cy-danger-border: rgba(240, 44, 66, 0.62);
+  --cy-cut: 0.55rem;
+
+  background:
+    linear-gradient(180deg, rgba(240, 44, 66, 0.09), transparent 13rem),
+    var(--cy-bg);
+  color: var(--cy-text);
+
+  &__topbar {
+    border-bottom: 1px solid rgba(240, 44, 66, 0.78);
+    background:
+      linear-gradient(90deg, rgba(240, 44, 66, 0.1), transparent 72%),
+      rgba(2, 7, 11, 0.95);
+  }
+
+  &__brand {
+    b {
+      color: var(--cy-red);
+      letter-spacing: 0;
+      text-shadow: 0 0 0.45rem rgba(240, 44, 66, 0.34);
+    }
+
+    i {
+      color: var(--cy-cyan);
+    }
+  }
+
+  .CyberTabs {
+    gap: 0.35rem;
+  }
+
+  .CyberTabs__tab {
+    min-width: 6.75rem;
+    min-height: 1.95rem;
+    padding: 0.25rem 0.62rem;
+    border: 1px solid rgba(20, 198, 238, 0.28);
+    border-bottom-color: rgba(240, 44, 66, 0.5);
+    clip-path: polygon(var(--cy-cut) 0, 100% 0, calc(100% - var(--cy-cut)) 100%, 0 100%);
+    color: var(--cy-cyan);
+    background: rgba(3, 18, 25, 0.92);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.05;
+    text-transform: uppercase;
+
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &:hover {
+      border-color: rgba(20, 198, 238, 0.65);
+      background: rgba(3, 40, 51, 0.84);
+    }
+
+    &.active {
+      color: #fff;
+      border-color: rgba(240, 44, 66, 0.82);
+      background:
+        linear-gradient(90deg, rgba(240, 44, 66, 0.36), transparent 78%),
+        rgba(25, 5, 10, 0.94);
+      text-shadow: 0 0 0.35rem rgba(20, 198, 238, 0.55);
+    }
+  }
+
+  .CyberPanel {
+    border: 1px solid var(--cy-danger-border);
+    clip-path: polygon(0.55rem 0, 100% 0, 100% calc(100% - 0.55rem), calc(100% - 0.55rem) 100%, 0 100%, 0 0.55rem);
+    background: var(--cy-panel);
+    box-shadow:
+      inset 0.2rem 0.2rem 0.7rem -0.35rem rgba(240, 44, 66, 0.8),
+      0 0 0.7rem rgba(0, 0, 0, 0.32);
+  }
+
+  .CyberPanel__header {
+    border-bottom: 1px solid rgba(240, 44, 66, 0.72);
+    background:
+      linear-gradient(90deg, rgba(240, 44, 66, 0.18), transparent 86%),
+      rgba(40, 5, 10, 0.72);
+  }
+
+  .CyberPanel__title,
+  .CyberSectionHeader {
+    color: var(--cy-red);
+    letter-spacing: 0;
+    text-shadow: 0 0 0.45rem rgba(240, 44, 66, 0.22);
+  }
+
+  .CyberPanel__subtitle {
+    color: var(--cy-cyan);
+    letter-spacing: 0;
+  }
+
+  .CyberPanel__content {
+    background: rgba(2, 7, 11, 0.74);
+  }
+
+  .CyberSectionHeader {
+    border-bottom: 1px solid rgba(240, 44, 66, 0.58);
+    padding-bottom: 0.32rem;
+  }
+
+  .Input,
+  .TextArea,
+  .Dropdown,
+  .NumberInput,
+  input,
+  select,
+  textarea {
+    border-radius: 0;
+    border: 1px solid var(--cy-border);
+    background: rgba(2, 7, 11, 0.94);
+    color: var(--cy-text);
+    box-shadow: none;
+
+    &:focus,
+    &:focus-within {
+      border-color: var(--cy-cyan);
+      box-shadow: 0 0 0.55rem rgba(20, 198, 238, 0.2);
+    }
+  }
+
+  .Dropdown {
+    clip-path: polygon(0.35rem 0, 100% 0, 100% calc(100% - 0.35rem), calc(100% - 0.35rem) 100%, 0 100%, 0 0.35rem);
+
+    &__control {
+      display: flex;
+      align-items: center;
+      min-height: 1.7rem;
+      border-radius: 0;
+      border-color: rgba(20, 198, 238, 0.62);
+      background:
+        linear-gradient(90deg, rgba(20, 198, 238, 0.08), transparent 70%),
+        rgba(3, 40, 51, 0.72);
+      color: var(--cy-cyan);
+      box-shadow: inset 0 -0.12rem 0 rgba(20, 198, 238, 0.16);
+
+      * {
+        color: inherit !important;
+      }
+    }
+
+    &__selected-text {
+      overflow: hidden;
+      color: var(--cy-cyan) !important;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__menu {
+      button,
+      .Button,
+      .Dropdown__menuentry {
+        color: var(--cy-red) !important;
+
+        * {
+          color: inherit !important;
+        }
+
+        &:hover,
+        &.active,
+        &.selected,
+        &.Button--selected,
+        &[data-selected='true'],
+        &[aria-selected='true'] {
+          color: var(--cy-cyan) !important;
+          background: rgba(20, 198, 238, 0.18);
+        }
+      }
+    }
+  }
+
+  .CyberField:has(.CyberSelectStepper.open) {
+    position: relative;
+    z-index: 1000;
+  }
+
+  .CyberSelectStepper {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.65rem minmax(0, 1fr) 1.65rem;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 1.65rem;
+    height: 1.65rem;
+    line-height: 1;
+    z-index: 8;
+
+    &.open {
+      z-index: 1000;
+    }
+
+    .CyberSelectDropdown {
+      position: relative;
+      min-width: 0;
+      height: 1.65rem;
+      z-index: 10;
+    }
+
+    .CyberSelectDropdown__control {
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-height: 1.65rem;
+      height: 1.65rem;
+      padding-top: 0;
+      padding-bottom: 0;
+      padding-right: 0.55rem;
+      padding-left: 0.55rem;
+      border: 1px solid rgba(20, 198, 238, 0.62);
+      border-right: 0;
+      border-left: 0;
+      border-radius: 0;
+      clip-path: none;
+      background:
+        linear-gradient(90deg, rgba(20, 198, 238, 0.08), transparent 70%),
+        rgba(3, 40, 51, 0.72);
+      color: var(--cy-cyan);
+      text-align: left;
+      cursor: pointer;
+
+      span {
+        overflow: hidden;
+        color: inherit !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      * {
+        color: inherit !important;
+      }
+    }
+
+    .CyberSelectDropdown__menu {
+      position: absolute;
+      top: calc(100% + 0.1rem);
+      right: 0;
+      left: 0;
+      z-index: 1002;
+      padding: 0.25rem;
+      border: 1px solid rgba(240, 44, 66, 0.78);
+      background: rgba(10, 2, 5, 0.98);
+      box-shadow:
+        inset 0 0 0 1px rgba(240, 44, 66, 0.18),
+        0 0.35rem 1rem rgba(0, 0, 0, 0.45);
+
+      button {
+        width: 100%;
+        min-height: 1.55rem;
+        margin-bottom: 0.16rem;
+        padding: 0.25rem 0.45rem;
+        border: 1px solid transparent;
+        border-radius: 0;
+        color: var(--cy-red) !important;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+
+        * {
+          color: inherit !important;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        &:hover,
+        &.active,
+        &.selected,
+        &.Button--selected,
+        &[data-selected='true'],
+        &[aria-selected='true'] {
+          border-color: rgba(20, 198, 238, 0.5);
+          color: var(--cy-cyan) !important;
+          background: rgba(20, 198, 238, 0.18);
+        }
+      }
+    }
+
+    .CyberSelectStepper__button {
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.65rem;
+      width: 1.65rem;
+      min-height: 1.65rem;
+      height: 1.65rem;
+      margin: 0;
+      padding: 0;
+      border: 1px solid rgba(20, 198, 238, 0.62);
+      border-radius: 0;
+      background:
+        linear-gradient(135deg, rgba(20, 198, 238, 0.14), transparent 58%),
+        rgba(3, 40, 51, 0.8);
+      color: var(--cy-cyan);
+      font-size: 0.82rem;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+
+      &:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+    }
+
+    .CyberSelectStepper__button--minus {
+      border-right: 0;
+      clip-path: polygon(0.42rem 0, 100% 0, 100% 100%, 0 100%, 0 0.42rem);
+    }
+
+    .CyberSelectStepper__button--plus {
+      border-left: 0;
+      clip-path: polygon(0 0, calc(100% - 0.42rem) 0, 100% 0.42rem, 100% 100%, 0 100%);
+    }
+  }
+
+  .CyberStepperField {
+    height: 1.65rem;
+    min-height: 1.65rem;
+
+    .Input {
+      box-sizing: border-box;
+      min-height: 1.65rem;
+      height: 1.65rem;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-right: 0;
+      border-left: 0;
+      clip-path: none;
+      text-align: center;
+    }
+  }
+
+  .Button,
+  button.CharacterSetup__speciesOption,
+  .CharacterSetup__categoryTabs button,
+  .CharacterSetup__segmented button,
+  .CharacterSetup__quickSlots button,
+  .RoleCard__priorityButton,
+  .CharacterSetup__randomAction,
+  .CharacterSetup__characterSwitcher button {
+    border-radius: 0;
+    border: 1px solid rgba(20, 198, 238, 0.52);
+    clip-path: polygon(0.42rem 0, 100% 0, 100% calc(100% - 0.42rem), calc(100% - 0.42rem) 100%, 0 100%, 0 0.42rem);
+    background: rgba(3, 40, 51, 0.78);
+    color: var(--cy-cyan);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.05;
+    min-height: 1.65rem;
+    padding: 0.24rem 0.52rem;
+    text-align: center;
+
+    > span,
+    .Button__content {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--cy-cyan);
+      background: rgba(5, 66, 82, 0.9);
+      color: var(--cy-text);
+    }
+
+    &:disabled {
+      opacity: 0.42;
+    }
+  }
+
+  .Button--selected,
+  .Button.selected,
+  .CharacterSetup__categoryTabs button.selected,
+  .CharacterSetup__segmented button.selected,
+  .CharacterSetup__quickSlots button.selected,
+  .RoleCard__priorityButton.selected {
+    border-color: var(--cy-cyan);
+    background: rgba(20, 198, 238, 0.26);
+    color: #fff;
+    text-shadow: 0 0 0.38rem rgba(20, 198, 238, 0.58);
+  }
+
+  .Button--color--bad,
+  .Button--color--red,
+  .CharacterSetup__danger,
+  .CharacterSetup__removeButton {
+    border-color: rgba(240, 44, 66, 0.86);
+    background: rgba(40, 5, 10, 0.94);
+    color: var(--cy-red);
+  }
+
+  &__metrics span,
+  &__statBox,
+  &__loadoutPoints,
+  &__infoField,
+  &__tag,
+  &__selectedDetail,
+  &__localNote,
+  &__empty,
+  &__warning,
+  &__bodyModRow,
+  &__speciesDetails,
+  .RoleGearPreview__item,
+  .RoleGearPreview__meta,
+  .RoleGearPreview__bonus,
+  .RoleGearPreview__expectation,
+  .RoleGearPreview__description,
+  .RoleGearPreview__section {
+    border: 1px solid rgba(20, 198, 238, 0.34);
+    clip-path: polygon(0.38rem 0, 100% 0, 100% calc(100% - 0.38rem), calc(100% - 0.38rem) 100%, 0 100%, 0 0.38rem);
+    background: rgba(3, 18, 25, 0.86);
+  }
+
+  &__warning,
+  .RoleGearPreview__expectation {
+    border-color: rgba(240, 44, 66, 0.48);
+    background: rgba(40, 5, 10, 0.78);
+  }
+
+  &__metrics span b,
+  &__statBox b,
+  &__loadoutPoints b,
+  &__infoField b,
+  &__tag b,
+  &__selectedDetail b,
+  .RoleGearPreview__meta b,
+  .RoleGearPreview__bonus b {
+    color: var(--cy-cyan);
+  }
+
+  .RoleCard,
+  .TraitCard,
+  .ItemCard,
+  &__antag,
+  &__speciesOption,
+  &__personalityRow,
+  &__bodyModRow,
+  .SkillTree__weaponControl {
+    border: 1px solid rgba(20, 198, 238, 0.32);
+    clip-path: polygon(0.45rem 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%, 0 0.45rem);
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.07), transparent 70%),
+      rgba(2, 7, 11, 0.82);
+  }
+
+  .RoleCard.selected,
+  .TraitCard.selected,
+  .ItemCard.selected,
+  &__antag.selected,
+  &__speciesOption.selected,
+  &__personalityRow.selected,
+  &__bodyModRow.selected {
+    border-color: var(--cy-cyan);
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.2), transparent 74%),
+      rgba(3, 40, 51, 0.72);
+    box-shadow: inset 0 0 0.55rem rgba(20, 198, 238, 0.08);
+  }
+
+  &__antag {
+    border-color: rgba(240, 44, 66, 0.7);
+    color: var(--cy-red);
+    background: rgba(40, 5, 10, 0.66);
+  }
+
+  &__antag.selected {
+    color: var(--cy-green);
+    border-color: rgba(66, 215, 125, 0.75);
+  }
+
+  .RoleCard__title,
+  .TraitCard__name,
+  .ItemCard__name,
+  .SkillTree__name,
+  .SkillTree__weaponName,
+  .PerkNode b {
+    color: var(--cy-cyan);
+    text-shadow:
+      -1px -1px 0 rgba(2, 7, 11, 0.95),
+      1px -1px 0 rgba(2, 7, 11, 0.95),
+      -1px 1px 0 rgba(2, 7, 11, 0.95),
+      1px 1px 0 rgba(2, 7, 11, 0.95),
+      0 0 0.35rem rgba(20, 198, 238, 0.24);
+  }
+
+  .RoleCard__priority {
+    gap: 0.22rem;
+  }
+
+  .RoleCard__priorityButton {
+    min-height: 1.45rem;
+    font-size: 0.72rem;
+    clip-path: polygon(0.38rem 0, 100% 0, calc(100% - 0.38rem) 100%, 0 100%);
+  }
+
+  .PerkNode.partial b {
+    color: #f5d469;
+    text-shadow:
+      -1px -1px 0 rgba(2, 7, 11, 0.95),
+      1px -1px 0 rgba(2, 7, 11, 0.95),
+      -1px 1px 0 rgba(2, 7, 11, 0.95),
+      1px 1px 0 rgba(2, 7, 11, 0.95),
+      0 0 0.35rem rgba(239, 196, 67, 0.26);
+  }
+
+  .PerkNode.full b {
+    color: var(--cy-cyan);
+  }
+
+  .CharacterSetup__summaryActions,
+  .CharacterSetup__characterSwitcher,
+  .CharacterSetup__headerActions {
+    .Button,
+    button {
+      min-width: 0;
+      font-size: 0.72rem;
+    }
+  }
+
+  .CharacterSetup__topActions {
+    display: grid;
+    grid-template-columns: minmax(9rem, 15rem) 2.05rem;
+    gap: 0.35rem;
+    align-items: center;
+
+    .Dropdown {
+      min-width: 0;
+      clip-path: polygon(0.42rem 0, 100% 0, 100% calc(100% - 0.42rem), calc(100% - 0.42rem) 100%, 0 100%, 0 0.42rem);
+    }
+
+    .Dropdown__control {
+      min-height: 1.8rem;
+      font-size: 0.78rem;
+    }
+
+    .Button {
+      width: 2.05rem;
+      min-width: 2.05rem;
+      min-height: 1.8rem;
+      padding: 0;
+      clip-path: polygon(0.45rem 0, 100% 0, 100% calc(100% - 0.45rem), calc(100% - 0.45rem) 100%, 0 100%, 0 0.45rem);
+    }
+  }
+
+  .CharacterSetup__centerPanel {
+    position: relative;
+
+    .CyberPanel__buttons {
+      position: absolute;
+      z-index: 3;
+      top: 2.75rem;
+      left: 50%;
+      display: flex;
+      gap: 0.35rem;
+      transform: translateX(-50%);
+
+      .Button {
+        width: 2rem;
+        min-width: 2rem;
+        min-height: 1.65rem;
+        padding: 0;
+      }
+    }
+  }
+
+  .CharacterSetup__speciesSelect {
+    .CyberButton.Button {
+      min-height: 2.15rem;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+    }
+  }
+
+  .CyberSlider {
+    border-color: rgba(20, 198, 238, 0.56);
+    background:
+      linear-gradient(90deg, rgba(20, 198, 238, 0.04), transparent 72%),
+      var(--cy-bg);
+
+    b {
+      justify-content: flex-end;
+      color: var(--cy-text);
+      background: transparent;
+    }
+  }
+
+  .SlotButton {
+    border: 1px solid rgba(240, 44, 66, 0.35);
+    clip-path: polygon(0.5rem 0, 100% 0, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0 100%, 0 0.5rem);
+    background: rgba(2, 7, 11, 0.86);
+  }
+
+  .SlotButton.selected,
+  .SlotButton.active {
+    border-color: var(--cy-cyan);
+    background: rgba(20, 198, 238, 0.14);
+  }
+
+  .SkillTree__xpTrack,
+  .SkillTree__weaponTrack,
+  &__loadoutPoints i,
+  &__statProgress,
+  &__progressTrack {
+    overflow: hidden;
+    height: 0.42rem;
+    border: 1px solid rgba(20, 198, 238, 0.42);
+    clip-path: polygon(0.25rem 0, 100% 0, calc(100% - 0.25rem) 100%, 0 100%);
+    background: rgba(2, 7, 11, 0.98);
+  }
+
+  .SkillTree__xpTrack span,
+  .SkillTree__weaponTrack span,
+  &__loadoutPoints b,
+  &__statProgress span,
+  &__progressTrack span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #00d8ff, rgba(20, 198, 238, 0.62));
+    box-shadow: 0 0 0.7rem rgba(20, 198, 238, 0.44);
+  }
+
+  .SkillTree__weapon .SkillTree__weaponTrack {
+    height: 0.32rem;
+    border: 0;
+    background: rgba(2, 7, 11, 0.96);
+  }
+
+  .CharacterSetup__scroll,
+  .CyberPanel.scrollable .CyberPanel__content {
+    scrollbar-color: rgba(20, 198, 238, 0.58) rgba(2, 7, 11, 0.88);
+  }
+
+  .CharacterSetup__scroll::-webkit-scrollbar,
+  .CyberPanel.scrollable .CyberPanel__content::-webkit-scrollbar {
+    width: 0.65rem;
+  }
+
+  .CharacterSetup__scroll::-webkit-scrollbar-thumb,
+  .CyberPanel.scrollable .CyberPanel__content::-webkit-scrollbar-thumb {
+    background: rgba(20, 198, 238, 0.45);
+    border: 1px solid rgba(2, 7, 11, 0.95);
+  }
+}
+
+body:has(.CharacterSetup) {
+  .Dropdown__menu,
+  .Dropdown__dropdown,
+  .Dropdown__options,
+  .Dropdown__popper {
+    border: 1px solid rgba(240, 44, 66, 0.72) !important;
+    border-radius: 0 !important;
+    background: rgba(10, 2, 5, 0.96) !important;
+    box-shadow:
+      inset 0 0 0 1px rgba(240, 44, 66, 0.18),
+      0 0.35rem 1rem rgba(0, 0, 0, 0.45) !important;
+  }
+
+  .Dropdown__menuEntry,
+  .Dropdown__option,
+  .Dropdown__item,
+  .Dropdown__menuItem,
+  .Dropdown__menu button,
+  .Dropdown__dropdown button,
+  .Dropdown__options button,
+  .Dropdown__popper button,
+  .Dropdown__menu .Button,
+  .Dropdown__dropdown .Button,
+  .Dropdown__options .Button,
+  .Dropdown__popper .Button {
+    border-radius: 0 !important;
+    color: var(--cy-red, #f02c42) !important;
+    background: transparent !important;
+
+    &:hover,
+    &.active,
+    &.selected,
+    &.Dropdown__menuEntry--highlighted,
+    &.Dropdown__option--selected,
+    &.Button--selected,
+    &[data-selected='true'],
+    &[aria-selected='true'] {
+      color: var(--cy-cyan, #14c6ee) !important;
+      background: rgba(20, 198, 238, 0.18) !important;
+
+      * {
+        color: var(--cy-cyan, #14c6ee) !important;
+      }
+    }
+  }
+
+  .Dropdown__menuEntry:not(.Dropdown__menuEntry--highlighted):not(.selected),
+  .Dropdown__option:not(.Dropdown__option--selected):not(.selected),
+  .Dropdown__item:not(.selected),
+  .Dropdown__menuItem:not(.selected),
+  .Dropdown__menu button:not(:hover):not(.active):not(.selected):not(.Button--selected):not([data-selected='true']):not([aria-selected='true']),
+  .Dropdown__dropdown button:not(:hover):not(.active):not(.selected):not(.Button--selected):not([data-selected='true']):not([aria-selected='true']),
+  .Dropdown__options button:not(:hover):not(.active):not(.selected):not(.Button--selected):not([data-selected='true']):not([aria-selected='true']),
+  .Dropdown__popper button:not(:hover):not(.active):not(.selected):not(.Button--selected):not([data-selected='true']):not([aria-selected='true']) {
+    color: var(--cy-red, #f02c42) !important;
   }
 }

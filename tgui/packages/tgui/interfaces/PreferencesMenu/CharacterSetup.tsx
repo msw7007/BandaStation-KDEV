@@ -58,7 +58,6 @@ export function CharacterSetupWindow() {
         <CyberTabs activeTab={activeTab} tabs={tabs} onSelect={setActiveTab} />
         <div className="CharacterSetup__topActions">
           <Dropdown
-            buttons
             displayText={currentProfile}
             selected={String(data.active_slot)}
             options={data.character_profiles.map((profile, index) => ({

@@ -24,6 +24,7 @@ import {
   flattenLoadoutCatalog,
   getDisplayName,
   getPreferenceValue,
+  numberValue,
   setPreference,
 } from '../helpers';
 
@@ -724,6 +725,10 @@ export function EquipmentTab() {
                 <CharacterPreview
                   height="170px"
                   id={data.character_preview_view}
+                  imageBase64={data.character_preview_icon}
+                  scale={numberValue(data, 'sprite_size', 1)}
+                  scaleX={numberValue(data, 'sprite_width', 1)}
+                  scaleY={numberValue(data, 'sprite_height', 1)}
                   transparent
                   width="180px"
                 />

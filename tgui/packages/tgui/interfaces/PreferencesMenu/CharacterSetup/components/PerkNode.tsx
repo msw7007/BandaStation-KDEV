@@ -89,9 +89,16 @@ export function PerkNode(props: PerkNodeProps) {
         className={classes([
           'PerkNode',
           rank > 0 && 'taken',
+          rank > 0 && rank < maxRank && 'partial',
+          rank >= maxRank && 'full',
           locked && 'locked',
           disabled && 'disabled',
         ])}
+        style={
+          {
+            '--perk-fill': `${Math.max(0, Math.min(100, maxRank ? (rank / maxRank) * 100 : 0))}%`,
+          } as CSSProperties
+        }
         aria-disabled={disabled || locked}
         onClick={onClick}
         onContextMenu={onContextMenu}

@@ -14,6 +14,7 @@ import { useServerPrefs } from '../../useServerPrefs';
 import { CyberPanel, CyberSectionHeader } from '../components/CyberPanel';
 import { RoleCard } from '../components/RoleCard';
 import { RoleGearPreview } from '../components/RoleGearPreview';
+import { numberValue } from '../helpers';
 
 const requireAntag = require.context(
   '../../antagonists/antagonists',
@@ -27,7 +28,6 @@ const roleFilters = [
   ['all', 'Все'],
   ['city', 'Городские'],
   ['corporate', 'Корпорация'],
-  ['deletion', 'Удаление'],
 ] as const;
 
 type RoleFilter = (typeof roleFilters)[number][0];
@@ -71,9 +71,6 @@ function getJobsForFilter(
       }
       if (!canShowJob(job, data)) {
         return false;
-      }
-      if (filter === 'deletion') {
-        return !standalone;
       }
       if (!standalone) {
         return false;
@@ -135,7 +132,7 @@ export function RolesTab() {
     <div className="CharacterSetup__layout">
       <CyberPanel title="A. Предпочтения ролей" scrollable>
         <CyberSectionHeader>Фильтр ролей</CyberSectionHeader>
-        <div className="CharacterSetup__segmented">
+        <div className="CharacterSetup__segmented CharacterSetup__segmented--roleFilter">
           {roleFilters.map(([id, label]) => (
             <button
               key={id}
@@ -178,7 +175,11 @@ export function RolesTab() {
         title="Превью выбранной роли"
       >
         <RoleGearPreview
+          previewImage={data.character_preview_icon}
           previewId={selectedRole ? data.character_preview_view : undefined}
+          previewScale={numberValue(data, 'sprite_size', 1)}
+          previewScaleX={numberValue(data, 'sprite_width', 1)}
+          previewScaleY={numberValue(data, 'sprite_height', 1)}
           roleId={visibleRole}
           job={jobs[visibleRole]}
         />

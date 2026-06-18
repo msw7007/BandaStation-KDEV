@@ -24,6 +24,7 @@ import {
   getChoiceOptions,
   getDisplayName,
   getPreferenceValue,
+  numberValue,
   setPreference,
 } from '../helpers';
 
@@ -790,6 +791,8 @@ export function CharacterTab() {
         </div>
         <SkillTree
           attributeId={selectedAttribute}
+          className="SkillTree--physical"
+          compact
           runtimeSkills={runtimeSkills}
           skills={setup?.physical_skills || []}
           onAdjustPerk={adjustPerk}
@@ -803,16 +806,27 @@ export function CharacterTab() {
         <div className="CharacterSetup__implantFixed">
           <div className="CharacterSetup__metrics">
             <span>
-              Хромированность: {metrics?.chromity ?? 50}/
-              {metrics?.chromity_max ?? 50}
-              {!!metrics?.chromity_used && ` (-${metrics.chromity_used})`}
+              Хромированность:{' '}
+              {metrics?.chromity_used ??
+                Math.max(
+                  0,
+                  (metrics?.chromity_max ?? 50) - (metrics?.chromity ?? 50),
+                )}
+              /{metrics?.chromity_max ?? 50}
               {!!metrics?.ice_chromity_penalty &&
                 `, лед -${metrics.ice_chromity_penalty}`}
             </span>
-            <span>Перегрев: {metrics?.overheat ?? 0}</span>
+            <span>
+              Перегрев: {metrics?.overheat ?? 0} / пол{' '}
+              {metrics?.overheat_floor ?? 0}
+            </span>
           </div>
           <CharacterPaperdollHub
+            previewImage={data.character_preview_icon}
             previewId={data.character_preview_view}
+            previewScale={numberValue(data, 'sprite_size', 1)}
+            previewScaleX={numberValue(data, 'sprite_width', 1)}
+            previewScaleY={numberValue(data, 'sprite_height', 1)}
             selectedSlot={selectedBodyPart || undefined}
             slots={toImplantBodyPartSlots(setup?.implant_slots)}
             onSelectSlot={selectBodyPart}
@@ -875,6 +889,7 @@ export function CharacterTab() {
           <span>Очки профессий: {professionalSkillPoints}</span>
         </div>
         <SkillTree
+          className="SkillTree--professional"
           compact
           runtimeSkills={runtimeSkills}
           skills={setup?.professional_skills || []}

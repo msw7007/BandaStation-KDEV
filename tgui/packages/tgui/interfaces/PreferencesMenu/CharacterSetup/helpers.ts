@@ -37,6 +37,15 @@ export function getPreferenceValue(
   return undefined;
 }
 
+export function numberValue(
+  data: PreferencesMenuData,
+  preference: string,
+  fallback: number,
+) {
+  const value = getPreferenceValue(data, preference);
+  return typeof value === 'number' ? value : fallback;
+}
+
 export function getServerPreference(
   serverData: ServerData | undefined,
   preference: string,

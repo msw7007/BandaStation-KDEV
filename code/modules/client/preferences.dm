@@ -188,6 +188,8 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 	for (var/datum/preference_middleware/preference_middleware as anything in middleware)
 		data += preference_middleware.get_ui_data(user)
 
+	data["character_preview_icon"] = character_preview_view?.preview_icon_base64
+
 	return data
 
 /datum/preferences/ui_static_data(mob/user)
@@ -242,6 +244,7 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 			if(!rotation_value)
 				rotation_value = -90
 			character_preview_view.setDir(turn(character_preview_view.dir, rotation_value))
+			character_preview_view.update_preview_icon()
 			return TRUE
 		if ("set_preference")
 			var/requested_preference_key = params["preference"]
@@ -383,6 +386,8 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 	var/show_job_clothes = TRUE
 	/// Job outfit forced by the role preferences preview.
 	var/datum/job/preview_job_override
+	/// Base64 flat icon used by TGUI when the native BYOND map preview would overlap controls.
+	var/preview_icon_base64
 
 /atom/movable/screen/map_view/char_preview/Initialize(mapload, datum/hud/hud_owner, datum/preferences/preferences)
 	. = ..()
@@ -402,6 +407,12 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 		body.wipe_state()
 
 	appearance = preferences.render_new_preview_appearance(body, show_job_clothes, preview_job_override)
+	update_preview_icon()
+
+/// Updates the generated icon payload for TGUI DOM previews.
+/atom/movable/screen/map_view/char_preview/proc/update_preview_icon()
+	var/icon/flat_preview = getFlatIcon(src, no_anim = TRUE)
+	preview_icon_base64 = icon2base64(flat_preview)
 
 /atom/movable/screen/map_view/char_preview/proc/create_body()
 	QDEL_NULL(body)

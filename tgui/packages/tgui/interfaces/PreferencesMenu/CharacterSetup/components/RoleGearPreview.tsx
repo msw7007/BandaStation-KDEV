@@ -7,7 +7,11 @@ import { roleDisplayName } from './RoleCard';
 type RoleGearPreviewProps = {
   roleId?: string;
   job?: Job;
+  previewImage?: string;
   previewId?: string;
+  previewScale?: number;
+  previewScaleX?: number;
+  previewScaleY?: number;
 };
 
 const corporationText: Record<string, string> = {
@@ -122,7 +126,15 @@ function expectationRows(cyberRole?: CyberpunkRole) {
 }
 
 export function RoleGearPreview(props: RoleGearPreviewProps) {
-  const { job, previewId, roleId } = props;
+  const {
+    job,
+    previewId,
+    previewImage,
+    previewScale,
+    previewScaleX,
+    previewScaleY,
+    roleId,
+  } = props;
   const outfitItems = job?.outfit_items || [];
   const groupedItems = groupOutfitItems(outfitItems);
   const cyberRole = job?.cyberpunk_role;
@@ -143,6 +155,10 @@ export function RoleGearPreview(props: RoleGearPreviewProps) {
           <CharacterPreview
             height="180px"
             id={previewId}
+            imageBase64={previewImage}
+            scale={previewScale}
+            scaleX={previewScaleX}
+            scaleY={previewScaleY}
             transparent
             width="220px"
           />
@@ -153,20 +169,20 @@ export function RoleGearPreview(props: RoleGearPreviewProps) {
         <div className="RoleGearPreview__summaryStrip">
           <span>
             <b>Направление</b>
-            {roleDirection(cyberRole)}
+            <em>{roleDirection(cyberRole)}</em>
           </span>
           <span>
             <b>Максимум слотов</b>
-            {maxSlots(job)}
+            <em>{maxSlots(job)}</em>
           </span>
           <span>
             <b>Фиксированная зарплата</b>
-            {salaryText(job, cyberRole)}
+            <em>{salaryText(job, cyberRole)}</em>
           </span>
           {!!cyberRole?.bonus_credits && (
             <span>
               <b>Стартовые кредиты</b>
-              {cyberRole.bonus_credits} cr
+              <em>{cyberRole.bonus_credits} cr</em>
             </span>
           )}
         </div>

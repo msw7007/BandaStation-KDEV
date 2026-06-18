@@ -75,10 +75,15 @@ function BinarySwitch(props: {
 function TextUnderlineSwitch(props: {
   value: string;
   options: [string, string][];
+  className?: string;
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="StyleGuide__textSwitch">
+    <div
+      className={['StyleGuide__textSwitch', props.className]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {props.options.map(([id, label]) => (
         <button
           key={id}
@@ -129,6 +134,36 @@ function StyleGuideDropdown(props: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function StyleGuideDropdownStepper(props: {
+  options: string[];
+  selected: string;
+  onSelected: (value: string) => void;
+}) {
+  const currentIndex = props.options.indexOf(props.selected);
+  const step = (direction: -1 | 1) => {
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex =
+      (safeIndex + direction + props.options.length) % props.options.length;
+    props.onSelected(props.options[nextIndex]);
+  };
+
+  return (
+    <div className="StyleGuide__dropdownStepper">
+      <button type="button" onClick={() => step(-1)}>
+        -
+      </button>
+      <StyleGuideDropdown
+        options={props.options}
+        selected={props.selected}
+        onSelected={props.onSelected}
+      />
+      <button type="button" onClick={() => step(1)}>
+        +
+      </button>
     </div>
   );
 }
@@ -401,8 +436,31 @@ export const CyberpunkUiStyleGuide = () => {
           </div>
         </div>
 
-        <div className="StyleGuide__numberedControl StyleGuide__numberedControl--block">
+        <div className="StyleGuide__numberedControl">
           <ElementNumber value={5} />
+          <div className="StyleGuide__fieldSample">
+            <span>Dropdown stepper</span>
+            <StyleGuideDropdownStepper
+              options={dropdownOptions}
+              selected={dropdown}
+              onSelected={setDropdown}
+            />
+          </div>
+        </div>
+
+        <div className="StyleGuide__numberedControl StyleGuide__numberedControl--block">
+          <ElementNumber value={6} />
+          <div className="StyleGuide__fieldSample">
+            <span>Color button</span>
+            <button type="button" className="StyleGuide__colorButton">
+              <i style={{ backgroundColor: '#f02c42' }} />
+              <span>Choose color</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="StyleGuide__numberedControl StyleGuide__numberedControl--block">
+          <ElementNumber value={7} />
           <div className="StyleGuide__fieldSample">
             <span>Knobs</span>
             <div
@@ -621,6 +679,21 @@ export const CyberpunkUiStyleGuide = () => {
                         <ElementNumber value={3} />
                         <TextUnderlineSwitch
                           value={textSwitch}
+                          onChange={setTextSwitch}
+                          options={[
+                            ['route', 'Route'],
+                            ['signal', 'Signal'],
+                            ['memory', 'Memory'],
+                          ]}
+                        />
+                      </div>
+                    </Stack.Item>
+                    <Stack.Item>
+                      <div className="StyleGuide__numberedSwitchRow">
+                        <ElementNumber value={5} />
+                        <TextUnderlineSwitch
+                          value={textSwitch}
+                          className="StyleGuide__textSwitch--redInactive"
                           onChange={setTextSwitch}
                           options={[
                             ['route', 'Route'],
