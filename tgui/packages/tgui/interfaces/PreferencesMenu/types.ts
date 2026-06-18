@@ -98,6 +98,11 @@ export type CyberpunkRole = {
   tasks?: string[];
   bonuses?: string[];
   bonus_credits?: number;
+  attribute_points?: number;
+  attribute_point_limits?: Record<string, number>;
+  professional_skill_points?: number;
+  weapon_skill_points?: number;
+  custom_title?: BooleanLike;
   standalone?: BooleanLike;
 };
 
@@ -274,6 +279,8 @@ export type CharacterSetupSkill = {
 export type CharacterSetupRuntimeSkill = {
   level: number;
   spent_points: number;
+  bonus_points?: number;
+  base_level?: number;
   perks: Record<string, CharacterSetupRuntimePerk | number>;
   can_increase: BooleanLike;
   can_decrease: BooleanLike;
@@ -282,6 +289,27 @@ export type CharacterSetupRuntimeSkill = {
   converted_experience?: number;
   pending_experience?: number;
   experience_goal?: number;
+};
+
+export type RoleSetupRuntimeAttribute = {
+  base_value: number;
+  bonus: number;
+  value: number;
+  can_increase: BooleanLike;
+  can_decrease: BooleanLike;
+};
+
+export type RoleSetupRuntimeData = {
+  attributes: Record<string, RoleSetupRuntimeAttribute>;
+  skills: Record<typePath, CharacterSetupRuntimeSkill>;
+  attribute_points: number;
+  attribute_points_max: number;
+  professional_skill_points: number;
+  professional_skill_points_max: number;
+  weapon_skill_points: number;
+  weapon_skill_points_max: number;
+  custom_title?: string;
+  can_rename: BooleanLike;
 };
 
 export type CharacterSetupImplantSlot = {
@@ -352,6 +380,7 @@ export type PreferencesMenuData = {
   >;
   is_admin?: BooleanLike;
   job_preferences: Record<string, JobPriority>;
+  character_role_setups?: Record<string, RoleSetupRuntimeData>;
 
   keybindings: Record<string, string[]>;
   overflow_role: string;

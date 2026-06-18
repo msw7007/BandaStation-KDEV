@@ -89,6 +89,8 @@ GLOBAL_LIST_EMPTY(preferences_datums)
 	var/character_setup_professional_skill_points = PROFESSIONAL_SKILL_POINTS_DEFAULT
 	/// Saved spendable weapon skill points for the selected character slot.
 	var/character_setup_weapon_skill_points = WEAPON_SKILL_POINTS_DEFAULT
+	/// Saved role-specific bonus setup data for the selected character slot, keyed by job title.
+	var/list/character_role_setups = list()
 
 	/// A list of keys that have been updated since the last save.
 	var/list/recently_updated_keys = list()

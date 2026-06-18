@@ -1,4 +1,4 @@
-import { Tooltip } from 'tgui-core/components';
+import { Button, Tooltip } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
 import { JobPriority, type Job } from '../../types';
@@ -54,7 +54,9 @@ type RoleCardProps = {
   selected?: boolean;
   priority?: JobPriority;
   disabled?: boolean;
+  setupActive?: boolean;
   onSelect?: () => void;
+  onSetup?: () => void;
   onPriority?: (priority: JobPriority | null) => void;
 };
 
@@ -63,7 +65,17 @@ export function roleDisplayName(id: string) {
 }
 
 export function RoleCard(props: RoleCardProps) {
-  const { disabled, id, job, onPriority, onSelect, priority, selected } = props;
+  const {
+    disabled,
+    id,
+    job,
+    onPriority,
+    onSelect,
+    onSetup,
+    priority,
+    selected,
+    setupActive,
+  } = props;
   const cyberRole = job.cyberpunk_role;
   const roleClass = cyberRole?.role_class
     ? roleClassText[cyberRole.role_class] || cyberRole.role_class
@@ -99,21 +111,32 @@ export function RoleCard(props: RoleCardProps) {
 
   return (
     <div className={classes(['RoleCard', selected && 'selected'])}>
-      <Tooltip content={tooltip} position="top">
-        <button
-          aria-disabled={disabled}
-          className="RoleCard__main"
-          onClick={() => {
-            if (!disabled) {
-              onSelect?.();
-            }
-          }}
-        >
-          <b>{roleDisplayName(id)}</b>
-          <span>{roleClass}</span>
-          {!!priority && <em>{priorityText[priority]}</em>}
-        </button>
-      </Tooltip>
+      <div className="RoleCard__top">
+        <Tooltip content={tooltip} position="top">
+          <button
+            aria-disabled={disabled}
+            className="RoleCard__main"
+            onClick={() => {
+              if (!disabled) {
+                onSelect?.();
+              }
+            }}
+          >
+            <b>{roleDisplayName(id)}</b>
+            <span>{roleClass}</span>
+            {!!priority && <em>{priorityText[priority]}</em>}
+          </button>
+        </Tooltip>
+        <div className="RoleCard__actions">
+          <Button
+            compact
+            icon={setupActive ? 'eye' : 'sliders'}
+            tooltip={setupActive ? 'Превью' : 'Настройка'}
+            disabled={disabled}
+            onClick={onSetup}
+          />
+        </div>
+      </div>
       {!!onPriority && (
         <div className="RoleCard__priority">
           <button

@@ -79,6 +79,12 @@
 	var/list/character_skill_perks = list()
 	///Assoc list of Cyberpunk weapon/direct skill levels. skill type -> level.
 	var/list/character_skill_levels = list()
+	///Roundstart role bonus attribute values applied over saved biometrics.
+	var/list/applied_character_role_attributes = list()
+	///Roundstart role bonus perk ranks applied over saved biometrics.
+	var/list/applied_character_role_perks = list()
+	///Roundstart role bonus weapon/direct skill levels applied over saved biometrics.
+	var/list/applied_character_role_skill_levels = list()
 	///Temporary or special giga-perk unlocks independent from current attribute value.
 	var/list/character_giga_perks = list()
 	///Assoc list of character attributes, keyed by ATTRIBUTE_* id.

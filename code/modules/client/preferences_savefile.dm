@@ -469,6 +469,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 	character_setup_skill_levels = list()
 	character_setup_professional_skill_points = PROFESSIONAL_SKILL_POINTS_DEFAULT
 	character_setup_weapon_skill_points = WEAPON_SKILL_POINTS_DEFAULT
+	character_role_setups = list()
 
 /datum/preferences/proc/load_character_setup_data(list/save_data)
 	reset_character_setup_data()
@@ -480,6 +481,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 	character_setup_skill_levels = sanitize_character_setup_skill_levels(save_data["character_setup_skill_levels"])
 	character_setup_professional_skill_points = sanitize_integer(save_data["character_setup_professional_skill_points"], 0, PROFESSIONAL_SKILL_POINTS_DEFAULT, PROFESSIONAL_SKILL_POINTS_DEFAULT)
 	character_setup_weapon_skill_points = sanitize_integer(save_data["character_setup_weapon_skill_points"], 0, WEAPON_SKILL_POINTS_DEFAULT, WEAPON_SKILL_POINTS_DEFAULT)
+	character_role_setups = sanitize_character_role_setups(save_data["character_role_setups"])
 
 /datum/preferences/proc/save_character_setup_data(list/save_data)
 	if(!islist(save_data))
@@ -489,6 +491,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 	save_data["character_setup_skill_levels"] = character_setup_skill_levels
 	save_data["character_setup_professional_skill_points"] = character_setup_professional_skill_points
 	save_data["character_setup_weapon_skill_points"] = character_setup_weapon_skill_points
+	save_data["character_role_setups"] = character_role_setups
 
 /datum/preferences/proc/sync_character_setup_from_mind(datum/mind/source_mind)
 	if(!source_mind)
@@ -496,7 +499,8 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 
 	var/list/saved_attributes = list()
 	for(var/attribute_id in ATTRIBUTE_ALL)
-		saved_attributes[attribute_id] = clamp(round(source_mind.get_attribute_value(attribute_id)), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
+		var/role_bonus = source_mind.applied_character_role_attributes?[attribute_id] || 0
+		saved_attributes[attribute_id] = clamp(round(source_mind.get_attribute_value(attribute_id) - role_bonus), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
 	character_setup_attributes = saved_attributes
 
 	var/list/saved_perks = list()
@@ -512,7 +516,9 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 			continue
 		var/list/saved_skill_perks = list()
 		for(var/perk_index in 1 to length(perk_skill_datum.perks))
-			var/rank = source_mind.get_character_perk_rank(perk_skill_type, perk_index)
+			var/list/role_skill_perks = source_mind.applied_character_role_perks?["[perk_skill_type]"]
+			var/role_bonus = islist(role_skill_perks) ? (role_skill_perks["[perk_index]"] || 0) : 0
+			var/rank = source_mind.get_character_perk_rank(perk_skill_type, perk_index) - role_bonus
 			if(rank > 0)
 				saved_skill_perks["[perk_index]"] = rank
 		if(length(saved_skill_perks))
@@ -532,7 +538,8 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 			if(temporary_level_skill)
 				qdel(level_skill_datum)
 			continue
-		var/level = source_mind.get_character_skill_level(level_skill_type)
+		var/role_bonus = source_mind.applied_character_role_skill_levels?["[level_skill_type]"] || 0
+		var/level = source_mind.get_character_skill_level(level_skill_type) - role_bonus
 		if(level > CHARACTER_SKILL_LEVEL_NONE)
 			saved_skill_levels["[level_skill_type]"] = level
 		if(temporary_level_skill)
@@ -632,6 +639,132 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 	target_mind.weapon_skill_points = max(0, WEAPON_SKILL_POINTS_DEFAULT - weapon_points_spent)
 	return TRUE
 
+/datum/preferences/proc/apply_character_role_setup_to_human(mob/living/carbon/human/target_human, datum/job/job)
+	if(!target_human?.mind || !job)
+		return FALSE
+
+	var/list/setup = character_role_setups[job.title]
+	if(!islist(setup))
+		setup = list()
+
+	var/list/attribute_bonuses = job.get_cyberpunk_role_attribute_point_limits()
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		var/bonus = clamp(round(attribute_bonuses[attribute_id] || 0), 0, ATTRIBUTE_MAXIMUM - ATTRIBUTE_MINIMUM)
+		if(bonus <= 0)
+			continue
+		var/current_value = target_human.mind.get_attribute_value(attribute_id)
+		var/new_value = min(ATTRIBUTE_MAXIMUM, current_value + bonus)
+		target_human.mind.set_attribute_value(attribute_id, new_value)
+		var/applied_bonus = new_value - current_value
+		if(applied_bonus > 0)
+			target_human.mind.applied_character_role_attributes[attribute_id] = applied_bonus
+
+	var/list/perks = setup["perks"]
+	var/remaining_professional_points = job.cyberpunk_role_professional_skill_points
+	var/list/remaining_physical_points_by_attribute = job.get_cyberpunk_role_attribute_point_limits()
+	if(islist(perks))
+		for(var/skill_key in perks)
+			var/skill_type = text2path(skill_key)
+			if(!ispath(skill_type, /datum/skill))
+				continue
+			var/datum/skill/skill_datum = GetSkillRef(skill_type)
+			if(!skill_datum || !skill_datum.uses_perks() || !(skill_datum.skill_kind in list(CHARACTER_SKILL_KIND_PHYSICAL, CHARACTER_SKILL_KIND_PROFESSIONAL)))
+				continue
+			var/list/skill_perks = perks[skill_key]
+			if(!islist(skill_perks))
+				continue
+			for(var/perk_index in 1 to length(skill_datum.perks))
+				var/remaining_role_points = 0
+				switch(skill_datum.skill_kind)
+					if(CHARACTER_SKILL_KIND_PHYSICAL)
+						remaining_role_points = max(0, round(remaining_physical_points_by_attribute[skill_datum.attribute_id] || 0))
+					if(CHARACTER_SKILL_KIND_PROFESSIONAL)
+						remaining_role_points = remaining_professional_points
+				if(remaining_role_points <= 0)
+					break
+				var/attribute_room = get_character_role_skill_attribute_room(target_human.mind, skill_datum, skill_type)
+				if(attribute_room <= 0)
+					break
+				var/bonus_rank = min(attribute_room, remaining_role_points, clamp(round(skill_perks["[perk_index]"] || 0), 0, skill_datum.max_perk_rank))
+				if(bonus_rank <= 0)
+					continue
+				var/current_rank = target_human.mind.get_character_perk_rank(skill_type, perk_index)
+				var/new_rank = min(skill_datum.max_perk_rank, current_rank + bonus_rank)
+				target_human.mind.set_character_perk_rank(skill_type, perk_index, new_rank, TRUE, TRUE)
+				var/applied_bonus = new_rank - current_rank
+				var/list/applied_skill_perks = target_human.mind.applied_character_role_perks[skill_key]
+				if(!islist(applied_skill_perks))
+					applied_skill_perks = list()
+					target_human.mind.applied_character_role_perks[skill_key] = applied_skill_perks
+				applied_skill_perks["[perk_index]"] = applied_bonus
+				switch(skill_datum.skill_kind)
+					if(CHARACTER_SKILL_KIND_PHYSICAL)
+						remaining_physical_points_by_attribute[skill_datum.attribute_id] = max(0, remaining_role_points - applied_bonus)
+					if(CHARACTER_SKILL_KIND_PROFESSIONAL)
+						remaining_professional_points -= applied_bonus
+
+	var/list/skill_levels = setup["skill_levels"]
+	var/remaining_weapon_points = job.cyberpunk_role_weapon_skill_points
+	if(islist(skill_levels))
+		for(var/skill_key in skill_levels)
+			if(remaining_weapon_points <= 0)
+				break
+			var/skill_type = text2path(skill_key)
+			if(!ispath(skill_type, /datum/skill))
+				continue
+			var/datum/skill/skill_datum = GetSkillRef(skill_type)
+			if(!skill_datum || skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
+				continue
+			var/attribute_room = get_character_role_skill_attribute_room(target_human.mind, skill_datum, skill_type)
+			if(attribute_room <= 0)
+				continue
+			var/bonus_level = min(attribute_room, remaining_weapon_points, clamp(round(skill_levels[skill_key] || 0), 0, skill_datum.max_character_level))
+			if(bonus_level <= 0)
+				continue
+			var/current_level = target_human.mind.get_character_skill_level(skill_type)
+			var/new_level = min(skill_datum.max_character_level, current_level + bonus_level)
+			target_human.mind.set_character_skill_level(skill_type, new_level, TRUE)
+			var/applied_bonus = new_level - current_level
+			target_human.mind.applied_character_role_skill_levels[skill_key] = applied_bonus
+			remaining_weapon_points -= applied_bonus
+
+	if(job.cyberpunk_allow_custom_title)
+		apply_character_role_custom_title(target_human, setup["custom_title"])
+
+	return TRUE
+
+/datum/preferences/proc/get_character_role_skill_attribute_room(datum/mind/target_mind, datum/skill/skill_datum, skill)
+	if(!skill_datum?.attribute_id)
+		return INFINITY
+	var/effective_attribute_value = target_mind?.get_attribute_value(skill_datum.attribute_id) || ATTRIBUTE_DEFAULT
+	var/current_points = skill_datum.skill_kind == CHARACTER_SKILL_KIND_PHYSICAL ? (target_mind?.get_attribute_physical_perk_points(skill_datum.attribute_id) || 0) : (target_mind?.get_character_skill_spent_points(skill) || 0)
+	return max(0, effective_attribute_value - current_points)
+
+/datum/preferences/proc/apply_character_role_custom_title(mob/living/carbon/human/target_human, custom_title)
+	custom_title = sanitize_role_custom_title(custom_title)
+	if(!target_human || !custom_title)
+		return FALSE
+
+	target_human.job = custom_title
+
+	var/obj/item/card/id/id_card = target_human.get_idcard(FALSE)
+	if(istype(id_card))
+		id_card.assignment = custom_title
+		if(istype(id_card, /obj/item/card/id/advanced))
+			var/obj/item/card/id/advanced/advanced_id = id_card
+			advanced_id.trim_assignment_override = custom_title
+		id_card.update_label()
+		target_human.update_ID_card()
+
+	var/obj/item/modular_computer/pda/pda = target_human.get_item_by_slot(ITEM_SLOT_BELT)
+	if(pda && !istype(pda))
+		pda = locate() in pda
+	if(istype(pda))
+		pda.imprint_id(target_human.real_name, custom_title)
+		pda.UpdateDisplay()
+
+	return TRUE
+
 /datum/preferences/proc/sanitize_character_setup_attributes(value)
 	var/list/input = sanitize_islist(value, list())
 	var/list/output = list()
@@ -689,6 +822,37 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 		if(temporary_skill)
 			qdel(skill_datum)
 	return output
+
+/datum/preferences/proc/sanitize_character_role_setups(value)
+	var/list/input = sanitize_islist(value, list())
+	var/list/output = list()
+	for(var/job_title in input)
+		var/list/source_setup = sanitize_islist(input[job_title], list())
+		var/list/setup = list()
+
+		var/list/perks = sanitize_character_setup_perks(source_setup["perks"])
+		if(length(perks))
+			setup["perks"] = perks
+
+		var/list/skill_levels = sanitize_character_setup_skill_levels(source_setup["skill_levels"])
+		if(length(skill_levels))
+			setup["skill_levels"] = skill_levels
+
+		var/custom_title = sanitize_role_custom_title(source_setup["custom_title"])
+		if(custom_title)
+			setup["custom_title"] = custom_title
+
+		if(length(setup))
+			output[copytext_char("[job_title]", 1, MAX_NAME_LEN)] = setup
+	return output
+
+/datum/preferences/proc/sanitize_role_custom_title(value)
+	if(!istext(value))
+		return null
+	var/sanitized_title = trim(strip_html(value, MAX_NAME_LEN))
+	if(!sanitized_title)
+		return null
+	return sanitized_title
 
 /datum/preferences/proc/switch_to_slot(new_slot)
 	if(new_slot == default_slot) // sanity check, nothing to do here.
