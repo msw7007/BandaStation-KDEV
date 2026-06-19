@@ -1,6 +1,6 @@
 // CYBERPUNK BUILD - rebuild and delete before release
 import { useState } from 'react';
-import { Box, Button, Input, Section, Stack } from 'tgui-core/components';
+import { Icon } from 'tgui-core/components';
 import type { BooleanLike } from 'tgui-core/react';
 
 import { useBackend } from '../backend';
@@ -24,7 +24,6 @@ type CryptoHackData = {
   targetName: string;
   keyName: string;
   owner: string;
-  testKey: string;
   maskedKey: string;
   selectedCode: string;
   hackingSkill: number;
@@ -43,7 +42,6 @@ export const CyberpunkCryptoHack = () => {
     targetName,
     keyName,
     owner,
-    testKey,
     maskedKey,
     selectedCode,
     hackingSkill,
@@ -58,138 +56,144 @@ export const CyberpunkCryptoHack = () => {
   const [code, setCode] = useState('');
 
   const getSegmentClass = (option: CryptoOption) =>
-    'CyberpunkPanel__CryptoSegment' +
-    (option.result === 'correct'
-      ? ' CyberpunkPanel__CryptoSegment--correct'
-      : '') +
-    (option.result === 'wrong'
-      ? ' CyberpunkPanel__CryptoSegment--wrong'
-      : '') +
-    (!option.result && option.selected
-      ? ' CyberpunkPanel__CryptoSegment--selected'
-      : '') +
-    (!option.result && !option.selected && option.wrongHint
-      ? ' CyberpunkPanel__CryptoSegment--wrong'
-      : '');
+    [
+      'StyleGuide__switch',
+      'CryptoHack__segment',
+      option.result === 'correct' && 'active',
+      option.result === 'wrong' && 'CryptoHack__segment--wrong',
+      !option.result && option.selected && 'active',
+      !option.result && !option.selected && option.wrongHint && 'CryptoHack__segment--wrong',
+    ]
+      .filter(Boolean)
+      .join(' ');
 
   return (
-    <Window width={760} height={640}>
-      <Window.Content scrollable className="CyberpunkPanel">
-        <Section title="Cryptokey breach">
-          <Stack>
-            <Stack.Item grow>
-              <Box className="CyberpunkPanel__Metric">
-                <Box className="CyberpunkPanel__Title">{targetName}</Box>
-                <Box className="CyberpunkPanel__Muted">
-                  {keyName} / {owner}
-                </Box>
-              </Box>
-            </Stack.Item>
-            <Stack.Item>
-              <Box className="CyberpunkPanel__Metric">
-                Hack {hackingSkill} / INT {intelligence}
-              </Box>
-            </Stack.Item>
-            <Stack.Item>
-              <Box className="CyberpunkPanel__Metric">
-                Reveal in {revealTimer}s
-              </Box>
-            </Stack.Item>
-            <Stack.Item>
-              <Box className="CyberpunkPanel__Metric">
-                {revealedCount}/20 / {revealDelay}s
-              </Box>
-            </Stack.Item>
-          </Stack>
-        </Section>
+    <Window width={780} height={650}>
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Взлом криптоключа</div>
+          <div className="CryptoHack__header">
+            <div className="StyleGuide__trapezoidNote">
+              <b>{targetName}</b>
+              <span>
+                {keyName} / {owner}
+              </span>
+            </div>
+            <div className="StyleGuide__blockMetrics">
+              <Metric label="Взлом / INT" value={`${hackingSkill} / ${intelligence}`} />
+              <Metric label="Открытие" value={`${revealTimer}s`} />
+              <Metric label="Прогресс" value={`${revealedCount}/20 / ${revealDelay}s`} />
+            </div>
+          </div>
+        </div>
 
-        <Section title="Key image">
-          <Stack vertical>
-            <Stack.Item>
-              <Box className="CyberpunkPanel__Muted">Skill mask</Box>
-              <Box className="CyberpunkPanel__CryptoKey">{maskedKey}</Box>
-            </Stack.Item>
-            {/* CYBERPUNK BUILD - rebuild and delete before release */}
-            <Stack.Item>
-              <Box className="CyberpunkPanel__Muted">Selected output</Box>
-              <Box className="CyberpunkPanel__CryptoKey">{selectedCode}</Box>
-            </Stack.Item>
-            <Stack.Item>
-              <Box className="CyberpunkPanel__Muted">Test output</Box>
-              <Box className="CyberpunkPanel__CryptoKey">{testKey}</Box>
-            </Stack.Item>
-            {/* CYBERPUNK BUILD - rebuild and delete before release */}
-          </Stack>
-        </Section>
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Образ ключа</div>
+          <div className="CryptoHack__keyGrid">
+            <KeyLine label="Маска навыка" value={maskedKey} />
+            <KeyLine label="Выбранный вывод" value={selectedCode} />
+          </div>
+        </div>
 
-        <Section
-          title="Column resolver"
-          buttons={
-            <Button
-              color={aligned ? 'green' : undefined}
+        <div className="StyleGuide__blockShell">
+          <div className="CryptoHack__titleRow">
+            <div className="StyleGuide__blockTitle">Решатель колонок</div>
+            <button
+              type="button"
+              className={[
+                'StyleGuide__cutButton',
+                aligned
+                  ? 'StyleGuide__cutButton--cyan-light'
+                  : 'StyleGuide__cutButton--cyan-dark',
+              ].join(' ')}
               onClick={() => act('attempt_alignment')}
             >
-              Confirm key
-            </Button>
-          }
-        >
-          {!!lastErrorCount && (
-            <Box className="CyberpunkPanel__Muted" mb={1}>
-              Last check rejected {lastErrorCount} segment
-              {lastErrorCount === 1 ? '' : 's'}.
-            </Box>
-          )}
-          <Box className="CyberpunkPanel__CryptoGrid">
-            {columns.map((column) => (
-              <Box key={column.index} className="CyberpunkPanel__CryptoColumn">
-                <Stack vertical>
-                  <Stack.Item>
-                    <Box className="CyberpunkPanel__Title" textAlign="center">
-                      Column {column.index}
-                    </Box>
-                  </Stack.Item>
-                  <Stack.Item>
-                    {column.options.map((option) => (
-                      <Button
-                        fluid
-                        key={option.index}
-                        className={getSegmentClass(option)}
-                        onClick={() =>
-                          act('select_segment', {
-                            column: column.index,
-                            option: option.index,
-                          })
-                        }
-                      >
-                        {option.text}
-                      </Button>
-                    ))}
-                  </Stack.Item>
-                </Stack>
-              </Box>
-            ))}
-          </Box>
-        </Section>
+              <Icon name="key" />
+              <span>Подтвердить ключ</span>
+            </button>
+          </div>
 
-        <Section title="Manual key input">
-          <Stack>
-            <Stack.Item grow>
-              <Input
-                fluid
-                value={code}
-                placeholder="20-character cryptokey"
-                onChange={(value: string) => setCode(value)}
-              />
-            </Stack.Item>
-            <Stack.Item>
-              <Button onClick={() => act('submit_code', { code })}>
-                Activate once
-              </Button>
-            </Stack.Item>
-          </Stack>
-        </Section>
+          {!!lastErrorCount && (
+            <div className="StyleGuide__trapezoidNote StyleGuide__trapezoidNote--meta">
+              Последняя проверка отклонила {lastErrorCount} сегм.
+            </div>
+          )}
+
+          <div className="CryptoHack__columnGrid">
+            {columns.map((column) => (
+              <div key={column.index} className="StyleGuide__createPanel CryptoHack__column">
+                <div className="StyleGuide__blockTitle">Колонка {column.index}</div>
+                <div className="CryptoHack__segmentStack">
+                  {column.options.map((option) => (
+                    <button
+                      key={option.index}
+                      type="button"
+                      className={getSegmentClass(option)}
+                      onClick={() =>
+                        act('select_segment', {
+                          column: column.index,
+                          option: option.index,
+                        })
+                      }
+                    >
+                      <span>{option.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Ручной ввод</div>
+          <div className="CryptoHack__manualRow">
+            <input
+              className="StyleGuide__textInput StyleGuide__textInput--cyan"
+              value={code}
+              placeholder="20-символьный криптоключ"
+              onChange={(event) => setCode(event.currentTarget.value)}
+            />
+            <button
+              type="button"
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              onClick={() => act('submit_code', { code })}
+            >
+              <Icon name="bolt" />
+              <span>Активировать</span>
+            </button>
+          </div>
+        </div>
       </Window.Content>
     </Window>
   );
 };
+
+const Metric = (props: { label: string; value: string }) => (
+  <span>
+    <small>{props.label}</small>
+    <b>{props.value}</b>
+  </span>
+);
+
+const KeyLine = (props: {
+  label: string;
+  value: string;
+  tone?: 'base' | 'good' | 'bad';
+}) => (
+  <label className="StyleGuide__formField">
+    <span>{props.label}</span>
+    <code
+      className={[
+        'CryptoHack__keyLine',
+        props.tone === 'good' && 'StyleGuide__textGood',
+        props.tone === 'bad' && 'StyleGuide__textBad',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {props.value}
+    </code>
+  </label>
+);
 // CYBERPUNK BUILD - rebuild and delete before release

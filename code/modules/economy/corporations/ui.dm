@@ -78,12 +78,12 @@
 			else
 				to_chat(user, span_warning("Unable to cancel this service request."))
 			return TRUE
-		if("create_pool_contract")
-			var/datum/cyberpunk_contract/contract = corporation.create_pool_contract(params["contract_type"])
+		if("create_corporate_contract")
+			var/datum/cyberpunk_contract/contract = corporation.create_corporate_contract(params["contract_type"])
 			if(contract)
-				to_chat(user, span_notice("Corporate pool contract #[contract.id] created."))
+				to_chat(user, span_notice("Corporate contract #[contract.id] created."))
 			else
-				to_chat(user, span_warning("Unable to fund a corporate pool contract."))
+				to_chat(user, span_warning("Unable to fund a corporate contract."))
 			return TRUE
 		if("pay_corporate_taxes")
 			if(corporation.pay_taxes(text2num(params["amount"]), user?.name || "corporate terminal"))

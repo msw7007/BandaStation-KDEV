@@ -53,9 +53,7 @@ type Contract = {
   taxPaid: number;
   legal: BooleanLike;
   public: BooleanLike;
-  pool: BooleanLike;
   corporation?: string;
-  generated: BooleanLike;
   creatorConfirmRequired: BooleanLike;
   directAccessCode?: string;
   requiredAmount: number;
@@ -518,8 +516,8 @@ const ContractDetails = (props: { contract: Contract; collapsed?: boolean }) => 
         <ContractCell
           label="Источник"
           value={
-            contract.pool
-              ? `пул${contract.corporation ? ` / ${contract.corporation}` : ''}`
+            contract.corporation
+              ? `корпорация / ${contract.corporation}`
               : contract.legal
                 ? 'легальный'
                 : 'теневой'
@@ -752,8 +750,6 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const [sabotageMode, setSabotageMode] = useState('damage');
   const [legal, setLegal] = useState(true);
   const [isPublic, setPublic] = useState(true);
-  const [poolContract, setPoolContract] = useState(false);
-  const [poolCorporation, setPoolCorporation] = useState('');
   const [creatorConfirm, setCreatorConfirm] = useState(false);
   const [reserveHeld, setReserveHeld] = useState(false);
   const [partialGuardPayment, setPartialGuardPayment] = useState(false);
@@ -996,7 +992,6 @@ const ContractCreation = (props: { disabled: boolean }) => {
       <div className="StyleGuide__formGrid StyleGuide__formGrid--toggles">
         <Toggle label={`Легальный: ${boolLabel(legal)}`} checked={legal} onClick={() => setLegal(!legal)} />
         <Toggle label={`Публичный: ${boolLabel(isPublic)}`} checked={isPublic} onClick={() => setPublic(!isPublic)} />
-        <Toggle label={`Пул: ${boolLabel(poolContract)}`} checked={poolContract} onClick={() => setPoolContract(!poolContract)} />
         <Toggle label={`Ручное подтверждение: ${boolLabel(creatorConfirm)}`} checked={creatorConfirm} onClick={() => setCreatorConfirm(!creatorConfirm)} />
         {isDelivery && (
           <Toggle label={`Резерв груза: ${boolLabel(reserveHeld)}`} checked={reserveHeld} onClick={() => setReserveHeld(!reserveHeld)} />
@@ -1005,16 +1000,6 @@ const ContractCreation = (props: { disabled: boolean }) => {
           <Toggle label={`Частичная охрана: ${boolLabel(partialGuardPayment)}`} checked={partialGuardPayment} onClick={() => setPartialGuardPayment(!partialGuardPayment)} />
         )}
       </div>
-
-      {!!poolContract && (
-        <Field label="Корпорация/источник пула">
-          <input
-            className="StyleGuide__textInput StyleGuide__textInput--cyan"
-            value={poolCorporation}
-            onChange={(event) => setPoolCorporation(event.currentTarget.value)}
-          />
-        </Field>
-      )}
 
       <button
         type="button"
@@ -1045,8 +1030,6 @@ const ContractCreation = (props: { disabled: boolean }) => {
             sabotage_mode: isSabotage ? sabotageMode : 'damage',
             legal: legal ? 1 : 0,
             public_contract: isPublic ? 1 : 0,
-            pool_contract: poolContract ? 1 : 0,
-            pool_corporation: poolCorporation,
             creator_confirm_required: creatorConfirm ? 1 : 0,
             reserve_held: isDelivery && reserveHeld ? 1 : 0,
             partial_guard_payment: isGuard && partialGuardPayment ? 1 : 0,

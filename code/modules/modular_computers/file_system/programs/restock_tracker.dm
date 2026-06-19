@@ -73,27 +73,6 @@
 /datum/computer_file/program/contract_registry/ui_data(mob/user)
 	return cyberpunk_contract_registry_ui_data(user)
 
-/datum/computer_file/program/contract_pool
-	filename = "contractpool"
-	filedesc = "Contract Pool"
-	downloader_category = PROGRAM_CATEGORY_SUPPLY
-	program_open_overlay = "generic"
-	extended_desc = "Corporate pool contracts. These jobs are public offers and can be taken by any contractor."
-	program_flags = PROGRAM_ON_NTNET_STORE | PROGRAM_REQUIRES_NTNET
-	can_run_on_flags = PROGRAM_ALL
-	size = 4
-	program_icon = FA_ICON_FILE_CONTRACT
-	tgui_id = "NtosContractPool"
-
-/datum/computer_file/program/contract_pool/ui_data(mob/user)
-	return cyberpunk_contract_pool_ui_data(user)
-
-/datum/computer_file/program/contract_pool/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
-	. = ..()
-	if(.)
-		return
-	return cyberpunk_contract_pool_ui_act(action, params, ui.user)
-
 /datum/computer_file/program/cyberpunk_pc_interface
 	filename = "cityshell"
 	filedesc = "City Shell"
@@ -181,24 +160,6 @@
 
 /datum/cyberpunk_contract_registry_verb_ui/ui_data(mob/user)
 	return cyberpunk_contract_registry_ui_data(user)
-
-/datum/cyberpunk_contract_pool_verb_ui/ui_state(mob/user)
-	return GLOB.always_state
-
-/datum/cyberpunk_contract_pool_verb_ui/ui_interact(mob/user, datum/tgui/ui)
-	ui = SStgui.try_update_ui(user, src, ui)
-	if(!ui)
-		ui = new(user, src, "NtosContractPool", "Contract Pool")
-		ui.open()
-
-/datum/cyberpunk_contract_pool_verb_ui/ui_data(mob/user)
-	return cyberpunk_contract_pool_ui_data(user)
-
-/datum/cyberpunk_contract_pool_verb_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
-	. = ..()
-	if(.)
-		return
-	return cyberpunk_contract_pool_ui_act(action, params, ui.user)
 
 /datum/cyberpunk_contract_offer_verb_ui
 	var/contract_id
@@ -297,14 +258,6 @@
 	set category = "IC"
 
 	var/datum/cyberpunk_contract_registry_verb_ui/interface = new
-	interface.ui_interact(src)
-
-/mob/living/verb/open_cyberpunk_contract_pool()
-	set name = "(НА УДАЛЕНИЕ) Contract Pool"
-	set desc = "Temporarily open corporate pool contracts without a PDA."
-	set category = "IC"
-
-	var/datum/cyberpunk_contract_pool_verb_ui/interface = new
 	interface.ui_interact(src)
 
 /mob/living/verb/open_cyberpunk_corporations()
@@ -806,7 +759,7 @@
 	return FALSE
 
 /proc/cyberpunk_contracts_ui_data(mob/user, direct_contract_id = null)
-	SSeconomy.ensure_cyberpunk_contract_pool_seeded()
+	SSeconomy.ensure_cyberpunk_corporate_contracts_seeded()
 	var/list/data = list()
 	var/mob/living/living_user = isliving(user) ? user : null
 	var/datum/bank_account/account = living_user?.get_bank_account()
@@ -856,19 +809,6 @@
 			if(private_contract?.can_direct_lookup(living_user, direct_contract_id))
 				data["directContract"] = private_contract.to_ui_data(living_user, TRUE)
 				break
-	return data
-
-/proc/cyberpunk_contract_pool_ui_data(mob/user)
-	var/list/data = list()
-	var/mob/living/living_user = isliving(user) ? user : null
-	var/datum/bank_account/account = living_user?.get_bank_account()
-	data["accountName"] = account?.account_holder
-	data["accountBalance"] = account?.account_balance || 0
-	data["contracts"] = list()
-	for(var/datum/cyberpunk_contract/contract as anything in SSeconomy.get_cyberpunk_contract_pool())
-		if(!contract || !contract.can_view(living_user))
-			continue
-		data["contracts"] += list(contract.to_ui_data(living_user, TRUE))
 	return data
 
 /proc/cyberpunk_contract_offer_ui_data(mob/user, contract_id)
@@ -982,20 +922,6 @@
 				to_chat(living_user, span_notice("Contract target check recorded."))
 			else
 				to_chat(living_user, span_warning("No nearby target satisfies this contract."))
-			return TRUE
-	return FALSE
-
-/proc/cyberpunk_contract_pool_ui_act(action, list/params, mob/user)
-	var/mob/living/living_user = isliving(user) ? user : null
-	if(!living_user)
-		return FALSE
-	var/datum/cyberpunk_contract/contract = params && params["id"] ? SSeconomy.get_cyberpunk_contract(params["id"]) : null
-	switch(action)
-		if("accept")
-			if(contract?.pool_contract && contract.accept(living_user))
-				to_chat(living_user, span_notice("Pool contract accepted."))
-			else
-				to_chat(living_user, span_warning("Unable to accept this pool contract."))
 			return TRUE
 	return FALSE
 

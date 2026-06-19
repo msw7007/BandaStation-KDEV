@@ -1255,7 +1255,7 @@ function ContractsTab(props: { corporation: Corporation }) {
   return (
     <div className="CorporateInterface__tabGrid">
       <div className="StyleGuide__blockShell CorporateInterface__wide">
-        <div className="StyleGuide__blockTitle">Пул контрактов</div>
+        <div className="StyleGuide__blockTitle">Корпоративные контракты</div>
         <div className="CorporateInterface__actions">
           {contractTypes.map(([type, label]) => (
             <button
@@ -1263,7 +1263,7 @@ function ContractsTab(props: { corporation: Corporation }) {
               type="button"
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
               onClick={() =>
-                act('create_pool_contract', {
+                act('create_corporate_contract', {
                   corporation_id: corporation.id,
                   contract_type: type,
                 })

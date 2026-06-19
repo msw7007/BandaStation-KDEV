@@ -25,9 +25,7 @@
 	var/escrow_deposit = 0
 	var/legal = TRUE
 	var/public_contract = TRUE
-	var/pool_contract = FALSE
-	var/pool_corporation
-	var/generated_pool_contract = FALSE
+	var/source_corporation
 	var/creator_confirm_required = FALSE
 	var/created_at = 0
 	var/accepted_at = 0
@@ -296,9 +294,9 @@
 		escrow_deposit = 0
 	status = CYBERPUNK_CONTRACT_COMPLETED
 	add_history("completed: [reason]")
-	if(pool_corporation)
+	if(source_corporation)
 		var/data_type = contract_type == CYBERPUNK_CONTRACT_DELIVERY ? "market" : contract_type
-		SScyberpunk_corporations.record_cyberpunk_corporate_activity(pool_corporation, data_type, max(1, round(payment / 100)), max(1, round(payment * 0.02)), "contract completed #[id]")
+		SScyberpunk_corporations.record_cyberpunk_corporate_activity(source_corporation, data_type, max(1, round(payment / 100)), max(1, round(payment * 0.02)), "contract completed #[id]")
 	clear_delivery_tracking()
 	SSeconomy.adjust_cyberpunk_contract_stat(contractor_character_key, "completed")
 	return TRUE
@@ -353,9 +351,7 @@
 		"creatorBusinessId" = creator_business_id,
 		"contractor" = contractor_name,
 		"assignedContractor" = assigned_contractor_name,
-		"pool" = pool_contract,
-		"corporation" = pool_corporation,
-		"generated" = generated_pool_contract,
+		"corporation" = source_corporation,
 		"payment" = payment,
 		"deposit" = deposit,
 		"penalty" = penalty,
@@ -377,5 +373,3 @@
 		"history" = include_history ? history : null,
 	)
 //CYBERPUNK BUILD - rebuild and delete before release
-
-

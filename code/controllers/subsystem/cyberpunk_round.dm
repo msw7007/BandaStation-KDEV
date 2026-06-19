@@ -242,7 +242,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 /datum/controller/subsystem/cyberpunk_round/proc/start_cyberpunk_round_clock()
 	cyberpunk_round_started_at = SSticker ? (SSticker.round_start_time || world.time) : world.time
 	SScyberpunk_corporations?.ensure_cyberpunk_corporations_seeded()
-	SSeconomy?.ensure_cyberpunk_contract_pool_seeded()
+	SSeconomy?.ensure_cyberpunk_corporate_contracts_seeded()
 	cyberpunk_round_last_snapshot_at = 0
 	cyberpunk_round_last_infrastructure = cyberpunk_round_empty_infrastructure_metrics()
 	cyberpunk_round_last_infrastructure_at = 0

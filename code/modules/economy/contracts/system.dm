@@ -60,30 +60,20 @@
 	return null
 
 
-/datum/controller/subsystem/economy/proc/ensure_cyberpunk_contract_pool_seeded()
-	if(cyberpunk_contract_pool_seeded)
+/datum/controller/subsystem/economy/proc/ensure_cyberpunk_corporate_contracts_seeded()
+	if(cyberpunk_corporate_contracts_seeded)
 		return
-	cyberpunk_contract_pool_seeded = TRUE
+	cyberpunk_corporate_contracts_seeded = TRUE
 	var/list/corporations = list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT)
 	for(var/corporation_id in corporations)
 		var/contract_count = rand(3, 4)
 		for(var/i in 1 to contract_count)
-			create_cyberpunk_generated_pool_contract(corporation_id)
+			create_cyberpunk_generated_corporate_contract(corporation_id)
 
 
-/datum/controller/subsystem/economy/proc/create_cyberpunk_generated_pool_contract(corporation)
+/datum/controller/subsystem/economy/proc/create_cyberpunk_generated_corporate_contract(corporation)
 	var/datum/cyberpunk_corporation/corporate_source = SScyberpunk_corporations.get_cyberpunk_corporation(corporation)
-	return corporate_source?.create_pool_contract()
-
-
-/datum/controller/subsystem/economy/proc/get_cyberpunk_contract_pool()
-	ensure_cyberpunk_contract_pool_seeded()
-	var/list/contracts = list()
-	for(var/contract_id in cyberpunk_contracts)
-		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
-		if(contract?.pool_contract && contract.status == CYBERPUNK_CONTRACT_CREATED)
-			contracts += contract
-	return contracts
+	return corporate_source?.create_corporate_contract()
 
 
 /datum/controller/subsystem/economy/proc/create_cyberpunk_contract(mob/living/creator, list/params)
@@ -133,8 +123,6 @@
 	var/target = reject_bad_text(params["target"], max_length = 64, ascii_only = FALSE)
 	var/description = reject_bad_text(params["description"], max_length = 240, ascii_only = FALSE)
 	var/assigned_contractor = reject_bad_text(params["assigned_contractor"], max_length = 64, ascii_only = FALSE)
-	var/pool_contract = text2num(params["pool_contract"]) ? TRUE : FALSE
-	var/pool_corporation = reject_bad_text(params["pool_corporation"], max_length = 64, ascii_only = FALSE)
 	var/reserve_held = text2num(params["reserve_held"]) ? TRUE : FALSE
 	var/obj/item/reserved_item
 	if(reserve_held)
@@ -173,8 +161,6 @@
 	contract.escrow_payment = payment
 	contract.legal = is_legal
 	contract.public_contract = text2num(params["public_contract"]) ? TRUE : FALSE
-	contract.pool_contract = pool_contract
-	contract.pool_corporation = pool_corporation
 	contract.creator_confirm_required = text2num(params["creator_confirm_required"]) ? TRUE : FALSE
 	contract.required_amount = uses_amount ? max(1, round(text2num(params["required_amount"]) || 1)) : 1
 	contract.required_percent = uses_threshold ? clamp(round(text2num(params["required_percent"]) || 75), 0, 100) : 75
@@ -203,9 +189,6 @@
 	if(assigned_contractor)
 		contract.add_history("assigned contractor: [assigned_contractor]")
 		contract.status = CYBERPUNK_CONTRACT_OFFERED
-	if(pool_contract)
-		contract.public_contract = TRUE
-		contract.add_history("published into contract pool[pool_corporation ? " for [pool_corporation]" : ""]")
 	if(reserved_item)
 		reserved_item.cyberpunk_contract_id = contract.id
 		contract.track_delivery_item(reserved_item)

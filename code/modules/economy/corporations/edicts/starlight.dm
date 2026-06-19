@@ -1,7 +1,7 @@
 //CYBERPUNK CORPORATIONS - Starlight edicts.
 /proc/cyberpunk_starlight_edicts()
 	return list(
-		list("id" = "starlight_trade_subscription", "name" = "Trade Subscription", "level" = 1, "description" = "Citizens and businesses may subscribe for faster Starlight delivery and direct pool hand-ins."),
+		list("id" = "starlight_trade_subscription", "name" = "Trade Subscription", "level" = 1, "description" = "Citizens and businesses may subscribe for faster Starlight delivery and direct corporate hand-ins."),
 		list("id" = "starlight_self_statistics", "name" = "Self-Statistics", "level" = 1, "description" = "Purchases, deliveries, contracts, sales, and Starlight vending generate market data."),
 		list("id" = "starlight_supply_cert", "name" = "Supply Certification", "level" = 1, "description" = "Starlight vendors use larger and more frequent stock support."),
 		list("id" = "starlight_trade_analysis", "name" = "Trade Analysis", "level" = 2, "description" = "Citizens may order goods to coordinates or beacons."),

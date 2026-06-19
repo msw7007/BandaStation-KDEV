@@ -362,6 +362,7 @@
 	var/list/selections = list()
 	var/list/revealed_positions = list()
 	var/list/column_results = list()
+	var/list/column_wrong_hints = list()
 	var/next_reveal = 0
 	var/reveal_delay = CYBERPUNK_CRYPTO_REVEAL_DELAY
 	var/last_error_count = 0
@@ -378,6 +379,7 @@
 		columns += list(generate_column_options(correct_segment))
 		selections += 0
 		column_results["[column_index]"] = null
+		column_wrong_hints["[column_index]"] = generate_wrong_hint_indexes(columns[column_index], correct_segment)
 	initialize_revealed_positions()
 	next_reveal = world.time + reveal_delay
 
@@ -389,6 +391,7 @@
 	selections = null
 	revealed_positions = null
 	column_results = null
+	column_wrong_hints = null
 	return ..()
 
 /datum/cyberpunk_crypto_hack_session/proc/generate_column_options(correct_segment)
@@ -399,6 +402,20 @@
 			continue
 		options += candidate
 	return shuffle(options)
+
+/datum/cyberpunk_crypto_hack_session/proc/generate_wrong_hint_indexes(list/options, correct_segment)
+	var/hacking_skill = user?.get_character_skill_level(SKILL_HACKING) || 0
+	var/wrong_hint_budget = clamp(hacking_skill, 0, CYBERPUNK_CRYPTO_OPTIONS - 1)
+	var/list/wrong_indexes = list()
+	for(var/option_index in 1 to length(options))
+		if(options[option_index] == correct_segment)
+			continue
+		wrong_indexes += option_index
+	wrong_indexes = shuffle(wrong_indexes)
+	var/list/hints = list()
+	for(var/hint_index in 1 to min(wrong_hint_budget, length(wrong_indexes)))
+		hints["[wrong_indexes[hint_index]]"] = TRUE
+	return hints
 
 /datum/cyberpunk_crypto_hack_session/proc/get_reveal_delay()
 	var/hacking_skill = user?.get_character_skill_level(SKILL_HACKING) || 0
@@ -461,17 +478,12 @@
 	var/correct_segment = get_cyberpunk_crypto_segment(key_datum.code, column_index)
 	var/selected_index = selections[column_index]
 	var/check_result = column_results["[column_index]"]
-	var/hacking_skill = user?.get_character_skill_level(SKILL_HACKING) || 0
-	var/wrong_hint_budget = clamp(hacking_skill, 0, CYBERPUNK_CRYPTO_OPTIONS - 1)
-	var/wrong_hints_used = 0
+	var/list/wrong_hints = column_wrong_hints["[column_index]"]
 	var/list/option_data = list()
 	for(var/option_index in 1 to length(options))
 		var/option = options[option_index]
 		var/is_wrong = option != correct_segment
-		var/hinted_wrong = FALSE
-		if(is_wrong && wrong_hints_used < wrong_hint_budget)
-			hinted_wrong = TRUE
-			wrong_hints_used++
+		var/hinted_wrong = is_wrong && wrong_hints["[option_index]"]
 		option_data += list(list(
 			"index" = option_index,
 			"text" = option,
@@ -545,9 +557,6 @@
 		"targetName" = target?.name || "test harness",
 		"keyName" = key_datum.name,
 		"owner" = key_datum.owner,
-		//CYBERPUNK BUILD - rebuild and delete before release
-		"testKey" = key_datum.code,
-		//CYBERPUNK BUILD - rebuild and delete before release
 		"maskedKey" = get_masked_key(),
 		"selectedCode" = get_selected_code(),
 		"hackingSkill" = src.user?.get_character_skill_level(SKILL_HACKING) || 0,

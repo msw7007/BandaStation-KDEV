@@ -56,8 +56,8 @@ SUBSYSTEM_DEF(economy)
 	var/list/cyberpunk_contract_stats = list()
 	/// Persistent reputation stats keyed by character/account name.
 	var/datum/json_database/cyberpunk_contract_stats_database
-	/// Whether the round-local corporate pool was filled with starter contracts.
-	var/cyberpunk_contract_pool_seeded = FALSE
+	/// Whether round-local starter corporate contracts were generated.
+	var/cyberpunk_corporate_contracts_seeded = FALSE
 	/// Round-local mail and cargo held by CP13 contract terminals.
 	var/list/cyberpunk_contract_mail = list()
 	/// Next id for CP13 contract terminal mail.
@@ -101,7 +101,7 @@ SUBSYSTEM_DEF(economy)
 	next_cyberpunk_contract_id = SSeconomy.next_cyberpunk_contract_id
 	cyberpunk_contract_stats = SSeconomy.cyberpunk_contract_stats
 	cyberpunk_contract_stats_database = SSeconomy.cyberpunk_contract_stats_database
-	cyberpunk_contract_pool_seeded = SSeconomy.cyberpunk_contract_pool_seeded
+	cyberpunk_corporate_contracts_seeded = SSeconomy.cyberpunk_corporate_contracts_seeded
 	cyberpunk_contract_mail = SSeconomy.cyberpunk_contract_mail
 	next_cyberpunk_contract_mail_id = SSeconomy.next_cyberpunk_contract_mail_id
 	//CYBERPUNK BUILD - rebuild and delete before release
