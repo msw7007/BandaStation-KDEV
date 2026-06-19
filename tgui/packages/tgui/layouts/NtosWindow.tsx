@@ -34,6 +34,8 @@ export type NTOSData = {
   proposed_login: Login;
   removable_media: string[];
   show_imprint: BooleanLike;
+  can_write_crypto_key?: BooleanLike;
+  crypto_key_target?: string;
 };
 
 type Program = {

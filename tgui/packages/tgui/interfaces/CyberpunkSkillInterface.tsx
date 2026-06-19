@@ -105,6 +105,8 @@ type SkillInterfaceData = {
   accessGranted: BooleanLike;
   accessCard?: string;
   memoryKeys: number;
+  canWriteCryptoKey?: BooleanLike;
+  cryptoKeyTarget?: string;
   levelPoints: number;
   skillPoints: number;
   professionalSkillPoints: number;
@@ -574,6 +576,20 @@ export const CyberpunkSkillInterface = () => {
                 </span>
               </div>
               <CyberSectionHeader>Установленные импланты</CyberSectionHeader>
+              <div className="CharacterSetup__headerActions">
+                <Button
+                  icon="key"
+                  disabled={!data.canWriteCryptoKey}
+                  tooltip={
+                    data.cryptoKeyTarget
+                      ? `Записать ключи на ${data.cryptoKeyTarget}`
+                      : 'Нужна нейропамять и карта/диск/чип в руке'
+                  }
+                  onClick={() => act('write_crypto_key')}
+                >
+                  Записать ключи
+                </Button>
+              </div>
               <div className="SkillInterface__implantList">
                 {implants.map((implant) => (
                   <ImplantCard

@@ -105,15 +105,21 @@
 	size = 6
 	program_icon = "desktop"
 	tgui_id = "CyberpunkPcInterface"
+	var/selected_corporation_id
 
 /datum/computer_file/program/cyberpunk_pc_interface/ui_data(mob/user)
-	return cyberpunk_pc_interface_ui_data(user)
+	return cyberpunk_pc_interface_ui_data(user, selected_corporation_id, computer)
 
 /datum/computer_file/program/cyberpunk_pc_interface/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
 	if(.)
 		return
-	return cyberpunk_pc_interface_ui_act(action, params, ui.user)
+	if(action == "select")
+		selected_corporation_id = params["corporation_id"]
+		return TRUE
+	if(cyberpunk_corporations_ui_act(action, params, ui.user))
+		return TRUE
+	return cyberpunk_pc_interface_ui_act(action, params, ui.user, src)
 
 /datum/cyberpunk_tgui_style_guide_ui/ui_state(mob/user)
 	return GLOB.always_state
@@ -251,6 +257,9 @@
 	var/datum/cyberpunk_skill_interface_verb_ui/interface = new(diagnostic_access)
 	interface.ui_interact(src)
 
+/datum/cyberpunk_pc_interface_verb_ui
+	var/selected_corporation_id
+
 /datum/cyberpunk_pc_interface_verb_ui/ui_state(mob/user)
 	return GLOB.always_state
 
@@ -261,12 +270,17 @@
 		ui.open()
 
 /datum/cyberpunk_pc_interface_verb_ui/ui_data(mob/user)
-	return cyberpunk_pc_interface_ui_data(user)
+	return cyberpunk_pc_interface_ui_data(user, selected_corporation_id)
 
 /datum/cyberpunk_pc_interface_verb_ui/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
 	if(.)
 		return
+	if(action == "select")
+		selected_corporation_id = params["corporation_id"]
+		return TRUE
+	if(cyberpunk_corporations_ui_act(action, params, ui.user))
+		return TRUE
 	return cyberpunk_pc_interface_ui_act(action, params, ui.user)
 
 /mob/living/verb/open_cyberpunk_contracts()
@@ -406,6 +420,7 @@
 	user_mind?.recalculate_character_skill_point_pools()
 
 	var/obj/item/card/id/access_card = living_user?.get_cyberpunk_access_card()
+	var/obj/item/crypto_write_target = living_user?.get_active_held_item() || access_card
 	data["userName"] = user?.name || "unknown"
 	data["hasNeuralInterface"] = has_neural
 	data["diagnosticAccess"] = !!diagnostic_access
@@ -413,6 +428,8 @@
 	data["implantEnabled"] = neural_interface?.skill_interface_enabled || FALSE
 	data["accessCard"] = access_card?.name
 	data["memoryKeys"] = length(living_user?.cyberpunk_crypto_memory)
+	data["canWriteCryptoKey"] = !!(has_neural && length(living_user?.cyberpunk_crypto_memory) && crypto_write_target)
+	data["cryptoKeyTarget"] = crypto_write_target?.name
 	data["levelPoints"] = user_mind?.level_points || 0
 	data["skillPoints"] = user_mind?.skill_points || 0
 	data["professionalSkillPoints"] = user_mind?.professional_skill_points || 0
@@ -623,6 +640,13 @@
 			var/result = living_user.sync_cyberpunk_access_card_to_neural_interface()
 			to_chat(living_user, span_notice(result))
 			return TRUE
+		if("write_crypto_key")
+			if(!living_user || !neural_interface)
+				return FALSE
+			var/obj/item/target = living_user.get_active_held_item() || living_user.get_cyberpunk_access_card()
+			var/result = living_user.write_cyberpunk_crypto_memory_to_item(target)
+			to_chat(living_user, span_notice(result))
+			return TRUE
 		if("install_skillchip")
 			if(!living_user || !neural_interface)
 				return FALSE
@@ -674,27 +698,68 @@
 			return user_mind.adjust_character_skill_level(skill_type, delta)
 	return FALSE
 
-/proc/cyberpunk_pc_interface_ui_data(mob/user)
+/proc/cyberpunk_pc_app_entry(id, name, category, status, description, icon = "window-maximize", native_program = null)
+	return list(
+		"id" = id,
+		"name" = name,
+		"category" = category,
+		"status" = status,
+		"description" = description,
+		"icon" = icon,
+		"nativeProgram" = native_program,
+	)
+
+/proc/cyberpunk_pc_build_app_index(obj/item/modular_computer/host_computer = null)
+	var/list/apps = list(
+		cyberpunk_pc_app_entry("contracts", "Контракты", "Работа", "ready", "Создание, принятие и сопровождение контрактов, включая сервисные заявки по месту назначения.", FA_ICON_FILE_CONTRACT),
+		cyberpunk_pc_app_entry("registry", "Реестр контрактов", "Работа", "ready", "Юридическая история контрактов и публичные записи.", FA_ICON_FILE_CONTRACT),
+		cyberpunk_pc_app_entry("corporations", "Корпорации", "Корпорации", "info", "Публичная витрина корпораций: профиль, специализация и активные услуги.", "building-columns"),
+		cyberpunk_pc_app_entry("skills", "Навыки", "Работа", "ready", "Просмотр и настройка нейроинтерфейса навыков.", "medal"),
+		cyberpunk_pc_app_entry("citylink", "CityLink", "Связь", "program", "Модлинк для личных сообщений между устройствами и будущего смартфонного SMS-слоя.", "comment-alt", "nt_messenger"),
+		cyberpunk_pc_app_entry("chat", "Городской чат", "Связь", "program", "Сетевые каналы NTNet и городские чаты.", FA_ICON_COMMENT_ALT, "ntnrc_client"),
+		cyberpunk_pc_app_entry("navigator", "Навигация", "Город", "program", "Карта, текущее положение и навигационные маршруты.", "route", "ntos_navigator"),
+		cyberpunk_pc_app_entry("pay", "Платежи", "Город", "program", "Счета, переводы и платежные операции.", "money-bill-wave", "ntpay"),
+		cyberpunk_pc_app_entry("software", "Установка приложений", "Система", "program", "Загрузка и управление программами через NT Software Hub.", "download", "ntsoftwarehub"),
+		cyberpunk_pc_app_entry("files", "Файлы", "Система", "program", "Локальные файлы, диски и документы.", "folder", "filemanager"),
+		cyberpunk_pc_app_entry("notepad", "Заметки", "Система", "program", "Локальные текстовые заметки.", "book", "notepad"),
+		cyberpunk_pc_app_entry("crew", "Список экипажа", "Город", "program", "Публичный список экипажа и назначений.", "clipboard-list", "plexagoncrew"),
+		cyberpunk_pc_app_entry("bounty", "Доска заявок", "Город", "program", "Городские заявки и bounty-сеть.", FA_ICON_BOXES_STACKED, "bountyboard"),
+		cyberpunk_pc_app_entry("cargo", "Заказы снабжения", "Город", "program", "Покупки, доставка и снабжение через NT Shopping Network.", FA_ICON_CART_FLATBED, "orderapp"),
+	)
+	if(!host_computer)
+		for(var/list/app as anything in apps)
+			if(app["nativeProgram"])
+				app["status"] = "needs_pc"
+		return apps
+	for(var/list/app as anything in apps)
+		var/native_program = app["nativeProgram"]
+		if(!native_program)
+			continue
+		var/datum/computer_file/program/program = host_computer.find_file_by_name(native_program)
+		if(!program)
+			app["status"] = "not_installed"
+			continue
+		app["status"] = program in host_computer.idle_threads ? "running" : "installed"
+		app["name"] = program.filedesc || app["name"]
+		app["icon"] = program.program_icon || app["icon"]
+	return apps
+
+/proc/cyberpunk_pc_interface_ui_data(mob/user, selected_corporation_id = null, obj/item/modular_computer/host_computer = null)
 	var/list/data = list()
 	var/mob/living/living_user = isliving(user) ? user : null
 	var/datum/bank_account/account = living_user?.get_bank_account()
 	var/obj/item/card/id/access_card = living_user?.get_cyberpunk_access_card()
+	var/obj/item/crypto_write_target = host_computer?.get_cyberpunk_crypto_write_target()
 	data["userName"] = user?.name || "unknown"
 	data["accountName"] = account?.account_holder
 	data["accountBalance"] = account?.account_balance || 0
 	data["hasNeuralInterface"] = living_user?.has_neural_implant() || FALSE
 	data["accessCard"] = access_card?.name
 	data["memoryKeys"] = length(living_user?.cyberpunk_crypto_memory)
-	data["apps"] = list(
-		list("id" = "contracts", "name" = "Contracts", "category" = "Work", "status" = "ready", "description" = "Create, accept, and track contracts."),
-		list("id" = "registry", "name" = "Contract Registry", "category" = "Work", "status" = "ready", "description" = "Legal contract history and public records."),
-		list("id" = "pool", "name" = "Contract Pool", "category" = "Corporate", "status" = "ready", "description" = "Corporate pool jobs paid from corp budgets."),
-		list("id" = "corporations", "name" = "Corporations", "category" = "Corporate", "status" = "ready", "description" = "Research, edicts, services, and budgets."),
-		list("id" = "appcracker", "name" = "App Cracker", "category" = "Net", "status" = "program", "description" = "Command-line access to nearby cyberspace nodes."),
-		list("id" = "mail", "name" = "Mail", "category" = "City", "status" = "planned", "description" = "Terminal mail, cargo pickup, and delivery notices."),
-		list("id" = "business", "name" = "Business", "category" = "City", "status" = "terminal", "description" = "Business management is routed through business terminals."),
-		list("id" = "files", "name" = "Files", "category" = "System", "status" = "local", "description" = "Local file system and inserted disks."),
-	)
+	data["canWriteCryptoKey"] = host_computer?.can_write_cyberpunk_crypto_memory(user) || FALSE
+	data["cryptoKeyTarget"] = crypto_write_target?.name
+	data["apps"] = cyberpunk_pc_build_app_index(host_computer)
+	data["corporationsInterface"] = cyberpunk_corporations_ui_data(user, selected_corporation_id)
 	data["activity"] = list(
 		"City shell mounted.",
 		"NTNet route accepted.",
@@ -702,10 +767,28 @@
 	)
 	return data
 
-/proc/cyberpunk_pc_interface_ui_act(action, list/params, mob/user)
+/proc/cyberpunk_pc_interface_ui_act(action, list/params, mob/user, datum/computer_file/program/cyberpunk_pc_interface/host_program = null)
 	switch(action)
+		if("write_crypto_key")
+			if(host_program?.computer?.write_cyberpunk_crypto_memory_to_inserted_storage(user))
+				playsound(host_program.computer, 'sound/machines/terminal/terminal_processing.ogg', 15, TRUE)
+			return TRUE
 		if("open_app")
 			var/app_id = params["app"]
+			if(host_program?.computer)
+				var/list/apps = cyberpunk_pc_build_app_index(host_program.computer)
+				for(var/list/app as anything in apps)
+					if(app["id"] != app_id)
+						continue
+					var/native_program = app["nativeProgram"]
+					if(!native_program)
+						break
+					var/datum/computer_file/program/program = host_program.computer.find_file_by_name(native_program)
+					if(program)
+						host_program.computer.open_program(user, program)
+						return TRUE
+					to_chat(user, span_notice("Программа [app["name"]] не установлена на этом ПК. Установите её через NT Software Hub."))
+					return TRUE
 			switch(app_id)
 				if("contracts")
 					var/datum/cyberpunk_contracts_verb_ui/interface = new
@@ -715,15 +798,10 @@
 					var/datum/cyberpunk_contract_registry_verb_ui/interface = new
 					interface.ui_interact(user)
 					return TRUE
-				if("pool")
-					var/datum/cyberpunk_contract_pool_verb_ui/interface = new
-					interface.ui_interact(user)
+				if("skills")
+					user.open_cyberpunk_skill_interface()
 					return TRUE
-				if("corporations")
-					var/datum/cyberpunk_corporations_verb_ui/interface = new
-					interface.ui_interact(user)
-					return TRUE
-			to_chat(user, span_notice("This app is installed as a computer program or awaits a dedicated terminal."))
+			to_chat(user, span_notice("Это приложение требует установленной программы на ПК."))
 			return TRUE
 	return FALSE
 

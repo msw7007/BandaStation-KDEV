@@ -57,46 +57,6 @@
     padding-right: 0.2rem;
   }
 
-  .CorporateInterface__entityButton {
-    display: grid;
-    width: 100%;
-    min-height: 3rem;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid rgba(24, 216, 255, 0.36);
-    clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
-    color: var(--sg-cyan);
-    background: rgba(3, 40, 51, 0.88);
-    cursor: pointer;
-    text-align: left;
-
-    span,
-    small {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    span {
-      color: #fff;
-      font-weight: 800;
-    }
-
-    small {
-      color: #9ec5d1;
-    }
-
-    &.active {
-      border-color: var(--sg-red);
-      background:
-        linear-gradient(90deg, rgba(240, 44, 66, 0.38), transparent 78%),
-        rgba(40, 5, 10, 0.94);
-    }
-
-    &.restricted {
-      border-color: rgba(240, 44, 66, 0.66);
-    }
-  }
-
   .CorporateInterface__main {
     display: grid;
     min-width: 0;
@@ -135,27 +95,32 @@
     margin-top: 0.65rem;
   }
 
+  .CorporateInterface__researchControls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 5.8rem max-content max-content;
+    gap: 0.45rem;
+    align-items: stretch;
+    margin-bottom: 0.65rem;
+
+    .StyleGuide__cutButton {
+      width: auto;
+      min-width: 7rem;
+    }
+  }
+
+  .CorporateInterface__inlineAction {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 0.45rem;
+    align-items: center;
+  }
+
   .CorporateInterface__serviceControls {
     display: block;
     clear: both;
     margin-top: 0.65rem;
     padding-top: 0.55rem;
     border-top: 1px solid rgba(24, 216, 255, 0.22);
-  }
-
-  .CorporateInterface__serviceToggle {
-    display: block;
-    width: 100%;
-    min-height: 1.9rem;
-    padding: 0.35rem 0.7rem;
-    border: 1px solid rgba(24, 216, 255, 0.5);
-    clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
-    color: var(--sg-cyan);
-    background: rgba(3, 40, 51, 0.88);
-    font-weight: 900;
-    text-align: center;
-    text-transform: uppercase;
-    cursor: pointer;
   }
 
   .CorporateInterface__transferGrid {
@@ -196,16 +161,6 @@
       max-height: 14rem;
       overflow-y: auto;
     }
-  }
-
-  .CorporateInterface__compactButton {
-    align-self: end;
-    width: auto;
-    min-width: 0;
-    min-height: 1.65rem;
-    padding: 0.22rem 0.52rem;
-    font-size: 0.82rem;
-    line-height: 1;
   }
 
   .CorporateInterface__hint {
@@ -253,6 +208,39 @@
     width: 24%;
   }
 
+  .CorporateInterface__taxRateList {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .CorporateInterface__taxRateRow {
+    min-width: 0;
+  }
+
+  .CorporateInterface__dragField .StyleGuide__dragFieldContent {
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .CorporateInterface__rentRateRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 0.5rem;
+    align-items: stretch;
+    min-width: 0;
+
+    .StyleGuide__cutButton {
+      width: auto;
+      min-width: 6.5rem;
+      min-height: 2.05rem;
+      align-self: stretch;
+      justify-content: center;
+    }
+  }
+
   .CorporateInterface__taxControl {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 7rem;
@@ -285,45 +273,6 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.5rem;
-  }
-
-  .CorporateInterface__serviceOption {
-    display: grid;
-    gap: 0.2rem;
-    min-height: 3.4rem;
-    padding: 0.45rem 0.55rem;
-    border: 1px solid rgba(240, 44, 66, 0.62);
-    clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
-    color: #d7e7ee;
-    background:
-      linear-gradient(90deg, rgba(240, 44, 66, 0.1), transparent 72%),
-      rgba(14, 2, 6, 0.78);
-    text-align: left;
-
-    b {
-      overflow: hidden;
-      color: var(--sg-red);
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    span {
-      color: #9ec5d1;
-      font-size: 0.82rem;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-
-    &.available {
-      border-color: rgba(20, 198, 238, 0.62);
-      background:
-        linear-gradient(90deg, rgba(20, 198, 238, 0.09), transparent 72%),
-        rgba(3, 18, 25, 0.8);
-    }
-
-    &.available b {
-      color: var(--sg-cyan);
-    }
   }
 
   .CorporateInterface__cardGrid {
@@ -408,29 +357,7 @@
   }
 
   .CorporateInterface__techFilters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-
-    button {
-      min-height: 1.75rem;
-      padding: 0.3rem 0.7rem;
-      border: 1px solid rgba(24, 216, 255, 0.38);
-      clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
-      color: var(--sg-cyan);
-      background: rgba(3, 40, 51, 0.82);
-      font-weight: 800;
-      text-transform: uppercase;
-      cursor: pointer;
-
-      &.active {
-        border-color: var(--sg-red);
-        color: #fff;
-        background:
-          linear-gradient(90deg, rgba(240, 44, 66, 0.32), transparent 78%),
-          rgba(40, 5, 10, 0.92);
-      }
-    }
+    min-width: 20rem;
   }
 
   .CorporateInterface__nodeGrid {
@@ -441,8 +368,8 @@
 
   .CorporateInterface__techNode {
     display: grid;
-    gap: 0.35rem;
-    min-height: 5.8rem;
+    gap: 0.45rem;
+    min-height: 6.4rem;
     padding: 0.45rem;
     border: 1px solid rgba(240, 44, 66, 0.62);
     background:
@@ -496,34 +423,26 @@
 
   .CorporateInterface__techNodeBody {
     display: grid;
-    grid-template-columns: 0.28rem minmax(0, 1fr) max-content;
-    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
     align-items: start;
   }
 
   .CorporateInterface__techNodeMeter {
     position: relative;
     overflow: hidden;
-    align-self: stretch;
-    min-height: 4.4rem;
+    min-width: 0;
+    height: 0.42rem;
     border: 1px solid rgba(24, 216, 255, 0.28);
     background: rgba(0, 0, 0, 0.4);
 
     span {
       position: absolute;
-      right: 0;
+      top: 0;
       bottom: 0;
       left: 0;
-      background: linear-gradient(180deg, var(--sg-cyan), var(--sg-red));
+      background: linear-gradient(90deg, var(--sg-cyan), var(--sg-red));
     }
-  }
-
-  .CorporateInterface__techNodeBody .Button {
-    align-self: start;
-    width: 6.4rem;
-    min-height: 1.9rem;
-    padding-right: 0.45rem;
-    padding-left: 0.45rem;
   }
 
   .CorporateInterface__techNodeContent {
@@ -532,10 +451,21 @@
     gap: 0.35rem;
   }
 
+  .CorporateInterface__techNodeProgress {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 0.6rem;
+    align-items: center;
+    margin-top: 0.1rem;
+  }
+
   .CorporateInterface__techNodeCost {
     justify-self: end;
     color: #fff;
-    font-size: 0.84rem;
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .CorporateInterface__techNodeMeta {
@@ -557,16 +487,7 @@
     grid-template-columns: 2.4rem minmax(0, 1fr);
     gap: 0.45rem;
     align-items: center;
-    width: 100%;
     min-height: 3rem;
-    padding: 0.42rem 0.55rem;
-    border: 1px solid rgba(240, 44, 66, 0.62);
-    clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
-    color: #d7e7ee;
-    background:
-      linear-gradient(90deg, rgba(240, 44, 66, 0.1), transparent 72%),
-      rgba(14, 2, 6, 0.78);
-    cursor: pointer;
     text-align: left;
 
     span {
@@ -580,14 +501,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    &.active {
-      border-color: rgba(66, 215, 125, 0.62);
-      background:
-        linear-gradient(90deg, rgba(66, 215, 125, 0.16), transparent 72%),
-        rgba(3, 18, 25, 0.82);
-    }
-
     &.active span {
       color: var(--cy-green);
     }
@@ -600,5 +513,248 @@
 
   .Input {
     min-height: 1.9rem;
+  }
+}
+
+.PcInterface {
+  min-height: 100%;
+
+  .PcInterface__header {
+    margin-bottom: 0.65rem;
+  }
+
+  .PcInterface__eyebrow {
+    color: var(--sg-red);
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .PcInterface__account {
+    display: grid;
+    justify-items: end;
+    color: var(--sg-cyan);
+
+    b {
+      color: #fff;
+      font-size: 1.2rem;
+    }
+
+    em {
+      color: var(--sg-red);
+      font-style: normal;
+    }
+  }
+
+  .PcInterface__identity {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .PcInterface__tabs {
+    margin-bottom: 0.65rem;
+  }
+
+  .PcInterface__layout {
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: start;
+  }
+
+  .PcInterface__side {
+    position: sticky;
+    top: 0;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .PcInterface__appList {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .PcInterface__appButton {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 0.45rem;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid rgba(24, 216, 255, 0.45);
+    background: linear-gradient(90deg, rgba(0, 116, 139, 0.48), rgba(0, 54, 70, 0.62));
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+
+    &.active {
+      border-color: var(--sg-red);
+      background: linear-gradient(90deg, rgba(154, 16, 35, 0.82), rgba(0, 54, 70, 0.62));
+    }
+
+    span,
+    small {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      font-weight: 900;
+    }
+
+    small {
+      color: var(--sg-cyan);
+      text-transform: uppercase;
+    }
+  }
+
+  .PcInterface__activity {
+    display: grid;
+    gap: 0.25rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(24, 216, 255, 0.35);
+  }
+
+  .PcInterface__activityLine {
+    color: #fff;
+    font-family: var(--font-family-mono);
+    font-size: 0.82rem;
+  }
+
+  .PcInterface__main {
+    min-width: 0;
+  }
+
+  .PcInterface__appCard {
+    display: grid;
+    gap: 0.65rem;
+    max-width: 42rem;
+
+    h2 {
+      margin: 0;
+      color: #fff;
+      font-size: 1.35rem;
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0;
+      color: #d7fbff;
+    }
+  }
+
+  .PcInterface__appMeta {
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+    color: var(--sg-cyan);
+
+    b {
+      color: var(--sg-red);
+      text-transform: uppercase;
+    }
+  }
+
+  .PcInterface__openButton {
+    justify-self: start;
+    width: auto;
+    min-width: 8rem;
+  }
+
+  .PcInterface__corporateBoard {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .PcInterface__corporateGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .PcInterface__corporateCard {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.65rem;
+    border: 1px solid rgba(24, 216, 255, 0.5);
+    background:
+      linear-gradient(90deg, rgba(0, 113, 132, 0.18), transparent 72%),
+      rgba(1, 10, 15, 0.82);
+  }
+
+  .PcInterface__corporateTitle {
+    display: grid;
+    gap: 0.15rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(24, 216, 255, 0.35);
+
+    h2 {
+      margin: 0;
+      overflow: hidden;
+      color: var(--sg-cyan);
+      font-size: 1.05rem;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    span {
+      overflow: hidden;
+      color: #fff;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .PcInterface__corporateLine {
+    display: grid;
+    grid-template-columns: 5.8rem minmax(0, 1fr);
+    gap: 0.45rem;
+    align-items: start;
+
+    b {
+      color: var(--sg-red);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+    }
+
+    span {
+      color: #d7fbff;
+    }
+  }
+
+  .PcInterface__serviceStrip {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.2rem;
+
+    > b {
+      color: var(--sg-cyan);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+
+    div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    span {
+      padding: 0.18rem 0.4rem;
+      border: 1px solid rgba(24, 216, 255, 0.5);
+      color: #fff;
+      background: rgba(0, 68, 84, 0.6);
+    }
+
+    em {
+      color: rgba(215, 251, 255, 0.72);
+      font-style: normal;
+    }
   }
 }

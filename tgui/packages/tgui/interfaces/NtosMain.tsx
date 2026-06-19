@@ -1,4 +1,4 @@
-import { Button, ColorBox, Section, Stack, Table } from 'tgui-core/components';
+import { Icon } from 'tgui-core/components';
 
 import { useBackend } from '../backend';
 import { NtosWindow } from '../layouts';
@@ -26,222 +26,226 @@ export const NtosMain = (props) => {
     login,
     proposed_login,
     pai,
+    can_write_crypto_key,
+    crypto_key_target,
   } = data;
-  const filtered_programs = programs.filter(
-    (program) => program.header_program,
-  );
+  const headerPrograms = programs.filter((program) => program.header_program);
+  const regularPrograms = programs.filter((program) => !program.header_program);
+  const title =
+    (PC_device_theme === 'syndicate' && 'Syndix Главное Меню') ||
+    'NtOS Главное Меню';
 
   return (
-    <NtosWindow
-      title={
-        (PC_device_theme === 'syndicate' && 'Syndix Главное Меню') ||
-        'NtOS Главное Меню'
-      }
-      width={400}
-      height={500}
-      z
-    >
-      <NtosWindow.Content scrollable>
-        {Boolean(
-          removable_media.length ||
-            programs.some((program) => program.header_program),
-        ) && (
-          <Section>
-            <Stack>
-              {filtered_programs.map((app) => (
-                <Stack.Item key={app.name}>
-                  <Button
-                    content={app.desc}
-                    icon={app.icon}
-                    onClick={() =>
-                      act('PC_runprogram', {
-                        name: app.name,
-                      })
-                    }
-                  />
-                </Stack.Item>
-              ))}
-              <Stack.Item right={0}>
-                <Button
-                  className={
-                    alert_style === alert_relevancies.ALERT_RELEVANCY_PERTINENT
-                      ? 'alertIndicator alertBlink'
-                      : 'alertIndicator'
-                  }
-                  textColor={
-                    alert_style === alert_relevancies.ALERT_RELEVANCY_SAFE
-                      ? alert_color
-                      : '#000000'
-                  }
-                  backgroundColor={
-                    alert_style === alert_relevancies.ALERT_RELEVANCY_SAFE
-                      ? '#0000000'
-                      : alert_color
-                  }
-                  tooltip="The current alert level. Indicator becomes more intense when there is a threat, moreso if your department is responsible for handling it."
-                >
-                  {alert_name}
-                </Button>
-              </Stack.Item>
-            </Stack>
-            <Stack>
-              {removable_media.map((device) => (
-                <Stack.Item key={device} mt={1}>
-                  <Button
-                    fluid
-                    icon="eject"
-                    content={device}
-                    onClick={() => act('PC_Eject_Disk', { name: device })}
-                    disabled={!device}
-                  />
-                </Stack.Item>
-              ))}
-            </Stack>
-          </Section>
+    <NtosWindow title={title} width={400} height={500} z>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
+        <div className="StyleGuide__compactHeader">
+          <div>
+            <div className="StyleGuide__eyebrow">CityLink</div>
+            <h1>{title}</h1>
+          </div>
+          <div
+            className={[
+              'StyleGuide__statusPill',
+              alert_style === alert_relevancies.ALERT_RELEVANCY_PERTINENT &&
+                'danger',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={{
+              borderColor: alert_color,
+              color:
+                alert_style === alert_relevancies.ALERT_RELEVANCY_SAFE
+                  ? alert_color
+                  : undefined,
+            }}
+          >
+            {alert_name}
+          </div>
+        </div>
+
+        {!!headerPrograms.length && (
+          <div className="StyleGuide__quickbar">
+            {headerPrograms.map((app) => (
+              <button
+                key={app.name}
+                type="button"
+                className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                onClick={() => act('PC_runprogram', { name: app.name })}
+              >
+                {!!app.icon && <Icon name={app.icon} />}
+                <span>{app.desc}</span>
+              </button>
+            ))}
+          </div>
         )}
-        <Section
-          title="Детали"
-          buttons={
-            <>
-              {!!has_light && (
-                <>
-                  <Button onClick={() => act('PC_light_color')}>
-                    <ColorBox color={comp_light_color} />
-                  </Button>
-                  <Button
-                    icon="lightbulb"
-                    color={light_on ? 'good' : 'bad'}
-                    selected={light_on}
-                    onClick={() => act('PC_toggle_light')}
-                  />
-                </>
-              )}
-              <Button
-                icon="eject"
-                content="Вытащить ID"
-                disabled={!proposed_login.IDInserted}
-                onClick={() => act('PC_Eject_Disk', { name: 'ID' })}
-              />
-              {!!show_imprint && (
-                <Button
-                  icon="dna"
-                  content="Привязать ID"
-                  disabled={
-                    !proposed_login.IDName ||
-                    (proposed_login.IDName === login.IDName &&
-                      proposed_login.IDJob === login.IDJob)
-                  }
-                  onClick={() => act('PC_Imprint_ID', { name: 'ID' })}
-                />
-              )}
-            </>
-          }
-        >
-          <Table>
-            <Table.Row>
-              Имя на ID:{' '}
+
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Детали</div>
+          <dl className="StyleGuide__definitionGrid">
+            <dt>Имя на ID</dt>
+            <dd>
               {show_imprint
-                ? login.IDName +
-                  ' ' +
-                  (proposed_login.IDName ? `(${proposed_login.IDName})` : '')
+                ? `${login.IDName} ${
+                    proposed_login.IDName ? `(${proposed_login.IDName})` : ''
+                  }`
                 : (proposed_login.IDName ?? '')}
-            </Table.Row>
-            <Table.Row>
-              Назначение:{' '}
+            </dd>
+            <dt>Назначение</dt>
+            <dd>
               {show_imprint
-                ? login.IDJob +
-                  ' ' +
-                  (proposed_login.IDJob ? `(${proposed_login.IDJob})` : '')
+                ? `${login.IDJob} ${
+                    proposed_login.IDJob ? `(${proposed_login.IDJob})` : ''
+                  }`
                 : (proposed_login.IDJob ?? '')}
-            </Table.Row>
-          </Table>
-        </Section>
-        {!!pai && (
-          <Section title="пИИ">
-            <Table>
-              <Table.Row>
-                <Table.Cell>
-                  <Button
-                    fluid
-                    icon="eject"
-                    color="transparent"
-                    content="Вытащить пИИ"
-                    onClick={() =>
-                      act('PC_Pai_Interact', {
-                        option: 'eject',
-                      })
-                    }
-                  />
-                </Table.Cell>
-              </Table.Row>
-              <Table.Row>
-                <Table.Cell>
-                  <Button
-                    fluid
-                    icon="cat"
-                    color="transparent"
-                    content="Настроить пИИ"
-                    onClick={() =>
-                      act('PC_Pai_Interact', {
-                        option: 'interact',
-                      })
-                    }
-                  />
-                </Table.Cell>
-              </Table.Row>
-            </Table>
-          </Section>
+            </dd>
+          </dl>
+          <div className="StyleGuide__actionRow StyleGuide__actionRow--four">
+            <button
+              type="button"
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              disabled={!has_light}
+              title="Цвет фонаря"
+              onClick={() => act('PC_light_color')}
+            >
+              <i style={{ backgroundColor: comp_light_color }} />
+              <span>Цвет</span>
+            </button>
+            <button
+              type="button"
+              className={[
+                'StyleGuide__cutButton StyleGuide__cutButton--cyan-dark',
+                light_on && 'active',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              disabled={!has_light}
+              title={light_on ? 'Выключить фонарь' : 'Включить фонарь'}
+              onClick={() => act('PC_toggle_light')}
+            >
+              <Icon name="lightbulb" />
+              <span>Фонарь</span>
+            </button>
+            <button
+              type="button"
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              disabled={!proposed_login.IDInserted}
+              title="Изъять ID"
+              onClick={() => act('PC_Eject_Disk', { name: 'ID' })}
+            >
+              <Icon name="eject" />
+              <span>ID</span>
+            </button>
+            <button
+              type="button"
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              disabled={!can_write_crypto_key}
+              title={
+                crypto_key_target
+                  ? `Записать ключи на ${crypto_key_target}`
+                  : 'Нужна нейропамять и вставленная ID/диск'
+              }
+              onClick={() => act('PC_Write_Crypto_Key')}
+            >
+              <Icon name="key" />
+              <span>Ключи</span>
+            </button>
+          </div>
+        </div>
+
+        {!!removable_media.length && (
+          <div className="StyleGuide__blockShell">
+            <div className="StyleGuide__blockTitle">Носители</div>
+            <div className="StyleGuide__listStack">
+              {removable_media.map((device) => (
+                <div
+                  key={device}
+                  className="StyleGuide__listRow StyleGuide__listRow--single"
+                >
+                  <button
+                    type="button"
+                    className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                    disabled={!device}
+                    onClick={() => act('PC_Eject_Disk', { name: device })}
+                  >
+                    <Icon name="eject" />
+                    <span>{device}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
-        <ProgramsTable />
+
+        {!!pai && (
+          <div className="StyleGuide__blockShell">
+            <div className="StyleGuide__blockTitle">пИИ</div>
+            <div className="StyleGuide__listStack">
+              <div className="StyleGuide__listRow StyleGuide__listRow--single">
+                <button
+                  type="button"
+                  className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                  onClick={() => act('PC_Pai_Interact', { option: 'eject' })}
+                >
+                  <Icon name="eject" />
+                  <span>Вытащить пИИ</span>
+                </button>
+              </div>
+              <div className="StyleGuide__listRow StyleGuide__listRow--single">
+                <button
+                  type="button"
+                  className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                  onClick={() => act('PC_Pai_Interact', { option: 'interact' })}
+                >
+                  <Icon name="cat" />
+                  <span>Настроить пИИ</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Программы</div>
+          <div className="StyleGuide__listStack">
+            {regularPrograms.map((program) => (
+              <div
+                key={program.name}
+                className={[
+                  'StyleGuide__listRow',
+                  !program.running && 'StyleGuide__listRow--single',
+                  program.alert && 'StyleGuide__listRow--alert',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <button
+                  type="button"
+                  className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                  onClick={() => act('PC_runprogram', { name: program.name })}
+                >
+                  {!!program.icon && <Icon name={program.icon} />}
+                  <span>{program.desc}</span>
+                </button>
+                {!!program.running && (
+                  <button
+                    type="button"
+                    className="StyleGuide__iconButton StyleGuide__iconButton--red StyleGuide__iconButton--compact"
+                    title="Закрыть программу"
+                    onClick={() => act('PC_killprogram', { name: program.name })}
+                  >
+                    <Icon name="times" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {!regularPrograms.length && (
+              <div className="StyleGuide__placeholder">
+                Установленных приложений нет.
+              </div>
+            )}
+          </div>
+        </div>
       </NtosWindow.Content>
     </NtosWindow>
-  );
-};
-
-const ProgramsTable = (props) => {
-  const { act, data } = useBackend<NTOSData>();
-  const { programs = [] } = data;
-  // add the program filename to this list to have it excluded from the main menu program list table
-  const filtered_programs = programs.filter(
-    (program) => !program.header_program,
-  );
-
-  return (
-    <Section title="Программы">
-      <Table>
-        {filtered_programs.map((program) => (
-          <Table.Row key={program.name}>
-            <Table.Cell>
-              <Button
-                fluid
-                color={program.alert ? 'yellow' : 'transparent'}
-                icon={program.icon}
-                content={program.desc}
-                onClick={() =>
-                  act('PC_runprogram', {
-                    name: program.name,
-                  })
-                }
-              />
-            </Table.Cell>
-            <Table.Cell collapsing width="18px">
-              {!!program.running && (
-                <Button
-                  color="transparent"
-                  icon="times"
-                  tooltip="Закрыть программу"
-                  tooltipPosition="left"
-                  onClick={() =>
-                    act('PC_killprogram', {
-                      name: program.name,
-                    })
-                  }
-                />
-              )}
-            </Table.Cell>
-          </Table.Row>
-        ))}
-      </Table>
-    </Section>
   );
 };

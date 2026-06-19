@@ -19,7 +19,7 @@
 	interaction_flags_atom = parent_type::interaction_flags_atom | INTERACT_ATOM_ALLOW_USER_LOCATION | INTERACT_ATOM_IGNORE_MOBILITY
 
 	icon_state_menu = "menu"
-	max_capacity = 64
+	max_capacity = 20
 	allow_chunky = TRUE
 	hardware_flag = PROGRAM_PDA
 	max_idle_programs = 2
@@ -42,10 +42,8 @@
 	var/has_pda_programs = TRUE
 	///Static list of default PDA apps to install on Initialize.
 	var/static/list/datum/computer_file/pda_programs = list(
+		/datum/computer_file/program/ntnetdownload,
 		/datum/computer_file/program/messenger,
-		/datum/computer_file/program/nt_pay,
-		/datum/computer_file/program/notepad,
-		/datum/computer_file/program/crew_manifest,
 		/datum/computer_file/program/navigator, // BANDASTATION ADDITION
 	)
 	///List of items that can be stored in a PDA
@@ -71,7 +69,7 @@
 /obj/item/modular_computer/pda/install_default_programs()
 	var/list/apps_to_download = list()
 	if(has_pda_programs)
-		apps_to_download += default_programs + pda_programs
+		apps_to_download += pda_programs
 	apps_to_download += starting_programs
 
 	for(var/programs in apps_to_download)

@@ -1,11 +1,5 @@
 // CYBERPUNK BUILD - rebuild and delete before release
-import {
-  Box,
-  Button,
-  Collapsible,
-  LabeledList,
-  Section,
-} from 'tgui-core/components';
+import { Icon } from 'tgui-core/components';
 import { formatMoney } from 'tgui-core/format';
 import type { BooleanLike } from 'tgui-core/react';
 
@@ -40,37 +34,51 @@ type Data = {
   contracts: PoolContract[];
 };
 
+function formatContractType(type: string) {
+  const labels: Record<string, string> = {
+    delivery: 'Доставка',
+    repair: 'Ремонт',
+    build: 'Стройка',
+    guard: 'Охрана',
+    mining: 'Добыча',
+    sabotage: 'Саботаж',
+    elimination: 'Устранение',
+  };
+  return labels[type] || type || '-';
+}
+
 export const NtosContractPool = () => {
   const { data } = useBackend<Data>();
   const { accountName, accountBalance = 0, contracts = [] } = data;
 
   return (
-    <NtosWindow width={700} height={640}>
-      <NtosWindow.Content scrollable className="CyberpunkPanel">
-        <Section title="Corporate contract pool">
-          <LabeledList>
-            <LabeledList.Item label="ID account">
-              {accountName || 'No ID account'}
-            </LabeledList.Item>
-            <LabeledList.Item label="Balance">
-              {formatMoney(accountBalance)} cr
-            </LabeledList.Item>
-            <LabeledList.Item label="Available">
-              {contracts.length}
-            </LabeledList.Item>
-          </LabeledList>
-        </Section>
-        <Section title="Pool offers">
-          {!contracts.length ? (
-            <Box className="CyberpunkPanel__Muted">
-              No pool contracts are available.
-            </Box>
-          ) : (
-            contracts.map((contract) => (
+    <NtosWindow width={760} height={660}>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Корпоративный пул контрактов</div>
+          <dl className="StyleGuide__definitionGrid">
+            <dt>ID счет</dt>
+            <dd>{accountName || 'ID счет не найден'}</dd>
+            <dt>Баланс</dt>
+            <dd>{formatMoney(accountBalance)} кр</dd>
+            <dt>Доступно</dt>
+            <dd>{contracts.length}</dd>
+          </dl>
+        </div>
+
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Предложения</div>
+          <div className="StyleGuide__listStack">
+            {contracts.map((contract) => (
               <PoolContractCard key={contract.id} contract={contract} />
-            ))
-          )}
-        </Section>
+            ))}
+            {!contracts.length && (
+              <div className="StyleGuide__placeholder">
+                Доступных контрактов пула нет.
+              </div>
+            )}
+          </div>
+        </div>
       </NtosWindow.Content>
     </NtosWindow>
   );
@@ -80,50 +88,57 @@ const PoolContractCard = (props: { contract: PoolContract }) => {
   const { act } = useBackend<Data>();
   const { contract } = props;
   return (
-    <Section
-      title={`#${contract.id} ${contract.title}`}
-      buttons={
-        <Button
-          icon="handshake"
+    <article className="StyleGuide__dataCard">
+      <div className="StyleGuide__dataCardContent">
+        <div className="StyleGuide__dataCardTitle">
+          <b>
+            #{contract.id} {contract.title}
+          </b>
+          <small>{formatMoney(contract.payment)} кр</small>
+        </div>
+        <dl className="StyleGuide__definitionGrid">
+          <dt>Корпорация</dt>
+          <dd>{contract.corporation || contract.creator}</dd>
+          <dt>Тип</dt>
+          <dd>{formatContractType(contract.type)}</dd>
+          <dt>Цель</dt>
+          <dd>{contract.target}</dd>
+          <dt>Срок</dt>
+          <dd>{contract.deadline}</dd>
+          <dt>Условие</dt>
+          <dd>
+            {contract.deliveredAmount}/{contract.requiredAmount}, порог{' '}
+            {contract.requiredPercent}%
+          </dd>
+          <dt>Депозит / штраф</dt>
+          <dd>
+            {formatMoney(contract.deposit)} / {formatMoney(contract.penalty)} кр
+          </dd>
+        </dl>
+        {!!contract.description && <p>{contract.description}</p>}
+        {!!contract.history?.length && (
+          <details>
+            <summary>История</summary>
+            {contract.history.map((entry, index) => (
+              <div key={index} className="StyleGuide__trapezoidNote">
+                {entry}
+              </div>
+            ))}
+          </details>
+        )}
+      </div>
+      <div className="StyleGuide__dataCardAction">
+        <button
+          type="button"
+          className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
           disabled={!contract.canAccept}
           onClick={() => act('accept', { id: contract.id })}
         >
-          Take
-        </Button>
-      }
-    >
-      <LabeledList>
-        <LabeledList.Item label="Corporation">
-          {contract.corporation || contract.creator}
-        </LabeledList.Item>
-        <LabeledList.Item label="Type">{contract.type}</LabeledList.Item>
-        <LabeledList.Item label="Target">{contract.target}</LabeledList.Item>
-        <LabeledList.Item label="Payment">
-          {formatMoney(contract.payment)} cr
-        </LabeledList.Item>
-        <LabeledList.Item label="Deposit">
-          {formatMoney(contract.deposit)} cr
-        </LabeledList.Item>
-        <LabeledList.Item label="Penalty">
-          {formatMoney(contract.penalty)} cr
-        </LabeledList.Item>
-        <LabeledList.Item label="Deadline">
-          {contract.deadline}
-        </LabeledList.Item>
-        <LabeledList.Item label="Requirement">
-          {contract.deliveredAmount}/{contract.requiredAmount}, threshold{' '}
-          {contract.requiredPercent}%
-        </LabeledList.Item>
-      </LabeledList>
-      {!!contract.description && <Box mt={1}>{contract.description}</Box>}
-      <Collapsible title="History">
-        {(contract.history || []).map((entry, index) => (
-          <Box key={index} className="CyberpunkPanel__Muted">
-            {entry}
-          </Box>
-        ))}
-      </Collapsible>
-    </Section>
+          <Icon name="handshake" />
+          <span>Взять</span>
+        </button>
+      </div>
+    </article>
   );
 };
 // CYBERPUNK BUILD - rebuild and delete before release

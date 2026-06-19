@@ -63,14 +63,10 @@
 	return CYBERPUNK_CORP_TAX_RATE
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_business_tax_rate(business_id = null)
-	if(!business_id)
-		if(isnum(cyberpunk_business_default_tax_rate))
-			return clamp(cyberpunk_business_default_tax_rate, 0, 1)
-		var/default_rate = 0.05
-		return default_rate
-	if(isnum(cyberpunk_business_tax_rates["[business_id]"]))
-		return clamp(cyberpunk_business_tax_rates["[business_id]"], 0, 1)
-	return get_cyberpunk_business_tax_rate()
+	if(isnum(cyberpunk_business_default_tax_rate))
+		return clamp(cyberpunk_business_default_tax_rate, 0, 1)
+	var/default_rate = 0.05
+	return default_rate
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_housing_rent(area_key)
 	if(area_key && isnum(cyberpunk_housing_rent_by_area["[area_key]"]))
@@ -88,9 +84,7 @@
 			cyberpunk_corporation_tax_rates[corporation_id] = clamp(round(value, 0.01), 0, 100) / 100
 			return TRUE
 		if("business")
-			if(!SScyberpunk_property.cyberpunk_businesses["[target]"])
-				return FALSE
-			cyberpunk_business_tax_rates["[target]"] = clamp(round(value, 0.01), 0, 100) / 100
+			cyberpunk_business_default_tax_rate = clamp(round(value, 0.01), 0, 100) / 100
 			return TRUE
 		if("business_default")
 			cyberpunk_business_default_tax_rate = clamp(round(value, 0.01), 0, 100) / 100
@@ -102,19 +96,40 @@
 			return TRUE
 	return FALSE
 
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_housing_area_label(area_key)
+	var/area/area_type = text2path(area_key)
+	if(ispath(area_type, /area))
+		return initial(area_type.cyberpunk_district_name) || initial(area_type.name) || area_key
+	return area_key
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_apartment_housing_area_key(datum/cyberpunk_apartment/apartment)
+	var/area/apartment_area = apartment?.get_apartment_area()
+	if(apartment_area?.cyberpunk_district_id)
+		return "[apartment_area.type]"
+	return "[apartment?.apartment_area_type]"
+
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_housing_tax_ui()
 	var/list/housing_by_area = list()
+	for(var/area/area_type in typesof(/area/cyberpunk_city/district))
+		if(area_type == /area/cyberpunk_city/district)
+			continue
+		var/area_key = "[area_type]"
+		housing_by_area[area_key] = list(
+			"areaKey" = area_key,
+			"area" = get_cyberpunk_housing_area_label(area_key),
+			"rent" = get_cyberpunk_housing_rent(area_key),
+			"apartments" = 0,
+		)
 	for(var/apartment_id in SScyberpunk_property.cyberpunk_apartments)
 		var/datum/cyberpunk_apartment/apartment = SScyberpunk_property.cyberpunk_apartments[apartment_id]
 		if(!apartment)
 			continue
-		var/area_key = "[apartment.apartment_area_type]"
+		var/area_key = get_cyberpunk_apartment_housing_area_key(apartment)
 		var/list/entry = housing_by_area[area_key]
 		if(!entry)
-			var/area/apartment_area = apartment.get_apartment_area()
 			entry = list(
 				"areaKey" = area_key,
-				"area" = apartment_area?.name || area_key,
+				"area" = get_cyberpunk_housing_area_label(area_key),
 				"rent" = get_cyberpunk_housing_rent(area_key),
 				"apartments" = 0,
 			)
@@ -123,10 +138,9 @@
 	for(var/area_key in cyberpunk_housing_rent_by_area)
 		if(housing_by_area[area_key])
 			continue
-		var/area/apartment_area = GLOB.areas_by_type[text2path(area_key)]
 		housing_by_area[area_key] = list(
 			"areaKey" = area_key,
-			"area" = apartment_area?.name || area_key,
+			"area" = get_cyberpunk_housing_area_label(area_key),
 			"rent" = get_cyberpunk_housing_rent(area_key),
 			"apartments" = 0,
 		)
@@ -152,7 +166,7 @@
 		var/datum/cyberpunk_apartment/apartment = SScyberpunk_property.cyberpunk_apartments[apartment_id]
 		if(!apartment)
 			continue
-		var/current_area_key = "[apartment.apartment_area_type]"
+		var/current_area_key = get_cyberpunk_apartment_housing_area_key(apartment)
 		if(area_key && current_area_key != area_key)
 			continue
 		var/rent = get_cyberpunk_housing_rent(current_area_key)

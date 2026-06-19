@@ -186,6 +186,23 @@
 			synced_keys++
 	return "Synchronized [synced_keys] cryptokey[synced_keys == 1 ? "" : "s"] from [card]."
 
+/mob/living/proc/write_cyberpunk_crypto_memory_to_item(obj/item/target)
+	if(!has_neural_implant())
+		return "Your body has no functional neural interface."
+	if(!target)
+		return "Insert or hold a card, disk or chip to write cryptokeys onto it."
+	if(!length(cyberpunk_crypto_memory))
+		return "No cryptokeys stored in neural memory."
+	var/written_keys = 0
+	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_memory)
+		if(target.has_cyberpunk_crypto_key(key_datum))
+			continue
+		if(target.store_cyberpunk_crypto_key(key_datum))
+			written_keys++
+	if(!written_keys)
+		return "All neural cryptokeys are already stored on [target]."
+	return "Wrote [written_keys] cryptokey[written_keys == 1 ? "" : "s"] to [target]."
+
 //CYBERPUNK BUILD - rebuild and delete before release
 /mob/living/verb/test_cyberpunk_crypto_hack()
 	set name = "Test cryptokey"

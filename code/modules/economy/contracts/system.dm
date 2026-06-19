@@ -119,6 +119,15 @@
 	)
 	if(!(contract_type in valid_contract_types))
 		contract_type = CYBERPUNK_CONTRACT_DELIVERY
+	var/is_delivery = contract_type == CYBERPUNK_CONTRACT_DELIVERY
+	var/is_mining = contract_type == CYBERPUNK_CONTRACT_MINING
+	var/is_repair = contract_type == CYBERPUNK_CONTRACT_REPAIR
+	var/is_build = contract_type == CYBERPUNK_CONTRACT_BUILD
+	var/is_guard = contract_type == CYBERPUNK_CONTRACT_GUARD
+	var/is_sabotage = contract_type == CYBERPUNK_CONTRACT_SABOTAGE
+	var/uses_quality = is_delivery || is_mining
+	var/uses_amount = is_delivery || is_mining || is_guard
+	var/uses_threshold = is_repair || is_build || is_sabotage
 
 	var/title = reject_bad_text(params["title"], max_length = 48, ascii_only = FALSE)
 	var/target = reject_bad_text(params["target"], max_length = 64, ascii_only = FALSE)
@@ -167,11 +176,28 @@
 	contract.pool_contract = pool_contract
 	contract.pool_corporation = pool_corporation
 	contract.creator_confirm_required = text2num(params["creator_confirm_required"]) ? TRUE : FALSE
-	contract.required_amount = max(1, round(text2num(params["required_amount"]) || 1))
-	contract.required_percent = clamp(round(text2num(params["required_percent"]) || 75), 0, 100)
+	contract.required_amount = uses_amount ? max(1, round(text2num(params["required_amount"]) || 1)) : 1
+	contract.required_percent = uses_threshold ? clamp(round(text2num(params["required_percent"]) || 75), 0, 100) : 75
 	contract.direct_access_code = uppertext(random_string(8, GLOB.hex_characters))
 	contract.due_time = world.time + clamp(round(text2num(params["duration_minutes"]) || 30), 1, 180) MINUTES
 	contract.created_at = world.time
+	var/destination_kind = reject_bad_text(params["destination_kind"], max_length = 32, ascii_only = TRUE)
+	if(!is_delivery)
+		params["destination_kind"] = "creator"
+		params["destination"] = ""
+	if(!is_delivery || destination_kind != "coordinates")
+		params["target_area"] = ""
+		params["target_x"] = 0
+		params["target_y"] = 0
+		params["target_z"] = 0
+		params["target_radius"] = 0
+	if(!is_sabotage)
+		params["sabotage_mode"] = "damage"
+	if(!is_guard)
+		params["partial_guard_payment"] = 0
+	if(!uses_quality)
+		params["minimum_quality"] = 0
+		params["minimum_rarity"] = 0
 	contract.setup_default_condition(params)
 	contract.add_history("created by [contract.creator_name]; [payment][MONEY_SYMBOL] reserved from [funding_business ? "business" : "personal"] budget")
 	if(assigned_contractor)
@@ -192,5 +218,3 @@
 	return contract
 
 #undef CYBERPUNK_CONTRACT_STATS_FILE
-
-

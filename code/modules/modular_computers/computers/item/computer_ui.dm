@@ -80,6 +80,26 @@
 	data["show_imprint"] = istype(src, /obj/item/modular_computer/pda)
 	return data
 
+/obj/item/modular_computer/proc/get_cyberpunk_crypto_write_target()
+	if(stored_id)
+		return stored_id
+	if(inserted_disk)
+		return inserted_disk
+	return null
+
+/obj/item/modular_computer/proc/can_write_cyberpunk_crypto_memory(mob/user)
+	var/mob/living/living_user = isliving(user) ? user : null
+	return !!(living_user?.has_neural_implant() && length(living_user.cyberpunk_crypto_memory) && get_cyberpunk_crypto_write_target())
+
+/obj/item/modular_computer/proc/write_cyberpunk_crypto_memory_to_inserted_storage(mob/user)
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!living_user)
+		return FALSE
+	var/obj/item/target = get_cyberpunk_crypto_write_target()
+	var/result = living_user.write_cyberpunk_crypto_memory_to_item(target)
+	to_chat(living_user, span_notice(result))
+	return !!(target && living_user.has_neural_implant() && length(living_user.cyberpunk_crypto_memory))
+
 /obj/item/modular_computer/ui_data(mob/user)
 	var/list/data = get_header_data()
 	if(active_program)
@@ -101,6 +121,9 @@
 		IDName = stored_id?.registered_name,
 		IDJob = stored_id?.assignment,
 	)
+	var/obj/item/crypto_write_target = get_cyberpunk_crypto_write_target()
+	data["can_write_crypto_key"] = can_write_cyberpunk_crypto_memory(user)
+	data["crypto_key_target"] = crypto_write_target?.name
 
 	data["removable_media"] = list()
 	if(inserted_disk)
@@ -219,6 +242,12 @@
 			imprint_id()
 			UpdateDisplay()
 			playsound(src, 'sound/machines/terminal/terminal_processing.ogg', 15, TRUE)
+			return TRUE
+
+		if("PC_Write_Crypto_Key")
+			if(write_cyberpunk_crypto_memory_to_inserted_storage(usr))
+				playsound(src, 'sound/machines/terminal/terminal_processing.ogg', 15, TRUE)
+			return TRUE
 
 		if("PC_Pai_Interact")
 			switch(params["option"])

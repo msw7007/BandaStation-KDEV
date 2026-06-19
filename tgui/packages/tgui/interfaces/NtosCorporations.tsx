@@ -1,13 +1,9 @@
 // CYBERPUNK BUILD - rebuild and delete before release
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import {
-  Box,
-  Button,
   Icon,
-  Input,
   LabeledList,
-  Stack,
   Table,
   Tooltip,
 } from 'tgui-core/components';
@@ -192,7 +188,7 @@ type Corporation = {
   history: string[];
 };
 
-type Data = {
+export type CorporateInterfaceData = {
   accountName?: string;
   accountBalance: number;
   corporations: Corporation[];
@@ -221,7 +217,22 @@ const contractTypes = [
 ];
 
 export const NtosCorporations = () => {
-  const { act, data } = useBackend<Data>();
+  const { act, data } = useBackend<CorporateInterfaceData>();
+
+  return (
+    <NtosWindow width={980} height={760}>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide CorporateInterface">
+        <NtosCorporationsContent data={data} act={act} />
+      </NtosWindow.Content>
+    </NtosWindow>
+  );
+};
+
+export function NtosCorporationsContent(props: {
+  data: CorporateInterfaceData;
+  act: (action: string, payload?: Record<string, unknown>) => void;
+}) {
+  const { act, data } = props;
   const { accountName, accountBalance = 0, corporations = [], selected } = data;
   const visibleCorporation = selected || corporations[0];
   const [activeTab, setActiveTab] = useState('state');
@@ -234,8 +245,7 @@ export const NtosCorporations = () => {
     : 'state';
 
   return (
-    <NtosWindow width={980} height={760}>
-      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide CorporateInterface">
+    <>
         <div className="StyleGuide__header CorporateInterface__header">
           <div>
             <div className="CorporateInterface__eyebrow">КОРПОРАТИВНЫЙ РЕЕСТР</div>
@@ -260,18 +270,20 @@ export const NtosCorporations = () => {
                       key={corporation.id}
                       type="button"
                       className={[
-                        'CorporateInterface__entityButton',
-                      visibleCorporation?.id === corporation.id && 'active',
-                      corporation.hidden && 'restricted',
-                    ]
+                        'StyleGuide__dataCard',
+                        visibleCorporation?.id === corporation.id && 'active',
+                        corporation.hidden && 'restricted',
+                      ]
                       .filter(Boolean)
                       .join(' ')}
                     onClick={() =>
                       act('select', { corporation_id: corporation.id })
                     }
                   >
-                    <span>{corporation.name}</span>
-                    <small>{corporation.group}</small>
+                    <div className="StyleGuide__dataCardContent">
+                      <b>{corporation.name}</b>
+                      <span>{corporation.group}</span>
+                    </div>
                   </button>
                 ))
               )}
@@ -312,10 +324,9 @@ export const NtosCorporations = () => {
             )}
           </main>
         </div>
-      </NtosWindow.Content>
-    </NtosWindow>
+      </>
   );
-};
+}
 
 function CorporationSummary(props: { corporation: Corporation }) {
   const { corporation } = props;
@@ -495,11 +506,16 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
           </label>
           <label className="CorporateInterface__field">
             <span>Сколько</span>
-            <Input value={transferAmount} placeholder="сумма" onChange={setTransferAmount} />
+            <input
+              className="StyleGuide__textInput StyleGuide__textInput--cyan"
+              value={transferAmount}
+              placeholder="сумма"
+              onChange={(event) => setTransferAmount(event.currentTarget.value)}
+            />
           </label>
-          <Button
-            icon="right-left"
-            className="StyleGuide__cutButton StyleGuide__cutButton--red-dark CorporateInterface__compactButton"
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
             disabled={!sourceRef.kind || !targetRef.kind || selectedSource === selectedTarget}
             onClick={() =>
               act('government_transfer', {
@@ -512,8 +528,9 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
               })
             }
           >
-            Перевод
-          </Button>
+            <Icon name="right-left" />
+            <span>Перевод</span>
+          </button>
         </div>
         <div className="CorporateInterface__hint">
           Выберите активные счета источника и получателя.
@@ -609,6 +626,110 @@ function CorporateDropdown(props: {
   );
 }
 
+function CorporateDragField(props: {
+  label: string;
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  className?: string;
+  formatValue: (value: number) => string;
+  onChange: (value: number) => void;
+}) {
+  const [draftValue, setDraftValue] = useState<number | null>(null);
+  const min = props.min ?? 0;
+  const max = props.max ?? 100;
+  const step = props.step ?? 1;
+  const range = Math.max(1, max - min);
+  const clampValue = (value: number) => Math.max(min, Math.min(max, value));
+  const snapValue = (value: number) =>
+    clampValue(Math.round(value / step) * step);
+  const currentValue = clampValue(draftValue ?? props.value ?? min);
+  const currentPercent = ((currentValue - min) / range) * 100;
+
+  const startDrag = (event: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    let nextValue = currentValue;
+    const updateValue = (clientX: number) => {
+      nextValue = snapValue(
+        min + ((clientX - rect.left) / rect.width) * range,
+      );
+      setDraftValue(nextValue);
+    };
+    const onMove = (moveEvent: MouseEvent) => updateValue(moveEvent.clientX);
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      setDraftValue(null);
+      props.onChange(nextValue);
+    };
+
+    updateValue(event.clientX);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  return (
+    <div
+      className={`StyleGuide__dragField CorporateInterface__dragField ${props.className || ''}`}
+      onMouseDown={startDrag}
+      title="Удерживайте ЛКМ и тяните внутри поля."
+    >
+      <div
+        className="StyleGuide__dragFieldHandle"
+        style={{ left: `${currentPercent}%` }}
+      />
+      <div className="StyleGuide__dragFieldContent">
+        <span>{props.label}</span>
+        <b>{props.formatValue(currentValue)}</b>
+      </div>
+    </div>
+  );
+}
+
+function CorporatePercentDragField(props: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <CorporateDragField
+      className="CorporateInterface__percentDrag"
+      label={props.label}
+      value={props.value}
+      min={0}
+      max={100}
+      step={1}
+      formatValue={(value) => `${value}%`}
+      onChange={props.onChange}
+    />
+  );
+}
+
+function CorporateCreditsDragField(props: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const max = Math.max(1000, Math.ceil((props.value || 0) / 1000) * 1000);
+
+  return (
+    <CorporateDragField
+      className="CorporateInterface__creditsDrag"
+      label={props.label}
+      value={props.value}
+      min={0}
+      max={max}
+      step={50}
+      formatValue={formatCredits}
+      onChange={props.onChange}
+    />
+  );
+}
+
 function ServicesTab(props: { corporation: Corporation }) {
   const { act } = useBackend<Data>();
   const { corporation } = props;
@@ -635,14 +756,22 @@ function ServicesTab(props: { corporation: Corporation }) {
         <div className="CorporateInterface__serviceControls">
           <button
             type="button"
-            className="CorporateInterface__serviceToggle"
+            className={[
+              'StyleGuide__switch',
+              corporation.serviceAutoEnabled && 'active',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             onClick={() =>
               act('toggle_service_auto', {
                 corporation_id: corporation.id,
               })
             }
           >
-            {corporation.serviceAutoEnabled ? 'Автоуслуги: вкл.' : 'Автоуслуги: выкл.'}
+            <span>
+              {corporation.serviceAutoEnabled ? 'Автоуслуги: вкл.' : 'Автоуслуги: выкл.'}
+            </span>
+            <span className="StyleGuide__switchMark" />
           </button>
         </div>
         <div className="CorporateInterface__subTitle">Каталог</div>
@@ -657,12 +786,16 @@ function ServicesTab(props: { corporation: Corporation }) {
                 <button
                   type="button"
                   className={[
-                    'CorporateInterface__serviceOption',
-                    service.enabled ? 'available' : 'locked',
+                    'StyleGuide__dataCard',
+                    service.enabled
+                      ? 'StyleGuide__dataCard--enabled'
+                      : 'StyleGuide__dataCard--disabled',
                   ].join(' ')}
                 >
-                  <b>{service.label}</b>
-                  <span>{service.enabled ? 'Доступно' : 'Закрыто'}</span>
+                  <div className="StyleGuide__dataCardContent">
+                    <b>{service.label}</b>
+                    <span>{service.enabled ? 'Доступно' : 'Закрыто'}</span>
+                  </div>
                 </button>
               </Tooltip>
             ))}
@@ -692,8 +825,9 @@ function ServicesTab(props: { corporation: Corporation }) {
                 <Table.Cell>{formatCredits(request.cost)}</Table.Cell>
                 <Table.Cell>{request.age}</Table.Cell>
                 <Table.Cell>
-                  <Button
-                    icon="check"
+                  <button
+                    type="button"
+                    className="StyleGuide__iconButton StyleGuide__iconButton--green StyleGuide__iconButton--compact"
                     disabled={request.status !== 'created'}
                     onClick={() =>
                       act('complete_service_request', {
@@ -701,9 +835,12 @@ function ServicesTab(props: { corporation: Corporation }) {
                         request_id: request.id,
                       })
                     }
-                  />
-                  <Button
-                    icon="xmark"
+                  >
+                    <Icon name="check" />
+                  </button>
+                  <button
+                    type="button"
+                    className="StyleGuide__iconButton StyleGuide__iconButton--red StyleGuide__iconButton--compact"
                     disabled={request.status !== 'created'}
                     onClick={() =>
                       act('cancel_service_request', {
@@ -711,7 +848,9 @@ function ServicesTab(props: { corporation: Corporation }) {
                         request_id: request.id,
                       })
                     }
-                  />
+                  >
+                    <Icon name="xmark" />
+                  </button>
                 </Table.Cell>
               </Table.Row>
             ))}
@@ -766,16 +905,21 @@ function ResearchTab(props: {
     <div className="CorporateInterface__tabGrid">
       <div className="StyleGuide__blockShell CorporateInterface__wide">
         <div className="StyleGuide__blockTitle">Исследовательские данные</div>
-        <Stack mb={1}>
-          <Stack.Item grow>
-            <Input fluid value={dataType} placeholder="тип данных" onChange={setDataType} />
-          </Stack.Item>
-          <Stack.Item width="90px">
-            <Input fluid value={amount} placeholder="кол-во" onChange={setAmount} />
-          </Stack.Item>
-          <Stack.Item>
-            <Button
-              icon="plus"
+        <div className="CorporateInterface__researchControls">
+          <input
+            className="StyleGuide__textInput StyleGuide__textInput--cyan"
+            value={dataType}
+            placeholder="тип данных"
+            onChange={(event) => setDataType(event.currentTarget.value)}
+          />
+          <input
+            className="StyleGuide__textInput StyleGuide__textInput--cyan"
+            value={amount}
+            placeholder="кол-во"
+            onChange={(event) => setAmount(event.currentTarget.value)}
+          />
+          <button
+              type="button"
               disabled={!amountNumber}
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-light"
               onClick={() =>
@@ -786,12 +930,11 @@ function ResearchTab(props: {
                 })
               }
             >
-              Тест данных
-            </Button>
-          </Stack.Item>
-          <Stack.Item>
-            <Button
-              icon="coins"
+              <Icon name="plus" />
+              <span>Тест данных</span>
+            </button>
+          <button
+              type="button"
               disabled={!corporation.researchPoints}
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
               onClick={() =>
@@ -801,10 +944,10 @@ function ResearchTab(props: {
                 })
               }
             >
-              Обмен
-            </Button>
-          </Stack.Item>
-        </Stack>
+              <Icon name="coins" />
+              <span>Обмен</span>
+            </button>
+        </div>
         {!corporation.researchData?.length ? (
           <div className="StyleGuide__placeholder">Сохраненных данных нет.</div>
         ) : (
@@ -819,8 +962,9 @@ function ResearchTab(props: {
                 <Table.Cell>{entry.type}</Table.Cell>
                 <Table.Cell>{entry.amount}</Table.Cell>
                 <Table.Cell>
-                  <Button
-                    icon="flask"
+                  <button
+                    type="button"
+                    className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
                     onClick={() =>
                       act('convert_data', {
                         corporation_id: corporation.id,
@@ -829,8 +973,9 @@ function ResearchTab(props: {
                       })
                     }
                   >
+                    <Icon name="flask" />
                     Конвертировать
-                  </Button>
+                  </button>
                 </Table.Cell>
               </Table.Row>
             ))}
@@ -885,7 +1030,7 @@ function CorporateTechnologyWeb(props: {
             Бонус реверса чужих технологий: скидка {corporation.foreignTechBonus || 0}%
           </span>
         </div>
-        <div className="CorporateInterface__techFilters">
+        <div className="StyleGuide__textSwitch CorporateInterface__techFilters">
           {[
             ['available', 'Доступно'],
             ['researched', 'Изучено'],
@@ -967,9 +1112,6 @@ function CorporateTechnologyNode(props: {
         .join(' ')}
     >
       <div className="CorporateInterface__techNodeBody">
-        <div className="CorporateInterface__techNodeMeter">
-          <span style={{ height: `${Math.round(progressValue * 100)}%` }} />
-        </div>
         <div className="CorporateInterface__techNodeContent">
           <Tooltip content={descriptionTooltip} position="bottom">
             <div className="CorporateInterface__techNodeTitle">
@@ -982,21 +1124,27 @@ function CorporateTechnologyNode(props: {
             {!!technology.discount && <span>Скидка: {technology.discount} RP</span>}
             {!!prereqs && <span>Требует: {prereqs}</span>}
           </div>
+          <div className="CorporateInterface__techNodeProgress">
+            <div className="CorporateInterface__techNodeMeter">
+              <span style={{ width: `${Math.round(progressValue * 100)}%` }} />
+            </div>
+            <div className="CorporateInterface__techNodeCost">
+              RP {Math.min(corporation.researchPoints, technology.cost)}/{technology.cost}
+            </div>
+          </div>
         </div>
-        <Tooltip content={unlocks || 'Прямых открытий нет'} position="left">
-          <Button
-            icon={technology.unlocked ? 'check' : 'lightbulb'}
-            disabled={!!technology.unlocked || !technology.canUnlock}
-            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
-            onClick={onResearch}
-          >
-            {technology.unlocked ? 'Готово' : 'Изучить'}
-          </Button>
-        </Tooltip>
       </div>
-      <div className="CorporateInterface__techNodeCost">
-        RP {Math.min(corporation.researchPoints, technology.cost)}/{technology.cost}
-      </div>
+      <Tooltip content={unlocks || 'Прямых открытий нет'} position="bottom">
+        <button
+          type="button"
+          disabled={!!technology.unlocked || !technology.canUnlock}
+          className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+          onClick={onResearch}
+        >
+          <Icon name={technology.unlocked ? 'check' : 'lightbulb'} />
+          <span>{technology.unlocked ? 'Готово' : 'Изучить'}</span>
+        </button>
+      </Tooltip>
     </div>
   );
 }
@@ -1030,11 +1178,11 @@ function ForeignTechnologyPanel(props: { corporation: Corporation }) {
               <Table.Cell>{entry.name || entry.id}</Table.Cell>
               <Table.Cell>{entry.sourceName || entry.source}</Table.Cell>
               <Table.Cell>
-                <Stack align="center">
-                  <Stack.Item grow>{entry.progress}%</Stack.Item>
-                  <Stack.Item>
-                    <Button
-                      icon="flask"
+                <div className="CorporateInterface__inlineAction">
+                  <span>{entry.progress}%</span>
+                    <button
+                      type="button"
+                      className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
                       disabled={corporation.researchPoints < 20}
                       onClick={() =>
                         act('invest_foreign_tech', {
@@ -1045,10 +1193,10 @@ function ForeignTechnologyPanel(props: { corporation: Corporation }) {
                         })
                       }
                     >
+                      <Icon name="flask" />
                       +1%
-                    </Button>
-                  </Stack.Item>
-                </Stack>
+                    </button>
+                </div>
               </Table.Cell>
             </Table.Row>
           ))}
@@ -1076,6 +1224,7 @@ function EdictsTab(props: { corporation: Corporation }) {
                 disabled={!!edict.active || !!edict.locked}
                 className={[
                   'CorporateInterface__edictSwitch',
+                  'StyleGuide__switch',
                   edict.active && 'active',
                   edict.locked && 'locked',
                 ]
@@ -1109,9 +1258,9 @@ function ContractsTab(props: { corporation: Corporation }) {
         <div className="StyleGuide__blockTitle">Пул контрактов</div>
         <div className="CorporateInterface__actions">
           {contractTypes.map(([type, label]) => (
-            <Button
+            <button
               key={type}
-              icon="file-signature"
+              type="button"
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
               onClick={() =>
                 act('create_pool_contract', {
@@ -1120,12 +1269,13 @@ function ContractsTab(props: { corporation: Corporation }) {
                 })
               }
             >
-              {label}
-            </Button>
+              <Icon name="file-signature" />
+              <span>{label}</span>
+            </button>
           ))}
           {corporation.id !== 'government' && (
-            <Button
-              icon="coins"
+            <button
+              type="button"
               disabled={!corporation.taxDebt}
               className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
               onClick={() =>
@@ -1135,8 +1285,9 @@ function ContractsTab(props: { corporation: Corporation }) {
                 })
               }
             >
-              Оплатить налоги
-            </Button>
+              <Icon name="coins" />
+              <span>Оплатить налоги</span>
+            </button>
           )}
         </div>
         {!corporation.contracts?.length ? (
@@ -1170,233 +1321,91 @@ function GovernmentTaxesTab(props: { corporation: Corporation }) {
   const { act } = useBackend<Data>();
   const { corporation } = props;
   const monitor = corporation.taxMonitor;
-  const corporationOptions = (monitor?.corporations || []).map((entry) => ({
-    value: entry.id,
-    displayText: `${entry.name} / ${entry.taxRate || 0}%`,
-  }));
-  const businessOptions = (monitor?.businesses || []).map((entry) => ({
-    value: String(entry.id),
-    displayText: `${entry.name} / ${entry.taxRate || 0}%`,
-  }));
-  const housingOptions = (monitor?.housing || []).map((entry) => ({
-    value: entry.areaKey,
-    displayText: `${entry.area} / ${formatCredits(entry.rent || 0)}`,
-  }));
-  const [selectedCorporation, setSelectedCorporation] = useState('');
-  const [corporationTax, setCorporationTax] = useState('');
-  const [selectedBusiness, setSelectedBusiness] = useState('');
-  const [businessTax, setBusinessTax] = useState('');
-  const [defaultBusinessTax, setDefaultBusinessTax] = useState(
-    String(monitor?.businessDefaultTaxRate || 0),
-  );
-  const [selectedHousing, setSelectedHousing] = useState('');
-  const [housingRent, setHousingRent] = useState('');
-  const activeCorporation =
-    corporationOptions.find((option) => option.value === selectedCorporation)
-      ?.value || corporationOptions[0]?.value || '';
-  const activeBusiness =
-    businessOptions.find((option) => option.value === selectedBusiness)?.value ||
-    businessOptions[0]?.value ||
-    '';
-  const activeHousing =
-    housingOptions.find((option) => option.value === selectedHousing)?.value ||
-    housingOptions[0]?.value ||
-    '';
-  const corporationEntry = monitor?.corporations?.find(
-    (entry) => entry.id === activeCorporation,
-  );
-  const businessEntry = monitor?.businesses?.find(
-    (entry) => String(entry.id) === activeBusiness,
-  );
-  const housingEntry = monitor?.housing?.find(
-    (entry) => entry.areaKey === activeHousing,
-  );
 
   return (
     <div className="CorporateInterface__tabGrid">
-      <div className="StyleGuide__blockShell">
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
         <div className="StyleGuide__blockTitle">Налог корпораций</div>
-        <div className="CorporateInterface__taxControl">
-          <label className="CorporateInterface__field">
-            <span>Корпорация</span>
-            <CorporateDropdown
-              selected={activeCorporation}
-              options={corporationOptions}
-              onSelected={setSelectedCorporation}
-              displayText={
-                corporationOptions.find((option) => option.value === activeCorporation)
-                  ?.displayText || 'Корпораций нет'
-              }
-            />
-          </label>
-          <label className="CorporateInterface__field">
-            <span>Процент</span>
-            <Input
-              value={corporationTax}
-              placeholder={`${corporationEntry?.taxRate || 0}%`}
-              onChange={setCorporationTax}
-            />
-          </label>
-          <div className="CorporateInterface__taxButtonRow">
-            <Button
-              icon="percent"
-              disabled={!activeCorporation}
-              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark CorporateInterface__compactButton"
-              onClick={() =>
-                act('set_tax_setting', {
-                  corporation_id: corporation.id,
-                  kind: 'corporation',
-                  target: activeCorporation,
-                  value: Number(corporationTax || corporationEntry?.taxRate || 0),
-                })
-              }
-            >
-              Сохранить
-            </Button>
+        {!monitor?.corporations?.length ? (
+          <div className="StyleGuide__placeholder">Корпораций под учетом нет.</div>
+        ) : (
+          <div className="CorporateInterface__taxRateList">
+            {monitor.corporations.map((entry) => (
+              <div className="CorporateInterface__taxRateRow" key={entry.id}>
+                <CorporatePercentDragField
+                  label={entry.name}
+                  value={entry.taxRate || 0}
+                  onChange={(value) =>
+                    act('set_tax_setting', {
+                      corporation_id: corporation.id,
+                      kind: 'corporation',
+                      target: entry.id,
+                      value,
+                    })
+                  }
+                />
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="StyleGuide__blockShell">
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
         <div className="StyleGuide__blockTitle">Налог бизнесов</div>
-        <div className="CorporateInterface__taxControl">
-          <label className="CorporateInterface__field">
-            <span>Бизнес</span>
-            <CorporateDropdown
-              selected={activeBusiness}
-              options={businessOptions}
-              onSelected={setSelectedBusiness}
-              displayText={
-                businessOptions.find((option) => option.value === activeBusiness)
-                  ?.displayText || 'Бизнесов нет'
-              }
-            />
-          </label>
-          <label className="CorporateInterface__field">
-            <span>Процент</span>
-            <Input
-              value={businessTax}
-              placeholder={`${businessEntry?.taxRate || monitor?.businessDefaultTaxRate || 0}%`}
-              onChange={setBusinessTax}
-            />
-          </label>
-          <div className="CorporateInterface__taxButtonRow">
-            <Button
-              icon="percent"
-              disabled={!activeBusiness}
-              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark CorporateInterface__compactButton"
-              onClick={() =>
-                act('set_tax_setting', {
-                  corporation_id: corporation.id,
-                  kind: 'business',
-                  target: activeBusiness,
-                  value: Number(businessTax || businessEntry?.taxRate || 0),
-                })
-              }
-            >
-              Сохранить
-            </Button>
-          </div>
-        </div>
-        <div className="CorporateInterface__taxControl CorporateInterface__taxControl--inline">
-          <label className="CorporateInterface__field">
-            <span>По умолчанию</span>
-            <Input value={defaultBusinessTax} onChange={setDefaultBusinessTax} />
-          </label>
-          <div className="CorporateInterface__taxButtonRow">
-            <Button
-              icon="percent"
-              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark CorporateInterface__compactButton"
-              onClick={() =>
+        <div className="CorporateInterface__taxRateList">
+          <div className="CorporateInterface__taxRateRow">
+            <CorporatePercentDragField
+              label="Все бизнесы"
+              value={monitor?.businessDefaultTaxRate || 0}
+              onChange={(value) =>
                 act('set_tax_setting', {
                   corporation_id: corporation.id,
                   kind: 'business_default',
                   target: '',
-                  value: Number(defaultBusinessTax) || 0,
+                  value,
                 })
               }
-            >
-              Сохранить
-            </Button>
+            />
           </div>
         </div>
       </div>
 
       <div className="StyleGuide__blockShell CorporateInterface__wide">
         <div className="StyleGuide__blockTitle">Аренда жилья</div>
-        <div className="CorporateInterface__taxControl CorporateInterface__taxControl--housing">
-          <label className="CorporateInterface__field">
-            <span>Район</span>
-            <CorporateDropdown
-              selected={activeHousing}
-              options={housingOptions}
-              onSelected={setSelectedHousing}
-              displayText={
-                housingOptions.find((option) => option.value === activeHousing)
-                  ?.displayText || 'Арендуемого жилья нет'
-              }
-            />
-          </label>
-          <label className="CorporateInterface__field">
-            <span>Плата</span>
-            <Input
-              value={housingRent}
-              placeholder={formatCredits(housingEntry?.rent || 0)}
-              onChange={setHousingRent}
-            />
-          </label>
-          <div className="CorporateInterface__taxButtonRow">
-            <Button
-              icon="coins"
-              disabled={!activeHousing}
-              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark CorporateInterface__compactButton"
-              onClick={() =>
-                act('set_tax_setting', {
-                  corporation_id: corporation.id,
-                  kind: 'housing',
-                  target: activeHousing,
-                  value: Number(housingRent || housingEntry?.rent || 0),
-                })
-              }
-            >
-              Сохранить
-            </Button>
-            <Button
-              icon="receipt"
-              disabled={!activeHousing}
-              className="StyleGuide__cutButton StyleGuide__cutButton--red-dark CorporateInterface__compactButton"
-              onClick={() =>
-                act('charge_housing_rent', {
-                  corporation_id: corporation.id,
-                  area_key: activeHousing,
-                })
-              }
-            >
-              Списать
-            </Button>
-          </div>
-        </div>
         {!monitor?.housing?.length ? (
-          <div className="StyleGuide__placeholder">Записей арендуемого жилья нет.</div>
+          <div className="StyleGuide__placeholder">Районов жилья нет.</div>
         ) : (
-          <Table className="CorporateInterface__taxTable">
-            <Table.Row header>
-              <Table.Cell className="CorporateInterface__nameCell">Район</Table.Cell>
-              <Table.Cell className="CorporateInterface__centerCell">Квартиры</Table.Cell>
-              <Table.Cell className="CorporateInterface__moneyCell">Аренда</Table.Cell>
-            </Table.Row>
+          <div className="CorporateInterface__taxRateList">
             {monitor.housing.map((entry) => (
-              <Table.Row key={entry.areaKey}>
-                <Table.Cell className="CorporateInterface__nameCell">
-                  {entry.area}
-                </Table.Cell>
-                <Table.Cell className="CorporateInterface__centerCell">
-                  {entry.apartments || 0}
-                </Table.Cell>
-                <MoneyCell amount={entry.rent || 0} />
-              </Table.Row>
+              <div className="CorporateInterface__rentRateRow" key={entry.areaKey}>
+                <CorporateCreditsDragField
+                  label={`${entry.area}${entry.apartments ? ` / ${entry.apartments}` : ''}`}
+                  value={entry.rent || 0}
+                  onChange={(value) =>
+                    act('set_tax_setting', {
+                      corporation_id: corporation.id,
+                      kind: 'housing',
+                      target: entry.areaKey,
+                      value,
+                    })
+                  }
+                />
+                <button
+                  type="button"
+                  className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+                  onClick={() =>
+                    act('charge_housing_rent', {
+                      corporation_id: corporation.id,
+                      area_key: entry.areaKey,
+                    })
+                  }
+                >
+                  <Icon name="receipt" />
+                  <span>Списать</span>
+                </button>
+              </div>
             ))}
-          </Table>
+          </div>
         )}
       </div>
     </div>
@@ -1540,7 +1549,7 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
   return (
     <div className="StyleGuide__blockShell CorporateInterface__wide CorporateInterface__taxMonitor">
       <div className="StyleGuide__blockTitle">Налоговый монитор правительства</div>
-      <Box className="CorporateInterface__subTitle">Бизнесы</Box>
+      <div className="CorporateInterface__subTitle">Бизнесы</div>
       <Table className="CorporateInterface__taxTable">
         <Table.Row header>
           <Table.Cell className="CorporateInterface__nameCell">Бизнес</Table.Cell>
@@ -1565,7 +1574,7 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
           </Table.Row>
         ))}
       </Table>
-      <Box className="CorporateInterface__subTitle">Корпорации</Box>
+      <div className="CorporateInterface__subTitle">Корпорации</div>
       <Table className="CorporateInterface__taxTable">
         <Table.Row header>
           <Table.Cell className="CorporateInterface__nameCell">Корпорация</Table.Cell>
@@ -1588,7 +1597,7 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
           </Table.Row>
         ))}
       </Table>
-      <Box className="CorporateInterface__subTitle">Счета</Box>
+      <div className="CorporateInterface__subTitle">Счета</div>
       <Table className="CorporateInterface__taxTable">
         <Table.Row header>
           <Table.Cell className="CorporateInterface__idCell">ID</Table.Cell>

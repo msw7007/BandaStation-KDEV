@@ -1,18 +1,10 @@
 // CYBERPUNK BUILD - rebuild and delete before release
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Collapsible,
-  LabeledList,
-  Section,
-  Table,
-} from 'tgui-core/components';
+import { useState, type ReactNode } from 'react';
 import { formatMoney } from 'tgui-core/format';
 import type { BooleanLike } from 'tgui-core/react';
 
-import { useBackend } from '../backend';
 import { NtosWindow } from '../layouts';
+import { useBackend } from '../backend';
 
 type RegistryContract = {
   id: number;
@@ -40,6 +32,48 @@ type Data = {
   taxRate: number;
 };
 
+const contractTypes = [
+  ['delivery', 'Доставка'],
+  ['repair', 'Ремонт'],
+  ['build', 'Стройка'],
+  ['guard', 'Охрана'],
+  ['mining', 'Добыча'],
+  ['sabotage', 'Саботаж'],
+  ['elimination', 'Устранение'],
+];
+
+function contractTypeLabel(type: string) {
+  return contractTypes.find(([value]) => value === type)?.[1] || type || '-';
+}
+
+function boolLabel(value: BooleanLike) {
+  return value ? 'да' : 'нет';
+}
+
+function moneyText(value: number) {
+  return `${formatMoney(value || 0)} кр`;
+}
+
+function toneClass(tone?: 'base' | 'good' | 'bad') {
+  if (tone === 'good') {
+    return 'StyleGuide__textGood';
+  }
+  if (tone === 'bad') {
+    return 'StyleGuide__textBad';
+  }
+  return 'StyleGuide__textBase';
+}
+
+function statusTone(status: string): 'base' | 'good' | 'bad' {
+  if (['completed', 'accepted'].includes(status)) {
+    return 'good';
+  }
+  if (['failed', 'cancelled', 'expired'].includes(status)) {
+    return 'bad';
+  }
+  return 'base';
+}
+
 export const NtosContractRegistry = () => {
   const { data } = useBackend<Data>();
   const {
@@ -54,96 +88,150 @@ export const NtosContractRegistry = () => {
     contracts.find((contract) => contract.id === selectedId) || contracts[0];
 
   return (
-    <NtosWindow width={780} height={620}>
-      <NtosWindow.Content scrollable className="CyberpunkPanel">
-        <Section title="Legal contract registry">
-          <Table>
-            <Table.Row header>
-              <Table.Cell>Indexed</Table.Cell>
-              <Table.Cell>Active</Table.Cell>
-              <Table.Cell>Completed</Table.Cell>
-              <Table.Cell>Failed</Table.Cell>
-              <Table.Cell>Legal tax</Table.Cell>
-            </Table.Row>
-            <Table.Row>
-              <Table.Cell>{contracts.length}</Table.Cell>
-              <Table.Cell>{activeCount}</Table.Cell>
-              <Table.Cell>{completedCount}</Table.Cell>
-              <Table.Cell>{failedCount}</Table.Cell>
-              <Table.Cell>{taxRate}%</Table.Cell>
-            </Table.Row>
-          </Table>
-        </Section>
-        <Section title="Records">
+    <NtosWindow width={860} height={660}>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Юридический реестр контрактов</div>
+          <div className="StyleGuide__blockMetrics StyleGuide__blockMetrics--five">
+            <Metric label="Записей" value={contracts.length} />
+            <Metric label="Активно" value={activeCount} tone="good" />
+            <Metric label="Выполнено" value={completedCount} tone="good" />
+            <Metric label="Провалено" value={failedCount} tone="bad" />
+            <Metric label="Налог" value={`${taxRate}%`} />
+          </div>
+        </div>
+
+        <div className="StyleGuide__blockShell">
+          <div className="StyleGuide__blockTitle">Записи</div>
           {!contracts.length ? (
-            <Box className="CyberpunkPanel__Muted">
-              No legal contracts are indexed.
-            </Box>
+            <div className="StyleGuide__placeholder">
+              В реестре нет легальных контрактов.
+            </div>
           ) : (
-            <Table>
-              <Table.Row header>
-                <Table.Cell collapsing>ID</Table.Cell>
-                <Table.Cell>Title</Table.Cell>
-                <Table.Cell>Type</Table.Cell>
-                <Table.Cell>Status</Table.Cell>
-                <Table.Cell>Target</Table.Cell>
-                <Table.Cell>Parties</Table.Cell>
-                <Table.Cell collapsing>Payment</Table.Cell>
-              </Table.Row>
-              {contracts.map((contract) => (
-                <Table.Row key={contract.id} className={selectedContract?.id === contract.id ? 'Table__row--selected' : undefined}>
-                  <Table.Cell>#{contract.id}</Table.Cell>
-                  <Table.Cell>
-                    <Button fluid onClick={() => setSelectedId(contract.id)}>
-                      {contract.title}
-                    </Button>
-                  </Table.Cell>
-                  <Table.Cell>{contract.type}</Table.Cell>
-                  <Table.Cell>{contract.status}</Table.Cell>
-                  <Table.Cell>{contract.target}</Table.Cell>
-                  <Table.Cell>
-                    {contract.creator}
-                    {!!contract.contractor && ` -> ${contract.contractor}`}
-                  </Table.Cell>
-                  <Table.Cell>{formatMoney(contract.payment)} cr</Table.Cell>
-                </Table.Row>
-              ))}
-            </Table>
+            <div className="StyleGuide__masterDetail StyleGuide__masterDetail--registry">
+              <div className="StyleGuide__masterList">
+                {contracts.map((contract) => (
+                  <button
+                    key={contract.id}
+                    type="button"
+                    className={[
+                      'StyleGuide__dataCard',
+                      selectedContract?.id === contract.id && 'active',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() => setSelectedId(contract.id)}
+                  >
+                    <div className="StyleGuide__dataCardContent">
+                      <div className="StyleGuide__dataCardTitle">
+                        <b>
+                          #{contract.id} {contract.title}
+                        </b>
+                        <small className={toneClass('good')}>
+                          {moneyText(contract.payment)}
+                        </small>
+                      </div>
+                      <div className="StyleGuide__miniMeta">
+                        <span>{contractTypeLabel(contract.type)}</span>
+                        <span className={toneClass(statusTone(contract.status))}>
+                          {contract.status}
+                        </span>
+                      </div>
+                      <span>{contract.target}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="StyleGuide__detailPane">
+                {!!selectedContract && (
+                  <RegistryDetails contract={selectedContract} />
+                )}
+              </div>
+            </div>
           )}
-        </Section>
-        {!!selectedContract && (
-          <Section title={`Record #${selectedContract.id}: ${selectedContract.title}`}>
-            <LabeledList>
-              <LabeledList.Item label="Deadline">
-                {selectedContract.deadline}
-              </LabeledList.Item>
-              <LabeledList.Item label="Public">
-                {selectedContract.public ? 'yes' : 'no'}
-              </LabeledList.Item>
-              <LabeledList.Item label="Deposit">
-                {formatMoney(selectedContract.deposit)} cr
-              </LabeledList.Item>
-              <LabeledList.Item label="Penalty">
-                {formatMoney(selectedContract.penalty)} cr
-              </LabeledList.Item>
-              <LabeledList.Item label="Tax paid">
-                {formatMoney(selectedContract.taxPaid || 0)} cr
-              </LabeledList.Item>
-              <LabeledList.Item label="Assigned">
-                {selectedContract.assignedContractor || 'open'}
-              </LabeledList.Item>
-            </LabeledList>
-            <Collapsible title="History">
-              {(selectedContract.history || []).map((entry, index) => (
-                <Box key={index} className="CyberpunkPanel__Muted">
-                  {entry}
-                </Box>
-              ))}
-            </Collapsible>
-          </Section>
-        )}
+        </div>
       </NtosWindow.Content>
     </NtosWindow>
   );
 };
+
+const Metric = (props: {
+  label: string;
+  value: ReactNode;
+  tone?: 'base' | 'good' | 'bad';
+}) => (
+  <span>
+    <small>{props.label}</small>
+    <b className={toneClass(props.tone)}>{props.value}</b>
+  </span>
+);
+
+const RegistryDetails = (props: { contract: RegistryContract }) => {
+  const { contract } = props;
+  return (
+    <article className="StyleGuide__dataCard">
+      <div className="StyleGuide__dataCardContent">
+        <div className="StyleGuide__dataCardTitle">
+          <b>
+            Реестр #{contract.id}: {contract.title}
+          </b>
+          <small className={toneClass(statusTone(contract.status))}>
+            {contract.status}
+          </small>
+        </div>
+
+        <div className="StyleGuide__contractMatrix">
+          <RegistryCell label="Тип" value={contractTypeLabel(contract.type)} />
+          <RegistryCell label="Цель" value={contract.target || '-'} />
+          <RegistryCell label="Оплата" value={moneyText(contract.payment)} tone="good" />
+          <RegistryCell
+            label="Срок"
+            value={contract.deadline || '-'}
+            tone={contract.deadline === 'expired' ? 'bad' : 'base'}
+          />
+          <RegistryCell label="Создатель" value={contract.creator || '-'} />
+          <RegistryCell
+            label="Исполнитель"
+            value={contract.contractor || contract.assignedContractor || 'открыто'}
+          />
+          <RegistryCell label="Публичный" value={boolLabel(contract.public)} />
+          <RegistryCell label="Депозит" value={moneyText(contract.deposit)} />
+          <RegistryCell
+            label="Штраф"
+            value={moneyText(contract.penalty)}
+            tone={contract.penalty > 0 ? 'bad' : 'base'}
+          />
+          <RegistryCell
+            label="Налог"
+            value={moneyText(contract.taxPaid)}
+            tone={contract.taxPaid > 0 ? 'bad' : 'base'}
+          />
+        </div>
+
+        {!!contract.history?.length && (
+          <details>
+            <summary>История</summary>
+            {contract.history.map((entry, index) => (
+              <div key={index} className="StyleGuide__trapezoidNote">
+                {entry}
+              </div>
+            ))}
+          </details>
+        )}
+      </div>
+    </article>
+  );
+};
+
+const RegistryCell = (props: {
+  label: string;
+  value: ReactNode;
+  tone?: 'base' | 'good' | 'bad';
+}) => (
+  <div className="StyleGuide__contractCell">
+    <span>{props.label}</span>
+    <b className={toneClass(props.tone)}>{props.value}</b>
+  </div>
+);
 // CYBERPUNK BUILD - rebuild and delete before release
