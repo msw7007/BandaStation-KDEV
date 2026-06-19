@@ -257,13 +257,17 @@
 	var/datum/bank_account/account = get_account()
 	if(!account || !amount)
 		return FALSE
-	account.adjust_money(amount, reason)
+	var/tax = 0
 	if(legal && taxable)
-		var/tax = round(amount * CYBERPUNK_BUSINESS_TAX_RATE)
+		tax = round(amount * SScyberpunk_corporations.get_cyberpunk_business_tax_rate(id))
 		if(tax > 0)
-			tax_debt += tax
-			add_history("tax debt increased by [tax][MONEY_SYMBOL]: [reason]")
-	log_econ("Business #[id] [legal ? "legal" : "off-ledger"] income [amount][MONEY_NAME]: [reason]; tax debt [tax_debt][MONEY_NAME].")
+			SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(tax, "Business tax: [name]")
+			tax_paid += tax
+			add_history("tax withheld [tax][MONEY_SYMBOL]: [reason]")
+	var/net_amount = amount - tax
+	if(net_amount)
+		account.adjust_money(net_amount, reason)
+	log_econ("Business #[id] [legal ? "legal" : "off-ledger"] income [amount][MONEY_NAME]: [reason]; tax withheld [tax][MONEY_NAME].")
 	return TRUE
 
 /datum/cyberpunk_business/proc/pay_taxes(mob/living/user, amount = 0)
@@ -592,7 +596,7 @@
 		"debt" = account?.account_debt || 0,
 		"taxDebt" = tax_debt,
 		"taxPaid" = tax_paid,
-		"taxRate" = round(CYBERPUNK_BUSINESS_TAX_RATE * 100),
+		"taxRate" = round(SScyberpunk_corporations.get_cyberpunk_business_tax_rate(id) * 100),
 		"employees" = employee_records,
 		"stock" = stock_records,
 		"deliveries" = delivery_records,

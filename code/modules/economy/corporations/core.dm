@@ -21,10 +21,10 @@
 	var/list/subscribers = list()
 	var/list/vendor_sales = list()
 	var/list/vendor_registry = list()
+	var/list/profit_records = list()
 	var/list/stolen_technology_progress = list()
 	var/list/stolen_technologies = list()
 	var/list/technology_discount_points = list()
-	var/list/technologies = list()
 	var/list/edicts = list()
 	var/list/history = list()
 
@@ -46,15 +46,6 @@
 				new /datum/cyberpunk_corporate_subsidiary(id, "ishikawa", "Ishikawa Industries", "Ishikawa", "Stealth systems and covert equipment.", "stealth"),
 				new /datum/cyberpunk_corporate_subsidiary(id, "ho_shi", "Ho Shi Technologies", "Ho Shi", "Speed, reflex and acceleration modules.", "speed"),
 			)
-			technologies = list(
-				list("id" = "benn_medtech", "name" = "Medical service lattice", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Medical kiosks, analyzers, insurance goods, and treatment automation."),
-				list("id" = "benn_genetics", "name" = "Genetic stabilization", "tier" = 2, "cost" = 45, "prereq" = "benn_medtech", "description" = "Genetic consoles, infusers, stabilizers, and mutation rollback support."),
-				list("id" = "benn_chemistry", "name" = "Combat chemistry", "tier" = 3, "cost" = 65, "prereq" = "benn_genetics", "description" = "Composite reagents, toxins, acid mixtures, and chemical demon payloads."),
-				list("id" = "benn_chemical_teg", "name" = "Chemical thermoelectric generation", "tier" = 3, "cost" = 70, "prereq" = "benn_chemistry", "description" = "Reagent-driven TEG blocks, hot/cold cartridges, and chemistry-controlled grid support."),
-				list("id" = "benn_stealthware", "name" = "Stealthware implants", "tier" = 4, "cost" = 85, "prereq" = "benn_chemistry", "description" = "Stealth, speed, precision and surgical implant branches."),
-				list("id" = "benn_bioreactor", "name" = "Biomass reactor", "tier" = 5, "cost" = 120, "prereq" = "benn_chemical_teg", "description" = "Organic matter disassembly, biohazard containment, and high-yield biological generation."),
-				list("id" = "benn_bioarchive", "name" = "DNA archive", "tier" = 5, "cost" = 110, "prereq" = "benn_stealthware", "description" = "Bio-data storage, foreign technology scanning, and recovery research.")
-			)
 			edicts = cyberpunk_benn_edicts()
 		if(CYBERPUNK_CORP_RYAZNOV)
 			name = "Ryaznov Union"
@@ -65,15 +56,6 @@
 				new /datum/cyberpunk_corporate_subsidiary(id, "kowalski", "Kowalski & Co", "Kowalski", "Industrial tooling and heavy classic weapons.", "engineering"),
 				new /datum/cyberpunk_corporate_subsidiary(id, "tyazhmarsh", "Tyazhmarsh Production", "Tyazhmarsh", "Armor, heavy machinery and reinforced frames.", "defense"),
 				new /datum/cyberpunk_corporate_subsidiary(id, "tesla_science", "Tesla Science", "Tesla Science", "Energy, power and shield modules.", "power"),
-			)
-			technologies = list(
-				list("id" = "ryaznov_tools", "name" = "Industrial toolchain", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Engineering tools, analyzers, repair stations, and construction gear."),
-				list("id" = "ryaznov_fortification", "name" = "Fortification grid", "tier" = 2, "cost" = 45, "prereq" = "ryaznov_tools", "description" = "Barriers, shields, barricades, plating, and reinforced structures."),
-				list("id" = "ryaznov_power", "name" = "Power and shield systems", "tier" = 3, "cost" = 65, "prereq" = "ryaznov_fortification", "description" = "Generators, shield emitters, chargers, and emergency energy modules."),
-				list("id" = "ryaznov_nuclear_block", "name" = "Nuclear energy block", "tier" = 3, "cost" = 75, "prereq" = "ryaznov_power", "description" = "Uranium energy blocks, coolant rods, reactor consoles, and city-grade industrial generation."),
-				list("id" = "ryaznov_robotics", "name" = "Robotic industry", "tier" = 4, "cost" = 85, "prereq" = "ryaznov_power", "description" = "Drones, turrets, mech docks, exoskeletons, and mobile workshops."),
-				list("id" = "ryaznov_cold_fusion", "name" = "Cold fusion collider", "tier" = 5, "cost" = 130, "prereq" = "ryaznov_nuclear_block", "description" = "High-density fusion generation and anomaly-prone collider infrastructure."),
-				list("id" = "ryaznov_blueprints", "name" = "Blueprint archive", "tier" = 5, "cost" = 110, "prereq" = "ryaznov_robotics", "description" = "Engineering data archive and foreign technology reverse engineering.")
 			)
 			edicts = cyberpunk_ryaznov_edicts()
 		if(CYBERPUNK_CORP_STARLIGHT)
@@ -86,15 +68,6 @@
 				new /datum/cyberpunk_corporate_subsidiary(id, "trans_travel", "Trans Travel", "Trans Travel", "Routing, movement and delivery systems.", "route"),
 				new /datum/cyberpunk_corporate_subsidiary(id, "samanthas_keir", "Samantha's Keir", "Samantha's Keir", "Social influence, advertising and market pressure.", "social"),
 			)
-			technologies = list(
-				list("id" = "starlight_market", "name" = "Market routing", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Contracts, vending, subscriptions, and stock telemetry."),
-				list("id" = "starlight_delivery", "name" = "Delivery network", "tier" = 2, "cost" = 45, "prereq" = "starlight_market", "description" = "Cargo drones, delivery beacons, route data, and business logistics."),
-				list("id" = "starlight_kinetic_reactor", "name" = "Kinetic reactor train", "tier" = 3, "cost" = 65, "prereq" = "starlight_delivery", "description" = "Wheel-shaft-motor reactor assemblies, inertia storage, and cold-room maintenance loops."),
-				list("id" = "starlight_vehicle", "name" = "Transport platforms", "tier" = 3, "cost" = 65, "prereq" = "starlight_delivery", "description" = "Ground and air vehicles, route registration, and cargo movement."),
-				list("id" = "starlight_phase", "name" = "Phase logistics", "tier" = 4, "cost" = 85, "prereq" = "starlight_vehicle", "description" = "Teleportation, recall, phase suits, and blink delivery."),
-				list("id" = "starlight_energy_portal", "name" = "Energy portal lattice", "tier" = 5, "cost" = 135, "prereq" = "starlight_phase", "description" = "Crystal portals, emitter containment, and high-risk extradimensional power import."),
-				list("id" = "starlight_route_archive", "name" = "Route archive", "tier" = 5, "cost" = 110, "prereq" = "starlight_phase", "description" = "Market intelligence, foreign tech scanning, and route optimization.")
-			)
 			edicts = cyberpunk_starlight_edicts()
 		if(CYBERPUNK_CORP_GOVERNMENT)
 			name = "City Government"
@@ -106,13 +79,6 @@
 				new /datum/cyberpunk_corporate_subsidiary(id, "gov_council", "Council", "City Council", "Votes, laws, emergency decrees.", "civic", 1, 1, 1),
 				new /datum/cyberpunk_corporate_subsidiary(id, "gov_police", "Police", "City Police", "Public order and emergency enforcement.", "security", 1, 1, 1),
 				new /datum/cyberpunk_corporate_subsidiary(id, "gov_treasury", "City Treasury", "City Treasury", "Taxes, debt, registered finance.", "finance", 1, 1, 1),
-			)
-			technologies = list(
-				list("id" = "gov_tax", "name" = "Tax registry", "tier" = 1, "cost" = 25, "prereq" = null, "description" = "Legal transaction tracking, tax records, and debt oversight."),
-				list("id" = "gov_cameras", "name" = "City surveillance", "tier" = 2, "cost" = 45, "prereq" = "gov_tax", "description" = "Camera monitoring, evidence routing, and public order data."),
-				list("id" = "gov_council", "name" = "Council voting keys", "tier" = 3, "cost" = 65, "prereq" = "gov_cameras", "description" = "Council votes, emergency state confirmation, and formal decrees."),
-				list("id" = "gov_armory", "name" = "Emergency armory", "tier" = 4, "cost" = 85, "prereq" = "gov_council", "description" = "Special police warehouse and emergency combat kit authorization."),
-				list("id" = "gov_city_directive", "name" = "City directive", "tier" = 5, "cost" = 110, "prereq" = "gov_armory", "description" = "City-wide corporate action approval and suppression hooks.")
 			)
 			edicts = list()
 
@@ -130,6 +96,48 @@
 
 /datum/cyberpunk_corporation/proc/add_history(message)
 	LAZYADD(history, "[round_timestamp()] - [message]")
+
+/datum/cyberpunk_corporation/proc/record_profit_entry(source, gross_amount, net_amount, tax_amount = 0, kind = "income")
+	gross_amount = round(gross_amount)
+	net_amount = round(net_amount)
+	tax_amount = max(0, round(tax_amount))
+	if(!gross_amount && !net_amount && !tax_amount)
+		return FALSE
+	source = trim("[source]") || "activity"
+	var/record_key = "[kind]:[source]"
+	var/list/record = profit_records[record_key]
+	if(!record)
+		record = list(
+			"source" = source,
+			"kind" = kind,
+			"count" = 0,
+			"gross" = 0,
+			"net" = 0,
+			"tax" = 0,
+			"lastAmount" = 0,
+			"lastNet" = 0,
+			"lastTax" = 0,
+			"lastSeen" = null,
+		)
+		profit_records[record_key] = record
+	record["count"] = (record["count"] || 0) + 1
+	record["gross"] = (record["gross"] || 0) + gross_amount
+	record["net"] = (record["net"] || 0) + net_amount
+	record["tax"] = (record["tax"] || 0) + tax_amount
+	record["lastAmount"] = gross_amount
+	record["lastNet"] = net_amount
+	record["lastTax"] = tax_amount
+	record["lastSeen"] = round_timestamp()
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/get_profit_records_ui()
+	var/list/records = list()
+	for(var/record_key in profit_records)
+		var/list/record = profit_records[record_key]
+		if(!islist(record))
+			continue
+		records += list(record.Copy())
+	return records
 
 /datum/cyberpunk_corporation/proc/get_subsidiary_by_manufacturer(manufacturer)
 	var/manufacturer_text = lowertext(trim("[manufacturer]"))
@@ -150,21 +158,117 @@
 	switch(data_type)
 		if("bio", "medical", "genetic", "chemistry", "stealth")
 			return findtext(search_text, "benn") || findtext(search_text, "med") || findtext(search_text, "gene") || findtext(search_text, "chem") || findtext(search_text, "bio") || findtext(search_text, "stealth")
-		if("engineering", "power", "defense", "repair", "salvage")
+		if("engineering", "power", "defense", "repair", "salvage", "robotics")
 			return findtext(search_text, "ryaznov") || findtext(search_text, "tool") || findtext(search_text, "fort") || findtext(search_text, "power") || findtext(search_text, "robot") || findtext(search_text, "blueprint")
 		if("market", "route", "social", "delivery", "supply")
 			return findtext(search_text, "starlight") || findtext(search_text, "market") || findtext(search_text, "delivery") || findtext(search_text, "vehicle") || findtext(search_text, "phase") || findtext(search_text, "route")
+		if("security", "civic", "finance")
+			return findtext(search_text, "gov") || findtext(search_text, "tax") || findtext(search_text, "camera") || findtext(search_text, "council") || findtext(search_text, "armory") || findtext(search_text, "directive")
 	return findtext(search_text, data_type)
+
+/datum/cyberpunk_corporation/proc/get_techweb_node_data_type(datum/techweb_node/node)
+	if(!node)
+		return get_primary_data_type()
+	var/search_text = lowertext("[node.id] [node.display_name] [node.description]")
+	for(var/design_id in node.design_ids)
+		var/datum/design/design = SSresearch.techweb_design_by_id(design_id)
+		if(design)
+			var/design_text = "[design.id] [design.name] [design.desc]"
+			search_text += " [lowertext(design_text)]"
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			if(findtext(search_text, "gene") || findtext(search_text, "dna") || findtext(search_text, "xeno") || findtext(search_text, "slime"))
+				return "genetic"
+			if(findtext(search_text, "chem") || findtext(search_text, "reagent") || findtext(search_text, "toxin") || findtext(search_text, "acid"))
+				return "chemistry"
+			if(findtext(search_text, "implant") || findtext(search_text, "stealth"))
+				return "stealth"
+			return "medical"
+		if(CYBERPUNK_CORP_RYAZNOV)
+			if(findtext(search_text, "robot") || findtext(search_text, "cyborg") || findtext(search_text, "mech") || findtext(search_text, "drone"))
+				return "robotics"
+			if(findtext(search_text, "power") || findtext(search_text, "cell") || findtext(search_text, "energy") || findtext(search_text, "shield"))
+				return "power"
+			if(findtext(search_text, "armor") || findtext(search_text, "plating") || findtext(search_text, "wall") || findtext(search_text, "fort"))
+				return "defense"
+			return "engineering"
+		if(CYBERPUNK_CORP_STARLIGHT)
+			if(findtext(search_text, "delivery") || findtext(search_text, "cargo") || findtext(search_text, "mining") || findtext(search_text, "supply"))
+				return "delivery"
+			if(findtext(search_text, "vehicle") || findtext(search_text, "transport") || findtext(search_text, "teleport") || findtext(search_text, "route"))
+				return "route"
+			if(findtext(search_text, "social") || findtext(search_text, "service") || findtext(search_text, "mood"))
+				return "social"
+			return "market"
+		if(CYBERPUNK_CORP_GOVERNMENT)
+			if(findtext(search_text, "security") || findtext(search_text, "camera") || findtext(search_text, "armory"))
+				return "security"
+			if(findtext(search_text, "tax") || findtext(search_text, "finance"))
+				return "finance"
+			return "civic"
+	return get_primary_data_type()
+
+/datum/cyberpunk_corporation/proc/get_cyberpunk_technology_node_record(datum/techweb_node/node)
+	if(!node)
+		return null
+	var/base_cost = get_cyberpunk_techweb_node_cost(node)
+	var/current_cost = get_technology_cost(list("id" = node.id, "cost" = base_cost))
+	var/list/prereq_ids = list()
+	for(var/prereq_id in node.prereq_ids)
+		var/datum/techweb_node/prereq_node = SSresearch.techweb_node_by_id(prereq_id)
+		if(get_cyberpunk_techweb_node_corporation_id(prereq_node) == id)
+			prereq_ids += prereq_id
+	var/list/unlock_ids = list()
+	for(var/unlock_id in node.unlock_ids)
+		var/datum/techweb_node/unlock_node = SSresearch.techweb_node_by_id(unlock_id)
+		if(get_cyberpunk_techweb_node_corporation_id(unlock_node) == id)
+			unlock_ids += unlock_id
+	var/prereqs_unlocked = TRUE
+	for(var/prereq_id in prereq_ids)
+		if(!has_technology(prereq_id))
+			prereqs_unlocked = FALSE
+			break
+	var/is_unlocked = !!unlocked_technologies[node.id] || node.starting_node
+	return list(
+		"id" = node.id,
+		"name" = node.display_name,
+		"tier" = max(1, length(prereq_ids) + 1),
+		"cost" = current_cost,
+		"baseCost" = base_cost,
+		"discount" = max(0, base_cost - current_cost),
+		"prereq" = length(prereq_ids) ? prereq_ids[1] : null,
+		"prereqIds" = prereq_ids,
+		"unlockIds" = unlock_ids,
+		"dataType" = get_techweb_node_data_type(node),
+		"description" = node.description,
+		"unlocked" = is_unlocked,
+		"canUnlock" = !is_unlocked && prereqs_unlocked && research_points >= current_cost,
+	)
+
+/datum/cyberpunk_corporation/proc/get_cyberpunk_technology_nodes_ui()
+	var/list/technology_records = list()
+	for(var/node_id in SSresearch.techweb_nodes)
+		var/datum/techweb_node/node = SSresearch.techweb_node_by_id(node_id)
+		if(get_cyberpunk_techweb_node_corporation_id(node) != id)
+			continue
+		var/list/node_record = get_cyberpunk_technology_node_record(node)
+		if(node_record)
+			technology_records += list(node_record)
+	return technology_records
 
 /datum/cyberpunk_corporation/proc/apply_technology_discounts(data_type, amount, source = "activity")
 	if(!amount)
 		return FALSE
 	var/applied = FALSE
-	for(var/list/technology as anything in technologies)
-		var/technology_id = technology["id"]
-		if(unlocked_technologies[technology_id] || !technology_matches_data_type(technology, data_type))
+	for(var/node_id in SSresearch.techweb_nodes)
+		var/datum/techweb_node/node = SSresearch.techweb_node_by_id(node_id)
+		if(get_cyberpunk_techweb_node_corporation_id(node) != id)
 			continue
-		var/max_discount = round((technology["cost"] || 0) * 0.35)
+		var/list/technology = get_cyberpunk_technology_node_record(node)
+		var/technology_id = node.id
+		if(technology["unlocked"] || !technology_matches_data_type(technology, data_type))
+			continue
+		var/max_discount = round((technology["baseCost"] || technology["cost"] || 0) * 0.35)
 		if(max_discount <= 0)
 			continue
 		var/current_discount = technology_discount_points[technology_id] || 0
@@ -197,12 +301,17 @@
 	if(!amount)
 		return FALSE
 	var/datum/bank_account/account = ensure_account()
-	account.adjust_money(amount, "Corporate funds: [source]")
+	var/tax = 0
 	if(amount > 0 && id != CYBERPUNK_CORP_GOVERNMENT)
-		var/tax = round(amount * CYBERPUNK_CORP_TAX_RATE)
+		tax = round(amount * SScyberpunk_corporations.get_cyberpunk_corporation_tax_rate(id))
 		if(tax > 0)
-			tax_debt += tax
-			add_history("[source]: tax debt +[tax][MONEY_SYMBOL]")
+			SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(tax, "Corporate tax: [name]")
+			tax_paid += tax
+			add_history("[source]: tax withheld [tax][MONEY_SYMBOL]")
+	var/net_amount = amount - tax
+	if(net_amount)
+		account.adjust_money(net_amount, "Corporate funds: [source]")
+	record_profit_entry(source, amount, net_amount, tax, "income")
 	var/amount_prefix = amount >= 0 ? "+" : ""
 	add_history("[source]: [amount_prefix][amount][MONEY_SYMBOL]")
 	return TRUE
@@ -214,6 +323,7 @@
 	var/datum/bank_account/account = ensure_account()
 	if(!account || !account.adjust_money(-amount, "Corporate expense: [source]"))
 		return FALSE
+	record_profit_entry(source, -amount, -amount, 0, "expense")
 	add_history("[source]: -[amount][MONEY_SYMBOL]")
 	return TRUE
 
@@ -266,9 +376,9 @@
 	return TRUE
 
 /datum/cyberpunk_corporation/proc/get_technology(technology_id)
-	for(var/list/technology as anything in technologies)
-		if(technology["id"] == technology_id)
-			return technology
+	var/datum/techweb_node/node = SSresearch.techweb_node_by_id(resolve_cyberpunk_corporate_technology_id(technology_id))
+	if(node && get_cyberpunk_techweb_node_corporation_id(node) == id)
+		return get_cyberpunk_technology_node_record(node)
 	return null
 
 /datum/cyberpunk_corporation/proc/get_foreign_technology_bonus()
@@ -283,12 +393,16 @@
 	return max(0, round((base_cost - activity_discount) * (1 - get_foreign_technology_bonus())))
 
 /datum/cyberpunk_corporation/proc/unlock_technology(technology_id)
+	technology_id = resolve_cyberpunk_corporate_technology_id(technology_id)
 	var/list/technology = get_technology(technology_id)
-	if(!technology || unlocked_technologies[technology_id])
+	if(!technology)
 		return FALSE
-	var/prereq = technology["prereq"]
-	if(prereq && !unlocked_technologies[prereq])
-		return FALSE
+	if(technology["unlocked"])
+		unlocked_technologies[technology_id] = TRUE
+		return TRUE
+	for(var/prereq_id in technology["prereqIds"])
+		if(!has_technology(prereq_id))
+			return FALSE
 	var/cost = get_technology_cost(technology)
 	if(research_points < cost)
 		return FALSE
@@ -320,7 +434,11 @@
 	return FALSE
 
 /datum/cyberpunk_corporation/proc/has_technology(technology_id)
-	return !!unlocked_technologies[technology_id]
+	technology_id = resolve_cyberpunk_corporate_technology_id(technology_id)
+	if(unlocked_technologies[technology_id])
+		return TRUE
+	var/datum/techweb_node/node = SSresearch.techweb_node_by_id(technology_id)
+	return !!node?.starting_node && get_cyberpunk_techweb_node_corporation_id(node) == id
 
 /datum/cyberpunk_corporation/proc/subscribe(mob/living/user)
 	if(!user)
@@ -522,24 +640,6 @@
 	var/list/data_records = list()
 	for(var/data_type in research_data)
 		data_records += list(list("type" = data_type, "amount" = research_data[data_type]))
-	var/list/technology_records = list()
-	for(var/list/technology as anything in technologies)
-		var/technology_id = technology["id"]
-		var/prereq = technology["prereq"]
-		var/base_cost = technology["cost"] || 0
-		var/current_cost = get_technology_cost(technology)
-		technology_records += list(list(
-			"id" = technology_id,
-			"name" = technology["name"],
-			"tier" = technology["tier"],
-			"cost" = current_cost,
-			"baseCost" = base_cost,
-			"discount" = max(0, base_cost - current_cost),
-			"prereq" = prereq,
-			"description" = technology["description"],
-			"unlocked" = !!unlocked_technologies[technology_id],
-			"canUnlock" = !unlocked_technologies[technology_id] && (!prereq || unlocked_technologies[prereq]) && research_points >= current_cost,
-		))
 	var/list/edict_records = list()
 	for(var/list/edict as anything in edicts)
 		var/edict_level = edict["level"] || 1
@@ -555,6 +655,7 @@
 	var/list/subsidiary_records = list()
 	for(var/datum/cyberpunk_corporate_subsidiary/subsidiary as anything in subsidiaries)
 		subsidiary_records += list(subsidiary.to_ui_data())
+	var/is_government = id == CYBERPUNK_CORP_GOVERNMENT
 	return list(
 		"id" = id,
 		"name" = name,
@@ -574,19 +675,20 @@
 		"taxDebt" = tax_debt,
 		"taxPaid" = tax_paid,
 		"serviceAutoEnabled" = service_auto_enabled,
-		"researchData" = data_records,
-		"technologies" = technology_records,
-		"edicts" = edict_records,
+		"researchData" = is_government ? list() : data_records,
+		"technologies" = is_government ? list() : get_cyberpunk_technology_nodes_ui(),
+		"edicts" = is_government ? list() : edict_records,
 		"activeEdicts" = active_edicts,
 		"subscribers" = length(subscribers),
 		"subscriptionCost" = get_subscription_cost(),
 		"serviceMedical" = can_request_service("medical"),
 		"serviceTechnical" = can_request_service("technical"),
 		"serviceDelivery" = can_request_service("delivery"),
-		"services" = get_available_services_ui(),
-		"serviceRequests" = SScyberpunk_corporations.get_cyberpunk_corporate_service_requests_ui(id),
+		"services" = is_government ? list() : get_available_services_ui(),
+		"serviceRequests" = is_government ? list() : SScyberpunk_corporations.get_cyberpunk_corporate_service_requests_ui(id),
 		"contracts" = SScyberpunk_corporations.get_cyberpunk_corporate_contracts_ui(id),
 		"vendors" = get_cyberpunk_corporate_vendors_ui(),
+		"profitRecords" = get_profit_records_ui(),
 		"taxMonitor" = id == CYBERPUNK_CORP_GOVERNMENT ? SScyberpunk_corporations.get_cyberpunk_government_tax_monitor_ui() : null,
 		"foreignTechBonus" = round(get_foreign_technology_bonus() * 100),
 		"stolenTechnologies" = get_stolen_technologies_ui(),

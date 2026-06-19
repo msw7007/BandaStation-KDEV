@@ -107,12 +107,11 @@
 
 /datum/cyberpunk_corporation/proc/get_unlocked_technology_records()
 	var/list/records = list()
-	for(var/list/technology as anything in technologies)
-		var/technology_id = technology["id"]
-		if(!unlocked_technologies[technology_id])
+	for(var/list/technology as anything in get_cyberpunk_technology_nodes_ui())
+		if(!technology["unlocked"])
 			continue
 		records += list(list(
-			"id" = technology_id,
+			"id" = technology["id"],
 			"name" = technology["name"],
 			"tier" = technology["tier"],
 			"description" = technology["description"],
@@ -120,8 +119,9 @@
 	return records
 
 /datum/cyberpunk_corporation/proc/create_technology_key(technology_id, mob/user)
+	technology_id = resolve_cyberpunk_corporate_technology_id(technology_id)
 	var/list/technology = get_technology(technology_id)
-	if(!technology || !unlocked_technologies[technology_id])
+	if(!technology || !has_technology(technology_id))
 		return null
 	var/datum/cyberpunk_technology_key/key = new(src, technology, user)
 	add_history("[user?.real_name || user?.name || "network"] exported technology key: [technology["name"]]")
@@ -133,11 +133,12 @@
 
 /datum/cyberpunk_corporation/proc/add_foreign_technology_progress(source_corporation_id, technology_id, progress, source = "foreign technology scan")
 	source_corporation_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(source_corporation_id)
+	technology_id = resolve_cyberpunk_corporate_technology_id(technology_id)
 	if(!source_corporation_id || !technology_id || source_corporation_id == id)
 		return FALSE
 	var/datum/cyberpunk_corporation/source_corporation = SScyberpunk_corporations.get_cyberpunk_corporation(source_corporation_id)
 	var/list/technology = source_corporation?.get_technology(technology_id)
-	if(!technology || !source_corporation.unlocked_technologies[technology_id])
+	if(!technology || !source_corporation.has_technology(technology_id))
 		return FALSE
 	if(stolen_technologies[technology_id])
 		return TRUE
@@ -157,8 +158,9 @@
 	if(!key?.is_valid())
 		return FALSE
 	var/source_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(key.source_corporation_id)
+	key.technology_id = resolve_cyberpunk_corporate_technology_id(key.technology_id)
 	var/datum/cyberpunk_corporation/source_corporation = SScyberpunk_corporations.get_cyberpunk_corporation(source_id)
-	if(!source_corporation?.unlocked_technologies[key.technology_id])
+	if(!source_corporation?.has_technology(key.technology_id))
 		return FALSE
 	if(source_id == id)
 		unlocked_technologies[key.technology_id] = TRUE
@@ -212,9 +214,9 @@
 	if(!victim || victim == src)
 		return FALSE
 	amount = max(1, round(amount))
-	for(var/list/technology as anything in victim.technologies)
+	for(var/list/technology as anything in victim.get_cyberpunk_technology_nodes_ui())
 		var/technology_id = technology["id"]
-		if(victim.unlocked_technologies[technology_id] && !stolen_technologies[technology_id])
+		if(victim.has_technology(technology_id) && !stolen_technologies[technology_id])
 			return add_foreign_technology_progress(victim.id, technology_id, amount, source)
 	return FALSE
 
@@ -228,9 +230,9 @@
 	var/datum/cyberpunk_corporation/source_corporation = get_cyberpunk_corporation(source_corporation_id)
 	if(!source_corporation)
 		return FALSE
-	for(var/list/technology as anything in source_corporation.technologies)
+	for(var/list/technology as anything in source_corporation.get_cyberpunk_technology_nodes_ui())
 		var/technology_id = technology["id"]
-		if(!source_corporation.unlocked_technologies[technology_id] || target_corporation.stolen_technologies[technology_id])
+		if(!source_corporation.has_technology(technology_id) || target_corporation.stolen_technologies[technology_id])
 			continue
 		var/progress = prob(CYBERPUNK_CORP_REVERSE_BREAKTHROUGH_CHANCE) ? 100 : CYBERPUNK_CORP_REVERSE_PROGRESS
 		if(target_corporation.has_edict("ryaznov_blueprint_archive"))
@@ -305,7 +307,7 @@
 		to_chat(user, span_warning("[src] has no corporate archive bound."))
 		return FALSE
 	var/list/technology = corporation.get_technology(technology_id)
-	if(!technology || !corporation.unlocked_technologies[technology_id])
+	if(!technology || !corporation.has_technology(technology_id))
 		to_chat(user, span_warning("Archive node is locked or missing."))
 		return FALSE
 	if(to_disk && !inserted_corporate_data_disk)

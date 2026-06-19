@@ -1,10 +1,10 @@
 //CYBERPUNK CORPORATIONS - computer app, terminals and verb UI.
 /datum/computer_file/program/corporations
 	filename = "corporations"
-	filedesc = "Corporations"
+	filedesc = "Корпорации"
 	downloader_category = PROGRAM_CATEGORY_SUPPLY
 	program_open_overlay = "generic"
-	extended_desc = "Corporate registry for research, funds, technologies, and corporate decisions."
+	extended_desc = "Корпоративный реестр исследований, средств, технологий и решений."
 	program_flags = PROGRAM_ON_NTNET_STORE | PROGRAM_REQUIRES_NTNET
 	can_run_on_flags = PROGRAM_ALL
 	size = 6
@@ -25,8 +25,8 @@
 	return cyberpunk_corporations_ui_act(action, params, ui.user)
 
 /obj/machinery/computer/corporate_terminal
-	name = "corporate terminal"
-	desc = "A locked corporate research and decision terminal."
+	name = "корпоративный терминал"
+	desc = "Закрытый корпоративный терминал исследований и решений."
 	icon_screen = "rdcomp"
 	icon_keyboard = "tech_key"
 	light_color = LIGHT_COLOR_BLUE
@@ -68,26 +68,26 @@
 	return cyberpunk_corporations_ui_act(action, params, ui.user)
 
 /obj/machinery/computer/corporate_terminal/benn
-	name = "Benn corporate terminal"
+	name = "корпоративный терминал Benn"
 	corporation_id = "benn"
 	corp_manufacturer = "Benn"
 	light_color = COLOR_GREEN
 
 /obj/machinery/computer/corporate_terminal/ryaznov
-	name = "Ryaznov corporate terminal"
+	name = "корпоративный терминал Ryaznov"
 	corporation_id = "ryaznov"
 	corp_manufacturer = "Ryaznov"
 	light_color = COLOR_ORANGE
 
 /obj/machinery/computer/corporate_terminal/starlight
-	name = "Starlight corporate terminal"
+	name = "корпоративный терминал Starlight"
 	corporation_id = "starlight"
 	corp_manufacturer = "Starlight"
 	light_color = COLOR_CYAN
 
 /mob/living/verb/create_cyberpunk_corporate_terminal()
-	set name = "Create Corporate Terminal"
-	set desc = "Temporarily create a locked corporate terminal for testing."
+	set name = "(НА УДАЛЕНИЕ) Создать корпоративный терминал"
+	set desc = "Временно создать закрытый корпоративный терминал для тестирования."
 	set category = "IC"
 
 	var/list/choices = list(
@@ -95,7 +95,7 @@
 		"Ryaznov" = /obj/machinery/computer/corporate_terminal/ryaznov,
 		"Starlight" = /obj/machinery/computer/corporate_terminal/starlight,
 	)
-	var/choice = tgui_input_list(src, "Select corporate terminal.", "Corporate terminal", choices)
+	var/choice = tgui_input_list(src, "Выберите корпоративный терминал.", "Корпоративный терминал", choices)
 	if(!choice)
 		return
 	var/terminal_type = choices[choice]
@@ -110,7 +110,7 @@
 /datum/cyberpunk_corporations_verb_ui/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
-		ui = new(user, src, "NtosCorporations", "Corporations")
+		ui = new(user, src, "NtosCorporations", "Корпорации")
 		ui.open()
 
 /datum/cyberpunk_corporations_verb_ui/ui_data(mob/user)

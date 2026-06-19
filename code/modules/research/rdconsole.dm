@@ -169,8 +169,10 @@ Nothing else in the console has ID requirements.
 			say("Успешно исследовано «[TN.display_name]».")
 			var/corporation_id = SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(src))
 			if(corporation_id)
+				var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
+				var/research_data_type = corporation?.get_techweb_node_data_type(TN) || "research"
 				var/research_value = max(1, round((price[TECHWEB_POINT_TYPE_GENERIC] || 0) / 500))
-				SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "research", research_value, 0, "R&D node researched: [TN.display_name]")
+				SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, research_data_type, research_value, 0, "R&D node researched: [TN.display_name]")
 			var/logname = "Unknown"
 			if(HAS_AI_ACCESS(user))
 				logname = "AI [user.name]"

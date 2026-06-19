@@ -33,7 +33,6 @@
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(params && params["corporation_id"])
 	if(!corporation)
 		return FALSE
-	var/mob/living/living_user = isliving(user) ? user : null
 	switch(action)
 		if("select")
 			return TRUE
@@ -60,18 +59,6 @@
 				to_chat(user, span_notice("[corporation.name] exchanged research for funds."))
 			else
 				to_chat(user, span_warning("Unable to exchange research."))
-			return TRUE
-		if("subscribe")
-			if(corporation.subscribe(living_user))
-				to_chat(user, span_notice("Subscription registered with [corporation.name]."))
-			else
-				to_chat(user, span_warning("Unable to register subscription."))
-			return TRUE
-		if("request_service")
-			if(corporation.request_service(living_user, params["service_id"]))
-				to_chat(user, span_notice("Service request sent to [corporation.name]."))
-			else
-				to_chat(user, span_warning("Unable to request this service."))
 			return TRUE
 		if("toggle_service_auto")
 			corporation.service_auto_enabled = !corporation.service_auto_enabled
@@ -103,6 +90,32 @@
 				to_chat(user, span_notice("[corporation.name] paid corporate taxes."))
 			else
 				to_chat(user, span_warning("Unable to pay corporate taxes."))
+			return TRUE
+		if("government_transfer")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			var/amount = clamp(round(text2num(params["amount"]) || 0), 1, 1000000)
+			if(SScyberpunk_corporations.force_cyberpunk_government_transfer(params["source_kind"], params["source_id"], params["target_kind"], params["target_id"], amount, user?.name || "government terminal"))
+				to_chat(user, span_notice("Government transfer completed."))
+			else
+				to_chat(user, span_warning("Unable to complete government transfer."))
+			return TRUE
+		if("set_tax_setting")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			if(SScyberpunk_corporations.set_cyberpunk_tax_setting(params["kind"], params["target"], text2num(params["value"])))
+				to_chat(user, span_notice("Government tax setting updated."))
+			else
+				to_chat(user, span_warning("Unable to update this tax setting."))
+			return TRUE
+		if("charge_housing_rent")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			var/list/result = SScyberpunk_corporations.charge_cyberpunk_housing_rent(params["area_key"], user?.name || "government terminal")
+			if(result && result["charged"])
+				to_chat(user, span_notice("Housing rent charged: [result["charged"]] account(s), [result["total"]][MONEY_SYMBOL]."))
+			else
+				to_chat(user, span_warning("No housing rent was charged."))
 			return TRUE
 		if("invest_foreign_tech")
 			var/points = max(CYBERPUNK_CORP_RESEARCH_TO_FOREIGN_PROGRESS_COST, round(text2num(params["points"]) || CYBERPUNK_CORP_RESEARCH_TO_FOREIGN_PROGRESS_COST))
