@@ -1753,7 +1753,7 @@
 	set category = "IC"
 	set name = "View Skills"
 
-	mind?.print_levels(src)
+	open_cyberpunk_skill_interface()
 
 /mob/key_down(key, client/client, full_key)
 	..()

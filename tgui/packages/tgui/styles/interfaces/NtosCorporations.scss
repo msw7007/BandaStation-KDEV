@@ -1,0 +1,202 @@
+.CorporateInterface {
+  .CorporateInterface__header {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    h1 {
+      margin: 0.1rem 0 0;
+      color: #fff;
+      font-size: 1.35rem;
+      letter-spacing: 0;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+  }
+
+  .CorporateInterface__eyebrow {
+    color: var(--sg-red);
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .CorporateInterface__account {
+    display: grid;
+    gap: 0.15rem;
+    justify-items: end;
+    color: #9ec5d1;
+
+    b {
+      color: #fff;
+    }
+
+    em {
+      color: var(--sg-red);
+      font-style: normal;
+    }
+  }
+
+  .CorporateInterface__layout {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .CorporateInterface__side {
+    align-self: start;
+  }
+
+  .CorporateInterface__entityList {
+    display: grid;
+    gap: 0.35rem;
+    max-height: 38rem;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+  }
+
+  .CorporateInterface__entityButton {
+    display: grid;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid rgba(24, 216, 255, 0.36);
+    clip-path: polygon(0.45rem 0, 100% 0, calc(100% - 0.45rem) 100%, 0 100%);
+    color: var(--sg-cyan);
+    background: rgba(3, 40, 51, 0.88);
+    cursor: pointer;
+    text-align: left;
+
+    span,
+    small {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      color: #fff;
+      font-weight: 800;
+    }
+
+    small {
+      color: #9ec5d1;
+    }
+
+    &.active {
+      border-color: var(--sg-red);
+      background:
+        linear-gradient(90deg, rgba(240, 44, 66, 0.38), transparent 78%),
+        rgba(40, 5, 10, 0.94);
+    }
+
+    &.restricted {
+      border-color: rgba(240, 44, 66, 0.66);
+    }
+  }
+
+  .CorporateInterface__main {
+    display: grid;
+    min-width: 0;
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  .CorporateInterface__summary {
+    display: grid;
+    grid-template-columns: minmax(12rem, 0.35fr) minmax(0, 1fr);
+    gap: 0.75rem;
+
+    p {
+      margin: 0.2rem 0 0;
+      color: #9ec5d1;
+    }
+  }
+
+  .CorporateInterface__summaryGrid {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 0.3rem 0.55rem;
+
+    span {
+      color: var(--sg-red);
+      font-size: 0.7rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    b {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: var(--sg-cyan);
+      font-weight: 700;
+    }
+  }
+
+  .CorporateInterface__tabs {
+    margin: 0;
+    flex-wrap: wrap;
+
+    button {
+      min-width: 8rem;
+    }
+  }
+
+  .CorporateInterface__tabGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .CorporateInterface__wide {
+    grid-column: 1 / -1;
+  }
+
+  .CorporateInterface__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+  }
+
+  .CorporateInterface__cardGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+
+    .StyleGuide__dataCard {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.4rem;
+      align-items: start;
+      margin: 0;
+
+      small {
+        color: #9ec5d1;
+        line-height: 1.25;
+      }
+    }
+  }
+
+  .CorporateInterface__subTitle {
+    margin: 0.65rem 0 0.35rem;
+    color: var(--sg-cyan);
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .CorporateInterface__history {
+    display: grid;
+    gap: 0.22rem;
+    max-height: 10rem;
+    overflow-y: auto;
+    color: #9ec5d1;
+    font-family: monospace;
+  }
+
+  .Input {
+    min-height: 1.9rem;
+  }
+}

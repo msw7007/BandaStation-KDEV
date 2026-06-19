@@ -4447,6 +4447,7 @@
 #include "code\modules\economy\corporations\contracts.dm"
 #include "code\modules\economy\holopay.dm"
 #include "code\modules\economy\poker_chips.dm"
+#include "code\modules\cyberpunk\property_persistence.dm"
 #include "code\modules\emoji\emoji_parse.dm"
 #include "code\modules\emote_panel\emote_panel.dm"
 #include "code\modules\error_handler\error_handler.dm"

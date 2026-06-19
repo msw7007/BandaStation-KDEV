@@ -1,15 +1,7 @@
 // CYBERPUNK BUILD - rebuild and delete before release
+import type { ReactNode } from 'react';
 import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Collapsible,
-  Input,
-  LabeledList,
-  Section,
-  Stack,
-  Table,
-} from 'tgui-core/components';
+import { Box, Button, Input, LabeledList, Stack, Table } from 'tgui-core/components';
 import { formatMoney } from 'tgui-core/format';
 import type { BooleanLike } from 'tgui-core/react';
 
@@ -162,118 +154,215 @@ type Data = {
   selected?: Corporation;
 };
 
+const tabs = [
+  ['state', 'Состояния'],
+  ['services', 'Услуги'],
+  ['research', 'Изучение и реверс'],
+  ['edicts', 'Эдикты'],
+  ['contracts', 'Контракты'],
+];
+
+const contractTypes = [
+  ['delivery', 'Delivery'],
+  ['repair', 'Repair'],
+  ['build', 'Build'],
+  ['mining', 'Mining'],
+  ['sabotage', 'Sabotage'],
+];
+
 export const NtosCorporations = () => {
   const { act, data } = useBackend<Data>();
   const { accountName, accountBalance = 0, corporations = [], selected } = data;
+  const visibleCorporation = selected || corporations[0];
+  const [activeTab, setActiveTab] = useState('state');
   const [dataType, setDataType] = useState('general');
   const [amount, setAmount] = useState('10');
 
   return (
-    <NtosWindow width={900} height={760}>
-      <NtosWindow.Content scrollable className="CyberpunkPanel">
-        <Section title="Corporate registry">
-          <LabeledList>
-            <LabeledList.Item label="ID account">
-              {accountName || 'No ID account'}
-            </LabeledList.Item>
-            <LabeledList.Item label="Balance">
-              {formatMoney(accountBalance)} cr
-            </LabeledList.Item>
-            <LabeledList.Item label="Corporations">
-              {corporations.length}
-            </LabeledList.Item>
-          </LabeledList>
-        </Section>
+    <NtosWindow width={980} height={760}>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide CorporateInterface">
+        <div className="StyleGuide__header CorporateInterface__header">
+          <div>
+            <div className="CorporateInterface__eyebrow">CORPORATE REGISTRY</div>
+            <h1>Corporations</h1>
+          </div>
+          <div className="CorporateInterface__account">
+            <span>{accountName || 'No ID account'}</span>
+            <b>{formatMoney(accountBalance)} cr</b>
+            <em>{corporations.length} entities</em>
+          </div>
+        </div>
 
-        <Stack align="stretch">
-          <Stack.Item width="235px">
-            <Section title="Entities">
+        <div className="CorporateInterface__layout">
+          <aside className="StyleGuide__blockShell CorporateInterface__side">
+            <div className="StyleGuide__blockTitle">Entities</div>
+            <div className="CorporateInterface__entityList">
               {!corporations.length ? (
-                <Box className="CyberpunkPanel__Muted">No corporations.</Box>
+                <div className="StyleGuide__placeholder">No corporations.</div>
               ) : (
                 corporations.map((corporation) => (
-                  <Button
-                    key={corporation.id}
-                    fluid
-                    selected={selected?.id === corporation.id}
-                    color={corporation.hidden ? 'red' : undefined}
+                  <button
+                      key={corporation.id}
+                      type="button"
+                      className={[
+                        'CorporateInterface__entityButton',
+                      visibleCorporation?.id === corporation.id && 'active',
+                      corporation.hidden && 'restricted',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     onClick={() =>
                       act('select', { corporation_id: corporation.id })
                     }
                   >
-                    {corporation.name}
-                  </Button>
+                    <span>{corporation.name}</span>
+                    <small>{corporation.group}</small>
+                  </button>
                 ))
               )}
-            </Section>
-          </Stack.Item>
+            </div>
+          </aside>
 
-          <Stack.Item grow>
-            {!selected ? (
-              <Section title="Corporation">
-                <Box className="CyberpunkPanel__Muted">
-                  Select a corporation.
-                </Box>
-              </Section>
+          <main className="CorporateInterface__main">
+            {!visibleCorporation ? (
+              <div className="StyleGuide__blockShell">
+                <div className="StyleGuide__placeholder">
+                  Corporate registry has no initialized entities.
+                </div>
+              </div>
             ) : (
-              <CorporateDetails
-                corporation={selected}
-                corporations={corporations}
-                dataType={dataType}
-                amount={amount}
-                setDataType={setDataType}
-                setAmount={setAmount}
-              />
+              <>
+                <CorporationSummary corporation={visibleCorporation} />
+                <div className="StyleGuide__topTabs CorporateInterface__tabs">
+                  {tabs.map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={activeTab === id ? 'active' : ''}
+                      onClick={() => setActiveTab(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <CorporateTab
+                  activeTab={activeTab}
+                  corporation={visibleCorporation}
+                  dataType={dataType}
+                  amount={amount}
+                  setDataType={setDataType}
+                  setAmount={setAmount}
+                />
+              </>
             )}
-          </Stack.Item>
-        </Stack>
+          </main>
+        </div>
       </NtosWindow.Content>
     </NtosWindow>
   );
 };
 
-const CorporateDetails = (props: {
+function CorporationSummary(props: { corporation: Corporation }) {
+  const { corporation } = props;
+
+  return (
+    <div className="StyleGuide__blockShell CorporateInterface__summary">
+      <div>
+        <div className="StyleGuide__blockTitle">{corporation.name}</div>
+        <p>{corporation.group}</p>
+      </div>
+      <div className="CorporateInterface__summaryGrid">
+        <span>Direction</span>
+        <b>{corporation.direction}</b>
+        <span>Combat</span>
+        <b>{corporation.combatDoctrine}</b>
+        <span>Subsidiaries</span>
+        <b>
+          {(corporation.subsidiaries || [])
+            .map((subsidiary) => subsidiary.name)
+            .join(', ') || 'none'}
+        </b>
+      </div>
+    </div>
+  );
+}
+
+function CorporateTab(props: {
+  activeTab: string;
   corporation: Corporation;
-  corporations: Corporation[];
   dataType: string;
   amount: string;
   setDataType: (value: string) => void;
   setAmount: (value: string) => void;
-}) => {
-  const { act } = useBackend<Data>();
-  const {
-    corporation,
-    dataType,
-    amount,
-    setDataType,
-    setAmount,
-  } = props;
-  const amountNumber = Number(amount) || 0;
-  const services = corporation.services || [];
-  const enabledServices = services.filter((service) => service.enabled);
+}) {
+  switch (props.activeTab) {
+    case 'services':
+      return <ServicesTab corporation={props.corporation} />;
+    case 'research':
+      return (
+        <ResearchTab
+          corporation={props.corporation}
+          dataType={props.dataType}
+          amount={props.amount}
+          setDataType={props.setDataType}
+          setAmount={props.setAmount}
+        />
+      );
+    case 'edicts':
+      return <EdictsTab corporation={props.corporation} />;
+    case 'contracts':
+      return <ContractsTab corporation={props.corporation} />;
+    default:
+      return <StateTab corporation={props.corporation} />;
+  }
+}
+
+function StateTab(props: { corporation: Corporation }) {
+  const { corporation } = props;
 
   return (
-    <>
-      <Section title={corporation.name}>
+    <div className="CorporateInterface__tabGrid">
+      <MetricPanel title="State">
         <LabeledList>
-          <LabeledList.Item label="Group">{corporation.group}</LabeledList.Item>
-          <LabeledList.Item label="Direction">
-            {corporation.direction}
+          <LabeledList.Item label="Level">{corporation.level}/5</LabeledList.Item>
+          <LabeledList.Item label="Experience">
+            {corporation.experience}
+            {corporation.nextLevelAt ? ` / ${corporation.nextLevelAt}` : ''}
           </LabeledList.Item>
-          <LabeledList.Item label="Combat">
-            {corporation.combatDoctrine}
+          <LabeledList.Item label="Research">
+            {corporation.researchPoints} RP
           </LabeledList.Item>
-          <LabeledList.Item label="Subsidiaries">
-            {(corporation.subsidiaries || [])
-              .map((subsidiary) => subsidiary.name)
-              .join(', ') || 'none'}
+          <LabeledList.Item label="Subscribers">
+            {corporation.subscribers || 0}
+          </LabeledList.Item>
+          <LabeledList.Item label="Foreign tech">
+            {corporation.foreignTechBonus || 0}% discount
           </LabeledList.Item>
         </LabeledList>
-      </Section>
+      </MetricPanel>
 
-      <Section title="Subsidiaries">
+      <MetricPanel title="Finance">
+        <LabeledList>
+          <LabeledList.Item label="Account">#{corporation.accountId}</LabeledList.Item>
+          <LabeledList.Item label="Funds">
+            {formatMoney(corporation.balance)} cr
+          </LabeledList.Item>
+          <LabeledList.Item label="Debt">
+            {formatMoney(corporation.debt)} cr
+          </LabeledList.Item>
+          <LabeledList.Item label="Tax debt">
+            {formatMoney(corporation.taxDebt || 0)} cr
+          </LabeledList.Item>
+          <LabeledList.Item label="Tax paid">
+            {formatMoney(corporation.taxPaid || 0)} cr
+          </LabeledList.Item>
+        </LabeledList>
+      </MetricPanel>
+
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Subsidiaries</div>
         {!corporation.subsidiaries?.length ? (
-          <Box className="CyberpunkPanel__Muted">No subsidiaries.</Box>
+          <div className="StyleGuide__placeholder">No subsidiaries.</div>
         ) : (
           <Table>
             <Table.Row header>
@@ -292,146 +381,104 @@ const CorporateDetails = (props: {
             ))}
           </Table>
         )}
-      </Section>
+      </div>
 
-      <Section title="State">
-        <Stack>
-          <Stack.Item grow>
-            <Box className="CyberpunkPanel__Metric">
-              <LabeledList>
-                <LabeledList.Item label="Level">
-                  {corporation.level}/5
-                </LabeledList.Item>
-                <LabeledList.Item label="Experience">
-                  {corporation.experience}
-                  {corporation.nextLevelAt
-                    ? ` / ${corporation.nextLevelAt}`
-                    : ''}
-                </LabeledList.Item>
-                <LabeledList.Item label="Research">
-                  {corporation.researchPoints} RP
-                </LabeledList.Item>
-                <LabeledList.Item label="Subscribers">
-                  {corporation.subscribers || 0}
-                </LabeledList.Item>
-                <LabeledList.Item label="Foreign tech">
-                  {corporation.foreignTechBonus || 0}% discount
-                </LabeledList.Item>
-              </LabeledList>
-            </Box>
-          </Stack.Item>
-          <Stack.Item grow>
-            <Box className="CyberpunkPanel__Metric">
-              <LabeledList>
-                <LabeledList.Item label="Account">
-                  #{corporation.accountId}
-                </LabeledList.Item>
-                <LabeledList.Item label="Funds">
-                  {formatMoney(corporation.balance)} cr
-                </LabeledList.Item>
-                <LabeledList.Item label="Debt">
-                  {formatMoney(corporation.debt)} cr
-                </LabeledList.Item>
-                <LabeledList.Item label="Tax debt">
-                  {formatMoney(corporation.taxDebt || 0)} cr
-                </LabeledList.Item>
-                <LabeledList.Item label="Tax paid">
-                  {formatMoney(corporation.taxPaid || 0)} cr
-                </LabeledList.Item>
-              </LabeledList>
-            </Box>
-          </Stack.Item>
-        </Stack>
-      </Section>
+      <HistoryPanel corporation={corporation} />
+    </div>
+  );
+}
 
-      <Section title="Services">
-        <Stack>
-          <Stack.Item grow>
-            <Box className="CyberpunkPanel__Metric">
-              <LabeledList>
-                <LabeledList.Item label="Subscription">
-                  {formatMoney(corporation.subscriptionCost || 0)} cr
-                </LabeledList.Item>
-                <LabeledList.Item label="Enabled services">
-                  {enabledServices.length
-                    ? enabledServices.map((service) => service.label).join(', ')
-                    : 'No active service edict'}
-                </LabeledList.Item>
-                <LabeledList.Item label="Mode">
-                  {corporation.serviceAutoEnabled ? 'automatic' : 'queued'}
-                </LabeledList.Item>
-              </LabeledList>
-            </Box>
-          </Stack.Item>
-          <Stack.Item>
-            <Button
-              icon="id-card"
-              onClick={() =>
-                act('subscribe', {
-                  corporation_id: corporation.id,
-                })
-              }
-            >
-              Subscribe
-            </Button>
-            <Button
-              ml={1}
-              icon={corporation.serviceAutoEnabled ? 'toggle-on' : 'toggle-off'}
-              onClick={() =>
-                act('toggle_service_auto', {
-                  corporation_id: corporation.id,
-                })
-              }
-            >
-              Auto services
-            </Button>
-          </Stack.Item>
-        </Stack>
-        {!!services.length && (
-          <Stack mt={1} wrap align="stretch">
-            {services.map((service) => (
-              <Stack.Item key={service.id} width="48%">
-                <Box className="CyberpunkPanel__Card" height="100%">
-                  <Stack vertical fill>
-                    <Stack.Item grow>
-                      <Box className="CyberpunkPanel__Title">
-                        {service.label}
-                      </Box>
-                      <Box className="CyberpunkPanel__Muted">
-                        {service.description}
-                      </Box>
-                    </Stack.Item>
-                    <Stack.Item>
-                      <Button
-                        fluid
-                        icon={service.icon || 'circle'}
-                        disabled={!service.enabled}
-                        onClick={() =>
-                          act('request_service', {
-                            corporation_id: corporation.id,
-                            service_id: service.id,
-                          })
-                        }
-                      >
-                        {service.enabled ? 'Request' : 'Locked by edict'}
-                      </Button>
-                    </Stack.Item>
-                  </Stack>
-                </Box>
-              </Stack.Item>
-            ))}
-          </Stack>
-        )}
-        {!services.length && (
-          <Box mt={1} className="CyberpunkPanel__Muted">
+function ServicesTab(props: { corporation: Corporation }) {
+  const { act } = useBackend<Data>();
+  const { corporation } = props;
+  const services = corporation.services || [];
+  const enabledServices = services.filter((service) => service.enabled);
+
+  return (
+    <div className="CorporateInterface__tabGrid">
+      <MetricPanel title="Service state">
+        <LabeledList>
+          <LabeledList.Item label="Subscription">
+            {formatMoney(corporation.subscriptionCost || 0)} cr
+          </LabeledList.Item>
+          <LabeledList.Item label="Enabled">
+            {enabledServices.length
+              ? enabledServices.map((service) => service.label).join(', ')
+              : 'No active service edict'}
+          </LabeledList.Item>
+          <LabeledList.Item label="Mode">
+            {corporation.serviceAutoEnabled ? 'automatic' : 'queued'}
+          </LabeledList.Item>
+        </LabeledList>
+        <div className="CorporateInterface__actions">
+          <Button
+            icon="id-card"
+            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-light"
+            onClick={() =>
+              act('subscribe', {
+                corporation_id: corporation.id,
+              })
+            }
+          >
+            Subscribe
+          </Button>
+          <Button
+            icon={corporation.serviceAutoEnabled ? 'toggle-on' : 'toggle-off'}
+            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+            onClick={() =>
+              act('toggle_service_auto', {
+                corporation_id: corporation.id,
+              })
+            }
+          >
+            Auto services
+          </Button>
+        </div>
+      </MetricPanel>
+
+      <div className="StyleGuide__blockShell">
+        <div className="StyleGuide__blockTitle">Catalogue</div>
+        {!services.length ? (
+          <div className="StyleGuide__placeholder">
             This corporation has no service catalogue yet.
-          </Box>
+          </div>
+        ) : (
+          <div className="CorporateInterface__cardGrid">
+            {services.map((service) => (
+              <div
+                key={service.id}
+                className={[
+                  'StyleGuide__dataCard',
+                  service.enabled
+                    ? 'StyleGuide__dataCard--enabled'
+                    : 'StyleGuide__dataCard--disabled',
+                ].join(' ')}
+              >
+                <b>{service.label}</b>
+                <span>{service.description}</span>
+                <Button
+                  icon={service.icon || 'circle'}
+                  disabled={!service.enabled}
+                  className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                  onClick={() =>
+                    act('request_service', {
+                      corporation_id: corporation.id,
+                      service_id: service.id,
+                    })
+                  }
+                >
+                  {service.enabled ? 'Request' : 'Locked'}
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
-      </Section>
+      </div>
 
-      <Section title="Service queue">
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Queue</div>
         {!corporation.serviceRequests?.length ? (
-          <Box className="CyberpunkPanel__Muted">No service requests.</Box>
+          <div className="StyleGuide__placeholder">No service requests.</div>
         ) : (
           <Table>
             <Table.Row header>
@@ -475,13 +522,14 @@ const CorporateDetails = (props: {
             ))}
           </Table>
         )}
-      </Section>
+      </div>
 
-      <Section title="Corporate vendors">
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Vendors</div>
         {!corporation.vendors?.length ? (
-          <Box className="CyberpunkPanel__Muted">
+          <div className="StyleGuide__placeholder">
             No registered corporate vending machines.
-          </Box>
+          </div>
         ) : (
           <Table>
             <Table.Row header>
@@ -502,135 +550,38 @@ const CorporateDetails = (props: {
             ))}
           </Table>
         )}
-      </Section>
+      </div>
+    </div>
+  );
+}
 
-      <Section title="Corporate contracts">
-        <Stack mb={1} wrap>
-          {[
-            ['delivery', 'Delivery'],
-            ['repair', 'Repair'],
-            ['build', 'Build'],
-            ['mining', 'Mining'],
-            ['sabotage', 'Sabotage'],
-          ].map(([type, label]) => (
-            <Stack.Item key={type}>
-              <Button
-                icon="file-signature"
-                onClick={() =>
-                  act('create_pool_contract', {
-                    corporation_id: corporation.id,
-                    contract_type: type,
-                  })
-                }
-              >
-                {label}
-              </Button>
-            </Stack.Item>
-          ))}
-          <Stack.Item>
-            <Button
-              icon="coins"
-              disabled={!corporation.taxDebt}
-              onClick={() =>
-                act('pay_corporate_taxes', {
-                  corporation_id: corporation.id,
-                  amount: corporation.taxDebt || 0,
-                })
-              }
-            >
-              Pay taxes
-            </Button>
-          </Stack.Item>
-        </Stack>
-        {!corporation.contracts?.length ? (
-          <Box className="CyberpunkPanel__Muted">No corporate contracts.</Box>
-        ) : (
-          <Table>
-            <Table.Row header>
-              <Table.Cell>Contract</Table.Cell>
-              <Table.Cell>Type</Table.Cell>
-              <Table.Cell>Status</Table.Cell>
-              <Table.Cell collapsing>Payment</Table.Cell>
-              <Table.Cell collapsing>Deadline</Table.Cell>
-            </Table.Row>
-            {corporation.contracts.map((contract) => (
-              <Table.Row key={contract.id}>
-                <Table.Cell>{contract.title}</Table.Cell>
-                <Table.Cell>{contract.type}</Table.Cell>
-                <Table.Cell>{contract.status}</Table.Cell>
-                <Table.Cell>{formatMoney(contract.payment)} cr</Table.Cell>
-                <Table.Cell>{contract.deadline}</Table.Cell>
-              </Table.Row>
-            ))}
-          </Table>
-        )}
-      </Section>
+function ResearchTab(props: {
+  corporation: Corporation;
+  dataType: string;
+  amount: string;
+  setDataType: (value: string) => void;
+  setAmount: (value: string) => void;
+}) {
+  const { act } = useBackend<Data>();
+  const { corporation, dataType, amount, setDataType, setAmount } = props;
+  const amountNumber = Number(amount) || 0;
 
-      {!!corporation.taxMonitor && (
-        <Section title="Government tax monitor">
-          <Box className="CyberpunkPanel__Title">Businesses</Box>
-          <Table>
-            <Table.Row header>
-              <Table.Cell>Business</Table.Cell>
-              <Table.Cell>Owner</Table.Cell>
-              <Table.Cell>Area</Table.Cell>
-              <Table.Cell collapsing>Debt</Table.Cell>
-              <Table.Cell collapsing>Paid</Table.Cell>
-            </Table.Row>
-            {(corporation.taxMonitor.businesses || []).map((business) => (
-              <Table.Row key={business.id}>
-                <Table.Cell>{business.name}</Table.Cell>
-                <Table.Cell>{business.owner}</Table.Cell>
-                <Table.Cell>{business.area}</Table.Cell>
-                <Table.Cell>{formatMoney(business.taxDebt || 0)} cr</Table.Cell>
-                <Table.Cell>{formatMoney(business.taxPaid || 0)} cr</Table.Cell>
-              </Table.Row>
-            ))}
-          </Table>
-          <Box mt={1} className="CyberpunkPanel__Title">
-            Corporations
-          </Box>
-          <Table>
-            <Table.Row header>
-              <Table.Cell>Corporation</Table.Cell>
-              <Table.Cell collapsing>Debt</Table.Cell>
-              <Table.Cell collapsing>Paid</Table.Cell>
-              <Table.Cell collapsing>Balance</Table.Cell>
-            </Table.Row>
-            {(corporation.taxMonitor.corporations || []).map((entry) => (
-              <Table.Row key={entry.id}>
-                <Table.Cell>{entry.name}</Table.Cell>
-                <Table.Cell>{formatMoney(entry.taxDebt || 0)} cr</Table.Cell>
-                <Table.Cell>{formatMoney(entry.taxPaid || 0)} cr</Table.Cell>
-                <Table.Cell>{formatMoney(entry.balance || 0)} cr</Table.Cell>
-              </Table.Row>
-            ))}
-          </Table>
-        </Section>
-      )}
-
-      <Section title="Research data">
+  return (
+    <div className="CorporateInterface__tabGrid">
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Research data</div>
         <Stack mb={1}>
           <Stack.Item grow>
-            <Input
-              fluid
-              value={dataType}
-              placeholder="data type"
-              onChange={setDataType}
-            />
+            <Input fluid value={dataType} placeholder="data type" onChange={setDataType} />
           </Stack.Item>
           <Stack.Item width="90px">
-            <Input
-              fluid
-              value={amount}
-              placeholder="amount"
-              onChange={setAmount}
-            />
+            <Input fluid value={amount} placeholder="amount" onChange={setAmount} />
           </Stack.Item>
           <Stack.Item>
             <Button
               icon="plus"
               disabled={!amountNumber}
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-light"
               onClick={() =>
                 act('test_activity', {
                   corporation_id: corporation.id,
@@ -642,9 +593,24 @@ const CorporateDetails = (props: {
               Test data
             </Button>
           </Stack.Item>
+          <Stack.Item>
+            <Button
+              icon="coins"
+              disabled={!corporation.researchPoints}
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              onClick={() =>
+                act('exchange_research', {
+                  corporation_id: corporation.id,
+                  amount: Math.min(10, corporation.researchPoints),
+                })
+              }
+            >
+              Exchange
+            </Button>
+          </Stack.Item>
         </Stack>
         {!corporation.researchData?.length ? (
-          <Box className="CyberpunkPanel__Muted">No stored data.</Box>
+          <div className="StyleGuide__placeholder">No stored data.</div>
         ) : (
           <Table>
             <Table.Row header>
@@ -674,164 +640,296 @@ const CorporateDetails = (props: {
             ))}
           </Table>
         )}
-        <Button
-          mt={1}
-          icon="coins"
-          disabled={!corporation.researchPoints}
-          onClick={() =>
-            act('exchange_research', {
-              corporation_id: corporation.id,
-              amount: Math.min(10, corporation.researchPoints),
-            })
-          }
-        >
-          Exchange 10 RP to funds
-        </Button>
-      </Section>
+      </div>
 
-      <Section title="Technologies">
-        {corporation.technologies.map((technology) => (
-          <Box key={technology.id} className="CyberpunkPanel__Card">
-            <Stack align="center">
-              <Stack.Item grow>
-                <Box className="CyberpunkPanel__Title">
-                  T{technology.tier} {technology.name}
-                </Box>
-                <Box>{technology.description}</Box>
-                <Box className="CyberpunkPanel__Muted CyberpunkPanel__Small">
-                  Cost {technology.cost} RP
-                  {technology.discount
-                    ? `, activity discount ${technology.discount} RP`
-                    : ''}
-                  {corporation.foreignTechBonus
-                    ? `, foreign tech discount ${corporation.foreignTechBonus}%`
-                    : ''}
-                  {technology.prereq ? `, requires ${technology.prereq}` : ''}
-                </Box>
-              </Stack.Item>
-              <Stack.Item>
-                <Button
-                  icon={technology.unlocked ? 'check' : 'microscope'}
-                  color={technology.unlocked ? 'green' : undefined}
-                  disabled={!!technology.unlocked || !technology.canUnlock}
-                  onClick={() =>
-                    act('unlock_technology', {
-                      corporation_id: corporation.id,
-                      technology_id: technology.id,
-                    })
-                  }
-                >
-                  {technology.unlocked ? 'Open' : 'Research'}
-                </Button>
-              </Stack.Item>
-            </Stack>
-          </Box>
-        ))}
-      </Section>
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Technologies</div>
+        <div className="CorporateInterface__cardGrid">
+          {(corporation.technologies || []).map((technology) => (
+            <div
+              key={technology.id}
+              className={[
+                'StyleGuide__dataCard',
+                technology.unlocked
+                  ? 'StyleGuide__dataCard--enabled'
+                  : 'StyleGuide__dataCard--disabled',
+              ].join(' ')}
+            >
+              <b>
+                T{technology.tier} {technology.name}
+              </b>
+              <span>{technology.description}</span>
+              <small>
+                {technology.cost} RP
+                {technology.discount ? `, discount ${technology.discount} RP` : ''}
+                {corporation.foreignTechBonus
+                  ? `, foreign ${corporation.foreignTechBonus}%`
+                  : ''}
+                {technology.prereq ? `, requires ${technology.prereq}` : ''}
+              </small>
+              <Button
+                icon={technology.unlocked ? 'check' : 'microscope'}
+                disabled={!!technology.unlocked || !technology.canUnlock}
+                className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                onClick={() =>
+                  act('unlock_technology', {
+                    corporation_id: corporation.id,
+                    technology_id: technology.id,
+                  })
+                }
+              >
+                {technology.unlocked ? 'Open' : 'Research'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <Section title="Corporate decisions">
-        {!corporation.edicts?.length ? (
-          <Box className="CyberpunkPanel__Muted">
-            No edicts for this entity yet.
-          </Box>
-        ) : (
-          corporation.edicts.map((edict) => (
-            <Box key={edict.id} className="CyberpunkPanel__Card">
-              <Stack align="center">
-                <Stack.Item grow>
-                  <Box className="CyberpunkPanel__Title">
-                    L{edict.level} {edict.name}
-                  </Box>
-                  <Box>{edict.description}</Box>
-                </Stack.Item>
-                <Stack.Item>
-                  <Button
-                    icon={edict.active ? 'check' : 'gavel'}
-                    color={edict.active ? 'green' : undefined}
-                    disabled={!!edict.active || !!edict.locked}
-                    onClick={() =>
-                      act('choose_edict', {
-                        corporation_id: corporation.id,
-                        edict_id: edict.id,
-                      })
-                    }
-                  >
-                    {edict.active ? 'Active' : 'Choose'}
-                  </Button>
-                </Stack.Item>
-              </Stack>
-            </Box>
-          ))
-        )}
-      </Section>
+      <ForeignTechnologyPanel corporation={corporation} />
+    </div>
+  );
+}
 
-      <Section title="Foreign technology">
-        <Box mb={1} className="CyberpunkPanel__Muted">
-          Foreign technologies are acquired through network theft and reverse
-          engineering. Copied records reduce future research costs by{' '}
-          {corporation.foreignTechBonus || 0}%.
-        </Box>
-        {!corporation.stolenTechnologies?.length &&
-        !corporation.stolenProgress?.length ? (
-          <Box className="CyberpunkPanel__Muted">
-            No foreign technology records.
-          </Box>
+function ForeignTechnologyPanel(props: { corporation: Corporation }) {
+  const { act } = useBackend<Data>();
+  const { corporation } = props;
+
+  return (
+    <div className="StyleGuide__blockShell CorporateInterface__wide">
+      <div className="StyleGuide__blockTitle">Reverse engineering</div>
+      {!corporation.stolenTechnologies?.length &&
+      !corporation.stolenProgress?.length ? (
+        <div className="StyleGuide__placeholder">No foreign technology records.</div>
+      ) : (
+        <Table>
+          <Table.Row header>
+            <Table.Cell>Technology</Table.Cell>
+            <Table.Cell>Source</Table.Cell>
+            <Table.Cell>Progress</Table.Cell>
+          </Table.Row>
+          {(corporation.stolenTechnologies || []).map((entry) => (
+            <Table.Row key={`stolen-${entry.id}`}>
+              <Table.Cell>{entry.name || entry.id}</Table.Cell>
+              <Table.Cell>{entry.sourceName || entry.source}</Table.Cell>
+              <Table.Cell>copied</Table.Cell>
+            </Table.Row>
+          ))}
+          {(corporation.stolenProgress || []).map((entry) => (
+            <Table.Row key={`progress-${entry.source}-${entry.id}`}>
+              <Table.Cell>{entry.name || entry.id}</Table.Cell>
+              <Table.Cell>{entry.sourceName || entry.source}</Table.Cell>
+              <Table.Cell>
+                <Stack align="center">
+                  <Stack.Item grow>{entry.progress}%</Stack.Item>
+                  <Stack.Item>
+                    <Button
+                      icon="flask"
+                      disabled={corporation.researchPoints < 20}
+                      onClick={() =>
+                        act('invest_foreign_tech', {
+                          corporation_id: corporation.id,
+                          source: entry.source,
+                          technology_id: entry.id,
+                          points: 20,
+                        })
+                      }
+                    >
+                      +1%
+                    </Button>
+                  </Stack.Item>
+                </Stack>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table>
+      )}
+    </div>
+  );
+}
+
+function EdictsTab(props: { corporation: Corporation }) {
+  const { act } = useBackend<Data>();
+  const { corporation } = props;
+
+  return (
+    <div className="StyleGuide__blockShell">
+      <div className="StyleGuide__blockTitle">Edicts</div>
+      {!corporation.edicts?.length ? (
+        <div className="StyleGuide__placeholder">No edicts for this entity yet.</div>
+      ) : (
+        <div className="CorporateInterface__cardGrid">
+          {corporation.edicts.map((edict) => (
+            <div
+              key={edict.id}
+              className={[
+                'StyleGuide__dataCard',
+                edict.active
+                  ? 'StyleGuide__dataCard--enabled'
+                  : 'StyleGuide__dataCard--disabled',
+              ].join(' ')}
+            >
+              <b>
+                L{edict.level} {edict.name}
+              </b>
+              <span>{edict.description}</span>
+              <Button
+                icon={edict.active ? 'check' : 'gavel'}
+                disabled={!!edict.active || !!edict.locked}
+                className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+                onClick={() =>
+                  act('choose_edict', {
+                    corporation_id: corporation.id,
+                    edict_id: edict.id,
+                  })
+                }
+              >
+                {edict.active ? 'Active' : 'Choose'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContractsTab(props: { corporation: Corporation }) {
+  const { act } = useBackend<Data>();
+  const { corporation } = props;
+
+  return (
+    <div className="CorporateInterface__tabGrid">
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Contract pool</div>
+        <div className="CorporateInterface__actions">
+          {contractTypes.map(([type, label]) => (
+            <Button
+              key={type}
+              icon="file-signature"
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              onClick={() =>
+                act('create_pool_contract', {
+                  corporation_id: corporation.id,
+                  contract_type: type,
+                })
+              }
+            >
+              {label}
+            </Button>
+          ))}
+          <Button
+            icon="coins"
+            disabled={!corporation.taxDebt}
+            className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+            onClick={() =>
+              act('pay_corporate_taxes', {
+                corporation_id: corporation.id,
+                amount: corporation.taxDebt || 0,
+              })
+            }
+          >
+            Pay taxes
+          </Button>
+        </div>
+        {!corporation.contracts?.length ? (
+          <div className="StyleGuide__placeholder">No corporate contracts.</div>
         ) : (
           <Table>
             <Table.Row header>
-              <Table.Cell>Technology</Table.Cell>
-              <Table.Cell>Source</Table.Cell>
-              <Table.Cell>Progress</Table.Cell>
+              <Table.Cell>Contract</Table.Cell>
+              <Table.Cell>Type</Table.Cell>
+              <Table.Cell>Status</Table.Cell>
+              <Table.Cell collapsing>Payment</Table.Cell>
+              <Table.Cell collapsing>Deadline</Table.Cell>
             </Table.Row>
-            {(corporation.stolenTechnologies || []).map((entry) => (
-              <Table.Row key={`stolen-${entry.id}`}>
-                <Table.Cell>{entry.name || entry.id}</Table.Cell>
-                <Table.Cell>{entry.sourceName || entry.source}</Table.Cell>
-                <Table.Cell>copied</Table.Cell>
-              </Table.Row>
-            ))}
-            {(corporation.stolenProgress || []).map((entry) => (
-              <Table.Row key={`progress-${entry.source}-${entry.id}`}>
-                <Table.Cell>{entry.name || entry.id}</Table.Cell>
-                <Table.Cell>{entry.sourceName || entry.source}</Table.Cell>
-                <Table.Cell>
-                  <Stack align="center">
-                    <Stack.Item grow>{entry.progress}%</Stack.Item>
-                    <Stack.Item>
-                      <Button
-                        icon="flask"
-                        disabled={
-                          corporation.researchPoints <
-                          20
-                        }
-                        onClick={() =>
-                          act('invest_foreign_tech', {
-                            corporation_id: corporation.id,
-                            source: entry.source,
-                            technology_id: entry.id,
-                            points: 20,
-                          })
-                        }
-                      >
-                        +1%
-                      </Button>
-                    </Stack.Item>
-                  </Stack>
-                </Table.Cell>
+            {corporation.contracts.map((contract) => (
+              <Table.Row key={contract.id}>
+                <Table.Cell>{contract.title}</Table.Cell>
+                <Table.Cell>{contract.type}</Table.Cell>
+                <Table.Cell>{contract.status}</Table.Cell>
+                <Table.Cell>{formatMoney(contract.payment)} cr</Table.Cell>
+                <Table.Cell>{contract.deadline}</Table.Cell>
               </Table.Row>
             ))}
           </Table>
         )}
-      </Section>
+      </div>
 
-      <Collapsible title="History">
-        {(corporation.history || []).map((entry, index) => (
-          <Box key={index} className="CyberpunkPanel__Mono CyberpunkPanel__Small">
-            {entry}
-          </Box>
-        ))}
-      </Collapsible>
-    </>
+      {!!corporation.taxMonitor && <TaxMonitorPanel corporation={corporation} />}
+    </div>
   );
-};
-// CYBERPUNK BUILD - rebuild and delete before release
+}
+
+function TaxMonitorPanel(props: { corporation: Corporation }) {
+  const { corporation } = props;
+
+  return (
+    <div className="StyleGuide__blockShell CorporateInterface__wide">
+      <div className="StyleGuide__blockTitle">Government tax monitor</div>
+      <Box className="CorporateInterface__subTitle">Businesses</Box>
+      <Table>
+        <Table.Row header>
+          <Table.Cell>Business</Table.Cell>
+          <Table.Cell>Owner</Table.Cell>
+          <Table.Cell>Area</Table.Cell>
+          <Table.Cell collapsing>Debt</Table.Cell>
+          <Table.Cell collapsing>Paid</Table.Cell>
+        </Table.Row>
+        {(corporation.taxMonitor?.businesses || []).map((business) => (
+          <Table.Row key={business.id}>
+            <Table.Cell>{business.name}</Table.Cell>
+            <Table.Cell>{business.owner}</Table.Cell>
+            <Table.Cell>{business.area}</Table.Cell>
+            <Table.Cell>{formatMoney(business.taxDebt || 0)} cr</Table.Cell>
+            <Table.Cell>{formatMoney(business.taxPaid || 0)} cr</Table.Cell>
+          </Table.Row>
+        ))}
+      </Table>
+      <Box className="CorporateInterface__subTitle">Corporations</Box>
+      <Table>
+        <Table.Row header>
+          <Table.Cell>Corporation</Table.Cell>
+          <Table.Cell collapsing>Debt</Table.Cell>
+          <Table.Cell collapsing>Paid</Table.Cell>
+          <Table.Cell collapsing>Balance</Table.Cell>
+        </Table.Row>
+        {(corporation.taxMonitor?.corporations || []).map((entry) => (
+          <Table.Row key={entry.id}>
+            <Table.Cell>{entry.name}</Table.Cell>
+            <Table.Cell>{formatMoney(entry.taxDebt || 0)} cr</Table.Cell>
+            <Table.Cell>{formatMoney(entry.taxPaid || 0)} cr</Table.Cell>
+            <Table.Cell>{formatMoney(entry.balance || 0)} cr</Table.Cell>
+          </Table.Row>
+        ))}
+      </Table>
+    </div>
+  );
+}
+
+function HistoryPanel(props: { corporation: Corporation }) {
+  const { corporation } = props;
+
+  return (
+    <div className="StyleGuide__blockShell CorporateInterface__wide">
+      <div className="StyleGuide__blockTitle">History</div>
+      {!corporation.history?.length ? (
+        <div className="StyleGuide__placeholder">No records.</div>
+      ) : (
+        <div className="CorporateInterface__history">
+          {corporation.history.map((entry, index) => (
+            <span key={index}>{entry}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricPanel(props: { title: string; children: ReactNode }) {
+  return (
+    <div className="StyleGuide__blockShell">
+      <div className="StyleGuide__blockTitle">{props.title}</div>
+      <div className="StyleGuide__blockMetrics">{props.children}</div>
+    </div>
+  );
+}

@@ -181,6 +181,63 @@
 		"runningGearSlots" = running_gear_slots,
 	)
 
+/datum/cyberpunk_vehicle_part/proc/cyberpunk_to_persistent_record()
+	return list(
+		"name" = name,
+		"category" = category,
+		"manufacturer" = manufacturer,
+		"tier" = tier,
+		"max_health" = max_health,
+		"health" = health,
+		"effect_desc" = effect_desc,
+		"speed_multiplier" = speed_multiplier,
+		"acceleration_multiplier" = acceleration_multiplier,
+		"maneuver_multiplier" = maneuver_multiplier,
+		"traction_multiplier" = traction_multiplier,
+		"grip_switch_multiplier" = grip_switch_multiplier,
+		"brake_multiplier" = brake_multiplier,
+		"fuel_multiplier" = fuel_multiplier,
+		"resource_type" = resource_type,
+		"max_fuel_multiplier" = max_fuel_multiplier,
+		"passenger_capacity" = passenger_capacity,
+		"mechanism_capacity" = mechanism_capacity,
+		"running_gear_slots" = running_gear_slots,
+		"floor_grip" = floor_grip,
+		"rough_grip" = rough_grip,
+		"bad_grip" = bad_grip,
+		"space_grip" = space_grip,
+	)
+
+/proc/cyberpunk_vehicle_part_from_persistent_record(list/record)
+	if(!islist(record))
+		return null
+	var/datum/cyberpunk_vehicle_part/part = new(
+		copytext_char("[record["name"] || "vehicle part"]", 1, MAX_NAME_LEN),
+		copytext_char("[record["category"] || "part"]", 1, MAX_NAME_LEN),
+		max(1, isnum(record["max_health"]) ? record["max_health"] : 100),
+		copytext_char("[record["effect_desc"] || "Provides baseline vehicle function."]", 1, 512),
+	)
+	part.manufacturer = copytext_char("[record["manufacturer"] || "Starlight"]", 1, MAX_NAME_LEN)
+	part.tier = clamp(isnum(record["tier"]) ? record["tier"] : 1, 1, 10)
+	part.health = clamp(isnum(record["health"]) ? record["health"] : part.max_health, 0, part.max_health)
+	part.speed_multiplier = max(0, isnum(record["speed_multiplier"]) ? record["speed_multiplier"] : 1)
+	part.acceleration_multiplier = max(0, isnum(record["acceleration_multiplier"]) ? record["acceleration_multiplier"] : 1)
+	part.maneuver_multiplier = max(0, isnum(record["maneuver_multiplier"]) ? record["maneuver_multiplier"] : 1)
+	part.traction_multiplier = max(0, isnum(record["traction_multiplier"]) ? record["traction_multiplier"] : 1)
+	part.grip_switch_multiplier = max(0, isnum(record["grip_switch_multiplier"]) ? record["grip_switch_multiplier"] : 1)
+	part.brake_multiplier = max(0, isnum(record["brake_multiplier"]) ? record["brake_multiplier"] : 1)
+	part.fuel_multiplier = max(0, isnum(record["fuel_multiplier"]) ? record["fuel_multiplier"] : 1)
+	part.resource_type = copytext_char("[record["resource_type"] || "energy"]", 1, MAX_NAME_LEN)
+	part.max_fuel_multiplier = max(0, isnum(record["max_fuel_multiplier"]) ? record["max_fuel_multiplier"] : 1)
+	part.passenger_capacity = max(0, isnum(record["passenger_capacity"]) ? record["passenger_capacity"] : 0)
+	part.mechanism_capacity = max(0, isnum(record["mechanism_capacity"]) ? record["mechanism_capacity"] : 0)
+	part.running_gear_slots = max(0, isnum(record["running_gear_slots"]) ? record["running_gear_slots"] : 0)
+	part.floor_grip = max(0, isnum(record["floor_grip"]) ? record["floor_grip"] : 1)
+	part.rough_grip = max(0, isnum(record["rough_grip"]) ? record["rough_grip"] : 0.75)
+	part.bad_grip = max(0, isnum(record["bad_grip"]) ? record["bad_grip"] : 0.45)
+	part.space_grip = max(0, isnum(record["space_grip"]) ? record["space_grip"] : 0.1)
+	return part
+
 /obj/item/cyberpunk_vehicle_part
 	name = "Starlight vehicle part"
 	desc = "A standardized Starlight vehicle component."
@@ -3924,6 +3981,51 @@
 		if(!QDELETED(machine))
 			machine.forceMove(drop_location())
 		return TRUE
+
+/obj/vehicle/sealed/car/cyberpunk_test/proc/cyberpunk_to_persistent_record()
+	var/list/part_records = list()
+	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
+		part_records += list(part.cyberpunk_to_persistent_record())
+	return list(
+		"panel_open" = panel_open,
+		"fuel" = fuel,
+		"max_fuel" = max_fuel,
+		"max_mechanism_slots" = max_mechanism_slots,
+		"integrity" = atom_integrity,
+		"max_integrity" = max_integrity,
+		"parts" = part_records,
+	)
+
+/obj/vehicle/sealed/car/cyberpunk_test/proc/cyberpunk_apply_persistent_record(list/record)
+	if(!islist(record))
+		return
+	var/list/part_records = record["parts"]
+	if(islist(part_records) && length(part_records))
+		QDEL_LIST(vehicle_parts)
+		vehicle_parts = list()
+		for(var/list/part_record as anything in part_records)
+			var/datum/cyberpunk_vehicle_part/part = cyberpunk_vehicle_part_from_persistent_record(part_record)
+			if(part)
+				vehicle_parts += part
+	panel_open = !!record["panel_open"]
+	recalculate_vehicle_body()
+	max_fuel = max(0, isnum(record["max_fuel"]) ? record["max_fuel"] : max_fuel)
+	fuel = clamp(isnum(record["fuel"]) ? record["fuel"] : 0, 0, max_fuel)
+	max_integrity = max(1, isnum(record["max_integrity"]) ? record["max_integrity"] : max_integrity)
+	atom_integrity = clamp(isnum(record["integrity"]) ? record["integrity"] : max_integrity, 1, max_integrity)
+	max_mechanism_slots = max(0, isnum(record["max_mechanism_slots"]) ? record["max_mechanism_slots"] : max_mechanism_slots)
+	current_speed = 0
+	cy_velocity_x = 0
+	cy_velocity_y = 0
+	clear_control_vector()
+	update_appearance(UPDATE_OVERLAYS)
+
+/obj/vehicle/sealed/car/cyberpunk_test/proc/cyberpunk_after_persistent_restore(list/record)
+	installed_mechanisms = list()
+	for(var/obj/machinery/machine as anything in contents)
+		if(length(installed_mechanisms) >= max_mechanism_slots)
+			break
+		installed_mechanisms += machine
 //CYBERPUNK BUILD - rebuild and delete before release
 
 //CYBERPUNK BUILD - rebuild and delete before release

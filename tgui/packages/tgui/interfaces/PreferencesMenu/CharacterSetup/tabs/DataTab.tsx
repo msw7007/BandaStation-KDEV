@@ -375,18 +375,28 @@ function SpeciesPickerModal(props: {
       <div className="CharacterSetup__speciesModalBody">
         <div className="CharacterSetup__speciesList">
           {speciesEntries.map(([speciesKey, species]) => (
-            <button
+            <div
               key={speciesKey}
               className={
                 speciesKey === props.currentSpeciesKey
-                  ? 'CharacterSetup__speciesOption selected'
-                  : 'CharacterSetup__speciesOption'
+                  ? 'CharacterSetup__speciesChoice selected'
+                  : 'CharacterSetup__speciesChoice'
               }
-              onClick={() => props.onSelect(speciesKey)}
             >
-              <b>{species.name}</b>
-              <span>{species.desc}</span>
-            </button>
+              <button
+                className={
+                  speciesKey === props.currentSpeciesKey
+                    ? 'CharacterSetup__speciesOption selected'
+                    : 'CharacterSetup__speciesOption'
+                }
+                onClick={() => props.onSelect(speciesKey)}
+              >
+                <b>{species.name}</b>
+              </button>
+              <span className="CharacterSetup__speciesDescription">
+                {species.desc}
+              </span>
+            </div>
           ))}
         </div>
         <div className="CharacterSetup__speciesDetails">

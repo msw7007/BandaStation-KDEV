@@ -2380,52 +2380,6 @@ ADMIN_VERB(cyberpunk_round_control, R_ADMIN, "Cyberpunk Round Control", "Open th
 		return
 	SScyberpunk_round.ui_interact(src)
 
-GLOBAL_DATUM_INIT(cyberpunk_ui_showcase, /datum/cyberpunk_ui_showcase, new)
-
-/datum/cyberpunk_ui_showcase
-	var/last_action = "none"
-
-/datum/cyberpunk_ui_showcase/ui_state(mob/user)
-	return GLOB.always_state
-
-/datum/cyberpunk_ui_showcase/ui_interact(mob/user, datum/tgui/ui)
-	ui = SStgui.try_update_ui(user, src, ui)
-	if(!ui)
-		ui = new(user, src, "CyberpunkUiShowcase", "CP13 UI Showcase")
-		ui.open()
-
-/datum/cyberpunk_ui_showcase/ui_data(mob/user)
-	return list(
-		"last_action" = last_action,
-		"user_name" = user ? key_name(user) : "unknown",
-		"metrics" = list(
-			list("label" = "City pressure", "value" = 42, "max" = 100, "color" = "average"),
-			list("label" = "Network noise", "value" = 68, "max" = 100, "color" = "bad"),
-			list("label" = "Corporate supply", "value" = 81, "max" = 100, "color" = "good"),
-		),
-		"rows" = list(
-			list("name" = "Empty contract slot", "type" = "Contract", "state" = "draft", "owner" = "none"),
-			list("name" = "Empty cyber node", "type" = "Network", "state" = "offline", "owner" = "none"),
-			list("name" = "Empty machine hook", "type" = "Machine", "state" = "stub", "owner" = "none"),
-		),
-		"tabs" = list("Status", "Actions", "Records", "Style"),
-	)
-
-/datum/cyberpunk_ui_showcase/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
-	. = ..()
-	if(.)
-		return
-	if(!ui.user?.client?.holder)
-		return FALSE
-	last_action = action
-	return TRUE
-
-ADMIN_VERB(cyberpunk_ui_showcase, R_ADMIN, "CP13 UI Showcase", "Open a dummy CP13 UI palette with empty controls and styling examples.", ADMIN_CATEGORY_DEBUG)
-	if(!GLOB.cyberpunk_ui_showcase || !user.mob)
-		return
-	GLOB.cyberpunk_ui_showcase.ui_interact(user.mob)
-	BLACKBOX_LOG_ADMIN_VERB("CP13 UI Showcase")
-
 /obj/effect/cyberpunk_daylight_source
 	name = "daylight"
 	icon = null

@@ -247,6 +247,10 @@
 		return
 	return cyberpunk_skill_interface_ui_act(action, params, ui.user, diagnostic_access)
 
+/mob/proc/open_cyberpunk_skill_interface(diagnostic_access = FALSE)
+	var/datum/cyberpunk_skill_interface_verb_ui/interface = new(diagnostic_access)
+	interface.ui_interact(src)
+
 /datum/cyberpunk_pc_interface_verb_ui/ui_state(mob/user)
 	return GLOB.always_state
 
@@ -266,7 +270,7 @@
 	return cyberpunk_pc_interface_ui_act(action, params, ui.user)
 
 /mob/living/verb/open_cyberpunk_contracts()
-	set name = "Контракты"
+	set name = "(НА УДАЛЕНИЕ) Контракты"
 	set desc = "Временно открыть приложение контрактов без КПК."
 	set category = "IC"
 
@@ -274,7 +278,7 @@
 	interface.ui_interact(src)
 
 /mob/living/verb/open_cyberpunk_contract_registry()
-	set name = "Реестр контрактов"
+	set name = "(НА УДАЛЕНИЕ) Реестр контрактов"
 	set desc = "Временно открыть легальный реестр контрактов без КПК."
 	set category = "IC"
 
@@ -282,7 +286,7 @@
 	interface.ui_interact(src)
 
 /mob/living/verb/open_cyberpunk_contract_pool()
-	set name = "Contract Pool"
+	set name = "(НА УДАЛЕНИЕ) Contract Pool"
 	set desc = "Temporarily open corporate pool contracts without a PDA."
 	set category = "IC"
 
@@ -290,7 +294,7 @@
 	interface.ui_interact(src)
 
 /mob/living/verb/open_cyberpunk_corporations()
-	set name = "Corporate Interface"
+	set name = "(НА УДАЛЕНИЕ) Corporate Interface"
 	set desc = "Temporarily open the corporate research and decisions interface."
 	set category = "IC"
 
@@ -302,15 +306,10 @@
 	set desc = "Open your neural skill interface."
 	set category = "IC"
 
-	if(!has_neural_implant())
-		to_chat(src, span_warning("You need a functional neural interface or a diagnostic analysis machine."))
-		return
-
-	var/datum/cyberpunk_skill_interface_verb_ui/interface = new(FALSE)
-	interface.ui_interact(src)
+	open_cyberpunk_skill_interface()
 
 /mob/living/verb/open_cyberpunk_pc_interface()
-	set name = "PC Interface"
+	set name = "(НА УДАЛЕНИЕ) PC Interface"
 	set desc = "Open the city personal computer interface shell."
 	set category = "IC"
 
@@ -318,7 +317,7 @@
 	interface.ui_interact(src)
 
 /mob/living/verb/open_cyberpunk_tgui_style_guide()
-	set name = "TGUI Style Guide"
+	set name = "(НА УДАЛЕНИЕ) TGUI Style Guide"
 	set desc = "Open a bare cyberpunk TGUI component reference window."
 	set category = "IC"
 
@@ -340,8 +339,7 @@
 
 /obj/machinery/computer/diagnostic_analysis/ui_interact(mob/user, datum/tgui/ui)
 	. = ..()
-	var/datum/cyberpunk_skill_interface_verb_ui/interface = new(TRUE)
-	interface.ui_interact(user)
+	user.open_cyberpunk_skill_interface(TRUE)
 
 /mob/living/verb/create_diagnostic_analysis_machine()
 	set name = "Create Diagnostic Analysis Machine"

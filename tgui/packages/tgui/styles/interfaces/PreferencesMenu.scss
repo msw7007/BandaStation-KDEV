@@ -1556,6 +1556,7 @@ $department_map: (
   &__speciesModalBody {
     display: grid;
     grid-template-columns: minmax(18rem, 1fr) minmax(18rem, 0.9fr);
+    align-items: stretch;
     gap: 0.75rem;
     padding: 0.75rem;
   }
@@ -1563,7 +1564,8 @@ $department_map: (
   &__speciesList {
     display: grid;
     gap: 0.45rem;
-    max-height: 28rem;
+    height: 30rem;
+    max-height: 30rem;
     overflow-y: auto;
   }
 
@@ -1597,6 +1599,7 @@ $department_map: (
     display: grid;
     gap: 0.5rem;
     align-content: start;
+    min-height: 30rem;
     padding: 0.65rem;
     border: 1px solid var(--cy-border);
     background-color: rgba(24, 216, 255, 0.05);
@@ -4014,7 +4017,7 @@ $department_map: (
   .TraitCard,
   .ItemCard,
   &__antag,
-  &__speciesOption,
+  &__speciesChoice,
   &__personalityRow,
   &__bodyModRow,
   .SkillTree__weaponControl {
@@ -4029,7 +4032,7 @@ $department_map: (
   .TraitCard.selected,
   .ItemCard.selected,
   &__antag.selected,
-  &__speciesOption.selected,
+  &__speciesChoice.selected,
   &__personalityRow.selected,
   &__bodyModRow.selected {
     border-color: var(--cy-cyan);
@@ -4048,6 +4051,41 @@ $department_map: (
   &__antag.selected {
     color: var(--cy-green);
     border-color: rgba(66, 215, 125, 0.75);
+  }
+
+  &__speciesChoice {
+    display: grid;
+    gap: 0.28rem;
+    padding: 0.42rem;
+  }
+
+  &__speciesChoice.selected .CharacterSetup__speciesOption {
+    border-color: var(--cy-cyan);
+    background: rgba(20, 198, 238, 0.22);
+    color: #fff;
+  }
+
+  &__speciesOption {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+
+    > b {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__speciesDescription {
+    display: block;
+    color: var(--cy-muted);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    max-height: 2.7rem;
+    overflow: hidden;
+    padding: 0 0.18rem;
   }
 
   .RoleCard__title,
