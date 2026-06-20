@@ -287,6 +287,10 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 /obj/structure/cyberpunk_metro_door/Initialize(mapload)
 	. = ..()
 	GLOB.cyberpunk_metro_doors += src
+	var/static/list/loc_connections = list(
+		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
+	)
+	AddElement(/datum/element/connect_loc, loc_connections)
 
 /obj/structure/cyberpunk_metro_door/Destroy(force)
 	GLOB.cyberpunk_metro_doors -= src
@@ -300,10 +304,10 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		return
 	try_exit(user)
 
-/obj/structure/cyberpunk_metro_door/Crossed(atom/movable/crossed_atom, oldloc)
-	. = ..()
-	if(isliving(crossed_atom))
-		try_exit(crossed_atom)
+/obj/structure/cyberpunk_metro_door/proc/on_entered(datum/source, atom/movable/entered)
+	SIGNAL_HANDLER
+	if(isliving(entered))
+		try_exit(entered)
 
 /obj/structure/cyberpunk_metro_door/proc/try_exit(mob/living/user)
 	if(!opened)

@@ -126,7 +126,7 @@
 		return FALSE
 	switch(skill_datum.point_pool)
 		if(CHARACTER_SKILL_POOL_ATTRIBUTE)
-			return get_attribute_physical_perk_points(skill_datum.attribute_id) + point_delta <= get_attribute_value(skill_datum.attribute_id)
+			return get_attribute_physical_perk_points(skill_datum.attribute_id) + point_delta <= get_attribute_perk_point_limit(skill_datum.attribute_id)
 		if(CHARACTER_SKILL_POOL_SKILL)
 			switch(skill_datum.skill_kind)
 				if(CHARACTER_SKILL_KIND_PROFESSIONAL)

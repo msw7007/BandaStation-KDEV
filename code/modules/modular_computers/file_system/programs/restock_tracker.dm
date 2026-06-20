@@ -692,7 +692,7 @@
 		if(!program)
 			app["status"] = "not_installed"
 			continue
-		app["status"] = program in host_computer.idle_threads ? "running" : "installed"
+		app["status"] = (program in host_computer.idle_threads) ? "running" : "installed"
 		app["name"] = program.filedesc || app["name"]
 		app["icon"] = program.program_icon || app["icon"]
 	return apps

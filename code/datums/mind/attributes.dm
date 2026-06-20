@@ -35,6 +35,10 @@
 	var/datum/attribute/attribute = get_attribute(attribute_id)
 	return (attribute?.value || ATTRIBUTE_DEFAULT) + get_cyberdemon_attribute_modifier(attribute_id)
 
+/datum/mind/proc/get_attribute_base_value(attribute_id)
+	var/datum/attribute/attribute = get_attribute(attribute_id)
+	return attribute?.value || ATTRIBUTE_DEFAULT
+
 /datum/mind/proc/set_attribute_value(attribute_id, new_value)
 	var/datum/attribute/attribute = get_attribute(attribute_id)
 	if(!attribute)
@@ -55,7 +59,7 @@
 	return (skill_level * 10) + (get_attribute_value(attribute_id) * 5)
 
 /datum/mind/proc/get_attribute_perk_point_limit(attribute_id)
-	return get_attribute_value(attribute_id)
+	return get_attribute_base_value(attribute_id)
 
 /datum/mind/proc/add_raw_character_experience(skill_key, amount, attribute_limited = FALSE)
 	if(amount <= 0)

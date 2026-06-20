@@ -736,7 +736,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 /datum/preferences/proc/get_character_role_skill_attribute_room(datum/mind/target_mind, datum/skill/skill_datum, skill)
 	if(!skill_datum?.attribute_id)
 		return INFINITY
-	var/effective_attribute_value = target_mind?.get_attribute_value(skill_datum.attribute_id) || ATTRIBUTE_DEFAULT
+	var/effective_attribute_value = target_mind?.get_attribute_perk_point_limit(skill_datum.attribute_id) || ATTRIBUTE_DEFAULT
 	var/current_points = skill_datum.skill_kind == CHARACTER_SKILL_KIND_PHYSICAL ? (target_mind?.get_attribute_physical_perk_points(skill_datum.attribute_id) || 0) : (target_mind?.get_character_skill_spent_points(skill) || 0)
 	return max(0, effective_attribute_value - current_points)
 
