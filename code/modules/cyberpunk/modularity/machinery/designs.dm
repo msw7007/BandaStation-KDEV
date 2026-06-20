@@ -7,8 +7,8 @@
 	var/cyberpunk_required_technology_id
 
 /datum/design/cyberpunk_machine_module
-	name = "Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ  Machine Module"
-	desc = "A Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ -certified maintenance module for Cyberpunk 13 machinery."
+	name = "Ryaznov Machine Module"
+	desc = "A Ryaznov-certified maintenance module for Cyberpunk 13 machinery."
 	id = "ryaznov_machine_module"
 	build_type = PROTOLATHE | AWAY_LATHE
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
@@ -19,39 +19,39 @@
 	cyberpunk_required_technology_id = "ryaznov_tools"
 
 /datum/design/cyberpunk_machine_module/power_governor
-	name = "Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ  Reserve Power Governor"
+	name = "Ryaznov Reserve Power Governor"
 	id = "ryaznov_power_governor"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/power_governor
 	cyberpunk_required_technology_id = "ryaznov_power"
 
 /datum/design/cyberpunk_machine_module/wear_buffer
-	name = "Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ  Wear Buffer"
+	name = "Ryaznov Wear Buffer"
 	id = "ryaznov_wear_buffer"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/wear_buffer
 
 /datum/design/cyberpunk_machine_module/reinforced_frame
-	name = "Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ  Reinforced Machine Frame"
+	name = "Ryaznov Reinforced Machine Frame"
 	id = "ryaznov_reinforced_frame"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 8, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2)
 	build_path = /obj/item/cyberpunk_machine_module/reinforced_frame
 	cyberpunk_required_technology_id = "ryaznov_fortification"
 
 /datum/design/cyberpunk_machine_module/service_bus
-	name = "Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ  Service Bus"
+	name = "Ryaznov Service Bus"
 	id = "ryaznov_service_bus"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/service_bus
 
 /datum/design/cyberpunk_machine_module/salvage_router
-	name = "Р В Р’В Р РЋР РЏР В Р’В·Р В Р вЂ¦Р В РЎвЂўР В Р вЂ  Salvage Routing Matrix"
+	name = "Ryaznov Salvage Routing Matrix"
 	id = "ryaznov_salvage_router"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/salvage_router
 
 /datum/design/cyberpunk_machine_module/chem_reaction_accelerator
-	name = "Р В Р’В Р вЂ™Р’В Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’В·Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В  Chem Reaction Accelerator"
+	name = "Benn Chem Reaction Accelerator"
 	id = "ryaznov_chem_reaction_accelerator"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/chem_reaction_accelerator
@@ -59,7 +59,7 @@
 	cyberpunk_required_technology_id = "benn_chemistry"
 
 /datum/design/cyberpunk_machine_module/chem_yield_regulator
-	name = "Р В Р’В Р вЂ™Р’В Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’В·Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В  Chem Yield Regulator"
+	name = "Benn Chem Yield Regulator"
 	id = "ryaznov_chem_yield_regulator"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/chem_yield_regulator
@@ -67,7 +67,7 @@
 	cyberpunk_required_technology_id = "benn_chemistry"
 
 /datum/design/cyberpunk_machine_module/corporate_vending_bus
-	name = "Р В Р’В Р вЂ™Р’В Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’В·Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В  Corporate Vending Bus"
+	name = "Corporate Vending Bus"
 	id = "generic_corporate_vending_bus"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/corporate_vending_bus
@@ -104,7 +104,7 @@
 	cyberpunk_required_technology_id = "starlight_market"
 
 /datum/design/cyberpunk_machine_module/apc_efficiency_core
-	name = "Р В Р’В Р вЂ™Р’В Р В Р Р‹Р В Р РЏР В Р’В Р вЂ™Р’В·Р В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В  APC Efficiency Core"
+	name = "Ryaznov APC Efficiency Core"
 	id = "ryaznov_apc_efficiency_core"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
 	build_path = /obj/item/cyberpunk_machine_module/apc_efficiency_core

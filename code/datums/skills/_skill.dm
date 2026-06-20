@@ -65,7 +65,7 @@ GLOBAL_LIST_INIT(skill_types, valid_subtypesof(/datum/skill))
 
 /datum/skill_perk/proc/render_description(description, rank = 1)
 	if(!description)
-		return "РќРµС‚ РѕРїРёСЃР°РЅРёСЏ СЌС„С„РµРєС‚Р°."
+		return "Нет описания эффекта."
 	var/list/values = get_description_values(rank)
 	if(!length(values))
 		return description

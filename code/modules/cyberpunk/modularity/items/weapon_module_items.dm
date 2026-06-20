@@ -2,8 +2,16 @@
 
 /obj/item/cyberpunk_item_module/melee_core
 	name = "melee core"
+	desc = "A Cyberpunk 13 melee weapon core. Melee frames require a core and attacking element; guard, balancer and coating modules are optional."
 	icon_state = "integrated_circuit"
 	module_datum_type = /datum/cyberpunk_item_module/melee_core
+
+/obj/item/cyberpunk_item_module/melee_core/examine(mob/user)
+	. = ..()
+	. += span_notice("Melee frame slots: core, element, guard, balance, coating.")
+	. += span_notice("Required: core and element.")
+	. += span_notice("Optional: guard, balance and coating.")
+	. += span_notice("Accepted element modules define the weapon form: knife, club, two-handed sword, two-handed hammer, axe, two-handed axe, rapier, spear or staff.")
 
 /obj/item/cyberpunk_item_module/melee_core/t2
 	name = "melee core T2"
@@ -238,8 +246,18 @@
 
 /obj/item/cyberpunk_item_module/firearm_core
 	name = "firearm core"
+	desc = "A Cyberpunk 13 firearm core. Firearm frames require core, barrel, receiver and trigger modules; ballistic frames also require an action module. Sight and underbarrel modules are optional when the frame supports them."
 	icon_state = "integrated_circuit"
 	module_datum_type = /datum/cyberpunk_item_module/firearm_core
+
+/obj/item/cyberpunk_item_module/firearm_core/examine(mob/user)
+	. = ..()
+	. += span_notice("Ballistic frame slots: core, barrel, action, receiver, trigger, sight, underbarrel.")
+	. += span_notice("Ballistic required: core, barrel, action, receiver and trigger.")
+	. += span_notice("Energy frame slots: core, barrel/emitter, receiver, trigger, sight, underbarrel.")
+	. += span_notice("Energy required: core, barrel/emitter, receiver and trigger.")
+	. += span_notice("Optional: sight and underbarrel, when the frame has those slots. Launcher frames do not have an underbarrel slot.")
+	. += span_notice("Accepted firearm modules include barrels/emitters, action modules, receivers, triggers, sights and underbarrel tools.")
 
 /obj/item/cyberpunk_item_module/firearm_core/t2
 	name = "firearm core T2"

@@ -758,13 +758,13 @@
 	. += "Modules: [length(cyberpunk_machine_modules)]/[cyberpunk_machine_module_slots]."
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		. += module.get_diagnostic_line(src)
-	. += "Р В РЎСџР В РЎвЂР РЋРІР‚С™Р В Р’В°Р В Р вЂ¦Р В РЎвЂР В Р’Вµ: [powered() ? "Р В Р’ВµР РЋР С“Р РЋРІР‚С™Р РЋР Р‰" : "Р В Р вЂ¦Р В Р’ВµР РЋРІР‚С™"]."
-	. += "Р В Р Р‹Р В РЎвЂўР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР РЋР РЏР В Р вЂ¦Р В РЎвЂР В Р’Вµ: [machine_stat ? "[machine_stat]" : "Р РЋРІвЂљВ¬Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚С™Р В Р вЂ¦Р В РЎвЂўР В Р’Вµ"]."
-	. += "Р В РЎСџР В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р’В»Р РЋР Р‰: [panel_open ? "Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°" : "Р В Р’В·Р В Р’В°Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°"]."
-	. += "Р В РЎв„ўР В РЎвЂўР В РЎВР В РЎвЂ”Р В РЎвЂўР В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–: [length(component_parts)]."
+	. += "Power: [powered() ? "yes" : "no"]."
+	. += "State: [machine_stat ? "[machine_stat]" : "operational"]."
+	. += "Panel: [panel_open ? "open" : "closed"]."
+	. += "Components: [length(component_parts)]."
 	if(user?.get_cyberpunk_machine_diagnostic_depth(src) > 0)
-		. += "Р В РЎСџР В РЎвЂўР РЋР вЂљР В РЎвЂўР В РЎвЂ“ Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р В РЎвЂР В Р’В·Р В Р вЂ¦Р В РЎвЂўР РЋР С“Р В РЎвЂўР В РЎВ: [cyberpunk_machine_wear_damage_threshold]."
-		. += "Р В Р РѓР В Р’В°Р В Р вЂ¦Р РЋР С“ Р В РЎвЂќР В РЎвЂўР РЋР вЂљР В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В Р’В·Р В Р’В°Р В РЎВР РЋРІР‚в„–Р В РЎвЂќР В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋР РЏ: [cyberpunk_machine_failure_shock_chance]%."
+		. += "Wear damage threshold: [cyberpunk_machine_wear_damage_threshold]."
+		. += "Short circuit chance: [cyberpunk_machine_failure_shock_chance]%."
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/machinery/LateInitialize()
@@ -1254,7 +1254,7 @@
 		return FALSE
 
 	if((interaction_flags_machine & INTERACT_MACHINE_REQUIRES_SIGHT) && user.is_blind())
-		to_chat(user, span_warning("Р В Р’В§Р РЋРІР‚С™Р В РЎвЂўР В Р’В±Р РЋРІР‚в„– Р В Р вЂ Р В РЎвЂўР РЋР С“Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В Р’В·Р В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰Р РЋР С“Р РЋР РЏ Р РЋР РЉР РЋРІР‚С™Р В РЎвЂўР В РІвЂћвЂ“ Р В РЎВР В Р’В°Р РЋРІвЂљВ¬Р В РЎвЂР В Р вЂ¦Р В РЎвЂўР В РІвЂћвЂ“, Р В Р вЂ¦Р РЋРЎвЂњР В Р’В¶Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂР В РЎВР В Р’ВµР РЋРІР‚С™Р РЋР Р‰ Р В Р’В·Р РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ."))
+		to_chat(user, span_warning("You cannot use this machine while blind; you need to see it."))
 		return FALSE
 
 	// machines have their own lit up display screens and LED buttons so we don't need to check for light
@@ -1294,7 +1294,7 @@
 	add_fingerprint(user)
 	update_last_used(user)
 	if(isAI(user) && !SScameras.is_visible_by_cameras(get_turf(src))) //We check if they're an AI specifically here, so borgs/adminghosts/human wand can still access off-camera stuff.
-		to_chat(user, span_warning("Р В РІР‚в„ўР РЋРІР‚в„– Р В Р’В±Р В РЎвЂўР В Р’В»Р РЋР Р‰Р РЋРІвЂљВ¬Р В Р’Вµ Р В Р вЂ¦Р В Р’Вµ Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™Р В Р’Вµ Р В Р вЂ Р В Р’В·Р В Р’В°Р В РЎвЂР В РЎВР В РЎвЂўР В РўвЂР В Р’ВµР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂўР В Р вЂ Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰ Р РЋР С“ Р РЋР РЉР РЋРІР‚С™Р В РЎвЂР В РЎВ Р РЋРЎвЂњР РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В РЎвЂўР В РІвЂћвЂ“Р РЋР С“Р РЋРІР‚С™Р В Р вЂ Р В РЎвЂўР В РЎВ!"))
+		to_chat(user, span_warning("You cannot interact with off-camera machinery from this interface!"))
 		return FALSE
 	return ..()
 
@@ -1351,7 +1351,7 @@
 		if(user_unbuckle_mob(buckled_mobs[1],user))
 			return TRUE
 
-	var/unbuckled = tgui_input_list(user, "Р В РЎв„ўР В РЎвЂўР В РЎвЂ“Р В РЎвЂў Р В Р вЂ Р РЋРІР‚в„– Р РЋРІР‚В¦Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂР РЋРІР‚С™Р В Р’Вµ Р В РЎвЂўР РЋРІР‚С™Р РЋР С“Р РЋРІР‚С™Р В Р’ВµР В РЎвЂ“Р В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР Р‰?", "Р В РЎвЂєР РЋРІР‚С™Р РЋР С“Р РЋРІР‚С™Р В Р’ВµР В РЎвЂ“Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР В Р’Вµ", sort_names(buckled_mobs))
+	var/unbuckled = tgui_input_list(user, "Who do you want to unbuckle?", "Unbuckle", sort_names(buckled_mobs))
 	if(isnull(unbuckled))
 		return FALSE
 	if(user_unbuckle_mob(unbuckled,user))
@@ -1469,7 +1469,7 @@
 		return deconstruct_on_fail ? default_deconstruction_crowbar(user, crowbar) : ITEM_INTERACT_BLOCKING
 
 	crowbar.play_tool_sound(src, 50)
-	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] Р В Р вЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™ [declent_ru(ACCUSATIVE)]."), span_notice("Р В РІР‚в„ўР РЋРІР‚в„– Р В Р вЂ Р РЋР С“Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р В Р’Вµ [declent_ru(ACCUSATIVE)]."))
+	user.visible_message(span_notice("[capitalize(user.declent_ru(NOMINATIVE))] вскрывает [declent_ru(ACCUSATIVE)]."), span_notice("Вы вскрываете [declent_ru(ACCUSATIVE)]."))
 	open_machine(density_to_set = open_density)
 	if (close_after_pry) //Should it immediately close after prying? (If not, it must be closed elsewhere)
 		close_machine(density_to_set = closed_density)
@@ -2203,7 +2203,7 @@
 
 	screwdriver.play_tool_sound(src, 50)
 	toggle_panel_open()
-	balloon_alert(user, "Р В РЎвЂ”Р В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р’В»Р РЋР Р‰ Р В РЎвЂўР В Р’В±Р РЋР С“Р В Р’В»Р РЋРЎвЂњР В Р’В¶Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋР РЏ [panel_open ? "Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°" : "Р В Р’В·Р В Р’В°Р В РЎвЂќР РЋР вЂљР РЋРІР‚в„–Р РЋРІР‚С™Р В Р’В°"]")
+	balloon_alert(user, "panel [panel_open ? "open" : "closed"]")
 	return ITEM_INTERACT_SUCCESS
 
 /**
@@ -2223,7 +2223,7 @@
 
 	wrench.play_tool_sound(src, 50)
 	setDir(turn(dir,-90))
-	to_chat(user, span_notice("Р В РІР‚в„ўР РЋРІР‚в„– Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р В РЎвЂўР РЋР вЂљР В Р’В°Р РЋРІР‚РЋР В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р В Р’Вµ [declent_ru(ACCUSATIVE)]."))
+	to_chat(user, span_notice("You rotate [declent_ru(ACCUSATIVE)]."))
 	SEND_SIGNAL(src, COMSIG_MACHINERY_DEFAULT_ROTATE_WRENCH, user, wrench)
 	return ITEM_INTERACT_SUCCESS
 
@@ -2314,7 +2314,7 @@
 					physical_part = primary_part_base
 
 				replacer_tool.atom_storage.attempt_insert(physical_part, user, TRUE, force = STORAGE_SOFT_LOCKED)
-				to_chat(user, span_notice("[capitalize(physical_part.declent_ru(NOMINATIVE))] Р В Р’В·Р В Р’В°Р В РЎВР В Р’ВµР В Р вЂ¦Р РЋР РЏР В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ¦Р В Р’В° [secondary_part_name]."))
+				to_chat(user, span_notice("[capitalize(physical_part.declent_ru(NOMINATIVE))] is replaced by [secondary_part_name]."))
 				shouldplaysound = TRUE //Only play the sound when parts are actually replaced!
 				break
 
@@ -2359,7 +2359,7 @@
 				part_count[component] = board.req_components[component]
 
 
-	var/text = span_notice("Р В РІР‚в„ўР В Р вЂ¦Р РЋРЎвЂњР РЋРІР‚С™Р РЋР вЂљР В РЎвЂ Р В РЎвЂР В РЎВР В Р’ВµР РЋР вЂ№Р РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р РЋР С“Р В Р’В»Р В Р’ВµР В РўвЂР РЋРЎвЂњР РЋР вЂ№Р РЋРІР‚В°Р В РЎвЂР В Р’Вµ Р В РЎвЂќР В РЎвЂўР В РЎВР В РЎвЂ”Р В РЎвЂўР В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р РЋРІР‚С™Р РЋРІР‚в„–:")
+	var/text = span_notice("Installed components:")
 	for(var/component_part in part_count)
 		var/part_name
 		var/icon/html_icon
@@ -2383,19 +2383,19 @@
 /obj/machinery/examine(mob/user)
 	. = ..()
 	if(machine_stat & BROKEN)
-		. += span_notice("Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂ“Р В Р’В»Р РЋР РЏР В РўвЂР В РЎвЂР РЋРІР‚С™ Р РЋР С“Р В Р’В»Р В РЎвЂўР В РЎВР В Р’В°Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂ Р В Р вЂ¦Р В Р’ВµР РЋРІР‚С›Р РЋРЎвЂњР В Р вЂ¦Р В РЎвЂќР РЋРІР‚В Р В РЎвЂР В РЎвЂўР В Р вЂ¦Р В Р’В°Р В Р’В»Р РЋР Р‰Р В Р вЂ¦Р В РЎвЂў.")
+		. += span_notice("It is broken and nonfunctional.")
 	if(!(resistance_flags & INDESTRUCTIBLE))
 		var/healthpercent = (atom_integrity/max_integrity) * 100
 		switch(healthpercent)
 			if(50 to 99)
-				. += "Р В Р’ВР В РЎВР В Р’ВµР В Р’ВµР РЋРІР‚С™ Р В Р вЂ¦Р В Р’ВµР В Р’В·Р В Р вЂ¦Р В Р’В°Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ."
+				. += "It has minor structural damage."
 			if(25 to 50)
-				. += "Р В Р’ВР В РЎВР В Р’ВµР В Р’ВµР РЋРІР‚С™ Р В Р’В·Р В Р вЂ¦Р В Р’В°Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р В Р’ВµР В Р’В»Р РЋР Р‰Р В Р вЂ¦Р РЋРІР‚в„–Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В Р вЂ Р РЋР вЂљР В Р’ВµР В Р’В¶Р В РўвЂР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ."
+				. += "It has heavy structural damage."
 			if(0 to 25)
-				. += span_warning("Р В Р’В Р В Р’В°Р В Р’В·Р В Р вЂ Р В Р’В°Р В Р’В»Р В РЎвЂР В Р вЂ Р В Р’В°Р В Р’ВµР РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ¦Р В Р’В° Р РЋРІР‚РЋР В Р’В°Р РЋР С“Р РЋРІР‚С™Р В РЎвЂ!")
+				. += span_warning("It is falling apart!")
 
 /obj/machinery/examine_descriptor(mob/user)
-	return "Р В РЎВР В Р’В°Р РЋРІвЂљВ¬Р В РЎвЂР В Р вЂ¦Р В Р’В°"
+	return "machine"
 
 /obj/machinery/examine_more(mob/user)
 	. = ..()
@@ -2457,7 +2457,8 @@
  * However, the proc may also be used elsewhere.
  */
 /obj/machinery/proc/AI_notify_hack()
-	var/alertstr = span_userdanger("Р В Р Р‹Р В Р’ВµР РЋРІР‚С™Р В Р’ВµР В Р вЂ Р В Р’В°Р РЋР РЏ Р РЋРІР‚С™Р РЋР вЂљР В Р’ВµР В Р вЂ Р В РЎвЂўР В РЎвЂ“Р В Р’В°: Р В РЎвЂєР В Р’В±Р В Р вЂ¦Р В Р’В°Р РЋР вЂљР РЋРЎвЂњР В Р’В¶Р В Р’ВµР В Р вЂ¦Р В Р’В° Р В РЎвЂ”Р В РЎвЂўР В РЎвЂ”Р РЋРІР‚в„–Р РЋРІР‚С™Р В РЎвЂќР В Р’В° Р В Р вЂ Р В Р’В·Р В Р’В»Р В РЎвЂўР В РЎВР В Р’В°[get_area(src)?" Р В Р вЂ  [get_area_name(src, TRUE)]":". Р В РЎСљР В Р’ВµР В Р вЂ Р В РЎвЂўР В Р’В·Р В РЎВР В РЎвЂўР В Р’В¶Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂўР В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р’ВµР В Р’В»Р В РЎвЂР РЋРІР‚С™Р РЋР Р‰ Р В РЎВР В Р’ВµР РЋР С“Р РЋРІР‚С™Р В РЎвЂўР В РЎвЂ”Р В РЎвЂўР В Р’В»Р В РЎвЂўР В Р’В¶Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ"].")
+	var/location_text = get_area(src) ? " in [get_area_name(src, TRUE)]" : ". Unable to determine location"
+	var/alertstr = span_userdanger("Network alert: unauthorized equipment access attempt[location_text].")
 	for(var/mob/living/silicon/ai/AI in GLOB.player_list)
 		to_chat(AI, alertstr)
 

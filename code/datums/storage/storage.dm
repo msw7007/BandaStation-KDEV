@@ -538,7 +538,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	//CYBERPUNK BUILD - rebuild and delete before release
 	if(!can_fit_cyberpunk_grid_item(to_insert))
 		if(messages && user && !silent_for_user)
-			user.balloon_alert(user, "РЅРµС‚ РјРµСЃС‚Р°!")
+			user.balloon_alert(user, "нет места!")
 		return FALSE
 
 	//CYBERPUNK BUILD - rebuild and delete before release
@@ -552,7 +552,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 
 	if(HAS_TRAIT(to_insert, TRAIT_NODROP))
 		if(messages && user)
-			user.balloon_alert(user, "застревает на руке!")
+			user.balloon_alert(user, "нет места!")
 		return FALSE
 
 	// this is valid if the container our location is being held in is a storage item

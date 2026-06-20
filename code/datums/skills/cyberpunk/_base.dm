@@ -737,10 +737,10 @@
 		return FALSE
 	if(prob(50))
 		flash_act(FLASH_PROTECTION_WELDER, visual = TRUE, length = 2 SECONDS)
-		to_chat(src, span_warning("РЇСЂРєР°СЏ РІСЃРїС‹С€РєР° СЃРІР°СЂРєРё Р±СЊРµС‚ РїРѕ РіР»Р°Р·Р°Рј."))
+		to_chat(src, span_warning("Яркая вспышка сварки бьет по глазам."))
 	else
 		apply_damage(4, BURN, get_active_hand(), wound_bonus = CANT_WOUND)
-		to_chat(src, span_warning("Р“РѕСЂСЏС‡Р°СЏ РёСЃРєСЂР° РѕР±Р¶РёРіР°РµС‚ СЂСѓРєСѓ."))
+		to_chat(src, span_warning("Горячая искра обжигает руку."))
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_invention_quality_bonus()

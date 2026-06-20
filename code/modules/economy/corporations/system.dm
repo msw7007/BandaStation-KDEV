@@ -6,13 +6,13 @@
 /datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_normalize_corporation_id(corporation_id)
 	var/corp_id = lowertext(trim("[corporation_id]"))
 	switch(corp_id)
-		if("benn", "ben", "bСЌРЅ", "Р±СЌРЅСЊ")
+		if("benn", "ben", "bэн", "бэнь")
 			return CYBERPUNK_CORP_BENN
-		if("ryaznov", "riaznov", "СЂСЏР·РЅРѕРІ")
+		if("ryaznov", "riaznov", "рязнов")
 			return CYBERPUNK_CORP_RYAZNOV
-		if("starlight", "СЃС‚Р°СЂР»Р°Р№С‚")
+		if("starlight", "старлайт")
 			return CYBERPUNK_CORP_STARLIGHT
-		if("government", "gov", "nanotrasen", "РїСЂР°РІРёС‚РµР»СЊСЃС‚РІРѕ")
+		if("government", "gov", "nanotrasen", "правительство")
 			return CYBERPUNK_CORP_GOVERNMENT
 	return corp_id
 

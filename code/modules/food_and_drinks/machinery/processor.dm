@@ -88,7 +88,7 @@
 	else
 		if(cyberpunk_processor_user && prob(cyberpunk_processor_user.get_cyberpunk_cooking_resource_save_chance()))
 			what.forceMove(drop_location())
-			to_chat(cyberpunk_processor_user, span_notice("Р’С‹ СЌРєРѕРЅРѕРјРёС‚Рµ [what.declent_ru(ACCUSATIVE)] РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ."))
+			to_chat(cyberpunk_processor_user, span_notice("Вы экономите [what.declent_ru(ACCUSATIVE)] при обработке."))
 		else
 			qdel(what)
 	LAZYREMOVE(processor_contents, what)

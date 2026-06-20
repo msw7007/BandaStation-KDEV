@@ -543,12 +543,12 @@
 		.[span_red("morbid")] = "It seems quite practical for particularly morbid procedures and experiments."
 
 	if (siemens_coefficient == 0)
-		.["РёР·РѕР»РёСЂСѓСЋС‰РёР№"] = "РџСЂРµРґРјРµС‚ РёР·РіРѕС‚РѕРІР»РµРЅ РёР· РїСЂРѕС‡РЅРѕРіРѕ РёР·РѕР»СЏС‚РѕСЂР° Рё Р±Р»РѕРєРёСЂСѓРµС‚ РїСЂРѕС…РѕРґСЏС‰РµРµ С‡РµСЂРµР· РЅРµРіРѕ СЌР»РµРєС‚СЂРёС‡РµСЃС‚РІРѕ!"
+		.["изолирующий"] = "Предмет изготовлен из прочного изолятора и блокирует проходящее через него электричество!"
 	else if (siemens_coefficient <= 0.5)
-		.["С‡Р°СЃС‚РёС‡РЅРѕ РёР·РѕР»РёСЂСѓСЋС‰РёР№"] = "РџСЂРµРґРјРµС‚ РёР·РіРѕС‚РѕРІР»РµРЅ РёР· РїР»РѕС…РѕРіРѕ РёР·РѕР»СЏС‚РѕСЂР°, РєРѕС‚РѕСЂС‹Р№ РіР°СЃРёС‚ (РЅРѕ РЅРµ РїРѕР»РЅРѕСЃС‚СЊСЋ Р±Р»РѕРєРёСЂСѓРµС‚) РїСЂРѕС…РѕРґСЏС‰РµРµ С‡РµСЂРµР· РЅРµРіРѕ СЌР»РµРєС‚СЂРёС‡РµСЃС‚РІРѕ."
+		.["частично изолирующий"] = "Предмет изготовлен из плохого изолятора, который гасит, но не полностью блокирует проходящее через него электричество."
 
 /obj/item/examine_descriptor(mob/user)
-	return "РїСЂРµРґРјРµС‚"
+	return "предмет"
 
 /obj/item/examine(mob/user)
 	// lazily initialize the weapon description element if it hasn't been already
@@ -1115,12 +1115,12 @@
 
 // afterattack() and attack() prototypes moved to _onclick/item_attack.dm for consistency
 
-/obj/item/proc/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "Р°С‚Р°РєСѓ", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK, damage_type = BRUTE)
+/obj/item/proc/hit_reaction(mob/living/carbon/human/owner, atom/movable/hitby, attack_text = "атаку", final_block_chance = 0, damage = 0, attack_type = MELEE_ATTACK, damage_type = BRUTE)
 	if(SEND_SIGNAL(src, COMSIG_ITEM_HIT_REACT, owner, hitby, attack_text, final_block_chance, damage, attack_type, damage_type) & COMPONENT_HIT_REACTION_BLOCK)
 		return TRUE
 
 	if(prob(final_block_chance))
-		owner.visible_message(span_danger("[capitalize(owner.declent_ru(NOMINATIVE))] Р±Р»РѕРєРёСЂСѓРµС‚ [attack_text] СЃ РїРѕРјРѕС‰СЊСЋ [declent_ru(GENITIVE)]!"))
+		owner.visible_message(span_danger("[capitalize(owner.declent_ru(NOMINATIVE))] блокирует [attack_text] с помощью [declent_ru(GENITIVE)]!"))
 		var/owner_turf = get_turf(owner)
 		new block_effect(owner_turf, COLOR_YELLOW)
 		playsound(src, block_sound, BLOCK_SOUND_VOLUME, vary = TRUE)
@@ -2286,7 +2286,7 @@
 
 /// Common proc used by painting tools like spraycans and palettes that can access the entire 24 bits color space.
 /obj/item/proc/pick_painting_tool_color(mob/user, default_color)
-	var/chosen_color = tgui_color_picker(user, "Р’С‹Р±РµСЂРёС‚Рµ РЅРѕРІС‹Р№ С†РІРµС‚", "[src]", default_color)
+	var/chosen_color = tgui_color_picker(user, "Выберите новый цвет", "[src]", default_color)
 	if(!chosen_color || QDELETED(src) || IS_DEAD_OR_INCAP(user) || !user.is_holding(src))
 		return
 	set_painting_tool_color(chosen_color)
@@ -2332,15 +2332,15 @@
 	if(show_visible_message)
 		if(HAS_TRAIT(equipping, TRAIT_DANGEROUS_OBJECT))
 			target.visible_message(
-				span_danger("[capitalize(user.declent_ru(NOMINATIVE))] РїС‹С‚Р°РµС‚СЃСЏ СЌРєРёРїРёСЂРѕРІР°С‚СЊ [equipping.declent_ru(ACCUSATIVE)] РЅР° [target.declent_ru(ACCUSATIVE)]."),
-				span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] РїС‹С‚Р°РµС‚СЃСЏ СЌРєРёРїРёСЂРѕРІР°С‚СЊ РЅР° РІР°СЃ [equipping.declent_ru(ACCUSATIVE)]."),
+				span_danger("[capitalize(user.declent_ru(NOMINATIVE))] пытается экипировать [equipping.declent_ru(ACCUSATIVE)] на [target.declent_ru(ACCUSATIVE)]."),
+				span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] пытается экипировать на вас [equipping.declent_ru(ACCUSATIVE)]."),
 				ignored_mobs = user,
 			)
 
 		else
 			target.visible_message(
-				span_notice("[capitalize(user.declent_ru(NOMINATIVE))] РїС‹С‚Р°РµС‚СЃСЏ СЌРєРёРїРёСЂРѕРІР°С‚СЊ [equipping.declent_ru(ACCUSATIVE)] РЅР° [target.declent_ru(ACCUSATIVE)]."),
-				span_notice("[capitalize(user.declent_ru(NOMINATIVE))] РїС‹С‚Р°РµС‚СЃСЏ СЌРєРёРїРёСЂРѕРІР°С‚СЊ РЅР° РІР°СЃ [equipping.declent_ru(ACCUSATIVE)]."),
+				span_notice("[capitalize(user.declent_ru(NOMINATIVE))] пытается экипировать [equipping.declent_ru(ACCUSATIVE)] на [target.declent_ru(ACCUSATIVE)]."),
+				span_notice("[capitalize(user.declent_ru(NOMINATIVE))] пытается экипировать на вас [equipping.declent_ru(ACCUSATIVE)]."),
 				ignored_mobs = user,
 			)
 
@@ -2348,14 +2348,14 @@
 			var/mob/living/carbon/human/victim_human = target
 			if(victim_human.key && !victim_human.client) // AKA braindead
 				if(victim_human.stat <= SOFT_CRIT && LAZYLEN(victim_human.afk_thefts) <= AFK_THEFT_MAX_MESSAGES)
-					var/list/new_entry = list(list(user.name, "РїС‹С‚Р°Р»СЃСЏ СЌРєРёРїРёСЂРѕРІР°С‚СЊ РЅР° РІР°СЃ [equipping.declent_ru(ACCUSATIVE)]", world.time))
+					var/list/new_entry = list(list(user.name, "пытался экипировать на вас [equipping.declent_ru(ACCUSATIVE)]", world.time))
 					LAZYADD(victim_human.afk_thefts, new_entry)
 
 			else if(victim_human.is_blind())
-				to_chat(target, span_userdanger("Р’С‹ С‡СѓРІСЃС‚РІСѓРµС‚Рµ, РєР°Рє РєС‚Рѕ-С‚Рѕ РїС‹С‚Р°РµС‚СЃСЏ С‡С‚Рѕ-С‚Рѕ СЌРєРёРїРёСЂРѕРІР°С‚СЊ РЅР° РІР°СЃ."))
+				to_chat(target, span_userdanger("Вы чувствуете, как кто-то пытается что-то экипировать на вас."))
 	user.do_item_attack_animation(target, used_item = equipping, animation_type = ATTACK_ANIMATION_BLUNT)
 
-	to_chat(user, span_notice("Р’С‹ РїС‹С‚Р°РµС‚РµСЃСЊ СЌРєРёРїРёСЂРѕРІР°С‚СЊ [equipping.declent_ru(ACCUSATIVE)] РЅР° [target.declent_ru(PREPOSITIONAL)]..."))
+	to_chat(user, span_notice("Вы пытаетесь экипировать [equipping.declent_ru(ACCUSATIVE)] на [target.declent_ru(PREPOSITIONAL)]..."))
 
 	user.log_message("is putting [equipping] on [key_name(target)]", LOG_ATTACK, color="red")
 	target.log_message("is having [equipping] put on them by [key_name(user)]", LOG_VICTIM, color="orange", log_globally=FALSE)
