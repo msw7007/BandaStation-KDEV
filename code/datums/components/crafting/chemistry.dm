@@ -33,7 +33,7 @@
 	category = CAT_CHEMISTRY
 
 /datum/crafting_recipe/chemical_payload2
-	name = "Chemical Payload (Gibtonite)"
+	name = "Chemical Payload (Azide Vein)"
 	result = /obj/item/bombcore/chemical
 	reqs = list(
 		/obj/item/stock_parts/matter_bin = 1,

@@ -1120,17 +1120,17 @@
 	activated_overlay.pixel_x = 2
 	activated_overlay.pixel_y = 2
 	add_overlay(activated_overlay)
-	name = "gibtonite deposit"
-	desc = "An active gibtonite reserve. Run!"
+	name = "азидная жила"
+	desc = "Активная азидная минерализация. Беги!"
 	stage = GIBTONITE_ACTIVE
-	visible_message(span_danger("There's gibtonite inside! It's going to explode!"))
+	visible_message(span_danger("Inside is an azide vein! It is going to explode!"))
 
 	var/notify_admins = !is_mining_level(z)
 
 	if(user)
-		log_bomber(user, "has triggered a gibtonite deposit reaction via", src, null, notify_admins)
+		log_bomber(user, "has triggered an azide vein reaction via", src, null, notify_admins)
 	else
-		log_bomber(null, "An explosion has triggered a gibtonite deposit reaction via", src, null, notify_admins)
+		log_bomber(null, "An explosion has triggered an azide vein reaction via", src, null, notify_admins)
 
 	countdown(notify_admins)
 
@@ -1156,7 +1156,7 @@
 	cut_overlay(activated_overlay)
 	activated_overlay.icon_state = "rock_Gibtonite_inactive"
 	add_overlay(activated_overlay)
-	desc = "An inactive gibtonite reserve. The ore can be extracted."
+	desc = "Неактивная азидная минерализация. Руду можно извлечь."
 	stage = GIBTONITE_STABLE
 	if(det_time < 0)
 		det_time = 0

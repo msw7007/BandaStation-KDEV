@@ -251,7 +251,7 @@
 //golden bikehorn
 /obj/item/bikehorn/golden
 	name = "golden bike horn"
-	desc = "Golden? Clearly, it's made with bananium! Honk!"
+	desc = "Golden? Clearly, it's made with a resonant PVDF composite! Honk!"
 	icon_state = "gold_horn"
 	inhand_icon_state = "gold_horn"
 	worn_icon_state = "horn_gold"

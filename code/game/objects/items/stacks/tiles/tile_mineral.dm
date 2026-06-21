@@ -25,9 +25,9 @@
 		return ..()
 
 /obj/item/stack/tile/mineral/plasma
-	name = "plasma tile"
-	singular_name = "plasma floor tile"
-	desc = "A tile made out of highly flammable plasma. This can only end well."
+	name = "плитка из топливного концентрата"
+	singular_name = "напольная плитка из топливного концентрата"
+	desc = "Плитка из легковоспламеняемого топливного концентрата. Идея сомнительная, но рабочая."
 	icon_state = "tile_plasma"
 	inhand_icon_state = "tile-plasma"
 	turf_type = /turf/open/floor/mineral/plasma
@@ -80,9 +80,9 @@
 	merge_type = /obj/item/stack/tile/mineral/diamond
 
 /obj/item/stack/tile/mineral/bananium
-	name = "bananium tile"
-	singular_name = "bananium floor tile"
-	desc = "A non-slippery tile made out of bananium, HOOOOOOOOONK!"
+	name = "PVDF-композитная плитка"
+	singular_name = "напольная плитка из PVDF-композита"
+	desc = "Упругая плитка из PVDF-композита с выраженным резонансным эффектом."
 	icon_state = "tile_bananium"
 	inhand_icon_state = "tile-bananium"
 	turf_type = /turf/open/floor/mineral/bananium

@@ -56,8 +56,8 @@
 	return ..()
 
 /turf/closed/wall/mineral/bananium
-	name = "bananium wall"
-	desc = "A wall with bananium plating. Honk!"
+	name = "стена из PVDF-композита"
+	desc = "Стена с упругой PVDF-композитной облицовкой."
 	icon = 'icons/turf/walls/32x40bananium_wall.dmi'
 	icon_state = "bananium_wall-0"
 	base_icon_state = "bananium_wall"
@@ -143,8 +143,8 @@
 	return ..()
 
 /turf/closed/wall/mineral/plasma
-	name = "plasma wall"
-	desc = "A wall with plasma plating. This is definitely a bad idea."
+	name = "стена из топливного концентрата"
+	desc = "Стена с облицовкой из топливного концентрата. Это определенно плохая идея."
 	icon = 'icons/turf/walls/32x40plasma_wall.dmi'
 	icon_state = "plasma_wall-0"
 	base_icon_state = "plasma_wall"

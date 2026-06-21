@@ -269,8 +269,8 @@
 	max_integrity = 800
 
 /obj/structure/falsewall/plasma
-	name = "plasma wall"
-	desc = "A wall with plasma plating. This is definitely a bad idea."
+	name = "стена из топливного концентрата"
+	desc = "Стена с облицовкой из топливного концентрата. Это определенно плохая идея."
 	fake_icon = 'icons/turf/walls/plasma_wall.dmi'
 	icon_state = "plasma_wall-open"
 	base_icon_state = "plasma_wall"
@@ -281,8 +281,8 @@
 	canSmoothWith = SMOOTH_GROUP_PLASMA_WALLS
 
 /obj/structure/falsewall/bananium
-	name = "bananium wall"
-	desc = "A wall with bananium plating. Honk!"
+	name = "стена из PVDF-композита"
+	desc = "Стена с упругой PVDF-композитной облицовкой."
 	fake_icon = 'icons/turf/walls/bananium_wall.dmi'
 	icon_state = "bananium_wall-open"
 	base_icon_state = "bananium_wall"

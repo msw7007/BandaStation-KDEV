@@ -202,7 +202,7 @@
 
 	COOLDOWN_START(src, gibtonite_warning_cd, 3 SECONDS)
 	playsound(bumper, 'sound/machines/scanner/scanbuzz.ogg', 25, TRUE, SILENCED_SOUND_EXTRARANGE)
-	to_chat(bumper, span_warning("[icon2html(src, bumper)] Unstable gibtonite ore deposit detected!"))
+	to_chat(bumper, span_warning("[icon2html(src, bumper)] Unstable azide vein detected!"))
 
 /obj/item/mod/module/drill/proc/mine_rock(turf/closed/mineral/rock, mob/living/carbon/human/bumper)
 	// Even faster if it has ore!

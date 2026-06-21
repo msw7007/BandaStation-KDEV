@@ -124,7 +124,7 @@ Industrial extracts:
 
 /obj/item/slimecross/industrial/bluespace
 	colour = SLIME_TYPE_BLUESPACE
-	effect_desc = "Produces synthetic bluespace crystals."
+	effect_desc = "Produces synthetic rift crystals."
 	plasmarequired = 7
 	itempath = /obj/item/stack/ore/bluespace_crystal/artificial
 

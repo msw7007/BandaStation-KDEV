@@ -3,9 +3,9 @@
 /// ID for a filter we apply so we can remove it again
 #define BLUESPACE_GLOW_FILTER "bluespace_glow_filter"
 
-/// Lets you hold a gibtonite ore in one hand and shoot it like a gun
+/// Lets you hold an azide vein in one hand and shoot it like a gun
 /obj/item/gibtonite_hand
-	name = "stabilised gibtonite fist"
+	name = "stabilised azide vein fist"
 	desc = "You had better launch this at something before it comes out the other end of your body."
 	icon = 'icons/obj/ore.dmi'
 	icon_state = "Gibtonite ore"

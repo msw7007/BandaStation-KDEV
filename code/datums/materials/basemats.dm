@@ -204,8 +204,8 @@
 
 /// Adds firestacks on hit (Still needs support to turn into gas on destruction)
 /datum/material/plasma
-	name = "plasma"
-	desc = "Isn't plasma a state of matter? Oh whatever."
+	name = "керогенит"
+	desc = "Высокоэнергетический углеводородный минерал, пригодный для получения плотного топливного концентрата."
 	color = "#BA3692"
 	mat_flags = MATERIAL_SILO_STORED | MATERIAL_BASIC_RECIPES | MATERIAL_CLASS_CRYSTAL | MATERIAL_CLASS_RIGID
 	mat_properties = list(
@@ -241,8 +241,8 @@
 
 /// Can cause bluespace effects on use. (Teleportation)
 /datum/material/bluespace
-	name = "bluespace crystal"
-	desc = "Crystals with bluespace properties."
+	name = "рифт-кристалл"
+	desc = "Метаматериальный кристалл с выраженными пространственными аномалиями. Базовый редкий ресурс технологий Starlight."
 	color = "#2E50B7"
 	alpha = 200
 	starlight_color = COLOR_BLUE
@@ -292,8 +292,8 @@
 
 ///Honks and slips
 /datum/material/bananium
-	name = "bananium"
-	desc = "Material with hilarious properties."
+	name = "PVDF-композит"
+	desc = "Пьезоэлектрический фторполимерный композит с упругой, резонансной структурой."
 	color = list(460/255, 464/255, 0, 0, 0,0,0,0, 0,0,0,0, 0,0,0,1, 0,0,0,0) //obnoxiously bright yellow //It's literally perfect I can't change it
 	greyscale_color = "#FFF269"
 	mat_flags = MATERIAL_SILO_STORED | MATERIAL_BASIC_RECIPES | MATERIAL_CLASS_METAL | MATERIAL_CLASS_RIGID

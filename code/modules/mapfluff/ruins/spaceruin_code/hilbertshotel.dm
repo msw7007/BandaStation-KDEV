@@ -639,12 +639,12 @@ GLOBAL_VAR_INIT(hhMysteryRoomNumber, rand(1, 999999))
 	Finally, my new facility is complete, and not a moment too soon!<br>
 	My disagreements with Greenham have become too much to bear, so some time away from the campus will do me well. It's not like my students understand my work, anyway. Teaching never was my passion.<br>
 	Anyway, I'm getting off track. It is quite amazing what a few million in grants will buy you. This station is state of the art, perfect for my studies.<br>
-	Since the Zhang Incident of 2459, we have been quite aware of the properties of bluespace crystals. Their space-warping properties are well-documented, but poorly understood. However, I theorise that it may be possible to harness them in new ways.<br>
+	Since the Zhang Incident of 2459, we have been quite aware of the properties of rift crystals. Their space-warping properties are well-documented, but poorly understood. However, I theorise that it may be possible to harness them in new ways.<br>
 	To this end, I've procured a small team of postdoctorate students from the institute to assist with my research. Some administrative help wouldn't go amiss, either- perhaps I should hire a secretary...<br>
 	*Following this is a long series of pages detailing failures, grievances with the institute, and more scientific equations than anyone can reasonably chew through.*<br>
 	<h4>Breakthrough<h4>
 	January 8th, 2557<br>
-	My theories have held up adequately. Today, we had our first successful test of the "Hilbert Pocket", as we've taken to calling it. By exploiting the ability of bluespace crystals to create a localised dilation in space, with precise application of force according to geometric calculus, we have successfully "folded" space into a pocket. We had Phil throw one of his analysers into it from across the room, and what we saw was incredible.<br>
+	My theories have held up adequately. Today, we had our first successful test of the "Hilbert Pocket", as we've taken to calling it. By exploiting the ability of rift crystals to create a localised dilation in space, with precise application of force according to geometric calculus, we have successfully "folded" space into a pocket. We had Phil throw one of his analysers into it from across the room, and what we saw was incredible.<br>
 	A pocket of infinite space, within a finite area. Simply revolutionary!<br>
 	I've set the postdocs to paper writing while I work out the specifics. The technology is successful, but we have no way to harness it. Unless...<br>
 	*Many more pages dedicated to equations, engineering drawings, and ramblings continue. Hilbert clearly loves the sight of his own handwriting.*<br>

@@ -115,7 +115,7 @@
 	* Bluespace Artillery Controls
 	* 26 cable pieces
 	* 20 iron
-	* 20 bluespace crystals (or artificial)
+	* 20 rift crystals (or artificial)
 	* 5 quadratic capacitors
 	* 5 femto servos
 	* 2 glass sheets

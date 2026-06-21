@@ -2201,8 +2201,8 @@
 	glass = TRUE
 
 /obj/machinery/door/airlock/bananium
-	name = "bananium airlock"
-	desc = "Honkhonkhonk"
+	name = "PVDF-composite airlock"
+	desc = "A resonant composite airlock with an extremely questionable acoustic profile."
 	icon = 'icons/obj/doors/airlocks/station/bananium.dmi'
 	assemblytype = /obj/structure/door_assembly/door_assembly_bananium
 	doorOpen = 'sound/items/bikehorn.ogg'

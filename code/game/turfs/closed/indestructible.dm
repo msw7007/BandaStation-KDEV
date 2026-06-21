@@ -140,7 +140,7 @@ INITIALIZE_IMMEDIATE(/turf/closed/indestructible/splashscreen)
 
 /turf/closed/indestructible/riveted/plastinum
 	name = "plastinum wall"
-	desc = "A luxurious wall made out of a plasma-platinum alloy. Effectively impervious to conventional methods of destruction."
+	desc = "A luxurious wall made out of a kerogenite-platinum alloy. Effectively impervious to conventional methods of destruction."
 	icon = 'icons/turf/walls/32x40plastinum_wall.dmi'
 	icon_state = "plastinum_wall-0"
 	base_icon_state = "plastinum_wall"

@@ -455,8 +455,8 @@
 	AddComponent(/datum/component/alternative_sharpness, SHARP_POINTY, alt_continuous, alt_simple, -3)
 
 /obj/item/knife/shiv/plasma
-	name = "plasma shiv"
-	desc = "A makeshift plasma glass shiv."
+	name = "kerogenite glass shiv"
+	desc = "A makeshift kerogenite glass shiv."
 	icon_state = "plasmashiv"
 	inhand_icon_state = "plasmashiv"
 	force = 9
@@ -495,7 +495,7 @@
 
 /obj/item/knife/shiv/plastitanium
 	name = "plastitanium shiv"
-	desc = "A makeshift titanium-infused plasma glass shiv."
+	desc = "A makeshift titanium-infused kerogenite glass shiv."
 	icon_state = "plastitaniumshiv"
 	inhand_icon_state = "plastitaniumshiv"
 	force = 10

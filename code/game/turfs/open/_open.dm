@@ -398,7 +398,7 @@
 	AddComponent(/datum/component/wet_floor, TURF_WET_LUBE, INFINITY, 0, INFINITY, TRUE)
 
 /turf/open/indestructible/honk
-	name = "bananium floor"
+	name = "PVDF-composite floor"
 	icon_state = "bananium"
 	footstep = null
 	barefootstep = null

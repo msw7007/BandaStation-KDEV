@@ -600,7 +600,7 @@
 	color = NARSIE_WINDOW_COLOUR
 
 /obj/structure/table/glass/plasmaglass
-	name = "plasma glass table"
+	name = "kerogenite glass table"
 	desc = "Кто-то решил, что это хорошая идея."
 	icon = 'icons/obj/smooth_structures/plasmaglass_table.dmi'
 	icon_state = "plasmaglass_table-0"
@@ -862,7 +862,7 @@
 	max_integrity = 150
 
 /obj/structure/table/reinforced/plasmarglass
-	name = "reinforced plasma glass table"
+	name = "reinforced kerogenite glass table"
 	desc = "Укреплённая версия стола из плазменного стекла."
 	icon = 'icons/obj/smooth_structures/rplasmaglass_table.dmi'
 	icon_state = "rplasmaglass_table-0"

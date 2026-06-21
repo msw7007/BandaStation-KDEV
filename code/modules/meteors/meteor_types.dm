@@ -344,7 +344,7 @@
 		do_teleport(src, get_turf(src), 6, asoundin = 'sound/effects/phasein.ogg', channel = TELEPORT_CHANNEL_BLUESPACE)
 
 /obj/effect/meteor/banana
-	name = "bananium meteor"
+	name = "PVDF-composite meteor"
 	desc = "Maybe it's a chunk blasted off of the legendary Clown Planet... How annoying."
 	icon_state = "bananium"
 	dropamt = 4

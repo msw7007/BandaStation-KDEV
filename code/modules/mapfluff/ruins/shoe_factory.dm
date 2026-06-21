@@ -32,7 +32,7 @@
 	<b>Citations:</b><br> \
 	<ul> \
 	<li><b>Violation 882.A:</b> Extreme deviation in product density. Random inspections reveal that approximately 99% of 'Sprint-Mate' footwear units possess a localized gravitational anomaly. Users report immense physical exertion, equating standard walking to 'dragging an asteroid through wet cement.'</li> \
-	<li><b>Violation 882.B:</b> Lethal kinetic acceleration. The remaining 1% of the production line exhibits zero-friction bluespace properties. A OSHA inspector testing a pair was accelerated to 150 km/h into a reinforced plasma glass window, resulting in critical injuries and a localized hull breach.</li> \
+	<li><b>Violation 882.B:</b> Lethal kinetic acceleration. The remaining 1% of the production line exhibits zero-friction rift properties. A OSHA inspector testing a pair was accelerated to 150 km/h into a reinforced kerogenite glass window, resulting in critical injuries and a localized hull breach.</li> \
 	</ul><br> \
 	All assets are frozen. Do not attempt to transport the remaining stock. If you must move a crate, DO NOT wear the contents."
 

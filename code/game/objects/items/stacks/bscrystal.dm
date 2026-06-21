@@ -1,10 +1,10 @@
 //Bluespace crystals, used in telescience and when crushed it will blink you to a random turf.
 /obj/item/stack/ore/bluespace_crystal
-	name = "bluespace crystal"
-	desc = "A glowing bluespace crystal, not much is known about how they work. It looks very delicate."
+	name = "рифт-кристалл"
+	desc = "Хрупкий светящийся кристалл с пространственными аномалиями. Основа ряда технологий Starlight."
 	icon = 'icons/obj/ore.dmi'
 	icon_state = "bluespace_crystal"
-	singular_name = "bluespace crystal"
+	singular_name = "рифт-кристалл"
 	dye_color = DYE_COSMIC
 	w_class = WEIGHT_CLASS_TINY
 	material_flags = MATERIAL_NO_DESCRIPTORS // Handles in-hand/thrown teleports by itself
@@ -21,7 +21,7 @@
 	var/blink_range = 8
 
 /obj/item/stack/ore/bluespace_crystal/refined
-	name = "refined bluespace crystal"
+	name = "очищенный рифт-кристалл"
 	points = 0
 	refined_type = null
 	merge_type = /obj/item/stack/ore/bluespace_crystal/refined
@@ -66,8 +66,8 @@
 
 //Artificial bluespace crystal, doesn't give you much research.
 /obj/item/stack/ore/bluespace_crystal/artificial
-	name = "artificial bluespace crystal"
-	desc = "An artificially made bluespace crystal, it looks delicate."
+	name = "синтетический рифт-кристалл"
+	desc = "Искусственно выращенный рифт-кристалл. Он выглядит хрупким и менее стабильным."
 	mats_per_unit = list(/datum/material/bluespace = HALF_SHEET_MATERIAL_AMOUNT)
 	blink_range = 4 // Not as good as the organic stuff!
 	points = 0 //nice try
@@ -78,16 +78,16 @@
 
 // Polycrystals, aka stacks
 /obj/item/stack/sheet/bluespace_crystal
-	name = "bluespace polycrystal"
-	singular_name = "bluespace polycrystal"
-	desc = "A stable polycrystal, made of fused-together bluespace crystals. You could probably break one off."
+	name = "рифт-поликристалл"
+	singular_name = "рифт-поликристалл"
+	desc = "Стабильный поликристалл, спеченный из рифт-кристаллов. От него можно отделить одиночный кристалл."
 	icon_state = "polycrystal"
 	inhand_icon_state = null
 	material_flags = MATERIAL_NO_DESCRIPTORS
 	gulag_valid = TRUE
 	mats_per_unit = list(/datum/material/bluespace=SHEET_MATERIAL_AMOUNT)
-	attack_verb_continuous = list("bluespace polybashes", "bluespace polybatters", "bluespace polybludgeons", "bluespace polythrashes", "bluespace polysmashes")
-	attack_verb_simple = list("bluespace polybash", "bluespace polybatter", "bluespace polybludgeon", "bluespace polythrash", "bluespace polysmash")
+	attack_verb_continuous = list("rift polybashes", "rift polybatters", "rift polybludgeons", "rift polythrashes", "rift polysmashes")
+	attack_verb_simple = list("rift polybash", "rift polybatter", "rift polybludgeon", "rift polythrash", "rift polysmash")
 	novariants = TRUE
 	merge_type = /obj/item/stack/sheet/bluespace_crystal
 	material_type = /datum/material/bluespace

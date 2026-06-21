@@ -117,7 +117,7 @@ Charged extracts:
 
 /obj/item/slimecross/charged/bluespace
 	colour = SLIME_TYPE_BLUESPACE
-	effect_desc = "Makes a bluespace polycrystal."
+	effect_desc = "Makes a rift polycrystal."
 
 /obj/item/slimecross/charged/bluespace/do_effect(mob/user)
 	new /obj/item/stack/sheet/bluespace_crystal(get_turf(user), 10)

@@ -70,12 +70,12 @@
 	cost = CARGO_CRATE_VALUE * 0.4
 	k_elasticity = 0
 	material_id = /datum/material/plasma
-	message = "cm3 of plasma"
+	message = "cm3 of kerogenite"
 
 /datum/export/material/bananium
 	cost = CARGO_CRATE_VALUE * 2
 	material_id = /datum/material/bananium
-	message = "cm3 of bananium"
+	message = "cm3 of PVDF composite"
 
 /datum/export/material/adamantine
 	cost = CARGO_CRATE_VALUE
@@ -164,7 +164,7 @@
 	message = "cm3 of titanium"
 
 /datum/export/material/market/bscrystal
-	message = "of bluespace crystals"
+	message = "of rift crystals"
 	material_id = /datum/material/bluespace
 	export_types = list(
 		/obj/item/stack/sheet/bluespace_crystal,

@@ -217,10 +217,10 @@
 	glass_type = /obj/machinery/door/airlock/plasma/glass
 
 /obj/structure/door_assembly/door_assembly_bananium
-	name = "bananium airlock assembly"
-	desc = "Honk."
+	name = "PVDF-composite airlock assembly"
+	desc = "A resonant composite airlock assembly."
 	icon = 'icons/obj/doors/airlocks/station/bananium.dmi'
-	base_name = "bananium airlock"
+	base_name = "PVDF-composite airlock"
 	airlock_type = /obj/machinery/door/airlock/bananium
 	mineral = "bananium"
 	glass_type = /obj/machinery/door/airlock/bananium/glass

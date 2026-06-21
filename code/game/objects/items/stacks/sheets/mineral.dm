@@ -165,10 +165,10 @@ GLOBAL_LIST_INIT(uranium_recipes, list ( \
  * Plasma
  */
 /obj/item/stack/sheet/mineral/plasma
-	name = "solid plasma"
+	name = "топливный концентрат"
 	icon_state = "sheet-plasma"
 	inhand_icon_state = "sheet-plasma"
-	singular_name = "plasma sheet"
+	singular_name = "лист топливного концентрата"
 	construction_path_type = "plasma"
 	resistance_flags = FLAMMABLE
 	max_integrity = 100
@@ -183,8 +183,8 @@ GLOBAL_LIST_INIT(uranium_recipes, list ( \
 	return TOXLOSS//dont you kids know that stuff is toxic?
 
 GLOBAL_LIST_INIT(plasma_recipes, list ( \
-	new/datum/stack_recipe("plasma door", /obj/structure/mineral_door/transparent/plasma, 10, time = 5 SECONDS, crafting_flags = CRAFT_CHECK_DENSITY | CRAFT_ONE_PER_TURF | CRAFT_ON_SOLID_GROUND, category = CAT_DOORS), \
-	new/datum/stack_recipe("plasma tile", /obj/item/stack/tile/mineral/plasma, 1, 4, 20, crafting_flags = NONE, category = CAT_TILES), \
+	new/datum/stack_recipe("дверь из топливного концентрата", /obj/structure/mineral_door/transparent/plasma, 10, time = 5 SECONDS, crafting_flags = CRAFT_CHECK_DENSITY | CRAFT_ONE_PER_TURF | CRAFT_ON_SOLID_GROUND, category = CAT_DOORS), \
+	new/datum/stack_recipe("плитка из топливного концентрата", /obj/item/stack/tile/mineral/plasma, 1, 4, 20, crafting_flags = NONE, category = CAT_TILES), \
 	))
 
 /obj/item/stack/sheet/mineral/plasma/get_main_recipes()
@@ -263,10 +263,10 @@ GLOBAL_LIST_INIT(silver_recipes, list ( \
  * Clown
  */
 /obj/item/stack/sheet/mineral/bananium
-	name = "bananium"
+	name = "PVDF-композит"
 	icon_state = "sheet-bananium"
 	inhand_icon_state = null
-	singular_name = "bananium sheet"
+	singular_name = "лист PVDF-композита"
 	construction_path_type = "bananium"
 	mats_per_unit = list(/datum/material/bananium=SHEET_MATERIAL_AMOUNT)
 	gulag_valid = TRUE
@@ -275,7 +275,7 @@ GLOBAL_LIST_INIT(silver_recipes, list ( \
 	walltype = /turf/closed/wall/mineral/bananium
 
 GLOBAL_LIST_INIT(bananium_recipes, list ( \
-	new/datum/stack_recipe("bananium tile", /obj/item/stack/tile/mineral/bananium, 1, 4, 20, crafting_flags = NONE, category = CAT_TILES), \
+	new/datum/stack_recipe("PVDF-композитная плитка", /obj/item/stack/tile/mineral/bananium, 1, 4, 20, crafting_flags = NONE, category = CAT_TILES), \
 	))
 
 /obj/item/stack/sheet/mineral/bananium/get_main_recipes()

@@ -251,7 +251,7 @@
 	set_opacity(FALSE)
 
 /obj/structure/mineral_door/transparent/plasma
-	name = "plasma door"
+	name = "дверь из топливного концентрата"
 	icon_state = "plasma"
 	sheetType = /obj/item/stack/sheet/mineral/plasma
 

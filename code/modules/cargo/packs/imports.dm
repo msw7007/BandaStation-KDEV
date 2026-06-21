@@ -74,11 +74,11 @@
 	crate_name = "wind turbine crate"
 
 /datum/supply_pack/imports/bananium
-	name = "A Single Sheet of Bananium"
-	desc = "Don't let the clown know that he can order this. It costs a fortune even for this much."
+	name = "A Single Sheet of PVDF Composite"
+	desc = "One sheet of high-grade resonant PVDF composite. It costs a fortune even for this much."
 	cost = CARGO_CRATE_VALUE * 100
 	contains = list(/obj/item/stack/sheet/mineral/bananium)
-	crate_name = "bananium sheet crate"
+	crate_name = "PVDF composite sheet crate"
 	discountable = SUPPLY_PACK_RARE_DISCOUNTABLE
 
 /datum/supply_pack/imports/dumpstercorpse
@@ -354,7 +354,7 @@
 	name = "Black Market LTSRBT"
 	desc = "Need a faster and better way of transporting your illegal goods from and to the \
 		station? Fear not, the Long-To-Short-Range-Bluespace-Transceiver (LTSRBT for short) \
-		is here to help. Contains a LTSRBT circuit, two bluespace crystals, and one ansible."
+		is here to help. Contains a LTSRBT circuit, two rift crystals, and one ansible."
 	cost = CARGO_CRATE_VALUE * 10
 	order_flags = ORDER_CONTRABAND
 	contains = list(

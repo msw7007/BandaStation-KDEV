@@ -34,7 +34,7 @@
 //PLASMA
 
 /turf/open/floor/mineral/plasma
-	name = "plasma floor"
+	name = "пол из топливного концентрата"
 	icon_state = "plasma"
 	floor_tile = /obj/item/stack/tile/mineral/plasma
 	icons = list("plasma","plasma_dam")
@@ -183,7 +183,7 @@
 //BANANIUM
 
 /turf/open/floor/mineral/bananium
-	name = "bananium floor"
+	name = "пол из PVDF-композита"
 	icon_state = "bananium"
 	floor_tile = /obj/item/stack/tile/mineral/bananium
 	icons = list("bananium","bananium_dam")

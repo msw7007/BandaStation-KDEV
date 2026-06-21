@@ -362,8 +362,8 @@
 	active = FALSE
 
 /obj/structure/tram/alt/plasma
-	name = "plasma tram"
-	desc = "A composite structure with plasma plating. This is definitely a bad idea."
+	name = "fuel-concentrate tram"
+	desc = "A composite structure with fuel-concentrate plating. This is definitely a bad idea."
 	icon = 'icons/turf/walls/plasma_wall.dmi'
 	icon_state = "plasma_wall-0"
 	base_icon_state = "plasma_wall"

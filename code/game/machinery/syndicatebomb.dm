@@ -461,7 +461,7 @@
 	qdel(src)
 
 /obj/item/bombcore/badmin/summon/clown
-	name = "bananium payload"
+	name = "PVDF-composite payload"
 	desc = "Clowns delivered fast and cheap!"
 	summon_path = /mob/living/basic/clown
 	amt_summon = 50

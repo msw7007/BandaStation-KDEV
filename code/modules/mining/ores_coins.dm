@@ -190,9 +190,9 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 	merge_type = /obj/item/stack/ore/glass/siderite
 
 /obj/item/stack/ore/plasma
-	name = "plasma ore"
+	name = "керогенитовая руда"
 	icon_state = "plasma"
-	singular_name = "plasma ore chunk"
+	singular_name = "кусок керогенитовой руды"
 	points = 15
 	mats_per_unit = list(/datum/material/plasma = SHEET_MATERIAL_AMOUNT)
 	refined_type = /obj/item/stack/sheet/mineral/plasma
@@ -263,9 +263,9 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 	amount = 5
 
 /obj/item/stack/ore/bananium
-	name = "bananium ore"
+	name = "PVDF-сырье"
 	icon_state = "bananium"
-	singular_name = "bananium ore chunk"
+	singular_name = "фрагмент PVDF-сырья"
 	points = 60
 	mats_per_unit = list(/datum/material/bananium = SHEET_MATERIAL_AMOUNT)
 	refined_type = /obj/item/stack/sheet/mineral/bananium
@@ -300,8 +300,8 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 	merge_type = /obj/item/stack/ore/slag
 
 /obj/item/gibtonite
-	name = "gibtonite ore"
-	desc = "Extremely explosive if struck with mining equipment, Gibtonite is often used by miners to speed up their work by using it as a mining charge. This material is illegal to possess by unauthorized personnel under space law."
+	name = "азидная жила"
+	desc = "Крайне нестабильная азидная минерализация. При ударе горным инструментом может сдетонировать, поэтому используется шахтерами как импровизированный заряд. Незаконное хранение без допуска запрещено."
 	icon = 'icons/obj/ore.dmi'
 	icon_state = "gibtonite"
 	inhand_icon_state = "Gibtonite ore"
@@ -380,7 +380,7 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 		return
 
 	if(I.tool_behaviour == TOOL_MINING || istype(I, /obj/item/resonator) || I.force >= 10)
-		GibtoniteReaction(user, "A resonator has primed for detonation a")
+		GibtoniteReaction(user, "A resonator has primed for detonation an")
 		return
 
 	if(istype(I, /obj/item/mining_scanner) || istype(I, /obj/item/t_scanner/adv_mining_scanner) || I.tool_behaviour == TOOL_MULTITOOL)
@@ -407,11 +407,11 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 		return ..()
 
 /obj/item/gibtonite/bullet_act(obj/projectile/proj)
-	GibtoniteReaction(proj.firer, "A projectile has primed for detonation a")
+	GibtoniteReaction(proj.firer, "A projectile has primed for detonation an")
 	return ..()
 
 /obj/item/gibtonite/ex_act()
-	GibtoniteReaction(null, "An explosion has primed for detonation a")
+	GibtoniteReaction(null, "An explosion has primed for detonation an")
 	return TRUE
 
 /obj/item/gibtonite/proc/GibtoniteReaction(mob/user, triggered_by)
@@ -457,7 +457,7 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 
 /obj/item/gibtonite/proc/igniter_prime()
 	SIGNAL_HANDLER
-	GibtoniteReaction(null, "An attached rig has primed a")
+	GibtoniteReaction(null, "An attached rig has primed an")
 
 /obj/item/stack/ore/Initialize(mapload, new_amount, merge = TRUE, list/mat_override=null, mat_amt=1)
 	. = ..()

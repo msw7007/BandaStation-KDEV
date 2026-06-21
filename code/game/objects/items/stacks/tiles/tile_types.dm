@@ -1334,18 +1334,18 @@
 	amount = 60
 
 /obj/item/stack/tile/glass/plasma
-	name = "plasma glass floor"
-	singular_name = "plasma glass floor tile"
-	desc = "Plasma glass window floors, for when... Whatever is down there is too scary for normal glass."
+	name = "kerogenite glass floor"
+	singular_name = "kerogenite glass floor tile"
+	desc = "Kerogenite glass window floors, for when... Whatever is down there is too scary for normal glass."
 	icon_state = "tile_pglass"
 	turf_type = /turf/open/floor/glass/plasma
 	merge_type = /obj/item/stack/tile/glass/plasma
 	mats_per_unit = list(/datum/material/alloy/plasmaglass = SHEET_MATERIAL_AMOUNT * 0.25)
 
 /obj/item/stack/tile/rglass/plasma
-	name = "reinforced plasma glass floor"
-	singular_name = "reinforced plasma glass floor tile"
-	desc = "Reinforced plasma glass window floors, because whatever's downstairs should really stay down there."
+	name = "reinforced kerogenite glass floor"
+	singular_name = "reinforced kerogenite glass floor tile"
+	desc = "Reinforced kerogenite glass window floors, because whatever's downstairs should really stay down there."
 	icon_state = "tile_rpglass"
 	turf_type = /turf/open/floor/glass/reinforced/plasma
 	merge_type = /obj/item/stack/tile/rglass/plasma

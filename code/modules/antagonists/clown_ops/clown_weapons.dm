@@ -13,7 +13,7 @@
 //BANANIUM SWORD
 
 /obj/item/melee/energy/sword/bananium
-	name = "bananium sword"
+	name = "PVDF-composite sword"
 	icon_state = "e_sword"
 	attack_verb_continuous = list("hits", "taps", "pokes")
 	attack_verb_simple = list("hit", "tap", "poke")
@@ -81,7 +81,7 @@
 //BANANIUM SHIELD
 
 /obj/item/shield/energy/bananium
-	name = "bananium energy shield"
+	name = "PVDF-composite energy shield"
 	desc = "A shield that stops most melee attacks, protects user from almost all energy projectiles, and can be thrown to slip opponents."
 	icon_state = "bananaeshield"
 	inhand_icon_state = "bananaeshield"

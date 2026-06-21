@@ -220,7 +220,7 @@
 
 /obj/item/mecha_parts/part/honker_torso
 	name = "\improper H.O.N.K torso"
-	desc = "A torso part of H.O.N.K. Contains chuckle unit, bananium core and honk support systems."
+	desc = "A torso part of H.O.N.K. Contains chuckle unit, PVDF-composite core and honk support systems."
 	icon_state = "honker_harness"
 
 /obj/item/mecha_parts/part/honker_head

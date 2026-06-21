@@ -1305,8 +1305,8 @@
 	rad_power = 2
 
 /datum/reagent/bluespace
-	name = "Bluespace Dust"
-	description = "A dust composed of microscopic bluespace crystals, with minor space-warping properties."
+	name = "Rift Crystal Dust"
+	description = "A dust composed of microscopic rift crystals, with minor space-warping properties."
 	color = "#0000CC"
 	taste_description = "fizzling blue"
 	material = /datum/material/bluespace

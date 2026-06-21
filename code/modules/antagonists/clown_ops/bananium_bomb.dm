@@ -1,5 +1,5 @@
 /obj/machinery/nuclearbomb/syndicate/bananium
-	name = "bananium fission explosive"
+	name = "PVDF-composite fission explosive"
 	desc = "You probably shouldn't stick around to see if this is armed."
 	icon_state = "bananiumbomb_base"
 	base_icon_state = "bananiumbomb"

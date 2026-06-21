@@ -506,6 +506,6 @@
 	time = 12 SECONDS
 	category = CAT_WEAPON_RANGED
 	steps = list(
-		"use high quality gibtonite and advanced release or large grenades for better yield",
+		"use a high quality azide vein and advanced release or large grenades for better yield",
 	)
 	crafting_flags = CRAFT_SKIP_MATERIALS_PARITY // BANDASTATION ADDITION - Crafting unit test workaround
