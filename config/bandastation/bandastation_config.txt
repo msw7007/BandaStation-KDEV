@@ -36,6 +36,14 @@ AI_SECRETARY_MODEL gpt-oss:20b-cloud
 ROUNDSTART_RACES vulpkanin
 ROUNDSTART_RACES tajaran
 
+## Thin wall client-side occlusion.
+## Set PARTIAL_WALL_OCCLUSION to 0 to disable without recompiling; reboot after changing config.
+PARTIAL_WALL_OCCLUSION 1
+## Side cuts use X pixels on left/right. 16 means 16/16.
+PARTIAL_WALL_OCCLUSION_X_PIXELS 16
+## Vertical cuts use Y pixels on top and 32-Y pixels on bottom. 8 means 8/24.
+PARTIAL_WALL_OCCLUSION_Y_PIXELS 8
+
 ## Automatic crew transfer
 
 ## Time after the roundstart the automatic crew transfer will run. 1.5 hours by default

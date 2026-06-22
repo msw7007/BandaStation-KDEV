@@ -86,12 +86,14 @@
 		RemoveElement(/datum/element/light_blocking)
 	// Change in opacity could change camera visibility
 	SScameras.update_visibility(src)
+	update_nearby_partial_wall_occlusion(src)
 
 /turf/set_opacity(new_opacity)
 	. = ..()
 	if(isnull(.))
 		return
 	recalculate_directional_opacity()
+	update_nearby_partial_wall_occlusion(src)
 
 /atom/proc/flash_lighting_fx(range = FLASH_LIGHT_RANGE, power = FLASH_LIGHT_POWER, color = COLOR_WHITE, duration = FLASH_LIGHT_DURATION, light_type = /obj/effect/dummy/lighting_obj)
 	if(!duration)

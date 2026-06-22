@@ -234,6 +234,247 @@
 	appearance_flags = RESET_COLOR | RESET_TRANSFORM
 	plane = FULLSCREEN_PLANE
 
+/mob/living/var/tmp/list/partial_wall_occlusion_images
+/mob/living/var/tmp/partial_wall_occlusion_update_timer = TIMER_ID_NULL
+
+/proc/is_partial_wall_occlusion_enabled()
+	return !isnull(global.config) && CONFIG_GET(flag/partial_wall_occlusion)
+
+/proc/update_nearby_partial_wall_occlusion(atom/center)
+	if(!is_partial_wall_occlusion_enabled() || !length(GLOB.player_list))
+		return
+	var/turf/center_turf = get_turf(center)
+	if(!center_turf)
+		return
+	for(var/mob/player_mob as anything in GLOB.player_list)
+		var/mob/living/viewer = player_mob
+		if(!istype(viewer) || !viewer.client)
+			continue
+		var/turf/viewer_turf = get_turf(viewer.client.eye || viewer)
+		if(!viewer_turf || viewer_turf.z != center_turf.z || get_dist(viewer_turf, center_turf) > 16)
+			continue
+		viewer.request_partial_wall_occlusion_update()
+
+/proc/get_partial_wall_occlusion_scan_view(view_size)
+	var/static/list/scan_views_by_key = list()
+	var/view_key = "[view_size]"
+	if(!isnull(scan_views_by_key[view_key]))
+		return scan_views_by_key[view_key]
+
+	if(isnum(view_size))
+		scan_views_by_key[view_key] = view_size + 1
+		return scan_views_by_key[view_key]
+
+	var/text_view = view_key
+	var/list/view_parts = splittext(text_view, "x")
+	if(length(view_parts) >= 2)
+		var/view_width = text2num(view_parts[1])
+		var/view_height = text2num(view_parts[2])
+		if(view_width && view_height)
+			scan_views_by_key[view_key] = "[view_width + 2]x[view_height + 2]"
+			return scan_views_by_key[view_key]
+	var/view_range = text2num(text_view)
+	if(!isnull(view_range))
+		scan_views_by_key[view_key] = view_range + 1
+		return scan_views_by_key[view_key]
+
+	scan_views_by_key[view_key] = view_size
+	return scan_views_by_key[view_key]
+
+/proc/get_partial_wall_occlusion_view_bounds(view_size)
+	var/static/list/view_bounds_by_key = list()
+	var/view_key = "[view_size]"
+	if(view_bounds_by_key[view_key])
+		return view_bounds_by_key[view_key]
+
+	var/list/view_bounds
+	if(isnum(view_size))
+		view_bounds = list("x" = view_size, "y" = view_size)
+	else
+		var/text_view = view_key
+		var/list/view_parts = splittext(text_view, "x")
+		if(length(view_parts) >= 2)
+			var/view_width = text2num(view_parts[1])
+			var/view_height = text2num(view_parts[2])
+			if(view_width && view_height)
+				view_bounds = list("x" = round((view_width - 1) * 0.5), "y" = round((view_height - 1) * 0.5))
+		if(!view_bounds)
+			var/view_range = text2num(text_view)
+			view_bounds = list("x" = view_range || 7, "y" = view_range || 7)
+
+	view_bounds_by_key[view_key] = view_bounds
+	return view_bounds_by_key[view_key]
+
+/proc/build_partial_wall_occlusion_icon(x1, y1, x2, y2)
+	if(x1 > x2 || y1 > y2)
+		return null
+	var/icon/cut_icon = icon('icons/blanks/32x32.dmi', "nothing")
+	cut_icon.DrawBox(COLOR_BLACK, x1, y1, x2, y2)
+	return cut_icon
+
+/proc/get_partial_wall_occlusion_icon(cut_dir)
+	var/static/list/partial_wall_occlusion_icons
+	var/static/cached_x_pixels
+	var/static/cached_y_pixels
+
+	var/x_pixels = CONFIG_GET(number/partial_wall_occlusion_x_pixels)
+	var/y_pixels = CONFIG_GET(number/partial_wall_occlusion_y_pixels)
+	if(!partial_wall_occlusion_icons || cached_x_pixels != x_pixels || cached_y_pixels != y_pixels)
+		partial_wall_occlusion_icons = list()
+		cached_x_pixels = x_pixels
+		cached_y_pixels = y_pixels
+
+		partial_wall_occlusion_icons["[EAST]"] = build_partial_wall_occlusion_icon(ICON_SIZE_X - x_pixels + 1, 1, ICON_SIZE_X, ICON_SIZE_Y)
+		partial_wall_occlusion_icons["[WEST]"] = build_partial_wall_occlusion_icon(1, 1, x_pixels, ICON_SIZE_Y)
+		partial_wall_occlusion_icons["[NORTH]"] = build_partial_wall_occlusion_icon(1, ICON_SIZE_Y - y_pixels + 1, ICON_SIZE_X, ICON_SIZE_Y)
+		partial_wall_occlusion_icons["[SOUTH]"] = build_partial_wall_occlusion_icon(1, 1, ICON_SIZE_X, ICON_SIZE_Y - y_pixels)
+
+	return partial_wall_occlusion_icons["[cut_dir]"]
+
+/mob/living/proc/clear_partial_wall_occlusion()
+	if(partial_wall_occlusion_update_timer != TIMER_ID_NULL)
+		deltimer(partial_wall_occlusion_update_timer)
+		partial_wall_occlusion_update_timer = TIMER_ID_NULL
+	if(!length(partial_wall_occlusion_images))
+		LAZYCLEARLIST(partial_wall_occlusion_images)
+		return
+	if(client)
+		for(var/mask_key in partial_wall_occlusion_images)
+			var/image/cut_mask = partial_wall_occlusion_images[mask_key]
+			client.images -= cut_mask
+	LAZYCLEARLIST(partial_wall_occlusion_images)
+
+/mob/living/proc/request_partial_wall_occlusion_update(immediate = FALSE)
+	if(!is_partial_wall_occlusion_enabled())
+		clear_partial_wall_occlusion()
+		return
+	if(!client)
+		LAZYCLEARLIST(partial_wall_occlusion_images)
+		return
+	if(immediate)
+		if(partial_wall_occlusion_update_timer != TIMER_ID_NULL)
+			deltimer(partial_wall_occlusion_update_timer)
+			partial_wall_occlusion_update_timer = TIMER_ID_NULL
+		update_partial_wall_occlusion()
+		return
+	if(partial_wall_occlusion_update_timer != TIMER_ID_NULL)
+		return
+	partial_wall_occlusion_update_timer = addtimer(CALLBACK(src, PROC_REF(run_partial_wall_occlusion_update)), world.tick_lag, TIMER_STOPPABLE)
+
+/mob/living/proc/run_partial_wall_occlusion_update()
+	partial_wall_occlusion_update_timer = TIMER_ID_NULL
+	update_partial_wall_occlusion()
+
+/mob/living/proc/add_partial_wall_occlusion_mask(atom/occluder, cut_dir, list/desired_masks)
+	var/icon/mask_icon = get_partial_wall_occlusion_icon(cut_dir)
+	if(!mask_icon)
+		return
+	var/mask_key = "[REF(occluder)]-[cut_dir]"
+	desired_masks[mask_key] = list(
+		"occluder" = occluder,
+		"dir" = cut_dir,
+	)
+
+/mob/living/proc/queue_partial_wall_occlusion(atom/occluder, turf/occluder_turf, list/scanned_turfs, list/desired_masks, require_segment_neighbor = TRUE)
+	if(!occluder?.opacity || !occluder_turf)
+		return
+
+	var/list/cut_dirs = list()
+	for(var/check_dir in GLOB.cardinals)
+		var/turf/hidden_side = get_step(occluder_turf, check_dir)
+		if(hidden_side && scanned_turfs[hidden_side])
+			continue
+
+		var/turf/near_side = get_step(occluder_turf, REVERSE_DIR(check_dir))
+		if(!near_side || !scanned_turfs[near_side])
+			continue
+
+		cut_dirs += check_dir
+
+	var/cut_dir_count = length(cut_dirs)
+	if(cut_dir_count == 1)
+		var/cut_dir = cut_dirs[1]
+		if(require_segment_neighbor)
+			var/has_straight_segment_neighbor = FALSE
+			if(cut_dir & (EAST|WEST))
+				for(var/parallel_dir in list(NORTH, SOUTH))
+					var/turf/closed/segment_neighbor = get_step(occluder_turf, parallel_dir)
+					if(istype(segment_neighbor) && segment_neighbor.opacity && scanned_turfs[segment_neighbor])
+						has_straight_segment_neighbor = TRUE
+						break
+			else
+				for(var/parallel_dir in list(EAST, WEST))
+					var/turf/closed/segment_neighbor = get_step(occluder_turf, parallel_dir)
+					if(istype(segment_neighbor) && segment_neighbor.opacity && scanned_turfs[segment_neighbor])
+						has_straight_segment_neighbor = TRUE
+						break
+			if(!has_straight_segment_neighbor)
+				return
+	else if(cut_dir_count == 2)
+		if(cut_dirs[1] == REVERSE_DIR(cut_dirs[2]))
+			return
+	else
+		return
+
+	for(var/cut_dir in cut_dirs)
+		add_partial_wall_occlusion_mask(occluder, cut_dir, desired_masks)
+
+/mob/living/proc/apply_partial_wall_occlusion_masks(list/desired_masks)
+	LAZYINITLIST(partial_wall_occlusion_images)
+
+	var/list/remove_masks
+	for(var/mask_key in partial_wall_occlusion_images)
+		if(desired_masks[mask_key])
+			continue
+		LAZYADD(remove_masks, mask_key)
+
+	for(var/mask_key in remove_masks)
+		var/image/old_mask = partial_wall_occlusion_images[mask_key]
+		client.images -= old_mask
+		partial_wall_occlusion_images -= mask_key
+
+	for(var/mask_key in desired_masks)
+		if(partial_wall_occlusion_images[mask_key])
+			continue
+		var/list/mask_data = desired_masks[mask_key]
+		var/atom/occluder = mask_data["occluder"]
+		var/cut_dir = mask_data["dir"]
+		var/image/cut_mask = image(icon = get_partial_wall_occlusion_icon(cut_dir), loc = occluder, layer = ABOVE_ALL_MOB_LAYER)
+		cut_mask.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+		SET_PLANE_EXPLICIT(cut_mask, ABOVE_LIGHTING_PLANE, occluder)
+		partial_wall_occlusion_images[mask_key] = cut_mask
+		client.images += cut_mask
+
+/mob/living/proc/update_partial_wall_occlusion()
+	if(!client || !is_partial_wall_occlusion_enabled())
+		clear_partial_wall_occlusion()
+		return
+
+	var/turf/viewer_turf = get_turf(client.eye || src)
+	if(!viewer_turf)
+		return
+
+	var/list/rendered_turfs = list()
+	var/list/scanned_turfs = list()
+	var/list/view_bounds = get_partial_wall_occlusion_view_bounds(client.view)
+	var/view_x = view_bounds["x"]
+	var/view_y = view_bounds["y"]
+	for(var/turf/scanned_turf as anything in view(get_partial_wall_occlusion_scan_view(client.view), viewer_turf))
+		scanned_turfs[scanned_turf] = TRUE
+		if(abs(scanned_turf.x - viewer_turf.x) <= view_x && abs(scanned_turf.y - viewer_turf.y) <= view_y)
+			rendered_turfs[scanned_turf] = TRUE
+
+	var/list/desired_masks = list()
+
+	for(var/turf/closed/visible_wall as anything in rendered_turfs)
+		queue_partial_wall_occlusion(visible_wall, visible_wall, scanned_turfs, desired_masks)
+
+	for(var/turf/rendered_turf as anything in rendered_turfs)
+		for(var/obj/machinery/door/visible_door in rendered_turf)
+			queue_partial_wall_occlusion(visible_door, rendered_turf, scanned_turfs, desired_masks, require_segment_neighbor = FALSE)
+
+	apply_partial_wall_occlusion_masks(desired_masks)
+
 /// Plays a visual effect representing a sound cue for people with vision obstructed by FOV or blindness
 /proc/play_fov_effect(atom/center, range, icon_state, dir = SOUTH, ignore_self = FALSE, angle = 0, time = 1.5 SECONDS, list/override_list)
 	var/turf/anchor_point = get_turf(center)

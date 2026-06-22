@@ -806,5 +806,18 @@
 
 /datum/config_entry/flag/fishing
 
+/datum/config_entry/flag/partial_wall_occlusion
+	default = TRUE
+
+/datum/config_entry/number/partial_wall_occlusion_x_pixels
+	default = 16
+	min_val = 0
+	max_val = ICON_SIZE_X
+
+/datum/config_entry/number/partial_wall_occlusion_y_pixels
+	default = 8
+	min_val = 0
+	max_val = ICON_SIZE_Y
+
 /datum/config_entry/string/policy_json_path
 	default = "policy.json"

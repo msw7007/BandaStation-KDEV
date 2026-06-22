@@ -27,6 +27,7 @@
 	med_hud_set_status()
 
 /mob/living/Destroy()
+	clear_partial_wall_occlusion()
 	clear_cyberpunk_grab_hold_items()
 	QDEL_NULL(cyberpunk_npc_profile)
 	if(vertical_state_timer != TIMER_ID_NULL)

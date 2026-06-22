@@ -19,3 +19,4 @@
 	med_hud_set_status()
 
 	update_fov_client()
+	request_partial_wall_occlusion_update(immediate = TRUE)

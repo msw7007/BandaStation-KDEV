@@ -1,4 +1,5 @@
 /mob/living/Logout()
+	clear_partial_wall_occlusion()
 	update_z(null)
 	..()
 	if(!key && mind) //key and mind have become separated.
