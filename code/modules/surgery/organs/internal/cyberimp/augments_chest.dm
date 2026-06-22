@@ -324,7 +324,7 @@
 	if(!is_implant_functional())
 		to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
 		return
-	if(!COOLDOWN_FINISHED(src, adrenaline_cooldown))
+	if(!cyberpsychosis_ignores_cooldown() && !COOLDOWN_FINISHED(src, adrenaline_cooldown))
 		to_chat(owner, span_warning("[capitalize(src)] is still recharging."))
 		return
 	boost_duration = tier_value(list(8 SECONDS, 12 SECONDS, 18 SECONDS), TRUE)

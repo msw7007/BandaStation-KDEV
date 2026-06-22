@@ -1060,6 +1060,11 @@
 		"water vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/water,
 		"smokes vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/smokes,
 		"gear vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/gear,
+		"misc vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/misc,
+		"toy vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/toys,
+		"clothing vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/clothing,
+		"stylist" = /mob/living/carbon/human/cyberpunk_npc/vendor/stylist,
+		"designer" = /mob/living/carbon/human/cyberpunk_npc/vendor/designer,
 		"implant vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/implants,
 		"parts vendor" = /mob/living/carbon/human/cyberpunk_npc/vendor/parts,
 		"bystander" = /mob/living/carbon/human/cyberpunk_npc/bystander,
@@ -1090,6 +1095,7 @@
 	var/cyberpunk_stationary_npc = FALSE
 	var/cyberpunk_vendor_profile = "local"
 	var/list/cyberpunk_vendor_categories
+	var/list/cyberpunk_vendor_services
 
 /mob/living/carbon/human/cyberpunk_npc/Initialize(mapload)
 	. = ..()
@@ -1109,12 +1115,21 @@
 	)
 	var/list/services = list()
 	if(cyberpunk_stationary_npc)
-		services = list(
-			new /datum/cyberpunk_npc_service/healing,
-			new /datum/cyberpunk_npc_service/repair,
-			new /datum/cyberpunk_npc_service/designer,
-			new /datum/cyberpunk_npc_service/stylist,
+		var/list/service_pool = list(
+			"healing" = /datum/cyberpunk_npc_service/healing,
+			"repair" = /datum/cyberpunk_npc_service/repair,
+			"designer" = /datum/cyberpunk_npc_service/designer,
+			"stylist" = /datum/cyberpunk_npc_service/stylist,
 		)
+		if(length(cyberpunk_vendor_services))
+			for(var/service_id in cyberpunk_vendor_services)
+				var/service_type = service_pool[service_id]
+				if(service_type)
+					services += new service_type
+		else
+			for(var/service_id in service_pool)
+				var/service_type = service_pool[service_id]
+				services += new service_type
 	cyberpunk_setup_npc_profile("Need something?", cyberpunk_vendor_profile, "independent", dialog, cyberpunk_city_shop_items(cyberpunk_vendor_categories), services)
 
 /proc/cyberpunk_city_shop_items(list/categories)
@@ -1123,7 +1138,13 @@
 		new /datum/cyberpunk_npc_shop_item("water", "Water", "Sealed drinking water.", /obj/item/reagent_containers/cup/soda_cans/sodawater, "water", 20, 5, 12),
 		new /datum/cyberpunk_npc_shop_item("cigarettes", "Cigarettes", "A disposable pack of smokes.", /obj/item/storage/fancy/cigarettes, "cigarettes", 45, 8, 6),
 		new /datum/cyberpunk_npc_shop_item("toy_ball", "Toy", "Cheap distraction.", /obj/item/toy/basketball, "toys", 70, 15, 2),
+		new /datum/cyberpunk_npc_shop_item("plush", "Plush toy", "Soft shelf toy.", /obj/item/toy/plush, "toys", 80, 15, 3),
 		new /datum/cyberpunk_npc_shop_item("jumpsuit", "Equipment", "Basic clothes.", /obj/item/clothing/under/color/grey, "equipment", 90, 20, 3),
+		new /datum/cyberpunk_npc_shop_item("grey_clothes", "Basic clothes", "Clean streetwear basics.", /obj/item/clothing/under/color/grey, "clothing", 90, 20, 5),
+		new /datum/cyberpunk_npc_shop_item("black_sneakers", "Black sneakers", "Cheap walking shoes.", /obj/item/clothing/shoes/sneakers/black, "clothing", 60, 15, 5),
+		new /datum/cyberpunk_npc_shop_item("paper", "Paper", "Blank city paperwork.", /obj/item/paper, "misc", 5, 1, 20),
+		new /datum/cyberpunk_npc_shop_item("pen", "Pen", "Disposable writing tool.", /obj/item/pen, "misc", 10, 2, 12),
+		new /datum/cyberpunk_npc_shop_item("flashlight", "Flashlight", "Small utility light.", /obj/item/flashlight, "misc", 45, 10, 6),
 		new /datum/cyberpunk_npc_shop_item("parts", "Machine parts", "Generic stock part.", /obj/item/stock_parts/scanning_module, "parts", 120, 25, 4),
 	)
 	if(!length(categories))
@@ -1167,6 +1188,38 @@
 	cyberpunk_vendor_profile = "gear vendor"
 	cyberpunk_vendor_categories = list("equipment", "toys")
 
+/mob/living/carbon/human/cyberpunk_npc/vendor/misc
+	real_name = "city goods vendor"
+	name = "city goods vendor"
+	cyberpunk_vendor_profile = "city goods vendor"
+	cyberpunk_vendor_categories = list("misc")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/toys
+	real_name = "toy vendor"
+	name = "toy vendor"
+	cyberpunk_vendor_profile = "toy vendor"
+	cyberpunk_vendor_categories = list("toys")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/clothing
+	real_name = "clothing vendor"
+	name = "clothing vendor"
+	cyberpunk_vendor_profile = "clothing vendor"
+	cyberpunk_vendor_categories = list("clothing")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/stylist
+	real_name = "stylist"
+	name = "stylist"
+	cyberpunk_vendor_profile = "stylist"
+	cyberpunk_vendor_categories = list("clothing")
+	cyberpunk_vendor_services = list("stylist")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/designer
+	real_name = "designer"
+	name = "designer"
+	cyberpunk_vendor_profile = "designer"
+	cyberpunk_vendor_categories = list("clothing")
+	cyberpunk_vendor_services = list("designer")
+
 /mob/living/carbon/human/cyberpunk_npc/vendor/implants
 	real_name = "implant vendor"
 	name = "implant vendor"
@@ -1205,6 +1258,45 @@
 	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/security
 	cyberpunk_vendor_profile = "security contractor"
 	cyberpunk_vendor_categories = list("equipment")
+
+/obj/effect/landmark/cyberpunk_npc_trader
+	name = "cyberpunk npc trader"
+	var/trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor
+
+/obj/effect/landmark/cyberpunk_npc_trader/Initialize(mapload)
+	. = ..()
+	if(!mapload)
+		return
+	var/turf/spawn_turf = get_turf(src)
+	if(!spawn_turf)
+		return INITIALIZE_HINT_QDEL
+	var/mob/living/carbon/human/cyberpunk_npc/trader = new trader_type(spawn_turf)
+	trader.setDir(dir)
+	return INITIALIZE_HINT_QDEL
+
+/obj/effect/landmark/cyberpunk_npc_trader/food
+	name = "cyberpunk food trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/food
+
+/obj/effect/landmark/cyberpunk_npc_trader/stylist
+	name = "cyberpunk stylist trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/stylist
+
+/obj/effect/landmark/cyberpunk_npc_trader/designer
+	name = "cyberpunk designer trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/designer
+
+/obj/effect/landmark/cyberpunk_npc_trader/misc
+	name = "cyberpunk misc trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/misc
+
+/obj/effect/landmark/cyberpunk_npc_trader/toys
+	name = "cyberpunk toy trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/toys
+
+/obj/effect/landmark/cyberpunk_npc_trader/clothing
+	name = "cyberpunk clothing trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/clothing
 
 /datum/cyberpunk_npc_profile
 	var/mob/living/owner

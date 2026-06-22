@@ -101,6 +101,9 @@
 		return !!vars["active"]
 	return FALSE
 
+/obj/item/organ/cyberimp/proc/cyberpsychosis_ignores_cooldown()
+	return owner?.cyberpsychosis_active || owner?.has_cyberpunk_status_effect("cyberpsychosis")
+
 /obj/item/organ/cyberimp/proc/skill_interface_toggle(mob/living/user)
 	if(!can_skill_interface_toggle())
 		return FALSE
@@ -388,7 +391,7 @@
 		if(owner)
 			to_chat(owner, span_warning("[capitalize(src)] doesn't respond."))
 		return FALSE
-	if(!COOLDOWN_FINISHED(src, os_cooldown))
+	if(!cyberpsychosis_ignores_cooldown() && !COOLDOWN_FINISHED(src, os_cooldown))
 		to_chat(owner, span_warning("[capitalize(src)] is still cooling down."))
 		return FALSE
 	active = TRUE
@@ -721,7 +724,7 @@
 		addtimer(CALLBACK(src, PROC_REF(clear_stuns)), stun_cap_amount, TIMER_UNIQUE|TIMER_OVERRIDE)
 
 /obj/item/organ/cyberimp/brain/anti_stun/proc/clear_stuns()
-	if(!is_implant_functional() || !COOLDOWN_FINISHED(src, implant_cooldown))
+	if(!is_implant_functional() || (!cyberpsychosis_ignores_cooldown() && !COOLDOWN_FINISHED(src, implant_cooldown)))
 		return
 
 	owner.SetStun(0)

@@ -380,6 +380,10 @@
 	var/time_at_min_mood = 0
 	var/last_control_loss = 0
 	var/last_cyberpsychosis_time = 0
+	var/cyberpsychosis_active = FALSE
+	var/cyberpsychosis_next_ai_tick = 0
+	var/cyberpsychosis_next_implant_tick = 0
+	var/mob/living/cyberpsychosis_target
 	var/last_combat_time = 0
 	/// Cooldown for Trans Travel defensive displacement from modular Cyberpunk protection.
 	var/cyberpunk_next_trans_travel_defense = 0

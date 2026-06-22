@@ -83,7 +83,7 @@
 	for(var/attribute_id in ATTRIBUTE_ALL)
 		var/attribute_editable = !!user_mind
 		attributes[attribute_id] = list(
-			"value" = user_mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT,
+			"value" = user_mind?.get_attribute_base_value(attribute_id) || ATTRIBUTE_DEFAULT,
 			"min" = ATTRIBUTE_MINIMUM,
 			"max" = ATTRIBUTE_MAXIMUM,
 			"super_threshold" = ATTRIBUTE_SUPER_THRESHOLD,
@@ -184,7 +184,7 @@
 	if(!delta)
 		return FALSE
 
-	var/current_value = user_mind.get_attribute_value(attribute_id)
+	var/current_value = user_mind.get_attribute_base_value(attribute_id)
 	if(delta > 0)
 		if(user_mind.level_points <= 0 || current_value >= ATTRIBUTE_MAXIMUM)
 			return FALSE

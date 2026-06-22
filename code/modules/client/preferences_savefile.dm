@@ -500,7 +500,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 	var/list/saved_attributes = list()
 	for(var/attribute_id in ATTRIBUTE_ALL)
 		var/role_bonus = source_mind.applied_character_role_attributes?[attribute_id] || 0
-		saved_attributes[attribute_id] = clamp(round(source_mind.get_attribute_value(attribute_id) - role_bonus), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
+		saved_attributes[attribute_id] = clamp(round(source_mind.get_attribute_base_value(attribute_id) - role_bonus), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
 	character_setup_attributes = saved_attributes
 
 	var/list/saved_perks = list()
@@ -652,7 +652,7 @@ SAVEFILE UPDATING/VERSIONING - 'Simplified', or rather, more coder-friendly ~Car
 		var/bonus = clamp(round(attribute_bonuses[attribute_id] || 0), 0, ATTRIBUTE_MAXIMUM - ATTRIBUTE_MINIMUM)
 		if(bonus <= 0)
 			continue
-		var/current_value = target_human.mind.get_attribute_value(attribute_id)
+		var/current_value = target_human.mind.get_attribute_base_value(attribute_id)
 		var/new_value = min(ATTRIBUTE_MAXIMUM, current_value + bonus)
 		target_human.mind.set_attribute_value(attribute_id, new_value)
 		var/applied_bonus = new_value - current_value

@@ -384,6 +384,8 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(!owner || !is_implant_functional())
 		return 1
 	var/multiplier = owner.get_cyberpunk_implant_cooldown_multiplier()
+	if(multiplier <= 0)
+		return 0
 	multiplier /= get_corporate_synergy_multiplier()
 	return max(0.05, multiplier)
 
@@ -391,6 +393,8 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(!owner || !is_implant_functional())
 		return 1
 	var/multiplier = owner.get_cyberpunk_implant_passive_interval_multiplier()
+	if(multiplier <= 0)
+		return 0
 	multiplier /= get_corporate_synergy_multiplier()
 	return max(0.05, multiplier)
 

@@ -91,6 +91,7 @@
 	process_chromity_overheat(seconds_per_tick)
 	process_mood_state(seconds_per_tick)
 	process_cyberpunk_status_effects(seconds_per_tick)
+	process_cyberpsychosis(seconds_per_tick)
 	apply_body_state_effects()
 
 /mob/living/get_status_tab_items()
@@ -318,11 +319,106 @@
 		return FALSE
 	last_cyberpsychosis_time = world.time
 	visible_message(span_warning("[src] spasms under chrome overload!"), span_userdanger("Your neural interface burns with static. You lose your grip on reality."))
-	apply_status_effect(/datum/status_effect/hallucination, 2 MINUTES)
-	adjust_jitter(30 SECONDS)
-	adjust_confusion_up_to(20 SECONDS, 40 SECONDS)
-	Stun(5 SECONDS)
+	apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/cyberpsychosis, CYBERPSYCHOSIS_DURATION, 1, src, FALSE)
+	apply_status_effect(/datum/status_effect/hallucination, CYBERPSYCHOSIS_DURATION)
+	adjust_jitter(CYBERPSYCHOSIS_DURATION)
+	adjust_confusion_up_to(10 SECONDS, 20 SECONDS)
 	return TRUE
+
+/mob/living/proc/start_cyberpsychosis_takeover()
+	if(cyberpsychosis_active)
+		return FALSE
+	cyberpsychosis_active = TRUE
+	cyberpsychosis_next_ai_tick = 0
+	cyberpsychosis_next_implant_tick = 0
+	cyberpsychosis_target = null
+	set_combat_mode(TRUE)
+	log_message("entered cyberpsychosis takeover", LOG_ATTACK)
+	return TRUE
+
+/mob/living/proc/end_cyberpsychosis_takeover()
+	if(!cyberpsychosis_active)
+		return FALSE
+	cyberpsychosis_active = FALSE
+	cyberpsychosis_next_ai_tick = 0
+	cyberpsychosis_next_implant_tick = 0
+	cyberpsychosis_target = null
+	to_chat(src, span_notice("The combat loop releases your body."))
+	log_message("left cyberpsychosis takeover", LOG_ATTACK)
+	return TRUE
+
+/mob/living/proc/process_cyberpsychosis(seconds_per_tick)
+	if(!cyberpsychosis_active)
+		return
+	if(stat == DEAD || !has_cyberpunk_status_effect("cyberpsychosis"))
+		end_cyberpsychosis_takeover()
+		return
+	if(world.time < cyberpsychosis_next_ai_tick)
+		return
+	cyberpsychosis_next_ai_tick = world.time + CYBERPSYCHOSIS_AI_TICK
+	maintain_cyberpsychosis_body_control()
+	set_combat_mode(TRUE)
+	if(world.time >= cyberpsychosis_next_implant_tick)
+		cyberpsychosis_next_implant_tick = world.time + CYBERPSYCHOSIS_IMPLANT_TICK
+		INVOKE_ASYNC(src, PROC_REF(use_cyberpsychosis_implants))
+	cyberpsychosis_target = find_cyberpsychosis_target()
+	if(!cyberpsychosis_target)
+		return
+	face_atom(cyberpsychosis_target)
+	if(!Adjacent(cyberpsychosis_target))
+		step_to(src, cyberpsychosis_target, 1)
+	INVOKE_ASYNC(src, PROC_REF(execute_cyberpsychosis_attack), cyberpsychosis_target)
+
+/mob/living/proc/execute_cyberpsychosis_attack(mob/living/target)
+	if(!cyberpsychosis_active)
+		return
+	if(stat == DEAD || !has_cyberpunk_status_effect("cyberpsychosis"))
+		return
+	if(QDELETED(target) || target.stat == DEAD)
+		return
+	if(!(target in view(CYBERPSYCHOSIS_VIEW_RANGE, src)))
+		return
+	set_combat_mode(TRUE)
+	face_atom(target)
+	ClickOn(target)
+
+/mob/living/proc/maintain_cyberpsychosis_body_control()
+	SetStun(0, TRUE)
+	SetKnockdown(0, TRUE)
+	SetImmobilized(0, TRUE)
+	SetParalyzed(0, TRUE)
+	SetUnconscious(0, TRUE)
+	set_incapacitated(0, TRUE)
+
+/mob/living/proc/find_cyberpsychosis_target()
+	var/mob/living/best_target
+	var/best_distance = INFINITY
+	for(var/mob/living/candidate in view(CYBERPSYCHOSIS_VIEW_RANGE, src))
+		if(candidate == src)
+			continue
+		if(candidate.stat == DEAD)
+			continue
+		if(candidate.invisibility > see_invisible)
+			continue
+		var/candidate_distance = get_dist(src, candidate)
+		if(candidate_distance >= best_distance)
+			continue
+		best_distance = candidate_distance
+		best_target = candidate
+	return best_target
+
+/mob/living/proc/use_cyberpsychosis_implants()
+	if(!iscarbon(src))
+		return FALSE
+	var/used_implant = FALSE
+	var/mob/living/carbon/carbon_owner = src
+	for(var/obj/item/organ/cyberimp/implant as anything in carbon_owner.organs)
+		if(!implant.can_skill_interface_toggle())
+			continue
+		if(implant.get_skill_interface_active())
+			continue
+		used_implant |= implant.skill_interface_toggle(src)
+	return used_implant
 
 /mob/living/proc/process_equipment_style(seconds_per_tick)
 	style_update_accumulator += seconds_per_tick
@@ -559,6 +655,27 @@
 	action_speed_modifier = 0.01
 	move_speed_modifier = 0.005
 	shareable = FALSE
+
+/datum/cyberpunk_status_effect/cyberpsychosis
+	id = "cyberpsychosis"
+	name = "Cyberpsychosis"
+	desc = "Chrome overload has handed motor control to a hostile combat loop."
+	effect_kind = "debuff"
+	check_modifier = 4
+	action_speed_modifier = -0.1
+	move_speed_modifier = -0.15
+	shareable = FALSE
+	unique_effect = "cyberpsychosis"
+
+/datum/cyberpunk_status_effect/cyberpsychosis/on_apply(mob/living/new_owner)
+	. = ..()
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		attribute_modifiers[attribute_id] = CYBERPSYCHOSIS_ATTRIBUTE_BONUS
+	owner?.start_cyberpsychosis_takeover()
+
+/datum/cyberpunk_status_effect/cyberpsychosis/on_remove()
+	owner?.end_cyberpsychosis_takeover()
+	return ..()
 
 /mob/living/proc/apply_cyberpunk_status_effect(effect_type, duration = 0, power = 1, source = null, share_cohort = TRUE)
 	if(!ispath(effect_type, /datum/cyberpunk_status_effect))
@@ -1266,10 +1383,14 @@
 	return FALSE
 
 /mob/living/proc/get_cyberpunk_implant_cooldown_multiplier()
+	if(cyberpsychosis_active || has_cyberpunk_status_effect("cyberpsychosis"))
+		return 0
 	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 4, "value_1")
 	return max(0.1, 1 - (reduction * 0.01))
 
 /mob/living/proc/get_cyberpunk_implant_passive_interval_multiplier()
+	if(cyberpsychosis_active || has_cyberpunk_status_effect("cyberpsychosis"))
+		return 0
 	var/frequency_bonus = get_cyberpunk_skill_perk_bonus(SKILL_COMPATIBILITY, 4, "value_2")
 	return 1 / max(0.1, 1 + (frequency_bonus * 0.01))
 

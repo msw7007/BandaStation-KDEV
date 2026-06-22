@@ -335,7 +335,7 @@
 	var/attribute_points_max = job.get_cyberpunk_role_attribute_points()
 	var/list/attributes = list()
 	for(var/attribute_id in ATTRIBUTE_ALL)
-		var/base_value = user_mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT
+		var/base_value = user_mind?.get_attribute_base_value(attribute_id) || ATTRIBUTE_DEFAULT
 		var/bonus_value = clamp(round(attribute_bonuses[attribute_id] || 0), 0, ATTRIBUTE_MAXIMUM - ATTRIBUTE_MINIMUM)
 		attributes[attribute_id] = list(
 			"base_value" = base_value,
@@ -502,7 +502,7 @@
 
 /datum/preference_middleware/jobs/proc/get_effective_role_attribute_value(datum/mind/user_mind, datum/job/job, attribute_id)
 	var/list/attribute_bonuses = job.get_cyberpunk_role_attribute_point_limits()
-	var/base_value = user_mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT
+	var/base_value = user_mind?.get_attribute_base_value(attribute_id) || ATTRIBUTE_DEFAULT
 	return min(ATTRIBUTE_MAXIMUM, base_value + max(0, round(attribute_bonuses[attribute_id] || 0)))
 
 /datum/preference_middleware/jobs/proc/can_role_skill_use_attribute(datum/mind/user_mind, list/setup, datum/job/job, datum/skill/skill_datum, skill, point_delta)

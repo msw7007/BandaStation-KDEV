@@ -54,6 +54,10 @@
 	var/obj/projectile/damaging_projectile = attacking_item
 	if(istype(damaging_projectile) && damaging_projectile.cyberpunk_hide_wound_source)
 		damage_source = null
+	var/resolved_brute_type = brute_type
+	if(isnull(resolved_brute_type) && !sharpness)
+		resolved_brute_type = BODYPART_DAMAGE_BLUNT
+	var/resolved_burn_type = burn_type || BODYPART_DAMAGE_HEAT
 	switch(damagetype)
 		if(BRUTE)
 			if(isbodypart(def_zone))
@@ -69,13 +73,13 @@
 					attack_direction = attack_direction,
 					damage_source = damage_source,
 					wound_clothing = wound_clothing,
-					brute_type = brute_type,
+					brute_type = resolved_brute_type,
 					precise_zone = precise_zone || actual_hit.body_zone,
 				))
 					update_damage_overlays()
 				damage_dealt = actual_hit.get_damage() - delta // Unfortunately bodypart receive_damage doesn't return damage dealt so we do it manually
 			else
-				damage_dealt = -1 * adjust_brute_loss(damage_amount, forced = forced, brute_type = brute_type)
+				damage_dealt = -1 * adjust_brute_loss(damage_amount, forced = forced, brute_type = resolved_brute_type)
 		if(BURN)
 			if(isbodypart(def_zone))
 				var/obj/item/bodypart/actual_hit = def_zone
@@ -90,14 +94,14 @@
 					attack_direction = attack_direction,
 					damage_source = damage_source,
 					wound_clothing = wound_clothing,
-					burn_type = burn_type,
+					burn_type = resolved_burn_type,
 					precise_zone = precise_zone || actual_hit.body_zone,
 				))
 					update_damage_overlays()
 				damage_dealt = actual_hit.get_damage() - delta // See above
 			else
-				damage_dealt = -1 * adjust_fire_loss(damage_amount, forced = forced, burn_type = burn_type)
-			if(burn_type == BODYPART_DAMAGE_COLD && damage_dealt > 0)
+				damage_dealt = -1 * adjust_fire_loss(damage_amount, forced = forced, burn_type = resolved_burn_type)
+			if(resolved_burn_type == BODYPART_DAMAGE_COLD && damage_dealt > 0)
 				adjust_chromity_overheat(-damage_dealt * 5, respect_floor = TRUE)
 		if(TOX)
 			damage_dealt = -1 * adjust_tox_loss(damage_amount, forced = forced)

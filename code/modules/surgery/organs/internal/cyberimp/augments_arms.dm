@@ -549,7 +549,7 @@
 		return NONE
 	if(HAS_TRAIT(source, TRAIT_HULK)) //NO HULK
 		return NONE
-	if(!COOLDOWN_FINISHED(src, slam_cooldown) && ishuman(target))
+	if(!cyberpsychosis_ignores_cooldown() && !COOLDOWN_FINISHED(src, slam_cooldown) && ishuman(target))
 		return NONE
 	if(!source.can_unarmed_attack())
 		return COMPONENT_SKIP_ATTACK
@@ -799,7 +799,7 @@
 	COOLDOWN_DECLARE(soundray_cooldown)
 
 /obj/item/organ/cyberimp/arm/soundray/ui_action_click(mob/user, datum/action/source)
-	if(!is_implant_functional() || !COOLDOWN_FINISHED(src, soundray_cooldown))
+	if(!is_implant_functional() || (!cyberpsychosis_ignores_cooldown() && !COOLDOWN_FINISHED(src, soundray_cooldown)))
 		return
 	add_chromity_overheat(20)
 	COOLDOWN_START(src, soundray_cooldown, 12 SECONDS * get_cyberpunk_implant_cooldown_multiplier())
@@ -826,7 +826,7 @@
 	COOLDOWN_DECLARE(soundwave_cooldown)
 
 /obj/item/organ/cyberimp/arm/soundwave/ui_action_click(mob/user, datum/action/source)
-	if(!is_implant_functional() || !COOLDOWN_FINISHED(src, soundwave_cooldown))
+	if(!is_implant_functional() || (!cyberpsychosis_ignores_cooldown() && !COOLDOWN_FINISHED(src, soundwave_cooldown)))
 		return
 	add_chromity_overheat(25)
 	COOLDOWN_START(src, soundwave_cooldown, 15 SECONDS * get_cyberpunk_implant_cooldown_multiplier())

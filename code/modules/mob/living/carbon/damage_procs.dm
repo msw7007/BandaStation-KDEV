@@ -423,7 +423,11 @@
 
 	var/obj/item/bodypart/picked = pick(parts)
 	var/damage_calculator = picked.get_damage()
-	if(picked.receive_damage(abs(brute), abs(burn), check_armor ? run_armor_check(picked, (brute ? MELEE : burn ? FIRE : null)) : FALSE, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, brute_type = brute_type, burn_type = burn_type, precise_zone = precise_zone))
+	var/resolved_brute_type = brute_type
+	if(isnull(resolved_brute_type) && !sharpness)
+		resolved_brute_type = BODYPART_DAMAGE_BLUNT
+	var/resolved_burn_type = burn_type || BODYPART_DAMAGE_HEAT
+	if(picked.receive_damage(abs(brute), abs(burn), check_armor ? run_armor_check(picked, (brute ? MELEE : burn ? FIRE : null)) : FALSE, wound_bonus = wound_bonus, exposed_wound_bonus = exposed_wound_bonus, sharpness = sharpness, brute_type = resolved_brute_type, burn_type = resolved_burn_type, precise_zone = precise_zone))
 		update_damage_overlays()
 	return (damage_calculator - picked.get_damage())
 
@@ -467,6 +471,8 @@
 	// treat negative args as positive
 	brute = abs(brute)
 	burn = abs(burn)
+	brute_type ||= BODYPART_DAMAGE_BLUNT
+	burn_type ||= BODYPART_DAMAGE_HEAT
 
 	var/list/obj/item/bodypart/parts = get_damageable_bodyparts(required_bodytype)
 	var/update = NONE
