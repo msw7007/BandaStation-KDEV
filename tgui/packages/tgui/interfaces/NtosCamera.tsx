@@ -40,7 +40,7 @@ type NtosCameraData =
 export const NtosCamera = (props) => {
   return (
     <NtosWindow width={400} height={600}>
-      <NtosWindow.Content scrollable>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
         <NtosCameraContent />
       </NtosWindow.Content>
     </NtosWindow>

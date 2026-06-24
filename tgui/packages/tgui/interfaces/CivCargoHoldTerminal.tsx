@@ -61,8 +61,8 @@ export const CivCargoHoldTerminal = (props) => {
   const listBounties = data.listBounty || [];
 
   return (
-    <Window width={580} height={375}>
-      <Window.Content scrollable>
+    <Window width={580} height={375} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         <Flex>
           <Flex.Item grow>
             <Section>

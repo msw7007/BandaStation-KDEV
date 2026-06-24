@@ -8,8 +8,8 @@ export const StationAlertConsole = (props) => {
   const { data } = useBackend();
   const { cameraView } = data;
   return (
-    <Window width={cameraView ? 390 : 345} height={587}>
-      <Window.Content scrollable>
+    <Window width={cameraView ? 390 : 345} height={587} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         <StationAlertConsoleContent />
       </Window.Content>
     </Window>

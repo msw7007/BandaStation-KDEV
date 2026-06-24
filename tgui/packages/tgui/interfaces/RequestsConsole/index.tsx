@@ -10,8 +10,13 @@ export const RequestsConsole = (props) => {
   const { act, data } = useBackend<RequestsData>();
   const { department } = data;
   return (
-    <Window title={`${department} Requests Console`} width={500} height={600}>
-      <Window.Content>
+    <Window
+      title={`${department} Requests Console`}
+      width={500}
+      height={600}
+      theme="cyberpunk"
+    >
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <RequestsConsoleContent />
       </Window.Content>
     </Window>

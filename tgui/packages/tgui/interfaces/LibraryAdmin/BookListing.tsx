@@ -23,7 +23,7 @@ export function BookListing(props) {
     <Stack fill vertical justify="space-between">
       <Stack.Item>
         <Box fillPositionedParent bottom="25px">
-          <Window.Content scrollable>
+          <Window.Content scrollable className="CyberpunkPanel StyleGuide">
             <SearchAndDisplay />
           </Window.Content>
         </Box>

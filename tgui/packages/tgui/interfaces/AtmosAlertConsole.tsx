@@ -13,8 +13,8 @@ export const AtmosAlertConsole = (props) => {
   const { priority = [], minor = [] } = data;
 
   return (
-    <Window width={350} height={300}>
-      <Window.Content scrollable>
+    <Window width={350} height={300} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         <Section title="Alarms">
           <ul>
             {priority.length === 0 && (

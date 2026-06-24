@@ -58,7 +58,7 @@ type Slot = {
 export const NtosCard = (props) => {
   return (
     <NtosWindow width={500} height={670}>
-      <NtosWindow.Content scrollable>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
         <NtosCardContent />
       </NtosWindow.Content>
     </NtosWindow>

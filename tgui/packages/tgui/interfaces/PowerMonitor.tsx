@@ -67,8 +67,8 @@ function nameSort(a: Area, b: Area): number {
 
 export function PowerMonitor() {
   return (
-    <Window width={550} height={700}>
-      <Window.Content>
+    <Window width={550} height={700} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <PowerMonitorContent />
       </Window.Content>
     </Window>

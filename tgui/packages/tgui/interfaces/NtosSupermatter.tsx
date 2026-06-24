@@ -15,7 +15,7 @@ export const NtosSupermatter = (props) => {
 
   return (
     <NtosWindow height={400} width={700}>
-      <NtosWindow.Content>
+      <NtosWindow.Content className="CyberpunkPanel StyleGuide">
         {activeSM ? (
           <SupermatterContent
             {...activeSM}

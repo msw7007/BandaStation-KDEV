@@ -31,8 +31,8 @@ export const Wires = (props) => {
   const dynamicHeight = 150 + wires.length * 30 + (proper_name ? 30 : 0);
 
   return (
-    <Window width={350} height={dynamicHeight}>
-      <Window.Content>
+    <Window width={350} height={dynamicHeight} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <Stack fill vertical>
           {!!proper_name && (
             <Stack.Item>

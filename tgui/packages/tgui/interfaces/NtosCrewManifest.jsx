@@ -10,7 +10,7 @@ export const NtosCrewManifest = (props) => {
   const { manifest = {} } = data;
   return (
     <NtosWindow width={400} height={480}>
-      <NtosWindow.Content scrollable>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
         <Section
           title="Список экипажа"
           buttons={

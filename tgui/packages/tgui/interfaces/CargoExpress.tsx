@@ -33,8 +33,8 @@ export function CargoExpress(props) {
   const { beaconError, canBeacon, message, locked } = data;
 
   return (
-    <Window width={600} height={700}>
-      <Window.Content>
+    <Window width={600} height={700} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         {locked ? (
           <Section fill>
             <Stack fill vertical textAlign={'center'} justify={'center'}>

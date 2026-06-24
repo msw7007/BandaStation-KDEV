@@ -22,8 +22,8 @@ export const CargoHoldTerminal = (props) => {
   const { points, pad, sending, status_report } = data;
 
   return (
-    <Window width={600} height={230}>
-      <Window.Content scrollable>
+    <Window width={600} height={230} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         <Section>
           <LabeledList>
             <LabeledList.Item label="Current Cargo Value">

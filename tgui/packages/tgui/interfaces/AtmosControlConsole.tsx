@@ -41,8 +41,8 @@ export const AtmosControlConsole = (props) => {
       : chambers.find((chamber) => chamber.id === chamberId);
   const [setActiveGasId, setActiveReactionId] = atmosHandbookHooks();
   return (
-    <Window width={550} height={350}>
-      <Window.Content scrollable>
+    <Window width={550} height={350} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         {chambers.length > 1 && (
           <Section title="Chamber Selection">
             <Dropdown

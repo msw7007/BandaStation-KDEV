@@ -39,7 +39,7 @@ export function ModifyPage(props) {
     : [];
 
   return (
-    <Window.Content scrollable>
+    <Window.Content scrollable className="CyberpunkPanel StyleGuide">
       <NoticeBox>
         Heads Up! We do not allow you to fully delete books in game
         <br />

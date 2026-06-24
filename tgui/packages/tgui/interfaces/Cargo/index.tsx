@@ -20,8 +20,8 @@ enum TAB {
 
 export function Cargo(props) {
   return (
-    <Window width={800} height={750}>
-      <Window.Content>
+    <Window width={800} height={750} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <CargoContent />
       </Window.Content>
     </Window>

@@ -33,9 +33,9 @@ export const OperatingComputer = () => {
     <Window
       width={tab === ComputerTabs.PatientState ? 350 : 430}
       height={610}
-      theme="operating_computer"
+      theme="cyberpunk"
     >
-      <Window.Content>
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <Stack vertical fill>
           <Stack.Item>
             <Tabs fluid>

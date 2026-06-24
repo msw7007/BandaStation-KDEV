@@ -17,7 +17,7 @@ export const NtosCivCargoHoldTerminal = (props) => {
   const out_text = 'To begin, insert your ID into the console.';
   return (
     <NtosWindow width={580} height={375}>
-      <NtosWindow.Content scrollable>
+      <NtosWindow.Content scrollable className="CyberpunkPanel StyleGuide">
         <Flex>
           <Flex.Item grow>
             <NoticeBox color={!id_inserted ? 'default' : 'blue'}>

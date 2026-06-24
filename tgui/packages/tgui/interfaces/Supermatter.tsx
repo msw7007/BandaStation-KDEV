@@ -424,8 +424,8 @@ export const Supermatter = (props) => {
   const { act, data } = useBackend<SupermatterData>();
   const { sm_data, gas_metadata } = data;
   return (
-    <Window width={700} height={400} theme="ntos">
-      <Window.Content>
+    <Window width={700} height={400} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <SupermatterContent {...sm_data[0]} gas_metadata={gas_metadata} />
       </Window.Content>
     </Window>

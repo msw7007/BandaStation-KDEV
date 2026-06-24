@@ -17,7 +17,12 @@ import { PageSelect } from './LibraryConsole/components/PageSelect';
 
 export const LibraryVisitor = (props) => {
   return (
-    <Window title="Library Lookup Console" width={702} height={421}>
+    <Window
+      title="Library Lookup Console"
+      width={702}
+      height={421}
+      theme="cyberpunk"
+    >
       <BookListing />
     </Window>
   );
@@ -38,7 +43,7 @@ const BookListing = (props) => {
     <Stack fill vertical justify="space-between">
       <Stack.Item>
         <Box fillPositionedParent bottom="25px">
-          <Window.Content scrollable>
+          <Window.Content scrollable className="CyberpunkPanel StyleGuide">
             <SearchAndDisplay />
           </Window.Content>
         </Box>

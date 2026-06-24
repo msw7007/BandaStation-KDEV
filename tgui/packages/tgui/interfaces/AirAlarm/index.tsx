@@ -21,8 +21,8 @@ export function AirAlarm(props) {
 
   return (
     <ModalContext.Provider value={modalState}>
-      <Window width={475} height={650}>
-        <Window.Content>
+      <Window width={475} height={650} theme="cyberpunk">
+        <Window.Content className="CyberpunkPanel StyleGuide">
           <Stack fill vertical>
             <Stack.Item mb={-1}>
               <InterfaceLockNoticeBox />

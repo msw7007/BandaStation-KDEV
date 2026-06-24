@@ -83,8 +83,8 @@ const selectCameras = (cameras: Camera[], searchText = ''): Camera[] => {
 
 export const CameraConsole = (props) => {
   return (
-    <Window width={850} height={708}>
-      <Window.Content>
+    <Window width={850} height={708} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <CameraContent />
       </Window.Content>
     </Window>

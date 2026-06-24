@@ -13,8 +13,8 @@ import { InterfaceLockNoticeBox } from './common/InterfaceLockNoticeBox';
 
 export const Apc = (props) => {
   return (
-    <Window width={450} height={445}>
-      <Window.Content scrollable>
+    <Window width={450} height={445} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         <ApcContent />
       </Window.Content>
     </Window>

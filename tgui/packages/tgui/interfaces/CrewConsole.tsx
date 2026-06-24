@@ -137,8 +137,8 @@ const HealthStat = (props: HealthStatProps) => {
 
 export const CrewConsole = () => {
   return (
-    <Window title="Crew Monitor" width={600} height={600}>
-      <Window.Content scrollable>
+    <Window title="Crew Monitor" width={600} height={600} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         <Section minHeight="540px">
           <CrewTable />
         </Section>

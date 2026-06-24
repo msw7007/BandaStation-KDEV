@@ -54,8 +54,8 @@ export function ApcControl(props) {
   const { authenticated } = data;
 
   return (
-    <Window title="APC Controller" width={550} height={500}>
-      <Window.Content>
+    <Window title="APC Controller" width={550} height={500} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         {authenticated ? <ApcLoggedIn /> : <ApcLoggedOut />}
       </Window.Content>
     </Window>

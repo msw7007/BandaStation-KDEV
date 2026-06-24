@@ -5,8 +5,15 @@ import { Window } from '../layouts';
 
 export const LibraryScanner = (props) => {
   return (
-    <Window title="Library Scanner" width={350} height={150}>
-      <BookScanning />
+    <Window
+      title="Library Scanner"
+      width={350}
+      height={150}
+      theme="cyberpunk"
+    >
+      <Window.Content className="CyberpunkPanel StyleGuide">
+        <BookScanning />
+      </Window.Content>
     </Window>
   );
 };

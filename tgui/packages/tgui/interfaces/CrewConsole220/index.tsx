@@ -17,8 +17,8 @@ import type { CrewConsoleData, CrewSensor } from './types';
 
 export function CrewConsole220(props) {
   return (
-    <Window title="Crew Monitor" width={1000} height={750}>
-      <Window.Content>
+    <Window title="Crew Monitor" width={1000} height={750} theme="cyberpunk">
+      <Window.Content className="CyberpunkPanel StyleGuide">
         <CrewContent />
       </Window.Content>
     </Window>

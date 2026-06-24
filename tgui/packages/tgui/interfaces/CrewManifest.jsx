@@ -20,8 +20,8 @@ export const CrewManifest = (props) => {
   } = useBackend();
 
   return (
-    <Window title="Crew Manifest" width={350} height={500}>
-      <Window.Content scrollable>
+    <Window title="Crew Manifest" width={350} height={500} theme="cyberpunk">
+      <Window.Content scrollable className="CyberpunkPanel StyleGuide">
         {Object.entries(manifest).map(([dept, crew]) => (
           <Section
             className={`CrewManifest--${dept}`}

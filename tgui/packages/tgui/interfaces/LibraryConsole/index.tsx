@@ -28,7 +28,7 @@ export function LibraryConsole(props) {
         width={880}
         height={520}
       >
-        <Window.Content>
+        <Window.Content className="CyberpunkPanel StyleGuide">
           <Stack fill>
             <Stack.Item>
               <PopoutMenu />
