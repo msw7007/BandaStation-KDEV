@@ -8,7 +8,18 @@
 	return turfs
 
 /proc/cyberpunk_is_apartment_area(area/target_area)
-	return istype(target_area, /area/station/commons/dorms/persistent_apartment) || istype(target_area, /area/station/commons/dorms/apartment1) || istype(target_area, /area/station/commons/dorms/apartment2)
+	if(istype(target_area, /area/station/commons/dorms/persistent_apartment) || istype(target_area, /area/station/commons/dorms/apartment1) || istype(target_area, /area/station/commons/dorms/apartment2))
+		return TRUE
+	if(istype(target_area, /area/cyberpunk/city/housing/apartment))
+		return TRUE
+	return islist(target_area?.cyberpunk_world_tags) && ("apartment" in target_area.cyberpunk_world_tags)
+
+/proc/cyberpunk_is_business_area(area/target_area)
+	if(istype(target_area, /area/station/service/business))
+		return TRUE
+	if(istype(target_area, /area/cyberpunk/city/business))
+		return TRUE
+	return islist(target_area?.cyberpunk_world_tags) && ("business" in target_area.cyberpunk_world_tags)
 
 /obj/structure/cyberpunk_vehicle_parking
 	name = "vehicle parking anchor"

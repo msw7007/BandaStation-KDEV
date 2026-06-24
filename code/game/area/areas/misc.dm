@@ -202,6 +202,286 @@
 	cyberpunk_district_direction = "se"
 	cyberpunk_district_base_danger = 12
 
+/area/cyberpunk/city/business
+	name = "Бизнес-зона"
+	outdoors = FALSE
+	static_lighting = TRUE
+	base_lighting_alpha = 0
+	base_lighting_color = null
+	cyberpunk_district_id = "business"
+	cyberpunk_district_name = "Бизнес-зона"
+	cyberpunk_district_kind = "business"
+	cyberpunk_world_tags = list("business")
+	cyberpunk_district_base_danger = 6
+
+/area/cyberpunk/city/business/lot_01
+	name = "Бизнес-зона 01"
+
+/area/cyberpunk/city/business/lot_02
+	name = "Бизнес-зона 02"
+
+/area/cyberpunk/city/business/lot_03
+	name = "Бизнес-зона 03"
+
+/area/cyberpunk/city/business/lot_04
+	name = "Бизнес-зона 04"
+
+/area/cyberpunk/city/business/lot_05
+	name = "Бизнес-зона 05"
+
+/area/cyberpunk/city/business/lot_06
+	name = "Бизнес-зона 06"
+
+/area/cyberpunk/city/business/lot_07
+	name = "Бизнес-зона 07"
+
+/area/cyberpunk/city/business/lot_08
+	name = "Бизнес-зона 08"
+
+/area/cyberpunk/city/business/lot_09
+	name = "Бизнес-зона 09"
+
+/area/cyberpunk/city/business/lot_10
+	name = "Бизнес-зона 10"
+
+/area/cyberpunk/city/business/lot_11
+	name = "Бизнес-зона 11"
+
+/area/cyberpunk/city/business/lot_12
+	name = "Бизнес-зона 12"
+
+/area/cyberpunk/city/business/food
+	name = "Бизнес: еда"
+	cyberpunk_world_tags = list("business", "food")
+
+/area/cyberpunk/city/business/clinic
+	name = "Бизнес: клиника"
+	cyberpunk_world_tags = list("business", "medical")
+
+/area/cyberpunk/city/business/style
+	name = "Бизнес: стиль"
+	cyberpunk_world_tags = list("business", "style")
+
+/area/cyberpunk/city/business/workshop
+	name = "Бизнес: мастерская"
+	cyberpunk_world_tags = list("business", "workshop")
+
+/area/cyberpunk/city/business/club
+	name = "Бизнес: клуб"
+	cyberpunk_world_tags = list("business", "entertainment")
+
+/area/cyberpunk/city/business/office
+	name = "Бизнес: офис"
+	cyberpunk_world_tags = list("business", "office")
+
+/area/cyberpunk/city/housing
+	name = "Жилая зона"
+	outdoors = FALSE
+	static_lighting = TRUE
+	base_lighting_alpha = 0
+	base_lighting_color = null
+	cyberpunk_district_id = "housing"
+	cyberpunk_district_name = "Жилая зона"
+	cyberpunk_district_kind = "housing"
+	cyberpunk_world_tags = list("housing")
+	cyberpunk_district_base_danger = 5
+
+/area/cyberpunk/city/housing/apartment
+	name = "Квартира"
+	cyberpunk_district_kind = "apartment"
+	cyberpunk_world_tags = list("housing", "apartment")
+
+/area/cyberpunk/city/housing/apartment/unit_01
+	name = "Квартира 01"
+
+/area/cyberpunk/city/housing/apartment/unit_02
+	name = "Квартира 02"
+
+/area/cyberpunk/city/housing/apartment/unit_03
+	name = "Квартира 03"
+
+/area/cyberpunk/city/housing/apartment/unit_04
+	name = "Квартира 04"
+
+/area/cyberpunk/city/housing/apartment/unit_05
+	name = "Квартира 05"
+
+/area/cyberpunk/city/housing/apartment/unit_06
+	name = "Квартира 06"
+
+/area/cyberpunk/city/housing/apartment/unit_07
+	name = "Квартира 07"
+
+/area/cyberpunk/city/housing/apartment/unit_08
+	name = "Квартира 08"
+
+/area/cyberpunk/city/housing/apartment/unit_09
+	name = "Квартира 09"
+
+/area/cyberpunk/city/housing/apartment/unit_10
+	name = "Квартира 10"
+
+/area/cyberpunk/city/housing/apartment/unit_11
+	name = "Квартира 11"
+
+/area/cyberpunk/city/housing/apartment/unit_12
+	name = "Квартира 12"
+
+/area/cyberpunk/city/housing/apartment/unit_13
+	name = "Квартира 13"
+
+/area/cyberpunk/city/housing/apartment/unit_14
+	name = "Квартира 14"
+
+/area/cyberpunk/city/housing/apartment/unit_15
+	name = "Квартира 15"
+
+/area/cyberpunk/city/housing/apartment/unit_16
+	name = "Квартира 16"
+
+/area/cyberpunk/city/housing/tenement
+	name = "Муравейник"
+	cyberpunk_world_tags = list("housing", "tenement")
+	cyberpunk_district_base_danger = 10
+
+/area/cyberpunk/city/housing/hotel
+	name = "Отель"
+	cyberpunk_world_tags = list("housing", "hotel")
+
+/area/cyberpunk/city/housing/condo
+	name = "Жилой комплекс"
+	cyberpunk_world_tags = list("housing", "condo")
+
+/area/cyberpunk/city/civic
+	name = "Городская служба"
+	outdoors = FALSE
+	static_lighting = TRUE
+	base_lighting_alpha = 0
+	base_lighting_color = null
+	cyberpunk_district_id = "civic"
+	cyberpunk_district_name = "Городская служба"
+	cyberpunk_district_kind = "civic"
+	cyberpunk_world_tags = list("government", "civic")
+	cyberpunk_world_owner = "government"
+	cyberpunk_violence_control = "high"
+	cyberpunk_district_base_danger = 4
+
+/area/cyberpunk/city/civic/city_hall
+	name = "Мэрия"
+
+/area/cyberpunk/city/civic/police
+	name = "Полицейский участок"
+	cyberpunk_district_kind = "police"
+
+/area/cyberpunk/city/civic/court
+	name = "Суд"
+
+/area/cyberpunk/city/civic/tax_office
+	name = "Налоговая служба"
+
+/area/cyberpunk/city/civic/contract_office
+	name = "Контрактное бюро"
+
+/area/cyberpunk/city/public_service
+	name = "Городской сервис"
+	outdoors = FALSE
+	static_lighting = TRUE
+	base_lighting_alpha = 0
+	base_lighting_color = null
+	cyberpunk_district_id = "public_service"
+	cyberpunk_district_name = "Городской сервис"
+	cyberpunk_district_kind = "service"
+	cyberpunk_world_tags = list("service")
+	cyberpunk_district_base_danger = 6
+
+/area/cyberpunk/city/public_service/clinic
+	name = "Клиника"
+	cyberpunk_world_tags = list("service", "medical")
+
+/area/cyberpunk/city/public_service/food
+	name = "Пункт питания"
+	cyberpunk_world_tags = list("service", "food")
+
+/area/cyberpunk/city/public_service/stylist
+	name = "Стилист"
+	cyberpunk_world_tags = list("service", "style")
+
+/area/cyberpunk/city/public_service/designer
+	name = "Дизайнер"
+	cyberpunk_world_tags = list("service", "design")
+
+/area/cyberpunk/city/public_service/clothing
+	name = "Одежда"
+	cyberpunk_world_tags = list("service", "clothing")
+
+/area/cyberpunk/city/public_service/toys
+	name = "Игрушки"
+	cyberpunk_world_tags = list("service", "toys")
+
+/area/cyberpunk/city/public_service/general_store
+	name = "Лавка мелочей"
+	cyberpunk_world_tags = list("service", "general_store")
+
+/area/cyberpunk/city/industry
+	name = "Промышленная зона"
+	outdoors = FALSE
+	static_lighting = TRUE
+	base_lighting_alpha = 0
+	base_lighting_color = null
+	cyberpunk_district_id = "industry"
+	cyberpunk_district_name = "Промышленная зона"
+	cyberpunk_district_kind = "industry"
+	cyberpunk_world_tags = list("industry")
+	cyberpunk_district_base_danger = 12
+
+/area/cyberpunk/city/industry/factory
+	name = "Фабрика"
+
+/area/cyberpunk/city/industry/workshop
+	name = "Цех"
+
+/area/cyberpunk/city/industry/refinery
+	name = "Переработка"
+
+/area/cyberpunk/city/industry/loading_dock
+	name = "Погрузочная зона"
+
+/area/cyberpunk/city/infrastructure
+	name = "Инфраструктура"
+	outdoors = FALSE
+	static_lighting = TRUE
+	base_lighting_alpha = 0
+	base_lighting_color = null
+	cyberpunk_district_id = "infrastructure"
+	cyberpunk_district_name = "Инфраструктура"
+	cyberpunk_district_kind = "infrastructure"
+	cyberpunk_world_tags = list("infrastructure")
+	cyberpunk_district_base_danger = 8
+
+/area/cyberpunk/city/infrastructure/power
+	name = "Электроснабжение"
+	cyberpunk_world_tags = list("infrastructure", "power")
+
+/area/cyberpunk/city/infrastructure/water
+	name = "Водоснабжение"
+	cyberpunk_world_tags = list("infrastructure", "water")
+
+/area/cyberpunk/city/infrastructure/waste
+	name = "Утилизация"
+	cyberpunk_world_tags = list("infrastructure", "waste")
+
+/area/cyberpunk/city/infrastructure/comms
+	name = "Связь"
+	cyberpunk_world_tags = list("infrastructure", "comms")
+
+/area/cyberpunk/city/infrastructure/transit_hub
+	name = "Транспортный узел"
+	cyberpunk_world_tags = list("infrastructure", "transit")
+
+/area/cyberpunk/city/infrastructure/parking
+	name = "Парковка"
+	cyberpunk_world_tags = list("infrastructure", "parking")
+
 /area/cyberpunk/city/metro
 	name = "Метро"
 	outdoors = FALSE

@@ -61,7 +61,7 @@
 	if(!owner.has_neural_implant())
 		return null
 	var/area/business_area = get_area(terminal)
-	if(!istype(business_area, /area/station/service/business))
+	if(!cyberpunk_is_business_area(business_area))
 		return null
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/existing_business = cyberpunk_businesses[business_id]

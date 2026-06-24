@@ -49,7 +49,7 @@
 /datum/cyberpunk_business/proc/get_business_area()
 	RETURN_TYPE(/area)
 	var/area/current_area = terminal ? get_area(terminal) : null
-	if(istype(current_area, /area/station/service/business))
+	if(cyberpunk_is_business_area(current_area))
 		return current_area
 	if(business_area_type)
 		var/area/stored_area = GLOB.areas_by_type[business_area_type]
@@ -307,7 +307,7 @@
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_TERMINAL) || !terminal)
 		return FALSE
 	var/area/business_area = get_business_area()
-	if(!istype(business_area, /area/station/service/business))
+	if(!cyberpunk_is_business_area(business_area))
 		premises_valid = FALSE
 		premises_validation = "failed: terminal is outside a business area"
 	else
