@@ -432,7 +432,5 @@
   MelokG000:
   - qol: you can now quit the game
   Swan:
-  - bugfix: fixes the gravity generator's crushing gravity effect not disappearing
-      when the gen goes offline
   Watermelon914:
   - bugfix: Fixed composite types appearing incorrectly in the IC editor.

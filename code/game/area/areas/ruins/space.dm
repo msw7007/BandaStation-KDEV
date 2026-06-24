@@ -2,7 +2,7 @@
 
 /area/ruin/space
 	default_gravity = ZERO_GRAVITY
-	area_flags = NONE
+	area_flags = NO_GRAVITY
 	area_flags_mapping = UNIQUE_AREA
 
 /area/ruin/space/unpowered
@@ -12,6 +12,7 @@
 	power_environ = FALSE
 
 /area/ruin/space/has_grav
+	area_flags = NONE
 	default_gravity = STANDARD_GRAVITY
 
 /area/ruin/space/has_grav/powered
@@ -256,8 +257,8 @@
 	icon_state = "os_beta_hall"
 
 /area/ruin/space/ancientstation/beta/gravity
-	name = "Beta Station Gravity Generator"
-	icon_state = "os_beta_gravity"
+	name = "Beta Station Utility Room"
+	icon_state = "os_beta_engine"
 
 /area/ruin/space/ancientstation/beta/mining
 	name = "Beta Station Mining Equipment"
@@ -389,9 +390,9 @@
 	name = "\improper Derelict Aux Storage"
 	icon_state = "ks13_aux_storage"
 
-/area/ruin/space/ks13/engineering/grav_gen
-	name = "\improper Derelict Gravity Generator"
-	icon_state = "ks13_grav_gen"
+/area/ruin/space/ks13/engineering/utility
+	name = "\improper Derelict Utility Room"
+	icon_state = "ks13_aux_storage"
 
 /area/ruin/space/ks13/engineering/sb_bow_solars_control
 	name = "\improper Derelict Starboard Bow Solars Control Room"
@@ -534,7 +535,7 @@
 /area/ruin/space/djstation/solars
 	name = "\improper DJ Station Solars"
 	icon_state = "DJ"
-	area_flags = NONE
+	area_flags = NO_GRAVITY
 	default_gravity = ZERO_GRAVITY
 
 /area/ruin/space/djstation/service

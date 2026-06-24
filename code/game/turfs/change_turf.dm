@@ -43,7 +43,9 @@ GLOBAL_LIST_INIT(blacklisted_automated_baseturfs, typecacheof(list(
 		var/datum/component/wet_floor/new_wet_floor_component = copy_to_turf.AddComponent(/datum/component/wet_floor)
 		new_wet_floor_component.InheritComponent(slip)
 	if (copy_air)
-		copy_to_turf.air.copy_from(air)
+		var/datum/gas_mixture/source_air = get_copyable_air()
+		if(source_air)
+			copy_to_turf.ensure_air()?.copy_from(source_air)
 
 //wrapper for ChangeTurf()s that you want to prevent/affect without overriding ChangeTurf() itself
 /turf/proc/TerraformTurf(path, new_baseturf, flags)
@@ -219,14 +221,14 @@ GLOBAL_LIST_INIT(blacklisted_automated_baseturfs, typecacheof(list(
 /turf/open/ChangeTurf(path, list/new_baseturfs, flags) //Resist the temptation to make this default to keeping air.
 	if ((flags & CHANGETURF_INHERIT_AIR) && ispath(path, /turf/open))
 		var/datum/gas_mixture/stashed_air = new()
-		stashed_air.copy_from(air)
+		stashed_air.copy_from(get_copyable_air())
 		var/stashed_state = excited
 		var/datum/excited_group/stashed_group = excited_group
 		. = ..() //If path == type this will return us, don't bank on making a new type
 		if (!.) // changeturf failed or didn't do anything
 			return
 		var/turf/open/new_turf = .
-		new_turf.air.copy_from(stashed_air)
+		new_turf.ensure_air()?.copy_from(stashed_air)
 		new_turf.excited = stashed_state
 		new_turf.excited_group = stashed_group
 		#ifdef VISUALIZE_ACTIVE_TURFS
@@ -292,7 +294,7 @@ GLOBAL_LIST_INIT(blacklisted_automated_baseturfs, typecacheof(list(
 		total_gases[id][MOLES] /= turflen
 
 	for(var/turf/open/turf in turf_list)
-		turf.air.copy_from(total)
+		turf.ensure_air()?.copy_from(total)
 		turf.update_visuals()
 		SSair.add_to_active(turf)
 

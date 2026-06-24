@@ -335,9 +335,6 @@
   - rscadd: Cloaks, like surgical drapes and bedsheets, can now initiate surgeries.
       This change affects both head of staff cloaks and skill capes.
   Guillaume Prata:
-  - rscadd: Gravity generator blackout is a new random event to spice the rounds.
-  - balance: High intensity gravitational anomalies that don't get neutralized in
-      time will trigger a gravity generator blackout.
   Iamgoofball:
   - balance: The Quartermaster is now a Head of Staff, and answers directly to the
       Captain now.
@@ -992,8 +989,6 @@
   - rscadd: Botany starts with watering cans instead of buckets now. There is also
       a research locked advanced watering can which generates it's own water.
   JohnFulpWillard:
-  - bugfix: the Gravity Generator no longer plays several looping sounds.
-  - bugfix: Oldstation's gravity generator now properly spawns off.
   Melbert:
   - bugfix: Service members can access the service dorms on Deltastation again
   - bugfix: Miners can access the shipping office on Deltastation again

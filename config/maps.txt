@@ -70,3 +70,7 @@ endmap
 
 map runtimestation
 endmap
+
+map cyberpunk_test
+	default
+endmap

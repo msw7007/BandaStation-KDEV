@@ -1063,7 +1063,7 @@
 /area/station/maintenance/port/lesser)
 "arq" = (
 /obj/machinery/door/airlock/highsecurity{
-	name = "Gravity Generator Room"
+	name = "Utility Room"
 	},
 /obj/effect/mapping_helpers/airlock/access/all/engineering/construction,
 /obj/structure/cable,
@@ -1072,10 +1072,10 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/door/firedoor/heavy,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "arr" = (
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "arB" = (
 /obj/machinery/atmospherics/components/binary/pump{
 	dir = 8;
@@ -1500,7 +1500,7 @@
 	dir = 8
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ayA" = (
 /obj/structure/filingcabinet,
 /obj/effect/turf_decal/tile/neutral/fourcorners,
@@ -1597,7 +1597,7 @@
 	dir = 1
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "azQ" = (
 /obj/structure/disposalpipe/segment{
 	dir = 10
@@ -2642,7 +2642,7 @@
 "aRs" = (
 /obj/machinery/camera/autoname/directional/south,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "aRt" = (
 /obj/structure/chair/pew/left{
 	dir = 4
@@ -4503,7 +4503,7 @@
 "bBH" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "bBI" = (
 /obj/structure/table/reinforced,
 /obj/machinery/door/window/right/directional/west{
@@ -5969,7 +5969,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "cdQ" = (
 /obj/structure/cable,
 /obj/effect/landmark/blobstart,
@@ -6075,7 +6075,7 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "cgj" = (
 /obj/effect/turf_decal/trimline/yellow/filled/line{
 	dir = 1
@@ -8865,7 +8865,7 @@
 /obj/machinery/atmospherics/components/unary/vent_scrubber/on/layer2,
 /obj/machinery/firealarm/directional/north,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "dgS" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -9669,7 +9669,7 @@
 "dsY" = (
 /obj/effect/turf_decal/trimline/yellow/filled/corner,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "dtc" = (
 /obj/structure/table/reinforced/rglass,
 /obj/item/assembly/flash/handheld{
@@ -9853,7 +9853,7 @@
 /obj/effect/turf_decal/bot_white/right,
 /obj/effect/turf_decal/tile/neutral/fourcorners,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "dwI" = (
 /turf/open/openspace,
 /area/station/maintenance/department/medical/central)
@@ -11729,7 +11729,7 @@
 	dir = 9
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ecj" = (
 /obj/structure/railing{
 	dir = 8
@@ -14330,7 +14330,7 @@
 	dir = 9
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "eZu" = (
 /obj/effect/turf_decal/trimline/yellow/filled/corner{
 	dir = 4
@@ -14501,7 +14501,7 @@
 /area/station/command/corporate_dock)
 "fdj" = (
 /turf/closed/wall/mineral/plastitanium/nodiagonal,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "fdm" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/structure/table,
@@ -16277,7 +16277,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "fIX" = (
 /obj/structure/table/wood/poker,
 /obj/effect/spawner/random/entertainment/cigar,
@@ -16357,7 +16357,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "fLe" = (
 /turf/open/floor/catwalk_floor,
 /area/station/cargo/storage)
@@ -18440,13 +18440,13 @@
 /area/station/maintenance/department/medical/central)
 "gvn" = (
 /obj/machinery/door/airlock/engineering/glass{
-	name = "Gravity Generator Access"
+	name = "Utility Access"
 	},
 /obj/effect/mapping_helpers/airlock/access/all/engineering/construction,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "gvs" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/effect/turf_decal/tile/dark_green/opposingcorners,
@@ -25271,7 +25271,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "iMS" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -28103,7 +28103,7 @@
 "jKu" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "jKw" = (
 /obj/effect/turf_decal/box/corners{
 	dir = 4
@@ -29092,7 +29092,7 @@
 	},
 /obj/structure/closet/radiation,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "kcA" = (
 /obj/structure/cable,
 /obj/effect/turf_decal/tile/red/opposingcorners,
@@ -29601,7 +29601,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "kjs" = (
 /obj/effect/spawner/random/structure/chair_comfy{
 	dir = 1
@@ -31856,7 +31856,7 @@
 /obj/effect/landmark/blobstart,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "kUz" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
@@ -33364,7 +33364,7 @@
 /obj/machinery/power/port_gen/pacman,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "lwI" = (
 /obj/effect/turf_decal/tile/blue/half/contrasted,
 /obj/item/kirbyplants/organic/plant11,
@@ -33570,7 +33570,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "lAc" = (
 /turf/closed/wall/r_wall,
 /area/station/science/genetics)
@@ -35988,7 +35988,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "mra" = (
 /obj/machinery/button/door/incinerator_vent_atmos_aux{
 	pixel_y = 24;
@@ -37115,7 +37115,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "mKe" = (
 /obj/structure/railing,
 /obj/machinery/door/firedoor/border_only,
@@ -37163,7 +37163,7 @@
 "mKO" = (
 /obj/machinery/holopad,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "mKW" = (
 /obj/structure/dresser,
 /turf/open/floor/carpet/red,
@@ -40015,7 +40015,7 @@
 	},
 /obj/structure/extinguisher_cabinet/directional/north,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "nLz" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/plating,
@@ -40128,7 +40128,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "nMX" = (
 /obj/effect/turf_decal/tile/neutral/opposingcorners,
 /obj/machinery/camera/autoname/directional/south,
@@ -40478,7 +40478,7 @@
 	},
 /obj/machinery/airalarm/directional/west,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "nVT" = (
 /turf/closed/wall,
 /area/station/service/cafeteria)
@@ -42710,7 +42710,7 @@
 /obj/effect/turf_decal/trimline/yellow/filled/line,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "oMk" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron/freezer,
@@ -43236,7 +43236,7 @@
 	},
 /obj/structure/disposalpipe/trunk/multiz,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "oUW" = (
 /obj/structure/chair/sofa/bench/left{
 	dir = 8
@@ -44608,7 +44608,7 @@
 /obj/effect/turf_decal/bot_white,
 /obj/effect/turf_decal/tile/neutral/fourcorners,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "pth" = (
 /obj/structure/lattice/catwalk,
 /obj/structure/railing{
@@ -45421,7 +45421,7 @@
 	},
 /obj/machinery/light_switch/directional/south,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "pGq" = (
 /obj/machinery/vending/games,
 /turf/open/floor/carpet/purple,
@@ -46085,7 +46085,7 @@
 	dir = 1
 	},
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "pRH" = (
 /obj/structure/disposalpipe/segment,
 /obj/effect/turf_decal/tile/neutral{
@@ -46879,7 +46879,7 @@
 	},
 /obj/effect/landmark/blobstart,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "qeP" = (
 /obj/structure/frame/machine,
 /obj/effect/spawner/random/maintenance,
@@ -50597,7 +50597,7 @@
 "rrz" = (
 /obj/effect/turf_decal/tile/neutral/fourcorners,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "rrF" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/power/apc/auto_name/directional/east,
@@ -52745,7 +52745,7 @@
 /obj/effect/turf_decal/bot_white/left,
 /obj/effect/turf_decal/tile/neutral/fourcorners,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "saN" = (
 /turf/open/openspace,
 /area/station/engineering/atmos/mix)
@@ -52832,7 +52832,7 @@
 "sbZ" = (
 /obj/effect/decal/cleanable/dirt,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "scg" = (
 /obj/effect/landmark/event_spawn,
 /turf/open/floor/glass/reinforced,
@@ -60799,7 +60799,7 @@
 	dir = 1
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "uLi" = (
 /obj/structure/cable,
 /obj/effect/landmark/navigate_destination/dockarrival,
@@ -62346,7 +62346,7 @@
 "voY" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "vpn" = (
 /obj/machinery/power/emitter/welded{
 	dir = 8
@@ -63797,7 +63797,7 @@
 	},
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "vQa" = (
 /obj/effect/turf_decal/tile/brown/half/contrasted{
 	dir = 1
@@ -64296,7 +64296,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "vZL" = (
 /obj/machinery/holopad,
 /obj/effect/turf_decal/box/white{
@@ -64500,7 +64500,7 @@
 	dir = 8
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wdm" = (
 /obj/effect/turf_decal/tile/neutral/half/contrasted{
 	dir = 4
@@ -64681,7 +64681,7 @@
 "wgk" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/plating,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wgm" = (
 /obj/effect/decal/cleanable/dirt/dust,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -65971,7 +65971,7 @@
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden/layer4,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wCC" = (
 /obj/effect/spawner/random/trash/mopbucket,
 /turf/open/floor/plating,
@@ -66345,7 +66345,7 @@
 	dir = 1
 	},
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wIQ" = (
 /obj/effect/turf_decal/tile/yellow{
 	dir = 8
@@ -66687,9 +66687,8 @@
 "wOy" = (
 /obj/effect/turf_decal/bot_white,
 /obj/effect/turf_decal/tile/neutral/fourcorners,
-/obj/machinery/gravity_generator/main,
 /turf/open/floor/iron/dark,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wOK" = (
 /obj/structure/chair/comfy/brown{
 	dir = 8;
@@ -68569,7 +68568,7 @@
 /area/station/maintenance/central/lesser)
 "xwh" = (
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "xwm" = (
 /obj/structure/lattice/catwalk,
 /obj/structure/railing,
@@ -69620,7 +69619,7 @@
 /area/station/medical/virology)
 "xOJ" = (
 /obj/machinery/door/airlock/highsecurity{
-	name = "Gravity Generator Room"
+	name = "Utility Room"
 	},
 /obj/effect/mapping_helpers/airlock/access/all/engineering/construction,
 /obj/structure/cable,
@@ -69630,7 +69629,7 @@
 	dir = 4
 	},
 /turf/open/floor/plating,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "xOK" = (
 /obj/effect/spawner/structure/window/reinforced,
 /obj/structure/cable,
@@ -70824,7 +70823,7 @@
 /area/station/medical/treatment_center)
 "ykG" = (
 /turf/closed/wall/r_wall,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ykO" = (
 /obj/effect/decal/cleanable/blood/gibs/core,
 /obj/effect/decal/cleanable/dirt,

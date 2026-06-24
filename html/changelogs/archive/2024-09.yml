@@ -50,7 +50,6 @@
   grungussuss:
   - sound: being sacrificed by a heretic is now spookier
   grungussuss and kayozz:
-  - sound: gravity generator has a new sound
   vinylspiders:
   - bugfix: due to a clerical error, all ballistic guns were shipping with built-in
       silencers. this has been resolved-they will now make noise once again when fired.

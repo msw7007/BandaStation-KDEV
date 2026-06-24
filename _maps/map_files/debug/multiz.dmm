@@ -19,7 +19,7 @@
 /area/station/engineering/main)
 "ak" = (
 /turf/closed/wall/r_wall,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "al" = (
 /obj/machinery/airalarm/directional/north{
 	locked = 0;
@@ -60,7 +60,7 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "at" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 5
@@ -69,7 +69,7 @@
 	dir = 8
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "av" = (
 /obj/structure/stairs/north,
 /turf/open/floor/plating,
@@ -85,22 +85,22 @@
 "aI" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/plating,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "aJ" = (
 /turf/open/floor/iron{
 	dir = 1
 	},
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "aK" = (
 /turf/open/floor/iron{
 	dir = 8
 	},
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "aL" = (
 /turf/open/floor/iron{
 	dir = 4
 	},
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "aM" = (
 /obj/machinery/suit_storage_unit/ce,
 /turf/open/floor/plating,
@@ -144,7 +144,7 @@
 "aY" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "aZ" = (
 /obj/structure/tank_dispenser{
 	pixel_x = -1
@@ -188,13 +188,13 @@
 /obj/structure/cable,
 /obj/machinery/power/apc/auto_name/directional/west,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "bh" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "bj" = (
 /obj/machinery/light/directional/south,
 /obj/structure/table,
@@ -243,14 +243,14 @@
 	dir = 10
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "br" = (
 /obj/structure/closet/radiation,
 /obj/effect/turf_decal/stripes/line{
 	dir = 6
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "bt" = (
 /obj/machinery/door/airlock,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/supply/hidden,
@@ -697,7 +697,7 @@
 /area/station/engineering/storage)
 "dV" = (
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "dW" = (
 /turf/open/floor/iron,
 /area/station/engineering/main)
@@ -967,7 +967,7 @@
 /obj/structure/cable,
 /obj/machinery/atmospherics/components/unary/vent_pump/on,
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "jz" = (
 /obj/machinery/airalarm/directional/north,
 /turf/open/floor/plating,
@@ -1147,7 +1147,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "qo" = (
 /turf/open/openspace,
 /area/station/engineering/storage)
@@ -1623,7 +1623,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "KV" = (
 /turf/open/floor/plating,
 /area/station/construction)
@@ -1780,11 +1780,10 @@
 /turf/open/floor/iron,
 /area/station/construction)
 "Rd" = (
-/obj/machinery/gravity_generator/main,
 /turf/open/floor/iron{
 	dir = 8
 	},
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "Re" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4

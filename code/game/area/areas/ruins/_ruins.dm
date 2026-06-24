@@ -14,8 +14,8 @@
 	always_unpowered = TRUE
 
 /area/ruin/unpowered/no_grav
+	area_flags = /area/ruin/unpowered::area_flags | NO_GRAVITY
 	default_gravity = ZERO_GRAVITY
 
 /area/ruin/powered
 	requires_power = FALSE
-

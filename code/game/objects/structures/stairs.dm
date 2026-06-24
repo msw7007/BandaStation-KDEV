@@ -42,6 +42,45 @@
 /obj/structure/stairs/west
 	dir = WEST
 
+/obj/structure/stairs/cyberpunk_auto
+	force_open_above = TRUE
+
+/obj/structure/stairs/cyberpunk_auto/north
+	dir = NORTH
+
+/obj/structure/stairs/cyberpunk_auto/south
+	dir = SOUTH
+
+/obj/structure/stairs/cyberpunk_auto/east
+	dir = EAST
+
+/obj/structure/stairs/cyberpunk_auto/west
+	dir = WEST
+
+/obj/structure/stairs/cyberpunk_auto/isTerminator()
+	return TRUE
+
+/obj/structure/stairs/cyberpunk_auto/Initialize(mapload)
+	. = ..()
+	var/static/list/auto_climb_connections = list(
+		COMSIG_ATOM_ENTERED = PROC_REF(on_enter_cyberpunk_stairs),
+	)
+	AddElement(/datum/element/connect_loc, auto_climb_connections)
+
+/obj/structure/stairs/cyberpunk_auto/proc/on_enter_cyberpunk_stairs(datum/source, atom/movable/entered)
+	SIGNAL_HANDLER
+
+	if(!isliving(entered) || entered.currently_z_moving)
+		return
+	if(!isTerminator())
+		return
+	INVOKE_ASYNC(src, PROC_REF(stair_ascend), entered)
+
+/obj/structure/stairs/cyberpunk_auto/intercept_zImpact(list/falling_movables, levels = 1)
+	if(levels != 1 || !isTerminator())
+		return ..()
+	. = FALL_INTERCEPTED | FALL_NO_MESSAGE | FALL_RETAIN_PULL
+
 /obj/structure/stairs/wood
 	icon_state = "stairs_wood"
 	has_merged_sprites = FALSE

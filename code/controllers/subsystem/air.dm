@@ -219,6 +219,17 @@ SUBSYSTEM_DEF(air)
 		if(MC_TICK_CHECK)
 			return
 
+/datum/controller/subsystem/air/proc/get_planetary_atmos(gas_string)
+	if(!gas_string)
+		gas_string = OPENTURF_DEFAULT_ATMOS
+	var/datum/gas_mixture/planetary_mix = planetary[gas_string]
+	if(planetary_mix)
+		return planetary_mix
+	var/datum/gas_mixture/immutable/planetary/new_planetary_mix = new
+	new_planetary_mix.parse_string_immutable(gas_string)
+	planetary[gas_string] = new_planetary_mix
+	return new_planetary_mix
+
 /datum/controller/subsystem/air/proc/add_to_rebuild_queue(obj/machinery/atmospherics/atmos_machine)
 	if(istype(atmos_machine, /obj/machinery/atmospherics) && !atmos_machine.rebuilding)
 		rebuild_queue += atmos_machine

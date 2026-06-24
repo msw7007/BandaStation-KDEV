@@ -546,7 +546,6 @@
   - code_imp: Created a system to profile code on a line by line basis and return
       detailed info about how much time was spent (in milliseconds) on each line(s).
   Xhuis:
-  - balance: Servants can no longer teleport into the gravity generator, EVA, or telecomms.
   ninjanomnom:
   - bugfix: Hardsuit helmets work like geiger counters for the user.
   - code_imp: Radiation should perform a little better in places.

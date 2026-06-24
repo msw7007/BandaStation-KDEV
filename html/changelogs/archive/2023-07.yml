@@ -732,8 +732,6 @@
   Melbert:
   - code_imp: AI cards should react more snap-ily to having their occupant perish
   OrionTheFox:
-  - qol: in the event the Gravity Generator becomes damaged, examining the main part
-      will now give repair hints!
   Timberpoes:
   - bugfix: Emotes now respect word filters.
   Watermelon914:
@@ -893,7 +891,6 @@
   - rscadd: 'New air alarm mode: Vent siphon, which disables scrubbers and forces
       vents to siphon air with no pressure regulation'
   vinylspiders:
-  - bugfix: fixes gravity generators causing CI failures from overriding a signal
 2023-07-21:
   Blockaboo:
   - bugfix: Tin man no longer causes you to drop all of your organs.

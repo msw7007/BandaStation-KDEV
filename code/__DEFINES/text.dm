@@ -90,6 +90,8 @@
 #define WANTED_FILE "wanted_message.json"
 /// File location for really dumb suggestions memes
 #define VISTA_FILE "steve.json"
+/// File location for Cyberpunk city NPC ambient chatter
+#define CYBERPUNK_NPC_AMBIENT_FILE "cyberpunk_npc_ambient.json"
 /// File location for flesh wound descriptions
 #define FLESH_SCAR_FILE "wounds/flesh_scar_desc.json"
 /// File location for bone wound descriptions

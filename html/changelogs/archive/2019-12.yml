@@ -71,7 +71,6 @@
   - tweak: Holopads now ping when a connection from another pad is established.
 2019-12-07:
   Arkatos:
-  - rscadd: Gravity Generator now uses tgui-next UI.
   Denton:
   - rscadd: Added an (admin only) amputation arcade subtype that dispenses wrapped
       gifts instead of arcade prizes.
@@ -285,7 +284,6 @@
 2019-12-22:
   Arkatos:
   - rscadd: Bank Machine now uses tgui-next UI.
-  - tweak: Small UI tweaks for Gravity Generator and Equipment Reclaimer Console.
   Buggy123:
   - tweak: An intern at Nanotrasen noticed that their shift timer was running about
       3 minutes fast, misleading employees about how long they had been clocked in.

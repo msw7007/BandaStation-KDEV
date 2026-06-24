@@ -190,7 +190,6 @@
 /area/engineering/supermatter : /area/station/engineering/supermatter
 /area/engineering/supermatter/room : /area/station/engineering/supermatter/room
 /area/engineering/break_room : /area/station/engineering/break_room
-/area/engineering/gravity_generator : /area/station/engineering/gravity_generator
 /area/engineering/storage : /area/station/engineering/storage
 /area/engineering/storage_shared : /area/station/engineering/storage_shared
 /area/engineering/transit_tube : /area/station/engineering/transit_tube

@@ -1,0 +1,46 @@
+{
+	"version": 1,
+	"map_name": "Runtime Station",
+	"map_path": "map_files/debug",
+	"map_file": "cyberpunk_test.dmm",
+	"planetary": 1,
+	"space_ruin_levels": 0,
+	"traits": [
+		{
+			"Linkage": "Cross",
+			"Up": true,
+			"Gravity": 1,
+			"Baseturf": "/turf/open/openspace"
+		},
+		{
+			"Linkage": "Cross",
+			"Up": true,
+			"Down": true,
+			"Gravity": 1,
+			"Baseturf": "/turf/open/openspace"
+		},
+		{
+			"Linkage": "Cross",
+			"Up": true,
+			"Down": true,
+			"Gravity": 1,
+			"Baseturf": "/turf/open/openspace"
+		},
+		{
+			"Linkage": "Cross",
+			"Down": true,
+			"Gravity": 1,
+			"Baseturf": "/turf/open/openspace"
+		}
+	],
+	"ignored_unit_tests": [
+		"/datum/unit_test/cargo_dep_order_locations",
+		"/datum/unit_test/maptest_job_roundstart_spawnpoints",
+		"/datum/unit_test/maptest_required_map_items",
+		"/datum/unit_test/spy_bounty"
+	],
+	"shuttles": {
+		"cargo": "cargo_delta"
+	},
+	"bonus_weakpoints": -3
+}

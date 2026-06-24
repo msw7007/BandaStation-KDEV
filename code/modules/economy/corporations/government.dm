@@ -110,10 +110,11 @@
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_housing_tax_ui()
 	var/list/housing_by_area = list()
-	for(var/area/area_type in typesof(/area/cyberpunk_city/district))
-		if(area_type == /area/cyberpunk_city/district)
+	for(var/area/area_type in typesof(/area/cyberpunk/city/district))
+		var/area_path = "[area_type]"
+		if(area_type == /area/cyberpunk/city/district)
 			continue
-		var/area_key = "[area_type]"
+		var/area_key = area_path
 		housing_by_area[area_key] = list(
 			"areaKey" = area_key,
 			"area" = get_cyberpunk_housing_area_label(area_key),

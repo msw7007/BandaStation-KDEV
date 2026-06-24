@@ -103,7 +103,7 @@ Always compile, always use that verb, and always make sure that it works for wha
 // number - bombcap is multiplied by this before being applied to bombs
 #define ZTRAIT_BOMBCAP_MULTIPLIER "Bombcap Multiplier"
 
-// number - default gravity if there's no gravity generators or area overrides present
+// number - default gravity for a z-level; normal gameplay gravity is world-default unless explicitly disabled by area/effect
 #define ZTRAIT_GRAVITY "Gravity"
 
 // Whether this z level is linked up/down. Bool.

@@ -98,9 +98,9 @@
 	icon_state = "engine_break"
 	sound_environment = SOUND_AREA_SMALL_ENCLOSED
 
-/area/station/engineering/gravity_generator
-	name = "\improper Gravity Generator Room"
-	icon_state = "grav_gen"
+/area/station/engineering/utility
+	name = "\improper Engineering Utility Room"
+	icon_state = "engine"
 	sound_environment = SOUND_AREA_SMALL_ENCLOSED
 
 /area/station/engineering/storage

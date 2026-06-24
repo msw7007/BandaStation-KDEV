@@ -493,7 +493,6 @@
   - rscadd: Ectoplasmic Outburst anomaly event
   - rscadd: Reactive Ectoplasm Armor
   Shadow-Quill:
-  - bugfix: Gravity generators have been re-centered.
   ZephyrTFA:
   - bugfix: Spells which are only able to be cast on the station can now only be cast
       on the station
@@ -583,8 +582,6 @@
   - bugfix: Fixed a runtime with examining empty bomb frames
   - bugfix: Fixed a FIVE YEAR OLD issue causing Time Stop to be a 3x3 instead of a
       5x5. Really.
-  - bugfix: The gravity generator correctly gives "forced gravity" to all adjacent
-      mobs
   - bugfix: Fixed some runtimes with Time Stop, and other miscellaneous issues
   NamelessFairy:
   - spellcheck: Head of staff lockers and prison cell lockers have had their proper
@@ -721,8 +718,6 @@
   NamelessFairy:
   - bugfix: Reinforced Plating baseturf helpers work and should now be bug free enough
       to be used in maps.
-  - bugfix: On metastation the gravity generator foyer airlock access has been made
-      consistent with the rest of the engine room airlocks.
   - bugfix: False walls will no longer tell you to wait until they've stopped moving
       when you use an item on them.
   Profakos:

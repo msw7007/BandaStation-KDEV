@@ -116,9 +116,6 @@
       the transit room being located at engineering south of the engi escape pod.
   - rscadd: The AI Upload however has been moved north slightly and is connected directly
       to the bridge.
-  - rscadd: In addition, the Gravity Generator has been relocated from its prior position
-      in engineering to the location of the old AI Upload, increasing its defence
-      and logical positioning.
 2014-04-22:
   Ikarrus:
   - rscadd: ID Computers have been modified to allow Station Heads of Staff to assign

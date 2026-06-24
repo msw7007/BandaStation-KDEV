@@ -589,7 +589,6 @@
       contraband.
   - bugfix: Fixed cats not begging people for food
   - bugfix: Fixed a mixup in ripley plate sprites
-  - bugfix: Fixed tethers being able to move immovable objects (and delete gravgens)
   - bugfix: Fixed a missing arg in fish release code causing runtimes
   carlarctg:
   - bugfix: '[no gbp] renmoves bartender skillchip from chipped quirk'

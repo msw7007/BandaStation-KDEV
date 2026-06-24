@@ -403,7 +403,7 @@
 
 /datum/job/cyberpunk/city_worker
 	title = "City Worker"
-	description = "Free city labor: contracts, service work, business setup, and street jobs."
+	description = "Free city labor: contracts, service work, business setup, and local jobs."
 	config_tag = "CYBERPUNK_CITY_WORKER"
 	total_positions = -1
 	spawn_positions = -1
@@ -695,7 +695,7 @@
 
 /datum/job/cyberpunk/criminal_contractor
 	title = "Criminal Contractor"
-	description = "Illegal economy role: gray contracts, theft, sabotage, and street violence."
+	description = "Illegal economy role: gray contracts, theft, sabotage, and district violence."
 	config_tag = "CYBERPUNK_CRIMINAL_CONTRACTOR"
 	total_positions = 6
 	spawn_positions = 6
@@ -1012,7 +1012,9 @@
 	if(length(GLOB.jobspawn_overrides[title]))
 		return pick(GLOB.jobspawn_overrides[title])
 	var/obj/effect/landmark/start/spawn_point = get_default_roundstart_spawn_point()
-	if(!spawn_point) //if there isn't a spawnpoint send them to latejoin, if there's no latejoin go yell at your mapper
+	if(!spawn_point)
+		spawn_point = get_generic_roundstart_spawn_point()
+	if(!spawn_point) //if there isn't any roundstart spawnpoint send them to latejoin, if there's no latejoin go yell at your mapper
 		return get_latejoin_spawn_point()
 	return spawn_point
 
@@ -1029,6 +1031,19 @@
 		break
 	if(!.)
 		log_mapping("Job [title] ([type]) couldn't find a round start spawn point.")
+
+/// Returns a generic roundstart spawn point when a map does not define one for this job.
+/datum/job/proc/get_generic_roundstart_spawn_point()
+	for(var/obj/effect/landmark/start/spawn_point as anything in GLOB.start_landmarks_list)
+		if(spawn_point.type != /obj/effect/landmark/start)
+			continue
+		. = spawn_point
+		if(spawn_point.used)
+			continue
+		spawn_point.used = TRUE
+		break
+	if(.)
+		log_mapping("Job [title] ([type]) is using a generic round start spawn point because no job-specific spawn point exists.")
 
 /// Finds a valid latejoin spawn point, checking for events and special conditions.
 /datum/job/proc/get_latejoin_spawn_point()

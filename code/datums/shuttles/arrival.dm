@@ -37,3 +37,7 @@
 /datum/map_template/shuttle/arrival/nebula
 	suffix = "nebula"
 	name = "arrival shuttle (Nebula)"
+
+/datum/map_template/shuttle/arrival/cyberpunk
+	suffix = "cyberpunk"
+	name = "arrival shuttle (Cyberpunk Metro Wagon)"

@@ -32683,15 +32683,6 @@ instrumental = "машинным отделением суперматерии"
 prepositional = "машинном отделении суперматерии"
 gender = "neuter"
 
-["Gravity Generator Room"]
-nominative = "комната генератора гравитации"
-genitive = "комнаты генератора гравитации"
-dative = "комнате генератора гравитации"
-accusative = "комнату генератора гравитации"
-instrumental = "комнатой генератора гравитации"
-prepositional = "комнате генератора гравитации"
-gender = "female"
-
 ["Engineering Storage"]
 nominative = "склад инженерного отдела"
 genitive = "склада инженерного отдела"

@@ -2,6 +2,7 @@ SUBSYSTEM_DEF(cyberpunk_property)
 	name = "Cyberpunk Property"
 	wait = 1 MINUTES
 	runlevels = RUNLEVEL_GAME
+	ss_flags = SS_NO_INIT
 	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Round-local business registry. Keyed by business id.
 	var/list/cyberpunk_businesses = list()

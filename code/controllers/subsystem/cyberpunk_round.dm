@@ -2,6 +2,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	name = "Cyberpunk Round"
 	wait = 1 MINUTES
 	runlevels = RUNLEVEL_GAME
+	ss_flags = SS_NO_INIT
 	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Real time budget of one cyberpunk city day.
 	var/cyberpunk_round_real_day = 30 MINUTES
@@ -294,7 +295,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	if(!length(cyberpunk_storyteller_profile_options))
 		cyberpunk_storyteller_profile_options = list(
 			"balanced" = build_cyberpunk_storyteller_profile("balanced", "Balanced", 1, 1, 0.85, 1, 1, 85, 1, 1, 1, 1, 1),
-			"street" = build_cyberpunk_storyteller_profile("street", "Street Soft", 1.35, 0.75, 0.35, 1.3, 1.4, 70, 0.7, 1.2, 1.2, 0.85, 0.75),
+			"district" = build_cyberpunk_storyteller_profile("district", "District Soft", 1.35, 0.75, 0.35, 1.3, 1.4, 70, 0.7, 1.2, 1.2, 0.85, 0.75),
 			"escalation" = build_cyberpunk_storyteller_profile("escalation", "Escalation", 0.9, 1.25, 1.45, 0.65, 0.75, 95, 1.4, 0.9, 1.15, 1.25, 1.35),
 		)
 	if(!cyberpunk_storyteller_profile_options[cyberpunk_storyteller_profile])

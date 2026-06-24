@@ -2,7 +2,7 @@
 	anchored = FALSE
 	density = TRUE
 	interaction_flags_machine = INTERACT_MACHINE_ALLOW_SILICON
-	icon = 'icons/obj/machines/gravity_generator.dmi'
+	icon = 'icons/obj/machines/portable_gravity.dmi'
 	icon_state = "portagrav"
 	base_icon_state = "portagrav"
 	name = "Portable Gravity Unit"

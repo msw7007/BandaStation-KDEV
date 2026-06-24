@@ -824,9 +824,6 @@
   Ivniinvi:
   - bugfix: Admins can no longer unprotect globals.
   JohnFulpWillard:
-  - rscadd: Charliestation now has a Supermatter and Gravity generator chamber.
-  - balance: Charliestation now requires the gravity generator to have functional
-      gravity. Its botany also has a biogenerator and nutriment vendor.
   LemonInTheDark:
   - bugfix: Artificers can see their action buttons again
   Melbert:
@@ -1135,7 +1132,6 @@
   - bugfix: Scientists should now be able to access the mass driver on Kilo once more.
   - bugfix: Kilo had some of its areas fixed.
   MTandi:
-  - bugfix: Gravgen now can't be repaired when not broken.
   - bugfix: Airlocks now properly say that they're welded when examined.
   - qol: Oldstation some internal windows are not reinforced to allow easier breaking
   - qol: Oldstation computers have random sprites and can be deconstructed, some of

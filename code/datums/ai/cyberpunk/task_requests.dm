@@ -175,7 +175,7 @@
 
 /proc/cyberpunk_find_security_delivery_turf()
 	for(var/area/security_area as anything in GLOB.areas)
-		if(!istype(security_area, /area/cyberpunk_city/security))
+		if(!istype(security_area, /area/cyberpunk/city/security))
 			continue
 		for(var/turf/security_turf as anything in cyberpunk_area_turfs(security_area))
 			if(security_turf && !isclosedturf(security_turf) && !isspaceturf(security_turf))
@@ -228,258 +228,6 @@
 /proc/cyberpunk_ai_is_city_managed(mob/living/candidate)
 	return candidate?.ai_controller?.blackboard_key_exists(BB_CP_AI_ROLE_PROFILE)
 
-/area
-	/// City AI uses this to decide whether violence should trigger a broad security response.
-	var/cyberpunk_safe_zone = FALSE
-	/// CP13 world tags used by the storyteller, contracts, NPCs and map tooling.
-	var/list/cyberpunk_world_tags
-	/// Optional owner key for corporate/government territory logic.
-	var/cyberpunk_world_owner
-	/// Coarse violence response: none, weak, normal, high.
-	var/cyberpunk_violence_control = "normal"
-	/// Stable CP13 district id used by the storyteller and city systems.
-	var/cyberpunk_district_id
-	/// Display name for CP13 district analytics. Defaults to area name.
-	var/cyberpunk_district_name
-	/// Coarse district kind: street, safe, security, wasteland, corporate, etc.
-	var/cyberpunk_district_kind = "generic"
-	/// Numeric district bucket. The city core expects 1-9 until final map names are assigned.
-	var/cyberpunk_district_index = 0
-	/// Grid direction inside a city z-level: nw, n, ne, w, c, e, sw, s, se.
-	var/cyberpunk_district_direction
-	/// Passive danger added to storyteller district pressure.
-	var/cyberpunk_district_base_danger = 0
-	/// Round-local violence score reported by city AI and combat hooks.
-	var/cyberpunk_round_violence_score = 0
-	/// Round-local damage amount associated with violent incidents in this area.
-	var/cyberpunk_round_damage_taken = 0
-	/// Round-local severe incident counter.
-	var/cyberpunk_round_critical_events = 0
-	/// World time of last recorded violent incident.
-	var/cyberpunk_round_last_violence_at = 0
-
-/area/cyberpunk_city
-	name = "Cyberpunk City"
-	cyberpunk_district_id = "city"
-	cyberpunk_district_name = "Cyberpunk City"
-	cyberpunk_district_kind = "city"
-
-/area/cyberpunk_city/street
-	name = "Cyberpunk City Street"
-	cyberpunk_district_id = "street"
-	cyberpunk_district_name = "Cyberpunk City Street"
-	cyberpunk_district_kind = "street"
-	cyberpunk_district_base_danger = 5
-	cyberpunk_world_tags = list("road")
-
-/area/cyberpunk_city/safe
-	name = "Cyberpunk City Safe Zone"
-	cyberpunk_safe_zone = TRUE
-	cyberpunk_district_id = "safe"
-	cyberpunk_district_name = "Cyberpunk City Safe Zone"
-	cyberpunk_district_kind = "safe"
-	cyberpunk_violence_control = "high"
-
-/area/cyberpunk_city/security
-	name = "Cyberpunk City Security"
-	cyberpunk_safe_zone = TRUE
-	cyberpunk_district_id = "security"
-	cyberpunk_district_name = "Cyberpunk City Security"
-	cyberpunk_district_kind = "security"
-	cyberpunk_world_tags = list("government")
-	cyberpunk_world_owner = "government"
-	cyberpunk_violence_control = "high"
-
-/area/cyberpunk_city/wasteland
-	name = "Cyberpunk City Wasteland"
-	cyberpunk_district_id = "wasteland"
-	cyberpunk_district_name = "Wasteland"
-	cyberpunk_district_kind = "wasteland"
-	cyberpunk_district_base_danger = 20
-	cyberpunk_violence_control = "none"
-
-/area/cyberpunk_city/district
-	name = "Cyberpunk City District"
-	cyberpunk_district_kind = "district"
-	cyberpunk_district_base_danger = 8
-
-/area/cyberpunk_city/district/district_01
-	name = "Аква Квин"
-	cyberpunk_district_id = "aqua_queen"
-	cyberpunk_district_name = "Аква Квин"
-	cyberpunk_district_kind = "marine"
-	cyberpunk_district_index = 1
-	cyberpunk_district_direction = "nw"
-	cyberpunk_district_base_danger = 7
-
-/area/cyberpunk_city/district/district_02
-	name = "Нортфилд"
-	cyberpunk_district_id = "northfield"
-	cyberpunk_district_name = "Нортфилд"
-	cyberpunk_district_kind = "port"
-	cyberpunk_district_index = 2
-	cyberpunk_district_direction = "n"
-	cyberpunk_district_base_danger = 9
-
-/area/cyberpunk_city/district/district_03
-	name = "Чейсвинд"
-	cyberpunk_district_id = "chasewind"
-	cyberpunk_district_name = "Чейсвинд"
-	cyberpunk_district_kind = "slums"
-	cyberpunk_district_index = 3
-	cyberpunk_district_direction = "ne"
-	cyberpunk_district_base_danger = 18
-
-/area/cyberpunk_city/district/district_04
-	name = "Гранд Плаза"
-	cyberpunk_district_id = "grand_plaza"
-	cyberpunk_district_name = "Гранд Плаза"
-	cyberpunk_district_kind = "government"
-	cyberpunk_district_index = 4
-	cyberpunk_district_direction = "w"
-	cyberpunk_district_base_danger = 4
-
-/area/cyberpunk_city/district/district_05
-	name = "Даунтаун"
-	cyberpunk_district_id = "downtown"
-	cyberpunk_district_name = "Даунтаун"
-	cyberpunk_district_kind = "residential"
-	cyberpunk_district_index = 5
-	cyberpunk_district_direction = "c"
-	cyberpunk_district_base_danger = 6
-
-/area/cyberpunk_city/district/district_06
-	name = "Истбук"
-	cyberpunk_district_id = "eastbook"
-	cyberpunk_district_name = "Истбук"
-	cyberpunk_district_kind = "slums"
-	cyberpunk_district_index = 6
-	cyberpunk_district_direction = "e"
-	cyberpunk_district_base_danger = 18
-
-/area/cyberpunk_city/district/district_07
-	name = "Чайнатаун"
-	cyberpunk_district_id = "chinatown"
-	cyberpunk_district_name = "Чайнатаун"
-	cyberpunk_district_kind = "ben"
-	cyberpunk_district_index = 7
-	cyberpunk_district_direction = "sw"
-	cyberpunk_district_base_danger = 10
-
-/area/cyberpunk_city/district/district_08
-	name = "Блайтфорт"
-	cyberpunk_district_id = "blightfort"
-	cyberpunk_district_name = "Блайтфорт"
-	cyberpunk_district_kind = "slums"
-	cyberpunk_district_index = 8
-	cyberpunk_district_direction = "s"
-	cyberpunk_district_base_danger = 18
-
-/area/cyberpunk_city/district/district_09
-	name = "Веллрок"
-	cyberpunk_district_id = "wellrock"
-	cyberpunk_district_name = "Веллрок"
-	cyberpunk_district_kind = "industrial"
-	cyberpunk_district_index = 9
-	cyberpunk_district_direction = "se"
-	cyberpunk_district_base_danger = 12
-
-/area/cyberpunk_city/metro
-	name = "Cyberpunk City Metro"
-	cyberpunk_district_id = "metro"
-	cyberpunk_district_name = "Metro"
-	cyberpunk_district_kind = "metro"
-	cyberpunk_world_tags = list("metro", "underground")
-	cyberpunk_district_base_danger = 8
-
-/area/cyberpunk_city/road
-	name = "Cyberpunk City Road"
-	cyberpunk_district_id = "road"
-	cyberpunk_district_name = "Road"
-	cyberpunk_district_kind = "road"
-	cyberpunk_world_tags = list("road")
-	cyberpunk_district_base_danger = 6
-
-/area/cyberpunk_city/canals
-	name = "Cyberpunk City Canals"
-	cyberpunk_district_id = "canals"
-	cyberpunk_district_name = "Canals"
-	cyberpunk_district_kind = "canals"
-	cyberpunk_world_tags = list("canals", "underground")
-	cyberpunk_district_base_danger = 12
-
-/area/cyberpunk_city/warehouse
-	name = "Cyberpunk City Warehouse"
-	cyberpunk_district_id = "warehouse"
-	cyberpunk_district_name = "Warehouse"
-	cyberpunk_district_kind = "warehouse"
-	cyberpunk_world_tags = list("warehouse")
-	cyberpunk_district_base_danger = 10
-
-/area/cyberpunk_city/corporate
-	name = "Corporate Territory"
-	cyberpunk_district_id = "corporate"
-	cyberpunk_district_name = "Corporate Territory"
-	cyberpunk_district_kind = "corporate"
-	cyberpunk_world_tags = list("corporate")
-	cyberpunk_violence_control = "high"
-	cyberpunk_district_base_danger = 5
-
-/area/cyberpunk_city/corporate/benn
-	name = "Benn Territory"
-	cyberpunk_district_id = "benn"
-	cyberpunk_district_name = "Benn Territory"
-	cyberpunk_world_owner = "benn"
-
-/area/cyberpunk_city/corporate/ryaznov
-	name = "Ryaznov Territory"
-	cyberpunk_district_id = "ryaznov"
-	cyberpunk_district_name = "Ryaznov Territory"
-	cyberpunk_world_owner = "ryaznov"
-
-/area/cyberpunk_city/corporate/starlight
-	name = "Starlight Territory"
-	cyberpunk_district_id = "starlight"
-	cyberpunk_district_name = "Starlight Territory"
-	cyberpunk_world_owner = "starlight"
-
-/area/cyberpunk_city/government
-	name = "Government Territory"
-	cyberpunk_safe_zone = TRUE
-	cyberpunk_district_id = "government"
-	cyberpunk_district_name = "Government Territory"
-	cyberpunk_district_kind = "government"
-	cyberpunk_world_tags = list("government")
-	cyberpunk_world_owner = "government"
-	cyberpunk_violence_control = "high"
-	cyberpunk_district_base_danger = 3
-
-/area/cyberpunk_city/slums
-	name = "Cyberpunk City Slums"
-	cyberpunk_district_id = "slums"
-	cyberpunk_district_name = "Slums"
-	cyberpunk_district_kind = "slums"
-	cyberpunk_world_tags = list("slums")
-	cyberpunk_violence_control = "weak"
-	cyberpunk_district_base_danger = 18
-
-/area/cyberpunk_city/roof
-	name = "Cyberpunk City Roof"
-	cyberpunk_district_id = "roof"
-	cyberpunk_district_name = "Roof"
-	cyberpunk_district_kind = "roof"
-	cyberpunk_world_tags = list("roof")
-	cyberpunk_district_base_danger = 11
-
-/area/cyberpunk_city/underground
-	name = "Cyberpunk City Underground"
-	cyberpunk_district_id = "underground"
-	cyberpunk_district_name = "Underground"
-	cyberpunk_district_kind = "underground"
-	cyberpunk_world_tags = list("underground")
-	cyberpunk_violence_control = "weak"
-	cyberpunk_district_base_danger = 14
-
 /proc/cyberpunk_is_safe_zone(atom/location)
 	var/area/current_area = get_area(location)
 	return current_area?.cyberpunk_safe_zone
@@ -493,12 +241,17 @@
 	return target ? REF(target) : null
 
 /proc/cyberpunk_turf_is_clear_for_city_spawn(turf/target)
-	if(!target || target.density || isclosedturf(target) || isspaceturf(target))
+	if(!target || target.density || isclosedturf(target) || isspaceturf(target) || isgroundlessturf(target))
 		return FALSE
 	for(var/atom/movable/content as anything in target)
 		if(content.density)
 			return FALSE
 	return TRUE
+
+/proc/cyberpunk_turf_is_city_district_ground(turf/target)
+	if(!cyberpunk_turf_is_clear_for_city_spawn(target))
+		return FALSE
+	return istype(get_area(target), /area/cyberpunk/city/district)
 
 /proc/cyberpunk_random_turf_in_area_type(area_type, list/near_mobs, min_distance = 0, max_distance = INFINITY)
 	var/list/candidates = list()
@@ -522,10 +275,28 @@
 		return null
 	return pick(candidates)
 
+/proc/cyberpunk_random_city_roam_turf(mob/living/carbon/human/cyberpunk_npc/npc, min_distance = 4, max_distance = 14)
+	if(!npc)
+		return null
+	var/list/candidates = list()
+	var/area/current_area = get_area(npc)
+	if(istype(current_area, /area/cyberpunk/city/district))
+		for(var/turf/current_turf as anything in cyberpunk_area_turfs(current_area))
+			if(!cyberpunk_turf_is_city_district_ground(current_turf))
+				continue
+			var/turf_distance = get_dist(npc, current_turf)
+			if(turf_distance < min_distance || turf_distance > max_distance)
+				continue
+			candidates += current_turf
+	if(length(candidates))
+		return pick(candidates)
+	return cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, list(npc), min_distance, max_distance)
+
 SUBSYSTEM_DEF(cyberpunk_city_ai)
 	name = "Cyberpunk City AI"
-	wait = 15 SECONDS
+	wait = 5 SECONDS
 	priority = FIRE_PRIORITY_DEFAULT
+	ss_flags = SS_NO_INIT
 	var/max_bystanders = 18
 	var/max_security = 6
 
@@ -538,10 +309,15 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		return
 	maintain_bystanders(active_players)
 	maintain_security()
+	maintain_roaming(active_players)
+	process_ambient_speech(active_players)
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/count_city_npcs(typepath)
 	var/count = 0
-	for(var/mob/living/carbon/human/cyberpunk_npc/npc as anything in GLOB.mob_living_list)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/npc = candidate
 		if(istype(npc, typepath) && npc.stat != DEAD)
 			count++
 	return count
@@ -550,7 +326,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/current_count = count_city_npcs(/mob/living/carbon/human/cyberpunk_npc/bystander)
 	if(current_count >= max_bystanders)
 		return
-	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk_city/street, active_players, 6, 18)
+	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, 6, 18)
 	if(!spawn_turf)
 		return
 	new /mob/living/carbon/human/cyberpunk_npc/bystander(spawn_turf)
@@ -559,13 +335,44 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/current_count = count_city_npcs(/mob/living/carbon/human/cyberpunk_npc/security)
 	if(current_count >= max_security)
 		return
-	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk_city/security)
+	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/security)
 	if(!spawn_turf)
 		return
 	var/mob/living/carbon/human/cyberpunk_npc/security/security_npc = new(spawn_turf)
-	var/turf/patrol_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk_city/street)
+	var/turf/patrol_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district)
 	if(patrol_turf)
 		cyberpunk_order_city_ai(security_npc, CP_AI_TASK_PATROL, spawn_turf, patrol_turf, null)
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/maintain_roaming(list/active_players)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/npc = candidate
+		if(!can_roam(npc))
+			continue
+		var/turf/roam_turf = cyberpunk_random_city_roam_turf(npc)
+		if(!roam_turf)
+			continue
+		npc.ai_controller.cyberpunk_assign_city_task(CP_AI_TASK_PATROL, null, roam_turf, null, null, rand(1 SECONDS, 3 SECONDS))
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/process_ambient_speech(list/active_players)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/npc = candidate
+		npc.cyberpunk_try_ambient_speech(active_players)
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/can_roam(mob/living/carbon/human/cyberpunk_npc/npc)
+	if(!npc || QDELETED(npc) || npc.cyberpunk_stationary_npc || npc.client || npc.stat != CONSCIOUS)
+		return FALSE
+	if(!(npc.mobility_flags & MOBILITY_MOVE) || npc.pulledby || npc.buckled)
+		return FALSE
+	var/datum/ai_controller/controller = npc.ai_controller
+	if(!controller || controller.blackboard_key_exists(BB_CP_CITY_TASK) || controller.blackboard_key_exists(BB_CP_THREAT_TARGET))
+		return FALSE
+	if(controller.blackboard[BB_CP_PHANTOM_STATE] != CP_AI_PHANTOM_INACTIVE)
+		return FALSE
+	return TRUE
 
 /proc/cyberpunk_order_city_ai(mob/living/npc, task_type, atom/source, atom/target, atom/cargo)
 	var/datum/ai_controller/controller = npc?.ai_controller
@@ -590,7 +397,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		controller.cyberpunk_assign_city_task(CP_AI_TASK_DELIVERY, source || cargo, target, cargo, null, 2 MINUTES, source)
 		return TRUE
 	if(task_type == CP_AI_TASK_PATROL)
-		controller.cyberpunk_assign_city_task(CP_AI_TASK_PATROL, null, target, null, null, 30 SECONDS, source)
+		controller.cyberpunk_assign_city_task(CP_AI_TASK_PATROL, null, target, null, null, 2 SECONDS, source)
 		return TRUE
 	return FALSE
 
@@ -763,7 +570,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		return FALSE
 	var/handled = FALSE
 	var/threat_level = isnull(level) ? (safe_zone ? 3 : 2) : level
-	SScyberpunk_round?.record_cyberpunk_district_violence(location || threat, threat_level, safe_zone ? "safe-zone violence" : "street violence")
+	SScyberpunk_round?.record_cyberpunk_district_violence(location || threat, threat_level, safe_zone ? "safe-zone violence" : "district violence")
 	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
 		var/datum/ai_controller/controller = candidate.ai_controller
 		if(!controller?.cyberpunk_has_capability(CP_AI_CAP_COMBAT))

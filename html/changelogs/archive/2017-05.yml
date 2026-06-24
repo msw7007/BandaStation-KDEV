@@ -447,8 +447,6 @@
   - bugfix: Wizards are now at least 30 years old. Apprentices will be in-between
       ages 17 to 29.
   Penguaro:
-  - bugfix: The Gravity Generator description now mentions a graviton field as opposed
-      to a gravaton field. What is Gravaty anyway?
   - bugfix: Centcom Engineering has reviewed the plans for the Box series station
       and has addressed some concerns related to some APCs not affecting their designated
       section. APCs for the Detective's Office, Cargobay, and Gateway, now control

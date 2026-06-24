@@ -278,8 +278,6 @@
   MMMiracles:
   - tweak: Boxstation's AI core was moved back into the original position just below
       the bridge.
-  - tweak: Boxstation's gravity generator was moved to the left of Engineering, accessed
-      through the main Engineering section.
   MacBlaze1:
   - rscadd: Security PDA's now come with the Crew Manifest Program
   - bugfix: fixed lesser form transformation not transferring stamina damage

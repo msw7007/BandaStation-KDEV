@@ -26,7 +26,6 @@
   - bugfix: computers don't deconstruct themselves twice so machines like slotmachine
       don't spawn excess chips upon deconstruction
   improvedname:
-  - bugfix: Fixes tramstation gravgen wiring
   - bugfix: Fixes tramstation turbine wiring
   - bugfix: Fixes northstar cmo button name
   jlsnow301:
@@ -831,7 +830,6 @@
 2024-05-31:
   Capsandi:
   - sound: Shuttle docking and undocking is quieter now
-  - sound: The volume of the gravity generator has been halved
   Rhials:
   - bugfix: You can no longer force NODE Drones off of ore vents. That includes using
       fulton packs!

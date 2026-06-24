@@ -38,6 +38,7 @@
 /area/ruin/space/nt_commsbuoy
 	name = "\improper Nanotrasen Comms Buoy"
 	sound_environment = SOUND_AREA_SMALL_ENCLOSED
+	area_flags = NO_GRAVITY
 	default_gravity = ZERO_GRAVITY
 	ambientsounds = list(
 		'sound/ambience/engineering/ambisin2.ogg',

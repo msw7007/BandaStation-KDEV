@@ -26,7 +26,6 @@
       instead of a 1x1, and apply normal gravity in a large radius around them
   - balance: Space Dragon and rift carps now communicate on a private mind link channel
       via action button similar to Raw Prophets and Slimepeople.
-  - bugfix: Fixed Gravity Generator forced gravity not applying.
   - bugfix: Intern Announcer will no longer replace Space Dragon announcements.
   - qol: The roundend report for space dragons now collates all players who played
       a carp into one entry, rather than one per carp spawned.

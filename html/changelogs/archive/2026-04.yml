@@ -87,7 +87,6 @@
       performance. Report broken reactions on github'
 2026-04-06:
   ArcaneMusic:
-  - admin: Adds a secret to restart the gravity generator.
   JohnFulpWillard:
   - qol: Health assemblies now show their health in maptext rather than a stat panel
       entry.

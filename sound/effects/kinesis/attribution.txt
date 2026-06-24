@@ -1,0 +1,4 @@
+kinesis_start.ogg
+kinesis_mid1.ogg
+kinesis_mid2.ogg - + Explosion 7b by LiamG_SFX -- https://freesound.org/s/322492/ -- License: Attribution NonCommercial 4.0
+kinesis_end.ogg

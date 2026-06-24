@@ -774,8 +774,19 @@ SUBSYSTEM_DEF(job)
 		if(length(available_turfs))
 			return pick(available_turfs)
 
+	var/obj/effect/landmark/start/generic_spawn = get_generic_start_spawn_point()
+	if(!isnull(generic_spawn))
+		log_mapping("Unable to find arrivals latejoin spawn point. Falling back to a generic roundstart spawn point.")
+		return generic_spawn
+
 	stack_trace("Unable to find last resort spawn point.")
 	return GET_ERROR_ROOM
+
+/datum/controller/subsystem/job/proc/get_generic_start_spawn_point()
+	for(var/obj/effect/landmark/start/spawn_point as anything in GLOB.start_landmarks_list)
+		if(spawn_point.type != /obj/effect/landmark/start)
+			continue
+		return spawn_point
 
 /// Returns a list of minds of all heads of staff who are alive
 /datum/controller/subsystem/job/proc/get_living_heads()

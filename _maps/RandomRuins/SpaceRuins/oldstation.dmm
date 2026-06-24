@@ -258,7 +258,7 @@
 /area/ruin/space/ancientstation/charlie/bridge)
 "bw" = (
 /obj/machinery/door/airlock/engineering{
-	name = "Gravity Generator"
+	name = "Utility"
 	},
 /obj/structure/cable,
 /obj/machinery/door/firedoor,
@@ -3618,7 +3618,6 @@
 /area/ruin/space/ancientstation/beta/atmos)
 "rG" = (
 /obj/effect/decal/cleanable/dirt,
-/obj/machinery/gravity_generator/main/off,
 /turf/open/floor/iron/diagonal,
 /area/ruin/space/ancientstation/beta/gravity)
 "rJ" = (
@@ -4697,7 +4696,7 @@
 /area/ruin/space/ancientstation/beta/atmos)
 "zn" = (
 /obj/machinery/door/airlock/engineering{
-	name = "Gravity Generator"
+	name = "Utility"
 	},
 /obj/machinery/door/firedoor,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2{

@@ -239,6 +239,9 @@ multiple modular subtrees with behaviors
 
 /// Assigns a compact city task through the blackboard. Use subtrees/behaviors to execute it.
 /datum/ai_controller/proc/cyberpunk_assign_city_task(task_type, atom/source, atom/target, atom/cargo, contract_id, duration = 30 SECONDS, atom/return_point)
+	cyberpunk_clear_city_task()
+	clear_blackboard_key(BB_CP_CITY_TASK_RESULT)
+	clear_blackboard_key(BB_CP_CITY_TASK_FAILURE_REASON)
 	set_blackboard_key(BB_CP_CITY_TASK, task_type)
 	set_blackboard_key(BB_CP_CITY_TASK_STATE, source ? CP_AI_TASK_ROUTE_TO_SOURCE : (target ? CP_AI_TASK_ROUTE_TO_TARGET : CP_AI_TASK_WORKING))
 	set_blackboard_key(BB_CP_CITY_TASK_FINISH_AT, world.time + duration)
@@ -266,17 +269,44 @@ multiple modular subtrees with behaviors
 		set_blackboard_key(BB_CP_ROUTE_TARGET_Z, target_turf.z)
 	reset_ai_status()
 
+/// Clears volatile task/route state while preserving last result/debug fields.
+/datum/ai_controller/proc/cyberpunk_clear_city_task()
+	var/static/list/city_task_blackboard_keys = list(
+		BB_CP_CITY_TASK,
+		BB_CP_CITY_TASK_STATE,
+		BB_CP_CITY_TASK_FINISH_AT,
+		BB_CP_CONTRACT_ID,
+		BB_CP_CONTRACT_REF,
+		BB_CP_CARGO,
+		BB_CP_CARGO_SOURCE,
+		BB_CP_CARGO_RECEIVER,
+		BB_CP_CARGO_STATUS,
+		BB_CP_ROUTE_SOURCE,
+		BB_CP_ROUTE_TARGET,
+		BB_CP_ROUTE_RETURN_POINT,
+		BB_CP_ROUTE_PHASE,
+		BB_CP_ROUTE_TARGET_Z,
+		BB_CP_ROUTE_Z_TRANSITION,
+		BB_CP_ROUTE_VISIBLE,
+		BB_CP_PHANTOM_FINISH_AT,
+		BB_CP_PHANTOM_NEXT_TICK,
+		BB_CP_PHANTOM_ACCUMULATED_SECONDS,
+	)
+	for(var/blackboard_key as anything in city_task_blackboard_keys)
+		clear_blackboard_key(blackboard_key)
+	set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_INACTIVE)
+
 /// Marks the current city task as complete.
 /datum/ai_controller/proc/cyberpunk_complete_city_task(result = "completed")
-	set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_COMPLETED)
 	set_blackboard_key(BB_CP_CITY_TASK_RESULT, result)
-	set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_COMPLETED)
+	cyberpunk_clear_city_task()
+	reset_ai_status()
 
 /// Marks the current city task as failed.
 /datum/ai_controller/proc/cyberpunk_fail_city_task(reason = "failed")
-	set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_FAILED)
 	set_blackboard_key(BB_CP_CITY_TASK_FAILURE_REASON, reason)
-	set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_FAILED)
+	cyberpunk_clear_city_task()
+	reset_ai_status()
 
 /// TRUE when the controller should keep logical city-task processing while physically idle.
 /datum/ai_controller/proc/cyberpunk_should_process_phantom()
@@ -509,6 +539,9 @@ multiple modular subtrees with behaviors
 	set_blackboard_key(BB_CP_PHANTOM_APPROX_TURF, target_turf)
 	set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, target_turf.z)
 	clear_blackboard_key(BB_CP_PHANTOM_FINISH_AT)
+	if(next_state == CP_AI_TASK_COMPLETED)
+		cyberpunk_complete_city_task("phantom route completed")
+		return
 	set_blackboard_key(BB_CP_CITY_TASK_STATE, next_state)
 
 /datum/ai_controller/proc/recalculate_idle(datum/exited)

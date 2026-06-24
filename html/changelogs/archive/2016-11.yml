@@ -60,8 +60,6 @@
       later disarm someone else to instantly chokehold them.
   - tweak: CQC costs more TC (13)
   Cyberboss:
-  - bugfix: Tesla zaps that don't come from an energy ball can no longer destroy nukes
-      and gravity generators
   El Tacolizard:
   - rscadd: A space monastery and chaplain job have been added to PubbyStation.
   - rscadd: Improved pubby's maint detailing

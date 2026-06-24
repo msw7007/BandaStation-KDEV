@@ -228,8 +228,6 @@
   - bugfix: Summon animals relic makes you less depressed
   - bugfix: Fix detached storage (modsuit storage)
   - rscadd: '[Catwalk] Entirely new Dorms & Holodeck'
-  - rscadd: '[Catwalk] Modified Atmos, Gravity Generator, Engineering and Tech Storage
-      a fair bit'
   - rscadd: '[Catwalk] Event locations were updated, meaning several random events
       now trigger in more appropriate places'
   - rscdel: '[Catwalk] Removed duplicate First Aid stations in a few places'
@@ -528,7 +526,6 @@
   - bugfix: Fixes a oversight on deltastation where mining still get a boulder beacon.
   - map: Nanotrasen now supplies deltastation mining employees with 3 instant meals
       before doing their workshift
-  - map: Changes the location of catwalk gravgen APC to be outside the Generator room
   - bugfix: Hos office on catwalk now includes an ID console
   Kaltf4:
   - bugfix: When all six non-rare colors of raptor are cross-bred, a black raptor

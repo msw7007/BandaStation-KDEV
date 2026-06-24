@@ -80,8 +80,8 @@ SUBSYSTEM_DEF(mapping)
 	/// True when in the process of adding a new Z-level, global locking
 	var/adding_new_zlevel = FALSE
 
-	///shows the default gravity value for each z level. recalculated when gravity generators change.
-	///List in the form: list(z level num = max generator gravity in that z level OR the gravity level trait)
+	/// Shows the default gravity value for each z level.
+	/// No-gravity gameplay is explicit through area flags or forced-gravity effects.
 	var/list/gravity_by_z_level = list()
 
 	/// list of traits and their associated z leves
@@ -238,14 +238,12 @@ SUBSYSTEM_DEF(mapping)
 	if(!isnum(z_level_number) || z_level_number < 1)
 		return FALSE
 
-	var/max_gravity = 0
+	var/z_gravity = level_trait(z_level_number, ZTRAIT_GRAVITY)
+	if(isnull(z_gravity))
+		z_gravity = STANDARD_GRAVITY
 
-	for(var/obj/machinery/gravity_generator/main/grav_gen as anything in GLOB.gravity_generators["[z_level_number]"])
-		max_gravity = max(grav_gen.setting, max_gravity)
-
-	max_gravity = max_gravity || level_trait(z_level_number, ZTRAIT_GRAVITY) || 0//just to make sure no nulls
-	gravity_by_z_level[z_level_number] = max_gravity
-	return max_gravity
+	gravity_by_z_level[z_level_number] = z_gravity
+	return z_gravity
 
 /**
  * ##setup_ruins

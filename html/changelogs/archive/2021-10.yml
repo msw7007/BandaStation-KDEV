@@ -69,8 +69,6 @@
   KittyCatMeowMeow:
   - bugfix: Fixes access on Maint airlocks on the tramstation bar
   Maurukas:
-  - bugfix: The Metastation gravity generator is now properly connected to the power
-      grid again
   - bugfix: A large number of doubled power cables have been fixed across on all stations
   - bugfix: A large number of broken, disconnected or doubled up atmospherics pipes
       have been fixed across all stations

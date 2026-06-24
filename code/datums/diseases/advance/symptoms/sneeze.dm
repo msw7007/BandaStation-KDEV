@@ -40,7 +40,7 @@
 	if(active_disease.totalStealth() >= 4)
 		suppress_warning = TRUE
 	if(active_disease.totalStageSpeed() >= 17) //Yep, stage speed 17, not stage speed 7. This is a big boy threshold (effect), like the language-scrambling transmission one for the voice change symptom.
-		cartoon_sneezing = TRUE //for a really fun time, distribute a disease with this threshold met while the gravity generator is down
+		cartoon_sneezing = TRUE //for a really fun time, distribute a disease with this threshold met in no gravity
 
 /datum/symptom/sneeze/Activate(datum/disease/advance/active_disease)
 	. = ..()

@@ -56,10 +56,6 @@
 		"min_players": 0,
 		"weight": 20
 	},
-	"Gravity Generator Blackout": {
-		"min_players": 0,
-		"weight": 30
-	},
 	"Grey Tide": {
 		"min_players": 5,
 		"weight": 10

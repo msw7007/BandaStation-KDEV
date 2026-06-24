@@ -44,8 +44,6 @@
       toxin damage when the target is irradiated.
   - balance: Screwdriver, Potassium Iodide, and Pentetic Acid will halt the damaging
       effects of radiation, just like showers. This means no tox damage or burns.
-  - balance: The gravity generator, instead of giving radiation when on, will now
-      have a high gravity field around it.
   - balance: Radiation protection has been kept to engineering hardsuits, rad suits,
       and H.E.C.K. suits. This can be expanded to others, those are just the ones
       I recognized.

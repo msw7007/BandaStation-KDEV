@@ -1096,6 +1096,9 @@
 	var/cyberpunk_vendor_profile = "local"
 	var/list/cyberpunk_vendor_categories
 	var/list/cyberpunk_vendor_services
+	var/cyberpunk_ambient_phrase_key = "bystander"
+	var/cyberpunk_ambient_speech_interval = 10 SECONDS
+	var/cyberpunk_next_ambient_speech = 0
 
 /mob/living/carbon/human/cyberpunk_npc/Initialize(mapload)
 	. = ..()
@@ -1107,6 +1110,35 @@
 		QDEL_NULL(ai_controller)
 	cyberpunk_setup_city_npc_profile()
 	update_body()
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_can_ambient_speak(list/active_players)
+	if(cyberpunk_stationary_npc || stat != CONSCIOUS || client || !ai_controller)
+		return FALSE
+	if(ai_controller.blackboard[BB_CP_PHANTOM_STATE] != CP_AI_PHANTOM_INACTIVE)
+		return FALSE
+	if(!length(active_players))
+		return FALSE
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return FALSE
+	for(var/mob/living/listener as anything in active_players)
+		if(listener.z != current_turf.z || get_dist(listener, src) > 7)
+			continue
+		if(can_see(listener, src, 7))
+			return TRUE
+	return FALSE
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_try_ambient_speech(list/active_players)
+	if(world.time < cyberpunk_next_ambient_speech)
+		return FALSE
+	if(!cyberpunk_next_ambient_speech)
+		cyberpunk_next_ambient_speech = world.time + rand(0, cyberpunk_ambient_speech_interval)
+		return FALSE
+	cyberpunk_next_ambient_speech = world.time + cyberpunk_ambient_speech_interval
+	if(!cyberpunk_can_ambient_speak(active_players))
+		return FALSE
+	say(pick_list(CYBERPUNK_NPC_AMBIENT_FILE, cyberpunk_ambient_phrase_key), forced = "city ambient")
+	return TRUE
 
 /mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_setup_city_npc_profile()
 	var/list/dialog = list(
@@ -1244,6 +1276,7 @@
 	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/runner
 	cyberpunk_vendor_profile = "runner"
 	cyberpunk_vendor_categories = list()
+	cyberpunk_ambient_phrase_key = "runner"
 
 /mob/living/carbon/human/cyberpunk_npc/worker
 	real_name = "worker"
@@ -1251,6 +1284,7 @@
 	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/worker
 	cyberpunk_vendor_profile = "worker"
 	cyberpunk_vendor_categories = list("parts", "water")
+	cyberpunk_ambient_phrase_key = "worker"
 
 /mob/living/carbon/human/cyberpunk_npc/security
 	real_name = "security contractor"
@@ -1258,9 +1292,12 @@
 	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/security
 	cyberpunk_vendor_profile = "security contractor"
 	cyberpunk_vendor_categories = list("equipment")
+	cyberpunk_ambient_phrase_key = "security"
 
 /obj/effect/landmark/cyberpunk_npc_trader
 	name = "cyberpunk npc trader"
+	icon_state = "generic_event"
+	color = "#00d9ff"
 	var/trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor
 
 /obj/effect/landmark/cyberpunk_npc_trader/Initialize(mapload)
@@ -1268,7 +1305,8 @@
 	if(!mapload)
 		return
 	var/turf/spawn_turf = get_turf(src)
-	if(!spawn_turf)
+	if(!cyberpunk_turf_is_clear_for_city_spawn(spawn_turf))
+		stack_trace("Cyberpunk NPC trader landmark [src.type] has no valid ground turf at [AREACOORD(src)].")
 		return INITIALIZE_HINT_QDEL
 	var/mob/living/carbon/human/cyberpunk_npc/trader = new trader_type(spawn_turf)
 	trader.setDir(dir)

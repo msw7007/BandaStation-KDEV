@@ -88,7 +88,7 @@
 	var/list/obj/structure/fillers = list()
 
 /obj/machinery/dna_vault/Initialize(mapload)
-	//TODO: Replace this,bsa and gravgen with some big machinery datum
+	//TODO: Replace this and bsa with some big machinery datum
 	var/list/occupied = list()
 	for(var/direct in list(EAST,WEST,SOUTHEAST,SOUTHWEST))
 		occupied += get_step(src,direct)

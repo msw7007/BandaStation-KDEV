@@ -60,10 +60,7 @@
 	if(!blocks_air)
 		air = create_gas_mixture()
 		if(planetary_atmos)
-			if(!SSair.planetary[initial_gas_mix])
-				var/datum/gas_mixture/immutable/planetary/mix = new
-				mix.parse_string_immutable(initial_gas_mix)
-				SSair.planetary[initial_gas_mix] = mix
+			SSair.get_planetary_atmos(initial_gas_mix)
 	return ..()
 
 /turf/open/Destroy()
@@ -98,18 +95,33 @@
 
 /turf/open/remove_air(amount)
 	var/datum/gas_mixture/ours = return_air()
+	if(!ours)
+		return null
 	var/datum/gas_mixture/removed = ours.remove(amount)
 	update_visuals()
 	air_update_turf(FALSE, FALSE)
 	return removed
 
+/turf/open/proc/ensure_air()
+	RETURN_TYPE(/datum/gas_mixture)
+	if(air)
+		return air
+	air = isspaceturf(src) ? SSair.parse_gas_string(AIRLESS_ATMOS, /datum/gas_mixture/turf) : create_gas_mixture()
+	return air
+
+/turf/open/proc/get_copyable_air()
+	RETURN_TYPE(/datum/gas_mixture)
+	return air || (isspaceturf(src) ? SSair.parse_gas_string(AIRLESS_ATMOS, /datum/gas_mixture/turf) : create_gas_mixture())
+
 /turf/open/proc/copy_air_with_tile(turf/open/target_turf)
 	if(istype(target_turf))
-		air.copy_from(target_turf.air)
+		var/datum/gas_mixture/target_air = target_turf.get_copyable_air()
+		if(target_air)
+			ensure_air()?.copy_from(target_air)
 
 /turf/open/proc/copy_air(datum/gas_mixture/copy)
 	if(copy)
-		air.copy_from(copy)
+		ensure_air()?.copy_from(copy)
 
 /turf/return_air()
 	RETURN_TYPE(/datum/gas_mixture)
@@ -252,6 +264,10 @@
 	SSair.remove_from_active(src)
 
 /turf/open/process_cell(fire_count)
+	var/datum/gas_mixture/our_air = air
+	if(!our_air)
+		SSair.remove_from_active(src)
+		return
 	if(archived_cycle < fire_count) //archive self if not already done
 		LINDA_CYCLE_ARCHIVE(src)
 
@@ -263,8 +279,6 @@
 	var/list/adjacent_turfs = atmos_adjacent_turfs
 	var/datum/excited_group/our_excited_group = excited_group
 	var/our_share_coeff = 1/(LAZYLEN(adjacent_turfs) + 1)
-
-	var/datum/gas_mixture/our_air = air
 
 	var/list/share_end
 
@@ -284,6 +298,10 @@
 		if(enemy_tile.run_later)
 			LAZYADD(share_end, enemy_tile)
 
+		var/datum/gas_mixture/enemy_air = enemy_tile.air
+		if(!enemy_air)
+			continue
+
 		if(fire_count <= enemy_tile.current_cycle)
 			continue
 		LINDA_CYCLE_ARCHIVE(enemy_tile)
@@ -291,7 +309,6 @@
 	/******************* GROUP HANDLING START *****************************************************************/
 
 		var/should_share_air = FALSE
-		var/datum/gas_mixture/enemy_air = enemy_tile.air
 
 		//cache for sanic speed
 		var/datum/excited_group/enemy_excited_group = enemy_tile.excited_group
@@ -331,7 +348,7 @@
 	/******************* GROUP HANDLING FINISH *********************************************************************/
 
 	if (planetary_atmos) //share our air with the "atmosphere" "above" the turf
-		var/datum/gas_mixture/planetary_mix = SSair.planetary[initial_gas_mix]
+		var/datum/gas_mixture/planetary_mix = SSair.get_planetary_atmos(initial_gas_mix)
 		// archive ourself again so we don't accidentally share more gas than we currently have
 		LINDA_CYCLE_ARCHIVE(src)
 		if(our_air.compare(planetary_mix, ARCHIVE))
@@ -348,6 +365,8 @@
 
 	for(var/turf/open/enemy_tile as anything in share_end)
 		var/datum/gas_mixture/enemy_mix = enemy_tile.air
+		if(!enemy_mix)
+			continue
 		archive()
 		// We share 100% of our mix in this step. Let's jive
 		var/difference = our_air.share(enemy_mix, 1, 1)
@@ -481,6 +500,8 @@
 	for(var/turf/open/group_member as anything in turf_list)
 		//Cache?
 		var/datum/gas_mixture/turf/mix = group_member.air
+		if(!mix)
+			continue
 		if (roundstart)
 			if(istype(group_member.air, /datum/gas_mixture/immutable))
 				imumutable_in_group = TRUE
@@ -490,7 +511,7 @@
 			// If we're planetary use THAT mix, and stop here
 			if(group_member.planetary_atmos)
 				imumutable_in_group = TRUE
-				var/datum/gas_mixture/planetary_mix = SSair.planetary[group_member.initial_gas_mix]
+				var/datum/gas_mixture/planetary_mix = SSair.get_planetary_atmos(group_member.initial_gas_mix)
 				shared_mix.copy_from(planetary_mix)
 				shared_gases = shared_mix.gases // Cache update
 				break
@@ -505,7 +526,7 @@
 			ASSERT_GAS_IN_LIST(giver_id, shared_gases)
 			shared_gases[giver_id][MOLES] += giver_gases[giver_id][MOLES]
 
-	if(!imumutable_in_group)
+	if(!imumutable_in_group && heat_cap)
 		shared_mix.temperature = energy / heat_cap
 		for(var/id in shared_gases)
 			shared_gases[id][MOLES] /= turflen
@@ -513,9 +534,9 @@
 
 	for(var/turf/open/group_member as anything in turf_list)
 		if(group_member.planetary_atmos) //We do this as a hack to try and minimize unneeded excited group spread over planetary turfs
-			group_member.air.copy_from(SSair.planetary[group_member.initial_gas_mix]) //Comes with a cost of "slower" drains, but it's worth it
+			group_member.ensure_air()?.copy_from(SSair.get_planetary_atmos(group_member.initial_gas_mix)) //Comes with a cost of "slower" drains, but it's worth it
 		else
-			group_member.air.copy_from(shared_mix) //Otherwise just set the mix to a copy of our equalized mix
+			group_member.ensure_air()?.copy_from(shared_mix) //Otherwise just set the mix to a copy of our equalized mix
 		group_member.update_visuals()
 		if(poke_turfs) //Because we only activate all these once every breakdown, in event of lag due to this code and slow space + vent things, increase the wait time for breakdowns
 			SSair.add_to_active(group_member)

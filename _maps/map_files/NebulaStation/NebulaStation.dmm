@@ -13506,7 +13506,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "bZy" = (
 /obj/effect/turf_decal/siding/wood,
 /obj/effect/turf_decal/siding/wood/corner{
@@ -18314,7 +18314,7 @@
 	},
 /obj/item/kirbyplants/organic/plant22,
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "cKU" = (
 /obj/effect/turf_decal/trimline/red/filled/line{
 	dir = 5
@@ -21610,7 +21610,7 @@
 /obj/item/crowbar/red,
 /obj/machinery/camera/autoname/directional/west,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "djL" = (
 /obj/effect/turf_decal/stripes/corner{
 	dir = 1
@@ -25126,7 +25126,7 @@
 /area/station/engineering/atmos)
 "dLb" = (
 /turf/open/floor/iron/stairs/right,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "dLe" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 1
@@ -25936,7 +25936,7 @@
 	dir = 1
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "dRy" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/window/reinforced/spawner/directional/east,
@@ -39187,7 +39187,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "fOi" = (
 /obj/effect/spawner/random/engineering/tank,
 /obj/structure/sign/poster/contraband/singletank_bomb/directional/west,
@@ -39740,7 +39740,7 @@
 /obj/effect/turf_decal/bot_white/left,
 /obj/machinery/digital_clock/directional/north,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "fSq" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/plating,
@@ -40592,7 +40592,7 @@
 "fYj" = (
 /obj/structure/hedge,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "fYl" = (
 /obj/effect/turf_decal/trimline/dark_blue,
 /turf/open/floor/iron/dark/small,
@@ -51355,7 +51355,7 @@
 /area/station/service/theater)
 "hBh" = (
 /turf/open/floor/iron/stairs/left,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "hBm" = (
 /obj/effect/turf_decal/siding/thinplating_new/light,
 /obj/effect/turf_decal/tile/dark_blue/opposingcorners,
@@ -54227,9 +54227,8 @@
 /obj/effect/turf_decal/bot_white,
 /obj/effect/turf_decal/stripes/line,
 /obj/effect/turf_decal/trimline/dark,
-/obj/machinery/gravity_generator/main,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "hXl" = (
 /obj/machinery/atmospherics/pipe/smart/manifold/purple/visible{
 	dir = 8
@@ -55337,7 +55336,7 @@
 /obj/machinery/light_switch/directional/south,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ifQ" = (
 /obj/machinery/door/airlock/multi_tile/public/glass{
 	name = "Permabrig Kitchen"
@@ -57821,7 +57820,7 @@
 	name = "Grav Gen Maintenance"
 	},
 /turf/open/floor/plating,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "izb" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 9
@@ -61000,7 +60999,7 @@
 /area/station/security/holding_cell)
 "iXu" = (
 /turf/open/floor/iron/stairs/medium,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "iXy" = (
 /obj/structure/cable,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -64445,7 +64444,7 @@
 /obj/machinery/airalarm/directional/east,
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "jzD" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark/corner{
 	dir = 1
@@ -64965,7 +64964,7 @@
 /obj/machinery/light/small/directional/south,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "jCc" = (
 /obj/effect/decal/cleanable/dirt,
 /obj/structure/cable,
@@ -73867,7 +73866,7 @@
 /obj/machinery/light/small/directional/south,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "kOZ" = (
 /obj/effect/turf_decal/tile/dark_blue/half/contrasted{
 	dir = 8
@@ -77181,7 +77180,7 @@
 	},
 /obj/item/kirbyplants/organic/plant22,
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "lqJ" = (
 /obj/effect/turf_decal/siding/thinplating_new/dark{
 	dir = 4
@@ -79588,7 +79587,7 @@
 /obj/effect/turf_decal/bot_white/left,
 /obj/effect/turf_decal/stripes/line,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "lKG" = (
 /obj/effect/turf_decal/trimline/green/filled/warning,
 /obj/machinery/atmospherics/pipe/smart/manifold4w/scrubbers/hidden/layer2,
@@ -89210,7 +89209,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "nln" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 1
@@ -92404,7 +92403,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "nJG" = (
 /obj/effect/turf_decal/siding/brown{
 	dir = 8
@@ -97433,7 +97432,7 @@
 /area/space/nearstation)
 "oum" = (
 /turf/open/floor/circuit,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ouq" = (
 /obj/structure/reflector/box/anchored{
 	dir = 1
@@ -102849,7 +102848,7 @@
 /obj/structure/cable,
 /obj/structure/disposalpipe/segment,
 /turf/open/floor/iron/dark/smooth_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "pgW" = (
 /obj/machinery/door/airlock/virology/glass{
 	name = "Test Subject Cell"
@@ -106818,7 +106817,7 @@
 /obj/machinery/firealarm/directional/south,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "pJE" = (
 /obj/effect/turf_decal/siding/wood{
 	dir = 4
@@ -109296,7 +109295,7 @@
 	dir = 8
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "qdI" = (
 /obj/effect/spawner/structure/window,
 /obj/machinery/door/poddoor/shutters/preopen{
@@ -112505,7 +112504,7 @@
 /obj/structure/sign/warning/radiation/rad_area/directional/north,
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "qDv" = (
 /obj/effect/turf_decal/trimline/red/filled/corner,
 /obj/effect/decal/cleanable/food/tomato_smudge{
@@ -127402,7 +127401,7 @@
 /obj/effect/turf_decal/bot_white/right,
 /obj/effect/turf_decal/stripes/line,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "sOG" = (
 /obj/effect/turf_decal/tile/dark_blue/half/contrasted{
 	dir = 1
@@ -129168,7 +129167,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "tcG" = (
 /obj/effect/turf_decal/stripes/white/line{
 	dir = 8
@@ -129718,7 +129717,7 @@
 	dir = 6
 	},
 /turf/open/floor/iron/dark/smooth_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "tgM" = (
 /obj/effect/turf_decal/tile/dark_blue/half/contrasted{
 	dir = 8
@@ -130911,7 +130910,7 @@
 /obj/structure/cable,
 /obj/item/radio/intercom/directional/west,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "tqa" = (
 /obj/effect/turf_decal/trimline/green,
 /obj/structure/chair/comfy,
@@ -134886,7 +134885,7 @@
 /area/station/maintenance/starboard/central)
 "tRc" = (
 /obj/machinery/door/airlock/highsecurity{
-	name = "Gravity Generator Foyer"
+	name = "Utility Foyer"
 	},
 /obj/effect/turf_decal/delivery,
 /obj/effect/mapping_helpers/airlock/access/all/engineering/construction,
@@ -134894,7 +134893,7 @@
 /obj/structure/cable,
 /obj/structure/disposalpipe/segment,
 /turf/open/floor/iron/dark/smooth_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "tRi" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 6
@@ -137216,7 +137215,7 @@
 	dir = 8
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ukm" = (
 /obj/structure/railing{
 	dir = 4
@@ -152137,7 +152136,7 @@
 /obj/machinery/status_display/evac/directional/north,
 /obj/effect/turf_decal/trimline/dark,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wxn" = (
 /obj/machinery/atmospherics/components/unary/vent_pump/on/layer4,
 /turf/open/floor/iron/dark/small,
@@ -153170,7 +153169,7 @@
 	dir = 1
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wFl" = (
 /obj/effect/turf_decal/siding/wood/corner{
 	dir = 1
@@ -154676,7 +154675,7 @@
 /obj/effect/turf_decal/bot_white/right,
 /obj/machinery/digital_clock/directional/north,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "wRj" = (
 /obj/structure/extinguisher_cabinet/directional/east,
 /obj/structure/chair/stool/bar/directional/south,
@@ -161170,7 +161169,7 @@
 /obj/structure/sign/poster/official/moth_piping/directional/east,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured_large,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "xQg" = (
 /obj/effect/turf_decal/siding/wideplating_new/dark{
 	dir = 1
@@ -162857,10 +162856,10 @@
 /obj/effect/turf_decal/bot_white,
 /obj/effect/turf_decal/trimline/dark,
 /turf/open/floor/iron/dark/textured,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ydo" = (
 /turf/closed/wall/r_wall,
-/area/station/engineering/gravity_generator)
+/area/station/engineering/utility)
 "ydp" = (
 /obj/effect/turf_decal/trimline/green/corner{
 	dir = 8

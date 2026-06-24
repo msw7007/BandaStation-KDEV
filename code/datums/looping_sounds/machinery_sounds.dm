@@ -144,15 +144,15 @@
 	extra_range = -12
 	falloff_distance = 1 //Instant falloff after initial tile
 
-/datum/looping_sound/gravgen
-	start_sound = 'sound/machines/gravgen/grav_gen_start.ogg'
+/datum/looping_sound/kinesis_field
+	start_sound = 'sound/effects/kinesis/kinesis_start.ogg'
 	start_length = 1 SECONDS
 	mid_sounds = list(
-		'sound/machines/gravgen/grav_gen_mid1.ogg' = 12,
-		'sound/machines/gravgen/grav_gen_mid2.ogg' = 1,
+		'sound/effects/kinesis/kinesis_mid1.ogg' = 12,
+		'sound/effects/kinesis/kinesis_mid2.ogg' = 1,
 	)
 	mid_length = 1.1 SECONDS
-	end_sound = 'sound/machines/gravgen/grav_gen_end.ogg'
+	end_sound = 'sound/effects/kinesis/kinesis_end.ogg'
 	extra_range = 8
 	vary = TRUE
 	volume = 70
@@ -169,7 +169,7 @@
 	mid_length = 2.4 SECONDS
 	volume = 30
 
-/datum/looping_sound/gravgen/kinesis
+/datum/looping_sound/kinesis_field/held_object
 	volume = 20
 	falloff_distance = 2
 	falloff_exponent = 5
