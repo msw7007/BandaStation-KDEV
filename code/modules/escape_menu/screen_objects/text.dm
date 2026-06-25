@@ -35,7 +35,7 @@
 	maptext = MAPTEXT_PIXELLARI("<span style='font-size: [font_size]px; color: [text_color()]'>[button_text]</span>")
 
 /atom/movable/screen/escape_menu/text/proc/text_color()
-	return enabled() ? "white" : "gray"
+	return enabled() ? "#d7e7ee" : "#58636a"
 
 /atom/movable/screen/escape_menu/text/proc/enabled()
 	return TRUE
@@ -65,6 +65,11 @@
 	. = ..()
 	if (hovered)
 		maptext = "<u>[maptext]</u>"
+
+/atom/movable/screen/escape_menu/text/clickable/text_color()
+	if(!enabled())
+		return "#58636a"
+	return hovered ? "#18d8ff" : "#ff334a"
 
 /atom/movable/screen/escape_menu/text/clickable/Click(location, control, params)
 	if (!enabled())

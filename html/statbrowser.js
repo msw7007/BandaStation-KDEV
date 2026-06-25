@@ -710,6 +710,9 @@ function set_theme(which) {
   } else if (which == 'dark') {
     document.body.className = 'dark';
     document.documentElement.className = 'dark';
+  } else if (which == 'cyberpunk') {
+    document.body.className = 'cyberpunk';
+    document.documentElement.className = 'cyberpunk';
   }
 }
 

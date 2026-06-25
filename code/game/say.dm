@@ -144,13 +144,16 @@ GLOBAL_LIST_INIT(freqtospan, list(
 	//This proc uses [] because it is faster than continually appending strings. Thanks BYOND.
 	//Basic span
 	var/freq_color = get_radio_color(radio_freq, radio_freq_color)
-	var/spanpart1 = "<span class='[radio_freq ? get_radio_span(radio_freq) : "game say"]' [freq_color ? "style='color:[freq_color];'" : ""]>"
+	var/chat_action_color = "#18d8ff"
+	var/spanpart1 = "<span class='[radio_freq ? get_radio_span(radio_freq) : "game say"]' [freq_color ? "style='color:[freq_color];'" : "style='color: [chat_action_color];'"]>"
 	//Start name span.
 	var/spanpart2 = "<span class='name'>"
 	//Radio freq/name display
 	var/freqpart = radio_freq ? "\[[get_radio_name(radio_freq, radio_freq_name)]\] " : ""
 	//Speaker name
 	var/namepart = message_mods[MODE_SPEAKER_NAME_OVERRIDE] || speaker.get_message_voice(visible_name)
+	var/speaker_chat_color = speaker.get_message_chat_color()
+	var/speaker_chat_style = speaker_chat_color ? " style='color: [speaker_chat_color];'" : ""
 
 	//End name span.
 	var/endspanpart = "</span>"
@@ -163,12 +166,21 @@ GLOBAL_LIST_INIT(freqtospan, list(
 			languageicon = "[dialect.get_icon()] "
 
 	// The actual message part.
-	var/messagepart = speaker.generate_messagepart(raw_message, spans, message_mods)
+	var/messagepart = speaker.generate_messagepart(raw_message, spans, message_mods, speaker_chat_color)
 	messagepart = " <span class='message'>[messagepart]</span></span>"
 
-	return "[spanpart1][spanpart2][freqpart][languageicon][compose_track_href(speaker, namepart)]["<span style='color: [speaker.get_message_chat_color()]'>[namepart]</span>"][compose_job(speaker, message_language, raw_message, radio_freq)][endspanpart][messagepart]" // BANDASTATION Addition: span with color
+	return "[spanpart1][spanpart2][freqpart][languageicon][compose_track_href(speaker, namepart)]["<span[speaker_chat_style]>[namepart]</span>"][compose_job(speaker, message_language, raw_message, radio_freq)][endspanpart][messagepart]" // BANDASTATION Addition: span with color
 
 /atom/movable/proc/get_message_chat_color()
+	return update_message_chat_color(get_voice())
+
+/atom/movable/proc/update_message_chat_color(chat_color_name_to_use)
+	if(!chat_color_name_to_use)
+		return chat_color
+	if(!chat_color || chat_color_name != chat_color_name_to_use)
+		chat_color = colorize_string(chat_color_name_to_use)
+		chat_color_darkened = colorize_string(chat_color_name_to_use, 0.85, 0.85)
+		chat_color_name = chat_color_name_to_use
 	return chat_color
 
 /atom/movable/proc/compose_track_href(atom/movable/speaker, message_langs, raw_message, radio_freq)
@@ -215,7 +227,7 @@ GLOBAL_LIST_INIT(freqtospan, list(
  * spans - A list of spans to attach to the message. Includes the atom's speech span by default
  * message_mods - A list of message modifiers, i.e. whispering/singing
  */
-/atom/movable/proc/generate_messagepart(input, list/spans = list(speech_span), list/message_mods = list())
+/atom/movable/proc/generate_messagepart(input, list/spans = list(speech_span), list/message_mods = list(), speech_color = null)
 	// If we only care about the emote part, early return.
 	if(message_mods[MODE_CUSTOM_SAY_ERASE_INPUT])
 		return apply_message_emphasis(message_mods[MODE_CUSTOM_SAY_EMOTE])
@@ -235,6 +247,8 @@ GLOBAL_LIST_INIT(freqtospan, list(
 
 	var/processed_input = apply_message_emphasis(input) //This MUST be done first so that we don't get clipped by spans
 	processed_input = attach_spans(processed_input, spans)
+	if(speech_color)
+		processed_input = "<span style='color: [speech_color];'>[processed_input]</span>"
 
 	var/processed_say_mod = apply_message_emphasis(say_mod)
 

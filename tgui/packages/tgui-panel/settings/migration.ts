@@ -104,6 +104,7 @@ export function startSettingsMigration(next: MergedSettings): void {
     schema: settingsSchema,
   });
   draftSettings.initialized = true;
+  draftSettings.theme = defaultSettings.theme;
   draftSettings.view = defaultSettings.view; // Preserve view state
 
   generalSettingsHandler(draftSettings);

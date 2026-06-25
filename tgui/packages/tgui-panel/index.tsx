@@ -5,6 +5,7 @@
  */
 
 import './styles/main.scss';
+import './styles/themes/cyberpunk.scss';
 import './styles/themes/light.scss';
 
 import { createRoot } from 'react-dom/client';

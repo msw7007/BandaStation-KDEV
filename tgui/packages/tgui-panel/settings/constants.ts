@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-export const THEMES = ['light', 'dark'] as const;
+export const THEMES = ['cyberpunk', 'light', 'dark'] as const;
 
 export const COLORS = {
   DARK: {
@@ -22,6 +22,14 @@ export const COLORS = {
     TEXT: '#000000',
     TEXT_IMPORTANT: '#A6A6A6',
     BG_IMPORTANT: '#910707',
+  },
+  CYBERPUNK: {
+    BG_BASE: '#04080c',
+    BG_SECOND: '#071016',
+    BUTTON: '#090d12',
+    TEXT: '#ff334a',
+    TEXT_IMPORTANT: '#ff334a',
+    BG_IMPORTANT: '#160407',
   },
 } as const;
 

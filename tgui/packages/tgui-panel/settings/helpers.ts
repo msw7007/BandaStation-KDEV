@@ -59,10 +59,7 @@ function setStatTabsStyle(style: string): void {
 
 export function generalSettingsHandler(update: SettingsState): void {
   // Set client theme
-  const theme = update?.theme;
-  if (theme) {
-    setClientTheme(theme);
-  }
+  setClientTheme('cyberpunk');
 
   // Update stat panel settings
   setStatTabsStyle(update.statTabsStyle);

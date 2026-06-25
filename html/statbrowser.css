@@ -271,3 +271,123 @@ body.dark {
 .dark .grid-item:active .grid-item-text {
   background-color: #313131;
 }
+
+/**
+ * MARK: Cyberpunk theme colors
+ */
+.cyberpunk:root {
+  --color-base: #04080c;
+  --scrollbar-base: #05080d;
+  --scrollbar-thumb: #d32136;
+  --cy-red: #ff334a;
+  --cy-red-dark: #4a0b13;
+  --cy-cyan: #18d8ff;
+  --cy-panel: #071016;
+  --cy-text: #d7e7ee;
+}
+
+body.cyberpunk {
+  background:
+    linear-gradient(rgba(255, 51, 74, 0.035) 50%, transparent 50%) 0 0 / 100% 4px,
+    #04080c;
+  color: var(--cy-red);
+  font-family: "Pix Cyrillic", "Grand9K Pixel", Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.cyberpunk a {
+  color: var(--cy-cyan);
+}
+
+.cyberpunk a:hover,
+.cyberpunk .grid-item:hover,
+.cyberpunk .grid-item:active {
+  color: #ffffff;
+}
+
+.cyberpunk #menu {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.92em;
+  padding: 0.38em 0.55em 0;
+  background: rgba(4, 8, 12, 0.78);
+  border-bottom: 0;
+}
+
+.cyberpunk #menu.tabs-classic {
+  padding: 0.38em 0.55em 0;
+}
+
+.cyberpunk .button,
+.cyberpunk #menu.tabs-classic .button {
+  min-width: auto;
+  margin: 0;
+  padding: 0 0.16em 0.34em;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 51, 74, 0.78);
+  border-radius: 0;
+  background: transparent;
+  color: var(--cy-cyan);
+  clip-path: none;
+  text-transform: none;
+  text-shadow: 0 0 0.35em rgba(24, 216, 255, 0.34);
+}
+
+.cyberpunk .button:hover {
+  background: transparent;
+  color: #ffffff;
+  border-bottom-color: var(--cy-cyan);
+}
+
+.cyberpunk .button.active,
+.cyberpunk #menu.tabs-classic .button.active {
+  background: transparent;
+  color: var(--cy-red);
+  border-bottom-color: var(--cy-red);
+  text-shadow: 0 0 0.35em rgba(255, 51, 74, 0.45);
+  box-shadow: 0 0 0.35em rgba(255, 51, 74, 0.18);
+}
+
+.cyberpunk .statcontent,
+.cyberpunk .mcstatcontent {
+  margin: 0.45em;
+  padding: 0.75em;
+  border: 1px solid rgba(255, 51, 74, 0.75);
+  background: rgba(5, 8, 13, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 51, 74, 0.12),
+    inset 0 0 22px rgba(255, 51, 74, 0.08);
+}
+
+.cyberpunk #under-menu,
+.cyberpunk #under-content {
+  height: 0.35em;
+  background: #04080c;
+}
+
+.cyberpunk h3 {
+  margin: 0 0 0.7em;
+  padding: 0.3em 0 0.45em;
+  border-bottom: 1px solid var(--cy-red);
+  color: var(--cy-red);
+  text-transform: uppercase;
+}
+
+.cyberpunk .grid-item {
+  color: var(--cy-red);
+}
+
+.cyberpunk .grid-item-text {
+  border-radius: 0;
+}
+
+.cyberpunk .grid-item:hover .grid-item-text {
+  background: rgba(255, 51, 74, 0.14);
+}
+
+.cyberpunk .grid-item:active .grid-item-text {
+  background: rgba(24, 216, 255, 0.16);
+}
+
+.cyberpunk .status-info {
+  color: var(--cy-text);
+}
