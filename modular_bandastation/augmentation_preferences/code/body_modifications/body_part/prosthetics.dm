@@ -2,7 +2,7 @@
 	name = "Body Part Prosthesis"
 	abstract_type = /datum/body_modification/bodypart_prosthesis
 	modification_kind = "prosthesis"
-	var/replacement_bodypart_type = null
+	var/obj/item/bodypart/replacement_bodypart_type = null
 	var/manufacturers = list(
 		"Сульфур T1",
 		"Сан Йон Корпорейшн MK-2",
@@ -45,12 +45,10 @@
 		body_part = body_zone_to_character_setup_part(body_zone)
 	grade = "T1-T3"
 	tier = null
-	var/obj/item/bodypart/bodypart_probe = new replacement_bodypart_type()
 	if(isnull(icon))
-		icon = bodypart_probe.icon
+		icon = initial(replacement_bodypart_type.icon)
 	if(isnull(icon_state))
-		icon_state = bodypart_probe.icon_state
-	qdel(bodypart_probe)
+		icon_state = initial(replacement_bodypart_type.icon_state)
 
 /datum/body_modification/bodypart_prosthesis/apply_to_human(mob/living/carbon/target, additional_params)
 	. = ..()
@@ -120,9 +118,7 @@
 	return length(manufacturers) ? manufacturers[1] : ""
 
 /datum/body_modification/bodypart_prosthesis/proc/get_body_zone()
-	var/obj/item/bodypart/probe = new replacement_bodypart_type()
-	. = probe.body_zone
-	qdel(probe)
+	return initial(replacement_bodypart_type.body_zone)
 
 /datum/body_modification/bodypart_prosthesis/arm
 	abstract_type = /datum/body_modification/bodypart_prosthesis/arm

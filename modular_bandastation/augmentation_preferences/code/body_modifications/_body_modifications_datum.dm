@@ -38,48 +38,41 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 		if(ispath(implant_type, /obj/item/organ/cyberimp/brain/neural_interface))
 			continue
 
-		var/obj/item/organ/cyberimp/implant_probe = new implant_type()
-		var/implant_slot = implant_probe.slot
-		var/implant_zone = implant_probe.zone
-		var/list/valid_zones = implant_probe.valid_zones
+		var/implant_slot = initial(implant_type.slot)
+		var/implant_zone = initial(implant_type.zone)
+		var/list/valid_zones = initial(implant_type.valid_zones)
 		if(length(valid_zones))
 			for(var/target_zone in valid_zones)
-				var/list/zone_slots = get_character_setup_cyberimp_slots(implant_probe, target_zone, valid_zones[target_zone])
+				var/list/zone_slots = get_character_setup_cyberimp_slots(implant_type, target_zone, valid_zones[target_zone])
 				if(!length(zone_slots))
 					continue
 				for(var/zone_slot in zone_slots)
-					register_character_setup_cyberimp(body_modifications, implant_type, zone_slot, get_character_setup_cyberimp_zone(implant_probe, target_zone))
-			qdel(implant_probe)
+					register_character_setup_cyberimp(body_modifications, implant_type, zone_slot, get_character_setup_cyberimp_zone(implant_type, target_zone))
 			continue
 
 		if(!implant_slot)
-			qdel(implant_probe)
 			continue
-		for(var/zone_slot in get_character_setup_cyberimp_slots(implant_probe, implant_zone, implant_slot))
-			register_character_setup_cyberimp(body_modifications, implant_type, zone_slot, get_character_setup_cyberimp_zone(implant_probe, implant_zone))
-		qdel(implant_probe)
+		for(var/zone_slot in get_character_setup_cyberimp_slots(implant_type, implant_zone, implant_slot))
+			register_character_setup_cyberimp(body_modifications, implant_type, zone_slot, get_character_setup_cyberimp_zone(implant_type, implant_zone))
 
 	for(var/organ_root in GLOB.character_setup_organ_replacement_roots)
 		for(var/obj/item/organ/organ_type as anything in subtypesof(organ_root))
 			if(!is_character_setup_visible_organ_replacement(organ_type))
 				continue
 
-			var/obj/item/organ/organ_probe = new organ_type()
-			if(!organ_probe.slot || !organ_probe.name)
-				qdel(organ_probe)
+			if(!initial(organ_type.slot) || !initial(organ_type.name))
 				continue
 
-			register_character_setup_organ_replacement(body_modifications, organ_type, organ_probe)
-			qdel(organ_probe)
+			register_character_setup_organ_replacement(body_modifications, organ_type)
 
 	return body_modifications
 
-/proc/register_character_setup_cyberimp(list/body_modifications, implant_type, target_slot, target_zone)
+/proc/register_character_setup_cyberimp(list/body_modifications, obj/item/organ/cyberimp/implant_type, target_slot, target_zone)
 	var/datum/body_modification/cybernetic_implant/modification = new(implant_type, target_slot, target_zone)
 	body_modifications[modification.key] = modification
 
-/proc/register_character_setup_organ_replacement(list/body_modifications, organ_type, obj/item/organ/organ_probe)
-	var/datum/body_modification/dynamic_organ_replacement/modification = new(organ_type, organ_probe)
+/proc/register_character_setup_organ_replacement(list/body_modifications, obj/item/organ/organ_type)
+	var/datum/body_modification/dynamic_organ_replacement/modification = new(organ_type)
 	if(!modification.key)
 		qdel(modification)
 		return
@@ -101,10 +94,10 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 
 	return FALSE
 
-/proc/get_character_setup_cyberimp_zone(obj/item/organ/cyberimp/implant, target_zone)
+/proc/get_character_setup_cyberimp_zone(obj/item/organ/cyberimp/implant_type, target_zone)
 	return target_zone
 
-/proc/get_character_setup_cyberimp_slots(obj/item/organ/cyberimp/implant, target_zone, target_slot)
+/proc/get_character_setup_cyberimp_slots(obj/item/organ/cyberimp/implant_type, target_zone, target_slot)
 	return target_slot ? list(target_slot) : list()
 
 /proc/body_zone_to_character_setup_part(body_zone)

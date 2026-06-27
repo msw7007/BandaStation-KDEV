@@ -122,6 +122,7 @@
 		/datum/ai_planning_subtree/cyberpunk_city_task,
 	)
 	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
 		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CIVILIAN,
 		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_USE_CONTRACTS,
 		BB_CP_AI_LEVEL = 1,
@@ -132,6 +133,7 @@
 
 /datum/ai_controller/basic_controller/simple/cyberpunk_city/worker
 	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
 		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_WORKER,
 		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_CARGO_SLOT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS | CP_AI_CAP_REPAIR,
 		BB_CP_AI_LEVEL = 2,
@@ -143,6 +145,7 @@
 /datum/ai_controller/basic_controller/simple/cyberpunk_city/runner
 	idle_behavior = /datum/idle_behavior/cyberpunk_phantom/runner
 	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
 		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CIVILIAN,
 		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS,
 		BB_CP_AI_LEVEL = 1,
@@ -160,6 +163,7 @@
 		/datum/ai_planning_subtree/cyberpunk_city_task,
 	)
 	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
 		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CORP_SECURITY,
 		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_COMBAT | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS,
 		BB_CP_AI_LEVEL = 3,
