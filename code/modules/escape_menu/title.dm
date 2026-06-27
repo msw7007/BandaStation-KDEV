@@ -29,8 +29,9 @@ GLOBAL_DATUM(escape_menu_title, /atom/movable/screen/escape_menu/title)
 
 /atom/movable/screen/escape_menu/title/proc/update_text()
 	var/subtitle_text = MAPTEXT("<span style='font-size: 8px'>Еще один день на...</span>")
+	subtitle_text = MAPTEXT("<span style='font-size: 8px; color: #18d8ff'>CYBERPUNK13</span>")
 	var/title_text = {"
-		<span style='font-weight: bolder; font-size: 24px'>
+		<span style='font-weight: bolder; font-size: 24px; color: #ff334a'>
 			[station_name()]
 		</span>
 	"}

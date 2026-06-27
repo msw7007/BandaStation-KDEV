@@ -147,32 +147,19 @@
 		extra_classes |= SPAN_YELL
 
 	var/list/prefixes
-	var/chat_color_name_to_use
+	var/is_emote_message = extra_classes.Find("emote")
 
 	// Append radio icon if from a virtual speaker
 	if (extra_classes.Find("virtual-speaker"))
 		var/image/r_icon = image('icons/ui/chat/chat_icons.dmi', icon_state = "radio")
 		LAZYADD(prefixes, "\icon[r_icon]")
-	else if (extra_classes.Find("emote"))
+	else if (is_emote_message)
 		var/image/r_icon = image('icons/ui/chat/chat_icons.dmi', icon_state = "emote")
 		LAZYADD(prefixes, "\icon[r_icon]")
-		chat_color_name_to_use = target.get_visible_name(add_id_name = FALSE) // use face name for nonverbal messages
 	// Bandastation Edit Start
 	else if (extra_classes.Find("looc"))
 		LAZYADD(prefixes, "<span style='font-size: 6px; color: #6699cc;'><b>\[LOOC\]</b></span> ")
 	// Bandastation Edit End
-
-	if(isnull(chat_color_name_to_use))
-		if(HAS_TRAIT(target, TRAIT_SIGN_LANG))
-			chat_color_name_to_use = target.get_visible_name(add_id_name = FALSE) // use face name for signers too
-		else
-			chat_color_name_to_use = target.get_voice() // for everything else, use the target's voice name
-
-	// Calculate target color if not already present
-	if (!target.chat_color || target.chat_color_name != chat_color_name_to_use)
-		target.chat_color = colorize_string(chat_color_name_to_use)
-		target.chat_color_darkened = colorize_string(chat_color_name_to_use, 0.85, 0.85)
-		target.chat_color_name = chat_color_name_to_use
 
 	// Append language icon if the language uses one
 	var/datum/language/language_instance = GLOB.language_datum_instances[language]
@@ -186,8 +173,13 @@
 
 	text = "[prefixes?.Join("&nbsp;")][text]"
 
-	// We dim italicized text to make it more distinguishable from regular text
-	var/tgt_color = extra_classes.Find("italics") ? target.chat_color_darkened : target.chat_color
+	var/tgt_color = "#18d8ff"
+	if(!is_emote_message)
+		if(istype(target, /atom/movable))
+			var/atom/movable/movable_target = target
+			tgt_color = movable_target.get_message_chat_color()
+		else
+			tgt_color = colorize_string("[target]")
 
 	// Approximate text height
 	var/complete_text = "<span style='color: [tgt_color]'><span class='center [extra_classes.Join(" ")]'>[owner.apply_message_emphasis(text)]</span></span>"

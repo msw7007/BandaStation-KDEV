@@ -859,3 +859,535 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 #undef CYBERPUNK_METRO_TRAIN_TEMPLATE
 #undef CYBERPUNK_METRO_EXTERIOR_CARS
 #undef CYBERPUNK_METRO_MOVE_STEP_DELAY
+
+GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
+
+#define CYBERPUNK_DUNGEON_CHUNK_SIZE 16
+#define CYBERPUNK_DUNGEON_DEFAULT_WIDTH 5
+#define CYBERPUNK_DUNGEON_DEFAULT_HEIGHT 5
+
+#define CYBERPUNK_DUNGEON_EXIT_NORTH (1<<0)
+#define CYBERPUNK_DUNGEON_EXIT_EAST (1<<1)
+#define CYBERPUNK_DUNGEON_EXIT_SOUTH (1<<2)
+#define CYBERPUNK_DUNGEON_EXIT_WEST (1<<3)
+#define CYBERPUNK_DUNGEON_EXIT_ALL (CYBERPUNK_DUNGEON_EXIT_NORTH|CYBERPUNK_DUNGEON_EXIT_EAST|CYBERPUNK_DUNGEON_EXIT_SOUTH|CYBERPUNK_DUNGEON_EXIT_WEST)
+
+/datum/cyberpunk_dungeon_chunk
+	/// Stable id used by logs and future config files.
+	var/id = "chunk"
+	/// Human-readable label.
+	var/name = "dungeon chunk"
+	/// Visual/mechanical set. Current first pass ships with cave.
+	var/theme = "cave"
+	/// DMM template path. Chunk templates are expected to be 16x16 for now.
+	var/template_path
+	/// Bitfield of open edges this chunk can satisfy.
+	var/exit_flags = CYBERPUNK_DUNGEON_EXIT_ALL
+	/// Weighted selection inside matching candidates.
+	var/weight = 1
+	/// Roles this template can serve: normal/start/loot/boss/exit.
+	var/list/roles = list("normal")
+	/// Depth gates are intentionally loose; depth is path distance from entry.
+	var/min_depth = 0
+	var/max_depth = INFINITY
+
+/datum/cyberpunk_dungeon_chunk/proc/can_place(required_theme, required_exits, role, depth)
+	if(required_theme && theme != required_theme)
+		return FALSE
+	if(template_path && !fexists(template_path))
+		return FALSE
+	if((exit_flags & required_exits) != required_exits)
+		return FALSE
+	if(role && !(role in roles))
+		return FALSE
+	if(depth < min_depth || depth > max_depth)
+		return FALSE
+	return TRUE
+
+/datum/cyberpunk_dungeon_chunk/cave/chamber
+	id = "cave_chamber"
+	name = "cave chamber"
+	template_path = "_maps/templates/cyberpunk_dungeons/cave_chamber_16.dmm"
+	weight = 6
+
+/datum/cyberpunk_dungeon_chunk/cave/start
+	id = "cave_start"
+	name = "cave entry chamber"
+	template_path = "_maps/templates/cyberpunk_dungeons/cave_start_16.dmm"
+	roles = list("start")
+
+/datum/cyberpunk_dungeon_chunk/cave/loot
+	id = "cave_loot"
+	name = "cave resource pocket"
+	template_path = "_maps/templates/cyberpunk_dungeons/cave_loot_16.dmm"
+	roles = list("loot")
+	weight = 2
+
+/datum/cyberpunk_dungeon_chunk/cave/boss
+	id = "cave_boss"
+	name = "cave boss chamber"
+	template_path = "_maps/templates/cyberpunk_dungeons/cave_boss_16.dmm"
+	roles = list("boss")
+	min_depth = 3
+
+/datum/cyberpunk_dungeon_chunk/cave/exit
+	id = "cave_exit"
+	name = "cave exit chamber"
+	template_path = "_maps/templates/cyberpunk_dungeons/cave_exit_16.dmm"
+	roles = list("exit")
+	min_depth = 2
+
+/proc/cyberpunk_dungeon_chunks()
+	var/static/list/chunks
+	if(chunks)
+		return chunks
+	chunks = list()
+	for(var/chunk_type in subtypesof(/datum/cyberpunk_dungeon_chunk))
+		chunks += new chunk_type
+	return chunks
+
+/proc/cyberpunk_dungeon_exit_flag(direction)
+	switch(direction)
+		if(NORTH)
+			return CYBERPUNK_DUNGEON_EXIT_NORTH
+		if(EAST)
+			return CYBERPUNK_DUNGEON_EXIT_EAST
+		if(SOUTH)
+			return CYBERPUNK_DUNGEON_EXIT_SOUTH
+		if(WEST)
+			return CYBERPUNK_DUNGEON_EXIT_WEST
+	return 0
+
+/proc/cyberpunk_dungeon_opposite_exit_flag(direction)
+	switch(direction)
+		if(NORTH)
+			return CYBERPUNK_DUNGEON_EXIT_SOUTH
+		if(EAST)
+			return CYBERPUNK_DUNGEON_EXIT_WEST
+		if(SOUTH)
+			return CYBERPUNK_DUNGEON_EXIT_NORTH
+		if(WEST)
+			return CYBERPUNK_DUNGEON_EXIT_EAST
+	return 0
+
+/proc/cyberpunk_dungeon_dir_between(from_x, from_y, to_x, to_y)
+	if(to_x > from_x)
+		return EAST
+	if(to_x < from_x)
+		return WEST
+	if(to_y > from_y)
+		return NORTH
+	if(to_y < from_y)
+		return SOUTH
+	return NONE
+
+/proc/cyberpunk_dungeon_cell_key(x_pos, y_pos)
+	return "[x_pos],[y_pos]"
+
+/proc/cyberpunk_dungeon_pick_chunk(theme, required_exits, role, depth)
+	var/list/candidates = list()
+	for(var/datum/cyberpunk_dungeon_chunk/chunk as anything in cyberpunk_dungeon_chunks())
+		if(chunk.can_place(theme, required_exits, role, depth))
+			candidates[chunk] = chunk.weight
+	if(length(candidates))
+		return pick_weight(candidates)
+
+	if(role != "normal")
+		for(var/datum/cyberpunk_dungeon_chunk/chunk as anything in cyberpunk_dungeon_chunks())
+			if(chunk.can_place(theme, required_exits, "normal", depth))
+				candidates[chunk] = chunk.weight
+		if(length(candidates))
+			return pick_weight(candidates)
+
+	for(var/datum/cyberpunk_dungeon_chunk/chunk as anything in cyberpunk_dungeon_chunks())
+		if(chunk.can_place(null, required_exits, null, depth))
+			candidates[chunk] = chunk.weight
+	if(length(candidates))
+		return pick_weight(candidates)
+
+	return null
+
+/datum/cyberpunk_dungeon_instance
+	var/instance_id
+	var/theme = "cave"
+	var/difficulty = 1
+	var/width_chunks = CYBERPUNK_DUNGEON_DEFAULT_WIDTH
+	var/height_chunks = CYBERPUNK_DUNGEON_DEFAULT_HEIGHT
+	var/chunk_size = CYBERPUNK_DUNGEON_CHUNK_SIZE
+	var/generated = FALSE
+	var/generating = FALSE
+	var/datum/weakref/entry_ref
+	var/turf/return_turf
+	var/z_value
+	var/turf/start_turf
+	var/turf/exit_turf
+	var/list/generated_atoms = list()
+	var/list/dungeon_landmarks = list()
+
+/datum/cyberpunk_dungeon_instance/New(obj/structure/cyberpunk_dungeon_entrance/entry, new_theme, new_difficulty, new_width_chunks, new_height_chunks)
+	. = ..()
+	instance_id = "dungeon_[world.time]_[rand(1000, 9999)]"
+	if(entry)
+		entry_ref = WEAKREF(entry)
+		return_turf = get_turf(entry)
+	if(new_theme)
+		theme = new_theme
+	if(new_difficulty)
+		difficulty = max(1, new_difficulty)
+	if(new_width_chunks)
+		width_chunks = max(3, new_width_chunks)
+	if(new_height_chunks)
+		height_chunks = max(3, new_height_chunks)
+	GLOB.cyberpunk_dungeon_instances += src
+
+/datum/cyberpunk_dungeon_instance/Destroy(force)
+	GLOB.cyberpunk_dungeon_instances -= src
+	entry_ref = null
+	return_turf = null
+	start_turf = null
+	exit_turf = null
+	generated_atoms = null
+	dungeon_landmarks = null
+	return ..()
+
+/datum/cyberpunk_dungeon_instance/proc/ensure_generated()
+	if(generated)
+		return TRUE
+	if(generating)
+		return FALSE
+	generating = TRUE
+	var/result = generate()
+	generating = FALSE
+	generated = result
+	return result
+
+/datum/cyberpunk_dungeon_instance/proc/enter(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(!ensure_generated())
+		user.balloon_alert(user, "dungeon failed")
+		return FALSE
+	if(!start_turf)
+		user.balloon_alert(user, "no entry")
+		return FALSE
+	user.forceMove(start_turf)
+	to_chat(user, span_notice("You descend into an unstable underground route."))
+	return TRUE
+
+/datum/cyberpunk_dungeon_instance/proc/leave(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	if(!return_turf)
+		var/obj/structure/cyberpunk_dungeon_entrance/entry = entry_ref?.resolve()
+		return_turf = get_turf(entry)
+	if(!return_turf)
+		user.balloon_alert(user, "no return")
+		return FALSE
+	user.forceMove(return_turf)
+	to_chat(user, span_notice("You return to the city."))
+	return TRUE
+
+/datum/cyberpunk_dungeon_instance/proc/generate()
+	var/total_width = width_chunks * chunk_size
+	var/total_height = height_chunks * chunk_size
+	if(total_width + 4 > world.maxx || total_height + 4 > world.maxy)
+		stack_trace("Cyberpunk dungeon [instance_id] is too large for world bounds: [total_width]x[total_height].")
+		return FALSE
+
+	var/datum/space_level/level = SSmapping.add_new_zlevel("Cyberpunk Dungeon [instance_id]", list(ZTRAIT_RESERVED = TRUE), contain_turfs = TRUE)
+	if(!level)
+		stack_trace("Cyberpunk dungeon [instance_id] failed to create a z-level.")
+		return FALSE
+	z_value = level.z_value
+
+	var/list/plan = build_plan()
+	if(!length(plan))
+		stack_trace("Cyberpunk dungeon [instance_id] generated an empty plan.")
+		return FALSE
+
+	var/origin_x = 3
+	var/origin_y = 3
+	for(var/key as anything in plan)
+		var/list/cell = plan[key]
+		var/datum/cyberpunk_dungeon_chunk/chunk = cyberpunk_dungeon_pick_chunk(theme, cell["exits"], cell["role"], cell["depth"])
+		if(!chunk)
+			stack_trace("Cyberpunk dungeon [instance_id] has no chunk for role [cell["role"]] exits [cell["exits"]].")
+			return FALSE
+		if(!load_chunk(chunk, origin_x + ((cell["x"] - 1) * chunk_size), origin_y + ((cell["y"] - 1) * chunk_size)))
+			return FALSE
+
+	spawn_content()
+	if(!start_turf)
+		start_turf = locate(origin_x + 7, origin_y + ((round((height_chunks + 1) / 2) - 1) * chunk_size) + 7, z_value)
+	if(!exit_turf)
+		exit_turf = locate(origin_x + ((width_chunks - 1) * chunk_size) + 7, origin_y + ((round((height_chunks + 1) / 2) - 1) * chunk_size) + 7, z_value)
+	log_game("Cyberpunk dungeon [instance_id] generated [length(plan)] chunks on z[z_value].")
+	return TRUE
+
+/datum/cyberpunk_dungeon_instance/proc/build_plan()
+	var/list/cells = list()
+	var/start_y = round((height_chunks + 1) / 2)
+	var/current_x = 1
+	var/current_y = start_y
+	var/list/main_path = list()
+
+	var/list/start_cell = ensure_cell(cells, current_x, current_y)
+	start_cell["role"] = "start"
+	main_path += list(start_cell)
+
+	var/guard = width_chunks * height_chunks * 4
+	while(current_x < width_chunks && guard-- > 0)
+		var/list/choices = list()
+		choices[EAST] = 6
+		if(current_y < height_chunks)
+			choices[NORTH] = 2
+		if(current_y > 1)
+			choices[SOUTH] = 2
+		var/chosen_dir = pick_weight(choices)
+		var/next_x = current_x
+		var/next_y = current_y
+		switch(chosen_dir)
+			if(EAST)
+				next_x++
+			if(NORTH)
+				next_y++
+			if(SOUTH)
+				next_y--
+		if(next_x < 1 || next_x > width_chunks || next_y < 1 || next_y > height_chunks)
+			continue
+		connect_cells(cells, current_x, current_y, next_x, next_y)
+		current_x = next_x
+		current_y = next_y
+		var/list/current_cell = ensure_cell(cells, current_x, current_y)
+		main_path += list(current_cell)
+
+	var/list/end_cell = ensure_cell(cells, current_x, current_y)
+	end_cell["role"] = "exit"
+	if(length(main_path) >= 3)
+		var/list/boss_cell = main_path[max(2, length(main_path) - 1)]
+		if(boss_cell["role"] == "normal")
+			boss_cell["role"] = "boss"
+
+	for(var/list/path_cell as anything in main_path)
+		if(prob(25))
+			try_add_branch(cells, path_cell)
+
+	for(var/key as anything in cells)
+		var/list/cell = cells[key]
+		cell["depth"] = abs(cell["x"] - 1) + abs(cell["y"] - start_y)
+
+	return cells
+
+/datum/cyberpunk_dungeon_instance/proc/ensure_cell(list/cells, x_pos, y_pos)
+	var/key = cyberpunk_dungeon_cell_key(x_pos, y_pos)
+	var/list/cell = cells[key]
+	if(!cell)
+		cell = list(
+			"x" = x_pos,
+			"y" = y_pos,
+			"exits" = 0,
+			"role" = "normal",
+			"depth" = 0,
+		)
+		cells[key] = cell
+	return cell
+
+/datum/cyberpunk_dungeon_instance/proc/connect_cells(list/cells, from_x, from_y, to_x, to_y)
+	var/direction = cyberpunk_dungeon_dir_between(from_x, from_y, to_x, to_y)
+	if(!direction)
+		return FALSE
+	var/list/from_cell = ensure_cell(cells, from_x, from_y)
+	var/list/to_cell = ensure_cell(cells, to_x, to_y)
+	from_cell["exits"] |= cyberpunk_dungeon_exit_flag(direction)
+	to_cell["exits"] |= cyberpunk_dungeon_opposite_exit_flag(direction)
+	return TRUE
+
+/datum/cyberpunk_dungeon_instance/proc/try_add_branch(list/cells, list/path_cell)
+	var/list/options = list(NORTH, SOUTH, EAST, WEST)
+	while(length(options))
+		var/chosen_dir = pick(options)
+		options -= chosen_dir
+		var/branch_x = path_cell["x"]
+		var/branch_y = path_cell["y"]
+		switch(chosen_dir)
+			if(NORTH)
+				branch_y++
+			if(SOUTH)
+				branch_y--
+			if(EAST)
+				branch_x++
+			if(WEST)
+				branch_x--
+		if(branch_x < 1 || branch_x > width_chunks || branch_y < 1 || branch_y > height_chunks)
+			continue
+		var/key = cyberpunk_dungeon_cell_key(branch_x, branch_y)
+		if(cells[key])
+			continue
+		connect_cells(cells, path_cell["x"], path_cell["y"], branch_x, branch_y)
+		var/list/branch_cell = cells[key]
+		branch_cell["role"] = prob(45) ? "loot" : "normal"
+		return TRUE
+	return FALSE
+
+/datum/cyberpunk_dungeon_instance/proc/load_chunk(datum/cyberpunk_dungeon_chunk/chunk, x_pos, y_pos)
+	var/turf/load_turf = locate(x_pos, y_pos, z_value)
+	if(!load_turf)
+		stack_trace("Cyberpunk dungeon [instance_id] failed to locate chunk turf [x_pos],[y_pos],[z_value].")
+		return FALSE
+	var/datum/map_template/template = new(chunk.template_path, "Cyberpunk Dungeon [chunk.id]")
+	if(template.width != chunk_size || template.height != chunk_size)
+		stack_trace("Cyberpunk dungeon chunk [chunk.id] must be [chunk_size]x[chunk_size], got [template.width]x[template.height].")
+		qdel(template)
+		return FALSE
+	template.returns_created_atoms = TRUE
+	if(!template.load(load_turf))
+		stack_trace("Cyberpunk dungeon [instance_id] failed to load chunk [chunk.id] at [x_pos],[y_pos],[z_value].")
+		qdel(template)
+		return FALSE
+	for(var/atom/created as anything in template.created_atoms)
+		generated_atoms += created
+		if(istype(created, /obj/effect/landmark/cyberpunk_dungeon))
+			var/obj/effect/landmark/cyberpunk_dungeon/landmark = created
+			landmark.instance_id = instance_id
+			dungeon_landmarks += landmark
+	template.created_atoms.Cut()
+	qdel(template)
+	return TRUE
+
+/datum/cyberpunk_dungeon_instance/proc/spawn_content()
+	for(var/obj/effect/landmark/cyberpunk_dungeon/landmark as anything in dungeon_landmarks)
+		if(QDELETED(landmark))
+			continue
+		var/turf/landmark_turf = get_turf(landmark)
+		if(!landmark_turf)
+			continue
+		if(istype(landmark, /obj/effect/landmark/cyberpunk_dungeon/start))
+			start_turf = landmark_turf
+		else if(istype(landmark, /obj/effect/landmark/cyberpunk_dungeon/exit))
+			exit_turf = landmark_turf
+			var/obj/structure/cyberpunk_dungeon_exit/exit = new(landmark_turf)
+			exit.instance = src
+			generated_atoms += exit
+		else if(istype(landmark, /obj/effect/landmark/cyberpunk_dungeon/enemy))
+			spawn_enemy(landmark_turf)
+		else if(istype(landmark, /obj/effect/landmark/cyberpunk_dungeon/boss))
+			spawn_boss(landmark_turf)
+		else if(istype(landmark, /obj/effect/landmark/cyberpunk_dungeon/loot))
+			spawn_loot(landmark_turf)
+		qdel(landmark)
+
+/datum/cyberpunk_dungeon_instance/proc/spawn_enemy(turf/spawn_turf)
+	var/list/enemies = list(
+		/mob/living/basic/mining/watcher = 4,
+		/mob/living/basic/mining/goliath = 2,
+		/mob/living/basic/mining/legion = 1,
+	)
+	var/enemy_type = pick_weight(enemies)
+	var/mob/living/enemy = new enemy_type(spawn_turf)
+	enemy.name = "dungeon threat"
+	generated_atoms += enemy
+	return enemy
+
+/datum/cyberpunk_dungeon_instance/proc/spawn_boss(turf/spawn_turf)
+	var/boss_type = difficulty >= 3 ? /mob/living/basic/mining/goliath/ancient : /mob/living/basic/mining/goliath
+	var/mob/living/boss = new boss_type(spawn_turf)
+	boss.name = "dungeon boss"
+	generated_atoms += boss
+	return boss
+
+/datum/cyberpunk_dungeon_instance/proc/spawn_loot(turf/spawn_turf)
+	var/list/loot = list(
+		/obj/item/stack/ore/iron = 5,
+		/obj/item/stack/ore/silver = 2,
+		/obj/item/stack/ore/titanium = 2,
+		/obj/item/stack/ore/gold = 1,
+	)
+	var/loot_type = pick_weight(loot)
+	var/obj/item/spawned_loot = new loot_type(spawn_turf)
+	generated_atoms += spawned_loot
+	return spawned_loot
+
+/obj/structure/cyberpunk_dungeon_entrance
+	name = "unstable underground entrance"
+	desc = "A route into generated underground space."
+	icon = 'icons/mob/simple/animal.dmi'
+	icon_state = "hole"
+	anchored = TRUE
+	density = FALSE
+	var/theme = "cave"
+	var/difficulty = 1
+	var/width_chunks = CYBERPUNK_DUNGEON_DEFAULT_WIDTH
+	var/height_chunks = CYBERPUNK_DUNGEON_DEFAULT_HEIGHT
+	var/datum/cyberpunk_dungeon_instance/instance
+
+/obj/structure/cyberpunk_dungeon_entrance/attack_hand(mob/living/user, list/modifiers)
+	. = ..()
+	if(.)
+		return
+	if(!istype(user))
+		return
+	enter_dungeon(user)
+
+/obj/structure/cyberpunk_dungeon_entrance/proc/enter_dungeon(mob/living/user)
+	if(!instance || QDELETED(instance))
+		instance = new /datum/cyberpunk_dungeon_instance(src, theme, difficulty, width_chunks, height_chunks)
+	return instance.enter(user)
+
+/obj/structure/cyberpunk_dungeon_entrance/Destroy(force)
+	instance = null
+	return ..()
+
+/obj/structure/cyberpunk_dungeon_exit
+	name = "unstable return route"
+	desc = "A route back to the place where this underground instance was entered."
+	icon = 'icons/mob/simple/animal.dmi'
+	icon_state = "hole"
+	anchored = TRUE
+	density = FALSE
+	var/datum/cyberpunk_dungeon_instance/instance
+
+/obj/structure/cyberpunk_dungeon_exit/attack_hand(mob/living/user, list/modifiers)
+	. = ..()
+	if(.)
+		return
+	if(!istype(user) || !instance)
+		return
+	instance.leave(user)
+
+/obj/structure/cyberpunk_dungeon_exit/Destroy(force)
+	instance = null
+	return ..()
+
+/obj/effect/landmark/cyberpunk_dungeon
+	name = "cyberpunk dungeon marker"
+	icon_state = "x2"
+	var/instance_id
+
+/obj/effect/landmark/cyberpunk_dungeon/start
+	name = "cyberpunk dungeon start"
+	icon_state = "x"
+
+/obj/effect/landmark/cyberpunk_dungeon/exit
+	name = "cyberpunk dungeon exit"
+	icon_state = "portal_exit"
+
+/obj/effect/landmark/cyberpunk_dungeon/enemy
+	name = "cyberpunk dungeon enemy"
+	icon_state = "xeno_spawn"
+
+/obj/effect/landmark/cyberpunk_dungeon/loot
+	name = "cyberpunk dungeon loot"
+	icon_state = "generic_event"
+
+/obj/effect/landmark/cyberpunk_dungeon/boss
+	name = "cyberpunk dungeon boss"
+	icon_state = "xeno_spawn"
+
+#undef CYBERPUNK_DUNGEON_CHUNK_SIZE
+#undef CYBERPUNK_DUNGEON_DEFAULT_WIDTH
+#undef CYBERPUNK_DUNGEON_DEFAULT_HEIGHT
+#undef CYBERPUNK_DUNGEON_EXIT_NORTH
+#undef CYBERPUNK_DUNGEON_EXIT_EAST
+#undef CYBERPUNK_DUNGEON_EXIT_SOUTH
+#undef CYBERPUNK_DUNGEON_EXIT_WEST
+#undef CYBERPUNK_DUNGEON_EXIT_ALL

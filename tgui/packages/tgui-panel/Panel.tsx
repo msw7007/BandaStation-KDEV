@@ -5,6 +5,7 @@
  */
 
 import { useAtom, useAtomValue } from 'jotai';
+import { useEffect } from 'react';
 import { Pane } from 'tgui/layouts';
 import { Button, Section, Stack } from 'tgui-core/components';
 import { visibleAtom } from './audio/atoms';
@@ -21,6 +22,7 @@ import { PingIndicator } from './ping/PingIndicator';
 import { ReconnectButton } from './reconnect';
 import { settingsVisibleAtom } from './settings/atoms';
 import { SettingsPanel } from './settings/SettingsPanel';
+import { setClientTheme } from './settings/themes';
 import { useSettings } from './settings/use-settings';
 
 export function Panel(props) {
@@ -40,8 +42,12 @@ export function Panel(props) {
   useChatPersistence();
   useKeepAlive();
 
+  useEffect(() => {
+    setClientTheme('cyberpunk');
+  }, []);
+
   return (
-    <Pane theme={settings.theme} canSuspend={false}>
+    <Pane theme="cyberpunk" canSuspend={false}>
       <Stack fill vertical>
         <Stack.Item>
           <Section fitted>

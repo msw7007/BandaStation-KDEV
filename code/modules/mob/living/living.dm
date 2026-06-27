@@ -1111,8 +1111,43 @@
 	cyberpunk_setup_city_npc_profile()
 	update_body()
 
+/mob/living/carbon/human/cyberpunk_npc/attack_hand(mob/user, list/modifiers)
+	var/mob/living/living_user = user
+	if(!cyberpunk_stationary_npc && istype(living_user) && !living_user.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK))
+		cyberpunk_try_prompted_ambient_speech(living_user, modifiers)
+		return TRUE
+	return ..()
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_has_active_threat()
+	return ai_controller?.blackboard_key_exists(BB_CP_THREAT_TARGET)
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_say_ambient_phrase()
+	var/message = pick_list(CYBERPUNK_NPC_AMBIENT_FILE, cyberpunk_ambient_phrase_key)
+	if(!message)
+		return FALSE
+	say(message, forced = "city ambient")
+	cyberpunk_next_ambient_speech = world.time + cyberpunk_ambient_speech_interval
+	return TRUE
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_try_prompted_ambient_speech(mob/user, list/modifiers)
+	if(cyberpunk_stationary_npc || LAZYACCESS(modifiers, RIGHT_CLICK))
+		return FALSE
+	var/mob/living/living_user = user
+	if(!istype(living_user) || living_user.stat != CONSCIOUS || living_user.combat_mode)
+		return FALSE
+	if(stat != CONSCIOUS || client || combat_mode || !ai_controller || cyberpunk_has_active_threat())
+		return FALSE
+	if(ai_controller.blackboard[BB_CP_PHANTOM_STATE] != CP_AI_PHANTOM_INACTIVE)
+		return FALSE
+	if(!Adjacent(living_user))
+		to_chat(living_user, span_warning("You need to be closer."))
+		return TRUE
+	return cyberpunk_say_ambient_phrase()
+
 /mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_can_ambient_speak(list/active_players)
 	if(cyberpunk_stationary_npc || stat != CONSCIOUS || client || !ai_controller)
+		return FALSE
+	if(cyberpunk_has_active_threat())
 		return FALSE
 	if(ai_controller.blackboard[BB_CP_PHANTOM_STATE] != CP_AI_PHANTOM_INACTIVE)
 		return FALSE
@@ -1137,8 +1172,7 @@
 	cyberpunk_next_ambient_speech = world.time + cyberpunk_ambient_speech_interval
 	if(!cyberpunk_can_ambient_speak(active_players))
 		return FALSE
-	say(pick_list(CYBERPUNK_NPC_AMBIENT_FILE, cyberpunk_ambient_phrase_key), forced = "city ambient")
-	return TRUE
+	return cyberpunk_say_ambient_phrase()
 
 /mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_setup_city_npc_profile()
 	var/list/dialog = list(

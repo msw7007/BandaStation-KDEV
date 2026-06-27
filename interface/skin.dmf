@@ -116,7 +116,7 @@ window "info_and_buttons"
 		size = 640x477
 		anchor1 = 0,0
 		anchor2 = 100,100
-		background-color = #ffc41f
+		background-color = #04080c
 		saved-params = "splitter"
 		left = "infobuttons"
 		right = "infowindow"
@@ -145,7 +145,9 @@ window "infobuttons"
 		size = 88x27
 		anchor1 = 0,0
 		anchor2 = 15,100
-		background-color = none
+		background-color = #090d12
+		text-color = #ff334a
+		is-flat = true
 		saved-params = "is-checked"
 		text = "Menu"
 		command = "open-escape-menu"
@@ -155,7 +157,9 @@ window "infobuttons"
 		size = 88x27
 		anchor1 = 15,0
 		anchor2 = 29,100
-		background-color = none
+		background-color = #090d12
+		text-color = #ff334a
+		is-flat = true
 		saved-params = "is-checked"
 		text = "Hotkeys"
 		command = "Hotkeys-Help"
@@ -165,7 +169,9 @@ window "infobuttons"
 		size = 88x27
 		anchor1 = 29,0
 		anchor2 = 43,100
-		background-color = none
+		background-color = #090d12
+		text-color = #ff334a
+		is-flat = true
 		saved-params = "is-checked"
 		text = "Emotes"
 		command = "Emote-Panel"
@@ -175,7 +181,9 @@ window "infobuttons"
 		size = 88x27
 		anchor1 = 43,0
 		anchor2 = 57,100
-		background-color = none
+		background-color = #090d12
+		text-color = #ff334a
+		is-flat = true
 		saved-params = "is-checked"
 		text = "Fullscreen"
 		command = "fullscreen"
@@ -185,7 +193,9 @@ window "infobuttons"
 		size = 88x27
 		anchor1 = 57,0
 		anchor2 = 71,100
-		background-color = none
+		background-color = #160407
+		text-color = #ff334a
+		is-flat = true
 		saved-params = "is-checked"
 		text = "Reconnect"
 		command = ".reconnect"
@@ -195,7 +205,9 @@ window "infobuttons"
 		size = 112x27
 		anchor1 = 85,0
 		anchor2 = 99,100
-		background-color = none
+		background-color = #090d12
+		text-color = #ff334a
+		is-flat = true
 		saved-params = "is-checked"
 		text = "Toggle Stat Panel"
 		command = "toggle-stat-panel"
@@ -217,7 +229,7 @@ window "infowindow"
 		size = 640x475
 		is-vert = false
 		splitter = 97.5
-		background-color = #ffc41f
+		background-color = #04080c
 		show-splitter = false
 		saved-params = "splitter"
 		left = "info"
@@ -240,7 +252,7 @@ window "info"
 		anchor2 = 100,100
 		saved-params = "splitter"
 		splitter = 40
-		background-color = #202020
+		background-color = #04080c
 		left = "statwindow"
 		right = "outputwindow"
 		is-vert = false
@@ -260,7 +272,7 @@ window "input_buttons"
 		size = 640x475
 		anchor1 = 0,0
 		anchor2 = 100,100
-		background-color = #ffc41f
+		background-color = #04080c
 		saved-params = "splitter"
 		left = "inputwindow"
 		right = "inputbuttons"
@@ -283,7 +295,7 @@ window "outputwindow"
 		anchor1 = 0,0
 		anchor2 = 100,100
 		saved-params = "splitter"
-		background-color = #ffc41f
+		background-color = #04080c
 		left = "output_selector"
 
 window "output_selector"
@@ -499,4 +511,3 @@ window "tgui_say"
 		anchor1 = 0,0
 		anchor2 = 0,0
 		saved-params = ""
-

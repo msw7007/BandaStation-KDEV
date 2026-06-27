@@ -47,6 +47,7 @@ export function useSettings() {
       ...settings,
       ...update,
     };
+    newSettings.theme = 'cyberpunk';
 
     generalSettingsHandler(newSettings);
     storeSettings(newSettings);

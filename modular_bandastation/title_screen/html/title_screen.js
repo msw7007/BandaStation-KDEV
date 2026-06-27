@@ -134,6 +134,61 @@ function updateLoadingName(name) {
 }
 
 const logoElement = document.getElementById('logo');
+const loadingMatrixChars =
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%&*+-/<>{}[]';
+let loadingMatrixElement;
+let loadingMatrixTimer;
+
+function makeLoadingMatrixLine(length = 24) {
+  let line = '';
+  for (let index = 0; index < length; index++) {
+    line += loadingMatrixChars.charAt(
+      Math.floor(Math.random() * loadingMatrixChars.length),
+    );
+  }
+  return line;
+}
+
+function refreshLoadingMatrix() {
+  if (!loadingMatrixElement) {
+    return;
+  }
+
+  for (const column of loadingMatrixElement.children) {
+    column.textContent = makeLoadingMatrixLine(18 + Math.floor(Math.random() * 16));
+  }
+}
+
+function startLoadingMatrix() {
+  if (!document.documentElement.classList.contains('loading')) {
+    return;
+  }
+
+  loadingMatrixElement = document.createElement('div');
+  loadingMatrixElement.id = 'loading_matrix';
+
+  const columnCount = 46;
+  for (let index = 0; index < columnCount; index++) {
+    const column = document.createElement('span');
+    column.style.setProperty('--column-delay', `${(index % 9) * -0.38}s`);
+    column.style.setProperty('--column-speed', `${3.4 + (index % 7) * 0.27}s`);
+    column.textContent = makeLoadingMatrixLine(22);
+    loadingMatrixElement.appendChild(column);
+  }
+
+  document.body.appendChild(loadingMatrixElement);
+  loadingMatrixTimer = window.setInterval(refreshLoadingMatrix, 360);
+}
+
+function stopLoadingMatrix() {
+  if (loadingMatrixTimer) {
+    window.clearInterval(loadingMatrixTimer);
+    loadingMatrixTimer = undefined;
+  }
+
+  loadingMatrixElement?.classList.add('finished');
+}
+
 function updateLoadedCount(count) {
   logoElement.setAttribute('data-loaded', `${Math.round(count)}%`);
   document.documentElement.style.setProperty(
@@ -143,8 +198,9 @@ function updateLoadedCount(count) {
 }
 
 function finishLoading() {
-  document.documentElement.style = '';
   document.documentElement.className = '';
+  document.documentElement.style.setProperty('--loading-percentage', '100%');
+  stopLoadingMatrix();
 }
 
 // MARK: Authentication
@@ -246,4 +302,5 @@ function toggleRutubeVideo(videoId) {
 }
 
 /* Tell Byond that the title screen is ready */
+startLoadingMatrix();
 call_byond('titleReady', true);
