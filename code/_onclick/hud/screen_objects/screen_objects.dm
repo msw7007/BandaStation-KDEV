@@ -623,7 +623,7 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 
 	var/obj/item/inserted = usr.get_active_held_item()
 	if(inserted)
-		storage_master.attempt_insert(inserted, usr)
+		storage_master.attempt_hand_insert(inserted, usr)
 
 	return TRUE
 

@@ -610,7 +610,7 @@
 		if(equip_delay_self)
 			return
 
-	if(user.active_storage?.attempt_insert(src, user, messages = FALSE))
+	if(user.active_storage?.attempt_hand_insert(src, user, messages = FALSE))
 		return TRUE
 
 	var/static/list/equip_priorities = list(

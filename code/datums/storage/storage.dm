@@ -627,6 +627,18 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	parent.update_appearance()
 	return TRUE
 
+/datum/storage/proc/wait_for_hand_insert(mob/user, obj/item/to_insert)
+	if(cyberpunk_insert_delay <= 0 || !istype(user) || !istype(to_insert) || !user.is_holding(to_insert))
+		return TRUE
+	if(!do_after(user, cyberpunk_insert_delay, target = parent))
+		return FALSE
+	return user.is_holding(to_insert)
+
+/datum/storage/proc/attempt_hand_insert(obj/item/to_insert, mob/user, override = FALSE, force = STORAGE_NOT_LOCKED, messages = TRUE)
+	if(!wait_for_hand_insert(user, to_insert))
+		return FALSE
+	return attempt_insert(to_insert, user, override, force, messages)
+
 /// Since items inside storages ignore transparency for QOL reasons, we're tracking when things are dropped onto them instead of our UI elements
 /datum/storage/proc/mousedrop_receive(atom/dropped_onto, atom/movable/target, mob/user, params)
 	SIGNAL_HANDLER
@@ -1015,16 +1027,15 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 		return
 	if(!iscarbon(user) && !isdrone(user))
 		return
-	attempt_insert(dropping, user)
+	attempt_hand_insert(dropping, user)
 	return COMPONENT_CANCEL_MOUSEDROPPED_ONTO
 
 /// Called directly from the attack chain if [insert_on_attack] is TRUE.
 /// Handles inserting an item into the storage when clicked.
 /datum/storage/proc/item_interact_insert(mob/living/user, obj/item/thing)
 	//CYBERPUNK BUILD - rebuild and delete before release
-	if(cyberpunk_insert_delay > 0 && istype(user) && istype(thing) && user.is_holding(thing))
-		if(!do_after(user, cyberpunk_insert_delay, target = parent))
-			return ITEM_INTERACT_BLOCKING
+	if(!wait_for_hand_insert(user, thing))
+		return ITEM_INTERACT_BLOCKING
 	//CYBERPUNK BUILD - rebuild and delete before release
 	attempt_insert(thing, user)
 	return ITEM_INTERACT_SUCCESS
