@@ -2487,6 +2487,11 @@
 
 /// Proc to append behavior related to lying down.
 /mob/living/proc/on_standing_up()
+	if(stealth_cover)
+		stealth_cover = null
+		chameleon_cap = STEALTH_CHAMELEON_MAX
+		restore_stealth_cover_layer()
+		update_stealth_chameleon()
 	if(layer == LYING_MOB_LAYER)
 		layer = initial(layer)
 	remove_traits(list(TRAIT_UI_BLOCKED, TRAIT_PULL_BLOCKED, TRAIT_UNDENSE), LYING_DOWN_TRAIT)
@@ -2785,6 +2790,7 @@
 
 	var/old_direction = dir
 	var/turf/old_loc = loc
+	var/old_wall_hug_dir = wall_hugging ? REVERSE_DIR(old_direction) : NONE
 
 	if(pulling)
 		update_pull_movespeed()
@@ -2800,10 +2806,13 @@
 
 	. = ..()
 
-	if(!. && move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
-		handle_sprint_collision(newloc)
+	if(!.)
+		if(wall_hugging)
+			validate_wall_hug(direct, old_wall_hug_dir, TRUE)
+		else if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
+			handle_sprint_collision(newloc)
 	else if(. && wall_hugging)
-		validate_wall_hug()
+		validate_wall_hug(direct, old_wall_hug_dir)
 
 	if(moving_diagonally != FIRST_DIAG_STEP && isliving(pulledby))
 		var/mob/living/puller = pulledby

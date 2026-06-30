@@ -346,6 +346,10 @@
 	var/chameleon_cap = STEALTH_CHAMELEON_MAX
 	/// Furniture currently hiding this mob during stealth mode.
 	var/atom/movable/stealth_cover
+	/// Layer to restore after hiding under stealth cover.
+	var/tmp/cyberpunk_stealth_cover_original_layer
+	/// True while this mob is being moved under stealth cover.
+	var/tmp/cyberpunk_stealth_cover_move = FALSE
 	/// Flat bonus provided by future demons/implants to chameleon checks.
 	var/chameleon_bonus = 0
 	/// Flat bonus provided by future demons/implants to chameleon change speed.

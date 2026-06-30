@@ -361,6 +361,8 @@
 		return FALSE
 	if(living_user.pulling != living_target)
 		return FALSE
+	if(living_user.combat_mode && (istype(src, /obj/structure/table) || istype(src, /obj/structure/chair) || istype(src, /obj/structure/bed)))
+		return living_user.perform_cyberpunk_grapple_furniture_throw(living_target, src)
 	if(istype(src, /obj/structure/table))
 		return living_user.perform_cyberpunk_grapple_table_drop(living_target, src)
 	return living_user.perform_cyberpunk_grapple_drop_onto(living_target, src)

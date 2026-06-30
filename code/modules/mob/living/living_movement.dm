@@ -297,6 +297,17 @@
 			return check_turf
 	return null
 
+/mob/living/proc/get_wall_hug_cover_in_dir(check_dir)
+	if(!check_dir || ISDIAGONALDIR(check_dir))
+		return null
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return null
+	var/turf/check_turf = get_step(current_turf, check_dir)
+	if(check_turf?.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+		return check_turf
+	return null
+
 /mob/living/proc/near_wall_hug_cover()
 	return !!get_wall_hug_cover()
 
@@ -337,17 +348,54 @@
 	if(!silent)
 		balloon_alert(src, "left cover")
 
+/mob/living/proc/set_wall_hug_cover(atom/cover)
+	if(!cover)
+		return FALSE
+	var/wall_dir = get_dir(src, cover)
+	if(!wall_dir || ISDIAGONALDIR(wall_dir))
+		return FALSE
+	setDir(REVERSE_DIR(wall_dir))
+	stop_leaning()
+	start_leaning(cover, 11)
+	if(stealth_mode)
+		update_stealth_chameleon()
+	return TRUE
+
 /mob/living/proc/toggle_wall_hug_state()
 	if(wall_hugging)
 		stop_wall_hug()
 		return FALSE
 	return start_wall_hug()
 
-/mob/living/proc/validate_wall_hug()
+/mob/living/proc/validate_wall_hug(movement_dir = NONE, old_wall_hug_dir = NONE, bumped = FALSE)
 	if(!wall_hugging)
 		return
-	if(body_position != STANDING_UP || buckled || incapacitated || !near_wall_hug_cover())
+	if(body_position != STANDING_UP || buckled || incapacitated)
 		stop_wall_hug()
+		return
+
+	var/list/check_dirs = list()
+	if(bumped && movement_dir && !ISDIAGONALDIR(movement_dir))
+		check_dirs += movement_dir
+	if(old_wall_hug_dir && !ISDIAGONALDIR(old_wall_hug_dir))
+		check_dirs += old_wall_hug_dir
+	if(!bumped && movement_dir && !ISDIAGONALDIR(movement_dir))
+		check_dirs += movement_dir
+	if(movement_dir && !ISDIAGONALDIR(movement_dir))
+		check_dirs += turn(movement_dir, 90)
+		check_dirs += turn(movement_dir, -90)
+
+	for(var/check_dir in check_dirs)
+		var/turf/cover = get_wall_hug_cover_in_dir(check_dir)
+		if(cover)
+			set_wall_hug_cover(cover)
+			return
+
+	var/turf/any_cover = get_wall_hug_cover()
+	if(any_cover)
+		set_wall_hug_cover(any_cover)
+		return
+	stop_wall_hug()
 
 /mob/living/proc/update_turf_movespeed(turf/open/turf)
 	if(isopenturf(turf) && !HAS_TRAIT(turf, TRAIT_TURF_IGNORE_SLOWDOWN))
@@ -380,6 +428,7 @@
 	chameleon = 0
 	chameleon_cap = STEALTH_CHAMELEON_MAX
 	stealth_cover = null
+	restore_stealth_cover_layer()
 	alpha = initial(alpha)
 	REMOVE_TRAIT(src, TRAIT_SNEAK, TRAIT_GENERIC)
 	if(revealed)
@@ -444,12 +493,48 @@
 		return FALSE
 	if(!stealth_mode)
 		start_stealth()
+	if(body_position != LYING_DOWN)
+		balloon_alert(src, "lie down")
+		return FALSE
+	if(!cover.can_hide_under_stealth_cover(src))
+		return FALSE
+	var/turf/cover_turf = get_turf(cover)
+	if(!cover_turf || get_dist(src, cover_turf) > 1)
+		return FALSE
 	stealth_cover = cover
 	chameleon_cap = STEALTH_CHAMELEON_HIDDEN_CAP
 	chameleon = STEALTH_CHAMELEON_HIDDEN_CAP
+	apply_stealth_cover_layer(cover)
+	var/old_dir = dir
+	cyberpunk_stealth_cover_move = TRUE
+	forceMove(cover_turf)
+	var/moved = get_turf(src) == cover_turf
+	cyberpunk_stealth_cover_move = FALSE
+	setDir(old_dir)
+	if(!moved)
+		restore_stealth_cover_layer()
+		stealth_cover = null
+		chameleon_cap = STEALTH_CHAMELEON_MAX
+		update_stealth_chameleon()
+		return FALSE
 	apply_chameleon_alpha()
 	balloon_alert(src, "hidden")
 	return TRUE
+
+/mob/living/proc/apply_stealth_cover_layer(atom/movable/cover)
+	if(!cover)
+		return
+	if(isnull(cyberpunk_stealth_cover_original_layer))
+		cyberpunk_stealth_cover_original_layer = layer
+	var/cover_layer = cover.layer - 0.01
+	if(layer > cover_layer)
+		layer = cover_layer
+
+/mob/living/proc/restore_stealth_cover_layer()
+	if(isnull(cyberpunk_stealth_cover_original_layer))
+		return
+	layer = cyberpunk_stealth_cover_original_layer
+	cyberpunk_stealth_cover_original_layer = null
 
 /mob/living/proc/update_pull_movespeed()
 	SEND_SIGNAL(src, COMSIG_LIVING_UPDATING_PULL_MOVESPEED)
