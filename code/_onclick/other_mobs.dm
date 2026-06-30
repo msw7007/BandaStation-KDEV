@@ -74,6 +74,8 @@
 	if(combat_mode || isliving(attack_target))
 		if(is_cyberpunk_kick || !consume_cyberpunk_fast_unarmed_free_hand_attack())
 			spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
+			if(LAZYACCESS(modifiers, "cyberpunk_defense_break"))
+				spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
 	if(is_cyberpunk_kick)
 		start_cyberpunk_kick_cooldown()
 

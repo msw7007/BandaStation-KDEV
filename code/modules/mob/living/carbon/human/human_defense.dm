@@ -84,10 +84,15 @@
 	. = ..(hit_by, damage, attack_text, attack_type, armour_penetration, damage_type, defense_break, grab_attempt)
 	if(. == SUCCESSFUL_BLOCK)
 		return SUCCESSFUL_BLOCK
-	if(defense_break == "parry" || !can_parry())
+	var/active_parry = has_active_cyberpunk_parry()
+	if(defense_break == "parry")
+		if(active_parry)
+			cyberpunk_parry_until = 0
+			report_cyberpunk_defense_break(hit_by, "parry")
+		return FAILED_BLOCK
+	if(!can_parry())
 		return FAILED_BLOCK
 
-	var/active_parry = has_active_cyberpunk_parry()
 	var/block_chance_modifier = round(damage / -3)
 	if(active_parry)
 		block_chance_modifier += 35

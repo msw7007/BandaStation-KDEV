@@ -248,7 +248,7 @@
 	user.movement_locked = FALSE
 
 /datum/keybinding/living/view_pet_data
-	hotkey_keys = list("Shift")
+	hotkey_keys = list("V")
 	name = "view_pet_commands"
 	full_name = "Просмотр команд питомцев"
 	description = "Удерживайте, чтобы увидеть все команды, которые вы можете дать своим питомцам!"

@@ -2,6 +2,10 @@
 /mob/proc/AltClickOn(atom/target)
 	base_click_alt(target)
 
+/mob/living/AltClickOn(atom/target)
+	if(!base_click_alt(target))
+		to_chat(src, span_notice("Вы не знаете, как альтернативно воздействовать на цель."))
+
 /**
  * ### Base proc for alt click interaction left click. Returns if the click was intercepted & handled
  *
@@ -23,15 +27,6 @@
 		return target.click_alt(src) & CLICK_ACTION_ANY
 
 	return FALSE
-
-/mob/living/base_click_alt(atom/target)
-	SHOULD_NOT_OVERRIDE(TRUE)
-
-	. = ..()
-	if(.)
-		return
-
-	return try_open_loot_panel_on(target)
 
 /**
  * ## Custom alt click interaction
@@ -69,6 +64,10 @@
 /mob/proc/AltClickSecondaryOn(atom/target)
 	base_click_alt_secondary(target)
 
+/mob/living/AltClickSecondaryOn(atom/target)
+	if(!base_click_alt_secondary(target))
+		to_chat(src, span_notice("Вы не знаете, как вторично воздействовать на цель."))
+
 /**
  * ### Base proc for alt click interaction right click.
  *
@@ -79,15 +78,17 @@
 
 	//Hook on the mob to intercept the click
 	if(SEND_SIGNAL(src, COMSIG_MOB_ALTCLICKON_SECONDARY, target) & COMSIG_MOB_CANCEL_CLICKON)
-		return
+		return TRUE
 
 	//Hook on the atom to intercept the click
 	if(SEND_SIGNAL(target, COMSIG_CLICK_ALT_SECONDARY, src) & COMPONENT_CANCEL_CLICK_ALT_SECONDARY)
-		return
+		return TRUE
 
 	// If it has a custom click_alt_secondary then do that
 	if(can_perform_action(target, target.interaction_flags_click | SILENT_ADJACENCY))
-		target.click_alt_secondary(src)
+		return target.click_alt_secondary(src) & CLICK_ACTION_ANY
+
+	return FALSE
 
 /**
  * ## Custom alt click secondary interaction
@@ -112,6 +113,17 @@
  * This raises no signals and is not meant to have its behavior overridden.
  **/
 /mob/living/alt_shift_click_on(atom/target)
+	SHOULD_NOT_OVERRIDE(TRUE)
+	return try_open_loot_panel_on(target)
+
+/**
+ * ## Bind for unambiguously opening the loot panel with Alt+MMB.
+ **/
+/mob/proc/AltMiddleClickOn(atom/target)
+	SHOULD_NOT_OVERRIDE(TRUE)
+	return FALSE
+
+/mob/living/AltMiddleClickOn(atom/target)
 	SHOULD_NOT_OVERRIDE(TRUE)
 	return try_open_loot_panel_on(target)
 

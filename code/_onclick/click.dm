@@ -87,9 +87,12 @@
 	if(isliving(src))
 		var/mob/living/living_user = src
 		if(living_user.combat_mode && LAZYACCESS(modifiers, ALT_CLICK) && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK))
-			modifiers -= ALT_CLICK
-			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
-			modifiers["cyberpunk_defense_break"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "parry" : "dodge"
+			var/click_button = LAZYACCESS(modifiers, BUTTON)
+			var/is_secondary_alt_attack = click_button ? (click_button == RIGHT_CLICK) : LAZYACCESS(modifiers, RIGHT_CLICK)
+			modifiers[ALT_CLICK] = null
+			modifiers["cyberpunk_combat_intent"] = is_secondary_alt_attack ? "stab" : living_user.cyberpunk_combat_intent
+			modifiers["cyberpunk_defense_break"] = is_secondary_alt_attack ? "parry" : "dodge"
+			to_chat(living_user, span_notice(is_secondary_alt_attack ? "Вы готовите хитрый удар, чтобы обойти парирование." : "Вы готовите быстрый удар, чтобы обойти уклонение."))
 		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK))
 			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
 			if(LAZYACCESS(modifiers, "cyberpunk_charged_intent") == "kick" && isliving(A) && Adjacent(A))
@@ -118,6 +121,9 @@
 			return
 		ShiftClickOn(A)
 		return
+	if(LAZYACCESS(modifiers, ALT_CLICK) && LAZYACCESS(modifiers, MIDDLE_CLICK))
+		AltMiddleClickOn(A)
+		return
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK))
 		if(LAZYACCESS(modifiers, CTRL_CLICK))
 			CtrlMiddleClickOn(A)
@@ -143,6 +149,7 @@
 	if(isliving(src))
 		var/mob/living/living_user = src
 		if(living_user.cyberpunk_defensive_action_held)
+			living_user.cyberpunk_defensive_action_clicked = TRUE
 			living_user.perform_cyberpunk_defensive_action(LAZYACCESS(modifiers, RIGHT_CLICK) ? "parry" : "dodge")
 			return
 
@@ -430,9 +437,6 @@
 	. = SEND_SIGNAL(src, COMSIG_MOB_MIDDLECLICKON, A, params)
 	if(. & COMSIG_MOB_CANCEL_CLICKON)
 		return
-	if(isliving(src))
-		return
-	swap_hand()
 
 /mob/proc/MiddleMouseDownOn(atom/A, params, atom/location = null)
 	return SEND_SIGNAL(src, COMSIG_MOB_MIDDLEMOUSEDOWNON, A, params, location)
@@ -570,14 +574,10 @@
 
 /atom/movable/screen/click_catcher/Click(location, control, params)
 	var/list/modifiers = params2list(params)
-	if(LAZYACCESS(modifiers, MIDDLE_CLICK) && iscarbon(usr))
-		var/mob/living/carbon/C = usr
-		C.swap_hand()
-	else
-		var/turf/click_turf = parse_caught_click_modifiers(modifiers, get_turf(usr.client ? usr.client.eye : usr), usr.client)
-		if (click_turf)
-			modifiers["catcher"] = TRUE
-			click_turf.Click(click_turf, control, list2params(modifiers))
+	var/turf/click_turf = parse_caught_click_modifiers(modifiers, get_turf(usr.client ? usr.client.eye : usr), usr.client)
+	if (click_turf)
+		modifiers["catcher"] = TRUE
+		click_turf.Click(click_turf, control, list2params(modifiers))
 	. = 1
 
 /// MouseWheelOn

@@ -63,6 +63,8 @@
 
 	// At this point the attack is really about to happen
 	living_user?.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
+	if(living_user && LAZYACCESS(modifiers, "cyberpunk_defense_break"))
+		living_user.spend_stamina(STAMINA_COST_ATTACK, "attack", TRUE)
 
 	var/attackby_result
 	if (is_right_clicking)

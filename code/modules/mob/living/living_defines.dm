@@ -275,6 +275,8 @@
 	var/cyberpunk_last_weakness_crit = 0
 	/// Whether the defensive action key is currently held for Space+click controls.
 	var/cyberpunk_defensive_action_held = FALSE
+	/// Whether the held defensive action key already picked a defense through Space+click.
+	var/cyberpunk_defensive_action_clicked = FALSE
 	/// Last defensive action selected by Space+click controls.
 	var/cyberpunk_last_defensive_action = "parry"
 	/// Active parry window expiry.
