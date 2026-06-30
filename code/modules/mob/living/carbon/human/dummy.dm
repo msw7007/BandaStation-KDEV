@@ -224,13 +224,13 @@ INITIALIZE_IMMEDIATE(/mob/living/carbon/human/dummy)
 
 	if(pointed != src)
 		return
-	toggle_active()
+	addtimer(CALLBACK(src, PROC_REF(toggle_active)), 0, TIMER_DELETE_ME)
 
 /mob/living/carbon/human/consistent/combat_doll/proc/toggle_active()
 	active = !active
 	report_status(active ? "Атака запущена. Режим: [get_mode_name()]." : "Атака остановлена.")
 	if(active)
-		combat_loop()
+		addtimer(CALLBACK(src, PROC_REF(combat_loop)), 0, TIMER_DELETE_ME)
 
 /mob/living/carbon/human/consistent/combat_doll/attack_hand(mob/user, list/modifiers)
 	var/mob/living/owner = owner_ref?.resolve()

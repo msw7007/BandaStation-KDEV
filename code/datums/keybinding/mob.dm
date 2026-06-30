@@ -161,8 +161,8 @@
 /datum/keybinding/mob/target/head_cycle
 	hotkey_keys = list("Numpad8")
 	name = "target_head_cycle"
-	full_name = "Выбрать голову/глаза/рот"
-	description = "Выбрать голову, глаза или рот как цель. Каждое нажатие циклирует между ними. Влияет на то, куда вы ударяете, или где вы проводите операции."
+	full_name = "Выбрать голову/шею"
+	description = "Выбрать голову или шею как цель. Каждое нажатие циклирует между ними. Влияет на то, куда вы ударяете, или где вы проводите операции."
 	keybind_signal = COMSIG_KB_MOB_TARGETCYCLEHEAD_DOWN
 
 /datum/keybinding/mob/target/head
@@ -173,17 +173,17 @@
 	keybind_signal = COMSIG_KB_MOB_TARGETHEAD_DOWN
 
 /datum/keybinding/mob/target/eyes
-	hotkey_keys = list("Numpad7")
+	hotkey_keys = list("Numpad9")
 	name = "target_eyes"
-	full_name = "Выбрать глаза"
-	description = "Выбрать глаза, как цель. Влияет на то, куда вы ударяете, или где вы проводите операции."
+	full_name = "Выбрать глаза/уши"
+	description = "Выбрать глаза или уши как цель. Каждое нажатие циклирует между ними. Влияет на то, куда вы ударяете, или где вы проводите операции."
 	keybind_signal = COMSIG_KB_MOB_TARGETEYES_DOWN
 
 /datum/keybinding/mob/target/mouth
-	hotkey_keys = list("Numpad9")
+	hotkey_keys = list("Numpad7")
 	name = "target_mouths"
-	full_name = "Выбрать рот"
-	description = "Выбрать рот, как цель. Влияет на то, куда вы ударяете, или где вы проводите операции."
+	full_name = "Выбрать нос/рот"
+	description = "Выбрать нос или рот как цель. Каждое нажатие циклирует между ними. Влияет на то, куда вы ударяете, или где вы проводите операции."
 	keybind_signal = COMSIG_KB_MOB_TARGETMOUTH_DOWN
 
 /datum/keybinding/mob/target/r_arm

@@ -391,6 +391,10 @@
 /mob/living/proc/normalize_cyberpunk_grab_zone(zone)
 	if(!zone)
 		return BODY_ZONE_CHEST
+	if(zone in GLOB.all_body_zones)
+		return zone
+	if(zone in GLOB.all_precise_body_zones)
+		return zone
 	return check_zone(zone) || zone
 
 /mob/living/proc/set_cyberpunk_grab_zone(zone)
@@ -406,7 +410,7 @@
 
 /mob/living/proc/is_cyberpunk_grab_zone_head(zone = cyberpunk_grab_zone)
 	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
-	return (checked_zone in list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK))
+	return (checked_zone in list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NOSE, BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK))
 
 /mob/living/proc/is_cyberpunk_grab_zone_torso(zone = cyberpunk_grab_zone)
 	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
@@ -437,7 +441,7 @@
 	if(!active_arm)
 		return TRUE
 	var/grabbed_zone = normalize_cyberpunk_grab_zone(grabber.cyberpunk_grab_zone)
-	return active_arm.body_zone == grabbed_zone
+	return active_arm.body_zone == check_zone(grabbed_zone)
 
 /mob/living/proc/is_cyberpunk_mouth_grabbed(grab_level = GRAB_PASSIVE)
 	var/mob/living/grabber = pulledby
@@ -3794,7 +3798,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	if(isliving(dropping))
 		var/mob/living/M = dropping
 		var/list/modifiers = params2list(params)
-		if(U == src && LAZYACCESS(modifiers, RIGHT_CLICK) && U.pulling == M && U.perform_cyberpunk_grapple_self_drag(M))
+		if(U == src && LAZYACCESS(modifiers, RIGHT_CLICK) && U.pulling == M && U.perform_cyberpunk_grapple_self_drag(M, TRUE))
 			return
 		if(M.can_be_held && U.pulling == M)
 			M.mob_try_pickup(U)//blame kevinz

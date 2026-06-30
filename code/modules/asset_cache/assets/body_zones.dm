@@ -16,9 +16,14 @@
 	add_limb(BODY_ZONE_R_LEG)
 	add_limb(BODY_ZONE_PRECISE_EYES)
 	add_limb(BODY_ZONE_PRECISE_MOUTH)
+	add_limb_alias(BODY_ZONE_PRECISE_NOSE, BODY_ZONE_HEAD)
+	add_limb_alias(BODY_ZONE_PRECISE_NECK, BODY_ZONE_HEAD)
 	add_limb(BODY_ZONE_PRECISE_GROIN)
 
 	return ..()
 
 /datum/asset/simple/body_zones/proc/add_limb(limb)
 	assets[SANITIZE_FILENAME("body_zones.[limb].png")] = icon('icons/hud/screen_gen.dmi', limb)
+
+/datum/asset/simple/body_zones/proc/add_limb_alias(limb, icon_limb)
+	assets[SANITIZE_FILENAME("body_zones.[limb].png")] = icon('icons/hud/screen_gen.dmi', icon_limb)

@@ -125,6 +125,11 @@
 		AltMiddleClickOn(A)
 		return
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK))
+		if(isliving(src) && isliving(A))
+			var/mob/living/living_user = src
+			var/mob/living/living_target = A
+			if(living_user.try_cyberpunk_grapple_attack(living_target, modifiers))
+				return
 		if(LAZYACCESS(modifiers, CTRL_CLICK))
 			CtrlMiddleClickOn(A)
 		else
@@ -176,7 +181,12 @@
 		if(living_user.try_cyberpunk_wrestling_launch_click(A))
 			return
 
-	if(isliving(src) && isliving(A) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
+	if(isliving(src) && LAZYACCESS(modifiers, RIGHT_CLICK))
+		var/mob/living/living_user = src
+		if(living_user.try_cyberpunk_grapple_furniture_click(A))
+			return
+
+	if(isliving(src) && isliving(A) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || (!LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK))))
 		var/mob/living/living_user = src
 		var/mob/living/living_target = A
 		if(living_user.try_cyberpunk_grapple_attack(living_target, modifiers))

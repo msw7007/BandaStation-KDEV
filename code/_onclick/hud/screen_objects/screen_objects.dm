@@ -726,7 +726,7 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 	var/obj/effect/overlay/zone_sel/overlay_object = hover_overlays_cache[choice]
 	if(!overlay_object)
 		overlay_object = new
-		overlay_object.icon_state = "[choice]"
+		overlay_object.icon_state = "[get_overlay_state(choice)]"
 		hover_overlays_cache[choice] = overlay_object
 	vis_contents += overlay_object
 
@@ -778,6 +778,9 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 							return BODY_ZONE_PRECISE_MOUTH
 						if(icon_x in 14 to 18)
 							return BODY_ZONE_PRECISE_NECK
+					if(25)
+						if(icon_x in 15 to 17)
+							return BODY_ZONE_PRECISE_NOSE
 					if(26) //Eyeline, eyes are on 15 and 17
 						if(icon_x in 14 to 18)
 							return BODY_ZONE_PRECISE_EYES
@@ -805,13 +808,16 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 	. = ..()
 	if(!hud?.mymob)
 		return
-	var/overlay_state = hud.mymob.zone_selected
-	switch(overlay_state)
-		if(BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK)
-			overlay_state = BODY_ZONE_HEAD
-		if(BODY_ZONE_PRECISE_ABDOMEN)
-			overlay_state = BODY_ZONE_CHEST
+	var/overlay_state = get_overlay_state(hud.mymob.zone_selected)
 	. += mutable_appearance(overlay_icon, "[overlay_state]")
+
+/atom/movable/screen/zone_sel/proc/get_overlay_state(choice)
+	switch(choice)
+		if(BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK, BODY_ZONE_PRECISE_NOSE)
+			return BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_ABDOMEN)
+			return BODY_ZONE_CHEST
+	return choice
 
 /atom/movable/screen/zone_sel/alien
 	icon = 'icons/hud/screen_alien.dmi'

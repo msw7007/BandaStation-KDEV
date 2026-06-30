@@ -102,7 +102,7 @@ GLOBAL_LIST_INIT_TYPED(body_modifications, /datum/body_modification, init_body_m
 
 /proc/body_zone_to_character_setup_part(body_zone)
 	switch(body_zone)
-		if(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK)
+		if(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NOSE, BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK)
 			return "head"
 		if(BODY_ZONE_L_ARM)
 			return "left_arm"

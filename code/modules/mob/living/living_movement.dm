@@ -162,7 +162,12 @@
 
 /mob/living/proc/perform_jump_sequence(jump_dir, long_jump = FALSE)
 	currently_jumping = TRUE
+	var/original_pixel_x = pixel_x
+	var/original_pixel_y = pixel_y
 	var/original_pixel_z = pixel_z
+	var/client/jumping_client = client
+	var/original_client_pixel_x = jumping_client?.pixel_x
+	var/original_client_pixel_y = jumping_client?.pixel_y
 	setDir(jump_dir)
 	var/air_distance = long_jump ? 3 : 2
 	var/turf/current_turf = get_turf(src)
@@ -171,7 +176,7 @@
 	for(var/i in 1 to air_distance)
 		landing_turf = get_step(landing_turf, jump_dir)
 		if(!landing_turf)
-			pixel_z = original_pixel_z
+			reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
 			handle_jump_collision(jump_dir)
 			currently_jumping = FALSE
 			return FALSE
@@ -181,26 +186,35 @@
 					jumpable_obstacle = get_jumpable_obstacle(landing_turf)
 				if(jumpable_obstacle)
 					continue
-			pixel_z = original_pixel_z
+			reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
 			handle_jump_collision(jump_dir)
 			currently_jumping = FALSE
 			return FALSE
 
-	animate_jump_arc(1, air_distance, original_pixel_z)
-	sleep(world.tick_lag)
+	var/travel_pixel_x = (landing_turf.x - current_turf.x) * ICON_SIZE_X
+	var/travel_pixel_y = (landing_turf.y - current_turf.y) * ICON_SIZE_Y
 	forceMove(landing_turf)
 	setDir(jump_dir)
+	pixel_x = original_pixel_x - travel_pixel_x
+	pixel_y = original_pixel_y - travel_pixel_y
+	pixel_z = original_pixel_z
+	if(jumping_client)
+		jumping_client.pixel_x = original_client_pixel_x - travel_pixel_x
+		jumping_client.pixel_y = original_client_pixel_y - travel_pixel_y
 	if(jumpable_obstacle)
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] vaults over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."), span_notice("You vault over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."))
 	else
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] jumps forward."), span_notice("You jump forward."))
-	animate(src, pixel_z = original_pixel_z, time = world.tick_lag, easing = SINE_EASING|EASE_IN)
-	sleep(world.tick_lag)
+	var/jump_animation_time = long_jump ? 0.12 SECONDS : 0.08 SECONDS
+	animate_jump_arc(air_distance, original_pixel_x, original_pixel_y, original_pixel_z, travel_pixel_x, travel_pixel_y, jump_animation_time)
+	animate_jump_camera(jumping_client, original_client_pixel_x, original_client_pixel_y, jump_animation_time)
+	sleep(jump_animation_time)
 
 	apply_cyberpunk_acrobatics_speed_bonus()
 	if(long_jump && !roll_cyberpunk_acrobatics_skip_long_jump_step())
 		continue_long_jump(jump_dir)
-	pixel_z = original_pixel_z
+	reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
+	reset_jump_camera(jumping_client, original_client_pixel_x, original_client_pixel_y)
 	currently_jumping = FALSE
 	return TRUE
 
@@ -208,11 +222,29 @@
 	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 1)
 	return chance > 0 && prob(chance)
 
-/mob/living/proc/animate_jump_arc(step_index, total_steps, original_pixel_z)
+/mob/living/proc/reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
+	pixel_x = original_pixel_x
+	pixel_y = original_pixel_y
+	pixel_z = original_pixel_z
+
+/mob/living/proc/reset_jump_camera(client/jumping_client, original_client_pixel_x, original_client_pixel_y)
+	if(!jumping_client)
+		return
+	jumping_client.pixel_x = original_client_pixel_x
+	jumping_client.pixel_y = original_client_pixel_y
+
+/mob/living/proc/get_jump_arc_peak(total_steps)
 	var/arc_peak = total_steps > 1 ? 14 : 10
-	if(step_index == total_steps)
-		arc_peak = max(8, arc_peak - 4)
-	animate(src, pixel_z = original_pixel_z + arc_peak, time = world.tick_lag, easing = SINE_EASING|EASE_OUT)
+	return arc_peak
+
+/mob/living/proc/animate_jump_arc(total_steps, original_pixel_x, original_pixel_y, original_pixel_z, travel_pixel_x, travel_pixel_y, animation_time)
+	animate(src, pixel_x = original_pixel_x - round(travel_pixel_x * 0.5), pixel_y = original_pixel_y - round(travel_pixel_y * 0.5), pixel_z = original_pixel_z + get_jump_arc_peak(total_steps), time = animation_time * 0.5, easing = SINE_EASING|EASE_OUT)
+	animate(pixel_x = original_pixel_x, pixel_y = original_pixel_y, pixel_z = original_pixel_z, time = animation_time * 0.5, easing = SINE_EASING|EASE_IN)
+
+/mob/living/proc/animate_jump_camera(client/jumping_client, original_client_pixel_x, original_client_pixel_y, animation_time)
+	if(!jumping_client)
+		return
+	animate(jumping_client, pixel_x = original_client_pixel_x, pixel_y = original_client_pixel_y, time = animation_time, easing = SINE_EASING)
 
 /mob/living/proc/continue_long_jump(jump_dir)
 	var/turf/next_turf = get_step(src, jump_dir)

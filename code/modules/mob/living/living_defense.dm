@@ -409,7 +409,8 @@
 
 	var/old_grab_state = user.grab_state
 	var/grab_upgrade_time = instant ? 0 : 0.5 SECONDS
-	// TODO CYBERPUNK TESTING: restore before release: && user.get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0 to grab_upgrade_time *= 0.5
+	if(user.normalize_cyberpunk_grab_zone(user.zone_selected) == BODY_ZONE_PRECISE_NECK && user.combat_mode)
+		grab_upgrade_time *= 0.5
 	user.set_cyberpunk_grab_zone(user.zone_selected)
 	visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на [declent_ru(PREPOSITIONAL)]!"), \
 					span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
