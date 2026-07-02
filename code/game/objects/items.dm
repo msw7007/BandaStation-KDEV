@@ -774,7 +774,8 @@
 	if(!extra_target)
 		return FALSE
 	var/zone = user.zone_selected || BODY_ZONE_CHEST
-	extra_target.apply_damage(damage, damtype, zone, attacking_item = src, sharpness = get_sharpness(), brute_type = get_cyberpunk_damage_brute_type(null))
+	var/damage_key = get_primary_cyberpunk_damage_key()
+	extra_target.apply_damage(damage, damtype, zone, attacking_item = src, sharpness = get_cyberpunk_damage_sharpness(damage_key), brute_type = get_cyberpunk_damage_brute_type(damage_key), burn_type = get_cyberpunk_damage_burn_type(damage_key))
 	user.visible_message(span_warning("[capitalize(src.declent_ru(NOMINATIVE))] catches [extra_target.declent_ru(ACCUSATIVE)] in a follow-through strike!"))
 	return TRUE
 
@@ -789,8 +790,9 @@
 			zone_targets += nearby
 	if(!length(zone_targets))
 		return FALSE
+	var/damage_key = get_primary_cyberpunk_damage_key()
 	for(var/mob/living/zone_target as anything in zone_targets)
-		zone_target.apply_damage(damage, damtype, user.zone_selected || BODY_ZONE_CHEST, attacking_item = src, sharpness = get_sharpness(), brute_type = get_cyberpunk_damage_brute_type(null))
+		zone_target.apply_damage(damage, damtype, user.zone_selected || BODY_ZONE_CHEST, attacking_item = src, sharpness = get_cyberpunk_damage_sharpness(damage_key), brute_type = get_cyberpunk_damage_brute_type(damage_key), burn_type = get_cyberpunk_damage_burn_type(damage_key))
 	user.visible_message(span_warning("[capitalize(src.declent_ru(NOMINATIVE))] sweeps through nearby targets!"))
 	return TRUE
 

@@ -605,20 +605,37 @@
 	var/obj/item/organ/lungs/lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
 	return lungs?.lung_punctures || 0
 
-/mob/living/carbon/proc/handle_oxygenation(seconds_per_tick)
-	var/blood_ratio = BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
-	var/heart_efficiency = get_organ_efficiency(ORGAN_SLOT_HEART)
-	var/lung_efficiency = get_organ_efficiency(ORGAN_SLOT_LUNGS)
+/mob/living/carbon/proc/get_blood_oxygen_transport_ratio()
+	return BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
+
+/mob/living/carbon/proc/get_lung_oxygen_uptake_multiplier(lung_efficiency)
 	if(HAS_TRAIT(src, TRAIT_NOBREATH))
 		lung_efficiency = max(lung_efficiency, 1)
+	return lung_efficiency * 2
+
+/mob/living/carbon/proc/get_heart_oxygen_delivery_multiplier(heart_efficiency)
+	if(HAS_TRAIT_FROM(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT) || undergoing_cardiac_arrest())
+		heart_efficiency = 0
+	return heart_efficiency * 3
+
+/mob/living/carbon/proc/get_oxygenation_target(blood_transport, heart_delivery, lung_uptake, pressure)
+	return clamp(blood_transport * heart_delivery * pressure * lung_uptake * 16.7, 0, 100)
+
+/mob/living/carbon/proc/handle_oxygenation(seconds_per_tick)
+	var/blood_transport = get_blood_oxygen_transport_ratio()
+	var/heart_efficiency = get_organ_efficiency(ORGAN_SLOT_HEART)
+	var/lung_efficiency = get_organ_efficiency(ORGAN_SLOT_LUNGS)
 	if(IsSleeping() || body_position == LYING_DOWN)
 		blood_pressure = max(0.4, blood_pressure - 0.02 * seconds_per_tick)
 	else
 		var/stamina_pressure = max_stamina ? clamp(1 - (stamina / max_stamina), 0, 1) : 0
 		blood_pressure = clamp(0.75 + heart_efficiency * 0.5 + stamina_pressure * 0.5, 0.1, 2)
-	if(HAS_TRAIT_FROM(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT) || undergoing_cardiac_arrest())
-		heart_efficiency = 0
-	var/new_oxygenation = clamp(blood_ratio * (heart_efficiency * 3) * blood_pressure * (lung_efficiency * 2) * 16.7, 0, 100)
+	var/new_oxygenation = get_oxygenation_target(
+		blood_transport,
+		get_heart_oxygen_delivery_multiplier(heart_efficiency),
+		get_lung_oxygen_uptake_multiplier(lung_efficiency),
+		blood_pressure,
+	)
 	if(new_oxygenation < oxygenation)
 		oxygenation = max(new_oxygenation, oxygenation - 5 * seconds_per_tick)
 	else

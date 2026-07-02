@@ -509,7 +509,6 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 /**
  * Non-pure availability checks for cyberpunk skill gates.
  */
-//CYBERPUNK BUILD - rebuild and delete before release
 /datum/surgery_operation/proc/check_cyberpunk_availability(mob/living/patient, atom/movable/operating_on, mob/living/surgeon, tool, operated_zone)
 	SHOULD_NOT_SLEEP(TRUE)
 
@@ -517,7 +516,6 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		return surgeon?.get_cyberpunk_self_surgery_success_chance(src) > 0
 
 	return TRUE
-//CYBERPUNK BUILD - rebuild and delete before release
 
 /**
  * Snowflake checks for surgeries which need many interconnected conditions to be met
@@ -803,9 +801,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		basemod *= 0.8
 	else
 		basemod *= 1 + round((drunkness ** 1.5) / 90, 0.1)
-	//CYBERPUNK BUILD - rebuild and delete before release
 	basemod *= surgeon.get_cyberpunk_surgery_time_multiplier()
-	//CYBERPUNK BUILD - rebuild and delete before release
 
 	return basemod
 
@@ -870,10 +866,8 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	if(istype(worn_gloves) && locate(/obj/item/clothing/accessory/gloves_accessory/ring) in worn_gloves.attached_accessories)
 		fail_chance += SURGERY_RING_FAIL_MOD - 5
 
-	//CYBERPUNK BUILD - rebuild and delete before release
 	fail_chance -= surgeon.get_cyberpunk_surgery_failure_reduction(src)
 	fail_chance -= surgeon.get_cyberpunk_surgical_processor_failure_reduction()
-	//CYBERPUNK BUILD - rebuild and delete before release
 	if(patient == surgeon && HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
 		fail_chance -= 50
 
@@ -1005,12 +999,10 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 			if(HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
 				operation_args[OPERATION_SPEED] += 1.5
 			else
-				//CYBERPUNK BUILD - rebuild and delete before release
 				var/self_surgery_chance = surgeon.get_cyberpunk_self_surgery_success_chance(src)
 				if(!prob(self_surgery_chance))
 					operation_args[OPERATION_FORCE_FAIL] = TRUE
 				operation_args[OPERATION_SPEED] += 1.5
-				//CYBERPUNK BUILD - rebuild and delete before release
 
 		// Otherwise if we have TRAIT_IGNORE_SURGERY_MODIFIERS we cannot possibly fail, unless we specifically allow failure
 		if(HAS_TRAIT(surgeon, TRAIT_IGNORE_SURGERY_MODIFIERS) && !(operation_flags & OPERATION_ALWAYS_FAILABLE))
@@ -1279,12 +1271,10 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 /datum/surgery_operation/proc/apply_surgery_sterility(atom/movable/operating_on, mob/living/surgeon)
 	PROTECTED_PROC(TRUE)
-	//CYBERPUNK BUILD - rebuild and delete before release
 	if(!surgeon?.get_cyberpunk_surgery_sterility_chance())
 		return
 	if(!prob(surgeon.get_cyberpunk_surgery_sterility_chance()))
 		return
-	//CYBERPUNK BUILD - rebuild and delete before release
 	var/obj/item/bodypart/limb
 	if(isbodypart(operating_on))
 		limb = operating_on

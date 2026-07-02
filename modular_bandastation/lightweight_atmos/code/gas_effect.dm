@@ -104,6 +104,7 @@
 	if(!length(chem_pool) || !breather?.reagents)
 		return
 	var/dose_scale = LIGHTWEIGHT_ATMOS_CHEM_BREATH_FRACTION * seconds_per_tick * min(amount, GAS_EFFECT_PER_TICK_MAX) / max(GAS_EFFECT_PER_TICK_MAX, 1)
+	dose_scale *= breather.get_organ_efficiency(ORGAN_SLOT_LUNGS)
 	for(var/reagent_path in chem_pool)
 		var/dose = chem_pool[reagent_path] * dose_scale
 		if(dose <= 0)
