@@ -30,6 +30,8 @@
 /proc/ru_parse_zone(zone, declent = NOMINATIVE)
 	var/static/list/chest = ru_names_toml("chest")
 	var/static/list/head = ru_names_toml("head")
+	var/static/list/eyes = ru_names_toml("eyes")
+	var/static/list/ears = ru_names_toml("ears")
 	var/static/list/right_hand = ru_names_toml("right hand")
 	var/static/list/left_hand = ru_names_toml("left hand")
 	var/static/list/left_arm = ru_names_toml("left arm")
@@ -44,6 +46,16 @@
 			return chest[declent] || zone
 		if(BODY_ZONE_HEAD)
 			return head[declent] || zone
+		if(BODY_ZONE_PRECISE_EYES)
+			return eyes[declent] || zone
+		if(BODY_ZONE_PRECISE_MOUTH)
+			return "рот"
+		if(BODY_ZONE_PRECISE_NOSE)
+			return "нос"
+		if(BODY_ZONE_PRECISE_EARS)
+			return ears[declent] || zone
+		if(BODY_ZONE_PRECISE_NECK)
+			return "шея"
 		if(BODY_ZONE_PRECISE_R_HAND)
 			return right_hand[declent] || zone
 		if(BODY_ZONE_PRECISE_L_HAND)

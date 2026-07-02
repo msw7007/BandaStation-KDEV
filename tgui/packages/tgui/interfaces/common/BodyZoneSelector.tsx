@@ -12,6 +12,8 @@ export enum BodyZone {
   RightLeg = 'r_leg',
   Eyes = 'eyes',
   Mouth = 'mouth',
+  Nose = 'nose',
+  Neck = 'neck',
   Groin = 'groin',
 }
 
@@ -33,7 +35,7 @@ function bodyZonePixelToZone(
     } else if (x > 17 && x < 22) {
       return BodyZone.LeftLeg;
     }
-  } else if (y < 13) {
+  } else if (y < 14) {
     if (x > 8 && x < 11) {
       return BodyZone.RightArm;
     } else if (x > 12 && x < 20) {
@@ -41,17 +43,28 @@ function bodyZonePixelToZone(
     } else if (x > 21 && x < 24) {
       return BodyZone.LeftArm;
     }
-  } else if (y < 22) {
+  } else if (y < 23) {
     if (x > 8 && x < 11) {
       return BodyZone.RightArm;
     } else if (x > 12 && x < 20) {
+      if (precise && y > 21 && x > 14 && x < 18) {
+        return BodyZone.Neck;
+      }
       return BodyZone.Chest;
     } else if (x > 21 && x < 24) {
       return BodyZone.LeftArm;
     }
-  } else if (y < 30 && x > 12 && x < 20) {
-    if (y > 23 && y < 24 && x > 15 && x < 17) {
-      return precise ? BodyZone.Mouth : BodyZone.Head;
+  } else if (y < 31 && x > 12 && x < 20) {
+    if (y > 22 && y < 25) {
+      if (precise && x > 15 && x < 17) {
+        return BodyZone.Mouth;
+      }
+      if (precise && x > 14 && x < 18) {
+        return BodyZone.Neck;
+      }
+      return BodyZone.Head;
+    } else if (y > 24 && y < 26 && x > 14 && x < 18) {
+      return precise ? BodyZone.Nose : BodyZone.Head;
     } else if (y > 25 && y < 27 && x > 14 && x < 18) {
       return precise ? BodyZone.Eyes : BodyZone.Head;
     } else {

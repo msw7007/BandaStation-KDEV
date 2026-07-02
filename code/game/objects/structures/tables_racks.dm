@@ -555,6 +555,9 @@
 
 	if(!isliving(AM))
 		return
+	var/mob/living/entering_living = AM
+	if(entering_living.cyberpunk_stealth_cover_move)
+		return
 	// Don't break if they're just flying past
 	if(AM.throwing)
 		addtimer(CALLBACK(src, PROC_REF(throw_check), AM), 0.5 SECONDS)
@@ -567,6 +570,8 @@
 
 /obj/structure/table/glass/proc/check_break(mob/living/M)
 	if(is_flipped)
+		return FALSE
+	if(M.stealth_mode && M.body_position == LYING_DOWN && M.stealth_cover == src)
 		return FALSE
 	if(M.has_gravity() && M.mob_size > MOB_SIZE_SMALL && !(M.movement_type & MOVETYPES_NOT_TOUCHING_GROUND))
 		table_shatter(M)

@@ -390,6 +390,33 @@ export const BuildTarget = new Juke.Target({
   dependsOn: [TguiTarget, DmTarget],
 });
 
+export const LowMemoryUnlockTarget = new Juke.Target({
+  parameters: [
+    DefineParameter,
+    DmVersionParameter,
+    WarningParameter,
+    NoWarningParameter,
+    SkipIconCutter,
+  ],
+  dependsOn: ({ get }) => [
+    TguiTarget,
+    !get(SkipIconCutter) && IconCutterTarget,
+  ],
+  executes: async ({ get }) => {
+    await DreamMaker(`${DME_NAME}.dme`, {
+      defines: [
+        'CBT',
+        'LOWMEMORYMODE',
+        'FULL_UNLOCK',
+        ...get(DefineParameter),
+      ],
+      warningsAsErrors: get(WarningParameter).includes('error'),
+      ignoreWarningCodes: get(NoWarningParameter),
+      namedDmVersion: get(DmVersionParameter),
+    });
+  },
+});
+
 export const ServerTarget = new Juke.Target({
   parameters: [DmVersionParameter, PortParameter],
   dependsOn: [BuildTarget],

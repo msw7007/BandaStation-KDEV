@@ -48,7 +48,10 @@
 
 /* Log to the logfile only. */
 /proc/log_runtime(text, list/data)
-	logger.Log(LOG_CATEGORY_RUNTIME, text, data)
+	if(logger)
+		logger.Log(LOG_CATEGORY_RUNTIME, text, data)
+	else
+		SEND_TEXT(world.log, text)
 
 /proc/log_signal(text, list/data)
 	logger.Log(LOG_CATEGORY_SIGNAL, text, data)

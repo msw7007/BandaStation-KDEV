@@ -162,7 +162,12 @@
 
 /mob/living/proc/perform_jump_sequence(jump_dir, long_jump = FALSE)
 	currently_jumping = TRUE
+	var/original_pixel_x = pixel_x
+	var/original_pixel_y = pixel_y
 	var/original_pixel_z = pixel_z
+	var/client/jumping_client = client
+	var/original_client_pixel_x = jumping_client?.pixel_x
+	var/original_client_pixel_y = jumping_client?.pixel_y
 	setDir(jump_dir)
 	var/air_distance = long_jump ? 3 : 2
 	var/turf/current_turf = get_turf(src)
@@ -171,7 +176,7 @@
 	for(var/i in 1 to air_distance)
 		landing_turf = get_step(landing_turf, jump_dir)
 		if(!landing_turf)
-			pixel_z = original_pixel_z
+			reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
 			handle_jump_collision(jump_dir)
 			currently_jumping = FALSE
 			return FALSE
@@ -181,26 +186,35 @@
 					jumpable_obstacle = get_jumpable_obstacle(landing_turf)
 				if(jumpable_obstacle)
 					continue
-			pixel_z = original_pixel_z
+			reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
 			handle_jump_collision(jump_dir)
 			currently_jumping = FALSE
 			return FALSE
 
-	animate_jump_arc(1, air_distance, original_pixel_z)
-	sleep(world.tick_lag)
+	var/travel_pixel_x = (landing_turf.x - current_turf.x) * ICON_SIZE_X
+	var/travel_pixel_y = (landing_turf.y - current_turf.y) * ICON_SIZE_Y
 	forceMove(landing_turf)
 	setDir(jump_dir)
+	pixel_x = original_pixel_x - travel_pixel_x
+	pixel_y = original_pixel_y - travel_pixel_y
+	pixel_z = original_pixel_z
+	if(jumping_client)
+		jumping_client.pixel_x = original_client_pixel_x - travel_pixel_x
+		jumping_client.pixel_y = original_client_pixel_y - travel_pixel_y
 	if(jumpable_obstacle)
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] vaults over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."), span_notice("You vault over [jumpable_obstacle.declent_ru(ACCUSATIVE)]."))
 	else
 		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] jumps forward."), span_notice("You jump forward."))
-	animate(src, pixel_z = original_pixel_z, time = world.tick_lag, easing = SINE_EASING|EASE_IN)
-	sleep(world.tick_lag)
+	var/jump_animation_time = long_jump ? 0.12 SECONDS : 0.08 SECONDS
+	animate_jump_arc(air_distance, original_pixel_x, original_pixel_y, original_pixel_z, travel_pixel_x, travel_pixel_y, jump_animation_time)
+	animate_jump_camera(jumping_client, original_client_pixel_x, original_client_pixel_y, jump_animation_time)
+	sleep(jump_animation_time)
 
 	apply_cyberpunk_acrobatics_speed_bonus()
 	if(long_jump && !roll_cyberpunk_acrobatics_skip_long_jump_step())
 		continue_long_jump(jump_dir)
-	pixel_z = original_pixel_z
+	reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
+	reset_jump_camera(jumping_client, original_client_pixel_x, original_client_pixel_y)
 	currently_jumping = FALSE
 	return TRUE
 
@@ -208,11 +222,29 @@
 	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 1)
 	return chance > 0 && prob(chance)
 
-/mob/living/proc/animate_jump_arc(step_index, total_steps, original_pixel_z)
+/mob/living/proc/reset_jump_pixels(original_pixel_x, original_pixel_y, original_pixel_z)
+	pixel_x = original_pixel_x
+	pixel_y = original_pixel_y
+	pixel_z = original_pixel_z
+
+/mob/living/proc/reset_jump_camera(client/jumping_client, original_client_pixel_x, original_client_pixel_y)
+	if(!jumping_client)
+		return
+	jumping_client.pixel_x = original_client_pixel_x
+	jumping_client.pixel_y = original_client_pixel_y
+
+/mob/living/proc/get_jump_arc_peak(total_steps)
 	var/arc_peak = total_steps > 1 ? 14 : 10
-	if(step_index == total_steps)
-		arc_peak = max(8, arc_peak - 4)
-	animate(src, pixel_z = original_pixel_z + arc_peak, time = world.tick_lag, easing = SINE_EASING|EASE_OUT)
+	return arc_peak
+
+/mob/living/proc/animate_jump_arc(total_steps, original_pixel_x, original_pixel_y, original_pixel_z, travel_pixel_x, travel_pixel_y, animation_time)
+	animate(src, pixel_x = original_pixel_x - round(travel_pixel_x * 0.5), pixel_y = original_pixel_y - round(travel_pixel_y * 0.5), pixel_z = original_pixel_z + get_jump_arc_peak(total_steps), time = animation_time * 0.5, easing = SINE_EASING|EASE_OUT)
+	animate(pixel_x = original_pixel_x, pixel_y = original_pixel_y, pixel_z = original_pixel_z, time = animation_time * 0.5, easing = SINE_EASING|EASE_IN)
+
+/mob/living/proc/animate_jump_camera(client/jumping_client, original_client_pixel_x, original_client_pixel_y, animation_time)
+	if(!jumping_client)
+		return
+	animate(jumping_client, pixel_x = original_client_pixel_x, pixel_y = original_client_pixel_y, time = animation_time, easing = SINE_EASING)
 
 /mob/living/proc/continue_long_jump(jump_dir)
 	var/turf/next_turf = get_step(src, jump_dir)
@@ -297,6 +329,17 @@
 			return check_turf
 	return null
 
+/mob/living/proc/get_wall_hug_cover_in_dir(check_dir)
+	if(!check_dir || ISDIAGONALDIR(check_dir))
+		return null
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return null
+	var/turf/check_turf = get_step(current_turf, check_dir)
+	if(check_turf?.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+		return check_turf
+	return null
+
 /mob/living/proc/near_wall_hug_cover()
 	return !!get_wall_hug_cover()
 
@@ -337,17 +380,54 @@
 	if(!silent)
 		balloon_alert(src, "left cover")
 
+/mob/living/proc/set_wall_hug_cover(atom/cover)
+	if(!cover)
+		return FALSE
+	var/wall_dir = get_dir(src, cover)
+	if(!wall_dir || ISDIAGONALDIR(wall_dir))
+		return FALSE
+	setDir(REVERSE_DIR(wall_dir))
+	stop_leaning()
+	start_leaning(cover, 11)
+	if(stealth_mode)
+		update_stealth_chameleon()
+	return TRUE
+
 /mob/living/proc/toggle_wall_hug_state()
 	if(wall_hugging)
 		stop_wall_hug()
 		return FALSE
 	return start_wall_hug()
 
-/mob/living/proc/validate_wall_hug()
+/mob/living/proc/validate_wall_hug(movement_dir = NONE, old_wall_hug_dir = NONE, bumped = FALSE)
 	if(!wall_hugging)
 		return
-	if(body_position != STANDING_UP || buckled || incapacitated || !near_wall_hug_cover())
+	if(body_position != STANDING_UP || buckled || incapacitated)
 		stop_wall_hug()
+		return
+
+	var/list/check_dirs = list()
+	if(bumped && movement_dir && !ISDIAGONALDIR(movement_dir))
+		check_dirs += movement_dir
+	if(old_wall_hug_dir && !ISDIAGONALDIR(old_wall_hug_dir))
+		check_dirs += old_wall_hug_dir
+	if(!bumped && movement_dir && !ISDIAGONALDIR(movement_dir))
+		check_dirs += movement_dir
+	if(movement_dir && !ISDIAGONALDIR(movement_dir))
+		check_dirs += turn(movement_dir, 90)
+		check_dirs += turn(movement_dir, -90)
+
+	for(var/check_dir in check_dirs)
+		var/turf/cover = get_wall_hug_cover_in_dir(check_dir)
+		if(cover)
+			set_wall_hug_cover(cover)
+			return
+
+	var/turf/any_cover = get_wall_hug_cover()
+	if(any_cover)
+		set_wall_hug_cover(any_cover)
+		return
+	stop_wall_hug()
 
 /mob/living/proc/update_turf_movespeed(turf/open/turf)
 	if(isopenturf(turf) && !HAS_TRAIT(turf, TRAIT_TURF_IGNORE_SLOWDOWN))
@@ -380,6 +460,7 @@
 	chameleon = 0
 	chameleon_cap = STEALTH_CHAMELEON_MAX
 	stealth_cover = null
+	restore_stealth_cover_layer()
 	alpha = initial(alpha)
 	REMOVE_TRAIT(src, TRAIT_SNEAK, TRAIT_GENERIC)
 	if(revealed)
@@ -444,12 +525,48 @@
 		return FALSE
 	if(!stealth_mode)
 		start_stealth()
+	if(body_position != LYING_DOWN)
+		balloon_alert(src, "lie down")
+		return FALSE
+	if(!cover.can_hide_under_stealth_cover(src))
+		return FALSE
+	var/turf/cover_turf = get_turf(cover)
+	if(!cover_turf || get_dist(src, cover_turf) > 1)
+		return FALSE
 	stealth_cover = cover
 	chameleon_cap = STEALTH_CHAMELEON_HIDDEN_CAP
 	chameleon = STEALTH_CHAMELEON_HIDDEN_CAP
+	apply_stealth_cover_layer(cover)
+	var/old_dir = dir
+	cyberpunk_stealth_cover_move = TRUE
+	forceMove(cover_turf)
+	var/moved = get_turf(src) == cover_turf
+	cyberpunk_stealth_cover_move = FALSE
+	setDir(old_dir)
+	if(!moved)
+		restore_stealth_cover_layer()
+		stealth_cover = null
+		chameleon_cap = STEALTH_CHAMELEON_MAX
+		update_stealth_chameleon()
+		return FALSE
 	apply_chameleon_alpha()
 	balloon_alert(src, "hidden")
 	return TRUE
+
+/mob/living/proc/apply_stealth_cover_layer(atom/movable/cover)
+	if(!cover)
+		return
+	if(isnull(cyberpunk_stealth_cover_original_layer))
+		cyberpunk_stealth_cover_original_layer = layer
+	var/cover_layer = cover.layer - 0.01
+	if(layer > cover_layer)
+		layer = cover_layer
+
+/mob/living/proc/restore_stealth_cover_layer()
+	if(isnull(cyberpunk_stealth_cover_original_layer))
+		return
+	layer = cyberpunk_stealth_cover_original_layer
+	cyberpunk_stealth_cover_original_layer = null
 
 /mob/living/proc/update_pull_movespeed()
 	SEND_SIGNAL(src, COMSIG_LIVING_UPDATING_PULL_MOVESPEED)

@@ -391,6 +391,10 @@
 /mob/living/proc/normalize_cyberpunk_grab_zone(zone)
 	if(!zone)
 		return BODY_ZONE_CHEST
+	if(zone in GLOB.all_body_zones)
+		return zone
+	if(zone in GLOB.all_precise_body_zones)
+		return zone
 	return check_zone(zone) || zone
 
 /mob/living/proc/set_cyberpunk_grab_zone(zone)
@@ -406,7 +410,7 @@
 
 /mob/living/proc/is_cyberpunk_grab_zone_head(zone = cyberpunk_grab_zone)
 	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
-	return (checked_zone in list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NECK))
+	return (checked_zone in list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NOSE, BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK))
 
 /mob/living/proc/is_cyberpunk_grab_zone_torso(zone = cyberpunk_grab_zone)
 	var/checked_zone = normalize_cyberpunk_grab_zone(zone)
@@ -437,7 +441,7 @@
 	if(!active_arm)
 		return TRUE
 	var/grabbed_zone = normalize_cyberpunk_grab_zone(grabber.cyberpunk_grab_zone)
-	return active_arm.body_zone == grabbed_zone
+	return active_arm.body_zone == check_zone(grabbed_zone)
 
 /mob/living/proc/is_cyberpunk_mouth_grabbed(grab_level = GRAB_PASSIVE)
 	var/mob/living/grabber = pulledby
@@ -2487,6 +2491,11 @@
 
 /// Proc to append behavior related to lying down.
 /mob/living/proc/on_standing_up()
+	if(stealth_cover)
+		stealth_cover = null
+		chameleon_cap = STEALTH_CHAMELEON_MAX
+		restore_stealth_cover_layer()
+		update_stealth_chameleon()
 	if(layer == LYING_MOB_LAYER)
 		layer = initial(layer)
 	remove_traits(list(TRAIT_UI_BLOCKED, TRAIT_PULL_BLOCKED, TRAIT_UNDENSE), LYING_DOWN_TRAIT)
@@ -2785,6 +2794,7 @@
 
 	var/old_direction = dir
 	var/turf/old_loc = loc
+	var/old_wall_hug_dir = wall_hugging ? REVERSE_DIR(old_direction) : NONE
 
 	if(pulling)
 		update_pull_movespeed()
@@ -2800,10 +2810,13 @@
 
 	. = ..()
 
-	if(!. && move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
-		handle_sprint_collision(newloc)
+	if(!.)
+		if(wall_hugging)
+			validate_wall_hug(direct, old_wall_hug_dir, TRUE)
+		else if(move_intent == MOVE_INTENT_RUN && !(movement_type & FLOATING))
+			handle_sprint_collision(newloc)
 	else if(. && wall_hugging)
-		validate_wall_hug()
+		validate_wall_hug(direct, old_wall_hug_dir)
 
 	if(moving_diagonally != FIRST_DIAG_STEP && isliving(pulledby))
 		var/mob/living/puller = pulledby
@@ -3785,7 +3798,7 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 	if(isliving(dropping))
 		var/mob/living/M = dropping
 		var/list/modifiers = params2list(params)
-		if(U == src && LAZYACCESS(modifiers, RIGHT_CLICK) && U.pulling == M && U.perform_cyberpunk_grapple_self_drag(M))
+		if(U == src && LAZYACCESS(modifiers, RIGHT_CLICK) && U.pulling == M && U.perform_cyberpunk_grapple_self_drag(M, TRUE))
 			return
 		if(M.can_be_held && U.pulling == M)
 			M.mob_try_pickup(U)//blame kevinz

@@ -1123,7 +1123,8 @@
 		owner.visible_message(span_danger("[capitalize(owner.declent_ru(NOMINATIVE))] блокирует [attack_text] с помощью [declent_ru(GENITIVE)]!"))
 		var/owner_turf = get_turf(owner)
 		new block_effect(owner_turf, COLOR_YELLOW)
-		playsound(src, block_sound, BLOCK_SOUND_VOLUME, vary = TRUE)
+		if(block_sound)
+			playsound(src, block_sound, BLOCK_SOUND_VOLUME, vary = TRUE)
 		return TRUE
 
 /**

@@ -43,6 +43,26 @@
 		{
 			"type": "process",
 			"command": "tools/build/build.sh",
+			"args": ["-DLOWMEMORYMODE", "-DFULL_UNLOCK"],
+			"windows": {
+				"command": ".\\tools\\build\\build.bat",
+				"args": ["-DLOWMEMORYMODE", "-DFULL_UNLOCK"]
+			},
+			"options": {
+				"env": {
+					"DM_EXE": "${config:dreammaker.byondPath}"
+				}
+			},
+			"problemMatcher": ["$dreammaker", "$tsc", "$eslint-stylish"],
+			"group": {
+				"kind": "build"
+			},
+			"dependsOn": "dm: reparse",
+			"label": "Build All (low memory mode + full unlock)"
+		},
+		{
+			"type": "process",
+			"command": "tools/build/build.sh",
 			"args": ["-DLOWMEMORYMODE", "-DABSOLUTE_MINIMUM"],
 			"windows": {
 				"command": ".\\tools\\build\\build.bat",

@@ -2178,6 +2178,9 @@
 	SIGNAL_HANDLER
 	if(!istype(user) || !(src in user.contents))
 		return
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, ALT_CLICK))
+		return
 	if(!selected_demon && !ready_demon && !preparing_demon)
 		return
 	return COMSIG_MOB_CANCEL_CLICKON
@@ -2186,12 +2189,18 @@
 	SIGNAL_HANDLER
 	if(!istype(user) || !(src in user.contents) || !selected_demon || ready_demon || preparing_demon)
 		return
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, ALT_CLICK))
+		return
 	prepare_selected_demon(user, selected_demon)
 	return COMSIG_MOB_CANCEL_CLICKON
 
 /obj/item/clothing/gloves/cyberdeck/proc/on_owner_middle_mouse_up(mob/living/user, atom/target, params)
 	SIGNAL_HANDLER
 	if(!istype(user) || !(src in user.contents))
+		return
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, ALT_CLICK))
 		return
 	if(ready_demon)
 		release_ready_demon(user, target)

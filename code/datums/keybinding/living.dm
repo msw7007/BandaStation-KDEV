@@ -191,7 +191,7 @@
 	return TRUE
 
 /datum/keybinding/living/toggle_move_intent
-	hotkey_keys = list("V") // BANDASTATION EDIT
+	hotkey_keys = list("Shift") // BANDASTATION EDIT
 	name = "toggle_move_intent"
 	full_name = "Смена режима ходьбы (зажать)"
 	description = "Удерживайте, чтобы временно поменять режим передвижения."
@@ -274,8 +274,10 @@
 	if(.)
 		return
 	var/mob/living/living_user = user.mob
+	if(living_user.cyberpunk_defensive_action_held)
+		return TRUE
 	living_user.cyberpunk_defensive_action_held = TRUE
-	living_user.perform_cyberpunk_defensive_action()
+	living_user.cyberpunk_defensive_action_clicked = FALSE
 	return TRUE
 
 /datum/keybinding/living/cyberpunk_defensive_action/up(client/user, turf/target)
@@ -283,7 +285,11 @@
 	if(.)
 		return
 	var/mob/living/living_user = user.mob
+	var/repeat_last_action = living_user.cyberpunk_defensive_action_held && !living_user.cyberpunk_defensive_action_clicked
 	living_user.cyberpunk_defensive_action_held = FALSE
+	living_user.cyberpunk_defensive_action_clicked = FALSE
+	if(repeat_last_action)
+		living_user.perform_cyberpunk_defensive_action()
 	return TRUE
 
 /datum/keybinding/living/cyberpunk_surrender

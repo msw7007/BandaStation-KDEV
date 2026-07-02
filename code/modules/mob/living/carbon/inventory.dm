@@ -451,6 +451,9 @@
 		if(BODY_ZONE_PRECISE_MOUTH)
 			if(is_mouth_covered(~exluded_equipment_slots) || (obscured_slots & HIDEFACE))
 				return FALSE
+		if(BODY_ZONE_PRECISE_NOSE)
+			if(is_mouth_covered(~exluded_equipment_slots) || (obscured_slots & HIDEFACE))
+				return FALSE
 
 	var/covered_flags = NONE
 	for(var/obj/item/worn_item in get_equipped_items(INCLUDE_ABSTRACT))

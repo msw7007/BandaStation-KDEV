@@ -42,7 +42,7 @@
 	if(LAZYACCESS(modifiers, RIGHT_CLICK) && isliving(user) && isliving(src) && over == user)
 		var/mob/living/living_user = user
 		var/mob/living/living_target = src
-		if(living_user.perform_cyberpunk_grapple_self_drag(living_target))
+		if(living_user.perform_cyberpunk_grapple_self_drag(living_target, TRUE))
 			return
 	if(LAZYACCESS(modifiers, RIGHT_CLICK) && ishuman(user) && iscarbon(src) && ishuman(over))
 		var/mob/living/carbon/human/carry_receiver = over

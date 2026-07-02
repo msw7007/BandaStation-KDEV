@@ -409,7 +409,8 @@
 
 	var/old_grab_state = user.grab_state
 	var/grab_upgrade_time = instant ? 0 : 0.5 SECONDS
-	// TODO CYBERPUNK TESTING: restore before release: && user.get_character_perk_rank(SKILL_POWER_UNARMED, 2) > 0 to grab_upgrade_time *= 0.5
+	if(user.normalize_cyberpunk_grab_zone(user.zone_selected) == BODY_ZONE_PRECISE_NECK && user.combat_mode)
+		grab_upgrade_time *= 0.5
 	user.set_cyberpunk_grab_zone(user.zone_selected)
 	visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на [declent_ru(PREPOSITIONAL)]!"), \
 					span_userdanger("[capitalize(user.declent_ru(NOMINATIVE))] начинает усиливать захват на вас!"), span_hear("Вы слышите агрессивное шарканье!"), null, user)
@@ -935,6 +936,10 @@
 		return SUCCESSFUL_BLOCK
 	if(consume_cyberpunk_defense_breach(hit_by))
 		return FAILED_BLOCK
+	if(defense_break == "dodge" && has_active_cyberpunk_dodge())
+		cyberpunk_dodge_until = 0
+		report_cyberpunk_defense_break(hit_by, "dodge")
+		return FAILED_BLOCK
 	if(defense_break != "dodge" && has_active_cyberpunk_dodge() && can_dodge())
 		var/dodge_chance = clamp(round((20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
 		if(prob(dodge_chance) && spend_stamina(STAMINA_COST_DODGE, "dodge"))
@@ -948,7 +953,30 @@
 
 	return FAILED_BLOCK
 
+/mob/living/proc/report_cyberpunk_defense_break(atom/hit_by, defense_type)
+	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
+	if(!attacker && isitem(hit_by))
+		var/obj/item/attacking_item = hit_by
+		attacker = isliving(attacking_item.loc) ? attacking_item.loc : null
+
+	var/attack_name = defense_type == "parry" ? "хитрый удар" : "быстрый удар"
+	var/defense_name = defense_type == "parry" ? "парирование" : "уворот"
+	var/attempt_name = defense_type == "parry" ? "парировать" : "уклониться"
+	if(attacker && attacker != src)
+		visible_message(
+			span_warning("[capitalize(attacker.declent_ru(NOMINATIVE))] прерывает [defense_name] [declent_ru(GENITIVE)] через [attack_name]!"),
+			span_warning("Вы пытаетесь [attempt_name], но [attacker.declent_ru(NOMINATIVE)] прерывает вашу защиту через [attack_name]."),
+			ignored_mobs = attacker,
+		)
+		to_chat(attacker, span_notice("Ваш [attack_name] прерывает [defense_name] [declent_ru(GENITIVE)]."))
+		return
+	visible_message(
+		span_warning("[capitalize(declent_ru(NOMINATIVE))] пытается [attempt_name], но [attack_name] прерывает защиту!"),
+		span_warning("Вы пытаетесь [attempt_name], но [attack_name] прерывает вашу защиту."),
+	)
+
 /mob/living/proc/handle_cyberpunk_successful_dodge(atom/hit_by, attack_text = "attack", grab_attempt = FALSE)
+	try_cyberpunk_successful_dodge_move(hit_by)
 	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
 	if(attacker)
 		var/stagger_chance = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 3)
@@ -977,6 +1005,38 @@
 	var/invis_duration = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 6, "value_2")
 	if(apply_cyberpunk_evasion_invisibility(invis_duration SECONDS))
 		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] vanishes after dodging [attack_text]!"), span_notice("You vanish after dodging [attack_text]."))
+
+/mob/living/proc/try_cyberpunk_successful_dodge_move(atom/hit_by)
+	if(!isturf(loc) || buckled)
+		return FALSE
+
+	var/list/directions = list()
+	var/away_dir = hit_by ? get_dir(hit_by, src) : 0
+	if(away_dir)
+		if(away_dir in GLOB.cardinals)
+			directions += turn(away_dir, 90)
+			directions += turn(away_dir, -90)
+		else
+			for(var/direction in GLOB.cardinals)
+				if(away_dir & direction)
+					directions += REVERSE_DIR(direction)
+		directions += away_dir
+
+	for(var/direction in GLOB.alldirs)
+		if(!(direction in directions))
+			directions += direction
+
+	var/old_dir = dir
+	var/turf/old_turf = get_turf(src)
+	for(var/direction in directions)
+		var/turf/target_turf = get_step(src, direction)
+		if(!target_turf || target_turf == old_turf || target_turf.is_blocked_turf(source_atom = src))
+			continue
+		if(forceMove(target_turf) && get_turf(src) != old_turf)
+			setDir(old_dir)
+			return TRUE
+	setDir(old_dir)
+	return FALSE
 
 /mob/living/proc/apply_cyberpunk_evasion_invisibility(duration)
 	if(duration <= 0)

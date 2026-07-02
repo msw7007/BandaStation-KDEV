@@ -275,6 +275,8 @@
 	var/cyberpunk_last_weakness_crit = 0
 	/// Whether the defensive action key is currently held for Space+click controls.
 	var/cyberpunk_defensive_action_held = FALSE
+	/// Whether the held defensive action key already picked a defense through Space+click.
+	var/cyberpunk_defensive_action_clicked = FALSE
 	/// Last defensive action selected by Space+click controls.
 	var/cyberpunk_last_defensive_action = "parry"
 	/// Active parry window expiry.
@@ -344,6 +346,10 @@
 	var/chameleon_cap = STEALTH_CHAMELEON_MAX
 	/// Furniture currently hiding this mob during stealth mode.
 	var/atom/movable/stealth_cover
+	/// Layer to restore after hiding under stealth cover.
+	var/tmp/cyberpunk_stealth_cover_original_layer
+	/// True while this mob is being moved under stealth cover.
+	var/tmp/cyberpunk_stealth_cover_move = FALSE
 	/// Flat bonus provided by future demons/implants to chameleon checks.
 	var/chameleon_bonus = 0
 	/// Flat bonus provided by future demons/implants to chameleon change speed.

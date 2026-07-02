@@ -669,6 +669,8 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 			return "грудь"
 		if(BODY_ZONE_HEAD)
 			return "голова"
+		if(BODY_ZONE_PRECISE_NOSE)
+			return "нос"
 		if(BODY_ZONE_PRECISE_EARS)
 			return "ears"
 		if(BODY_ZONE_PRECISE_NECK)
@@ -704,6 +706,8 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 		if(BODY_ZONE_PRECISE_EYES)
 			return BODY_ZONE_HEAD
 		if(BODY_ZONE_PRECISE_MOUTH)
+			return BODY_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_NOSE)
 			return BODY_ZONE_HEAD
 		if(BODY_ZONE_PRECISE_EARS)
 			return BODY_ZONE_HEAD

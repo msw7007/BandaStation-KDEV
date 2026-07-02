@@ -3,16 +3,15 @@
 	abstract_type = /datum/body_modification/implants
 	modification_kind = "organ"
 	chromity_cost = 5
-	var/replacement_organ = null
+	var/obj/item/organ/replacement_organ = null
 
 /datum/body_modification/implants/New()
 	. = ..()
 	if(!replacement_organ)
 		return
 
-	var/obj/item/organ/organ_probe = new replacement_organ()
-	var/replacement_slot = organ_probe.slot
-	var/replacement_zone = organ_probe.zone
+	var/replacement_slot = initial(replacement_organ.slot)
+	var/replacement_zone = initial(replacement_organ.zone)
 	if(isnull(slot_id))
 		slot_id = replacement_slot
 	if(isnull(body_zone))
@@ -20,12 +19,11 @@
 	if(isnull(body_part))
 		body_part = body_zone_to_character_setup_part(body_zone)
 	if(isnull(icon))
-		icon = organ_probe.icon
+		icon = initial(replacement_organ.icon)
 	if(isnull(icon_state))
-		icon_state = organ_probe.icon_state
+		icon_state = initial(replacement_organ.icon_state)
 	if(!chromity_cost)
-		chromity_cost = max(1, organ_probe.chromity_overheat || 5)
-	qdel(organ_probe)
+		chromity_cost = max(1, initial(replacement_organ.chromity_overheat) || 5)
 
 /datum/body_modification/implants/robotic
 	name = "Robotic implants"
@@ -95,21 +93,21 @@
 	abstract_type = /datum/body_modification/dynamic_organ_replacement
 	category = "Органы"
 	modification_kind = "organ"
-	var/replacement_organ = null
+	var/obj/item/organ/replacement_organ = null
 	var/replacement_description = null
 
-/datum/body_modification/dynamic_organ_replacement/New(organ_type, obj/item/organ/organ_probe)
+/datum/body_modification/dynamic_organ_replacement/New(obj/item/organ/organ_type)
 	abstract_type = null
 	replacement_organ = organ_type
-	slot_id = organ_probe.slot
-	body_zone = organ_probe.zone
+	slot_id = initial(organ_type.slot)
+	body_zone = initial(organ_type.zone)
 	body_part = body_zone_to_character_setup_part(body_zone)
 	key = "organ_[slot_id]_[replacetext("[organ_type]", "/", "_")]"
-	name = organ_probe.name
-	icon = organ_probe.icon
-	icon_state = organ_probe.icon_state
-	replacement_description = organ_probe.desc
-	chromity_cost = max(1, organ_probe.chromity_overheat || 5)
+	name = initial(organ_type.name)
+	icon = initial(organ_type.icon)
+	icon_state = initial(organ_type.icon_state)
+	replacement_description = initial(organ_type.desc)
+	chromity_cost = max(1, initial(organ_type.chromity_overheat) || 5)
 	return ..()
 
 /datum/body_modification/dynamic_organ_replacement/get_description()
@@ -144,25 +142,23 @@
 	abstract_type = /datum/body_modification/cybernetic_implant
 	category = "Импланты"
 	modification_kind = "implant"
-	var/implant_type = null
+	var/obj/item/organ/cyberimp/implant_type = null
 	var/implant_description = null
 
-/datum/body_modification/cybernetic_implant/New(implant_type, target_slot, target_zone)
+/datum/body_modification/cybernetic_implant/New(obj/item/organ/cyberimp/implant_type, target_slot, target_zone)
 	abstract_type = null
 	src.implant_type = implant_type
 	slot_id = target_slot
 	body_zone = target_zone
 	body_part = body_zone_to_character_setup_part(body_zone)
 	key = "cyberimp_[target_slot]_[replacetext("[implant_type]", "/", "_")]"
-	var/obj/item/organ/cyberimp/implant_probe = new implant_type()
-	name = implant_probe.name
-	icon = implant_probe.icon
-	icon_state = implant_probe.icon_state
-	implant_description = implant_probe.desc
+	name = initial(implant_type.name)
+	icon = initial(implant_type.icon)
+	icon_state = initial(implant_type.icon_state)
+	implant_description = initial(implant_type.desc)
 	grade = null
 	tier = null
-	chromity_cost = max(1, implant_probe.chromity_overheat || 5)
-	qdel(implant_probe)
+	chromity_cost = max(1, initial(implant_type.chromity_overheat) || 5)
 	return ..()
 
 /datum/body_modification/cybernetic_implant/get_description()
