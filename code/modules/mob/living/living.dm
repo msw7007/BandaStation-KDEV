@@ -2834,6 +2834,9 @@
 				handle_sprint_step(direct)
 			else
 				stop_sprinting("too tired")
+		if(has_starvation_exhaustion() && prob(2))
+			Knockdown(2 SECONDS)
+			visible_message(span_warning("[src] stumbles from hunger."), span_userdanger("Hunger makes your legs buckle."))
 		var/blood_flow = get_bleed_rate()
 		var/health_check = body_position == LYING_DOWN && prob(get_brute_loss() * 200 / maxHealth)
 		var/bleeding_check = blood_flow > 3 && prob(blood_flow * 16)

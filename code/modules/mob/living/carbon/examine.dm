@@ -23,7 +23,7 @@
 
 	if(ishuman(src))
 		var/mob/living/carbon/human/human_source = src
-		var/descriptor_text = human_source.get_appearance_descriptor_text()
+		var/descriptor_text = human_source.get_appearance_descriptor_text(user)
 		if(descriptor_text)
 			. += span_notice("They look [descriptor_text].")
 		if(human_source.flavor_text && !human_source.is_incognito())

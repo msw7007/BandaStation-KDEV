@@ -95,6 +95,13 @@
 		var/mob/living/living_user = user
 		living_user.taste_container(reagents)
 
+/obj/item/reagent_containers/get_examine_name(mob/user, declent = NOMINATIVE)
+	if(isliving(user))
+		var/mob/living/living_user = user
+		if(living_user.has_dehydration() && reagents?.total_volume)
+			return "water"
+	return ..()
+
 /obj/item/reagent_containers/create_reagents(max_vol, flags)
 	. = ..()
 	RegisterSignal(reagents, COMSIG_REAGENTS_HOLDER_UPDATED, PROC_REF(on_reagent_change))

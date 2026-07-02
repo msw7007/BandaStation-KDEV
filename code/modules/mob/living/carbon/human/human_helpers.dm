@@ -113,9 +113,17 @@
 /mob/living/carbon/human/proc/get_voice_description()
 	return "[voice_adjective] [voice_noun]"
 
-/mob/living/carbon/human/proc/get_appearance_descriptor_text()
+/mob/living/carbon/human/proc/get_appearance_descriptor_text(mob/viewer)
 	if(!length(appearance_descriptors))
 		return null
+	if(isliving(viewer) && viewer != src && style < 0 && prob(clamp(abs(style) / 15 * 100, 0, 100)))
+		var/list/false_descriptors = body_descriptor_choices()
+		return english_list(list(
+			pick(false_descriptors),
+			pick(false_descriptors),
+			pick(false_descriptors),
+			pick(false_descriptors),
+		))
 	return english_list(appearance_descriptors)
 
 /mob/living/carbon/human/proc/apply_preference_sprite_scale()

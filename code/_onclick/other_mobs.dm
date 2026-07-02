@@ -55,6 +55,11 @@
 	if(sigreturn & COMPONENT_SKIP_ATTACK)
 		return FALSE
 
+	if(!is_cyberpunk_kick && isliving(attack_target) && !LAZYACCESS(modifiers, RIGHT_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK))
+		var/mob/living/living_target = attack_target
+		if(try_cyberpunk_human_burger_interaction(living_target, proximity_flag))
+			return TRUE
+
 	if(!is_cyberpunk_kick && isliving(attack_target) && (LAZYACCESS(modifiers, RIGHT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK)))
 		var/mob/living/living_target = attack_target
 		if(try_cyberpunk_grapple_attack(living_target, modifiers))
