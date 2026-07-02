@@ -127,7 +127,8 @@
 		for(var/attribute_id in ATTRIBUTE_ALL)
 			var/datum/attribute/attribute = mind.get_attribute(attribute_id)
 			if(attribute)
-				. += "[attribute.name]: [attribute.value]/[ATTRIBUTE_MAXIMUM][attribute.super_mode ? " (Super)" : ""]"
+				var/effective_value = get_attribute_value(attribute_id)
+				. += "[attribute.name]: [attribute.value]/[ATTRIBUTE_MAXIMUM] effective [effective_value]/[ATTRIBUTE_EFFECTIVE_MAXIMUM][effective_value >= ATTRIBUTE_SUPER_THRESHOLD ? " (Giga)" : ""]"
 		. += "Unconverted General XP: [round(mind.unconverted_general_experience, 0.1)]/[ATTRIBUTE_LEVEL_POINT_EXPERIENCE]"
 		. += "Level Points: [mind.level_points]"
 		. += "Skill Points: [mind.skill_points]"
@@ -224,6 +225,8 @@
 
 /mob/living/proc/process_mood_state(seconds_per_tick)
 	sync_mood_from_moodlets()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		mood = max(mood, (mind?.get_character_skill_level(SKILL_ENDURANCE) || 0) * 2)
 	mood = clamp(mood, -30, 20)
 	if(mood <= -30)
 		time_at_min_mood += seconds_per_tick
@@ -718,6 +721,38 @@
 	move_speed_modifier = 0.005
 	shareable = FALSE
 
+/datum/cyberpunk_status_effect/giga_perk
+	id = "giga_perk"
+	name = "Giga Perk"
+	desc = "A superhuman attribute threshold effect."
+	effect_kind = "buff"
+	shareable = FALSE
+	unique_effect = "giga_perk"
+
+/datum/cyberpunk_status_effect/giga_perk/strength
+	id = "giga_strength"
+	name = "Дробление"
+
+/datum/cyberpunk_status_effect/giga_perk/dexterity
+	id = "giga_dexterity"
+	name = "Змеевидность"
+
+/datum/cyberpunk_status_effect/giga_perk/perception
+	id = "giga_perception"
+	name = "Орлиный глаз"
+
+/datum/cyberpunk_status_effect/giga_perk/intelligence
+	id = "giga_intelligence"
+	name = "Ботаник"
+
+/datum/cyberpunk_status_effect/giga_perk/spirit
+	id = "giga_spirit"
+	name = "Несокрушимость"
+
+/datum/cyberpunk_status_effect/giga_perk/charisma
+	id = "giga_charisma"
+	name = "Холщенность"
+
 /datum/cyberpunk_status_effect/cyberpsychosis
 	id = "cyberpsychosis"
 	name = "Cyberpsychosis"
@@ -776,6 +811,7 @@
 
 /mob/living/proc/process_cyberpunk_status_effects(seconds_per_tick)
 	sync_cyberpunk_need_status_effects()
+	sync_character_giga_perk_status_effects()
 	if(!length(cyberpunk_status_effects))
 		return
 	for(var/effect_id in cyberpunk_status_effects.Copy())
@@ -787,6 +823,54 @@
 			remove_cyberpunk_status_effect(effect_id)
 			continue
 		effect.tick(seconds_per_tick)
+
+/mob/living/proc/get_character_giga_perk_status_type(attribute_id)
+	switch(attribute_id)
+		if(ATTRIBUTE_STRENGTH)
+			return /datum/cyberpunk_status_effect/giga_perk/strength
+		if(ATTRIBUTE_DEXTERITY)
+			return /datum/cyberpunk_status_effect/giga_perk/dexterity
+		if(ATTRIBUTE_PERCEPTION)
+			return /datum/cyberpunk_status_effect/giga_perk/perception
+		if(ATTRIBUTE_INTELLIGENCE)
+			return /datum/cyberpunk_status_effect/giga_perk/intelligence
+		if(ATTRIBUTE_SPIRIT)
+			return /datum/cyberpunk_status_effect/giga_perk/spirit
+		if(ATTRIBUTE_CHARISMA)
+			return /datum/cyberpunk_status_effect/giga_perk/charisma
+	return null
+
+/mob/living/proc/get_character_giga_perk_status_id(attribute_id)
+	switch(attribute_id)
+		if(ATTRIBUTE_STRENGTH)
+			return "giga_strength"
+		if(ATTRIBUTE_DEXTERITY)
+			return "giga_dexterity"
+		if(ATTRIBUTE_PERCEPTION)
+			return "giga_perception"
+		if(ATTRIBUTE_INTELLIGENCE)
+			return "giga_intelligence"
+		if(ATTRIBUTE_SPIRIT)
+			return "giga_spirit"
+		if(ATTRIBUTE_CHARISMA)
+			return "giga_charisma"
+	return null
+
+/mob/living/proc/sync_character_giga_perk_status_effects()
+	if(!mind)
+		return FALSE
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		var/status_type = get_character_giga_perk_status_type(attribute_id)
+		var/status_id = get_character_giga_perk_status_id(attribute_id)
+		if(!status_type || !status_id)
+			continue
+		var/should_have_giga = stat != DEAD && (get_attribute_value(attribute_id) >= ATTRIBUTE_SUPER_THRESHOLD || mind.character_giga_perks[attribute_id])
+		if(should_have_giga)
+			if(!has_cyberpunk_status_effect(status_id))
+				apply_cyberpunk_status_effect(status_type, 0, 1, src, FALSE)
+		else
+			remove_cyberpunk_status_effect(status_id)
+	return TRUE
 
 /mob/living/proc/sync_cyberpunk_need_status_effects()
 	sync_cyberpunk_hunger_delusion()
@@ -807,12 +891,12 @@
 	else
 		remove_cyberpunk_status_effect("tiredness")
 
-	if(has_overeating())
+	if(has_overeating() && !has_character_giga_perk(ATTRIBUTE_SPIRIT))
 		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/overeating, 5 SECONDS, 1, src, FALSE)
 	else
 		remove_cyberpunk_status_effect("overeating")
 
-	if(has_overdrinking())
+	if(has_overdrinking() && !has_character_giga_perk(ATTRIBUTE_SPIRIT))
 		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/overdrinking, 5 SECONDS, 1, src, FALSE)
 	else
 		remove_cyberpunk_status_effect("overdrinking")
@@ -1156,6 +1240,7 @@
 	var/share_percent = source.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 1)
 	if(share_percent <= 0)
 		return
+	share_percent *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/shared_experience = final_experience * share_percent * 0.01
 	for(var/mob/living/member as anything in get_members())
 		if(member == source || !member.mind)
@@ -1168,6 +1253,7 @@
 	var/share_percent = source.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 4)
 	if(share_percent <= 0)
 		return
+	share_percent *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/shared_amount = amount * share_percent * 0.01
 	for(var/mob/living/member as anything in get_members())
 		if(member == source)
@@ -1176,9 +1262,11 @@
 
 /datum/cyberpunk_cohort/proc/get_inspiration_guard_bonus(mob/living/source)
 	var/bonus = source?.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5) || 0
+	if(source)
+		bonus *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/mob/living/leader = get_leader()
 	if(leader && leader != source)
-		bonus = max(bonus, leader.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5))
+		bonus = max(bonus, leader.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5) * leader.get_cyberpunk_charisma_giga_inspiration_multiplier())
 	return bonus
 
 /datum/cyberpunk_cohort/proc/try_grant_inspiration_guard(mob/living/source, amount)
@@ -1197,6 +1285,7 @@
 	var/share_percent = source.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 3)
 	if(share_percent <= 0)
 		return
+	share_percent *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/shared_duration = max(1, round(effect.get_remaining_duration() * share_percent * 0.01))
 	var/shared_power = max(0.1, effect.power * share_percent * 0.01)
 	for(var/mob/living/member as anything in get_members())
@@ -1308,12 +1397,23 @@
 	var/style_xp_bonus = get_cyberpunk_skill_perk_bonus(SKILL_STYLE, 5)
 	if(style_xp_bonus > 0)
 		style_bonus *= 1 + style_xp_bonus * 0.01
-	return (1 + style_bonus + max(0, mood) / 20 * 0.5) * get_cyberpunk_status_experience_multiplier()
+	var/mood_bonus = max(0, mood) / 20 * 0.5
+	if(has_character_giga_perk(ATTRIBUTE_CHARISMA))
+		style_bonus *= 1 + ((mind?.get_character_skill_level(SKILL_STYLE) || 0) * 0.2)
+		mood_bonus *= 1.5
+	return (1 + style_bonus + mood_bonus) * get_cyberpunk_status_experience_multiplier()
+
+/mob/living/proc/get_cyberpunk_charisma_giga_inspiration_multiplier()
+	if(!has_character_giga_perk(ATTRIBUTE_CHARISMA))
+		return 1
+	return 1 + ((mind?.get_character_skill_level(SKILL_INSPIRATION) || 0) * 0.5)
 
 /mob/living/proc/can_dodge()
 	if(is_cyberpunk_grabbing_living() || is_cyberpunk_grabbed_by_leg())
 		return FALSE
 	var/threshold_multiplier = max(0.2, 1 - get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1) * 0.01)
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY))
+		threshold_multiplier = max(0.1, threshold_multiplier * 0.5)
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_DODGE * threshold_multiplier && !is_exhausted_by_needs()
 
 /mob/living/proc/can_parry()
@@ -1369,6 +1469,8 @@
 
 /mob/living/proc/can_jump()
 	var/threshold_multiplier = max(0.2, 1 - get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 3) * 0.01)
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY))
+		threshold_multiplier = max(0.1, threshold_multiplier * 0.5)
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_JUMP * threshold_multiplier && !is_exhausted_by_needs()
 
 /mob/living/proc/can_run()
@@ -1378,6 +1480,8 @@
 	return has_starvation_exhaustion() || has_dehydration() || has_sleep_deprivation()
 
 /mob/living/proc/get_cyberpunk_needs_move_slowdown()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		return 0
 	var/slowdown = 0
 	if(has_starvation_exhaustion())
 		slowdown = max(slowdown, 0.25)
@@ -1396,6 +1500,8 @@
 	return slowdown * get_cyberpunk_survival_penalty_multiplier()
 
 /mob/living/proc/get_cyberpunk_needs_action_slowdown()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		return 0
 	var/slowdown = 0
 	if(has_starvation_exhaustion())
 		slowdown = max(slowdown, 0.25)
@@ -1418,6 +1524,8 @@
 	return slowdown * get_cyberpunk_survival_penalty_multiplier()
 
 /mob/living/proc/get_cyberpunk_needs_check_penalty()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		return 0
 	var/penalty = 0
 	if(has_starvation_exhaustion())
 		penalty += 0.15
@@ -1441,6 +1549,8 @@
 
 /mob/living/proc/get_cyberpunk_needs_stamina_cost_multiplier(source)
 	if(!(source in list("progress", "run", "jump", "vertical_movement", "attack", "parry", "dodge", "defense")))
+		return 1
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
 		return 1
 	var/multiplier = 1
 	if(has_starvation_exhaustion())
@@ -1475,6 +1585,8 @@
 	return multiplier
 
 /mob/living/proc/get_cyberpunk_survival_need_drain_multiplier()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT) && prob((mind?.get_character_skill_level(SKILL_SURVIVAL) || 0) * 20))
+		return 0
 	return max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_SURVIVAL, 1) * 0.01)
 
 /mob/living/proc/get_cyberpunk_survival_recovery_multiplier()
@@ -1486,6 +1598,8 @@
 
 /mob/living/proc/get_cyberpunk_endurance_negative_mood_multiplier()
 	var/reduction = max(get_cyberpunk_skill_perk_bonus(SKILL_ENDURANCE, 3), get_cyberpunk_skill_perk_bonus(SKILL_ENDURANCE, 6))
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		reduction = max(reduction, (mind?.get_character_skill_level(SKILL_ENDURANCE) || 0) * 15)
 	return max(0.1, 1 - reduction * 0.01)
 
 /mob/living/proc/get_cyberpunk_endurance_stamina_penalty_multiplier()
@@ -1583,6 +1697,8 @@
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_weakness_critical_damage_multiplier()
+	if(has_character_giga_perk(ATTRIBUTE_PERCEPTION))
+		return prob(get_cyberpunk_skill_perk_bonus(SKILL_WEAKNESS_ANALYSIS, 2)) ? 6 : 4
 	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_WEAKNESS_ANALYSIS, 2)))
 		return 3
 	return 2

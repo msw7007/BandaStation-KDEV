@@ -470,6 +470,8 @@
 
 /datum/cyberspace_demon/proc/get_effective_power(mob/living/caster, physical_world = FALSE)
 	var/power = effect_power
+	if(caster?.cyberdemon_has_botanist())
+		power *= 1.25
 	var/power_bonus = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 1) || 0
 	if(power_bonus > 0)
 		power *= 1 + (power_bonus / 100)
@@ -487,6 +489,8 @@
 
 /datum/cyberspace_demon/proc/get_effective_cast_time(mob/living/caster)
 	var/effective_cast_time = cast_time
+	if(caster?.cyberdemon_has_botanist())
+		effective_cast_time *= 0.75
 	var/prepare_bonus = caster?.mind?.get_character_perk_effectiveness(SKILL_FAST_CODE, 1) || 0
 	if(prepare_bonus > 0)
 		effective_cast_time *= max(0, 1 - (prepare_bonus / 100))
@@ -501,6 +505,8 @@
 	var/effective_cooldown = cooldown
 	if(effective_cooldown <= 0)
 		return 0
+	if(caster?.cyberdemon_has_botanist())
+		effective_cooldown *= 0.5
 	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
 	effective_cooldown /= synergy
 	effective_cooldown /= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_tuning", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.05)
@@ -510,6 +516,8 @@
 	var/effective_delay = activation_delay
 	if(caster?.cyberdemon_consume_next_instant_activation())
 		return 0
+	if(caster?.cyberdemon_has_botanist())
+		effective_delay *= 0.75
 	var/activation_bonus = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 2) || 0
 	if(activation_bonus > 0)
 		effective_delay *= max(0, 1 - (activation_bonus / 100))
@@ -736,7 +744,7 @@
 /mob/living/proc/cyberdemon_should_reflect_directed_demon(mob/living/caster, datum/cyberspace_demon/demon)
 	if(!cyberdemon_is_hostile_target(caster) || !cyberdemon_has_botanist())
 		return FALSE
-	var/reflect_chance = (mind?.get_character_skill_level(SKILL_ENDURANCE) || 0) * 15
+	var/reflect_chance = (mind?.get_character_skill_level(SKILL_NEUTRALIZATION) || 0) * 15
 	return reflect_chance > 0 && prob(reflect_chance)
 
 /mob/living/proc/cyberdemon_consume_next_power_multiplier()
@@ -1090,6 +1098,13 @@
 				if(istype(trace))
 					key_node = trace.node
 			if(!key_node)
+				var/mob/living/memory_target = target
+				if(istype(memory_target) && caster && memory_target.memory_holder)
+					for(var/memory_key in memory_target.memory_holder)
+						caster.remember_data("stolen:[memory_target.real_name || memory_target.name]:[memory_key]", memory_target.memory_holder[memory_key])
+					if(announce)
+						to_chat(caster, span_notice("[demon_name] copies [memory_target]'s memory records."))
+					return TRUE
 				if(announce && caster)
 					to_chat(caster, span_warning("[demon_name] needs a cyberspace node target."))
 				return FALSE

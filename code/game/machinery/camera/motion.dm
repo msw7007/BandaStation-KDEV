@@ -23,6 +23,10 @@
 /obj/machinery/camera/proc/new_target(mob/target)
 	if(isAI(target))
 		return FALSE
+	var/mob/living/living_target = target
+	if(istype(living_target) && living_target.stealth_mode && living_target.chameleon >= STEALTH_SOUND_MUTE_THRESHOLD)
+		living_target.create_stealth_camera_trace()
+		return FALSE
 	if (detectTime == 0)
 		detectTime = world.time // start the clock
 	var/list/targets = getTargetList()

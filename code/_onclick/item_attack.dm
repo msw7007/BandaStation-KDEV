@@ -531,6 +531,7 @@
 	if(weakness_critical && damage_done > 0)
 		user.apply_cyberpunk_weakness_critical_effects(src)
 	if(damage_done > 0 && user != src)
+		user.try_cyberpunk_giga_perception_blind(src, SKILL_PRECISE_WEAPON)
 		if(user.roll_cyberpunk_weapon_free_repeat(attacking_item))
 			user.changeNext_move(0)
 		if(targeting in list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_PRECISE_L_HAND, BODY_ZONE_PRECISE_R_HAND) && user.roll_cyberpunk_precise_weapon_disarm(attacking_item))

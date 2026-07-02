@@ -33,7 +33,7 @@
 
 /datum/mind/proc/get_attribute_value(attribute_id)
 	var/datum/attribute/attribute = get_attribute(attribute_id)
-	return (attribute?.value || ATTRIBUTE_DEFAULT) + get_cyberdemon_attribute_modifier(attribute_id)
+	return clamp((attribute?.value || ATTRIBUTE_DEFAULT) + get_cyberdemon_attribute_modifier(attribute_id), ATTRIBUTE_MINIMUM, ATTRIBUTE_EFFECTIVE_MAXIMUM)
 
 /datum/mind/proc/get_attribute_base_value(attribute_id)
 	var/datum/attribute/attribute = get_attribute(attribute_id)
@@ -52,8 +52,7 @@
 	return attribute.adjust_value(amount)
 
 /datum/mind/proc/has_super_attribute(attribute_id)
-	var/datum/attribute/attribute = get_attribute(attribute_id)
-	return !!attribute?.super_mode
+	return get_attribute_value(attribute_id) >= ATTRIBUTE_SUPER_THRESHOLD
 
 /datum/mind/proc/get_attribute_check_value(skill_level, attribute_id)
 	return (skill_level * 10) + (get_attribute_value(attribute_id) * 5)
@@ -119,7 +118,7 @@
 	return TRUE
 
 /mob/living/proc/get_attribute_value(attribute_id)
-	return (mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT) + get_cyberpunk_status_attribute_modifier(attribute_id)
+	return clamp((mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT) + get_cyberpunk_status_attribute_modifier(attribute_id), ATTRIBUTE_MINIMUM, ATTRIBUTE_EFFECTIVE_MAXIMUM)
 
 /mob/living/proc/get_attribute_check_value(skill_level, attribute_id)
 	if(mind)
@@ -141,11 +140,11 @@
 /mob/living/proc/get_character_skill_level(skill)
 	return mind?.get_character_skill_level(skill) || CHARACTER_SKILL_LEVEL_NONE
 
-/mob/living/proc/set_character_skill_level(skill, new_level, free = FALSE)
-	return mind?.set_character_skill_level(skill, new_level, free) || FALSE
+/mob/living/proc/set_character_skill_level(skill, new_level, free = FALSE, require_experience = FALSE)
+	return mind?.set_character_skill_level(skill, new_level, free, require_experience) || FALSE
 
-/mob/living/proc/adjust_character_skill_level(skill, amount = 1, free = FALSE)
-	return mind?.adjust_character_skill_level(skill, amount, free) || FALSE
+/mob/living/proc/adjust_character_skill_level(skill, amount = 1, free = FALSE, require_experience = FALSE)
+	return mind?.adjust_character_skill_level(skill, amount, free, require_experience) || FALSE
 
 /mob/living/proc/get_character_skill_check(skill, modifier = 0, apply_body_penalty = TRUE)
 	return mind?.get_character_skill_check_value(skill, modifier, apply_body_penalty) || clamp((ATTRIBUTE_DEFAULT * 5) + modifier, CHARACTER_SKILL_CHECK_MINIMUM, CHARACTER_SKILL_CHECK_MAXIMUM)
@@ -156,11 +155,11 @@
 /mob/living/proc/get_character_perk_rank(skill, perk_index)
 	return mind?.get_character_perk_rank(skill, perk_index) || 0
 
-/mob/living/proc/set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE)
-	return mind?.set_character_perk_rank(skill, perk_index, new_rank, free, allow_sequence_break) || FALSE
+/mob/living/proc/set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
+	return mind?.set_character_perk_rank(skill, perk_index, new_rank, free, allow_sequence_break, require_experience) || FALSE
 
-/mob/living/proc/adjust_character_perk_rank(skill, perk_index, amount = 1, free = FALSE, allow_sequence_break = FALSE)
-	return mind?.adjust_character_perk_rank(skill, perk_index, amount, free, allow_sequence_break) || FALSE
+/mob/living/proc/adjust_character_perk_rank(skill, perk_index, amount = 1, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
+	return mind?.adjust_character_perk_rank(skill, perk_index, amount, free, allow_sequence_break, require_experience) || FALSE
 
 /mob/living/proc/get_character_perk_power_multiplier(skill, perk_index)
 	return mind?.get_character_perk_power_multiplier(skill, perk_index) || 0

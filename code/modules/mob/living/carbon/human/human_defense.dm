@@ -86,10 +86,11 @@
 		return SUCCESSFUL_BLOCK
 	var/active_parry = has_active_cyberpunk_parry()
 	if(defense_break == "parry")
-		if(active_parry)
+		var/weapon_break_bonus = get_cyberpunk_incoming_weapon_defense_break_bonus(hit_by)
+		if(active_parry && weapon_break_bonus > 0 && prob(weapon_break_bonus))
 			cyberpunk_parry_until = 0
 			report_cyberpunk_defense_break(hit_by, "parry")
-		return FAILED_BLOCK
+			return FAILED_BLOCK
 	if(!can_parry())
 		return FAILED_BLOCK
 

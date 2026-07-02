@@ -448,12 +448,16 @@
 	var/is_stack = ispath(design.build_path, /obj/item/stack)
 	var/list/design_materials = build_materials || design.materials
 	cyberpunk_business_supply_materials(materials.mat_container, design_materials, material_cost_coefficient, is_stack ? items_remaining : 1)
-	if(!materials.mat_container.has_materials(design_materials, material_cost_coefficient, is_stack ? items_remaining : 1))
+	var/effective_material_cost_coefficient = material_cost_coefficient
+	if(fabricator && prob(fabricator.get_cyberpunk_invention_resource_save_chance()))
+		effective_material_cost_coefficient = 0
+		to_chat(fabricator, span_notice("You preserve the resources for [design.name] during fabrication."))
+	if(!materials.mat_container.has_materials(design_materials, effective_material_cost_coefficient, is_stack ? items_remaining : 1))
 		say("Unable to continue production, missing materials.")
 		finalize_build()
 		return
 	var/build_resource_quality = materials.mat_container.get_materials_resource_quality(design_materials, material_cost_coefficient, is_stack ? items_remaining : 1)
-	materials.use_materials(design_materials, material_cost_coefficient, is_stack ? items_remaining : 1, "processed", "[design.name]", user_data = user_data)
+	materials.use_materials(design_materials, effective_material_cost_coefficient, is_stack ? items_remaining : 1, "processed", "[design.name]", user_data = user_data)
 
 	var/atom/movable/created
 	if(is_stack)

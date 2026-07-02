@@ -75,6 +75,11 @@ const WireMap = (props) => {
           label={wire.shownColor}
           labelColor={wire.shownColor.replace(' ', '')}
           color={wire.shownColor.replace(' ', '')}
+          onMouseEnter={() =>
+            act('inspect_wire', {
+              wire: wire.color,
+            })
+          }
           buttons={
             <>
               <Button

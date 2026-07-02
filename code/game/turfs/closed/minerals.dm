@@ -289,7 +289,10 @@
 		//CYBERPUNK BUILD - rebuild and delete before release
 		var/ore_amount = living_user ? living_user.get_cyberpunk_mining_ore_amount(mineral_amt, drill) : mineral_amt
 		//CYBERPUNK BUILD - rebuild and delete before release
-		new mineral_type(src, ore_amount)
+		var/obj/item/stack/ore/mined_ore = new mineral_type(src, ore_amount)
+		var/resource_quality = living_user?.get_cyberpunk_mining_resource_quality() || 0
+		if(resource_quality > 0 && mined_ore.resource_quality < resource_quality)
+			mined_ore.set_resource_quality(resource_quality)
 		SSblackbox.record_feedback("tally", "ore_mined", ore_amount, mineral_type)
 	else if(living_user && prob(living_user.get_cyberpunk_mining_hidden_resource_chance()))
 		new /obj/item/stack/ore/iron(src, 1)

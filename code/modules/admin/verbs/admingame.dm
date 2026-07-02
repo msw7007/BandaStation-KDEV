@@ -63,6 +63,11 @@ ADMIN_VERB_ONLY_CONTEXT_MENU(show_player_panel, R_ADMIN, "Show Player Panel", mo
 
 	body += "<b>Mob type</b> = [player.type]<br><br>"
 
+	if(player.mind)
+		body += "<b>Character level</b> = [player.mind.character_level]<br>"
+		body += "<b>Character level points</b> = [player.mind.level_points]<br>"
+		body += "<b>Character skill points</b> = [player.mind.skill_points]<br><br>"
+
 	if(HAS_CONNECTED_PLAYER(player))
 		body += "<b>Old names:</b> "
 		if(player.persistent_client)

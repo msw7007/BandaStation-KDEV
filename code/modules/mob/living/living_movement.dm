@@ -469,6 +469,8 @@
 		balloon_alert(src, "stealth off")
 
 /mob/living/proc/get_stealth_light_level()
+	if(has_character_giga_perk(ATTRIBUTE_CHARISMA) && prob((mind?.get_character_skill_level(SKILL_STEALTH) || 0) * 20))
+		return 0
 	var/turf/current_turf = get_turf(src)
 	if(!current_turf)
 		return 1

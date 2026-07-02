@@ -404,9 +404,10 @@
 			"value" = user_mind?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT,
 			"min" = ATTRIBUTE_MINIMUM,
 			"max" = ATTRIBUTE_MAXIMUM,
+			"effective_max" = ATTRIBUTE_EFFECTIVE_MAXIMUM,
 			"super_threshold" = ATTRIBUTE_SUPER_THRESHOLD,
-			"editable" = FALSE,
-			"disabled_reason" = "Runtime skill interface cannot alter base attributes.",
+			"editable" = TRUE,
+			"disabled_reason" = null,
 		)
 	return attributes
 
@@ -426,7 +427,7 @@
 				var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
 				var/perk_rank = user_mind?.get_character_perk_rank(skill_type, perk_index) || 0
 				var/independent_perk = !skill_datum.requires_sequential_perks
-				var/can_increase = can_edit && (user_mind?.can_set_character_perk_rank(skill_type, perk_index, perk_rank + 1, FALSE, independent_perk) || FALSE)
+				var/can_increase = can_edit && (user_mind?.can_set_character_perk_rank(skill_type, perk_index, perk_rank + 1, FALSE, independent_perk, TRUE) || FALSE)
 				var/can_decrease = can_edit && (user_mind?.can_set_character_perk_rank(skill_type, perk_index, perk_rank - 1, FALSE, independent_perk) || FALSE)
 				perks += list(perk?.get_static_data() || list(
 					"index" = perk_index,
@@ -464,9 +465,9 @@
 			"pendingExperience" = user_mind?.pending_skill_experience[skill_type] || 0,
 			"experienceGoal" = ATTRIBUTE_LEVEL_POINT_EXPERIENCE,
 			"perks" = perks,
-			"canIncrease" = can_edit && user_mind?.can_pay_character_skill_points(skill_type, 1) && level < skill_datum.max_character_level,
+			"canIncrease" = can_edit && user_mind?.can_pay_character_skill_points(skill_type, 1) && user_mind?.can_pay_character_skill_experience(skill_type, 1) && level < skill_datum.max_character_level,
 			"canDecrease" = can_edit && level > CHARACTER_SKILL_LEVEL_NONE,
-			"can_increase" = can_edit && user_mind?.can_pay_character_skill_points(skill_type, 1) && level < skill_datum.max_character_level,
+			"can_increase" = can_edit && user_mind?.can_pay_character_skill_points(skill_type, 1) && user_mind?.can_pay_character_skill_experience(skill_type, 1) && level < skill_datum.max_character_level,
 			"can_decrease" = can_edit && level > CHARACTER_SKILL_LEVEL_NONE,
 			"editable" = can_edit && !!user_mind,
 			"disabled_reason" = can_edit ? null : "Neural interface or diagnostic access required.",
@@ -634,7 +635,7 @@
 			if(!skill_datum || !skill_datum.uses_perks())
 				return FALSE
 			var/independent_perk = !skill_datum.requires_sequential_perks
-			return user_mind.adjust_character_perk_rank(skill_type, perk_index, delta, FALSE, independent_perk)
+			return user_mind.adjust_character_perk_rank(skill_type, perk_index, delta, FALSE, independent_perk, TRUE)
 		if("adjust_skill_level")
 			if(!user_mind)
 				return FALSE
@@ -648,7 +649,33 @@
 			var/datum/skill/skill_datum = GetSkillRef(skill_type)
 			if(!skill_datum || skill_datum.skill_kind != CHARACTER_SKILL_KIND_WEAPON)
 				return FALSE
-			return user_mind.adjust_character_skill_level(skill_type, delta)
+			return user_mind.adjust_character_skill_level(skill_type, delta, FALSE, TRUE)
+		if("adjust_attribute")
+			if(!user_mind)
+				return FALSE
+			var/attribute_id = params["attributeId"]
+			if(!(attribute_id in ATTRIBUTE_ALL))
+				return FALSE
+			var/raw_delta = params["delta"]
+			var/delta = round(text2num("[raw_delta]") || 0)
+			if(!delta)
+				return FALSE
+			if(delta > 0)
+				return user_mind.spend_level_point_on_attribute(attribute_id)
+			var/current_value = user_mind.get_attribute_base_value(attribute_id)
+			if(current_value <= ATTRIBUTE_MINIMUM)
+				return FALSE
+			if(user_mind.get_attribute_physical_perk_points(attribute_id) > current_value - 1)
+				return FALSE
+			user_mind.adjust_attribute_value(attribute_id, -1)
+			user_mind.level_points++
+			return TRUE
+		if("convert_level_points")
+			if(!user_mind)
+				return FALSE
+			var/raw_amount = params["amount"]
+			var/amount = round(text2num("[raw_amount]") || 1)
+			return user_mind.convert_level_points_to_skill_points(amount)
 	return FALSE
 
 /proc/cyberpunk_pc_app_entry(id, name, category, status, description, icon = "window-maximize", native_program = null)

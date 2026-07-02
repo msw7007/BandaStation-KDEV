@@ -53,4 +53,3 @@ GLOBAL_LIST_INIT(attribute_types, subtypesof(/datum/attribute))
 	id = ATTRIBUTE_CHARISMA
 	name = "Charisma"
 	description = "Social presence, style and inspiration."
-

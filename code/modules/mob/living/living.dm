@@ -3110,6 +3110,9 @@
 		return FALSE
 	if(!isnull(user) && src == user)
 		return FALSE
+	if(stealth_mode && chameleon >= STEALTH_SOUND_MUTE_THRESHOLD)
+		create_stealth_camera_trace()
+		return FALSE
 	if(invisibility || alpha <= 50)//cloaked
 		return FALSE
 	if(!isturf(loc)) //The reason why we don't just use get_turf is because they could be in a closet, disposals, or a vehicle.
@@ -3125,6 +3128,12 @@
 	if(!SScameras.is_visible_by_cameras(src))
 		return FALSE
 	return TRUE
+
+/mob/living/proc/create_stealth_camera_trace()
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return
+	new /obj/effect/temp_visual/dir_setting/ninja/shadow(current_turf, dir)
 
 /mob/living/proc/harvest(mob/living/user) //used for extra objects etc. in butchering
 	return

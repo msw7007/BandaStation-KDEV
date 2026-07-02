@@ -183,7 +183,7 @@ GLOBAL_LIST_INIT(skill_types, valid_subtypesof(/datum/skill))
 /datum/skill_perk/proc/apply_effect(datum/mind/mind, datum/source = null, datum/target = null, list/context = null, required_rank = 1, probability = 100)
 	return get_check_result(mind, required_rank, probability)
 
-/datum/skill_perk/proc/can_set_rank(datum/mind/mind, new_rank, free = FALSE, allow_sequence_break = FALSE)
+/datum/skill_perk/proc/can_set_rank(datum/mind/mind, new_rank, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
 	if(!mind || !owner)
 		return FALSE
 	if(index < 1 || index > length(owner.perks))
@@ -195,6 +195,8 @@ GLOBAL_LIST_INIT(skill_types, valid_subtypesof(/datum/skill))
 	var/old_rank = get_rank(mind)
 	var/point_delta = new_rank - old_rank
 	if(!mind.can_pay_character_skill_points(owner.type, point_delta, free))
+		return FALSE
+	if(require_experience && !mind.can_pay_character_skill_experience(owner.type, point_delta, free))
 		return FALSE
 
 	if(!allow_sequence_break && owner.requires_sequential_perks)
@@ -210,9 +212,9 @@ GLOBAL_LIST_INIT(skill_types, valid_subtypesof(/datum/skill))
 						return FALSE
 	return TRUE
 
-/datum/skill_perk/proc/set_rank(datum/mind/mind, new_rank, free = FALSE, allow_sequence_break = FALSE)
+/datum/skill_perk/proc/set_rank(datum/mind/mind, new_rank, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
 	new_rank = normalize_rank(new_rank)
-	if(!can_set_rank(mind, new_rank, free, allow_sequence_break))
+	if(!can_set_rank(mind, new_rank, free, allow_sequence_break, require_experience))
 		return FALSE
 	var/old_rank = get_rank(mind)
 	var/list/perk_ranks = mind.get_character_perk_list(owner.type)
@@ -224,9 +226,9 @@ GLOBAL_LIST_INIT(skill_types, valid_subtypesof(/datum/skill))
 	mind.pay_character_skill_points(owner.type, new_rank - old_rank, free)
 	return TRUE
 
-/datum/skill_perk/proc/adjust_rank(datum/mind/mind, amount = 1, free = FALSE, allow_sequence_break = FALSE)
+/datum/skill_perk/proc/adjust_rank(datum/mind/mind, amount = 1, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
 	amount = normalize_rank(amount)
-	return set_rank(mind, get_rank(mind) + amount, free, allow_sequence_break)
+	return set_rank(mind, get_rank(mind) + amount, free, allow_sequence_break, require_experience)
 
 /datum/skill
 	abstract_type = /datum/skill

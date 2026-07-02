@@ -402,6 +402,9 @@
 	var/mob/living/L = usr
 	var/obj/item/I
 	switch(action)
+		if("inspect_wire")
+			if(can_reveal_wire_with_cyberpunk_electrics(L, target_wire))
+				. = TRUE
 		if("cut")
 			I = L.is_holding_tool_quality(TOOL_WIRECUTTER)
 			if(I || isAdminGhostAI(usr))
