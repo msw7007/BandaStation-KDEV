@@ -317,8 +317,7 @@
 					continue
 				if(prob(save_chance))
 					LAZYADD(saved_components, component)
-					if(TRUE)
-						to_chat(living_crafter, span_notice("Вы экономите [item_component.declent_ru(ACCUSATIVE)] в процессе готовки."))
+					to_chat(living_crafter, span_notice("Вы экономите [item_component.declent_ru(ACCUSATIVE)] в процессе готовки."))
 	for(var/atom/movable/component as anything in stuff_to_use) //delete anything that wasn't stored inside the object
 		if(component in saved_components)
 			continue

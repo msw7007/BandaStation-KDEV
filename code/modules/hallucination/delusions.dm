@@ -379,8 +379,6 @@
 		RegisterSignal(found_human, COMSIG_ATOM_EXAMINE, PROC_REF(on_burger_examine))
 
 /datum/hallucination/delusion/preset/human_burger/on_mob_delete(mob/living/carbon/human/source)
-	SIGNAL_HANDLER
-
 	UnregisterSignal(source, COMSIG_ATOM_EXAMINE)
 	return ..()
 

@@ -377,13 +377,15 @@
 	if(!cyberpsychosis_target)
 		return
 	if(SPT_PROB(20, seconds_per_tick))
-		say(pick(GLOB.cyberpsychosis_phrases), forced = CYBERPSYCHOSIS_TRAIT)
+		INVOKE_ASYNC(src, TYPE_PROC_REF(/atom/movable, say), message = pick(GLOB.cyberpsychosis_phrases), forced = CYBERPSYCHOSIS_TRAIT)
 	face_atom(cyberpsychosis_target)
 	if(!Adjacent(cyberpsychosis_target))
 		step_to(src, cyberpsychosis_target, 1)
 	INVOKE_ASYNC(src, PROC_REF(execute_cyberpsychosis_attack), cyberpsychosis_target)
 
 /mob/living/proc/execute_cyberpsychosis_attack(mob/living/target)
+	set waitfor = FALSE
+
 	if(!cyberpsychosis_active)
 		return
 	if(stat == DEAD || !has_cyberpunk_status_effect("cyberpsychosis"))
@@ -1948,11 +1950,18 @@
 	var/atom/target = pick(targets)
 	visible_message(span_warning("[src] lashes out at [target]!"), span_userdanger("You lash out without thinking."))
 	set_combat_mode(TRUE)
-	ClickOn(target)
+	INVOKE_ASYNC(src, PROC_REF(execute_hysteria_random_attack), target)
 	return TRUE
 
+/mob/living/proc/execute_hysteria_random_attack(atom/target)
+	set waitfor = FALSE
+
+	if(QDELETED(target) || QDELETED(src))
+		return
+	ClickOn(target)
+
 /mob/living/proc/trigger_hysteria_swear()
-	say(pick(GLOB.hysteria_phrases), forced = HYSTERIA_TRAIT)
+	INVOKE_ASYNC(src, TYPE_PROC_REF(/atom/movable, say), message = pick(GLOB.hysteria_phrases), forced = HYSTERIA_TRAIT)
 	return TRUE
 
 // Base mob environment handler for body temperature
