@@ -3,6 +3,7 @@
 	desc = "Teaches you the Tiziran martial arts of Kaza Ruk in 5 short instructional videos beamed directly into your eyeballs."
 	icon = 'icons/obj/scrolls.dmi'
 	icon_state ="scroll2"
+	requires_neural_interface = TRUE
 	/// The martial art style this implant teaches.
 	var/datum/martial_art/kaza_ruk/style
 
@@ -22,6 +23,8 @@
 
 /obj/item/implant/kaza_ruk/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	if(isnull(imp_in.mind))
 		return
 	if(style.unlearn(imp_in))

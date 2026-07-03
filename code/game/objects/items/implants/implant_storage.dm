@@ -3,10 +3,13 @@
 	desc = "Stores up to two big items in a bluespace pocket."
 	icon_state = "storage"
 	implant_color = "r"
+	requires_neural_interface = TRUE
 	var/max_slot_stacking = 4
 
 /obj/item/implant/storage/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	atom_storage?.open_storage(imp_in)
 
 /obj/item/implant/storage/removed(source, silent = FALSE, special = FALSE)

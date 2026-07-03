@@ -6,7 +6,7 @@
 	text_gain_indication = span_notice("Запахи приобретают новый смысл...")
 	text_lose_indication = span_notice("Твоё обоняние возвращается в норму.")
 	power_path = /datum/action/cooldown/spell/olfaction
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	synchronizer_coeff = 1
 
 /datum/mutation/olfaction/setup()

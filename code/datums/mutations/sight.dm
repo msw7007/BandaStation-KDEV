@@ -2,7 +2,7 @@
 /datum/mutation/nearsight
 	name = "Near Sightness"
 	desc = "Обладатель данной мутации имеет проблемы со зрением."
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	quality = MINOR_NEGATIVE
 	text_gain_indication = span_danger("Ты плоховато видишь.")
 
@@ -21,7 +21,7 @@
 /datum/mutation/blind
 	name = "Blindness"
 	desc = "Субъект становится полностью слепым."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	quality = NEGATIVE
 	text_gain_indication = span_danger("Ты не можешь ничего увидеть.")
 
@@ -44,7 +44,7 @@
 	difficulty = 18
 	text_gain_indication = span_notice("Ты замечаешь тепло, исходящее из твоей кожи...")
 	text_lose_indication = span_notice("Ты больше не видишь тепло, исходящее из твоей кожи...")
-	instability = POSITIVE_INSTABILITY_MAJOR // thermals aren't station equipment
+	instability = HUMANOIDITY_LOAD_MAJOR // thermals aren't station equipment
 	synchronizer_coeff = 1
 	power_coeff = 1
 	energy_coeff = 1
@@ -114,7 +114,7 @@
 	name = "X Ray Vision"
 	desc = "Странный геном, который позволяет его обладателю видеть пространство между стенами." //actual x-ray would mean you'd constantly be blasting rads, which might be fun for later //hmb
 	text_gain_indication = span_notice("Стены вдруг исчезли!")
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	locked = TRUE
 
 /datum/mutation/xray/on_acquiring(mob/living/carbon/human/owner)
@@ -187,7 +187,7 @@
 /datum/mutation/illiterate
 	name = "Illiterate"
 	desc = "Является причиной тяжёлого случая афазии, которая мешает чтению или письму."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	quality = NEGATIVE
 	text_gain_indication = span_danger("Ты чувствуешь себя неспособным читать или писать.")
 	text_lose_indication = span_danger("Ты чувствуешь, что снова можешь читать или писать.")

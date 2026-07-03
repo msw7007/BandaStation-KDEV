@@ -142,8 +142,8 @@ export const MutationInfo = (props) => {
         <LabeledList.Item label="Description">
           {mutation.Description}
         </LabeledList.Item>
-        <LabeledList.Item label="Instability">
-          {mutation.Instability}
+        <LabeledList.Item label="Humanoidity Load">
+          {mutation.HumanoidityLoad}
         </LabeledList.Item>
         {!!mutation.AnalysisHint && (
           <LabeledList.Item label="Analysis">

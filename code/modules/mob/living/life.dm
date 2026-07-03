@@ -108,7 +108,7 @@
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_source = src
 		if(carbon_source.dna)
-			. += "Genetic Stability: [round(carbon_source.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT]"
+			. += "Humanoidity: [round(carbon_source.dna.get_effective_humanoidity(), 0.1)]/[HUMANOIDITY_DEFAULT]"
 	. += "Style: [round(style, 0.1)]/15"
 	. += "Mood: [round(mood, 0.1)]/20"
 	if(length(cyberpunk_status_effects))
@@ -492,6 +492,12 @@
 		if(!organ.is_implant_disabled())
 			continue
 		retuned |= organ.retune_implant()
+	for(var/obj/item/implant/implant as anything in carbon_owner.implants)
+		if(implant.implant_disable_reason != "EMP")
+			continue
+		retuned |= implant.retune_implant()
+	if(retuned)
+		to_chat(src, span_notice("Your implants snap back into tune."))
 	return retuned
 
 /mob/living/proc/sync_mood_from_moodlets()

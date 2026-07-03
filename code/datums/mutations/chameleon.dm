@@ -6,7 +6,7 @@
 	difficulty = 16
 	text_gain_indication = span_notice("Ты чувствуешь себя единым с окружением.")
 	text_lose_indication = span_notice("Ты чувствуешь себя необычно заметным.")
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	power_coeff = 1
 
 /datum/mutation/chameleon/on_acquiring(mob/living/carbon/human/owner)
@@ -20,7 +20,7 @@
 /datum/mutation/chameleon/on_life(seconds_per_tick)
 	owner.alpha = max(owner.alpha - (12.5 * (GET_MUTATION_POWER(src)) * seconds_per_tick), 0)
 
-//Upgraded mutation of the base variant, used for changelings. No instability and better power_coeff
+//Upgraded mutation of the base variant, used for changelings. No humanoidity load and better power_coeff
 /datum/mutation/chameleon/changeling
 	instability = 0
 	power_coeff = 2.5

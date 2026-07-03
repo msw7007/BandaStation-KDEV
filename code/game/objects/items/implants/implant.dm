@@ -23,6 +23,12 @@
 	var/implant_flags = NONE
 	///what icon state will we represent ourselves with on the hud?
 	var/hud_icon_state = null
+	///whether this legacy implant needs a working neural interface to be activated
+	var/requires_neural_interface = FALSE
+	///world.time until this implant is disabled
+	var/implant_disabled_until = 0
+	///why this implant is disabled, if any
+	var/implant_disable_reason = null
 
 	/// What's the most important info that we really, really care about, e.g. name, lifespan-after-death, utility?
 	var/implant_info = "No information available."
@@ -30,7 +36,40 @@
 	var/implant_lore = "No information available."
 
 /obj/item/implant/proc/activate()
+	if(!can_activate_implant())
+		return FALSE
 	SEND_SIGNAL(src, COMSIG_IMPLANT_ACTIVATED)
+	return TRUE
+
+/obj/item/implant/proc/can_activate_implant()
+	if(!imp_in)
+		return FALSE
+	if(world.time < implant_disabled_until)
+		to_chat(imp_in, span_warning("[capitalize(src)] does not respond."))
+		return FALSE
+	if(requires_neural_interface && !imp_in.has_neural_implant())
+		to_chat(imp_in, span_warning("[capitalize(src)] cannot link to a working neural interface."))
+		return FALSE
+	return TRUE
+
+/obj/item/implant/proc/disable_implant(duration = IMPLANT_EMP_DISABLE_TIME, reason = "disabled")
+	implant_disabled_until = max(implant_disabled_until, world.time + duration)
+	implant_disable_reason = reason
+	return TRUE
+
+/obj/item/implant/proc/retune_implant()
+	if(!implant_disabled_until && !implant_disable_reason)
+		return FALSE
+	implant_disabled_until = 0
+	implant_disable_reason = null
+	return TRUE
+
+/obj/item/implant/emp_act(severity)
+	. = ..()
+	if(. & EMP_PROTECT_SELF)
+		return
+	if(requires_neural_interface)
+		disable_implant(IMPLANT_EMP_DISABLE_TIME, "EMP")
 
 /obj/item/implant/ui_action_click()
 	INVOKE_ASYNC(src, PROC_REF(activate), "action_button")

@@ -6,9 +6,12 @@
 	var/obj/machinery/abductor/pad/home
 	var/cooldown = 60 SECONDS
 	var/on_cooldown
+	requires_neural_interface = TRUE
 
 /obj/item/implant/abductor/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	if(on_cooldown)
 		to_chat(imp_in, span_warning("You must wait [timeleft(on_cooldown)*0.1] seconds to use [src] again!"))
 		return

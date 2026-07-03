@@ -122,7 +122,7 @@
 /obj/item/firing_pin/implant/pin_auth(mob/living/user)
 	if(user)
 		for(var/obj/item/implant/I in user.implants)
-			if(req_implant && I.type == req_implant)
+			if(req_implant && I.type == req_implant && I.can_activate_implant())
 				return TRUE
 	return FALSE
 

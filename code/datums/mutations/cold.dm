@@ -3,7 +3,7 @@
 	desc = "Позволяет обладателю генома сконцентрировать влагу и холод в снег."
 	quality = POSITIVE
 	text_gain_indication = span_notice("Ты ощущаешь холод в руках.")
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	difficulty = 10
 	synchronizer_coeff = 1
 	power_path = /datum/action/cooldown/spell/conjure_item/snow
@@ -25,7 +25,7 @@
 	desc = "Даёт возможность в любой момент притянуть негативную энергию из морозной пустоты, чтобы заморозить окружение вокруг субъекта."
 	quality = POSITIVE //upsides and downsides
 	text_gain_indication = span_notice("Ты ощущаешь холод в руках.")
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	difficulty = 12
 	synchronizer_coeff = 1
 	energy_coeff = 1

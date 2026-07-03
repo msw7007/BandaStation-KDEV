@@ -7,7 +7,7 @@
 	text_gain_indication = span_notice("Ты чувствуешь, как ток протекает через твои руки.")
 	text_lose_indication = span_notice("Электричество в твоих руках ослабевает.")
 	power_path = /datum/action/cooldown/spell/touch/shock
-	instability = POSITIVE_INSTABILITY_MODERATE // bad stun baton
+	instability = HUMANOIDITY_LOAD_MODERATE // bad stun baton
 	energy_coeff = 1
 	power_coeff = 1
 
@@ -91,7 +91,7 @@
 	text_gain_indication = span_notice("Твоя рука, будто бы священна!")
 	text_lose_indication = span_notice("Твоя рука снова кажется обычной.")
 	power_path = /datum/action/cooldown/spell/touch/lay_on_hands
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	energy_coeff = 1
 	power_coeff = 1
 	synchronizer_coeff = 1

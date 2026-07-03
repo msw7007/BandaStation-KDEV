@@ -2,6 +2,7 @@
 	name = "S3 implant"
 	desc = "Allows you to be hidden in plain sight."
 	actions_types = list(/datum/action/item_action/agent_box)
+	requires_neural_interface = TRUE
 
 	implant_info = "Activated manually. \
 		Fabricates a horrifically fragile cardboard box around the user that has integrated gradual optical camouflage."

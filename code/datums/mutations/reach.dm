@@ -6,7 +6,7 @@
 	difficulty = 18
 	text_gain_indication = span_notice("You feel smarter!")
 	limb_req = BODY_ZONE_HEAD
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	///Typecache of atoms that TK shouldn't interact with
 	var/static/list/blacklisted_atoms = typecacheof(list(/atom/movable/screen))
 
@@ -46,7 +46,7 @@
 	name = "Elastic Arms"
 	desc = "Руки субъекта становятся эластичными, позволяя им растягиваться до метра. Однако, такая эластичность затрудняет ношение перчаток, выполнение сложных задач и взятие больших объектов."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	text_gain_indication = span_warning("Твои руки становятся похожими на... на... НА СПАГЕТТИ!")
 	text_lose_indication = span_warning("Твои руки перестают быть такими отвисшими всё время.")
 	difficulty = 32

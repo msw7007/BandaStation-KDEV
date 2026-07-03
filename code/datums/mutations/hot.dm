@@ -3,7 +3,7 @@
 	desc = "Позволяет обладателю мутации сконцентрировать рядом находящееся тепло в кучу пепла. Вау. Очень интересно."
 	quality = POSITIVE
 	text_gain_indication = span_notice("Твоя рука кажется тёплой.")
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	difficulty = 10
 	synchronizer_coeff = 1
 	locked = TRUE
@@ -26,7 +26,7 @@
 	desc = "Притягивает положительную энергию окружения для повышения температуры вокруг субъекта."
 	quality = POSITIVE
 	text_gain_indication = span_notice("Твоя рука кажется горячей!")
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	difficulty = 12
 	synchronizer_coeff = 1
 	energy_coeff = 1

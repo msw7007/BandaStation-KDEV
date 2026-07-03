@@ -123,7 +123,7 @@ const DnaScannerContent = (props) => {
     subjectHealth,
     subjectDamage,
     subjectHumanoidity,
-    subjectGeneticStability,
+    subjectHumanoidityRaw,
     subjectHumanoidityPenalty,
     subjectHumanoidityStabilizedBonus,
     subjectStatus,
@@ -171,7 +171,7 @@ const DnaScannerContent = (props) => {
           {subjectDamage}%
         </ProgressBar>
       </LabeledList.Item>
-      <LabeledList.Item label="Genetic Stability">
+      <LabeledList.Item label="Humanoidity">
         <ProgressBar
           value={subjectHumanoidity}
           minValue={0}
@@ -185,10 +185,10 @@ const DnaScannerContent = (props) => {
           {subjectHumanoidity}%
         </ProgressBar>
       </LabeledList.Item>
-      <LabeledList.Item label="Stability Detail">
-        DNA {subjectGeneticStability}, penalty {subjectHumanoidityPenalty}
+      <LabeledList.Item label="Humanoidity Detail">
+        raw {subjectHumanoidityRaw}, penalty {subjectHumanoidityPenalty}
         {!!subjectHumanoidityStabilizedBonus &&
-          `, stabilized +${subjectHumanoidityStabilizedBonus}`}
+          `, boosted +${subjectHumanoidityStabilizedBonus}`}
       </LabeledList.Item>
     </LabeledList>
   );

@@ -134,7 +134,7 @@
 
 /datum/reagent/medicine/immunosuppressant
 	name = "Immunosuppressant"
-	description = "A controlled immunosuppressive stabilizer that temporarily raises genetic stability while it metabolizes."
+	description = "A controlled immunosuppressive stabilizer that temporarily raises humanoidity while it metabolizes."
 	ph = 7.1
 	color = "#A8D7B0"
 	chemical_flags = REAGENT_CAN_BE_SYNTHESIZED
@@ -144,10 +144,10 @@
 	. = ..()
 	if(!affected_mob.dna)
 		return
-	var/missing_stability = HUMANOIDITY_DEFAULT - affected_mob.dna.get_effective_genetic_stability()
-	if(missing_stability <= 0)
+	var/missing_humanoidity = HUMANOIDITY_DEFAULT - affected_mob.dna.get_effective_humanoidity()
+	if(missing_humanoidity <= 0)
 		return
-	affected_mob.dna.adjust_humanoidity_stabilized_bonus(min(missing_stability, metabolization_ratio * seconds_per_tick))
+	affected_mob.dna.adjust_humanoidity_stabilized_bonus(min(missing_humanoidity, metabolization_ratio * seconds_per_tick))
 
 /datum/reagent/medicine/sansufentanyl
 	name = "Sansufentanyl"

@@ -46,7 +46,7 @@
 			if(ishuman(occupant))
 				var/mob/living/carbon/human/human_occupant = occupant
 				if(human_occupant.dna)
-					. += span_notice("Subject humanoidity: [round(human_occupant.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT] (raw [round(human_occupant.dna.humanoidity, 0.1)], TG stability [round(human_occupant.dna.stability, 0.1)]).")
+					. += span_notice("Subject humanoidity: [round(human_occupant.dna.get_effective_humanoidity(), 0.1)]/[HUMANOIDITY_DEFAULT] (raw [round(human_occupant.dna.humanoidity, 0.1)]).")
 					if(analysis_info >= 40)
 						. += span_notice("Subject active mutations: [length(human_occupant.dna.mutations)]. Indexed mutation blocks: [length(human_occupant.dna.mutation_index)].")
 

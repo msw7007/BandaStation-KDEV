@@ -1,4 +1,4 @@
-/// A possible genetic meltdown that occurs when someone exceeds 100 genetic instability
+/// A possible genetic meltdown that occurs when humanoidity collapses.
 /datum/instability_meltdown
 	/// Used to ensure that abstract subtypes do not get picked
 	abstract_type = /datum/instability_meltdown
@@ -110,21 +110,21 @@
 /datum/instability_meltdown/fatal/gib
 
 /datum/instability_meltdown/fatal/gib/meltdown(mob/living/carbon/human/victim)
-	victim.investigate_log("has been gibbed by DNA instability.", INVESTIGATE_DEATHS)
+	victim.investigate_log("has been gibbed by humanoidity collapse.", INVESTIGATE_DEATHS)
 	victim.gib(DROP_ALL_REMAINS)
 
 /// Dusts you
 /datum/instability_meltdown/fatal/dust
 
 /datum/instability_meltdown/fatal/dust/meltdown(mob/living/carbon/human/victim)
-	victim.investigate_log("has been dusted by DNA instability.", INVESTIGATE_DEATHS)
+	victim.investigate_log("has been dusted by humanoidity collapse.", INVESTIGATE_DEATHS)
 	victim.dust()
 
 /// Turns you into a statue
 /datum/instability_meltdown/fatal/petrify
 
 /datum/instability_meltdown/fatal/petrify/meltdown(mob/living/carbon/human/victim)
-	victim.investigate_log("has been transformed into a statue by DNA instability.", INVESTIGATE_DEATHS)
+	victim.investigate_log("has been transformed into a statue by humanoidity collapse.", INVESTIGATE_DEATHS)
 	victim.death()
 	victim.petrify(statue_timer = INFINITY, save_brain = FALSE)
 	victim.ghostize(FALSE)
@@ -137,7 +137,7 @@
 	if(part)
 		part.dismember()
 		return
-	victim.investigate_log("has been gibbed by DNA instability.", INVESTIGATE_DEATHS)
+	victim.investigate_log("has been gibbed by humanoidity collapse.", INVESTIGATE_DEATHS)
 	victim.gib(DROP_ALL_REMAINS)
 
 /// Turns you into a skeleton, with a high chance of killing you soon after

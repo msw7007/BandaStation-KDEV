@@ -554,7 +554,7 @@
 	switch(id)
 		if(CYBERPUNK_CORP_BENN)
 			services += cyberpunk_service_ui_entry("medical", "Medical aid", "Remote treatment and medical telemetry.", "truck-medical", can_request_service("medical"))
-			services += cyberpunk_service_ui_entry("body", "Body stabilization", "Genetic stability and body retuning support.", "dna", can_request_service("body"))
+			services += cyberpunk_service_ui_entry("body", "Body stabilization", "Humanoidity and body retuning support.", "dna", can_request_service("body"))
 			services += cyberpunk_service_ui_entry("stealth", "Stealth conditioning", "Short tactical stamina and signature support.", "user-ninja", can_request_service("stealth"))
 			services += cyberpunk_service_ui_entry("chemistry", "Chemistry kit", "Combat chemistry starter delivery.", "flask", can_request_service("chemistry"))
 		if(CYBERPUNK_CORP_RYAZNOV)
