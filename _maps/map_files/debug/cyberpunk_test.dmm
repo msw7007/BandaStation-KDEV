@@ -76,6 +76,17 @@
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/small,
 /area/station/command/bridge)
+"bD" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/glasses/cyberpunk,
+/obj/item/clothing/glasses/cyberpunk/benn_optic,
+/obj/item/clothing/glasses/cyberpunk/ceramic,
+/obj/item/clothing/glasses/cyberpunk/composite,
+/obj/item/clothing/glasses/cyberpunk/industrial,
+/obj/item/clothing/glasses/cyberpunk/plasteel,
+/obj/item/clothing/glasses/cyberpunk/threat,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "bE" = (
 /obj/machinery/light/directional/west,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
@@ -88,6 +99,14 @@
 "bN" = (
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"bP" = (
+/obj/structure/closet/crate,
+/obj/item/gun/ballistic/automatic/ar/cyberpunk,
+/obj/item/gun/ballistic/automatic/ar/cyberpunk/streetline,
+/obj/item/gun/ballistic/automatic/l6_saw/cyberpunk,
+/obj/item/gun/ballistic/automatic/l6_saw/cyberpunk/suppressor,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "bR" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/textured,
@@ -227,6 +246,19 @@
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/metro)
+"ee" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/pistol_magwell_10mm,
+/obj/item/cyberpunk_item_module/pistol_magwell_10mm/t2,
+/obj/item/cyberpunk_item_module/pistol_magwell_10mm/t3,
+/obj/item/cyberpunk_item_module/pistol_magwell_9mm,
+/obj/item/cyberpunk_item_module/pistol_magwell_9mm/t2,
+/obj/item/cyberpunk_item_module/pistol_magwell_9mm/t3,
+/obj/item/cyberpunk_item_module/plasma_emitter,
+/obj/item/cyberpunk_item_module/plasma_emitter/t2,
+/obj/item/cyberpunk_item_module/plasma_emitter/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "et" = (
 /obj/machinery/dna_scannernew,
 /turf/open/floor/iron/white,
@@ -276,6 +308,18 @@
 /obj/machinery/jukebox/disco/indestructible,
 /turf/open/floor/mineral/abductor,
 /area/station/service/bar)
+"fh" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/head/helmet/cyberpunk,
+/obj/item/clothing/head/helmet/cyberpunk/anti_energy,
+/obj/item/clothing/head/helmet/cyberpunk/breacher,
+/obj/item/clothing/head/helmet/cyberpunk/ceramic,
+/obj/item/clothing/head/helmet/cyberpunk/composite,
+/obj/item/clothing/head/helmet/cyberpunk/patrol,
+/obj/item/clothing/head/helmet/cyberpunk/plasteel,
+/obj/item/clothing/head/helmet/cyberpunk/wood,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "fi" = (
 /obj/machinery/door/airlock/maintenance{
 	name = "Warehouse Maintenance"
@@ -381,6 +425,31 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "gM" = (
+/turf/open/floor/wood,
+/area/station/security/brig)
+"gZ" = (
+/obj/structure/closet/crate,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/ceramic,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/composite,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/handcannon,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/plasteel,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/polymer,
+/obj/item/gun/ballistic/automatic/pistol/cyberpunk/sidearm,
+/obj/item/gun/ballistic/revolver/cyberpunk,
+/obj/item/gun/ballistic/revolver/cyberpunk/bruiser,
+/obj/item/gun/ballistic/revolver/cyberpunk/ceramic,
+/obj/item/gun/ballistic/revolver/cyberpunk/composite,
+/obj/item/gun/ballistic/revolver/cyberpunk/plasteel,
+/obj/item/gun/ballistic/revolver/cyberpunk/polymer,
+/obj/item/gun/ballistic/revolver/cyberpunk/sentinel,
+/turf/open/floor/wood,
+/area/station/security/brig)
+"he" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/speed_trigger,
+/obj/item/cyberpunk_item_module/speed_trigger/t2,
+/obj/item/cyberpunk_item_module/speed_trigger/t3,
 /turf/open/floor/wood,
 /area/station/security/brig)
 "hf" = (
@@ -546,6 +615,11 @@
 	route_order = 2;
 	stop_id = "metro east"
 	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
+"jT" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/metro)
 "kb" = (
@@ -734,14 +808,58 @@
 /obj/machinery/power/smes/magical,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/contract_office)
+"mN" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/reflex_sight,
+/obj/item/cyberpunk_item_module/reflex_sight/t2,
+/obj/item/cyberpunk_item_module/reflex_sight/t3,
+/obj/item/cyberpunk_item_module/serrated_coating,
+/obj/item/cyberpunk_item_module/serrated_coating/t2,
+/obj/item/cyberpunk_item_module/serrated_coating/t3,
+/obj/item/cyberpunk_item_module/tactical_light,
+/obj/item/cyberpunk_item_module/tactical_light/t2,
+/obj/item/cyberpunk_item_module/tactical_light/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "mO" = (
 /obj/machinery/light/directional/south,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"mV" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/blast_padding,
+/obj/item/cyberpunk_item_module/blast_padding/t2,
+/obj/item/cyberpunk_item_module/blast_padding/t3,
+/obj/item/cyberpunk_item_module/deflection_laminate,
+/obj/item/cyberpunk_item_module/deflection_laminate/t2,
+/obj/item/cyberpunk_item_module/deflection_laminate/t3,
+/obj/item/cyberpunk_item_module/firearm_core,
+/obj/item/cyberpunk_item_module/firearm_core/t2,
+/obj/item/cyberpunk_item_module/firearm_core/t3,
+/obj/item/cyberpunk_item_module/reactive_hardener,
+/obj/item/cyberpunk_item_module/reactive_hardener/t2,
+/obj/item/cyberpunk_item_module/reactive_hardener/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
+"mW" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/neck/cyberpunk,
+/obj/item/clothing/neck/cyberpunk/ceramic,
+/obj/item/clothing/neck/cyberpunk/composite,
+/obj/item/clothing/neck/cyberpunk/patrol,
+/obj/item/clothing/neck/cyberpunk/plasteel,
+/obj/item/clothing/neck/cyberpunk/ryaznov_guard,
+/obj/item/clothing/neck/cyberpunk/sealed,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "na" = (
 /turf/closed/wall,
 /area/station/service/bar)
+"ni" = (
+/obj/structure/stairs/cyberpunk_auto/north,
+/turf/open/openspace,
+/area/station/security/brig)
 "nj" = (
 /obj/item/wrench,
 /obj/item/plant_analyzer,
@@ -767,6 +885,12 @@
 /obj/structure/table,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"nz" = (
+/obj/structure/closet/crate,
+/obj/item/gun/ballistic/rocketlauncher/cyberpunk,
+/obj/item/gun/ballistic/rocketlauncher/cyberpunk/punchline,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "nF" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/white,
@@ -879,6 +1003,19 @@
 "op" = (
 /turf/open/water/hot_spring,
 /area/cyberpunk/city/metro)
+"or" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/gloves/cyberpunk,
+/obj/item/clothing/gloves/cyberpunk/benn_grip,
+/obj/item/clothing/gloves/cyberpunk/ceramic,
+/obj/item/clothing/gloves/cyberpunk/composite,
+/obj/item/clothing/gloves/cyberpunk/patrol,
+/obj/item/clothing/gloves/cyberpunk/plasteel,
+/obj/item/clothing/gloves/cyberpunk/ryaznov_knuckle,
+/obj/item/clothing/gloves/cyberpunk/tech,
+/obj/item/clothing/gloves/cyberpunk/wood,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "ou" = (
 /obj/structure/stairs/cyberpunk_auto/north,
 /turf/open/floor/iron/dark/textured,
@@ -943,6 +1080,19 @@
 	},
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"pB" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/assault_barrel,
+/obj/item/cyberpunk_item_module/assault_barrel/t2,
+/obj/item/cyberpunk_item_module/assault_barrel/t3,
+/obj/item/cyberpunk_item_module/assault_magwell_223,
+/obj/item/cyberpunk_item_module/assault_magwell_223/t2,
+/obj/item/cyberpunk_item_module/assault_magwell_223/t3,
+/obj/item/cyberpunk_item_module/cylinder_50,
+/obj/item/cyberpunk_item_module/cylinder_50/t2,
+/obj/item/cyberpunk_item_module/cylinder_50/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "pD" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/cyan/visible,
 /turf/open/floor/iron/white,
@@ -1052,10 +1202,23 @@
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_01)
+"qW" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/shock_coating,
+/obj/item/cyberpunk_item_module/shock_coating/t2,
+/obj/item/cyberpunk_item_module/shock_coating/t3,
+/obj/item/cyberpunk_item_module/thermal_coating,
+/obj/item/cyberpunk_item_module/thermal_coating/t2,
+/obj/item/cyberpunk_item_module/thermal_coating/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "qY" = (
 /obj/machinery/power/smes/magical,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/metro)
+"rh" = (
+/turf/open/openspace,
+/area/station/security/brig)
 "rk" = (
 /obj/machinery/vending/syndichem,
 /turf/open/floor/iron/white,
@@ -1075,6 +1238,13 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
+"rG" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_spear_element,
+/obj/item/cyberpunk_item_module/melee_spear_element/t2,
+/obj/item/cyberpunk_item_module/melee_spear_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "rK" = (
 /turf/closed/wall,
 /area/station/commons/dorms)
@@ -1129,6 +1299,28 @@
 /obj/structure/cable,
 /turf/open/floor/engine,
 /area/station/science/research)
+"sG" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/machinery/light/directional/east,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
+"sP" = (
+/obj/machinery/light/directional/east,
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/impact_gel,
+/obj/item/cyberpunk_item_module/impact_gel/t2,
+/obj/item/cyberpunk_item_module/impact_gel/t3,
+/obj/item/cyberpunk_item_module/insulation_lining,
+/obj/item/cyberpunk_item_module/insulation_lining/t2,
+/obj/item/cyberpunk_item_module/insulation_lining/t3,
+/obj/item/cyberpunk_item_module/trauma_mesh,
+/obj/item/cyberpunk_item_module/trauma_mesh/t2,
+/obj/item/cyberpunk_item_module/trauma_mesh/t3,
+/obj/item/cyberpunk_item_module/weight_reducer,
+/obj/item/cyberpunk_item_module/weight_reducer/t2,
+/obj/item/cyberpunk_item_module/weight_reducer/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "sQ" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/window/reinforced/spawner/directional/south,
@@ -1181,6 +1373,22 @@
 /obj/machinery/light/directional/south,
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_02)
+"uq" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/grounding_bus,
+/obj/item/cyberpunk_item_module/grounding_bus/t2,
+/obj/item/cyberpunk_item_module/grounding_bus/t3,
+/obj/item/cyberpunk_item_module/guard,
+/obj/item/cyberpunk_item_module/guard/t2,
+/obj/item/cyberpunk_item_module/guard/t3,
+/obj/item/cyberpunk_item_module/heavy_barrel,
+/obj/item/cyberpunk_item_module/heavy_barrel/t2,
+/obj/item/cyberpunk_item_module/heavy_barrel/t3,
+/obj/item/cyberpunk_item_module/sensor_bus,
+/obj/item/cyberpunk_item_module/sensor_bus/t2,
+/obj/item/cyberpunk_item_module/sensor_bus/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "us" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
@@ -1196,6 +1404,11 @@
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/contract_office)
+"uX" = (
+/obj/structure/cable,
+/obj/structure/stairs/cyberpunk_auto/north,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "vd" = (
 /obj/machinery/vending/cigarette/beach,
 /turf/open/floor/iron/dark/textured,
@@ -1216,6 +1429,13 @@
 	},
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
+"vi" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/medfoam_injector,
+/obj/item/cyberpunk_item_module/medfoam_injector/t2,
+/obj/item/cyberpunk_item_module/medfoam_injector/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "vz" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
@@ -1243,6 +1463,34 @@
 /area/station/command/bridge)
 "vS" = (
 /obj/machinery/power/smes/magical,
+/turf/open/floor/wood,
+/area/station/security/brig)
+"vT" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/revolver_barrel,
+/obj/item/cyberpunk_item_module/revolver_barrel/t2,
+/obj/item/cyberpunk_item_module/revolver_barrel/t3,
+/obj/item/cyberpunk_item_module/rifle_barrel,
+/obj/item/cyberpunk_item_module/rifle_barrel/t2,
+/obj/item/cyberpunk_item_module/rifle_barrel/t3,
+/obj/item/cyberpunk_item_module/rifle_magwell_223,
+/obj/item/cyberpunk_item_module/rifle_magwell_223/t2,
+/obj/item/cyberpunk_item_module/rifle_magwell_223/t3,
+/obj/item/cyberpunk_item_module/rocket_barrel,
+/obj/item/cyberpunk_item_module/rocket_barrel/t2,
+/obj/item/cyberpunk_item_module/rocket_barrel/t3,
+/obj/item/cyberpunk_item_module/rocket_tube,
+/obj/item/cyberpunk_item_module/rocket_tube/t2,
+/obj/item/cyberpunk_item_module/rocket_tube/t3,
+/obj/item/cyberpunk_item_module/shotgun_barrel,
+/obj/item/cyberpunk_item_module/shotgun_barrel/t2,
+/obj/item/cyberpunk_item_module/shotgun_barrel/t3,
+/obj/item/cyberpunk_item_module/shotgun_tube,
+/obj/item/cyberpunk_item_module/shotgun_tube/t2,
+/obj/item/cyberpunk_item_module/shotgun_tube/t3,
+/obj/item/cyberpunk_item_module/sniper_barrel,
+/obj/item/cyberpunk_item_module/sniper_barrel/t2,
+/obj/item/cyberpunk_item_module/sniper_barrel/t3,
 /turf/open/floor/wood,
 /area/station/security/brig)
 "vU" = (
@@ -1364,10 +1612,24 @@
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/small,
 /area/station/service/bar)
+"yh" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/pistol_barrel,
+/obj/item/cyberpunk_item_module/pistol_barrel/t2,
+/obj/item/cyberpunk_item_module/pistol_barrel/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "yt" = (
 /obj/structure/cable,
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"yy" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_knife_element,
+/obj/item/cyberpunk_item_module/melee_knife_element/t2,
+/obj/item/cyberpunk_item_module/melee_knife_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "yF" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -1375,6 +1637,13 @@
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
 /area/station/command/bridge)
+"yI" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_staff_element,
+/obj/item/cyberpunk_item_module/melee_staff_element/t2,
+/obj/item/cyberpunk_item_module/melee_staff_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "yL" = (
 /obj/machinery/power/smes/magical,
 /turf/open/floor/iron/dark/textured,
@@ -1431,6 +1700,13 @@
 /obj/machinery/dna_scannernew,
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"zP" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_core,
+/obj/item/cyberpunk_item_module/melee_core/t2,
+/obj/item/cyberpunk_item_module/melee_core/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "zV" = (
 /turf/closed/indestructible/wood,
 /area/station/service/bar)
@@ -1675,6 +1951,11 @@
 	},
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"DS" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/effect/landmark/start,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
 "DU" = (
 /obj/item/robot_suit,
 /turf/open/floor/iron,
@@ -1688,6 +1969,10 @@
 /obj/effect/spawner/random/food_or_drink/dinner,
 /turf/open/floor/light/colour_cycle/dancefloor_a,
 /area/station/service/bar)
+"Ef" = (
+/obj/machinery/light/directional/west,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
 "Ej" = (
 /obj/machinery/door/window/left/directional/west{
 	name = "Maximum Security Test Chamber";
@@ -1695,6 +1980,28 @@
 	},
 /turf/open/floor/engine,
 /area/station/science/research)
+"Eu" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/lmg_feed_223,
+/obj/item/cyberpunk_item_module/lmg_feed_223/t2,
+/obj/item/cyberpunk_item_module/lmg_feed_223/t3,
+/obj/item/cyberpunk_item_module/long_barrel,
+/obj/item/cyberpunk_item_module/long_barrel/t2,
+/obj/item/cyberpunk_item_module/long_barrel/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
+"Ev" = (
+/obj/structure/cable,
+/obj/structure/closet/crate,
+/obj/item/knife/cyberpunk,
+/obj/item/knife/cyberpunk/axe,
+/obj/item/knife/cyberpunk/ceramic,
+/obj/item/knife/cyberpunk/club,
+/obj/item/knife/cyberpunk/composite,
+/obj/item/knife/cyberpunk/energy,
+/obj/item/knife/cyberpunk/energy_blade,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "Ey" = (
 /obj/effect/landmark/cyberpunk_npc_trader,
 /turf/open/floor/iron/dark/textured,
@@ -1711,6 +2018,11 @@
 /obj/structure/cable,
 /turf/open/floor/iron,
 /area/station/commons/dorms)
+"EG" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/machinery/light/directional/south,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
 "EJ" = (
 /turf/closed/wall,
 /area/cyberpunk/city/government)
@@ -1778,6 +2090,20 @@
 /obj/effect/mapping_helpers/requests_console/ore_update,
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
+"FD" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module,
+/obj/item/cyberpunk_item_module/ablative_mesh,
+/obj/item/cyberpunk_item_module/ablative_mesh/t2,
+/obj/item/cyberpunk_item_module/ablative_mesh/t3,
+/obj/item/cyberpunk_item_module/armor_lining,
+/obj/item/cyberpunk_item_module/armor_lining/t2,
+/obj/item/cyberpunk_item_module/armor_lining/t3,
+/obj/item/cyberpunk_item_module/armor_plate,
+/obj/item/cyberpunk_item_module/armor_plate/t2,
+/obj/item/cyberpunk_item_module/armor_plate/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "FF" = (
 /obj/machinery/vending/dinnerware,
 /turf/open/floor/iron/dark/small,
@@ -1786,6 +2112,19 @@
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/small,
 /area/station/service/bar)
+"FJ" = (
+/obj/structure/closet/crate,
+/obj/item/gun/ballistic/rifle/boltaction/cyberpunk,
+/obj/item/gun/ballistic/rifle/boltaction/cyberpunk/longwatch,
+/obj/item/gun/ballistic/rifle/cyberpunk,
+/obj/item/gun/ballistic/rifle/cyberpunk/ceramic,
+/obj/item/gun/ballistic/rifle/cyberpunk/composite,
+/obj/item/gun/ballistic/rifle/cyberpunk/marksman,
+/obj/item/gun/ballistic/rifle/cyberpunk/patrol,
+/obj/item/gun/ballistic/rifle/cyberpunk/plasteel,
+/obj/item/gun/ballistic/rifle/cyberpunk/polymer,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "FK" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
@@ -1832,6 +2171,11 @@
 	},
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
+"Gs" = (
+/obj/structure/cable,
+/obj/structure/closet/crate,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "Gz" = (
 /obj/structure/chair/office/light{
 	dir = 1
@@ -1852,11 +2196,48 @@
 "GR" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/warehouse)
+"GT" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/balancer,
+/obj/item/cyberpunk_item_module/balancer/t2,
+/obj/item/cyberpunk_item_module/balancer/t3,
+/obj/item/cyberpunk_item_module/chemseal_lining,
+/obj/item/cyberpunk_item_module/chemseal_lining/t2,
+/obj/item/cyberpunk_item_module/chemseal_lining/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "GU" = (
 /obj/structure/table/greyscale,
 /obj/item/gun/energy/laser/cyberpunk,
 /obj/item/gun/energy/laser/cyberpunk/plasma,
 /obj/item/gun/energy/laser/cyberpunk/radiant,
+/turf/open/floor/wood,
+/area/station/security/brig)
+"Ha" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/suit/armor/cyberpunk,
+/obj/item/clothing/suit/armor/cyberpunk/benn_mirage,
+/obj/item/clothing/suit/armor/cyberpunk/breacher,
+/obj/item/clothing/suit/armor/cyberpunk/ceramic,
+/obj/item/clothing/suit/armor/cyberpunk/composite,
+/obj/item/clothing/suit/armor/cyberpunk/firebreak,
+/obj/item/clothing/suit/armor/cyberpunk/patrol,
+/obj/item/clothing/suit/armor/cyberpunk/plasteel,
+/obj/item/clothing/suit/armor/cyberpunk/ryaznov_bulwark,
+/obj/item/clothing/suit/armor/cyberpunk/starlight_response,
+/obj/item/clothing/suit/armor/cyberpunk/wood,
+/obj/item/clothing/suit/armor/vest/cyberpunk,
+/obj/item/clothing/suit/armor/vest/cyberpunk/anti_energy,
+/obj/item/clothing/suit/armor/vest/cyberpunk/benn_light,
+/obj/item/clothing/suit/armor/vest/cyberpunk/blast,
+/obj/item/clothing/suit/armor/vest/cyberpunk/ceramic,
+/obj/item/clothing/suit/armor/vest/cyberpunk/composite,
+/obj/item/clothing/suit/armor/vest/cyberpunk/plasteel,
+/obj/item/clothing/suit/armor/vest/cyberpunk/runner,
+/obj/item/clothing/suit/armor/vest/cyberpunk/ryaznov_heavy,
+/obj/item/clothing/suit/armor/vest/cyberpunk/starlight_skirmisher,
+/obj/item/clothing/suit/armor/vest/cyberpunk/street_guard,
+/obj/item/clothing/suit/armor/vest/cyberpunk/wood,
 /turf/open/floor/wood,
 /area/station/security/brig)
 "Hf" = (
@@ -1954,6 +2335,13 @@
 "ID" = (
 /turf/open/floor/wood,
 /area/station/command/bridge)
+"IH" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_twohand_axe_element,
+/obj/item/cyberpunk_item_module/melee_twohand_axe_element/t2,
+/obj/item/cyberpunk_item_module/melee_twohand_axe_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "IK" = (
 /obj/machinery/vending/hydroseeds{
 	all_products_free = 1
@@ -2113,9 +2501,23 @@
 "LJ" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/police)
+"LK" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_twohand_hammer_element,
+/obj/item/cyberpunk_item_module/melee_twohand_hammer_element/t2,
+/obj/item/cyberpunk_item_module/melee_twohand_hammer_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "LP" = (
 /turf/open/floor/engine,
 /area/station/science/research)
+"LU" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/machinery/light/directional/east,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
 "LV" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/small,
@@ -2211,6 +2613,19 @@
 /obj/structure/cable,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"MV" = (
+/obj/structure/closet/crate,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/breacher,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/ceramic,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/composite,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/plasteel,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/polymer,
+/obj/item/gun/ballistic/automatic/proto/cyberpunk/sprinter,
+/obj/item/gun/ballistic/shotgun/cyberpunk,
+/obj/item/gun/ballistic/shotgun/cyberpunk/room_clearer,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "MX" = (
 /obj/structure/table,
 /obj/item/clothing/gloves/latex,
@@ -2239,14 +2654,39 @@
 /obj/structure/window/reinforced/spawner/directional/east,
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"Nm" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/gloves/bracer/cyberpunk,
+/obj/item/clothing/gloves/bracer/cyberpunk/bulwark,
+/obj/item/clothing/gloves/bracer/cyberpunk/ceramic,
+/obj/item/clothing/gloves/bracer/cyberpunk/composite,
+/obj/item/clothing/gloves/bracer/cyberpunk/guard,
+/obj/item/clothing/gloves/bracer/cyberpunk/plasteel,
+/obj/item/clothing/gloves/bracer/cyberpunk/wood,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "Nu" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"ND" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_twohand_sword_element,
+/obj/item/cyberpunk_item_module/melee_twohand_sword_element/t2,
+/obj/item/cyberpunk_item_module/melee_twohand_sword_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "NG" = (
 /obj/machinery/light/directional/west,
 /obj/structure/cable,
+/obj/structure/closet/crate,
+/obj/item/knife/cyberpunk/shock_staff,
+/obj/item/knife/cyberpunk/spear,
+/obj/item/knife/cyberpunk/staff,
+/obj/item/knife/cyberpunk/twohand_axe,
+/obj/item/knife/cyberpunk/twohand_hammer,
+/obj/item/knife/cyberpunk/twohand_sword,
 /turf/open/floor/wood,
 /area/station/security/brig)
 "NI" = (
@@ -2376,6 +2816,18 @@
 /obj/structure/cable,
 /turf/open/floor/iron,
 /area/station/command/bridge)
+"PG" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/mask/cyberpunk,
+/obj/item/clothing/mask/cyberpunk/ceramic,
+/obj/item/clothing/mask/cyberpunk/composite,
+/obj/item/clothing/mask/cyberpunk/plasteel,
+/obj/item/clothing/mask/cyberpunk/sealed,
+/obj/item/clothing/mask/cyberpunk/starlight_filter,
+/obj/item/clothing/mask/cyberpunk/street,
+/obj/item/clothing/mask/cyberpunk/wood,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "PR" = (
 /obj/effect/landmark/start/medical_doctor,
 /turf/open/floor/iron/white,
@@ -2411,6 +2863,13 @@
 /obj/vehicle/sealed/car/cyberpunk_test/bike,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
+"QB" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_spike,
+/obj/item/cyberpunk_item_module/melee_spike/t2,
+/obj/item/cyberpunk_item_module/melee_spike/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "QI" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/structure/fence,
@@ -2456,6 +2915,22 @@
 /obj/machinery/power/apc/auto_name/directional/south,
 /turf/open/floor/iron/white,
 /area/station/command/bridge)
+"Rx" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/ballistic_weave,
+/obj/item/cyberpunk_item_module/ballistic_weave/t2,
+/obj/item/cyberpunk_item_module/ballistic_weave/t3,
+/obj/item/cyberpunk_item_module/cylinder_357,
+/obj/item/cyberpunk_item_module/cylinder_357/t2,
+/obj/item/cyberpunk_item_module/cylinder_357/t3,
+/obj/item/cyberpunk_item_module/damage_trigger,
+/obj/item/cyberpunk_item_module/damage_trigger/t2,
+/obj/item/cyberpunk_item_module/damage_trigger/t3,
+/obj/item/cyberpunk_item_module/precision_receiver,
+/obj/item/cyberpunk_item_module/precision_receiver/t2,
+/obj/item/cyberpunk_item_module/precision_receiver/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "RA" = (
 /obj/machinery/chem_mass_spec,
 /turf/open/floor/iron/white,
@@ -2517,11 +2992,28 @@
 /obj/machinery/power/apc/auto_name/directional/south,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/corporate)
+"SE" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_blade,
+/obj/item/cyberpunk_item_module/melee_blade/t2,
+/obj/item/cyberpunk_item_module/melee_blade/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "SG" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_04)
+"SI" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/laser_emitter,
+/obj/item/cyberpunk_item_module/laser_emitter/t2,
+/obj/item/cyberpunk_item_module/laser_emitter/t3,
+/obj/item/cyberpunk_item_module/lmg_barrel,
+/obj/item/cyberpunk_item_module/lmg_barrel/t2,
+/obj/item/cyberpunk_item_module/lmg_barrel/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "SL" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
@@ -2550,10 +3042,24 @@
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron,
 /area/station/commons/dorms)
+"Um" = (
+/obj/structure/closet/crate,
+/obj/item/gun/energy/laser/cyberpunk,
+/obj/item/gun/energy/laser/cyberpunk/plasma,
+/obj/item/gun/energy/laser/cyberpunk/radiant,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "Uo" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"Ut" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_rapier_element,
+/obj/item/cyberpunk_item_module/melee_rapier_element/t2,
+/obj/item/cyberpunk_item_module/melee_rapier_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "Uz" = (
 /obj/structure/rack,
 /obj/machinery/light/directional/west,
@@ -2583,6 +3089,20 @@
 /obj/item/stock_parts/power_store/cell/infinite,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"Vh" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/mobility_servo,
+/obj/item/cyberpunk_item_module/mobility_servo/t2,
+/obj/item/cyberpunk_item_module/mobility_servo/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
+"Vi" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_axe_element,
+/obj/item/cyberpunk_item_module/melee_axe_element/t2,
+/obj/item/cyberpunk_item_module/melee_axe_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "VJ" = (
 /obj/machinery/vending/dinnerware,
 /turf/open/floor/carpet,
@@ -2626,6 +3146,18 @@
 /obj/item/toy/beach_ball/branded,
 /turf/open/indestructible/white,
 /area/cyberpunk/city/metro)
+"Wp" = (
+/obj/structure/closet/crate,
+/obj/item/clothing/shoes/cyberpunk,
+/obj/item/clothing/shoes/cyberpunk/ceramic,
+/obj/item/clothing/shoes/cyberpunk/composite,
+/obj/item/clothing/shoes/cyberpunk/patrol,
+/obj/item/clothing/shoes/cyberpunk/plasteel,
+/obj/item/clothing/shoes/cyberpunk/runner,
+/obj/item/clothing/shoes/cyberpunk/sealed,
+/obj/item/clothing/shoes/cyberpunk/wood,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "Wq" = (
 /obj/structure/table,
 /obj/item/surgical_drapes,
@@ -2767,6 +3299,13 @@
 "Yx" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/government)
+"YG" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_head,
+/obj/item/cyberpunk_item_module/melee_head/t2,
+/obj/item/cyberpunk_item_module/melee_head/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "YH" = (
 /obj/machinery/sleeper/syndie/fullupgrade,
 /turf/open/floor/iron/white,
@@ -2776,10 +3315,27 @@
 /obj/structure/cable,
 /turf/open/floor/wood,
 /area/station/security/brig)
+"YL" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/melee_club_element,
+/obj/item/cyberpunk_item_module/melee_club_element/t2,
+/obj/item/cyberpunk_item_module/melee_club_element/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "YM" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/engine,
 /area/station/science/research)
+"YO" = (
+/obj/structure/cable,
+/obj/structure/closet/crate,
+/obj/item/knife/cyberpunk/plasteel,
+/obj/item/knife/cyberpunk/polymer,
+/obj/item/knife/cyberpunk/puncture,
+/obj/item/knife/cyberpunk/rapier,
+/obj/item/knife/cyberpunk/razor,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "YP" = (
 /obj/machinery/door/window/left/directional/south{
 	name = "Containment Pen #2";
@@ -2802,6 +3358,13 @@
 /obj/structure/fence,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
+"Zm" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/machinery/light/directional/south,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
 "Zn" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/textured,
@@ -2814,6 +3377,19 @@
 "Zu" = (
 /turf/open/openspace,
 /area/station/command/bridge)
+"ZT" = (
+/obj/structure/closet/crate,
+/obj/item/cyberpunk_item_module/smg_barrel,
+/obj/item/cyberpunk_item_module/smg_barrel/t2,
+/obj/item/cyberpunk_item_module/smg_barrel/t3,
+/obj/item/cyberpunk_item_module/smg_magwell_9mm,
+/obj/item/cyberpunk_item_module/smg_magwell_9mm/t2,
+/obj/item/cyberpunk_item_module/smg_magwell_9mm/t3,
+/obj/item/cyberpunk_item_module/sniper_chamber,
+/obj/item/cyberpunk_item_module/sniper_chamber/t2,
+/obj/item/cyberpunk_item_module/sniper_chamber/t3,
+/turf/open/floor/wood,
+/area/station/security/brig)
 "ZV" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/cable,
@@ -3030,6 +3606,19 @@ ea
 ea
 ea
 ea
+jT
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+jT
 ea
 ea
 ea
@@ -3042,20 +3631,7 @@ ea
 ea
 ea
 ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
+jT
 JO
 JO
 JO
@@ -3208,7 +3784,7 @@ xK
 bc
 bc
 bc
-bc
+NR
 JO
 JO
 JO
@@ -3327,12 +3903,12 @@ JO
 JO
 bc
 bc
+Ef
 bc
 bc
 bc
 bc
 bc
-bc
 JO
 JO
 JO
@@ -3365,7 +3941,7 @@ JO
 JO
 JO
 JO
-ea
+EG
 JO
 JO
 jF
@@ -3923,7 +4499,7 @@ ea
 JO
 JO
 JO
-ea
+EG
 JO
 JO
 JO
@@ -3999,7 +4575,7 @@ ea
 ea
 ea
 ea
-ea
+EG
 JO
 "}
 (20,1,1) = {"
@@ -4611,8 +5187,8 @@ bc
 df
 bc
 bc
-bc
-bc
+QW
+QW
 bc
 ea
 bc
@@ -4674,7 +5250,7 @@ JO
 bc
 bc
 QW
-bc
+QW
 bc
 ea
 bc
@@ -4735,8 +5311,8 @@ bc
 df
 ea
 ea
-ea
-ea
+DS
+DS
 ea
 bc
 ea
@@ -5411,7 +5987,7 @@ ea
 JO
 JO
 JO
-zn
+Zm
 JO
 JO
 JO
@@ -5487,7 +6063,7 @@ ea
 ea
 ea
 ea
-ea
+EG
 jF
 "}
 (44,1,1) = {"
@@ -5673,7 +6249,7 @@ bc
 bc
 bc
 bc
-NR
+bc
 jF
 "}
 (47,1,1) = {"
@@ -5937,7 +6513,7 @@ bc
 bc
 bc
 bc
-bc
+NR
 JO
 JO
 JO
@@ -5969,7 +6545,7 @@ JO
 JO
 JO
 JO
-zn
+Zm
 JO
 JO
 JO
@@ -5983,7 +6559,7 @@ bc
 bc
 bc
 bc
-bc
+NR
 jF
 "}
 (52,1,1) = {"
@@ -5993,7 +6569,7 @@ JO
 JO
 bc
 bc
-bc
+Ef
 bc
 bc
 bc
@@ -6316,6 +6892,19 @@ ea
 ea
 ea
 ea
+sG
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+ea
+sG
 ea
 ea
 ea
@@ -6328,20 +6917,7 @@ ea
 ea
 ea
 ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-ea
-zn
+LU
 JO
 JO
 JO
@@ -6355,7 +6931,7 @@ bc
 bc
 bc
 bc
-bc
+NR
 jF
 "}
 (58,1,1) = {"
@@ -11953,7 +12529,7 @@ rK
 DV
 DV
 rK
-lT
+DV
 DV
 DV
 rK
@@ -12015,7 +12591,7 @@ rK
 DV
 DV
 rK
-DV
+lT
 DV
 DV
 rK
@@ -12382,14 +12958,14 @@ XJ
 cM
 vS
 jy
-lB
-lB
+Ev
+YO
 NG
-lB
-lB
-lB
-lB
-lB
+Gs
+Gs
+Gs
+ro
+uX
 cM
 XJ
 XJ
@@ -12450,8 +13026,8 @@ gM
 gM
 gM
 gM
-gM
-lB
+cM
+uX
 cM
 XJ
 XJ
@@ -12504,7 +13080,7 @@ XJ
 XJ
 XJ
 cM
-gM
+bP
 gM
 gM
 gM
@@ -12566,7 +13142,7 @@ XJ
 XJ
 XJ
 cM
-gM
+gZ
 gM
 gM
 gM
@@ -12628,7 +13204,7 @@ XJ
 XJ
 XJ
 cM
-gM
+MV
 gM
 gM
 gM
@@ -12690,7 +13266,7 @@ XJ
 XJ
 XJ
 cM
-gM
+FJ
 gM
 gM
 gM
@@ -12752,7 +13328,7 @@ XJ
 XJ
 XJ
 cM
-gM
+nz
 gM
 gM
 gM
@@ -12814,7 +13390,7 @@ XJ
 XJ
 XJ
 cM
-gM
+Um
 gM
 gM
 gM
@@ -12938,7 +13514,7 @@ XJ
 XJ
 XJ
 cM
-gM
+bD
 gM
 lB
 lB
@@ -13000,7 +13576,7 @@ XJ
 XJ
 XJ
 cM
-gM
+Nm
 gM
 gM
 gM
@@ -13062,14 +13638,14 @@ XJ
 XJ
 XJ
 cM
+or
 gM
 gM
-gM
-gM
-gM
-gM
-gM
-gM
+IH
+yI
+QB
+rG
+Vi
 gM
 gM
 cM
@@ -13124,14 +13700,14 @@ XJ
 XJ
 XJ
 cM
+fh
+gM
+gM
+LK
 gM
 gM
 gM
-gM
-gM
-gM
-gM
-gM
+SE
 gM
 gM
 cM
@@ -13186,14 +13762,14 @@ XJ
 XJ
 XJ
 cM
+PG
+gM
+gM
+ND
 gM
 gM
 gM
-gM
-gM
-gM
-gM
-gM
+YL
 gM
 gM
 cM
@@ -13248,14 +13824,14 @@ XJ
 XJ
 XJ
 cM
+mW
+gM
+gM
+Vh
 gM
 gM
 gM
-gM
-gM
-gM
-gM
-gM
+zP
 gM
 gM
 cM
@@ -13310,14 +13886,14 @@ XJ
 XJ
 XJ
 cM
+Wp
+gM
+gM
+yh
 gM
 gM
 gM
-gM
-gM
-gM
-gM
-gM
+YG
 gM
 gM
 cM
@@ -13372,14 +13948,14 @@ XJ
 XJ
 XJ
 cM
+Ha
+gM
+gM
+qW
 gM
 gM
 gM
-gM
-gM
-gM
-gM
-gM
+yy
 gM
 gM
 cM
@@ -13434,14 +14010,14 @@ XJ
 XJ
 XJ
 cM
+FD
 gM
 gM
-gM
-gM
-gM
-gM
-gM
-gM
+mN
+vT
+ZT
+he
+Ut
 gM
 gM
 cM
@@ -13496,7 +14072,7 @@ XJ
 XJ
 XJ
 cM
-gM
+pB
 gM
 gM
 gM
@@ -13558,7 +14134,7 @@ XJ
 XJ
 XJ
 cM
-gM
+GT
 gM
 gM
 gM
@@ -13621,14 +14197,14 @@ XJ
 XJ
 cM
 gM
-gM
-gM
-gM
-Om
-gM
-gM
-gM
-gM
+Rx
+mV
+uq
+sP
+SI
+Eu
+vi
+ee
 gM
 cM
 XJ
@@ -16109,8 +16685,8 @@ gM
 gM
 gM
 ov
-gM
-gM
+ni
+rh
 cM
 XJ
 XJ
@@ -16171,8 +16747,8 @@ gM
 gM
 gM
 gM
-gM
-gM
+ni
+rh
 cM
 XJ
 XJ
