@@ -106,6 +106,8 @@
 	var/temporary_pain_disabled = FALSE
 	/// Infection progress on this limb, 0 to 100.
 	var/infection = 0
+	/// Last infection stage reported to the owner.
+	var/last_reported_infection_stage = 0
 	/// Temporary surgical sterility window from skilled surgery.
 	var/sterile_until = 0
 	/// Internal blood pooled by aorta damage or comparable deep trauma.
@@ -867,7 +869,38 @@
 		weight = max(weight, 4)
 	else if(heat_trauma == TRAUMA_MINOR || acid_trauma == TRAUMA_MINOR)
 		weight = max(weight, 2)
+	if(weight && has_cyberpunk_medical_wrap())
+		weight = max(weight - 1, 0)
 	return weight
+
+/obj/item/bodypart/proc/get_infection_stage()
+	switch(infection)
+		if(90 to INFINITY)
+			return 4
+		if(60 to 90)
+			return 3
+		if(50 to 60)
+			return 2
+		if(20 to 50)
+			return 1
+	return 0
+
+/obj/item/bodypart/proc/report_infection_stage()
+	if(!owner || owner.stat == DEAD)
+		return
+	var/current_stage = get_infection_stage()
+	if(current_stage <= last_reported_infection_stage)
+		return
+	last_reported_infection_stage = current_stage
+	switch(current_stage)
+		if(1)
+			to_chat(owner, span_warning("Ваша [ru_plaintext_zone[NOMINATIVE] || plaintext_zone] начинает неприятно ныть и теплеть."))
+		if(2)
+			to_chat(owner, span_warning("Инфекция в вашей [ru_plaintext_zone[PREPOSITIONAL] || plaintext_zone] усиливается, по телу расходится болезненная слабость."))
+		if(3)
+			to_chat(owner, span_userdanger("Ваша [ru_plaintext_zone[NOMINATIVE] || plaintext_zone] плохо слушается из-за инфекции!"))
+		if(4)
+			to_chat(owner, span_userdanger("Инфекция в вашей [ru_plaintext_zone[PREPOSITIONAL] || plaintext_zone] стала критической и может распространиться дальше!"))
 
 /obj/item/bodypart/proc/has_foreign_blood_contact()
 	if(!owner)
@@ -919,8 +952,10 @@
 			var/chance = wound_weight * 10 * factors
 			if(SPT_PROB(chance, seconds_per_tick))
 				infection = min(100, infection + 1)
+				report_infection_stage()
 	if(infection <= 0)
 		return FALSE
+	report_infection_stage()
 	if(infection > 50)
 		owner.adjust_tox_loss(((infection - 50) / 10) * seconds_per_tick, updating_health = FALSE, forced = TRUE)
 	if(infection >= 60 && prob(max(infection - 60, 0)))
@@ -955,6 +990,7 @@
 	var/reduced = min(amount, reducible)
 	var/new_infection = max(0, current_infection - reduced)
 	infection = min(infection, new_infection)
+	last_reported_infection_stage = min(last_reported_infection_stage, get_infection_stage())
 	for(var/datum/wound/burn/flesh/burn_wound in wounds)
 		burn_wound.infection = min(burn_wound.infection, new_infection)
 		burn_wound.sanitization = max(burn_wound.sanitization, 1)
@@ -991,6 +1027,7 @@
 			"acid" = round(limb.acid_dam, 0.1),
 			"pain" = round(limb.pain, 0.1),
 			"infection" = round(limb.infection, 0.1),
+			"infectionStage" = limb.get_infection_stage(),
 			"bluntTrauma" = limb.blunt_trauma,
 			"pierceTrauma" = limb.pierce_trauma,
 			"slashTrauma" = limb.slash_trauma,
@@ -1013,6 +1050,7 @@
 			"maxDamage" = organ.maxHealth,
 			"pain" = round(organ.pain, 0.1),
 			"failing" = !!(organ.organ_flags & ORGAN_FAILING),
+			"condition" = organ.get_status_text(FALSE, FALSE),
 		))
 	return organ_data
 

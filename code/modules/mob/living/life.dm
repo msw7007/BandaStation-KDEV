@@ -108,7 +108,7 @@
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_source = src
 		if(carbon_source.dna)
-			. += "Genetic Stability: [round(carbon_source.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT]"
+			. += "Humanoidity: [round(carbon_source.dna.get_effective_humanoidity(), 0.1)]/[HUMANOIDITY_DEFAULT]"
 	. += "Style: [round(style, 0.1)]/15"
 	. += "Mood: [round(mood, 0.1)]/20"
 	if(length(cyberpunk_status_effects))
@@ -127,7 +127,8 @@
 		for(var/attribute_id in ATTRIBUTE_ALL)
 			var/datum/attribute/attribute = mind.get_attribute(attribute_id)
 			if(attribute)
-				. += "[attribute.name]: [attribute.value]/[ATTRIBUTE_MAXIMUM][attribute.super_mode ? " (Super)" : ""]"
+				var/effective_value = get_attribute_value(attribute_id)
+				. += "[attribute.name]: [attribute.value]/[ATTRIBUTE_MAXIMUM] effective [effective_value]/[ATTRIBUTE_EFFECTIVE_MAXIMUM][effective_value >= ATTRIBUTE_SUPER_THRESHOLD ? " (Giga)" : ""]"
 		. += "Unconverted General XP: [round(mind.unconverted_general_experience, 0.1)]/[ATTRIBUTE_LEVEL_POINT_EXPERIENCE]"
 		. += "Level Points: [mind.level_points]"
 		. += "Skill Points: [mind.skill_points]"
@@ -224,6 +225,8 @@
 
 /mob/living/proc/process_mood_state(seconds_per_tick)
 	sync_mood_from_moodlets()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		mood = max(mood, (mind?.get_character_skill_level(SKILL_ENDURANCE) || 0) * 2)
 	mood = clamp(mood, -30, 20)
 	if(mood <= -30)
 		time_at_min_mood += seconds_per_tick
@@ -232,9 +235,6 @@
 
 	if(is_comfortably_sleeping_for_experience())
 		mind?.convert_rest_experience()
-
-	if(mood <= CYBERPSYCHOSIS_MIN_MOOD && chromity_overheat > get_effective_chromity() * CYBERPSYCHOSIS_OVERHEAT_RATIO)
-		trigger_cyberpsychosis()
 
 /mob/living/proc/process_chromity_overheat(seconds_per_tick)
 	if(iscarbon(src))
@@ -314,10 +314,17 @@
 			if(amount > 0)
 				adjust_organ_loss(ORGAN_SLOT_BRAIN, amount)
 
-/mob/living/proc/trigger_cyberpsychosis()
+/mob/living/proc/should_trigger_cyberpsychosis()
+	return mood <= CYBERPSYCHOSIS_MIN_MOOD && chromity_overheat > get_effective_chromity() * CYBERPSYCHOSIS_OVERHEAT_RATIO
+
+/mob/living/proc/trigger_cyberpsychosis(from_hysteria = FALSE)
 	if(world.time < last_cyberpsychosis_time + CYBERPSYCHOSIS_COOLDOWN)
 		return FALSE
 	last_cyberpsychosis_time = world.time
+	last_control_loss = world.time
+	time_at_min_mood = 0
+	if(from_hysteria)
+		adjust_organ_loss(ORGAN_SLOT_BRAIN, 50)
 	visible_message(span_warning("[src] spasms under chrome overload!"), span_userdanger("Your neural interface burns with static. You lose your grip on reality."))
 	apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/cyberpsychosis, CYBERPSYCHOSIS_DURATION, 1, src, FALSE)
 	apply_status_effect(/datum/status_effect/hallucination, CYBERPSYCHOSIS_DURATION)
@@ -332,6 +339,8 @@
 	cyberpsychosis_next_ai_tick = 0
 	cyberpsychosis_next_implant_tick = 0
 	cyberpsychosis_target = null
+	ADD_TRAIT(src, TRAIT_STUNIMMUNE, CYBERPSYCHOSIS_TRAIT)
+	ADD_TRAIT(src, TRAIT_SLEEPIMMUNE, CYBERPSYCHOSIS_TRAIT)
 	set_combat_mode(TRUE)
 	log_message("entered cyberpsychosis takeover", LOG_ATTACK)
 	return TRUE
@@ -343,6 +352,8 @@
 	cyberpsychosis_next_ai_tick = 0
 	cyberpsychosis_next_implant_tick = 0
 	cyberpsychosis_target = null
+	REMOVE_TRAIT(src, TRAIT_STUNIMMUNE, CYBERPSYCHOSIS_TRAIT)
+	REMOVE_TRAIT(src, TRAIT_SLEEPIMMUNE, CYBERPSYCHOSIS_TRAIT)
 	to_chat(src, span_notice("The combat loop releases your body."))
 	log_message("left cyberpsychosis takeover", LOG_ATTACK)
 	return TRUE
@@ -351,6 +362,7 @@
 	if(!cyberpsychosis_active)
 		return
 	if(stat == DEAD || !has_cyberpunk_status_effect("cyberpsychosis"))
+		remove_cyberpunk_status_effect("cyberpsychosis")
 		end_cyberpsychosis_takeover()
 		return
 	if(world.time < cyberpsychosis_next_ai_tick)
@@ -364,12 +376,16 @@
 	cyberpsychosis_target = find_cyberpsychosis_target()
 	if(!cyberpsychosis_target)
 		return
+	if(SPT_PROB(20, seconds_per_tick))
+		INVOKE_ASYNC(src, TYPE_PROC_REF(/atom/movable, say), message = pick(GLOB.cyberpsychosis_phrases), forced = CYBERPSYCHOSIS_TRAIT)
 	face_atom(cyberpsychosis_target)
 	if(!Adjacent(cyberpsychosis_target))
 		step_to(src, cyberpsychosis_target, 1)
 	INVOKE_ASYNC(src, PROC_REF(execute_cyberpsychosis_attack), cyberpsychosis_target)
 
 /mob/living/proc/execute_cyberpsychosis_attack(mob/living/target)
+	set waitfor = FALSE
+
 	if(!cyberpsychosis_active)
 		return
 	if(stat == DEAD || !has_cyberpunk_status_effect("cyberpsychosis"))
@@ -414,8 +430,6 @@
 	var/mob/living/carbon/carbon_owner = src
 	for(var/obj/item/organ/cyberimp/implant as anything in carbon_owner.organs)
 		if(!implant.can_skill_interface_toggle())
-			continue
-		if(implant.get_skill_interface_active())
 			continue
 		used_implant |= implant.skill_interface_toggle(src)
 	return used_implant
@@ -480,6 +494,12 @@
 		if(!organ.is_implant_disabled())
 			continue
 		retuned |= organ.retune_implant()
+	for(var/obj/item/implant/implant as anything in carbon_owner.implants)
+		if(implant.implant_disable_reason != "EMP")
+			continue
+		retuned |= implant.retune_implant()
+	if(retuned)
+		to_chat(src, span_notice("Your implants snap back into tune."))
 	return retuned
 
 /mob/living/proc/sync_mood_from_moodlets()
@@ -600,15 +620,68 @@
 	name = "Hunger"
 	desc = "Low satiation is pulling down the body state."
 
+/datum/cyberpunk_status_effect/need/hunger/on_apply(mob/living/new_owner)
+	. = ..()
+	refresh(duration, power, source)
+
+/datum/cyberpunk_status_effect/need/hunger/refresh(new_duration, new_power = 1, new_source = null)
+	. = ..()
+	attribute_modifiers[ATTRIBUTE_STRENGTH] = -round(power)
+	attribute_modifiers[ATTRIBUTE_INTELLIGENCE] = -round(power)
+
 /datum/cyberpunk_status_effect/need/thirst
 	id = "thirst"
 	name = "Thirst"
 	desc = "Low hydration is pulling down the body state."
 
+/datum/cyberpunk_status_effect/need/thirst/on_apply(mob/living/new_owner)
+	. = ..()
+	refresh(duration, power, source)
+
+/datum/cyberpunk_status_effect/need/thirst/refresh(new_duration, new_power = 1, new_source = null)
+	. = ..()
+	attribute_modifiers[ATTRIBUTE_SPIRIT] = -round(power)
+	attribute_modifiers[ATTRIBUTE_STRENGTH] = -round(power)
+
 /datum/cyberpunk_status_effect/need/tiredness
 	id = "tiredness"
 	name = "Tiredness"
 	desc = "Fatigue is pulling down the body state."
+
+/datum/cyberpunk_status_effect/need/tiredness/on_apply(mob/living/new_owner)
+	. = ..()
+	refresh(duration, power, source)
+
+/datum/cyberpunk_status_effect/need/tiredness/refresh(new_duration, new_power = 1, new_source = null)
+	. = ..()
+	attribute_modifiers[ATTRIBUTE_CHARISMA] = -round(power)
+	attribute_modifiers[ATTRIBUTE_PERCEPTION] = -round(power)
+
+/datum/cyberpunk_status_effect/need/overeating
+	id = "overeating"
+	name = "Overeating"
+	desc = "Excess satiation is slowing body response."
+
+/datum/cyberpunk_status_effect/need/overeating/on_apply(mob/living/new_owner)
+	. = ..()
+	refresh(duration, power, source)
+
+/datum/cyberpunk_status_effect/need/overeating/refresh(new_duration, new_power = 1, new_source = null)
+	. = ..()
+	attribute_modifiers[ATTRIBUTE_DEXTERITY] = -round(power)
+
+/datum/cyberpunk_status_effect/need/overdrinking
+	id = "overdrinking"
+	name = "Overdrinking"
+	desc = "Excess hydration is dulling focus."
+
+/datum/cyberpunk_status_effect/need/overdrinking/on_apply(mob/living/new_owner)
+	. = ..()
+	refresh(duration, power, source)
+
+/datum/cyberpunk_status_effect/need/overdrinking/refresh(new_duration, new_power = 1, new_source = null)
+	. = ..()
+	attribute_modifiers[ATTRIBUTE_INTELLIGENCE] = -round(power)
 
 /datum/cyberpunk_status_effect/radiation
 	id = "radiation"
@@ -656,6 +729,38 @@
 	move_speed_modifier = 0.005
 	shareable = FALSE
 
+/datum/cyberpunk_status_effect/giga_perk
+	id = "giga_perk"
+	name = "Giga Perk"
+	desc = "A superhuman attribute threshold effect."
+	effect_kind = "buff"
+	shareable = FALSE
+	unique_effect = "giga_perk"
+
+/datum/cyberpunk_status_effect/giga_perk/strength
+	id = "giga_strength"
+	name = "Дробление"
+
+/datum/cyberpunk_status_effect/giga_perk/dexterity
+	id = "giga_dexterity"
+	name = "Змеевидность"
+
+/datum/cyberpunk_status_effect/giga_perk/perception
+	id = "giga_perception"
+	name = "Орлиный глаз"
+
+/datum/cyberpunk_status_effect/giga_perk/intelligence
+	id = "giga_intelligence"
+	name = "Ботаник"
+
+/datum/cyberpunk_status_effect/giga_perk/spirit
+	id = "giga_spirit"
+	name = "Несокрушимость"
+
+/datum/cyberpunk_status_effect/giga_perk/charisma
+	id = "giga_charisma"
+	name = "Холщенность"
+
 /datum/cyberpunk_status_effect/cyberpsychosis
 	id = "cyberpsychosis"
 	name = "Cyberpsychosis"
@@ -670,7 +775,7 @@
 /datum/cyberpunk_status_effect/cyberpsychosis/on_apply(mob/living/new_owner)
 	. = ..()
 	for(var/attribute_id in ATTRIBUTE_ALL)
-		attribute_modifiers[attribute_id] = CYBERPSYCHOSIS_ATTRIBUTE_BONUS
+		attribute_modifiers[attribute_id] = max(0, CYBERPSYCHOSIS_ATTRIBUTE_TARGET - (owner?.get_attribute_value(attribute_id) || ATTRIBUTE_DEFAULT))
 	owner?.start_cyberpsychosis_takeover()
 
 /datum/cyberpunk_status_effect/cyberpsychosis/on_remove()
@@ -714,6 +819,7 @@
 
 /mob/living/proc/process_cyberpunk_status_effects(seconds_per_tick)
 	sync_cyberpunk_need_status_effects()
+	sync_character_giga_perk_status_effects()
 	if(!length(cyberpunk_status_effects))
 		return
 	for(var/effect_id in cyberpunk_status_effects.Copy())
@@ -726,7 +832,58 @@
 			continue
 		effect.tick(seconds_per_tick)
 
+/mob/living/proc/get_character_giga_perk_status_type(attribute_id)
+	switch(attribute_id)
+		if(ATTRIBUTE_STRENGTH)
+			return /datum/cyberpunk_status_effect/giga_perk/strength
+		if(ATTRIBUTE_DEXTERITY)
+			return /datum/cyberpunk_status_effect/giga_perk/dexterity
+		if(ATTRIBUTE_PERCEPTION)
+			return /datum/cyberpunk_status_effect/giga_perk/perception
+		if(ATTRIBUTE_INTELLIGENCE)
+			return /datum/cyberpunk_status_effect/giga_perk/intelligence
+		if(ATTRIBUTE_SPIRIT)
+			return /datum/cyberpunk_status_effect/giga_perk/spirit
+		if(ATTRIBUTE_CHARISMA)
+			return /datum/cyberpunk_status_effect/giga_perk/charisma
+	return null
+
+/mob/living/proc/get_character_giga_perk_status_id(attribute_id)
+	switch(attribute_id)
+		if(ATTRIBUTE_STRENGTH)
+			return "giga_strength"
+		if(ATTRIBUTE_DEXTERITY)
+			return "giga_dexterity"
+		if(ATTRIBUTE_PERCEPTION)
+			return "giga_perception"
+		if(ATTRIBUTE_INTELLIGENCE)
+			return "giga_intelligence"
+		if(ATTRIBUTE_SPIRIT)
+			return "giga_spirit"
+		if(ATTRIBUTE_CHARISMA)
+			return "giga_charisma"
+	return null
+
+/mob/living/proc/sync_character_giga_perk_status_effects()
+	if(!mind)
+		return FALSE
+	for(var/attribute_id in ATTRIBUTE_ALL)
+		var/status_type = get_character_giga_perk_status_type(attribute_id)
+		var/status_id = get_character_giga_perk_status_id(attribute_id)
+		if(!status_type || !status_id)
+			continue
+		var/should_have_giga = stat != DEAD && (get_attribute_value(attribute_id) >= ATTRIBUTE_SUPER_THRESHOLD || mind.character_giga_perks[attribute_id])
+		if(should_have_giga)
+			if(!has_cyberpunk_status_effect(status_id))
+				apply_cyberpunk_status_effect(status_type, 0, 1, src, FALSE)
+		else
+			remove_cyberpunk_status_effect(status_id)
+	return TRUE
+
 /mob/living/proc/sync_cyberpunk_need_status_effects()
+	sync_cyberpunk_hunger_delusion()
+	sync_cyberpunk_water_delusion()
+
 	if(has_hunger())
 		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/hunger, 5 SECONDS, has_starvation_exhaustion() ? 3 : (has_strong_hunger() ? 2 : 1), src, FALSE)
 	else
@@ -738,9 +895,76 @@
 		remove_cyberpunk_status_effect("thirst")
 
 	if(has_sleepiness())
-		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/tiredness, 5 SECONDS, has_sleep_deprivation() ? 3 : 1, src, FALSE)
+		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/tiredness, 5 SECONDS, tireness <= 0 ? 4 : (has_sleep_deprivation() ? 2 : 1), src, FALSE)
 	else
 		remove_cyberpunk_status_effect("tiredness")
+
+	if(has_overeating() && !has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/overeating, 5 SECONDS, 1, src, FALSE)
+	else
+		remove_cyberpunk_status_effect("overeating")
+
+	if(has_overdrinking() && !has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		apply_cyberpunk_status_effect(/datum/cyberpunk_status_effect/need/overdrinking, 5 SECONDS, 1, src, FALSE)
+	else
+		remove_cyberpunk_status_effect("overdrinking")
+
+/mob/living/proc/sync_cyberpunk_hunger_delusion()
+	if(!has_starvation_exhaustion())
+		QDEL_NULL(cyberpunk_hunger_delusion)
+		QDEL_NULL(cyberpunk_hunger_food_delusion)
+		return FALSE
+	if(cyberpunk_hunger_delusion && !QDELETED(cyberpunk_hunger_delusion))
+		. = TRUE
+	else
+		cyberpunk_hunger_delusion = new /datum/hallucination/delusion/preset/human_burger(src, 0, FALSE, TRUE, FALSE, FALSE)
+		if(!cyberpunk_hunger_delusion.start())
+			QDEL_NULL(cyberpunk_hunger_delusion)
+		else
+			. = TRUE
+	if(cyberpunk_hunger_food_delusion && !QDELETED(cyberpunk_hunger_food_delusion))
+		return cyberpunk_hunger_food_delusion.refresh_nearby_delusions() || .
+	cyberpunk_hunger_food_delusion = new /datum/hallucination/nearby_item_delusion/food_burger(src)
+	if(!cyberpunk_hunger_food_delusion.start())
+		QDEL_NULL(cyberpunk_hunger_food_delusion)
+		return .
+	return TRUE
+
+/mob/living/proc/sync_cyberpunk_water_delusion()
+	if(!has_dehydration())
+		QDEL_NULL(cyberpunk_water_delusion)
+		return FALSE
+	if(cyberpunk_water_delusion && !QDELETED(cyberpunk_water_delusion))
+		return cyberpunk_water_delusion.refresh_nearby_delusions()
+	cyberpunk_water_delusion = new /datum/hallucination/nearby_item_delusion/water(src)
+	if(!cyberpunk_water_delusion.start())
+		QDEL_NULL(cyberpunk_water_delusion)
+		return FALSE
+	return TRUE
+
+/mob/living/proc/can_perceive_cyberpunk_human_burger(mob/living/target)
+	return has_starvation_exhaustion() && ishuman(target) && target != src
+
+/mob/living/proc/try_cyberpunk_human_burger_interaction(mob/living/target, proximity_flag)
+	if(!proximity_flag || !can_perceive_cyberpunk_human_burger(target))
+		return FALSE
+	if(pulling != target)
+		var/old_zone = zone_selected
+		zone_selected = BODY_ZONE_HEAD
+		var/grab_result = grab(target)
+		zone_selected = old_zone
+		if(grab_result == GRAB_SUCCESS)
+			to_chat(src, span_warning("You grab the Tasty juicy burger by the top bun."))
+			return TRUE
+		return FALSE
+	visible_message(
+		span_danger("[capitalize(declent_ru(NOMINATIVE))] bites [target.declent_ru(ACCUSATIVE)] in the head!"),
+		span_danger("You bite into the Tasty juicy burger."),
+	)
+	target.apply_damage(10, BRUTE, BODY_ZONE_HEAD)
+	changeNext_move(CLICK_CD_MELEE)
+	log_combat(src, target, "bit", addition = "starvation Tasty juicy burger hallucination")
+	return TRUE
 
 /mob/living/proc/get_cyberpunk_status_attribute_modifier(attribute_id)
 	if(!length(cyberpunk_status_effects))
@@ -951,13 +1175,13 @@
 	if(body_position == LYING_DOWN)
 		var/recovery = 1
 		if(istype(buckled, /obj/structure/bed))
-			recovery += 1
+			recovery += 0
 			if(locate(/obj/item/pillow) in loc)
-				recovery += 1
+				recovery += 2
 			if(locate(/obj/item/bedsheet) in loc)
-				recovery += 1
+				recovery += 2
 			if(!has_hunger())
-				recovery += 1
+				recovery += 2
 		return recovery
 	if(resting || buckled)
 		return 1
@@ -1024,6 +1248,7 @@
 	var/share_percent = source.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 1)
 	if(share_percent <= 0)
 		return
+	share_percent *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/shared_experience = final_experience * share_percent * 0.01
 	for(var/mob/living/member as anything in get_members())
 		if(member == source || !member.mind)
@@ -1036,6 +1261,7 @@
 	var/share_percent = source.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 4)
 	if(share_percent <= 0)
 		return
+	share_percent *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/shared_amount = amount * share_percent * 0.01
 	for(var/mob/living/member as anything in get_members())
 		if(member == source)
@@ -1044,9 +1270,11 @@
 
 /datum/cyberpunk_cohort/proc/get_inspiration_guard_bonus(mob/living/source)
 	var/bonus = source?.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5) || 0
+	if(source)
+		bonus *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/mob/living/leader = get_leader()
 	if(leader && leader != source)
-		bonus = max(bonus, leader.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5))
+		bonus = max(bonus, leader.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 5) * leader.get_cyberpunk_charisma_giga_inspiration_multiplier())
 	return bonus
 
 /datum/cyberpunk_cohort/proc/try_grant_inspiration_guard(mob/living/source, amount)
@@ -1065,6 +1293,7 @@
 	var/share_percent = source.get_cyberpunk_skill_perk_bonus(SKILL_INSPIRATION, 3)
 	if(share_percent <= 0)
 		return
+	share_percent *= source.get_cyberpunk_charisma_giga_inspiration_multiplier()
 	var/shared_duration = max(1, round(effect.get_remaining_duration() * share_percent * 0.01))
 	var/shared_power = max(0.1, effect.power * share_percent * 0.01)
 	for(var/mob/living/member as anything in get_members())
@@ -1176,12 +1405,23 @@
 	var/style_xp_bonus = get_cyberpunk_skill_perk_bonus(SKILL_STYLE, 5)
 	if(style_xp_bonus > 0)
 		style_bonus *= 1 + style_xp_bonus * 0.01
-	return (1 + style_bonus + max(0, mood) / 20 * 0.5) * get_cyberpunk_status_experience_multiplier()
+	var/mood_bonus = max(0, mood) / 20 * 0.5
+	if(has_character_giga_perk(ATTRIBUTE_CHARISMA))
+		style_bonus *= 1 + ((mind?.get_character_skill_level(SKILL_STYLE) || 0) * 0.2)
+		mood_bonus *= 1.5
+	return (1 + style_bonus + mood_bonus) * get_cyberpunk_status_experience_multiplier()
+
+/mob/living/proc/get_cyberpunk_charisma_giga_inspiration_multiplier()
+	if(!has_character_giga_perk(ATTRIBUTE_CHARISMA))
+		return 1
+	return 1 + ((mind?.get_character_skill_level(SKILL_INSPIRATION) || 0) * 0.5)
 
 /mob/living/proc/can_dodge()
 	if(is_cyberpunk_grabbing_living() || is_cyberpunk_grabbed_by_leg())
 		return FALSE
 	var/threshold_multiplier = max(0.2, 1 - get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1) * 0.01)
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY))
+		threshold_multiplier = max(0.1, threshold_multiplier * 0.5)
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_DODGE * threshold_multiplier && !is_exhausted_by_needs()
 
 /mob/living/proc/can_parry()
@@ -1237,6 +1477,8 @@
 
 /mob/living/proc/can_jump()
 	var/threshold_multiplier = max(0.2, 1 - get_cyberpunk_skill_perk_bonus(SKILL_ACROBATICS, 3) * 0.01)
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY))
+		threshold_multiplier = max(0.1, threshold_multiplier * 0.5)
 	return stamina > max_stamina * 0.1 * threshold_multiplier && stamina >= STAMINA_COST_JUMP * threshold_multiplier && !is_exhausted_by_needs()
 
 /mob/living/proc/can_run()
@@ -1246,6 +1488,8 @@
 	return has_starvation_exhaustion() || has_dehydration() || has_sleep_deprivation()
 
 /mob/living/proc/get_cyberpunk_needs_move_slowdown()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		return 0
 	var/slowdown = 0
 	if(has_starvation_exhaustion())
 		slowdown = max(slowdown, 0.25)
@@ -1253,7 +1497,7 @@
 		slowdown = max(slowdown, 0.1)
 
 	if(has_dehydration())
-		slowdown = max(slowdown, 0.25)
+		slowdown = max(slowdown, 0.2)
 	else if(has_strong_thirst())
 		slowdown = max(slowdown, 0.15)
 	else if(has_thirst())
@@ -1264,6 +1508,8 @@
 	return slowdown * get_cyberpunk_survival_penalty_multiplier()
 
 /mob/living/proc/get_cyberpunk_needs_action_slowdown()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		return 0
 	var/slowdown = 0
 	if(has_starvation_exhaustion())
 		slowdown = max(slowdown, 0.25)
@@ -1286,6 +1532,8 @@
 	return slowdown * get_cyberpunk_survival_penalty_multiplier()
 
 /mob/living/proc/get_cyberpunk_needs_check_penalty()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		return 0
 	var/penalty = 0
 	if(has_starvation_exhaustion())
 		penalty += 0.15
@@ -1309,6 +1557,8 @@
 
 /mob/living/proc/get_cyberpunk_needs_stamina_cost_multiplier(source)
 	if(!(source in list("progress", "run", "jump", "vertical_movement", "attack", "parry", "dodge", "defense")))
+		return 1
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
 		return 1
 	var/multiplier = 1
 	if(has_starvation_exhaustion())
@@ -1343,6 +1593,8 @@
 	return multiplier
 
 /mob/living/proc/get_cyberpunk_survival_need_drain_multiplier()
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT) && prob((mind?.get_character_skill_level(SKILL_SURVIVAL) || 0) * 20))
+		return 0
 	return max(0.1, 1 - get_cyberpunk_skill_perk_bonus(SKILL_SURVIVAL, 1) * 0.01)
 
 /mob/living/proc/get_cyberpunk_survival_recovery_multiplier()
@@ -1354,6 +1606,8 @@
 
 /mob/living/proc/get_cyberpunk_endurance_negative_mood_multiplier()
 	var/reduction = max(get_cyberpunk_skill_perk_bonus(SKILL_ENDURANCE, 3), get_cyberpunk_skill_perk_bonus(SKILL_ENDURANCE, 6))
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT))
+		reduction = max(reduction, (mind?.get_character_skill_level(SKILL_ENDURANCE) || 0) * 15)
 	return max(0.1, 1 - reduction * 0.01)
 
 /mob/living/proc/get_cyberpunk_endurance_stamina_penalty_multiplier()
@@ -1451,6 +1705,8 @@
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_weakness_critical_damage_multiplier()
+	if(has_character_giga_perk(ATTRIBUTE_PERCEPTION))
+		return prob(get_cyberpunk_skill_perk_bonus(SKILL_WEAKNESS_ANALYSIS, 2)) ? 6 : 4
 	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_WEAKNESS_ANALYSIS, 2)))
 		return 3
 	return 2
@@ -1482,7 +1738,11 @@
 	return get_cyberpunk_skill_perk_bonus(SKILL_STYLE, 2) > 0
 
 /mob/living/proc/get_cyberpunk_style_body_readout()
-	return span_notice("Style read: mood [round(mood, 0.1)], satiation [get_cyberpunk_hunger_state()], hydration [get_cyberpunk_thirst_state()], tiredness [get_cyberpunk_tiredness_state()].")
+	var/read_mood = round(mood, 0.1)
+	var/read_hunger = get_cyberpunk_hunger_state()
+	var/read_thirst = get_cyberpunk_thirst_state()
+	var/read_tiredness = get_cyberpunk_tiredness_state()
+	return span_notice("Style read: mood [read_mood], satiation [read_hunger], hydration [read_thirst], tiredness [read_tiredness].")
 
 /mob/living/proc/apply_cyberpunk_style_examine_bonus(mob/living/viewer)
 	if(!viewer || viewer == src || style <= 0)
@@ -1641,8 +1901,68 @@
 /mob/living/proc/trigger_hysteria()
 	last_control_loss = world.time
 	time_at_min_mood = 0
-	visible_message(span_warning("[src] loses control!"), span_userdanger("You lose control of yourself."))
+	if(should_trigger_cyberpsychosis())
+		return trigger_cyberpsychosis(TRUE)
+	switch(rand(1, 4))
+		if(1)
+			return trigger_hysteria_stun()
+		if(2)
+			return trigger_hysteria_random_walk()
+		if(3)
+			return trigger_hysteria_random_attack()
+		if(4)
+			return trigger_hysteria_swear()
+	return FALSE
+
+/mob/living/proc/trigger_hysteria_stun()
+	visible_message(span_warning("[src] freezes in a hysterical break!"), span_userdanger("Your body locks up in panic."))
 	Stun(30 SECONDS)
+	return TRUE
+
+/mob/living/proc/trigger_hysteria_random_walk()
+	visible_message(span_warning("[src] staggers away without control!"), span_userdanger("Your legs move on their own."))
+	move_intent = MOVE_INTENT_WALK
+	update_move_intent_slowdown()
+	var/end_time = world.time + HYSTERIA_RANDOM_WALK_DURATION
+	continue_hysteria_random_walk(end_time)
+	return TRUE
+
+/mob/living/proc/continue_hysteria_random_walk(end_time)
+	if(QDELETED(src) || stat >= UNCONSCIOUS || world.time >= end_time || cyberpsychosis_active)
+		return
+	move_intent = MOVE_INTENT_WALK
+	update_move_intent_slowdown()
+	step(src, pick(GLOB.cardinals))
+	addtimer(CALLBACK(src, PROC_REF(continue_hysteria_random_walk), end_time), HYSTERIA_RANDOM_WALK_TICK)
+
+/mob/living/proc/trigger_hysteria_random_attack()
+	var/list/targets = list()
+	for(var/atom/target as anything in oview(1, src))
+		if(target == src)
+			continue
+		if(isliving(target))
+			var/mob/living/living_target = target
+			if(living_target.stat == DEAD)
+				continue
+		targets += target
+	if(!length(targets))
+		return trigger_hysteria_swear()
+	var/atom/target = pick(targets)
+	visible_message(span_warning("[src] lashes out at [target]!"), span_userdanger("You lash out without thinking."))
+	set_combat_mode(TRUE)
+	INVOKE_ASYNC(src, PROC_REF(execute_hysteria_random_attack), target)
+	return TRUE
+
+/mob/living/proc/execute_hysteria_random_attack(atom/target)
+	set waitfor = FALSE
+
+	if(QDELETED(target) || QDELETED(src))
+		return
+	ClickOn(target)
+
+/mob/living/proc/trigger_hysteria_swear()
+	INVOKE_ASYNC(src, TYPE_PROC_REF(/atom/movable, say), message = pick(GLOB.hysteria_phrases), forced = HYSTERIA_TRAIT)
+	return TRUE
 
 // Base mob environment handler for body temperature
 /mob/living/proc/handle_environment(datum/gas_mixture/environment, seconds_per_tick)

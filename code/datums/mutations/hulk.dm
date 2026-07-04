@@ -8,7 +8,7 @@
 	text_gain_indication = span_notice("Ты чувствуешь боль в мышцах!")
 	species_allowed = list(SPECIES_HUMAN) //no skeleton/lizard hulk
 	health_req = 25
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	conflicts = list(/datum/mutation/hulk/ork)
 	var/scream_delay = 50
 	var/last_scream = 0

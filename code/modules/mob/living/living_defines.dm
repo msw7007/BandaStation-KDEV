@@ -390,6 +390,9 @@
 	var/cyberpsychosis_next_ai_tick = 0
 	var/cyberpsychosis_next_implant_tick = 0
 	var/mob/living/cyberpsychosis_target
+	var/datum/hallucination/delusion/cyberpunk_hunger_delusion
+	var/datum/hallucination/nearby_item_delusion/cyberpunk_hunger_food_delusion
+	var/datum/hallucination/nearby_item_delusion/cyberpunk_water_delusion
 	var/last_combat_time = 0
 	/// Cooldown for Trans Travel defensive displacement from modular Cyberpunk protection.
 	var/cyberpunk_next_trans_travel_defense = 0

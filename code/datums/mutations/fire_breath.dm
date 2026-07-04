@@ -7,7 +7,7 @@
 	text_gain_indication = span_notice("Ты ощущаешь жжение в горле!")
 	text_lose_indication = span_notice("Жжение в горле проходит.")
 	power_path = /datum/action/cooldown/spell/cone/staggered/fire_breath
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	energy_coeff = 1
 	power_coeff = 1
 

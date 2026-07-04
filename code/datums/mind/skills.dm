@@ -130,11 +130,23 @@
 		if(CHARACTER_SKILL_POOL_SKILL)
 			switch(skill_datum.skill_kind)
 				if(CHARACTER_SKILL_KIND_PROFESSIONAL)
-					return professional_skill_points >= point_delta
+					return professional_skill_points + skill_points >= point_delta
 				if(CHARACTER_SKILL_KIND_WEAPON)
-					return weapon_skill_points >= point_delta
+					return weapon_skill_points + skill_points >= point_delta
 			return skill_points >= point_delta
 	return TRUE
+
+/datum/mind/proc/can_pay_character_skill_experience(skill, point_delta, free = FALSE)
+	point_delta = normalize_character_skill_number(point_delta)
+	if(point_delta <= 0 || free)
+		return TRUE
+	var/datum/skill/skill_datum = get_character_skill_datum(skill)
+	if(!skill_datum || !skill_datum.is_character_skill())
+		return FALSE
+	var/current_points = get_character_skill_spent_points(skill)
+	var/target_points = current_points + point_delta
+	var/unlocked_points = FLOOR((converted_skill_experience[skill] || 0) / ATTRIBUTE_LEVEL_POINT_EXPERIENCE, 1)
+	return target_points <= unlocked_points
 
 /datum/mind/proc/pay_character_skill_points(skill, point_delta, free = FALSE)
 	point_delta = normalize_character_skill_number(point_delta)
@@ -146,13 +158,17 @@
 	if(skill_datum.point_pool == CHARACTER_SKILL_POOL_SKILL)
 		switch(skill_datum.skill_kind)
 			if(CHARACTER_SKILL_KIND_PROFESSIONAL)
-				professional_skill_points -= point_delta
+				var/professional_payment = min(point_delta, professional_skill_points)
+				professional_skill_points -= professional_payment
+				skill_points -= point_delta - professional_payment
 			if(CHARACTER_SKILL_KIND_WEAPON)
-				weapon_skill_points -= point_delta
+				var/weapon_payment = min(point_delta, weapon_skill_points)
+				weapon_skill_points -= weapon_payment
+				skill_points -= point_delta - weapon_payment
 			else
 				skill_points -= point_delta
 
-/datum/mind/proc/can_set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE)
+/datum/mind/proc/can_set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.uses_perks())
 		return FALSE
@@ -160,24 +176,24 @@
 	if(perk_index < 1 || perk_index > length(skill_datum.perks))
 		return FALSE
 	var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
-	return perk?.can_set_rank(src, new_rank, free, allow_sequence_break)
+	return perk?.can_set_rank(src, new_rank, free, allow_sequence_break, require_experience)
 
-/datum/mind/proc/set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE)
+/datum/mind/proc/set_character_perk_rank(skill, perk_index, new_rank, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.uses_perks())
 		return FALSE
 	perk_index = normalize_character_skill_number(perk_index)
 	var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
-	return perk?.set_rank(src, new_rank, free, allow_sequence_break)
+	return perk?.set_rank(src, new_rank, free, allow_sequence_break, require_experience)
 
-/datum/mind/proc/adjust_character_perk_rank(skill, perk_index, amount = 1, free = FALSE, allow_sequence_break = FALSE)
+/datum/mind/proc/adjust_character_perk_rank(skill, perk_index, amount = 1, free = FALSE, allow_sequence_break = FALSE, require_experience = FALSE)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.uses_perks())
 		return FALSE
 	perk_index = normalize_character_skill_number(perk_index)
 	amount = normalize_character_skill_number(amount)
 	var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
-	return perk?.adjust_rank(src, amount, free, allow_sequence_break)
+	return perk?.adjust_rank(src, amount, free, allow_sequence_break, require_experience)
 
 /datum/mind/proc/has_character_perk(skill, perk_index, required_rank = 1)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
@@ -231,7 +247,7 @@
 	var/datum/skill_perk/perk = skill_datum.get_perk(perk_index)
 	return perk?.get_check_result(src, required_rank, probability)
 
-/datum/mind/proc/set_character_skill_level(skill, new_level, free = FALSE)
+/datum/mind/proc/set_character_skill_level(skill, new_level, free = FALSE, require_experience = FALSE)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
 	if(!skill_datum || !skill_datum.is_character_skill())
 		return FALSE
@@ -241,6 +257,8 @@
 		var/point_delta = new_level - old_level
 		if(!can_pay_character_skill_points(skill, point_delta, free))
 			return FALSE
+		if(require_experience && !can_pay_character_skill_experience(skill, point_delta, free))
+			return FALSE
 		character_skill_levels[skill] = new_level
 		pay_character_skill_points(skill, point_delta, free)
 		return TRUE
@@ -248,6 +266,8 @@
 	var/old_points = get_character_skill_spent_points(skill)
 	var/point_delta = new_level - old_points
 	if(!can_pay_character_skill_points(skill, point_delta, free))
+		return FALSE
+	if(require_experience && !can_pay_character_skill_experience(skill, point_delta, free))
 		return FALSE
 	var/list/perk_ranks = get_character_perk_list(skill)
 	for(var/perk_index in 1 to length(skill_datum.perks))
@@ -260,9 +280,9 @@
 	pay_character_skill_points(skill, point_delta, free)
 	return TRUE
 
-/datum/mind/proc/adjust_character_skill_level(skill, amount = 1, free = FALSE)
+/datum/mind/proc/adjust_character_skill_level(skill, amount = 1, free = FALSE, require_experience = FALSE)
 	amount = normalize_character_skill_number(amount)
-	return set_character_skill_level(skill, get_character_skill_level(skill) + amount, free)
+	return set_character_skill_level(skill, get_character_skill_level(skill) + amount, free, require_experience)
 
 /datum/mind/proc/get_character_skill_check_value(skill, modifier = 0, apply_body_penalty = TRUE)
 	var/datum/skill/skill_datum = get_character_skill_datum(skill)
@@ -290,14 +310,24 @@
 	return skill_datum ? skill_datum.get_perk_power_multiplier(get_character_perk_rank(skill, perk_index)) : 0
 
 /datum/mind/proc/has_character_giga_perk(attribute_id)
-	return has_super_attribute(attribute_id) || !!character_giga_perks[attribute_id]
+	if(has_super_attribute(attribute_id) || !!character_giga_perks[attribute_id])
+		return TRUE
+	var/mob/living/living_current = isliving(current) ? current : null
+	var/status_id = living_current?.get_character_giga_perk_status_id(attribute_id)
+	return status_id && living_current.has_cyberpunk_status_effect(status_id)
 
 /datum/mind/proc/grant_character_giga_perk(attribute_id)
+	if(!(attribute_id in ATTRIBUTE_ALL))
+		return FALSE
 	character_giga_perks[attribute_id] = TRUE
+	var/mob/living/living_current = isliving(current) ? current : null
+	living_current?.sync_character_giga_perk_status_effects()
 	return TRUE
 
 /datum/mind/proc/revoke_character_giga_perk(attribute_id)
 	character_giga_perks -= attribute_id
+	var/mob/living/living_current = isliving(current) ? current : null
+	living_current?.sync_character_giga_perk_status_effects()
 	return TRUE
 
 /datum/mind/proc/get_weapon_skill_damage_multiplier(skill)

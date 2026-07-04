@@ -13,6 +13,9 @@
 
 ///Handles opening and closing the box.
 /datum/action/item_action/agent_box/do_effect(trigger_flags)
+	var/obj/item/implant/implant_target = target
+	if(istype(implant_target) && !implant_target.can_activate_implant())
+		return FALSE
 	. = ..()
 	if(!.)
 		return FALSE

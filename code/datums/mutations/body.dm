@@ -4,7 +4,7 @@
 /datum/mutation/epilepsy
 	name = "Epilepsy"
 	desc = "Генетический дефект, из-за которого случаются приступы эпилепсии."
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	quality = NEGATIVE
 	text_gain_indication = span_danger("Ты ощущаешь головную боль.")
 	synchronizer_coeff = 1
@@ -52,7 +52,7 @@
 /datum/mutation/bad_dna
 	name = "Unstable DNA"
 	desc = "Странная мутация, которая приводит к случайным мутациям у её обладателя."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	quality = NEGATIVE
 	text_gain_indication = span_danger("Ты чувствуешь себя как-то старнно.")
 	locked = TRUE
@@ -83,7 +83,7 @@
 /datum/mutation/cough
 	name = "Cough"
 	desc = "Хронический кашель."
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	quality = MINOR_NEGATIVE
 	text_gain_indication = span_danger("Ты начинаешь кашлять.")
 	synchronizer_coeff = 1
@@ -101,7 +101,7 @@
 /datum/mutation/paranoia
 	name = "Paranoia"
 	desc = "Субъект, обладающий данной мутацией, слегка напуган и может испытывать галлюцинации."
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	quality = NEGATIVE
 	text_gain_indication = span_danger("Ты слышишь эхо криков в закромах своего разума ..")
 	text_lose_indication = span_notice("Крики в твоей голове затихают.")
@@ -118,7 +118,7 @@
 	desc = "Считается, что данная мутация является причиной карликовости."
 	quality = POSITIVE
 	difficulty = 16
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	conflicts = list(/datum/mutation/gigantism, /datum/mutation/acromegaly)
 	locked = TRUE // Default intert species for now, so locked from regular pool.
 
@@ -140,7 +140,7 @@
 	desc = "Считается, что данная мутация вызвана акромегалией или 'необычно высоким ростом'."
 	quality = MINOR_NEGATIVE
 	difficulty = 16
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	synchronizer_coeff = 1
 	conflicts = list(/datum/mutation/dwarfism)
 
@@ -199,7 +199,7 @@
 /datum/mutation/clumsy
 	name = "Clumsiness"
 	desc = "Данный геном подавляет определённые функции мозга, из-за чего его обладатель выглядит неуклюжим."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	quality = MINOR_NEGATIVE
 	text_gain_indication = span_danger("Тебя охватывает легкомыслие")
 	mutation_traits = list(TRAIT_CLUMSY)
@@ -230,7 +230,7 @@
 /datum/mutation/deaf
 	name = "Deafness"
 	desc = "Обладатель данного генома полностью глухой."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	quality = NEGATIVE
 	text_gain_indication = span_danger("Ты ничего не слышишь.")
 	mutation_traits = list(TRAIT_DEAF)
@@ -242,7 +242,7 @@
 	text_gain_indication = span_green("Ты чувствуешь необычно по-обезьяни.")
 	text_lose_indication = span_notice("Ты чувствуешь себя как раньше.")
 	quality = NEGATIVE
-	instability = NEGATIVE_STABILITY_MAJOR // mmmonky
+	instability = HUMANOIDITY_RECOVERY_MAJOR // mmmonky
 	remove_on_aheal = FALSE
 	locked = TRUE //Species specific, keep out of actual gene pool
 	var/datum/species/original_species = /datum/species/human
@@ -275,7 +275,7 @@
 	desc = "Вы будете излучать свет случайного цвета и интенсивности."
 	quality = POSITIVE
 	text_gain_indication = span_notice("Твоя кожа начинает немного светиться.")
-	instability = POSITIVE_INSTABILITY_MINI
+	instability = HUMANOIDITY_LOAD_MINI
 	power_coeff = 1
 	conflicts = list(/datum/mutation/glow/anti)
 	var/glow_power = 2
@@ -312,7 +312,7 @@
 	desc = "Ваша кожа начинает притягивать и поглащать окружающий вас свет, создавая темноту вокруг вас."
 	text_gain_indication = span_notice("Свет вокруг тебя понемногу пропадает.")
 	conflicts = list(/datum/mutation/glow)
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	locked = TRUE
 	glow_power = -1.5
 
@@ -324,7 +324,7 @@
 	desc = "У обладателя данного гена мышцы слегка увеличиваются. Commonly seen in top-ranking boxers."
 	quality = POSITIVE
 	text_gain_indication = span_notice("Ты чувствуешь себя сильнее.")
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	difficulty = 16
 	mutation_traits = list(TRAIT_STRENGTH)
 
@@ -332,7 +332,7 @@
 	name = "Stimmed"
 	desc = "Химический баланс обладателя данного генома становится более надёжным."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MINI
+	instability = HUMANOIDITY_LOAD_MINI
 	text_gain_indication = span_notice("Ты ощущаешь странное чувство... Это баланс?")
 	difficulty = 16
 	mutation_traits = list(TRAIT_STIMMED)
@@ -344,7 +344,7 @@
 	text_gain_indication = span_notice("Кончики твоих пальцев немеют.")
 	text_lose_indication = span_notice("Ты снова чувствуешь кончики своих пальцев.")
 	difficulty = 16
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	mutation_traits = list(TRAIT_SHOCKIMMUNE)
 
 /datum/mutation/fire
@@ -359,7 +359,7 @@
 	power_coeff = 1
 
 /datum/mutation/fire/on_life(seconds_per_tick)
-	if(SPT_PROB((0.05+(100-dna.stability)/19.5) * GET_MUTATION_SYNCHRONIZER(src), seconds_per_tick))
+	if(SPT_PROB((0.05 + (HUMANOIDITY_DEFAULT - dna.get_effective_humanoidity()) / 19.5) * GET_MUTATION_SYNCHRONIZER(src), seconds_per_tick))
 		owner.adjust_fire_stacks(2 * GET_MUTATION_POWER(src))
 		owner.ignite_mob()
 
@@ -381,7 +381,7 @@
 	text_gain_indication = span_warning("Пространство вокруг тебя тошнотворно искажается.")
 	text_lose_indication = span_notice("Пространство вокруг тебя возвращается в норму.")
 	difficulty = 18//high so it's hard to unlock and abuse
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	synchronizer_coeff = 1
 	energy_coeff = 1
 	power_coeff = 1
@@ -407,7 +407,7 @@
 /datum/mutation/acidflesh
 	name = "Acidic Flesh"
 	desc = "Под кожными покровами субъекта накапливаются кислотные реагенты. Зачастую это смертельно."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	quality = NEGATIVE
 	text_gain_indication = span_userdanger("Ужасное ощущение жжения охватывает тебя, когда твоя плоть превращается в кислоту!")
 	text_lose_indication = span_notice("Тебя окутывает чувство облегчения, когда плоть возвращается в нормальное состояние.")
@@ -428,7 +428,7 @@
 /datum/mutation/spastic
 	name = "Spastic"
 	desc = "Субъект страдает от спазма в мышцах."
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	quality = NEGATIVE
 	text_gain_indication = span_warning("Ты начинаешь дрожать.")
 	text_lose_indication = span_notice("Твое дрожание проходит.")
@@ -448,7 +448,7 @@
 /datum/mutation/extrastun
 	name = "Two Left Feet"
 	desc = "Мутация заменяет правую ногу еще одной левой ногой. Симптомы включают в себя поцелуй пола при каждом шаге."
-	instability = NEGATIVE_STABILITY_MODERATE
+	instability = HUMANOIDITY_RECOVERY_MODERATE
 	quality = NEGATIVE
 	text_gain_indication = span_warning("Твоя правая нога, кажется, стала леветь.")
 	text_lose_indication = span_notice("Твоя правая нога, кажется, снова права.")
@@ -480,7 +480,7 @@
 /datum/mutation/martyrdom
 	name = "Internal Martyrdom"
 	desc = "Мутация разрушающая тело вблизи смерти. Не причиняет вреда, но ОЧЕНЬ дезориентирует."
-	instability = NEGATIVE_STABILITY_MAJOR // free stability >:)
+	instability = HUMANOIDITY_RECOVERY_MAJOR // free humanoidity recovery >:)
 	locked = TRUE
 	quality = POSITIVE //not that cloning will be an option a lot but generally lets keep this around i guess?
 	text_gain_indication = span_warning("Ты ощущаешь невыносимую изжогу.")
@@ -528,7 +528,7 @@
 /datum/mutation/headless
 	name = "H.A.R.S."
 	desc = "Мутация заставляет тело отторгать голову, мозг субъекта с данной мутацией переносится в грудь. Расшифровывается как Синдром Аллергического Отторжения Головы. Удаление данной мутации очень опасно, хоть она и регенерирует не жизненно важные органы головы."
-	instability = NEGATIVE_STABILITY_MAJOR
+	instability = HUMANOIDITY_RECOVERY_MAJOR
 	difficulty = 12 //pretty good for traitors
 	quality = NEGATIVE //holy shit no eyes or tongue or ears
 	text_gain_indication = span_warning("Что-то здесь не так.")
@@ -585,7 +585,7 @@
 	name = "Hypermetabolic Blood"
 	desc = "Кровь субъекта является гиперметаболической, вызывая ускоренную её выработку."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	text_gain_indication = span_notice("Ты ощущаешь, как твоё сердцебиение ускоряется.")
 	text_lose_indication = span_notice("Твое сердцебиение медленно замедляется.")
 	difficulty = 16
@@ -638,7 +638,7 @@
 	desc = "Тело субъекта становится способным переварить камни и минералы."
 	quality = POSITIVE
 	locked = TRUE
-	instability = POSITIVE_INSTABILITY_MINI
+	instability = HUMANOIDITY_LOAD_MINI
 	text_gain_indication = span_notice("Ты ощущаешь аппетит к камням.")
 	text_lose_indication = span_notice("Ты можешь вернуться к нормальной еде.")
 	difficulty = 12
@@ -650,7 +650,7 @@
 	name = "Rock Absorber"
 	desc = "The subject's body is able to digest rocks and minerals, taking on their properties."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MAJOR
+	instability = HUMANOIDITY_LOAD_MAJOR
 	text_gain_indication = span_notice("You feel a supreme craving for rocks.")
 	text_lose_indication = span_notice("You could go for a normal meal.")
 	mutation_traits = list(TRAIT_ROCK_EATER, TRAIT_ROCK_METAMORPHIC)
@@ -670,7 +670,7 @@
 	desc = "Ваше тело может выйти за рамки лимитов обычной человеческой выносливости. \
 		Однако, нарушение данных лимитов может привести к серьёзным травмам вашего тела."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	text_gain_indication = span_notice("Ты ощущаешь себя непреклонным.")
 	text_lose_indication = span_notice("Ты внезапно чувствуешь себя как обычный человек.")
 	difficulty = 24

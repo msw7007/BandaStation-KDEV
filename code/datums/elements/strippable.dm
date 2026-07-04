@@ -407,6 +407,9 @@
 	if(isliving(user))
 		var/mob/living/living_user = user
 		living_user.reward_character_check_experience(SKILL_THEFT, max(1, item.w_class || 1), FALSE, 1)
+		if(living_user.has_character_giga_perk(ATTRIBUTE_CHARISMA) && prob(living_user.get_character_skill_level(SKILL_THEFT) * 20))
+			living_user.apply_cyberpunk_evasion_invisibility(5 SECONDS)
+			to_chat(living_user, span_notice("You vanish into the crowd after the theft."))
 
 	user.log_message("has stripped [key_name(source)] of [item].", LOG_ATTACK, color="red")
 	source.log_message("has been stripped of [item] by [key_name(user)].", LOG_VICTIM, color="orange", log_globally=FALSE)

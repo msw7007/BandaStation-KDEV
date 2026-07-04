@@ -54,13 +54,13 @@
 		mutation_names += mutation?.name || "[mutation_type]"
 	return english_list(mutation_names)
 
-/obj/item/dnainjector/proc/get_mutation_instability_text(list/mutation_types)
+/obj/item/dnainjector/proc/get_mutation_humanoidity_text(list/mutation_types)
 	var/list/mutation_data = list()
 	for(var/mutation_type in mutation_types)
 		var/datum/mutation/mutation = GET_INITIALIZED_MUTATION(mutation_type)
 		if(!mutation)
 			continue
-		mutation_data += "[mutation.name] ([mutation.instability >= 0 ? "+" : ""][mutation.instability] stability)"
+		mutation_data += "[mutation.name] ([mutation.instability >= 0 ? "+" : ""][mutation.instability] humanoidity load)"
 	return english_list(mutation_data)
 
 /obj/item/dnainjector/examine(mob/user)
@@ -76,11 +76,11 @@
 		. += span_notice("Genetic payload: identity/profile rewrite data present.")
 	if(analysis_info >= 40)
 		if(length(add_mutations))
-			. += span_notice("Mutation stability load: [get_mutation_instability_text(add_mutations)].")
+			. += span_notice("Mutation humanoidity load: [get_mutation_humanoidity_text(add_mutations)].")
 		if(length(remove_mutations))
-			. += span_notice("Recovery target stability: [get_mutation_instability_text(remove_mutations)].")
+			. += span_notice("Recovery target humanoidity: [get_mutation_humanoidity_text(remove_mutations)].")
 	if(analysis_info >= 60)
-		. += span_notice("Humanoidity note: injector mutations are handled through TG mutation stability; recovery injectors restore it only by removing the matching mutation source.")
+		. += span_notice("Humanoidity note: injector mutations affect humanoidity through their mutation load; recovery injectors restore it only by removing the matching mutation source.")
 
 /obj/item/dnainjector/proc/inject(mob/living/carbon/target, mob/user)
 	if(!target.can_mutate())

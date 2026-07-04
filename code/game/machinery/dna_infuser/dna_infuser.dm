@@ -62,7 +62,7 @@
 		if(ishuman(occupant))
 			var/mob/living/carbon/human/human_occupant = occupant
 			if(human_occupant.dna)
-				. += span_notice("Humanoidity: [round(human_occupant.dna.get_effective_genetic_stability(), 0.1)]/[HUMANOIDITY_DEFAULT] (raw [round(human_occupant.dna.humanoidity, 0.1)], TG stability [round(human_occupant.dna.stability, 0.1)], stabilized +[round(human_occupant.dna.humanoidity_stabilized_bonus, 0.1)]).")
+				. += span_notice("Humanoidity: [round(human_occupant.dna.get_effective_humanoidity(), 0.1)]/[HUMANOIDITY_DEFAULT] (raw [round(human_occupant.dna.humanoidity, 0.1)], boosted +[round(human_occupant.dna.humanoidity_stabilized_bonus, 0.1)]).")
 	if(!infusing_from)
 		. += span_notice("Missing [span_bold("an infusion source")].")
 	else
@@ -74,7 +74,7 @@
 	. += span_notice("Alt-click to eject the infusion source, if one is inside.")
 	if(infusing_from && (analysis_info >= 20 || get_analysis_level(user) >= CHARACTER_SKILL_LEVEL_SKILLED))
 		var/datum/infuser_entry/analyzed_entry = infusing_from.get_infusion_entry()
-		. += span_notice("Analysis: [analyzed_entry.infuse_mob_name], tier [analyzed_entry.tier], genetic stability cost [analyzed_entry.get_humanoidity_cost()].")
+		. += span_notice("Analysis: [analyzed_entry.infuse_mob_name], tier [analyzed_entry.tier], humanoidity cost [analyzed_entry.get_humanoidity_cost()].")
 		if(analysis_info >= 40)
 			. += span_notice("Likely adaptation: [analyzed_entry.infusion_desc].")
 		if(analysis_info >= 60 && length(analyzed_entry.output_organs))

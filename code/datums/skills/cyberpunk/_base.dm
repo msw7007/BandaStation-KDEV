@@ -187,7 +187,7 @@
 	if(!target?.is_cyberpunk_structure_target())
 		return 0
 	var/analysis_bonus = target.is_cyberpunk_recently_analyzed() ? get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3) : 0
-	return max(analysis_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 5))
+	return analysis_bonus
 
 /mob/living/proc/get_cyberpunk_structure_salvage_amount(atom/target, base_amount)
 	if(base_amount <= 0)
@@ -266,6 +266,62 @@
 	if(!target)
 		return list()
 	return target.get_cyberpunk_diagnostic_data(src)
+
+/mob/living/proc/get_cyberpunk_analysis_time_multiplier()
+	return 1 / max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 1) * 0.01)
+
+/proc/get_cyberpunk_science_techweb()
+	return locate(/datum/techweb/science) in SSresearch.techwebs
+
+/mob/living/proc/try_cyberpunk_analysis_research_reward(atom/target, chance, require_new_type = FALSE)
+	if(!target || !mind || chance <= 0)
+		return FALSE
+	if(require_new_type)
+		if(mind.cyberpunk_analyzed_typepaths[target.type])
+			return FALSE
+		mind.cyberpunk_analyzed_typepaths[target.type] = TRUE
+	if(!prob(chance))
+		return FALSE
+	var/datum/techweb/science/science_web = get_cyberpunk_science_techweb()
+	if(!science_web)
+		return FALSE
+	var/list/matching_designs = list()
+	var/list/locked_designs = list()
+	for(var/design_id in SSresearch.techweb_designs)
+		if(science_web.researched_designs[design_id])
+			continue
+		var/datum/design/design = SSresearch.techweb_design_by_id(design_id)
+		if(!design?.build_path)
+			continue
+		locked_designs += design_id
+		if(design.build_path == target.type)
+			matching_designs += design_id
+	if(length(matching_designs))
+		var/design_id = pick(matching_designs)
+		var/datum/design/design = SSresearch.techweb_design_by_id(design_id)
+		if(science_web.add_design_by_id(design_id, TRUE))
+			to_chat(src, span_notice("Your analysis reconstructs the design pattern for [design.name]."))
+			reward_character_check_experience(SKILL_ANALYSIS, 5, FALSE, 2)
+			return TRUE
+	var/list/available_nodes = list()
+	for(var/node_id in science_web.available_nodes)
+		if(!science_web.researched_nodes[node_id])
+			available_nodes += node_id
+	if(length(available_nodes))
+		var/node_id = pick(available_nodes)
+		var/datum/techweb_node/node = SSresearch.techweb_node_by_id(node_id)
+		if(science_web.research_node_id(node_id, TRUE, FALSE, FALSE, target))
+			to_chat(src, span_notice("Your analysis unlocks a useful technology pattern: [node.display_name]."))
+			reward_character_check_experience(SKILL_ANALYSIS, 5, FALSE, 2)
+			return TRUE
+	if(length(locked_designs))
+		var/design_id = pick(locked_designs)
+		var/datum/design/design = SSresearch.techweb_design_by_id(design_id)
+		if(science_web.add_design_by_id(design_id, TRUE))
+			to_chat(src, span_notice("Your analysis reconstructs the design pattern for [design.name]."))
+			reward_character_check_experience(SKILL_ANALYSIS, 5, FALSE, 2)
+			return TRUE
+	return FALSE
 
 /mob/living/proc/get_cyberpunk_medical_scan_time_multiplier(atom/target, base_time = 10 SECONDS)
 	var/highest_bonus = max(
@@ -348,6 +404,15 @@
 /mob/living/proc/get_cyberpunk_mining_hidden_resource_chance()
 	return get_cyberpunk_skill_perk_bonus(SKILL_MINING, 3)
 
+/mob/living/proc/get_cyberpunk_mining_resource_quality()
+	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_3")))
+		return 5
+	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_2")))
+		return 4
+	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_MINING, 4, "value_1")))
+		return 3
+	return 0
+
 /mob/living/proc/get_cyberpunk_cooking_manual_time_multiplier()
 	return 1 / max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_1") * 0.01)
 
@@ -398,6 +463,8 @@
 	return max(0, 20 - get_cyberpunk_skill_perk_bonus(SKILL_GARDENING, 1))
 
 /mob/living/proc/get_cyberpunk_stamina_cost_multiplier(source)
+	if(has_character_giga_perk(ATTRIBUTE_SPIRIT) && prob(get_character_skill_level(SKILL_ATHLETICS) * 15))
+		return 0
 	var/reduction = get_cyberpunk_skill_perk_bonus(SKILL_ATHLETICS, 1)
 	var/spirit_reduction = max(0, get_attribute_value(ATTRIBUTE_SPIRIT) - ATTRIBUTE_DEFAULT) * 2
 	return max(0.1, 1 + (reduction - spirit_reduction) * 0.01)
@@ -416,6 +483,8 @@
 
 /mob/living/proc/roll_cyberpunk_fortitude_knockdown_resist()
 	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_FORTITUDE, 6, "value_2")
+	if(has_character_giga_perk(ATTRIBUTE_STRENGTH))
+		chance = max(chance, get_character_skill_level(SKILL_FORTITUDE) * 15)
 	return chance > 0 && prob(chance)
 
 /mob/living/proc/get_cyberpunk_fortitude_organ_health_multiplier()
@@ -490,7 +559,11 @@
 	return max(0, get_attribute_value(ATTRIBUTE_STRENGTH)) * bonus * 0.01
 
 /mob/living/proc/roll_cyberpunk_heavy_weapon_wound(obj/item/weapon)
-	if(!weapon || !mind || !weapon.is_cyberpunk_heavy_weapon())
+	if(!weapon || !mind)
+		return FALSE
+	if(has_character_giga_perk(ATTRIBUTE_STRENGTH) && weapon.is_cyberpunk_combat_weapon())
+		return prob(max(5, get_character_skill_level(SKILL_HEAVY_WEAPON) * 15))
+	if(!weapon.is_cyberpunk_heavy_weapon())
 		return FALSE
 	var/chance = get_cyberpunk_skill_perk_bonus(SKILL_HEAVY_WEAPON, 5)
 	return chance > 0 && prob(chance)
@@ -533,6 +606,8 @@
 		if(armour_penetration > armor_rating)
 			pierced_armor = TRUE
 	if(!pierced_armor || !can_force_wound)
+		if(can_force_wound && attacker.has_character_giga_perk(ATTRIBUTE_STRENGTH))
+			cause_wound_of_type_and_severity(WOUND_BLUNT, hit_part, WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_SEVERE, wound_source = weapon)
 		return
 	var/wounding_type = attacker.get_cyberpunk_wounding_type_from_hit(damagetype, sharpness, armor_flag, brute_type, burn_type)
 	cause_wound_of_type_and_severity(wounding_type, hit_part, WOUND_SEVERITY_MODERATE, wound_source = weapon)
@@ -598,6 +673,8 @@
 /mob/living/proc/roll_cyberpunk_weapon_free_repeat(obj/item/weapon)
 	if(!weapon || !mind)
 		return FALSE
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY) && weapon.is_cyberpunk_combat_weapon())
+		return prob(get_character_skill_level(SKILL_LIGHT_WEAPON) * 15)
 	if(get_cyberpunk_skill_perk_bonus(SKILL_LIGHT_WEAPON, 3) <= 0)
 		return FALSE
 	if(weapon.w_class > WEIGHT_CLASS_NORMAL)
@@ -706,6 +783,16 @@
 		return FALSE
 	return prob(chance)
 
+/mob/living/proc/try_cyberpunk_giga_perception_blind(mob/living/target, skill_path)
+	if(!target || target == src || !has_character_giga_perk(ATTRIBUTE_PERCEPTION))
+		return FALSE
+	var/blind_chance = (mind?.get_character_skill_level(skill_path) || 0) * 15
+	if(blind_chance <= 0 || !prob(blind_chance))
+		return FALSE
+	target.adjust_temp_blindness_up_to(2 SECONDS, 10 SECONDS)
+	to_chat(src, span_notice("Your eagle-eyed strike blinds [target.declent_ru(ACCUSATIVE)]."))
+	return TRUE
+
 /mob/living/proc/get_cyberpunk_electric_shock_multiplier()
 	var/electric_safety = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 3)
 	if(electric_safety <= 0)
@@ -749,6 +836,9 @@
 		return 0
 	return round(quality_bonus / 25)
 
+/mob/living/proc/get_cyberpunk_invention_resource_save_chance()
+	return get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 5)
+
 /mob/living/proc/apply_cyberpunk_invention_quality_bonus(obj/item/created)
 	if(!created)
 		return FALSE
@@ -784,6 +874,7 @@
 			target.Stun(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_3") * 1 SECONDS)
 		if(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_EYES)
 			target.set_confusion_if_lower(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 4, "value_4") * 1 SECONDS)
+			try_cyberpunk_giga_perception_blind(target, SKILL_PRECISE_UNARMED)
 		if(BODY_ZONE_CHEST)
 			if(prob(get_cyberpunk_skill_perk_bonus(SKILL_PRECISE_UNARMED, 6, "value_2")))
 				target.Knockdown(2 SECONDS)
@@ -804,6 +895,8 @@
 	return TRUE
 
 /mob/living/proc/get_cyberpunk_fast_unarmed_attack_cooldown(charged_intent = null)
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY) && prob(get_character_skill_level(SKILL_FAST_UNARMED) * 15))
+		return 0
 	var/cooldown = charged_intent == "kick" ? 1.5 SECONDS : 1.3 SECONDS
 	cooldown -= get_character_skill_level(SKILL_FAST_UNARMED) * (0.1 SECONDS)
 	var/speed_bonus = get_cyberpunk_skill_perk_bonus(SKILL_FAST_UNARMED, 1)
@@ -857,6 +950,9 @@
 		var/knocked_down = target.Knockdown(SHOVE_KNOCKDOWN_HUMAN, daze_amount = 3 SECONDS)
 		if(knocked_down)
 			to_chat(src, span_notice("Ваш пинок сбивает [target.declent_ru(ACCUSATIVE)] с ног."))
+	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY) && prob(get_character_skill_level(SKILL_ACROBATICS) * 15))
+		target.Knockdown(SHOVE_KNOCKDOWN_HUMAN, daze_amount = 3 SECONDS)
+		to_chat(src, span_notice("Your acrobatic strike drops [target.declent_ru(ACCUSATIVE)]."))
 	if(get_attribute_value(ATTRIBUTE_STRENGTH) >= 10 && target != src)
 		var/throw_dir = get_dir(src, target) || dir
 		if(throw_dir)
@@ -882,6 +978,11 @@
 /mob/living/proc/apply_cyberpunk_power_unarmed_effects(mob/living/target)
 	if(!target)
 		return FALSE
+	if(has_character_giga_perk(ATTRIBUTE_STRENGTH) && prob(get_character_skill_level(SKILL_POWER_UNARMED) * 15) && iscarbon(target))
+		var/mob/living/carbon/carbon_target = target
+		var/obj/item/bodypart/hit_part = carbon_target.get_bodypart(check_hit_limb_zone_name(zone_selected || BODY_ZONE_CHEST))
+		if(hit_part)
+			carbon_target.cause_wound_of_type_and_severity(WOUND_BLUNT, hit_part, WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_SEVERE, wound_source = "power unarmed strike")
 	if(prob(get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 4)))
 		target.adjust_staggered_up_to(4 SECONDS, 10 SECONDS)
 	if(target.has_status_effect(/datum/status_effect/staggered) && prob(get_cyberpunk_skill_perk_bonus(SKILL_POWER_UNARMED, 5)))

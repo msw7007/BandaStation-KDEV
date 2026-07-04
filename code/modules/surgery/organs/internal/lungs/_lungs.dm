@@ -287,13 +287,18 @@
 /obj/item/organ/lungs/proc/safe_oxygen(mob/living/carbon/breather, datum/gas_mixture/breath, old_o2_pp)
 	breather.clear_alert(ALERT_TOO_MUCH_OXYGEN)
 
+/obj/item/organ/lungs/proc/add_inhaled_reagent(mob/living/carbon/breather, datum/reagent/reagent_type, amount)
+	if(!breather?.reagents || amount <= 0)
+		return 0
+	return breather.reagents.add_reagent(reagent_type, amount * breather.get_organ_efficiency(ORGAN_SLOT_LUNGS))
+
 /// Behaves like Oxygen with 8X efficacy, but metabolizes into a reagent.
 /obj/item/organ/lungs/proc/consume_pluoxium(mob/living/carbon/breather, datum/gas_mixture/breath, pluoxium_pp, old_pluoxium_pp)
 	breathe_gas_volume(breath, /datum/gas/pluoxium)
 	// Metabolize to reagent.
 	if(pluoxium_pp > gas_stimulation_min)
 		var/existing = breather.reagents.get_reagent_amount(/datum/reagent/pluoxium)
-		breather.reagents.add_reagent(/datum/reagent/pluoxium, max(0, 1 - existing))
+		add_inhaled_reagent(breather, /datum/reagent/pluoxium, max(0, 1 - existing))
 
 /// If the lungs need Nitrogen to breathe properly, N2 is exchanged with CO2.
 /obj/item/organ/lungs/proc/breathe_nitro(mob/living/carbon/breather, datum/gas_mixture/breath, nitro_pp, old_nitro_pp)
@@ -393,7 +398,7 @@
 /// Too much funny gas, time to get brain damage
 /obj/item/organ/lungs/proc/too_much_bz(mob/living/carbon/breather, datum/gas_mixture/breath, bz_pp, old_bz_pp)
 	if(bz_pp > BZ_trip_balls_min)
-		breather.reagents.add_reagent(/datum/reagent/bz_metabolites, clamp(bz_pp, 1, 5))
+		add_inhaled_reagent(breather, /datum/reagent/bz_metabolites, clamp(bz_pp, 1, 5))
 	if(bz_pp > BZ_brain_damage_min && prob(33))
 		breather.adjust_organ_loss(ORGAN_SLOT_BRAIN, 3, 150, ORGAN_ORGANIC)
 
@@ -402,7 +407,7 @@
 	// Inhale Freon. Exhale nothing.
 	breathe_gas_volume(breath, /datum/gas/freon)
 	if (freon_pp > gas_stimulation_min)
-		breather.reagents.add_reagent(/datum/reagent/freon, 1)
+		add_inhaled_reagent(breather, /datum/reagent/freon, 1)
 	if (prob(freon_pp))
 		to_chat(breather, span_alert("Your mouth feels like it's burning!"))
 	if (freon_pp > 40)
@@ -421,7 +426,7 @@
 	// Metabolize to reagent.
 	if(halon_pp > gas_stimulation_min)
 		breather.adjust_oxy_loss(5)
-		breather.reagents.add_reagent(/datum/reagent/halon, max(0, 1 - breather.reagents.get_reagent_amount(/datum/reagent/halon)))
+		add_inhaled_reagent(breather, /datum/reagent/halon, max(0, 1 - breather.reagents.get_reagent_amount(/datum/reagent/halon)))
 
 /// Sleeping gas with healing properties.
 /obj/item/organ/lungs/proc/consume_healium(mob/living/carbon/breather, datum/gas_mixture/breath, healium_pp, old_healium_pp)
@@ -439,7 +444,7 @@
 		breather.Sleeping(rand(3 SECONDS, 5 SECONDS))
 	// Metabolize to reagent when concentration is high enough.
 	if(healium_pp > healium_sleep_min)
-		breather.reagents.add_reagent(/datum/reagent/healium, max(0, 1 - breather.reagents.get_reagent_amount(/datum/reagent/healium)))
+		add_inhaled_reagent(breather, /datum/reagent/healium, max(0, 1 - breather.reagents.get_reagent_amount(/datum/reagent/healium)))
 
 /// Lose healium side effects
 /obj/item/organ/lungs/proc/lose_healium(mob/living/carbon/breather, datum/gas_mixture/breath, old_healium_pp)
@@ -469,7 +474,7 @@
 	breathe_gas_volume(breath, /datum/gas/hypernoblium)
 	if (hypernob_pp > gas_stimulation_min)
 		var/existing = breather.reagents.get_reagent_amount(/datum/reagent/hypernoblium)
-		breather.reagents.add_reagent(/datum/reagent/hypernoblium,max(0, 1 - existing))
+		add_inhaled_reagent(breather, /datum/reagent/hypernoblium, max(0, 1 - existing))
 
 /// Breathing in the stink gas
 /obj/item/organ/lungs/proc/too_much_miasma(mob/living/carbon/breather, datum/gas_mixture/breath, miasma_pp, old_miasma_pp)
@@ -565,10 +570,10 @@
 	// Metabolize to reagents.
 	if (nitrium_pp > 5)
 		var/existing = breather.reagents.get_reagent_amount(/datum/reagent/nitrium_low_metabolization)
-		breather.reagents.add_reagent(/datum/reagent/nitrium_low_metabolization, max(0, 2 - existing))
+		add_inhaled_reagent(breather, /datum/reagent/nitrium_low_metabolization, max(0, 2 - existing))
 	if (nitrium_pp > 10)
 		var/existing = breather.reagents.get_reagent_amount(/datum/reagent/nitrium_high_metabolization)
-		breather.reagents.add_reagent(/datum/reagent/nitrium_high_metabolization, max(0, 2 - existing))
+		add_inhaled_reagent(breather, /datum/reagent/nitrium_high_metabolization, max(0, 2 - existing))
 
 /// Radioactive, green gas. Toxin damage, and a radiation chance
 /obj/item/organ/lungs/proc/too_much_tritium(mob/living/carbon/breather, datum/gas_mixture/breath, trit_pp, old_trit_pp)
@@ -591,7 +596,7 @@
 	// Metabolize to reagent.
 	if(zauker_pp > gas_stimulation_min)
 		var/existing = breather.reagents.get_reagent_amount(/datum/reagent/zauker)
-		breather.reagents.add_reagent(/datum/reagent/zauker, max(0, 1 - existing))
+		add_inhaled_reagent(breather, /datum/reagent/zauker, max(0, 1 - existing))
 
 /**
  * This proc tests if the lungs can breathe, if they can breathe a given gas mixture, and throws/clears gas alerts.

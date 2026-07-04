@@ -2834,6 +2834,9 @@
 				handle_sprint_step(direct)
 			else
 				stop_sprinting("too tired")
+		if(has_starvation_exhaustion() && prob(2))
+			Knockdown(2 SECONDS)
+			visible_message(span_warning("[src] stumbles from hunger."), span_userdanger("Hunger makes your legs buckle."))
 		var/blood_flow = get_bleed_rate()
 		var/health_check = body_position == LYING_DOWN && prob(get_brute_loss() * 200 / maxHealth)
 		var/bleeding_check = blood_flow > 3 && prob(blood_flow * 16)
@@ -3107,6 +3110,9 @@
 		return FALSE
 	if(!isnull(user) && src == user)
 		return FALSE
+	if(stealth_mode && chameleon >= STEALTH_SOUND_MUTE_THRESHOLD)
+		create_stealth_camera_trace()
+		return FALSE
 	if(invisibility || alpha <= 50)//cloaked
 		return FALSE
 	if(!isturf(loc)) //The reason why we don't just use get_turf is because they could be in a closet, disposals, or a vehicle.
@@ -3122,6 +3128,12 @@
 	if(!SScameras.is_visible_by_cameras(src))
 		return FALSE
 	return TRUE
+
+/mob/living/proc/create_stealth_camera_trace()
+	var/turf/current_turf = get_turf(src)
+	if(!current_turf)
+		return
+	new /obj/effect/temp_visual/dir_setting/ninja/shadow(current_turf, dir)
 
 /mob/living/proc/harvest(mob/living/user) //used for extra objects etc. in butchering
 	return

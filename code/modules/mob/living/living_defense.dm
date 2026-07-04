@@ -133,7 +133,7 @@
 		spend_stamina(STAMINA_COST_DODGE, "dodge")
 		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [proj.declent_ru(ACCUSATIVE)]!"), span_notice("You dodge [proj.declent_ru(ACCUSATIVE)]."))
 		reward_character_check_experience(SKILL_EVASION, max(1, proj.damage), FALSE, 1)
-		handle_cyberpunk_successful_dodge(proj.firer, proj.declent_ru(ACCUSATIVE))
+		handle_cyberpunk_successful_dodge(proj.firer, proj.declent_ru(ACCUSATIVE), incoming_damage = proj.damage)
 		return BULLET_ACT_BLOCK
 
 	var/hit_limb_zone = check_hit_limb_zone_name(def_zone)
@@ -179,6 +179,7 @@
 		var/mob/living/living_firer = proj.firer
 		var/obj/item/fired_weapon = proj.fired_from
 		apply_cyberpunk_heavy_weapon_armor_effects(living_firer, fired_weapon, def_zone, proj.armor_flag, proj.armour_penetration, proj.damage_type, proj.sharpness, projectile_brute_type)
+		living_firer.try_cyberpunk_giga_perception_blind(src, SKILL_PRECISE_WEAPON)
 
 	if(proj.damage_type == BRUTE && damage_dealt >= 10 && proj.speed >= 1 && prob(0.1))
 		var/obj/item/organ/brain/a_brain = locate() in get_bodypart(def_zone)
@@ -321,6 +322,7 @@
 	var/mob/living/thrower = throwingdatum?.get_thrower()
 	if(thrown_damage_done > 0 && thrower)
 		apply_cyberpunk_heavy_weapon_armor_effects(thrower, thrown_item, zone, MELEE, thrown_item.armour_penetration, thrown_item.damtype, thrown_item.get_sharpness())
+		thrower.try_cyberpunk_giga_perception_blind(src, SKILL_PRECISE_WEAPON)
 	log_hit_combat(throwingdatum?.get_thrower(), thrown_item)
 
 	if(QDELETED(src)) //Damage can delete the mob.
@@ -430,6 +432,8 @@
 	if(!user.can_cyberpunk_grab_succeed(src, TRUE))
 		return user.fail_cyberpunk_grab_attempt(src, TRUE)
 	user.setGrabState(user.grab_state + 1)
+	if(user.has_character_giga_perk(ATTRIBUTE_STRENGTH) && user.grab_state == GRAB_AGGRESSIVE)
+		user.setGrabState(min(user.max_grab, GRAB_TWOHANDED))
 	if(!user.update_cyberpunk_grab_hold_items())
 		return FALSE
 	user.try_cyberpunk_grapple_stagger_on_grab(src)
@@ -937,21 +941,35 @@
 	if(consume_cyberpunk_defense_breach(hit_by))
 		return FAILED_BLOCK
 	if(defense_break == "dodge" && has_active_cyberpunk_dodge())
-		cyberpunk_dodge_until = 0
-		report_cyberpunk_defense_break(hit_by, "dodge")
-		return FAILED_BLOCK
-	if(defense_break != "dodge" && has_active_cyberpunk_dodge() && can_dodge())
+		var/weapon_break_bonus = get_cyberpunk_incoming_weapon_defense_break_bonus(hit_by)
+		if(weapon_break_bonus > 0 && prob(weapon_break_bonus))
+			cyberpunk_dodge_until = 0
+			report_cyberpunk_defense_break(hit_by, "dodge")
+			return FAILED_BLOCK
+	if(has_active_cyberpunk_dodge() && can_dodge())
 		var/dodge_chance = clamp(round((20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
 		if(prob(dodge_chance) && spend_stamina(STAMINA_COST_DODGE, "dodge"))
 			cyberpunk_dodge_until = 0
 			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [attack_text]!"), span_notice("You dodge [attack_text]."))
 			reward_character_check_experience(SKILL_EVASION, max(1, damage), FALSE, 1)
 			consume_cyberpunk_inspiration_guard("dodge")
-			handle_cyberpunk_successful_dodge(hit_by, attack_text, grab_attempt)
+			handle_cyberpunk_successful_dodge(hit_by, attack_text, grab_attempt, damage)
 			return SUCCESSFUL_BLOCK
 		cyberpunk_dodge_until = 0
 
 	return FAILED_BLOCK
+
+/mob/living/proc/get_cyberpunk_incoming_weapon_defense_break_bonus(atom/hit_by)
+	var/obj/item/attacking_item = hit_by
+	if(!istype(attacking_item))
+		return 0
+	var/mob/living/attacker = get(attacking_item, /mob/living)
+	if(!attacker)
+		return 0
+	var/weapon_skill = attacking_item.get_cyberpunk_weapon_skill()
+	if(!weapon_skill)
+		return 0
+	return attacker.get_weapon_skill_defense_break_bonus(weapon_skill)
 
 /mob/living/proc/report_cyberpunk_defense_break(atom/hit_by, defense_type)
 	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
@@ -975,10 +993,14 @@
 		span_warning("Вы пытаетесь [attempt_name], но [attack_name] прерывает вашу защиту."),
 	)
 
-/mob/living/proc/handle_cyberpunk_successful_dodge(atom/hit_by, attack_text = "attack", grab_attempt = FALSE)
+/mob/living/proc/handle_cyberpunk_successful_dodge(atom/hit_by, attack_text = "attack", grab_attempt = FALSE, incoming_damage = 0)
 	try_cyberpunk_successful_dodge_move(hit_by)
 	var/mob/living/attacker = isliving(hit_by) ? hit_by : null
 	if(attacker)
+		if(attacker != src && has_character_giga_perk(ATTRIBUTE_DEXTERITY) && incoming_damage > 0 && prob(get_character_skill_level(SKILL_EVASION) * 15))
+			attacker.apply_damage(max(1, incoming_damage), BRUTE)
+			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))]'s dodge turns [attacker.declent_ru(GENITIVE)] attack back on themself!"), span_notice("Your dodge turns [attacker.declent_ru(GENITIVE)] attack back on them."))
+
 		var/stagger_chance = get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 3)
 		if(stagger_chance > 0)
 			var/list/stagger_check = get_character_perk_check_result(SKILL_EVASION, 3, probability = stagger_chance)

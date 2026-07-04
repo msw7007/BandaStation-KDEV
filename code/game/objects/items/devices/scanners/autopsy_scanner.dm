@@ -175,9 +175,9 @@
 
 		autopsy_information += "<hr>"
 
-		// Genetic Stability, Species, and Body Temperature
-		if(humantarget.has_dna() && humantarget.dna.stability != initial(humantarget.dna.stability))
-			autopsy_information += "<b>Genetic Stability:</b> [humantarget.dna.stability]%.</br>"
+		// Humanoidity, Species, and Body Temperature
+		if(humantarget.has_dna() && humantarget.dna.get_effective_humanoidity() != HUMANOIDITY_DEFAULT)
+			autopsy_information += "<b>Humanoidity:</b> [round(humantarget.dna.get_effective_humanoidity(), 0.1)]%.</br>"
 		var/datum/species/targetspecies = humantarget.dna.species
 		var/disguised = !ishumanbasic(humantarget) && istype(humantarget.head, /obj/item/clothing/head/hooded/human_head) && istype(humantarget.wear_suit, /obj/item/clothing/suit/hooded/bloated_human)
 		var/species_name = "[disguised ? "\"[/datum/species/human::name]\"" : targetspecies.name][mutant ? "-derived mutant" : ""]"

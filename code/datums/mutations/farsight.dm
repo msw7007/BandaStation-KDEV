@@ -2,7 +2,7 @@
 	name = "Farsight"
 	desc = "Глаза субъекта способны видеть дальше, чем обычно."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MINOR
+	instability = HUMANOIDITY_LOAD_MINOR
 	text_gain_indication = span_notice("Ты ощущаешь покалывания в глазах.")
 	text_lose_indication = span_notice("Твои глаза ощущаются нормальными.")
 	difficulty = 16

@@ -3,7 +3,7 @@
 	desc = "Позволяет обладателю данной мутации при желании наполнить своё тело адреналином."
 	quality = POSITIVE
 	text_gain_indication = span_notice("Ты чувствуешь себя накаченным!")
-	instability = POSITIVE_INSTABILITY_MODERATE
+	instability = HUMANOIDITY_LOAD_MODERATE
 	power_path = /datum/action/cooldown/adrenaline
 
 	energy_coeff = 1

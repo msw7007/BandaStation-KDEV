@@ -119,6 +119,7 @@ type SkillInterfaceData = {
       value: number;
       min: number;
       max: number;
+      effective_max?: number;
       super_threshold: number;
       editable: BooleanLike;
       disabled_reason?: string;
@@ -427,6 +428,15 @@ export const CyberpunkSkillInterface = () => {
       skill: skillId,
       delta,
     });
+  const adjustAttribute = (attributeId: string, delta: number) =>
+    act('adjust_attribute', {
+      attributeId,
+      delta,
+    });
+  const convertLevelPoint = () =>
+    act('convert_level_points', {
+      amount: 1,
+    });
 
   return (
     <Window title="Skill Interface" width={1240} height={840}>
@@ -500,6 +510,13 @@ export const CyberpunkSkillInterface = () => {
               <CyberSectionHeader>Базовые характеристики</CyberSectionHeader>
               <div className="CharacterSetup__spent">
                 <span>Очки характеристик: {data.levelPoints || 0}</span>
+                <Button
+                  icon="exchange-alt"
+                  disabled={!accessGranted || !data.levelPoints}
+                  onClick={convertLevelPoint}
+                >
+                  +2 skill
+                </Button>
               </div>
               {attributeOrder.map((attributeId) => {
                 const runtimeAttribute = runtimeAttributes[attributeId];
@@ -528,11 +545,11 @@ export const CyberpunkSkillInterface = () => {
                       max={runtimeAttribute?.max}
                       min={runtimeAttribute?.min}
                       minusDisabled={spentPhysicalPoints >= attributeValue}
-                      plusDisabled
+                      plusDisabled={!accessGranted || !data.levelPoints}
                       reason={runtimeAttribute?.disabled_reason}
                       value={attributeValue}
-                      onMinus={() => undefined}
-                      onPlus={() => undefined}
+                      onMinus={() => adjustAttribute(attributeId, -1)}
+                      onPlus={() => adjustAttribute(attributeId, 1)}
                     />
                   </div>
                 );

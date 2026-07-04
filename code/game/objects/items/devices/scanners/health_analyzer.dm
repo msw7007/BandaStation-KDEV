@@ -473,9 +473,9 @@
 
 		render_list += "<hr>"
 
-		//Genetic stability
-		if(advanced && humantarget.has_dna() && humantarget.dna.stability != initial(humantarget.dna.stability))
-			render_list += "<span class='info ml-1'>Генетическая стабильность: [humantarget.dna.stability]%.</span><br>"
+		//Humanoidity
+		if(advanced && humantarget.has_dna() && humantarget.dna.get_effective_humanoidity() != HUMANOIDITY_DEFAULT)
+			render_list += "<span class='info ml-1'>Humanoidity: [round(humantarget.dna.get_effective_humanoidity(), 0.1)]%.</span><br>"
 
 		//body temperature
 		var/datum/species/targetspecies = humantarget.dna.species

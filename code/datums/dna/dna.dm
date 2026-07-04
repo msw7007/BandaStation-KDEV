@@ -53,7 +53,6 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	var/mutation_index[DNA_MUTATION_BLOCKS]
 	///List of the default genes from this mutation to allow DNA Scanner highlighting
 	var/default_mutation_genes[DNA_MUTATION_BLOCKS]
-	var/stability = 100
 	/// CP13 body compatibility with chrome and neural interfaces.
 	var/humanoidity = HUMANOIDITY_DEFAULT
 	/// Permanent penalty from DNA infusions, genetic segments and non-cosmetic bio-modification.
@@ -156,7 +155,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	if(MUTATION_SOURCE_ACTIVATED in sources)
 		set_se(1, actual_mutation)
 
-	update_instability()
+	update_humanoidity()
 
 /datum/dna/proc/remove_mutation(mutation_to_remove, list/sources)
 	if(!islist(sources))
@@ -180,7 +179,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		actual_mutation.on_losing(holder)
 		qdel(actual_mutation)
 
-	update_instability(FALSE)
+	update_humanoidity(FALSE)
 
 /datum/dna/proc/check_mutation(mutation_type)
 	return get_mutation(mutation_type)
@@ -309,51 +308,20 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 	return FALSE
 
-/datum/dna/proc/update_instability(alert=TRUE)
-	var/old_stability = stability
-	stability = 100
-	for(var/datum/mutation/mutation in mutations)
-		if((MUTATION_SOURCE_MUTATOR in mutation.sources) || mutation.instability < 0)
-			stability -= mutation.instability * GET_MUTATION_STABILIZER(mutation)
-	if(holder)
-		var/message
-		if(alert)
-			switch(stability)
-				if(70 to 90)
-					message = span_warning("You shiver.")
-				if(60 to 69)
-					message = span_warning("You feel cold.")
-				if(40 to 59)
-					message = span_warning("You feel sick.")
-				if(20 to 39)
-					message = span_warning("It feels like your skin is moving.")
-				if(1 to 19)
-					message = span_warning("You can feel your cells burning.")
-				if(-INFINITY to 0)
-					message = span_boldwarning("You can feel your DNA exploding, we need to do something fast!")
-		if(stability <= 0)
-			holder.apply_status_effect(/datum/status_effect/dna_melt)
-		if(message && stability < old_stability)
-			to_chat(holder, message)
-	update_humanoidity(alert)
-
 /datum/dna/proc/get_effective_humanoidity()
-	return get_effective_genetic_stability()
-
-/datum/dna/proc/get_effective_genetic_stability()
 	var/effective_bonus = humanoidity_stabilized_bonus
 	var/datum/mutation/biotechcompat/biotech_compatibility = get_mutation(/datum/mutation/biotechcompat)
 	if(biotech_compatibility)
 		effective_bonus += biotech_compatibility.humanoidity_bonus
-	return clamp(min(humanoidity, stability) + effective_bonus, 0, HUMANOIDITY_DEFAULT)
+	return clamp(humanoidity + effective_bonus, 0, HUMANOIDITY_DEFAULT)
 
 /datum/dna/proc/get_humanoidity_chromity_multiplier()
-	var/effective_stability = get_effective_genetic_stability()
-	if(effective_stability >= HUMANOIDITY_CHROMITY_START)
+	var/effective_humanoidity = get_effective_humanoidity()
+	if(effective_humanoidity >= HUMANOIDITY_CHROMITY_START)
 		return 1
-	if(effective_stability <= HUMANOIDITY_CHROMITY_ZERO)
+	if(effective_humanoidity <= HUMANOIDITY_CHROMITY_ZERO)
 		return 0
-	return (effective_stability - HUMANOIDITY_CHROMITY_ZERO) / (HUMANOIDITY_CHROMITY_START - HUMANOIDITY_CHROMITY_ZERO)
+	return (effective_humanoidity - HUMANOIDITY_CHROMITY_ZERO) / (HUMANOIDITY_CHROMITY_START - HUMANOIDITY_CHROMITY_ZERO)
 
 /datum/dna/proc/adjust_humanoidity_stabilized_bonus(amount)
 	var/old_bonus = humanoidity_stabilized_bonus
@@ -385,7 +353,9 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	humanoidity = clamp(HUMANOIDITY_DEFAULT - humanoidity_genetic_penalty - mutation_penalty, 0, HUMANOIDITY_DEFAULT)
 	if(holder && alert && humanoidity < old_humanoidity)
 		to_chat(holder, span_warning("Your body feels less human."))
-	if(holder && get_effective_genetic_stability() <= HUMANOIDITY_COLLAPSE_THRESHOLD && !humanoidity_collapsed && ishuman(holder))
+	if(holder && humanoidity <= 0)
+		holder.apply_status_effect(/datum/status_effect/dna_melt)
+	if(holder && get_effective_humanoidity() <= HUMANOIDITY_COLLAPSE_THRESHOLD && !humanoidity_collapsed && ishuman(holder))
 		var/mob/living/carbon/human/human_holder = holder
 		humanoidity_collapsed = TRUE
 		human_holder.cy_check_humanoidity_collapse()
@@ -755,16 +725,16 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 /////////////////////////// DNA HELPER-PROCS
 
-/mob/living/carbon/human/proc/something_horrible(ignore_stability)
+/mob/living/carbon/human/proc/something_horrible(ignore_humanoidity)
 	if(!has_dna()) //shouldn't ever happen anyway so it's just in really weird cases
 		return
-	if(!ignore_stability && (dna.stability > 0))
+	var/humanoidity_deficit = HUMANOIDITY_DEFAULT - dna.get_effective_humanoidity()
+	if(!ignore_humanoidity && (humanoidity_deficit < HUMANOIDITY_DEFAULT))
 		return
-	var/instability = -dna.stability
 	dna.remove_all_mutations()
-	dna.stability = 100
+	dna.update_humanoidity(FALSE)
 
-	var/nonfatal = prob(max(70-instability, 0))
+	var/nonfatal = prob(max(70 - humanoidity_deficit, 0))
 
 	if(!dna.nonfatal_meltdowns.len)
 		for(var/datum/instability_meltdown/meltdown_type as anything in typecacheof(/datum/instability_meltdown, ignore_root_path = TRUE))

@@ -79,6 +79,8 @@
 	var/list/character_skill_perks = list()
 	///Assoc list of Cyberpunk weapon/direct skill levels. skill type -> level.
 	var/list/character_skill_levels = list()
+	///Types already checked for Analysis "new object type" rewards.
+	var/list/cyberpunk_analyzed_typepaths = list()
 	///Roundstart role bonus attribute values applied over saved biometrics.
 	var/list/applied_character_role_attributes = list()
 	///Roundstart role bonus perk ranks applied over saved biometrics.

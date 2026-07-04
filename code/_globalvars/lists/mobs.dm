@@ -62,6 +62,30 @@ GLOBAL_LIST_EMPTY(blob_telepathy_mobs)
 /// All "living" (because revenants are in between mortal planes or whatever) mobs that can hear revenants
 GLOBAL_LIST_EMPTY(revenant_relay_mobs)
 
+GLOBAL_LIST_INIT(cyberpsychosis_phrases, list(
+	"Chrome is screaming.",
+	"No brakes. No mercy.",
+	"Target acquired.",
+	"Cut the noise out.",
+	"Meat is slow. Chrome is truth.",
+	"Protocol override accepted.",
+	"Threat map: everyone.",
+	"Neural loop unbound.",
+	"All safeties off.",
+	"Burn the signal clean.",
+))
+
+GLOBAL_LIST_INIT(hysteria_phrases, list(
+	"Get away from me!",
+	"I can't take this anymore!",
+	"Shut up!",
+	"Leave me alone!",
+	"Everything is wrong!",
+	"Stop looking at me!",
+	"Keep your hands off me!",
+	"Enough!",
+))
+
 ///underages who have been reported to security for trying to buy things they shouldn't, so they can't spam
 GLOBAL_LIST_EMPTY(narcd_underages)
 

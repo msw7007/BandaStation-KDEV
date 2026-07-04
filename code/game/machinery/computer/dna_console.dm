@@ -99,8 +99,8 @@
 	var/max_injector_selections = 2
 	/// Maximum number of mutation that an advanced injector can store
 	var/max_injector_mutations = 10
-	/// Maximum total instability of all combined mutations allowed on an advanced injector
-	var/max_injector_instability = 50
+	/// Maximum total humanoidity load of all combined mutations allowed on an advanced injector
+	var/max_injector_humanoidity_load = 50
 
 	/// World time when injectors are ready to be printed
 	var/injector_ready = 0
@@ -354,7 +354,7 @@
 			matched_pairs++
 	var/list/hints = list("paired sections: [matched_pairs]/[round(length(sequence) / 2)]")
 	if(level >= CHARACTER_SKILL_LEVEL_TRAINED || info_bonus >= 40)
-		hints += "instability class: [mutation.instability >= 0 ? "unstable" : "stabilizing"] [abs(mutation.instability)]"
+		hints += "humanoidity load: [mutation.instability >= 0 ? "burden" : "recovery"] [abs(mutation.instability)]"
 	if(level >= CHARACTER_SKILL_LEVEL_EXPERT || info_bonus >= 60)
 		hints += "quality signature: [mutation.quality]"
 	return english_list(hints)
@@ -399,9 +399,8 @@
 			data["subjectStatus"] = scanner_occupant.stat
 		data["subjectHealth"] = scanner_occupant.health
 		data["subjectEnzymes"] = scanner_occupant.dna.unique_enzymes
-		data["subjectHumanoidity"] = scanner_occupant.dna.get_effective_genetic_stability()
+		data["subjectHumanoidity"] = scanner_occupant.dna.get_effective_humanoidity()
 		data["subjectHumanoidityRaw"] = scanner_occupant.dna.humanoidity
-		data["subjectGeneticStability"] = scanner_occupant.dna.stability
 		data["subjectHumanoidityPenalty"] = scanner_occupant.dna.humanoidity_genetic_penalty
 		data["subjectHumanoidityStabilizedBonus"] = scanner_occupant.dna.humanoidity_stabilized_bonus
 		data["isMonkey"] = ismonkey(scanner_occupant)
@@ -419,7 +418,6 @@
 		data["subjectEnzymes"] = null
 		data["subjectHumanoidity"] = null
 		data["subjectHumanoidityRaw"] = null
-		data["subjectGeneticStability"] = null
 		data["subjectHumanoidityPenalty"] = null
 		data["subjectHumanoidityStabilizedBonus"] = null
 		data["storage"]["occupant"] = null
@@ -1642,10 +1640,10 @@
 
 			// Run through each mutation in our Advanced Injector and add them to a
 			//  new injector
-			var/total_stability = 0
+			var/total_humanoidity_load = 0
 			for(var/datum/mutation/mutation as anything in injector_selection[inj_name])
 				injector.add_mutations += mutation.make_copy()
-				total_stability += mutation.instability
+				total_humanoidity_load += mutation.instability
 
 			// Force apply any mutations, this is functionality similar to mutators
 			injector.force_mutate = TRUE
@@ -1654,7 +1652,7 @@
 			// If there's an operational connected scanner, we can use its upgrades
 			//  to improve our injector's genetic damage generation
 			var/cd_reduction_mult = 1 + ADVANCED_COOLDOWN_MULTIPLIER
-			var/base_cd_time = max(MIN_ADVANCED_TIMEOUT, abs(total_stability) SECONDS)
+			var/base_cd_time = max(MIN_ADVANCED_TIMEOUT, abs(total_humanoidity_load) SECONDS)
 
 			if(scanner_operational())
 				injector.damage_coeff = connected_scanner.damage_coeff*4
@@ -1713,18 +1711,18 @@
 			if(!original)
 				return
 
-			// We want to make sure we stick within the instability limit.
-			// We start with the instability of the mutation we're intending to add.
-			var/instability_total = original.instability
+			// We want to make sure we stick within the humanoidity load limit.
+			// We start with the humanoidity load of the mutation we're intending to add.
+			var/humanoidity_load_total = original.instability
 
-			// We then add the instabilities of all other mutations in the injector,
-			//  remembering to apply the Stabilizer chromosome modifiers
+			// We then add the load of all other mutations in the injector,
+			//  remembering to apply the stabilizer chromosome modifiers
 			for(var/datum/mutation/mutation in injector_selection[adv_inj])
-				instability_total += mutation.instability * GET_MUTATION_STABILIZER(mutation)
+				humanoidity_load_total += mutation.instability * GET_MUTATION_STABILIZER(mutation)
 
-			// If this would take us over the max instability, we inform the user.
-			if(instability_total > max_injector_instability)
-				to_chat(usr,span_warning("Extra mutation would make the advanced injector too instable."))
+			// If this would take us over the max humanoidity load, we inform the user.
+			if(humanoidity_load_total > max_injector_humanoidity_load)
+				to_chat(usr,span_warning("Extra mutation would exceed the advanced injector humanoidity load limit."))
 				return
 
 			// If we've got here, all our checks are passed and we can successfully
@@ -2012,7 +2010,7 @@
 			if(discovered)
 				mutation_data["Name"] = mutation.name
 				mutation_data["Description"] = mutation.desc
-				mutation_data["Instability"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
+				mutation_data["HumanoidityLoad"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
 				mutation_data["Quality"] = mutation.quality
 			else if(mutation_data["AnalysisHint"])
 				mutation_data["Description"] = "Undiscovered sequence. Analysis has partial diagnostic data."
@@ -2078,7 +2076,7 @@
 
 			mutation_data["Name"] = mutation.name
 			mutation_data["Description"] = mutation.desc
-			mutation_data["Instability"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
+			mutation_data["HumanoidityLoad"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
 
 			mutation_data["Active"] = TRUE
 			mutation_data["Scrambled"] = mutation.scrambled
@@ -2113,7 +2111,7 @@
 		mutation_data["Source"] = "console"
 		mutation_data["Active"] = TRUE
 		mutation_data["Description"] = mutation.desc
-		mutation_data["Instability"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
+		mutation_data["HumanoidityLoad"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
 		mutation_data["ByondRef"] = REF(mutation)
 		mutation_data["Type"] = mutation.type
 
@@ -2152,7 +2150,7 @@
 			//mutation_data["Sequence"] = GET_SEQUENCE(HM.type)
 			mutation_data["Source"] = "disk"
 			mutation_data["Description"] = HM.desc
-			mutation_data["Instability"] = HM.instability * GET_MUTATION_STABILIZER(HM)
+			mutation_data["HumanoidityLoad"] = HM.instability * GET_MUTATION_STABILIZER(HM)
 			mutation_data["ByondRef"] = REF(HM)
 			mutation_data["Type"] = HM.type
 
@@ -2180,7 +2178,7 @@
 				//mutation_data["Sequence"] = GET_SEQUENCE(HM.type)
 				mutation_data["Source"] = "injector"
 				mutation_data["Description"] = HM.desc
-				mutation_data["Instability"] = HM.instability * GET_MUTATION_STABILIZER(HM)
+				mutation_data["HumanoidityLoad"] = HM.instability * GET_MUTATION_STABILIZER(HM)
 				mutation_data["ByondRef"] = REF(HM)
 				mutation_data["Type"] = HM.type
 

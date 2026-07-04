@@ -42,6 +42,17 @@
 		return list(BODYPART_DAMAGE_HEAT = 1)
 	return list(BODYPART_DAMAGE_BLUNT = 1)
 
+/obj/item/proc/get_primary_cyberpunk_damage_key()
+	var/list/damage_entries = get_cyberpunk_damage_entries()
+	var/primary_key = BODYPART_DAMAGE_BLUNT
+	var/primary_weight = -INFINITY
+	for(var/damage_key in damage_entries)
+		var/damage_weight = damage_entries[damage_key]
+		if(damage_weight > primary_weight)
+			primary_key = damage_key
+			primary_weight = damage_weight
+	return primary_key
+
 /obj/item/proc/get_cyberpunk_damage_type(type_key)
 	switch(type_key)
 		if("pierce", BODYPART_DAMAGE_PIERCE)

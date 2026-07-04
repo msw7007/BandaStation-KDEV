@@ -3,6 +3,7 @@
 	desc = "Обучает тебя навыкам боевого искусства Close Quarters Combat за 5 коротких видео-инструкций проецируемых прямо в глаза."
 	icon = 'icons/obj/scrolls.dmi'
 	icon_state ="scroll2"
+	requires_neural_interface = TRUE
 	var/datum/martial_art/cqc/style
 
 /obj/item/implant/cqc/get_data()
@@ -34,6 +35,8 @@
 
 /obj/item/implant/cqc/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	if(isnull(imp_in.mind))
 		return
 	if(style.unlearn(imp_in))

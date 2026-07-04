@@ -14,7 +14,7 @@
 			if(istype(carbon_user) && carbon_user.dna)
 				carbon_user.dna.adjust_humanoidity_stabilized_bonus(corporation?.is_subscribed(user) ? 12 : 7)
 			user.adjust_stamina_loss(-25)
-			to_chat(user, span_notice("Benn body stabilization raises your genetic stability buffer."))
+			to_chat(user, span_notice("Benn body stabilization raises your humanoidity buffer."))
 		if("stealth")
 			user.adjust_stamina_loss(-45)
 			to_chat(user, span_notice("Benn stealth conditioning clears fatigue and dampens your network profile."))

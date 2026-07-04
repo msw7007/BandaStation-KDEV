@@ -167,6 +167,150 @@
 	returned_name[1] = delusion_name
 	return SCREENTIP_NAME_SET
 
+/datum/hallucination/nearby_item_delusion
+	var/delusion_icon_file
+	var/delusion_icon_state
+	var/delusion_name
+	var/delusion_examine_text
+	var/view_range = 7
+	var/list/delusions
+
+/datum/hallucination/nearby_item_delusion/Destroy()
+	if(LAZYLEN(delusions))
+		for(var/atom/movable/found_atom as anything in delusions)
+			remove_delusion(found_atom)
+		LAZYNULL(delusions)
+	return ..()
+
+/datum/hallucination/nearby_item_delusion/start()
+	if(!hallucinator.client || hallucinator.stat >= UNCONSCIOUS)
+		return FALSE
+	feedback_details += "Nearby item delusion: [delusion_name]"
+	hallucinator.mob_flags |= MOB_HAS_SCREENTIPS_NAME_OVERRIDE
+	RegisterSignal(hallucinator, COMSIG_MOB_REQUESTING_SCREENTIP_NAME_FROM_USER, PROC_REF(screentip_name_override))
+	refresh_nearby_delusions()
+	return TRUE
+
+/datum/hallucination/nearby_item_delusion/proc/refresh_nearby_delusions()
+	if(!hallucinator.client)
+		return FALSE
+
+	var/list/valid_atoms = list()
+	for(var/atom/movable/found_atom as anything in view(view_range, hallucinator))
+		if(should_affect(found_atom))
+			valid_atoms += found_atom
+			if(!LAZYACCESS(delusions, found_atom))
+				add_delusion(found_atom)
+
+	if(LAZYLEN(delusions))
+		for(var/atom/movable/found_atom as anything in delusions.Copy())
+			if(QDELETED(found_atom) || !(found_atom in valid_atoms))
+				remove_delusion(found_atom)
+	return TRUE
+
+/datum/hallucination/nearby_item_delusion/proc/should_affect(atom/movable/found_atom)
+	return FALSE
+
+/datum/hallucination/nearby_item_delusion/proc/add_delusion(atom/movable/found_atom)
+	var/image/funny_image = image(delusion_icon_file, found_atom, delusion_icon_state)
+	funny_image.name = delusion_name
+	funny_image.override = TRUE
+	SET_PLANE_EXPLICIT(funny_image, ABOVE_GAME_PLANE, found_atom)
+	for(var/image/underlay as anything in found_atom.underlays)
+		if(PLANE_TO_TRUE(underlay.plane) == O_LIGHTING_VISUAL_PLANE)
+			funny_image.underlays += underlay
+	LAZYSET(delusions, found_atom, funny_image)
+	hallucinator.client.images |= funny_image
+	RegisterSignal(found_atom, COMSIG_QDELETING, PROC_REF(on_atom_delete))
+	RegisterSignal(found_atom, COMSIG_MOVABLE_Z_CHANGED, PROC_REF(on_z_change))
+	RegisterSignal(found_atom, COMSIG_ATOM_HOLDER_OVERLAY_LIGHT_APPLIED, PROC_REF(on_atom_light_add))
+	RegisterSignal(found_atom, COMSIG_ATOM_HOLDER_OVERLAY_LIGHT_REMOVED, PROC_REF(on_atom_light_remove))
+	RegisterSignal(found_atom, COMSIG_ATOM_GET_EXAMINE_NAME, PROC_REF(get_examine_name))
+	if(delusion_examine_text)
+		RegisterSignal(found_atom, COMSIG_ATOM_EXAMINE, PROC_REF(on_examine))
+
+/datum/hallucination/nearby_item_delusion/proc/remove_delusion(atom/movable/found_atom)
+	if(hallucinator?.client)
+		hallucinator.client.images -= delusions[found_atom]
+	UnregisterSignal(found_atom, list(
+		COMSIG_QDELETING,
+		COMSIG_MOVABLE_Z_CHANGED,
+		COMSIG_ATOM_HOLDER_OVERLAY_LIGHT_APPLIED,
+		COMSIG_ATOM_HOLDER_OVERLAY_LIGHT_REMOVED,
+		COMSIG_ATOM_GET_EXAMINE_NAME,
+		COMSIG_ATOM_EXAMINE,
+	))
+	LAZYREMOVE(delusions, found_atom)
+
+/datum/hallucination/nearby_item_delusion/proc/on_atom_delete(atom/movable/source)
+	SIGNAL_HANDLER
+
+	remove_delusion(source)
+
+/datum/hallucination/nearby_item_delusion/proc/on_z_change(atom/movable/source)
+	SIGNAL_HANDLER
+
+	var/image/funny_image = delusions[source]
+	SET_PLANE_EXPLICIT(funny_image, ABOVE_GAME_PLANE, source)
+
+/datum/hallucination/nearby_item_delusion/proc/on_atom_light_add(atom/movable/source, image/visible_mask, image/cone)
+	SIGNAL_HANDLER
+
+	var/image/funny_image = delusions[source]
+	funny_image.underlays |= visible_mask
+	if(cone)
+		funny_image.underlays |= cone
+
+/datum/hallucination/nearby_item_delusion/proc/on_atom_light_remove(atom/movable/source)
+	SIGNAL_HANDLER
+
+	var/image/funny_image = delusions[source]
+	for(var/image/underlay as anything in funny_image.underlays)
+		if(PLANE_TO_TRUE(underlay.plane) == O_LIGHTING_VISUAL_PLANE)
+			funny_image.underlays -= underlay
+
+/datum/hallucination/nearby_item_delusion/proc/get_examine_name(atom/movable/source, mob/user, list/override)
+	SIGNAL_HANDLER
+
+	if(user != hallucinator || !LAZYACCESS(delusions, source))
+		return
+	override[EXAMINE_POSITION_ARTICLE] = "a"
+	override[EXAMINE_POSITION_BEFORE] = null
+	override[EXAMINE_POSITION_NAME] = "<em>[delusion_name]</em>"
+
+/datum/hallucination/nearby_item_delusion/proc/on_examine(atom/movable/source, mob/user, list/examine_list)
+	SIGNAL_HANDLER
+
+	if(user != hallucinator || !LAZYACCESS(delusions, source))
+		return
+	examine_list += span_notice(delusion_examine_text)
+
+/datum/hallucination/nearby_item_delusion/proc/screentip_name_override(datum/source, list/returned_name, obj/item/held_item, atom/hovered)
+	SIGNAL_HANDLER
+
+	if(!LAZYACCESS(delusions, hovered))
+		return NONE
+	returned_name[1] = delusion_name
+	return SCREENTIP_NAME_SET
+
+/datum/hallucination/nearby_item_delusion/food_burger
+	delusion_icon_file = 'icons/obj/food/burgerbread.dmi'
+	delusion_icon_state = "hburger"
+	delusion_name = "Tasty juicy burger"
+	delusion_examine_text = "It looks like a gorgeous, mouth-watering burger: a warm glossy bun, tender layers, and a thick patty dripping fresh fat. Every bite would be perfect."
+
+/datum/hallucination/nearby_item_delusion/food_burger/should_affect(atom/movable/found_atom)
+	return istype(found_atom, /obj/item/food)
+
+/datum/hallucination/nearby_item_delusion/water
+	delusion_icon_file = 'icons/obj/drinks/soda.dmi'
+	delusion_icon_state = "sodawater"
+	delusion_name = "water"
+
+/datum/hallucination/nearby_item_delusion/water/should_affect(atom/movable/found_atom)
+	var/obj/item/reagent_containers/container = found_atom
+	return istype(container) && container.reagents?.total_volume
+
 /// Used for making custom delusions.
 /datum/hallucination/delusion/custom
 	random_hallucination_weight = 0
@@ -214,6 +358,36 @@
 /datum/hallucination/delusion/preset/monkey/start()
 	delusion_name += " ([rand(1, 999)])"
 	return ..()
+
+/datum/hallucination/delusion/preset/human_burger
+	random_hallucination_weight = 0
+	delusion_icon_file = 'icons/obj/food/burgerbread.dmi'
+	delusion_icon_state = "hburger"
+	delusion_name = "Tasty juicy burger"
+
+/datum/hallucination/delusion/preset/human_burger/Destroy()
+	if(LAZYLEN(delusions))
+		for(var/mob/living/carbon/human/found_human as anything in delusions)
+			UnregisterSignal(found_human, COMSIG_ATOM_EXAMINE)
+	return ..()
+
+/datum/hallucination/delusion/preset/human_burger/start()
+	. = ..()
+	if(!.)
+		return
+	for(var/mob/living/carbon/human/found_human as anything in delusions)
+		RegisterSignal(found_human, COMSIG_ATOM_EXAMINE, PROC_REF(on_burger_examine))
+
+/datum/hallucination/delusion/preset/human_burger/on_mob_delete(mob/living/carbon/human/source)
+	UnregisterSignal(source, COMSIG_ATOM_EXAMINE)
+	return ..()
+
+/datum/hallucination/delusion/preset/human_burger/proc/on_burger_examine(mob/living/carbon/human/source, mob/user, list/examine_list)
+	SIGNAL_HANDLER
+
+	if(user != hallucinator || !LAZYACCESS(delusions, source))
+		return
+	examine_list += span_notice("It looks like a gorgeous, mouth-watering burger: a warm glossy bun, tender layers, and a thick patty dripping fresh fat. Every bite would be perfect.")
 
 /datum/hallucination/delusion/preset/corgi
 	delusion_icon_file = 'icons/mob/simple/pets.dmi'

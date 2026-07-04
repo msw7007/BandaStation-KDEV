@@ -2,7 +2,7 @@
 	name = "Biological Compatibility"
 	desc = "Субъект становится более совместимым с грубыми биологическими изменениями. Часть потери гуманоидности временно маскируется при расчетах совместимости с хромом."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MINI
+	instability = HUMANOIDITY_LOAD_MINI
 	var/humanoidity_bonus = 10
 
 /datum/mutation/biotechcompat/on_acquiring(mob/living/carbon/human/owner)
@@ -21,7 +21,7 @@
 	name = "Clever"
 	desc = "Заставляет субъекта чувствовать себя немного умнее. Наиболее эффективен с особями, обладающими низким уровнем интеллекта."
 	quality = POSITIVE
-	instability = POSITIVE_INSTABILITY_MODERATE // literally makes you on par with station equipment
+	instability = HUMANOIDITY_LOAD_MODERATE // literally makes you on par with station equipment
 	text_gain_indication = span_danger("Ты чувствуешь себя немного умнее.")
 	text_lose_indication = span_danger("Твоё сознание немного затуманивается.")
 

@@ -6,5 +6,5 @@
 	text_lose_indication = span_notice("Ты перестаешь слышать эхо внутри своего разума.")
 	difficulty = 12
 	power_path = /datum/action/cooldown/spell/list_target/telepathy
-	instability = POSITIVE_INSTABILITY_MINOR // basically a mediocre PDA messager
+	instability = HUMANOIDITY_LOAD_MINOR // basically a mediocre PDA messager
 	energy_coeff = 1

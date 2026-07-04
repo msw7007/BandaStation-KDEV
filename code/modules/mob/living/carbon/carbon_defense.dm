@@ -458,25 +458,30 @@
 		return FALSE
 	var/obj/item/bodypart/limb = get_bodypart(check_zone(helper.zone_selected))
 	if(!limb)
-		to_chat(helper, span_warning("There is no bodypart to palpate there."))
+		to_chat(helper, span_warning("В этой зоне нечего ощупывать."))
 		return TRUE
-	helper.visible_message(span_notice("[helper] palpates [src]'s [parse_zone_with_bodypart(limb.body_zone)]."), span_notice("You start palpating [src]'s [parse_zone_with_bodypart(limb.body_zone)]."))
+	helper.visible_message(span_notice("[capitalize(helper.declent_ru(NOMINATIVE))] ощупывает [declent_ru(ACCUSATIVE)] в области [parse_zone_with_bodypart(limb.body_zone)]."), span_notice("Вы начинаете ощупывать [declent_ru(ACCUSATIVE)] в области [parse_zone_with_bodypart(limb.body_zone)]."))
 	if(!do_after(helper, 20 SECONDS, target = src))
 		return TRUE
 	if(helper.pulling != src || helper.grab_state >= GRAB_AGGRESSIVE || helper.combat_mode || combat_mode)
 		return TRUE
 	var/list/report = list()
-	report += span_notice("<b>Palpation: [parse_zone_with_bodypart(limb.body_zone)]</b>")
-	report += span_notice("Physical: BLUNT [round(limb.blunt_dam, 0.1)], PIERCE [round(limb.pierce_dam, 0.1)], SLASH [round(limb.slash_dam, 0.1)].")
-	report += span_notice("Thermal: HEAT [round(limb.heat_dam, 0.1)], COLD [round(limb.cold_dam, 0.1)], ACID [round(limb.acid_dam, 0.1)].")
-	report += span_notice("Pain [round(limb.pain, 0.1)], infection [round(limb.infection, 0.1)]%.")
+	report += span_notice("<b>Ощупывание: [parse_zone_with_bodypart(limb.body_zone)]</b>")
+	if(ishuman(helper))
+		var/mob/living/carbon/human/human_helper = helper
+		var/bodypart_report = limb.check_for_injuries(human_helper)
+		if(bodypart_report)
+			report += bodypart_report
+	report += span_notice("Физический урон: BLUNT [round(limb.blunt_dam, 0.1)], PIERCE [round(limb.pierce_dam, 0.1)], SLASH [round(limb.slash_dam, 0.1)].")
+	report += span_notice("Термический/химический урон: HEAT [round(limb.heat_dam, 0.1)], COLD [round(limb.cold_dam, 0.1)], ACID [round(limb.acid_dam, 0.1)].")
+	report += span_notice("Боль [round(limb.pain, 0.1)], инфекция [round(limb.infection, 0.1)]%.")
 	if(limb.blunt_trauma || limb.pierce_trauma || limb.slash_trauma || limb.heat_trauma || limb.cold_trauma || limb.acid_trauma)
-		report += span_warning("Trauma flags: blunt [limb.blunt_trauma], pierce [limb.pierce_trauma], slash [limb.slash_trauma], heat [limb.heat_trauma], cold [limb.cold_trauma], acid [limb.acid_trauma].")
+		report += span_warning("Травмы: blunt [limb.blunt_trauma], pierce [limb.pierce_trauma], slash [limb.slash_trauma], heat [limb.heat_trauma], cold [limb.cold_trauma], acid [limb.acid_trauma].")
 	if(length(limb.wounds))
 		var/list/wound_names = list()
 		for(var/datum/wound/wound as anything in limb.wounds)
 			wound_names += wound.name
-		report += span_warning("Wounds: [english_list(wound_names)].")
+		report += span_warning("Раны: [english_list(wound_names)].")
 	to_chat(helper, boxed_message(report.Join("<br>")))
 	return TRUE
 

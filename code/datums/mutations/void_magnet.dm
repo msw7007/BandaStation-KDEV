@@ -3,7 +3,7 @@
 	desc = "Редкий геном, который притягивает странные силы, обычно не наблюдаемые."
 	quality = MINOR_NEGATIVE //upsides and downsides
 	text_gain_indication = span_notice("Ты ощущаешь тяжёлую, мрачную силу, которая наблюдает за тобой через стену.")
-	instability = POSITIVE_INSTABILITY_MODERATE // useful, but has large drawbacks
+	instability = HUMANOIDITY_LOAD_MODERATE // useful, but has large drawbacks
 	power_path = /datum/action/cooldown/spell/void/cursed
 	energy_coeff = 1
 	synchronizer_coeff = 1
@@ -70,8 +70,8 @@
 
 	var/mob/living/carbon/carbon_source = source
 	if(istype(carbon_source) && carbon_source.dna)
-		// If we have DNA, the probability of curse changes based on how stable we are
-		prob_of_curse += ((100 - carbon_source.dna.stability) / 40)
+		// If we have DNA, the probability of curse changes based on humanoidity loss.
+		prob_of_curse += ((HUMANOIDITY_DEFAULT - carbon_source.dna.get_effective_humanoidity()) / 40)
 
 	prob_of_curse *= curse_probability_modifier
 

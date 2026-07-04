@@ -3,6 +3,7 @@
 	desc = "Lets you shoot your guns."
 	icon_state = "auth"
 	actions_types = null
+	requires_neural_interface = TRUE
 
 	implant_info = "Automatically activates upon implantation. Provides authentication for weapons with \
 		appropriate security systems, typically in the firing pin."
@@ -19,6 +20,7 @@
 	desc = "Triggers an EMP."
 	icon_state = "emp"
 	uses = 3
+	requires_neural_interface = TRUE
 
 	implant_info = "Activated manually. Generates an indiscriminate electromagnetic pulse of moderate size when triggered."
 
@@ -30,6 +32,8 @@
 
 /obj/item/implant/emp/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	uses--
 	empulse(imp_in, 3, 5, emp_source = src)
 	if(!uses)
@@ -44,6 +48,7 @@
 	desc = "Releases a plume of smoke."
 	icon_state = "smoke"
 	uses = 3
+	requires_neural_interface = TRUE
 
 	implant_info = "Activated manually. Generates an indiscriminate cloud of smoke of moderate size when triggered."
 
@@ -55,6 +60,8 @@
 
 /obj/item/implant/smoke/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	uses--
 	do_smoke(6, imp_in, imp_in.loc, smoke_type = /datum/effect_system/fluid_spread/smoke/bad)
 	if(!uses)
@@ -69,6 +76,7 @@
 	var/obj/item/radio/radio
 	var/radio_key
 	var/subspace_transmission = FALSE
+	requires_neural_interface = TRUE
 	icon = 'icons/obj/devices/voice.dmi'
 	icon_state = "walkietalkie"
 
@@ -81,6 +89,8 @@
 
 /obj/item/implant/radio/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	// needs to be GLOB.deep_inventory_state otherwise it won't open
 	radio.ui_interact(usr, state = GLOB.deep_inventory_state)
 

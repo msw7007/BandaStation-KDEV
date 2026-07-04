@@ -4,6 +4,7 @@
 	icon_state = "freedom"
 	implant_color = "r"
 	uses = FREEDOM_IMPLANT_CHARGES
+	requires_neural_interface = TRUE
 
 	implant_info = "Activated manually. \
 		Unlocks bindings on arms and legs when activated, but not larger ones e.g. straightjackets."
@@ -25,6 +26,8 @@
 
 /obj/item/implant/freedom/activate()
 	. = ..()
+	if(!.)
+		return FALSE
 	var/mob/living/carbon/carbon_imp_in = imp_in
 	if(!can_trigger(carbon_imp_in))
 		balloon_alert(carbon_imp_in, "no restraints!")
