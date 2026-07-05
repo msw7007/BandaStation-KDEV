@@ -1023,6 +1023,12 @@
 			slowdown = max(slowdown, 1)
 	return slowdown
 
+/mob/living/proc/get_cyberpunk_medical_move_slowdown()
+	var/oxy_loss = get_oxy_loss()
+	if(oxy_loss <= 0)
+		return 0
+	return clamp(oxy_loss / OXYLOSS_FULL_SLOWDOWN_THRESHOLD, 0, 1) * OXYLOSS_FULL_SLOWDOWN
+
 /mob/living/proc/get_cyberpunk_medical_stamina_cost_multiplier(source)
 	var/mob/living/carbon/carbon_mob = iscarbon(src) ? src : null
 	if(!carbon_mob)
@@ -1082,6 +1088,7 @@
 
 	move_slowdown = max(move_slowdown, get_cyberpunk_needs_move_slowdown())
 	action_slowdown = max(action_slowdown, get_cyberpunk_needs_action_slowdown())
+	move_slowdown = max(move_slowdown, get_cyberpunk_medical_move_slowdown())
 	action_slowdown = max(action_slowdown, get_cyberpunk_medical_action_slowdown())
 	move_slowdown += get_cyberpunk_status_move_slowdown()
 	action_slowdown += get_cyberpunk_status_action_slowdown()

@@ -628,6 +628,7 @@
 		return 0
 	var/old_loss = get_oxy_loss()
 	var/new_loss = clamp(old_loss + amount * CONFIG_GET(number/damage_multiplier), 0, maxHealth * 2)
+	oxyloss = new_loss
 	oxygenation = clamp(100 - new_loss, 0, 100)
 	var/delta = new_loss - old_loss
 	if(delta)
@@ -647,6 +648,7 @@
 		return 0
 	var/old_loss = get_oxy_loss()
 	var/new_loss = clamp(amount, 0, maxHealth * 2)
+	oxyloss = new_loss
 	oxygenation = clamp(100 - new_loss, 0, 100)
 	var/delta = new_loss - old_loss
 	if(delta)
@@ -663,6 +665,7 @@
 	var/mob_oxyloss = get_oxy_loss()
 	if(mob_oxyloss >= OXYLOSS_PASSOUT_THRESHOLD && !HAS_TRAIT(src, TRAIT_NO_OXYLOSS_PASSOUT))
 		if(!HAS_TRAIT_FROM(src, TRAIT_KNOCKEDOUT, OXYLOSS_TRAIT))
+			Knockdown(2 SECONDS, ignore_canstun = TRUE)
 			ADD_TRAIT(src, TRAIT_KNOCKEDOUT, OXYLOSS_TRAIT)
 	else if(mob_oxyloss < OXYLOSS_PASSOUT_THRESHOLD)
 		REMOVE_TRAIT(src, TRAIT_KNOCKEDOUT, OXYLOSS_TRAIT)

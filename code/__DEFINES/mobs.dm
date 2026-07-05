@@ -11,7 +11,39 @@
 #define MOVE_INTENT_RUN "run"
 
 /// Amount of oxyloss that KOs a human
-#define OXYLOSS_PASSOUT_THRESHOLD 50
+#define OXYLOSS_PASSOUT_THRESHOLD 70
+/// Highest oxyloss value used for movement slowdown scaling.
+#define OXYLOSS_FULL_SLOWDOWN_THRESHOLD 70
+/// Movement slowdown reached at OXYLOSS_FULL_SLOWDOWN_THRESHOLD.
+#define OXYLOSS_FULL_SLOWDOWN 1
+/// Combined brute and burn damage needed for carbon softcrit.
+#define CARBON_PHYSICAL_SOFTCRIT_DAMAGE 100
+/// Combined brute and burn damage needed for carbon hardcrit.
+#define CARBON_PHYSICAL_HARDCRIT_DAMAGE 200
+/// Brute and burn damage needed for instant carbon death.
+#define CARBON_PHYSICAL_DEATH_DAMAGE 300
+/// Oxy damage needed for carbon hardcrit.
+#define CARBON_OXY_HARDCRIT_DAMAGE 120
+/// Oxy damage needed for instant carbon death.
+#define CARBON_OXY_DEATH_DAMAGE 200
+/// Toxin damage needed for carbon softcrit.
+#define CARBON_TOX_SOFTCRIT_DAMAGE 100
+/// Toxin damage needed for carbon hardcrit.
+#define CARBON_TOX_HARDCRIT_DAMAGE 200
+/// Toxin damage needed for instant carbon death.
+#define CARBON_TOX_DEATH_DAMAGE 300
+/// Oxy damage per second while carbon is in hardcrit.
+#define CARBON_HARDCRIT_OXYLOSS_RATE (CARBON_OXY_DEATH_DAMAGE / 120)
+/// Oxy damage per second when carbon has no lungs.
+#define CARBON_NO_LUNGS_OXYLOSS_RATE (CARBON_OXY_DEATH_DAMAGE / 30)
+/// Oxy damage per second from a killing neck grab.
+#define CARBON_KILL_GRAB_OXYLOSS_RATE (CARBON_OXY_DEATH_DAMAGE / 40)
+/// Oxy damage per second from a missed breath.
+#define CARBON_MISSED_BREATH_OXYLOSS_RATE (CARBON_OXY_DEATH_DAMAGE / 120)
+/// Seconds from hardcrit start to full hardcrit circulatory collapse.
+#define CARBON_HARDCRIT_CIRCULATION_COLLAPSE_TIME 60
+/// Reagent metabolism multiplier during hardcrit circulatory collapse.
+#define CARBON_HARDCRIT_CIRCULATION_METABOLISM_MULTIPLIER 0.8
 //Blood levels
 #define BLOOD_VOLUME_MAXIMUM 2000
 #define BLOOD_VOLUME_MAX_LETHAL (BLOOD_VOLUME_MAXIMUM * 1.075) // 2150 units if BLOOD_VOLUME_MAXIMUM is 2000

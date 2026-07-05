@@ -373,7 +373,7 @@
 	if(need_to_breathe)
 		breathe_gas_volume(breath, /datum/gas/water_vapor, /datum/gas/carbon_dioxide)
 	// Heal mob if not in crit.
-	if(breather.health >= breather.crit_threshold && breather.oxyloss)
+	if(breather.health >= breather.crit_threshold && breather.get_oxy_loss())
 		breather.adjust_oxy_loss(-5)
 
 /// Called when there isn't enough water to breath

@@ -634,7 +634,7 @@
 /mob/living/acid_act(acidpwr, acid_volume)
 	if(iscarbon(src))
 		var/mob/living/carbon/carbon_target = src
-		carbon_target.adjust_chemical_loss(acidpwr * min(1, acid_volume * 0.05), updating_health = FALSE)
+		carbon_target.adjust_tox_loss(acidpwr * min(1, acid_volume * 0.05), updating_health = FALSE, forced = TRUE)
 	take_bodypart_damage(burn = acidpwr * min(1, acid_volume * 0.1), burn_type = BODYPART_DAMAGE_ACID)
 	return TRUE
 

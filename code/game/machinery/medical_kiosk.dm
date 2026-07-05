@@ -225,7 +225,6 @@
 	var/fire_loss = patient.get_fire_loss()
 	var/tox_loss = patient.get_tox_loss()
 	var/oxy_loss = patient.get_oxy_loss()
-	var/chemical_loss = patient.get_chemical_loss()
 	var/chaos_modifier = 0
 	var/total_blunt = 0
 	var/total_pierce = 0
@@ -375,7 +374,6 @@
 	data["burn_health"] = round(fire_loss+(chaos_modifier * (rand(1,30))),0.001) //then a random number is added, which is multiplied by chaos modifier.
 	data["toxin_health"] = round(tox_loss+(chaos_modifier * (rand(1,30))),0.001) //That allows for a weaker version of the affect to be applied while hallucinating as opposed to emagged.
 	data["suffocation_health"] = round(oxy_loss+(chaos_modifier * (rand(1,30))),0.001) //It's not the cleanest but it does make for a colorful window.
-	data["chemical_health"] = round(chemical_loss+(chaos_modifier * (rand(1,30))),0.001)
 	data["oxygenation"] = round(patient.oxygenation, 0.1)
 	data["blood_pressure"] = round(patient.blood_pressure * 100, 1)
 	data["pain_total"] = round(patient.get_total_pain(), 0.1)

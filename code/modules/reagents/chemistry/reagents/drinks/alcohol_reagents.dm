@@ -1,5 +1,5 @@
 #define ALCOHOL_THRESHOLD_MODIFIER 1 //Greater numbers mean that less alcohol has greater intoxication potential
-#define ALCOHOL_EXPONENT 1.6 //The exponent applied to boozepwr to make higher volume alcohol at least a little bit damaging to the liver
+#define ALCOHOL_EXPONENT 1.45 //The exponent applied to boozepwr to make higher volume alcohol at least a little bit damaging to the liver
 
 /datum/reagent/consumable/ethanol
 	name = "Ethanol"
@@ -84,7 +84,7 @@
 			var/obj/item/organ/liver/liver = drinker.get_organ_slot(ORGAN_SLOT_LIVER)
 			var/heavy_drinker_multiplier = (HAS_TRAIT(drinker, TRAIT_HEAVY_DRINKER) ? 0.5 : 1)
 			if (istype(liver))
-				if(liver.apply_organ_damage(((max(sqrt(volume) * (boozepwr ** ALCOHOL_EXPONENT) * liver.alcohol_tolerance * heavy_drinker_multiplier * seconds_per_tick, 0))/900)))
+				if(liver.apply_alcohol_damage(((max(sqrt(volume) * (boozepwr ** ALCOHOL_EXPONENT) * liver.alcohol_tolerance * heavy_drinker_multiplier * seconds_per_tick, 0))/1800)))
 					return UPDATE_MOB_HEALTH
 
 /datum/reagent/consumable/ethanol/expose_obj(obj/exposed_obj, reac_volume, methods=TOUCH, show_message=TRUE)

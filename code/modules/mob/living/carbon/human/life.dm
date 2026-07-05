@@ -296,8 +296,6 @@
 	if(we_breath)
 		adjust_oxy_loss(4 * seconds_per_tick)
 		Unconscious(80)
-	// Tissues die without blood circulation
-	adjust_brute_loss(1 * seconds_per_tick)
 
 #undef THERMAL_PROTECTION_HEAD
 #undef THERMAL_PROTECTION_CHEST
