@@ -431,9 +431,7 @@
 	for(var/obj/item/bodypart/BP as anything in get_bodyparts())
 		total_brute += (BP.brute_dam * BP.body_damage_coeff)
 		total_burn += (BP.burn_dam * BP.body_damage_coeff)
-	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - get_chemical_loss() - total_burn - total_brute, DAMAGE_PRECISION))
-	if(health <= HEALTH_THRESHOLD_FULLCRIT && stat != DEAD && can_heartattack() && !undergoing_cardiac_arrest())
-		set_heartattack(TRUE)
+	set_health(round(maxHealth - get_oxy_loss() - get_tox_loss() - total_burn - total_brute, DAMAGE_PRECISION))
 	update_stat()
 	update_stamina()
 
@@ -448,6 +446,39 @@
 	else
 		remove_movespeed_modifier(/datum/movespeed_modifier/carbon_softcrit)
 	SEND_SIGNAL(src, COMSIG_LIVING_HEALTH_UPDATE)
+
+/mob/living/carbon/proc/get_cyberpunk_physical_death_damage()
+	var/total_damage = 0
+	for(var/obj/item/bodypart/BP as anything in get_bodyparts())
+		total_damage += (BP.brute_dam * BP.body_damage_coeff) + (BP.burn_dam * BP.body_damage_coeff)
+	return round(total_damage, DAMAGE_PRECISION)
+
+/mob/living/carbon/proc/has_cyberpunk_softcrit_damage()
+	if(get_cyberpunk_physical_death_damage() >= CARBON_PHYSICAL_SOFTCRIT_DAMAGE)
+		return TRUE
+	if(get_oxy_loss() >= OXYLOSS_PASSOUT_THRESHOLD)
+		return TRUE
+	if(get_tox_loss() >= CARBON_TOX_SOFTCRIT_DAMAGE)
+		return TRUE
+	return FALSE
+
+/mob/living/carbon/proc/has_cyberpunk_hardcrit_damage()
+	if(get_cyberpunk_physical_death_damage() >= CARBON_PHYSICAL_HARDCRIT_DAMAGE)
+		return TRUE
+	if(get_oxy_loss() >= CARBON_OXY_HARDCRIT_DAMAGE)
+		return TRUE
+	if(get_tox_loss() >= CARBON_TOX_HARDCRIT_DAMAGE)
+		return TRUE
+	return FALSE
+
+/mob/living/carbon/proc/has_cyberpunk_lethal_damage()
+	if(get_cyberpunk_physical_death_damage() >= CARBON_PHYSICAL_DEATH_DAMAGE)
+		return TRUE
+	if(get_oxy_loss() >= CARBON_OXY_DEATH_DAMAGE)
+		return TRUE
+	if(get_tox_loss() >= CARBON_TOX_DEATH_DAMAGE)
+		return TRUE
+	return FALSE
 
 /mob/living/carbon/update_sight()
 	if(!client)
@@ -601,9 +632,10 @@
 		clear_fullscreen("critvision")
 
 	//Oxygen damage overlay
-	if(oxyloss)
+	var/current_oxy_loss = get_oxy_loss()
+	if(current_oxy_loss)
 		var/severity = 0
-		switch(oxyloss)
+		switch(current_oxy_loss)
 			if(10 to 20)
 				severity = 1
 			if(20 to 25)
@@ -671,10 +703,9 @@
 
 /mob/living/carbon/set_health(new_value)
 	. = ..()
-	if(. > hardcrit_threshold)
-		if(health <= hardcrit_threshold && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
-			ADD_TRAIT(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT)
-	else if(health > hardcrit_threshold)
+	if(has_cyberpunk_hardcrit_damage() && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
+		ADD_TRAIT(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT)
+	else
 		REMOVE_TRAIT(src, TRAIT_KNOCKEDOUT, CRIT_HEALTH_TRAIT)
 	if(CONFIG_GET(flag/near_death_experience))
 		if(. > HEALTH_THRESHOLD_NEARDEATH)
@@ -688,16 +719,16 @@
 	if(HAS_TRAIT(src, TRAIT_GODMODE))
 		return
 	if(stat != DEAD)
-		if(health <= HEALTH_THRESHOLD_DEAD && !HAS_TRAIT(src, TRAIT_NODEATH))
+		if(has_cyberpunk_lethal_damage() && !HAS_TRAIT(src, TRAIT_NODEATH))
 			death()
 			return
 		if(HAS_TRAIT_FROM(src, TRAIT_DISSECTED, AUTOPSY_TRAIT))
 			REMOVE_TRAIT(src, TRAIT_DISSECTED, AUTOPSY_TRAIT)
-		if(health <= hardcrit_threshold && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
+		if(has_cyberpunk_hardcrit_damage() && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
 			set_stat(HARD_CRIT)
 		else if(HAS_TRAIT(src, TRAIT_KNOCKEDOUT))
 			set_stat(UNCONSCIOUS)
-		else if(health <= crit_threshold && !HAS_TRAIT(src, TRAIT_NOSOFTCRIT))
+		else if(has_cyberpunk_softcrit_damage() && !HAS_TRAIT(src, TRAIT_NOSOFTCRIT))
 			set_stat(SOFT_CRIT)
 		else
 			set_stat(CONSCIOUS)

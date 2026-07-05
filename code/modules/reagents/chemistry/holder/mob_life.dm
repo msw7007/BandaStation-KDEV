@@ -17,6 +17,8 @@
 	var/list/cached_reagents = reagent_list
 	if(owner)
 		expose_temperature(owner.bodytemperature, 0.25)
+		if(owner.has_hardcrit_circulatory_collapse())
+			seconds_per_tick *= CARBON_HARDCRIT_CIRCULATION_METABOLISM_MULTIPLIER
 
 	var/need_mob_update = FALSE
 	var/obj/item/organ/stomach/belly = owner.get_organ_slot(ORGAN_SLOT_STOMACH)

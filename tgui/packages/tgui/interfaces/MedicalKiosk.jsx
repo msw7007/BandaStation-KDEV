@@ -144,7 +144,6 @@ const MedicalKioskScanResults1 = (props) => {
     burn_health,
     suffocation_health,
     toxin_health,
-    chemical_health,
     oxygenation,
     blood_pressure,
     pain_total,
@@ -186,11 +185,6 @@ const MedicalKioskScanResults1 = (props) => {
             <LabeledList.Item label="Токсины">
               <ProgressBar value={toxin_health / 100} color="bad">
                 <AnimatedNumber value={toxin_health} />
-              </ProgressBar>
-            </LabeledList.Item>
-            <LabeledList.Item label="Химический урон">
-              <ProgressBar value={chemical_health / 100} color="bad">
-                <AnimatedNumber value={chemical_health} />
               </ProgressBar>
             </LabeledList.Item>
             <LabeledList.Divider />

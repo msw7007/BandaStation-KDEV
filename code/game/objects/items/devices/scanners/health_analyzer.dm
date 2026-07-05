@@ -344,7 +344,7 @@
 			total_cold += iter_part.cold_dam
 			total_acid += iter_part.acid_dam
 			total_infection += iter_part.infection
-		render_list += "<span class='info ml-1'>Oxygenation: [round(carbontarget.oxygenation, 0.1)]%, pressure: [round(carbontarget.blood_pressure * 100, 1)]%, pain: [round(carbontarget.get_total_pain(), 0.1)], chemical loss: [round(carbontarget.get_chemical_loss(), 0.1)], infection: [round(total_infection, 0.1)].</span><br>"
+		render_list += "<span class='info ml-1'>Oxygenation: [round(carbontarget.oxygenation, 0.1)]%, pressure: [round(carbontarget.blood_pressure * 100, 1)]%, pain: [round(carbontarget.get_total_pain(), 0.1)], infection: [round(total_infection, 0.1)].</span><br>"
 		render_list += "<span class='info ml-1'>Physical: blunt [ceil(total_blunt)], pierce [ceil(total_pierce)], slash [ceil(total_slash)]. Thermal: heat [ceil(total_heat)], cold [ceil(total_cold)], acid [ceil(total_acid)].</span><br>"
 		var/any_damage = brute_loss > 0 || fire_loss > 0 || oxy_loss > 0 || tox_loss > 0 || fire_loss > 0
 		var/any_missing = length(carbontarget.get_missing_limbs())

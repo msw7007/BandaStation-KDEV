@@ -167,32 +167,7 @@
 	return adjust_fire_loss(diff, updating_health, forced, required_bodytype)
 
 /mob/living/carbon/get_oxy_loss()
-	return round(max(0, 100 - oxygenation), DAMAGE_PRECISION)
-
-/mob/living/carbon/proc/get_chemical_loss()
-	return round(chemical_loss, DAMAGE_PRECISION)
-
-/mob/living/carbon/proc/adjust_chemical_loss(amount, updating_health = TRUE, forced = FALSE)
-	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
-		return 0
-	. = chemical_loss
-	chemical_loss = clamp(chemical_loss + amount * CONFIG_GET(number/damage_multiplier), 0, maxHealth * 2)
-	. -= chemical_loss
-	if(!.)
-		return FALSE
-	if(updating_health)
-		updatehealth()
-
-/mob/living/carbon/proc/set_chemical_loss(amount, updating_health = TRUE, forced = FALSE)
-	if(!forced && HAS_TRAIT(src, TRAIT_GODMODE))
-		return 0
-	. = chemical_loss
-	chemical_loss = clamp(amount, 0, maxHealth * 2)
-	. -= chemical_loss
-	if(!.)
-		return FALSE
-	if(updating_health)
-		updatehealth()
+	return round(max(0, oxyloss), DAMAGE_PRECISION)
 
 /mob/living/carbon/adjust_tox_loss(amount, updating_health = TRUE, forced = FALSE, required_biotype = ALL)
 	if(!can_adjust_tox_loss(amount, forced, required_biotype))

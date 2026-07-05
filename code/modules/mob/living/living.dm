@@ -3926,16 +3926,51 @@ GLOBAL_LIST_EMPTY(fire_appearances)
 			sync_lighting_plane_cutoff()
 
 
+/mob/living/proc/get_vv_brute_damage_tooltip()
+	return "Total brute damage: [get_brute_loss()]"
+
+/mob/living/proc/get_vv_burn_damage_tooltip()
+	return "Total fire damage: [get_fire_loss()]"
+
+/mob/living/proc/get_vv_oxy_damage_tooltip()
+	return "OXY loss: [get_oxy_loss()]"
+
+/mob/living/carbon/get_vv_brute_damage_tooltip()
+	var/blunt = 0
+	var/pierce = 0
+	var/slash = 0
+	for(var/obj/item/bodypart/limb as anything in get_bodyparts())
+		blunt += limb.blunt_dam
+		pierce += limb.pierce_dam
+		slash += limb.slash_dam
+	return "Total brute: [get_brute_loss()]&#10;Blunt: [round(blunt, DAMAGE_PRECISION)]&#10;Pierce: [round(pierce, DAMAGE_PRECISION)]&#10;Slash: [round(slash, DAMAGE_PRECISION)]"
+
+/mob/living/carbon/get_vv_burn_damage_tooltip()
+	var/heat = 0
+	var/cold = 0
+	var/acid = 0
+	for(var/obj/item/bodypart/limb as anything in get_bodyparts())
+		heat += limb.heat_dam
+		cold += limb.cold_dam
+		acid += limb.acid_dam
+	return "Total fire: [get_fire_loss()]&#10;Heat: [round(heat, DAMAGE_PRECISION)]&#10;Cold: [round(cold, DAMAGE_PRECISION)]&#10;Acid: [round(acid, DAMAGE_PRECISION)]"
+
+/mob/living/carbon/get_vv_oxy_damage_tooltip()
+	return "OXY loss: [get_oxy_loss()]&#10;Oxygenation: [round(oxygenation, DAMAGE_PRECISION)]"
+
 /mob/living/vv_get_header()
 	. = ..()
 	var/refid = REF(src)
+	var/brute_tooltip = get_vv_brute_damage_tooltip()
+	var/fire_tooltip = get_vv_burn_damage_tooltip()
+	var/oxy_tooltip = get_vv_oxy_damage_tooltip()
 	. += {"
 		<br><font size='1'>[VV_HREF_TARGETREF(refid, VV_HK_GIVE_DIRECT_CONTROL, "[ckey || "no ckey"]")] / [VV_HREF_TARGETREF_1V(refid, VV_HK_BASIC_EDIT, "[real_name || "no real name"]", NAMEOF(src, real_name))]</font>
 		<br><font size='1'>
-			BRUTE:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=brute' id='brute'>[get_brute_loss()]</a>
-			FIRE:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=fire' id='fire'>[get_fire_loss()]</a>
+			BRUTE:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=brute' id='brute' title='[brute_tooltip]'>[get_brute_loss()]</a>
+			FIRE:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=fire' id='fire' title='[fire_tooltip]'>[get_fire_loss()]</a>
 			TOXIN:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=toxin' id='toxin'>[get_tox_loss()]</a>
-			OXY:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=oxygen' id='oxygen'>[get_oxy_loss()]</a>
+			OXY:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=oxygen' id='oxygen' title='[oxy_tooltip]'>[get_oxy_loss()]</a>
 			BRAIN:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=brain' id='brain'>[get_organ_loss(ORGAN_SLOT_BRAIN)]</a>
 			STAMINA:<font size='1'><a href='byond://?_src_=vars;[HrefToken()];mobToDamage=[refid];adjustDamage=stamina' id='stamina'>[get_stamina_loss()]</a>
 		</font>

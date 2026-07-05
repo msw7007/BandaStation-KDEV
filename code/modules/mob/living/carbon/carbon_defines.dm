@@ -65,9 +65,8 @@
 	var/oxygenation = 100
 	/// Blood pressure multiplier. Affects oxygenation and bleeding rate.
 	var/blood_pressure = 1
-	/// Accumulated chemical loss from caustic/toxic chemical effects.
-	var/chemical_loss = 0
-
+	/// Seconds spent in hardcrit circulatory decline. This is separate from real heart attacks.
+	var/hardcrit_circulation_seconds = 0
 	var/obj/item/food/meat/slab/type_of_meat = /obj/item/food/meat/slab
 
 	rotate_on_lying = TRUE

@@ -1,6 +1,7 @@
 #define LIVER_DEFAULT_TOX_TOLERANCE 3 //amount of toxins the liver can filter out
 #define LIVER_DEFAULT_TOX_RESISTANCE 1 //lower values lower how harmful toxins are to the liver
 #define LIVER_FAILURE_STAGE_SECONDS 60 //amount of seconds before liver failure reaches a new stage
+#define LIVER_ALCOHOL_DAMAGE_CAP 0.9
 
 /obj/item/organ/liver
 	name = "liver"
@@ -73,6 +74,19 @@
 /obj/item/organ/liver/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
 	. = ..()
 	UnregisterSignal(organ_owner, list(COMSIG_MOB_REAGENT_TICK, COMSIG_ATOM_EXAMINE))
+
+/obj/item/organ/liver/proc/apply_alcohol_damage(damage_amount)
+	if(damage_amount <= 0)
+		return FALSE
+	var/damage_cap = maxHealth * LIVER_ALCOHOL_DAMAGE_CAP
+	if(damage >= damage_cap)
+		return FALSE
+	var/old_damage = damage
+	damage = min(damage + damage_amount, damage_cap)
+	if(damage > old_damage)
+		add_organ_pain(damage - old_damage, TRUE)
+	SEND_SIGNAL(src, COMSIG_ORGAN_ADJUST_DAMAGE, damage_amount, damage_cap, NONE)
+	return old_damage - damage
 
 /**
  * This proc can be overriden by liver subtypes so they can handle certain chemicals in special ways.
@@ -410,3 +424,4 @@
 #undef LIVER_DEFAULT_TOX_TOLERANCE
 #undef LIVER_DEFAULT_TOX_RESISTANCE
 #undef LIVER_FAILURE_STAGE_SECONDS
+#undef LIVER_ALCOHOL_DAMAGE_CAP

@@ -618,7 +618,7 @@
 
 		apply_damage(acidity * damage_mod, BRUTE, affecting)
 		apply_damage(acidity * damage_mod * 2, BURN, affecting, burn_type = BODYPART_DAMAGE_ACID)
-		adjust_chemical_loss(acidity * damage_mod * 0.5, updating_health = FALSE)
+		adjust_tox_loss(acidity * damage_mod * 0.5, updating_health = FALSE, forced = TRUE)
 
 	//MELTING INVENTORY ITEMS//
 	//these items are all outside of armour visually, so melt regardless.
