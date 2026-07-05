@@ -1,5 +1,7 @@
 #define GORILLA_MUTATION_CHANCE_PER_SECOND 0.25
 #define GORILLA_MUTATION_MINIMUM_DAMAGE 2500
+#define GENETIC_DAMAGE_HUMANOIDITY_SCAR_CHANCE_MULTIPLIER 1
+#define GENETIC_DAMAGE_HUMANOIDITY_SCAR_AMOUNT 0.5
 
 /datum/status_effect/genetic_damage
 	id = "genetic_damage"
@@ -21,6 +23,7 @@
 /datum/status_effect/genetic_damage/on_creation(mob/living/new_owner, total_damage)
 	. = ..()
 	src.total_damage = total_damage
+	try_humanoidity_scarring(total_damage)
 	RegisterSignal(new_owner, COMSIG_LIVING_HEALTHSCAN, PROC_REF(on_healthscan))
 
 /datum/status_effect/genetic_damage/on_remove()
@@ -30,6 +33,16 @@
 /datum/status_effect/genetic_damage/refresh(effect, total_damage)
 	. = ..()
 	src.total_damage += total_damage
+	try_humanoidity_scarring(total_damage)
+
+/datum/status_effect/genetic_damage/proc/try_humanoidity_scarring(damage_added)
+	if(damage_added <= 0 || !iscarbon(owner))
+		return
+	var/mob/living/carbon/carbon_owner = owner
+	if(!carbon_owner.dna)
+		return
+	if(prob(clamp(damage_added * GENETIC_DAMAGE_HUMANOIDITY_SCAR_CHANCE_MULTIPLIER, 0, 100)))
+		carbon_owner.dna.adjust_humanoidity_genetic_penalty(GENETIC_DAMAGE_HUMANOIDITY_SCAR_AMOUNT)
 
 /datum/status_effect/genetic_damage/tick(seconds_between_ticks)
 	if(ismonkey(owner) && total_damage >= GORILLA_MUTATION_MINIMUM_DAMAGE && SPT_PROB(GORILLA_MUTATION_CHANCE_PER_SECOND, seconds_between_ticks))
@@ -64,3 +77,5 @@
 
 #undef GORILLA_MUTATION_CHANCE_PER_SECOND
 #undef GORILLA_MUTATION_MINIMUM_DAMAGE
+#undef GENETIC_DAMAGE_HUMANOIDITY_SCAR_CHANCE_MULTIPLIER
+#undef GENETIC_DAMAGE_HUMANOIDITY_SCAR_AMOUNT
