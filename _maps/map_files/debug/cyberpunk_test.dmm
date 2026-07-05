@@ -74,11 +74,9 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "br" = (
-/obj/structure/stairs/cyberpunk_auto/north,
-/turf/open/floor/iron/stairs{
-	color = "#3d3e42"
-	},
-/area/cyberpunk/city/corporate)
+/obj/machinery/door/airlock/engineering,
+/turf/open/floor/wood,
+/area/station/command/bridge)
 "bt" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/small,
@@ -114,11 +112,11 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "bY" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/small,
 /area/station/service/bar)
 "ca" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
 "cr" = (
@@ -265,12 +263,6 @@
 "ew" = (
 /turf/open/openspace,
 /area/station/cargo/miningoffice)
-"ez" = (
-/obj/structure/stairs/cyberpunk_auto/north,
-/turf/open/floor/iron/stairs{
-	color = "#3d3e42"
-	},
-/area/station/science/research)
 "eB" = (
 /obj/structure/stairs/cyberpunk_auto/west,
 /turf/open/floor/iron/dark/textured,
@@ -342,7 +334,7 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "fz" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/corporate)
 "fF" = (
@@ -463,7 +455,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/public_service/general_store)
 "hT" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "ii" = (
@@ -793,7 +785,7 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "ls" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
 /area/station/command/bridge)
 "ly" = (
@@ -854,7 +846,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
 "mJ" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/contract_office)
 "mO" = (
@@ -1233,7 +1225,7 @@
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_01)
 "qY" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/metro)
 "rk" = (
@@ -1468,7 +1460,7 @@
 /turf/open/floor/wood,
 /area/station/command/bridge)
 "vS" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/wood,
 /area/station/security/brig)
 "vU" = (
@@ -1628,7 +1620,7 @@
 /turf/open/floor/iron/dark/small,
 /area/station/command/bridge)
 "yL" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/security)
 "yR" = (
@@ -1667,13 +1659,8 @@
 	dir = 4
 	},
 /area/station/cargo/miningoffice)
-"zr" = (
-/obj/effect/turf_decal/tile/brown/fourcorners,
-/obj/structure/stairs/cyberpunk_auto/west,
-/turf/open/floor/iron,
-/area/station/cargo/miningoffice)
 "zw" = (
-/obj/structure/window/reinforced/spawner/directional/west,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
 /area/station/science/research)
 "zD" = (
@@ -1715,7 +1702,7 @@
 /turf/open/openspace,
 /area/cyberpunk/city/security)
 "An" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
 "Ar" = (
@@ -1893,10 +1880,6 @@
 "BY" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/contract_office)
-"Ck" = (
-/obj/structure/stairs/cyberpunk_auto/west,
-/turf/open/floor/iron,
-/area/station/command/bridge)
 "Cl" = (
 /obj/structure/closet/crate,
 /obj/item/knife/cyberpunk,
@@ -2184,12 +2167,6 @@
 /obj/effect/landmark/start/chemist,
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
-"GE" = (
-/obj/structure/stairs/cyberpunk_auto/north,
-/turf/open/floor/iron/stairs{
-	color = "#3d3e42"
-	},
-/area/cyberpunk/city/civic/city_hall)
 "GQ" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -2554,7 +2531,7 @@
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
 "Mr" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/wood,
 /area/station/command/bridge)
 "MB" = (
@@ -2720,13 +2697,9 @@
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
 "OB" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron,
 /area/station/commons/dorms)
-"OE" = (
-/obj/machinery/power/smes/magical,
-/turf/open/floor/iron/white,
-/area/station/science/research)
 "OH" = (
 /obj/structure/stairs/cyberpunk_auto/north,
 /turf/open/floor/iron/white,
@@ -3063,12 +3036,6 @@
 /obj/machinery/vending/security,
 /turf/open/floor/wood,
 /area/station/security/brig)
-"We" = (
-/obj/structure/stairs/cyberpunk_auto/north,
-/turf/open/floor/iron/stairs{
-	color = "#3d3e42"
-	},
-/area/cyberpunk/city/security)
 "Wg" = (
 /turf/open/openspace,
 /area/station/science/research)
@@ -3164,9 +3131,9 @@
 /turf/open/floor/iron/dark/small,
 /area/station/service/bar)
 "XD" = (
-/obj/structure/stairs/cyberpunk_auto/south,
-/turf/open/openspace,
-/area/station/commons/dorms)
+/obj/machinery/door/airlock/command,
+/turf/open/floor/wood,
+/area/station/command/bridge)
 "XG" = (
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
@@ -3249,7 +3216,7 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "Ym" = (
-/obj/machinery/power/smes/magical,
+/obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/small,
 /area/station/command/bridge)
 "Yu" = (
@@ -3264,9 +3231,9 @@
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
 "YL" = (
-/obj/structure/stairs/cyberpunk_auto/north,
-/turf/open/openspace,
-/area/station/security/brig)
+/obj/machinery/door/airlock/command,
+/turf/open/floor/iron/white,
+/area/station/command/bridge)
 "YM" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/engine,
@@ -3305,6 +3272,10 @@
 "Zu" = (
 /turf/open/openspace,
 /area/station/command/bridge)
+"ZV" = (
+/obj/structure/window/reinforced/spawner/directional/west,
+/turf/open/floor/iron/white,
+/area/station/science/research)
 "ZX" = (
 /obj/machinery/smartfridge/food,
 /turf/closed/wall,
@@ -7410,7 +7381,7 @@ MI
 qQ
 AY
 ok
-br
+ok
 WW
 ok
 ok
@@ -7472,7 +7443,7 @@ MI
 uw
 AY
 Qu
-br
+ok
 WW
 ok
 ok
@@ -7575,7 +7546,7 @@ ll
 mA
 mA
 mA
-Mj
+mA
 HN
 mA
 mA
@@ -7637,7 +7608,7 @@ ll
 mA
 mA
 mA
-Mj
+mA
 HN
 mA
 mA
@@ -7699,7 +7670,7 @@ ll
 mA
 mA
 mA
-Mj
+mA
 HN
 mA
 mA
@@ -7804,9 +7775,9 @@ Oh
 Oh
 Oh
 AX
-cK
-cK
-cK
+Oh
+Oh
+Oh
 AX
 Oh
 Oh
@@ -10076,7 +10047,7 @@ MI
 vz
 dO
 Ng
-GE
+Ng
 kW
 Ng
 Ng
@@ -10138,7 +10109,7 @@ MI
 vz
 dO
 Ng
-GE
+Ng
 kW
 Ng
 Ng
@@ -10179,7 +10150,7 @@ is
 is
 is
 is
-We
+is
 Ag
 is
 is
@@ -10241,7 +10212,7 @@ is
 is
 is
 is
-We
+is
 Ag
 is
 is
@@ -10303,7 +10274,7 @@ is
 is
 is
 is
-We
+is
 Ag
 is
 is
@@ -11938,7 +11909,7 @@ XJ
 rK
 DV
 ES
-XD
+DV
 DV
 DV
 DV
@@ -12000,7 +11971,7 @@ XJ
 rK
 DV
 ES
-XD
+DV
 DV
 DV
 DV
@@ -13259,6 +13230,7 @@ zb
 zb
 zb
 zb
+YL
 zb
 zb
 zb
@@ -13267,9 +13239,8 @@ zb
 zb
 zb
 zb
-zb
-zb
-zb
+XD
+br
 zb
 zb
 zb
@@ -15734,8 +15705,8 @@ XJ
 XJ
 XJ
 zb
-oP
-oP
+PB
+PB
 cZ
 PB
 PB
@@ -15762,10 +15733,10 @@ XG
 XG
 XG
 qj
-zo
-zo
-zo
-zo
+XG
+XG
+XG
+XG
 XG
 XG
 XG
@@ -15858,8 +15829,8 @@ XJ
 XJ
 XJ
 zb
-Zu
-Zu
+PB
+PB
 cZ
 PB
 PB
@@ -16010,8 +15981,8 @@ Ox
 iR
 iR
 iR
-zr
-zr
+iR
+iR
 XG
 XG
 XG
@@ -16595,7 +16566,7 @@ gM
 gM
 gM
 ov
-YL
+gM
 gr
 cM
 XJ
@@ -16657,7 +16628,7 @@ gM
 gM
 gM
 gM
-YL
+gM
 gr
 cM
 XJ
@@ -16726,8 +16697,8 @@ XJ
 XJ
 XJ
 zb
-Ck
-Ck
+bg
+bg
 bg
 bg
 bg
@@ -16989,8 +16960,8 @@ IC
 IC
 IC
 IC
-IC
-IC
+DG
+DG
 IC
 IC
 IC
@@ -17062,7 +17033,7 @@ bN
 DG
 hF
 bN
-ez
+bN
 Wg
 Wg
 IC
@@ -17124,7 +17095,7 @@ bN
 DG
 bN
 bN
-ez
+bN
 Wg
 Wg
 IC
@@ -17249,7 +17220,7 @@ IC
 bN
 bN
 bN
-OE
+zw
 hh
 IC
 Ws
@@ -17604,9 +17575,9 @@ bg
 bg
 bg
 IC
-zw
-zw
-zw
+ZV
+ZV
+ZV
 bN
 bN
 bN
