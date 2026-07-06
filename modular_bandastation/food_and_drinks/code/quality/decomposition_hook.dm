@@ -7,4 +7,6 @@
 
 /obj/item/food/Initialize(mapload)
 	. = ..()
+	AddComponent(/datum/component/cyberpunk_food_quality_model)
 	AddComponent(/datum/component/ingredient_compatibility)
+	AddComponent(/datum/component/cyberpunk_food_additions)
