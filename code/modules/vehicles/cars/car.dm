@@ -2961,6 +2961,8 @@
 	var/cy_crash_eject_threshold = 160
 	var/cy_crash_damage_threshold = 5
 	var/cy_crash_rebound_multiplier = 0.25
+	var/cy_driving_xp_interval = 10 SECONDS
+	var/cy_driving_xp_next_time = 0
 	var/cy_throttle_grip_charge = 0
 	var/cy_throttle_grip_gain = 0.22
 	var/cy_throttle_grip_decay = 1.25
@@ -3305,6 +3307,7 @@
 		return
 
 	consume_vehicle_fuel((abs(move_x) + abs(move_y)) * base_fuel_use * fuel_multiplier * get_vehicle_stat_multiplier("fuel"))
+	reward_driver_movement_experience(driver)
 	handle_vehicle_movement_visuals()
 	cy_apply_world_pixel_position()
 
@@ -3319,6 +3322,12 @@
 		new /obj/effect/temp_visual/cyberpunk_vehicle_skid(skid_turf)
 	else if(prob(15))
 		new /obj/effect/temp_visual/cyberpunk_vehicle_dust(skid_turf)
+
+/obj/vehicle/sealed/car/cyberpunk/proc/reward_driver_movement_experience(mob/living/driver)
+	if(!driver || world.time < cy_driving_xp_next_time)
+		return
+	cy_driving_xp_next_time = world.time + cy_driving_xp_interval
+	driver.reward_cyberpunk_driving_movement_experience(src)
 
 /obj/vehicle/sealed/car/cyberpunk/proc/approach_value(current, target, amount)
 	if(current < target)
