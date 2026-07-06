@@ -20,6 +20,8 @@
 	var/production_time_multiplier = 1
 	var/production_material_multiplier = 1
 	var/failure_shock_multiplier = 1
+	var/charge_rate_multiplier = 1
+	var/generator_output_multiplier = 1
 
 /datum/cyberpunk_machine_module/proc/can_install(obj/machinery/machine, mob/living/user)
 	return TRUE
@@ -252,6 +254,52 @@
 	power_usage_multiplier = 1.04
 	wear_multiplier = 1.03
 
+/datum/cyberpunk_machine_module/door_servo_matrix
+	name = "door servo matrix"
+	id = "door_servo_matrix"
+	description = "A door-focused module that reduces actuator wear and access-loop faults."
+	module_item_type = /obj/item/cyberpunk_machine_module/door_servo_matrix
+	power_usage_multiplier = 0.95
+	wear_multiplier = 0.84
+	tool_time_multiplier = 0.9
+
+/datum/cyberpunk_machine_module/charger_regulator
+	name = "charger regulator"
+	id = "charger_regulator"
+	description = "A charger-focused module that improves charge throughput and dampens reverse-charge faults."
+	module_item_type = /obj/item/cyberpunk_machine_module/charger_regulator
+	power_usage_multiplier = 0.92
+	wear_multiplier = 0.9
+	charge_rate_multiplier = 1.25
+	failure_shock_multiplier = 0.8
+
+/datum/cyberpunk_machine_module/generator_fuel_controller
+	name = "generator fuel controller"
+	id = "generator_fuel_controller"
+	description = "A generator-focused module that improves fuel metering and output stability."
+	module_item_type = /obj/item/cyberpunk_machine_module/generator_fuel_controller
+	wear_multiplier = 0.9
+	generator_output_multiplier = 1.15
+	failure_shock_multiplier = 0.8
+
+/datum/cyberpunk_machine_module/camera_signal_booster
+	name = "camera signal booster"
+	id = "camera_signal_booster"
+	description = "A camera-focused module that reduces network drift and improves service tolerance."
+	module_item_type = /obj/item/cyberpunk_machine_module/camera_signal_booster
+	power_usage_multiplier = 0.93
+	wear_multiplier = 0.82
+	tool_time_multiplier = 0.9
+
+/datum/cyberpunk_machine_module/turret_targeting_limiter
+	name = "turret targeting limiter"
+	id = "turret_targeting_limiter"
+	description = "A turret-focused module that reduces targeting faults and unsafe firing-state wear."
+	module_item_type = /obj/item/cyberpunk_machine_module/turret_targeting_limiter
+	power_usage_multiplier = 0.96
+	wear_multiplier = 0.8
+	failure_shock_multiplier = 0.75
+
 /datum/cyberpunk_machine_module/chem_reaction_accelerator/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/chem_master) || istype(machine, /obj/machinery/chem_dispenser)
 
@@ -294,6 +342,21 @@
 /datum/cyberpunk_machine_module/vending_contract_terminal/can_install(obj/machinery/machine, mob/living/user)
 	return istype(machine, /obj/machinery/vending)
 
+/datum/cyberpunk_machine_module/door_servo_matrix/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/door)
+
+/datum/cyberpunk_machine_module/charger_regulator/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/cell_charger) || istype(machine, /obj/machinery/recharger)
+
+/datum/cyberpunk_machine_module/generator_fuel_controller/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/power/cyberpunk_generator)
+
+/datum/cyberpunk_machine_module/camera_signal_booster/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/camera)
+
+/datum/cyberpunk_machine_module/turret_targeting_limiter/can_install(obj/machinery/machine, mob/living/user)
+	return istype(machine, /obj/machinery/porta_turret) || istype(machine, /obj/machinery/deployable_turret) || istype(machine, /obj/machinery/turretid)
+
 /proc/cyberpunk_machine_module_catalog()
 	return list(
 		/datum/cyberpunk_machine_module/power_governor,
@@ -319,6 +382,11 @@
 		/datum/cyberpunk_machine_module/network_filter,
 		/datum/cyberpunk_machine_module/vending_cyberspace_relay,
 		/datum/cyberpunk_machine_module/vending_contract_terminal,
+		/datum/cyberpunk_machine_module/door_servo_matrix,
+		/datum/cyberpunk_machine_module/charger_regulator,
+		/datum/cyberpunk_machine_module/generator_fuel_controller,
+		/datum/cyberpunk_machine_module/camera_signal_booster,
+		/datum/cyberpunk_machine_module/turret_targeting_limiter,
 	)
 
 /obj/item/cyberpunk_machine_module
@@ -476,3 +544,28 @@
 	name = "vending contract terminal"
 	icon_state = "harddisk"
 	module_datum_type = /datum/cyberpunk_machine_module/vending_contract_terminal
+
+/obj/item/cyberpunk_machine_module/door_servo_matrix
+	name = "door servo matrix"
+	icon_state = "component"
+	module_datum_type = /datum/cyberpunk_machine_module/door_servo_matrix
+
+/obj/item/cyberpunk_machine_module/charger_regulator
+	name = "charger regulator"
+	icon_state = "cell_con"
+	module_datum_type = /datum/cyberpunk_machine_module/charger_regulator
+
+/obj/item/cyberpunk_machine_module/generator_fuel_controller
+	name = "generator fuel controller"
+	icon_state = "circuit_board"
+	module_datum_type = /datum/cyberpunk_machine_module/generator_fuel_controller
+
+/obj/item/cyberpunk_machine_module/camera_signal_booster
+	name = "camera signal booster"
+	icon_state = "integrated_circuit"
+	module_datum_type = /datum/cyberpunk_machine_module/camera_signal_booster
+
+/obj/item/cyberpunk_machine_module/turret_targeting_limiter
+	name = "turret targeting limiter"
+	icon_state = "harddisk"
+	module_datum_type = /datum/cyberpunk_machine_module/turret_targeting_limiter

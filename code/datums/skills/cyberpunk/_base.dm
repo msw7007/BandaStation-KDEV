@@ -38,6 +38,16 @@
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5), get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3))
 
 	switch(action)
+		if("anchor", "unanchor", "secure", "unsecure")
+			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5))
+			if(istype(target, /obj/machinery))
+				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
+			if(target?.is_cyberpunk_heavy_mobile_structure())
+				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ATHLETICS, 2, "value_2"), get_cyberpunk_skill_perk_bonus(SKILL_ATHLETICS, 3))
+		if("fold", "unfold", "deploy")
+			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5), get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
+			if(istype(target, /obj/machinery))
+				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
 		if("build", "assemble", "construction")
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
 		if("dismantle", "disassemble", "deconstruct")
@@ -46,6 +56,16 @@
 				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3))
 		if("repair")
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3))
+		if("panel", "service")
+			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5), get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3))
+			if(target?.is_cyberpunk_recently_analyzed())
+				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
+		if("module")
+			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1), get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
+			if(target?.is_cyberpunk_recently_analyzed())
+				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
+		if("hack", "sabotage")
+			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_HACKING, 6), get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
 
 	return max(0.1, 1 + highest_bonus * 0.01)
 
@@ -177,6 +197,53 @@
 	if(athletics_bonus <= 0)
 		return base_force
 	return base_force * (1 + athletics_bonus * 0.01)
+
+/mob/living/proc/reward_cyberpunk_structure_anchor_experience(atom/target)
+	if(!target?.is_cyberpunk_structure_target())
+		return
+	reward_character_check_experience(SKILL_CONSTRUCTION, 2, FALSE, 1)
+	if(istype(target, /obj/machinery))
+		reward_character_check_experience(SKILL_ELECTRICS, 2, FALSE, 1)
+	switch(target.get_cyberpunk_structure_category())
+		if("mobile_structure")
+			reward_character_check_experience(SKILL_ATHLETICS, 2, FALSE, 1)
+		if("foldable_structure")
+			reward_character_check_experience(SKILL_INVENTION, 2, FALSE, 1)
+		if("nonmobile_mechanism")
+			reward_character_check_experience(SKILL_INVENTION, 1, FALSE, 1)
+
+/mob/living/proc/reward_cyberpunk_structure_tool_experience(atom/target, action = "work")
+	if(!target?.is_cyberpunk_structure_target())
+		return
+	var/base_amount = 1
+	switch(action)
+		if("repair")
+			base_amount = 2
+		if("dismantle", "disassemble", "deconstruct")
+			base_amount = 2
+		if("panel", "module", "service")
+			base_amount = 2
+		if("anchor", "unanchor", "fold", "unfold", "deploy")
+			base_amount = 1
+	reward_character_check_experience(SKILL_CONSTRUCTION, base_amount, FALSE, 1)
+	if(istype(target, /obj/machinery))
+		reward_character_check_experience(SKILL_ELECTRICS, base_amount, FALSE, 1)
+	switch(target.get_cyberpunk_structure_category())
+		if("mobile_structure")
+			reward_character_check_experience(SKILL_ATHLETICS, base_amount, FALSE, 1)
+		if("foldable_structure")
+			reward_character_check_experience(SKILL_INVENTION, base_amount, FALSE, 1)
+		if("nonmobile_mechanism")
+			reward_character_check_experience(SKILL_INVENTION, max(1, base_amount * 0.5), FALSE, 1)
+	if(action in list("module", "service"))
+		reward_character_check_experience(SKILL_INVENTION, base_amount, FALSE, 1)
+	if(target.is_cyberpunk_recently_analyzed())
+		reward_character_check_experience(SKILL_ANALYSIS, 1, FALSE, 1)
+
+/mob/living/proc/reward_cyberpunk_driving_movement_experience(atom/vehicle)
+	if(!mind || !vehicle)
+		return
+	reward_character_check_experience(SKILL_DRIVING, 1, FALSE, 1)
 
 /mob/living/proc/get_cyberpunk_structure_damage_bonus(atom/target)
 	if(!target?.is_cyberpunk_structure_target())

@@ -685,6 +685,7 @@
 	part_category = "drivetrain"
 	part_health = 100
 	part_effect = "Fast street suspension. Strong on floors and roads, weak on natural terrain."
+	running_gear_slots = 4
 	speed_multiplier = 1.08
 	floor_grip = 1.1
 	rough_grip = 0.55
@@ -707,6 +708,7 @@
 	part_name = "Starlight tracked running gear"
 	part_health = 160
 	part_effect = "Slow tracks with steady grip across most terrain."
+	running_gear_slots = 8
 	speed_multiplier = 0.7
 	maneuver_multiplier = 0.65
 	traction_multiplier = 1.35
@@ -720,6 +722,7 @@
 	part_name = "Starlight walker legs"
 	part_health = 130
 	part_effect = "Mechanical legs with stable bad-terrain movement."
+	running_gear_slots = 4
 	speed_multiplier = 0.75
 	maneuver_multiplier = 0.9
 	traction_multiplier = 1.2
@@ -730,6 +733,7 @@
 	part_name = "Starlight gravitic drive"
 	part_health = 120
 	part_effect = "Terrain-agnostic grav drive with weak grip and heavy drift."
+	running_gear_slots = 4
 	speed_multiplier = 1.05
 	maneuver_multiplier = 1.05
 	traction_multiplier = 0.55
@@ -743,6 +747,7 @@
 	part_name = "Starlight flight nozzles"
 	part_health = 90
 	part_effect = "Flight nozzles. Enables altitude changes and handles open space."
+	running_gear_slots = 2
 	speed_multiplier = 1.35
 	maneuver_multiplier = 0.85
 	traction_multiplier = 0.75
@@ -812,6 +817,7 @@
 	part_name = "Starlight light tracks"
 	part_health = 140
 	part_effect = "Lighter tracks with better turn-in and less armor tolerance."
+	running_gear_slots = 6
 	speed_multiplier = 0.82
 	acceleration_multiplier = 0.95
 	maneuver_multiplier = 0.82
@@ -826,6 +832,7 @@
 	part_name = "Starlight industrial tracks"
 	part_health = 210
 	part_effect = "Heavy tracks that trade speed for consistent pull and braking."
+	running_gear_slots = 8
 	speed_multiplier = 0.58
 	acceleration_multiplier = 0.82
 	maneuver_multiplier = 0.55
@@ -2756,11 +2763,11 @@
 	build_path = /obj/item/cyberpunk_vehicle_part/engine/heavy/armored/tier3
 
 /datum/design/cyberpunk_vehicle
-	name = "Starlight Prototype Vehicle"
-	id = "starlight_vehicle_prototype"
+	name = "Starlight Vehicle Platform"
+	id = "starlight_vehicle_platform"
 	build_type = MECHFAB | PROTOLATHE
 	materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 12, /datum/material/glass = SHEET_MATERIAL_AMOUNT * 2)
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test
+	build_path = /obj/vehicle/sealed/car/cyberpunk
 	construction_time = 30 SECONDS
 	category = list(
 		RND_CATEGORY_MECHFAB_EQUIPMENT + RND_SUBCATEGORY_MECHFAB_EQUIPMENT_MISC,
@@ -2791,47 +2798,52 @@
 /datum/design/cyberpunk_vehicle/microbike
 	name = "Starlight Microbike"
 	id = "starlight_vehicle_microbike"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/microbike
+	build_path = /obj/vehicle/sealed/car/cyberpunk/microbike
 
 /datum/design/cyberpunk_vehicle/bike
 	name = "Starlight Bike"
 	id = "starlight_vehicle_bike"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/bike
+	build_path = /obj/vehicle/sealed/car/cyberpunk/bike
+
+/datum/design/cyberpunk_vehicle/standard_car
+	name = "Starlight Standard Car"
+	id = "starlight_vehicle_standard_car"
+	build_path = /obj/vehicle/sealed/car/cyberpunk/standard_car
 
 /datum/design/cyberpunk_vehicle/large_car
 	name = "Starlight Large Car"
 	id = "starlight_vehicle_large_car"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/large_car
+	build_path = /obj/vehicle/sealed/car/cyberpunk/large_car
 
 /datum/design/cyberpunk_vehicle/minivan
 	name = "Starlight Minivan"
 	id = "starlight_vehicle_minivan"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/minivan
+	build_path = /obj/vehicle/sealed/car/cyberpunk/minivan
 
 /datum/design/cyberpunk_vehicle/cargo_minivan
 	name = "Starlight Cargo Minivan"
 	id = "starlight_vehicle_cargo_minivan"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/cargo_minivan
+	build_path = /obj/vehicle/sealed/car/cyberpunk/cargo_minivan
 
 /datum/design/cyberpunk_vehicle/bus
 	name = "Starlight Bus"
 	id = "starlight_vehicle_bus"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/bus
+	build_path = /obj/vehicle/sealed/car/cyberpunk/bus
 
 /datum/design/cyberpunk_vehicle/cargo_truck
 	name = "Starlight Cargo Truck"
 	id = "starlight_vehicle_cargo_truck"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/cargo_truck
+	build_path = /obj/vehicle/sealed/car/cyberpunk/cargo_truck
 
 /datum/design/cyberpunk_vehicle/apc
 	name = "Starlight APC"
 	id = "starlight_vehicle_apc"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/apc
+	build_path = /obj/vehicle/sealed/car/cyberpunk/apc
 
 /datum/design/cyberpunk_vehicle/tank
 	name = "Starlight Tank"
 	id = "starlight_vehicle_tank"
-	build_path = /obj/vehicle/sealed/car/cyberpunk_test/tank
+	build_path = /obj/vehicle/sealed/car/cyberpunk/tank
 
 /datum/techweb_node/cyberpunk_vehicle
 	id = "starlight_vehicle"
@@ -2859,7 +2871,7 @@
 		"starlight_engine_combustion",
 		"starlight_engine_performance",
 		"starlight_engine_heavy",
-		"starlight_vehicle_prototype",
+		"starlight_vehicle_platform",
 		"starlight_vehicle_microbike",
 		"starlight_vehicle_bike",
 		"starlight_vehicle_large_car",
@@ -2872,10 +2884,11 @@
 	)
 
 //CYBERPUNK BUILD - rebuild and delete before release
-/obj/vehicle/sealed/car/cyberpunk_test
-	name = "Starlight prototype vehicle"
+/obj/vehicle/sealed/car/cyberpunk
+	name = "Starlight Vehicle Platform"
 	desc = "A temporary Starlight test platform using a clown car body shell."
-	icon_state = "clowncar"
+	icon = 'icons/obj/cyberpunk_vehicle_debug.dmi'
+	icon_state = "debug_car"
 	max_integrity = 220
 	max_occupants = 4
 	max_drivers = 1
@@ -2892,6 +2905,7 @@
 	var/max_fuel = 2000
 	var/max_mechanism_slots = 1
 	var/list/installed_mechanisms
+	var/list/cyberpunk_exposed_passengers
 	var/subpixel_x = 0
 	var/subpixel_y = 0
 	var/cy_world_px = 0
@@ -2934,11 +2948,17 @@
 	var/cy_collision_half_width = 8
 	var/cy_collision_half_height = 8
 	var/cy_drift_amount = 0
+	var/cy_visual_fixed_dir = NORTH
+	var/cy_visual_current_rotation = 0
+	var/cy_visual_turn_rate = 360
+	var/cy_visual_snap_threshold = 0.5
+	var/cy_visual_max_drift_rotation = 18
+	var/cy_visual_min_speed_for_drift = 12
 	var/cy_reverse_drive = FALSE
-	var/cy_reverse_speed_threshold = 35
+	var/cy_reverse_speed_threshold = 2
 	var/cy_reverse_max_speed_multiplier = 0.45
 	var/cy_opposite_brake_multiplier = 1.75
-	var/cy_crash_eject_threshold = 50
+	var/cy_crash_eject_threshold = 160
 	var/cy_crash_damage_threshold = 5
 	var/cy_crash_rebound_multiplier = 0.25
 	var/cy_throttle_grip_charge = 0
@@ -2953,7 +2973,11 @@
 	var/drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain
 	var/engine_part_type = /obj/item/cyberpunk_vehicle_part/engine
 
-/obj/vehicle/sealed/car/cyberpunk_test/Initialize(mapload)
+/obj/vehicle/sealed/car/cyberpunk/generate_actions()
+	. = ..()
+	initialize_passenger_action_type(/datum/action/vehicle/sealed/cyberpunk_lean_out)
+
+/obj/vehicle/sealed/car/cyberpunk/Initialize(mapload)
 	. = ..()
 	var/obj/item/cyberpunk_vehicle_part/default_hull = new hull_part_type(src)
 	var/obj/item/cyberpunk_vehicle_part/default_drivetrain = new drivetrain_part_type(src)
@@ -2973,74 +2997,104 @@
 	cy_accel_y = cy_forward_y
 	cy_grip_world_x = cy_forward_x
 	cy_grip_world_y = cy_forward_y
+	setDir(cy_visual_fixed_dir)
+	cy_visual_current_rotation = get_vehicle_target_visual_rotation()
+	transform = get_vehicle_visual_transform()
 	START_PROCESSING(SSfastprocess, src)
 
-/obj/vehicle/sealed/car/cyberpunk_test/microbike
+/obj/vehicle/sealed/car/cyberpunk/microbike
 	name = "Starlight microbike"
 	desc = "A small Starlight one-seat vehicle with a compact mechanism slot."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/microbike
 
-/obj/vehicle/sealed/car/cyberpunk_test/bike
+/obj/vehicle/sealed/car/cyberpunk/bike
 	name = "Starlight bike"
 	desc = "A two-seat Starlight bike frame."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/bike
 
-/obj/vehicle/sealed/car/cyberpunk_test/large_car
+/obj/vehicle/sealed/car/cyberpunk/standard_car
+	name = "Starlight standard car"
+	desc = "A four-seat Starlight city car with standard chassis, suspension and engine."
+
+/obj/vehicle/sealed/car/cyberpunk/coupe
+	name = "Starlight coupe"
+	desc = "A two-seat Starlight coupe tuned for fast city driving."
+	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/sport_compact
+	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/race_street
+	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/performance
+
+/obj/vehicle/sealed/car/cyberpunk/large_car
 	name = "Starlight large car"
 	desc = "A larger Starlight car body with two mechanism slots."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/large_car
 
-/obj/vehicle/sealed/car/cyberpunk_test/minivan
+/obj/vehicle/sealed/car/cyberpunk/minivan
 	name = "Starlight minivan"
 	desc = "A six-seat Starlight minivan."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/minivan
 
-/obj/vehicle/sealed/car/cyberpunk_test/cargo_minivan
+/obj/vehicle/sealed/car/cyberpunk/cargo_minivan
 	name = "Starlight cargo minivan"
 	desc = "A compact cargo vehicle with four mechanism slots."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/cargo_minivan
 
-/obj/vehicle/sealed/car/cyberpunk_test/bus
+/obj/vehicle/sealed/car/cyberpunk/bus
 	name = "Starlight bus"
 	desc = "A slow eight-seat Starlight bus."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/bus
 	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/offroad
 	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/heavy
 
-/obj/vehicle/sealed/car/cyberpunk_test/cargo_truck
+/obj/vehicle/sealed/car/cyberpunk/cargo_truck
 	name = "Starlight cargo truck"
 	desc = "A heavy Starlight cargo carrier with six mechanism slots."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/cargo_truck
 	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks
 	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/heavy
 
-/obj/vehicle/sealed/car/cyberpunk_test/apc
+/obj/vehicle/sealed/car/cyberpunk/apc
 	name = "Starlight APC"
 	desc = "A heavy armored Starlight carrier."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/apc
 	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks
 	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/heavy
 
-/obj/vehicle/sealed/car/cyberpunk_test/tank
+/obj/vehicle/sealed/car/cyberpunk/tank
 	name = "Starlight tank"
 	desc = "A heavy armored Starlight combat hull."
 	hull_part_type = /obj/item/cyberpunk_vehicle_part/hull/tank
 	drivetrain_part_type = /obj/item/cyberpunk_vehicle_part/drivetrain/tracks
 	engine_part_type = /obj/item/cyberpunk_vehicle_part/engine/heavy
 
-/obj/vehicle/sealed/car/cyberpunk_test/Destroy()
+/obj/vehicle/sealed/car/cyberpunk/examine(mob/user)
+	. = ..()
+	var/mob/living/driver = get_primary_driver()
+	var/hull_health = get_part_health_fraction("hull")
+	var/drivetrain_health = get_part_health_fraction("drivetrain")
+	var/engine_health = get_part_health_fraction("engine")
+	var/turf_grip = get_current_turf_grip_multiplier()
+	var/speed_multiplier = driver?.get_cyberpunk_driving_speed_multiplier() || 1
+	var/reaction_multiplier = driver?.get_cyberpunk_driving_reaction_multiplier() || 1
+	var/corporate_vehicle_multiplier = get_vehicle_corporate_synergy_multiplier(driver)
+	var/effective_max_speed = base_max_speed * speed_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
+	. += span_notice("Drive status: driver [driver ? driver : "none"], skill speed x[round(speed_multiplier, 0.01)], reaction x[round(reaction_multiplier, 0.01)], surface grip x[round(turf_grip, 0.01)], max speed [round(effective_max_speed, 0.1)].")
+	. += span_notice("Part health: hull [round(hull_health * 100)]%, drivetrain [round(drivetrain_health * 100)]%, engine [round(engine_health * 100)]%.")
+
+/obj/vehicle/sealed/car/cyberpunk/Destroy()
 	STOP_PROCESSING(SSfastprocess, src)
 	for(var/mob/occupant as anything in occupants)
 		cy_reset_occupant_camera(occupant)
 	QDEL_LIST(vehicle_parts)
 	installed_mechanisms = null
+	cyberpunk_exposed_passengers = null
 	return ..()
 
-/obj/vehicle/sealed/car/cyberpunk_test/after_remove_occupant(mob/M)
+/obj/vehicle/sealed/car/cyberpunk/after_remove_occupant(mob/M)
 	. = ..()
+	LAZYREMOVE(cyberpunk_exposed_passengers, M)
 	cy_reset_occupant_camera(M)
 
-/obj/vehicle/sealed/car/cyberpunk_test/relaymove(mob/living/user, direction)
+/obj/vehicle/sealed/car/cyberpunk/relaymove(mob/living/user, direction)
 	if(!is_driver(user) || !canmove)
 		return TRUE
 	if(fuel <= 0)
@@ -3058,7 +3112,7 @@
 	last_input_time = world.time
 	return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/set_control_from_dir(direction)
+/obj/vehicle/sealed/car/cyberpunk/proc/set_control_from_dir(direction)
 	control_x = 0
 	control_y = 0
 	if(direction & EAST)
@@ -3071,18 +3125,18 @@
 		control_y -= 1
 	normalize_pair("control")
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/clear_control_vector()
+/obj/vehicle/sealed/car/cyberpunk/proc/clear_control_vector()
 	control_x = 0
 	control_y = 0
 
-/obj/vehicle/sealed/car/cyberpunk_test/process(seconds_per_tick)
+/obj/vehicle/sealed/car/cyberpunk/process(seconds_per_tick)
 	if(!seconds_per_tick)
 		seconds_per_tick = world.tick_lag * 0.1
 	seconds_per_tick = clamp(seconds_per_tick, 0, 0.2)
 	cy_throttle_grip_charge = max(0, cy_throttle_grip_charge - cy_throttle_grip_decay * seconds_per_tick)
 	update_pixel_movement(seconds_per_tick)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/update_pixel_movement(seconds_per_tick)
+/obj/vehicle/sealed/car/cyberpunk/proc/update_pixel_movement(seconds_per_tick)
 	if(world.time > last_input_time + 3)
 		clear_control_vector()
 
@@ -3120,7 +3174,7 @@
 		if(pre_input_speed > 0.05)
 			input_velocity_alignment = vector_dot(control_x, control_y, cy_velocity_x / pre_input_speed, cy_velocity_y / pre_input_speed)
 	var/reverse_request = has_input && input_forward_alignment < -0.35
-	var/opposite_brake_request = has_input && input_velocity_alignment < -0.25 && pre_input_speed > 2
+	var/opposite_brake_request = reverse_request && input_velocity_alignment < -0.25 && pre_input_speed > 2
 	if(reverse_request && pre_input_speed <= cy_reverse_speed_threshold)
 		cy_reverse_drive = TRUE
 	else if(!reverse_request)
@@ -3128,11 +3182,16 @@
 	if(cy_reverse_drive)
 		max_speed *= cy_reverse_max_speed_multiplier
 
-	if(cy_reverse_drive && pre_input_speed <= 1)
-		cy_accel_x = control_x
-		cy_accel_y = control_y
-	if(has_input && (!opposite_brake_request || cy_reverse_drive))
-		cy_approach_accel_vector(control_x, control_y, clamp(maneuver * seconds_per_tick * 0.35, 0, 1))
+	if(has_input)
+		if(!reverse_request)
+			cy_approach_forward_vector(control_x, control_y, clamp(maneuver * seconds_per_tick * 0.35, 0, 1))
+			update_visual_dir()
+		if(cy_reverse_drive)
+			cy_accel_x = -cy_forward_x
+			cy_accel_y = -cy_forward_y
+		else
+			cy_accel_x = cy_forward_x
+			cy_accel_y = cy_forward_y
 	else
 		var/accel_decay = clamp(maneuver * seconds_per_tick * 0.35, 0, 1)
 		cy_accel_x *= (1 - accel_decay)
@@ -3145,11 +3204,6 @@
 	directed_x = cy_accel_x
 	directed_y = cy_accel_y
 	var/has_accel = abs(cy_accel_x) + abs(cy_accel_y) > 0.01
-	if(has_accel && !cy_reverse_drive && !opposite_brake_request)
-		cy_forward_x = cy_accel_x
-		cy_forward_y = cy_accel_y
-		cy_normalize_forward_vector()
-		update_visual_dir()
 
 	if(has_input)
 		if(opposite_brake_request)
@@ -3218,6 +3272,7 @@
 		cy_velocity_y = 0
 
 	current_speed = cy_get_speed()
+	update_vehicle_visual_rotation(seconds_per_tick)
 	if(current_speed > 0)
 		movement_x = cy_velocity_x / current_speed
 		movement_y = cy_velocity_y / current_speed
@@ -3253,7 +3308,7 @@
 	handle_vehicle_movement_visuals()
 	cy_apply_world_pixel_position()
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/handle_vehicle_movement_visuals()
+/obj/vehicle/sealed/car/cyberpunk/proc/handle_vehicle_movement_visuals()
 	if(current_speed < 16 || world.time < last_skid_time + 4)
 		return
 	last_skid_time = world.time
@@ -3265,14 +3320,14 @@
 	else if(prob(15))
 		new /obj/effect/temp_visual/cyberpunk_vehicle_dust(skid_turf)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/approach_value(current, target, amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/approach_value(current, target, amount)
 	if(current < target)
 		return min(target, current + amount)
 	if(current > target)
 		return max(target, current - amount)
 	return current
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/normalize_pair(kind)
+/obj/vehicle/sealed/car/cyberpunk/proc/normalize_pair(kind)
 	var/x_value
 	var/y_value
 	switch(kind)
@@ -3307,13 +3362,13 @@
 			grip_x = x_value
 			grip_y = y_value
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/vector_dot(ax, ay, bx, by)
+/obj/vehicle/sealed/car/cyberpunk/proc/vector_dot(ax, ay, bx, by)
 	return ax * bx + ay * by
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_get_speed()
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_get_speed()
 	return sqrt(cy_velocity_x * cy_velocity_x + cy_velocity_y * cy_velocity_y)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_approach_accel_vector(target_x, target_y, amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_approach_accel_vector(target_x, target_y, amount)
 	amount = clamp(amount, 0, 1)
 	cy_accel_x += (target_x - cy_accel_x) * amount
 	cy_accel_y += (target_y - cy_accel_y) * amount
@@ -3325,7 +3380,13 @@
 	cy_accel_x /= length
 	cy_accel_y /= length
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_approach_grip_vector(target_x, target_y, amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_approach_forward_vector(target_x, target_y, amount)
+	amount = clamp(amount, 0, 1)
+	cy_forward_x += (target_x - cy_forward_x) * amount
+	cy_forward_y += (target_y - cy_forward_y) * amount
+	cy_normalize_forward_vector()
+
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_approach_grip_vector(target_x, target_y, amount)
 	amount = clamp(amount, 0, 1)
 	cy_grip_world_x += (target_x - cy_grip_world_x) * amount
 	cy_grip_world_y += (target_y - cy_grip_world_y) * amount
@@ -3335,7 +3396,7 @@
 	cy_grip_world_x /= length
 	cy_grip_world_y /= length
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_approach_velocity_direction(target_x, target_y, amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_approach_velocity_direction(target_x, target_y, amount)
 	amount = clamp(amount, 0, 1)
 	var/speed = cy_get_speed()
 	if(speed <= 0)
@@ -3352,7 +3413,7 @@
 	cy_velocity_x = current_x * speed
 	cy_velocity_y = current_y * speed
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_apply_world_pixel_position()
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_apply_world_pixel_position()
 	var/tile = 32
 	var/new_x = FLOOR(cy_world_px / tile, 1) + 1
 	var/new_y = FLOOR(cy_world_py / tile, 1) + 1
@@ -3399,18 +3460,54 @@
 		if(move_dir)
 			after_move(move_dir)
 
-	animate(src, pixel_x = new_pixel_x, pixel_y = new_pixel_y, time = animation_time, flags = ANIMATION_END_NOW)
+	animate(src, pixel_x = new_pixel_x, pixel_y = new_pixel_y, transform = get_vehicle_visual_transform(), time = animation_time, flags = ANIMATION_END_NOW)
 	cy_sync_occupant_cameras(new_pixel_x, new_pixel_y, animation_time)
 	if(!did_register_to_new_turf)
 		return
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_sync_occupant_cameras(target_pixel_x = pixel_x, target_pixel_y = pixel_y, animation_time = 0)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_target_visual_rotation()
+	var/base_angle = dir2angle(cy_visual_fixed_dir) || 0
+	var/forward_angle = delta_to_angle(cy_forward_x, cy_forward_y)
+	var/visual_rotation_clockwise = closer_angle_difference(base_angle, forward_angle) || 0
+	if(!cy_reverse_drive && current_speed >= cy_visual_min_speed_for_drift)
+		var/velocity_angle = delta_to_angle(cy_velocity_x, cy_velocity_y)
+		var/drift_delta = closer_angle_difference(forward_angle, velocity_angle) || 0
+		var/drift_factor = drift_active ? 0.85 : 0.35
+		visual_rotation_clockwise += clamp(drift_delta * drift_factor, -cy_visual_max_drift_rotation, cy_visual_max_drift_rotation)
+	return visual_rotation_clockwise
+
+/obj/vehicle/sealed/car/cyberpunk/proc/update_vehicle_visual_rotation(seconds_per_tick)
+	var/target_rotation = get_vehicle_target_visual_rotation()
+	var/rotation_delta = closer_angle_difference(cy_visual_current_rotation, target_rotation) || 0
+	if(abs(rotation_delta) <= cy_visual_snap_threshold)
+		cy_visual_current_rotation = target_rotation
+		return
+	var/max_rotation_step = cy_visual_turn_rate * seconds_per_tick
+	cy_visual_current_rotation = SIMPLIFY_DEGREES(cy_visual_current_rotation + clamp(rotation_delta, -max_rotation_step, max_rotation_step))
+
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_visual_transform()
+	var/matrix/visual_transform = matrix()
+	var/visual_rotation_clockwise = cy_visual_current_rotation
+	if(visual_rotation_clockwise)
+		visual_transform.Turn(visual_rotation_clockwise)
+	return visual_transform
+
+/obj/vehicle/sealed/car/cyberpunk/handle_internal_lifeform(mob/lifeform_inside_me, breath_request)
+	if(breath_request <= 0)
+		return null
+	var/datum/gas_mixture/breath = new(BREATH_VOLUME)
+	breath.set_gas(/datum/gas/oxygen, MOLES_O2STANDARD * BREATH_PERCENTAGE)
+	breath.set_gas(/datum/gas/nitrogen, MOLES_N2STANDARD * BREATH_PERCENTAGE)
+	breath.temperature = T20C
+	return breath
+
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_sync_occupant_cameras(target_pixel_x = pixel_x, target_pixel_y = pixel_y, animation_time = 0)
 	if(!cy_smooth_camera_follow)
 		return
 	for(var/mob/occupant as anything in occupants)
 		cy_sync_occupant_camera(occupant, target_pixel_x, target_pixel_y, animation_time)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_sync_occupant_camera(mob/occupant, target_pixel_x = pixel_x, target_pixel_y = pixel_y, animation_time = 0)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_sync_occupant_camera(mob/occupant, target_pixel_x = pixel_x, target_pixel_y = pixel_y, animation_time = 0)
 	if(!cy_smooth_camera_follow || !occupant?.client)
 		return
 	var/client/occupant_client = occupant.client
@@ -3420,12 +3517,12 @@
 		occupant_client.pixel_x = target_pixel_x
 		occupant_client.pixel_y = target_pixel_y
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_reset_occupant_camera(mob/occupant)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_reset_occupant_camera(mob/occupant)
 	if(!occupant?.client)
 		return
 	animate(occupant.client, pixel_x = 0, pixel_y = 0, time = 1, flags = ANIMATION_END_NOW)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_can_occupy_pixel_position(test_px, test_py)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_can_occupy_pixel_position(test_px, test_py)
 	var/collision_center_x = test_px + cy_collision_center_offset_x
 	var/collision_center_y = test_py + cy_collision_center_offset_y
 	if(cy_pixel_point_blocked(collision_center_x, collision_center_y))
@@ -3440,7 +3537,7 @@
 		return FALSE
 	return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_pixel_point_blocked(test_px, test_py)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_pixel_point_blocked(test_px, test_py)
 	var/tile = 32
 	var/check_x = FLOOR(test_px / tile, 1) + 1
 	var/check_y = FLOOR(test_py / tile, 1) + 1
@@ -3459,14 +3556,14 @@
 			return TRUE
 	return FALSE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_on_pixel_collision(direction)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_on_pixel_collision(direction)
 	var/speed = cy_get_speed()
 	if(speed < 1)
 		return
 	current_speed = speed
 	handle_vehicle_collision(get_step(src, direction) || get_turf(src), direction, speed)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_set_forward_from_dir(direction)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_set_forward_from_dir(direction)
 	switch(direction)
 		if(EAST)
 			cy_forward_x = 1
@@ -3482,7 +3579,7 @@
 			cy_forward_y = 1
 	cy_normalize_forward_vector()
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_normalize_forward_vector()
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_normalize_forward_vector()
 	var/length = sqrt(cy_forward_x * cy_forward_x + cy_forward_y * cy_forward_y)
 	if(length <= 0)
 		cy_forward_x = 0
@@ -3491,7 +3588,7 @@
 	cy_forward_x /= length
 	cy_forward_y /= length
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_forward_to_dir()
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_forward_to_dir()
 	var/x_value = cy_forward_x
 	var/y_value = cy_forward_y
 	if(y_value >= 0.45)
@@ -3510,14 +3607,14 @@
 		return EAST
 	return WEST
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_velocity_to_dir()
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_velocity_to_dir()
 	if(abs(cy_velocity_x) < 0.01 && abs(cy_velocity_y) < 0.01)
 		return dir
 	if(abs(cy_velocity_x) > abs(cy_velocity_y))
 		return cy_velocity_x > 0 ? EAST : WEST
 	return cy_velocity_y > 0 ? NORTH : SOUTH
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/apply_pixel_motion(move_x, move_y)
+/obj/vehicle/sealed/car/cyberpunk/proc/apply_pixel_motion(move_x, move_y)
 	subpixel_x += move_x
 	subpixel_y += move_y
 	var/tile_steps = 0
@@ -3563,19 +3660,21 @@
 	update_vehicle_pixel_visuals(!stepped_tile)
 	update_visual_dir()
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/update_vehicle_pixel_visuals(animate_shift = TRUE)
+/obj/vehicle/sealed/car/cyberpunk/proc/update_vehicle_pixel_visuals(animate_shift = TRUE)
 	var/target_pixel_x = round(subpixel_x)
 	var/target_pixel_y = round(subpixel_y)
 	if(!animate_shift || pixel_animation_time <= 0)
 		animate(src)
 		pixel_x = target_pixel_x
 		pixel_y = target_pixel_y
+		transform = get_vehicle_visual_transform()
 		return
-	if(pixel_x == target_pixel_x && pixel_y == target_pixel_y)
+	var/matrix/visual_transform = get_vehicle_visual_transform()
+	if(pixel_x == target_pixel_x && pixel_y == target_pixel_y && transform == visual_transform)
 		return
-	animate(src, pixel_x = target_pixel_x, pixel_y = target_pixel_y, time = pixel_animation_time, flags = ANIMATION_PARALLEL)
+	animate(src, pixel_x = target_pixel_x, pixel_y = target_pixel_y, transform = visual_transform, time = pixel_animation_time, flags = ANIMATION_PARALLEL)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/try_vehicle_pixel_step(step_dir)
+/obj/vehicle/sealed/car/cyberpunk/proc/try_vehicle_pixel_step(step_dir)
 	var/turf/next = get_step(src, step_dir)
 	if(!istype(next))
 		current_speed = 0
@@ -3586,26 +3685,31 @@
 		return FALSE
 	return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/update_visual_dir()
-	setDir(cy_forward_to_dir())
+/obj/vehicle/sealed/car/cyberpunk/proc/update_visual_dir()
+	setDir(cy_visual_fixed_dir)
+	transform = get_vehicle_visual_transform()
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/consume_vehicle_fuel(amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/consume_vehicle_fuel(amount)
 	if(amount <= 0)
 		return
 	fuel = max(0, fuel - amount)
 	if(fuel <= 0)
 		current_speed = min(current_speed, base_brake * 0.2)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/handle_vehicle_collision(atom/collided, collision_dir, impact_speed = null)
+/obj/vehicle/sealed/car/cyberpunk/proc/handle_vehicle_collision(atom/collided, collision_dir, impact_speed = null)
 	if(isnull(impact_speed))
 		impact_speed = current_speed || cy_get_speed()
 	if(!collision_dir)
 		collision_dir = cy_velocity_to_dir()
+	var/mob/living/living_collision = get_living_vehicle_collision_target(collided)
+	if(living_collision)
+		knock_living_from_vehicle_collision(living_collision, collision_dir, impact_speed)
 	var/impact = max(2, impact_speed * 0.18)
 	if(impact_speed >= cy_crash_damage_threshold)
 		damage_random_vehicle_part(impact)
 		take_damage(impact, BRUTE, MELEE, TRUE)
-	eject_occupants_from_hard_crash(impact_speed, collision_dir)
+	if(!living_collision)
+		eject_occupants_from_hard_crash(impact_speed, collision_dir)
 	var/rebound_speed = max(0, impact_speed * cy_crash_rebound_multiplier)
 	var/rebound_dir = REVERSE_DIR(collision_dir)
 	cy_set_velocity_from_dir(rebound_dir, rebound_speed)
@@ -3613,21 +3717,31 @@
 	cy_accel_y = cy_velocity_y ? cy_velocity_y / max(rebound_speed, 1) : 0
 	cy_grip_world_x = cy_accel_x
 	cy_grip_world_y = cy_accel_y
-	cy_forward_x = cy_accel_x
-	cy_forward_y = cy_accel_y
-	cy_normalize_forward_vector()
 	current_speed = cy_get_speed()
 	cy_drift_amount = 0
 	drift_active = current_speed > 1
 	playsound(src, 'sound/vehicles/car_crash.ogg', 65, TRUE)
 	visible_message(span_warning("[src] slams into [collided]!"))
 
-/obj/vehicle/sealed/car/cyberpunk_test/Bump(atom/bumped)
+/obj/vehicle/sealed/car/cyberpunk/Bump(atom/bumped)
 	. = ..()
 	if(current_speed > 12)
 		handle_vehicle_collision(bumped, get_dir(src, bumped), current_speed)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cy_set_velocity_from_dir(direction, speed)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_living_vehicle_collision_target(atom/collided)
+	if(isliving(collided))
+		return collided
+	var/turf/collision_turf = get_turf(collided)
+	if(!collision_turf)
+		return null
+	for(var/mob/living/living_target in collision_turf)
+		if(living_target == src || living_target.loc == src)
+			continue
+		if(living_target.density)
+			return living_target
+	return null
+
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_set_velocity_from_dir(direction, speed)
 	var/vector_x = 0
 	var/vector_y = 0
 	if(direction & EAST)
@@ -3646,7 +3760,19 @@
 	cy_velocity_x = (vector_x / length) * speed
 	cy_velocity_y = (vector_y / length) * speed
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/eject_occupants_from_hard_crash(impact_speed, collision_dir)
+/obj/vehicle/sealed/car/cyberpunk/proc/knock_living_from_vehicle_collision(mob/living/victim, collision_dir, impact_speed)
+	if(!istype(victim) || impact_speed < 4)
+		return
+	var/throw_dir = collision_dir || cy_velocity_to_dir()
+	if(!throw_dir)
+		throw_dir = dir || NORTH
+	var/throw_range = clamp(round(impact_speed / 18), 1, 7)
+	var/throw_speed = clamp(round(impact_speed / 22), 1, 6)
+	victim.safe_throw_at(get_edge_target_turf(victim, throw_dir), throw_range, throw_speed, src, force = MOVE_FORCE_STRONG)
+	if(impact_speed >= 12)
+		victim.Knockdown(clamp(round(impact_speed / 20), 1, 4) SECONDS)
+
+/obj/vehicle/sealed/car/cyberpunk/proc/eject_occupants_from_hard_crash(impact_speed, collision_dir)
 	if(impact_speed <= cy_crash_eject_threshold || !length(occupants))
 		return
 	var/eject_range = clamp(round(impact_speed / 12), 3, 10)
@@ -3664,11 +3790,62 @@
 	if(length(ejected))
 		visible_message(span_danger("[src]'s crash throws [english_list(ejected)] out!"))
 
-/obj/vehicle/sealed/car/cyberpunk_test/take_damage(damage_amount, damage_type = BRUTE, damage_flag = 0, sound_effect = 1, attack_dir)
+/obj/vehicle/sealed/car/cyberpunk/take_damage(damage_amount, damage_type = BRUTE, damage_flag = 0, sound_effect = 1, attack_dir)
+	var/mob/living/exposed_passenger = pick_cyberpunk_exposed_passenger()
+	if(exposed_passenger)
+		exposed_passenger.apply_damage(damage_amount, damage_type, BODY_ZONE_CHEST, wound_bonus = CANT_WOUND)
+		visible_message(span_danger("[exposed_passenger] takes the hit meant for [src]!"))
+		return damage_amount
 	. = ..()
 	damage_random_vehicle_part(damage_amount * 0.35)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/damage_random_vehicle_part(amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/pick_cyberpunk_exposed_passenger()
+	if(!length(cyberpunk_exposed_passengers))
+		return null
+	var/list/valid_passengers = list()
+	for(var/mob/living/passenger as anything in cyberpunk_exposed_passengers.Copy())
+		if(QDELETED(passenger) || isnull(LAZYACCESS(occupants, passenger)))
+			LAZYREMOVE(cyberpunk_exposed_passengers, passenger)
+			continue
+		if(passenger.stat == DEAD)
+			continue
+		valid_passengers += passenger
+	if(!length(valid_passengers))
+		return null
+	return pick(valid_passengers)
+
+/obj/vehicle/sealed/car/cyberpunk/proc/toggle_cyberpunk_lean_out(mob/living/passenger)
+	if(!istype(passenger) || isnull(LAZYACCESS(occupants, passenger)))
+		return FALSE
+	if(is_driver(passenger))
+		to_chat(passenger, span_warning("You cannot lean out while driving [src]."))
+		return FALSE
+	LAZYINITLIST(cyberpunk_exposed_passengers)
+	if(passenger in cyberpunk_exposed_passengers)
+		LAZYREMOVE(cyberpunk_exposed_passengers, passenger)
+		ADD_TRAIT(passenger, TRAIT_HANDS_BLOCKED, VEHICLE_TRAIT)
+		to_chat(passenger, span_notice("You duck back inside [src]."))
+		return TRUE
+	cyberpunk_exposed_passengers |= passenger
+	REMOVE_TRAIT(passenger, TRAIT_HANDS_BLOCKED, VEHICLE_TRAIT)
+	to_chat(passenger, span_warning("You lean out of [src]. Incoming hits against the vehicle may hit you."))
+	return TRUE
+
+/datum/action/vehicle/sealed/cyberpunk_lean_out
+	name = "Lean Out"
+	desc = "Lean out of the vehicle."
+	button_icon_state = "car_cannon"
+
+/datum/action/vehicle/sealed/cyberpunk_lean_out/Trigger(mob/clicker, trigger_flags)
+	. = ..()
+	if(!.)
+		return
+	var/obj/vehicle/sealed/car/cyberpunk/cyberpunk_vehicle = vehicle_entered_target
+	if(!istype(cyberpunk_vehicle))
+		return
+	cyberpunk_vehicle.toggle_cyberpunk_lean_out(owner)
+
+/obj/vehicle/sealed/car/cyberpunk/proc/damage_random_vehicle_part(amount)
 	if(!length(vehicle_parts) || amount <= 0)
 		return
 	var/datum/cyberpunk_vehicle_part/part = pick(vehicle_parts)
@@ -3678,18 +3855,18 @@
 		fuel = min(fuel, 5)
 		current_speed = 0
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_part_health_fraction(category)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_part_health_fraction(category)
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
 		if(part.category == category)
 			return part.health_fraction()
 	return 1
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_vehicle_part(category)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_part(category)
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
 		if(part.category == category)
 			return part
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_vehicle_stat_multiplier(stat_key)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_stat_multiplier(stat_key)
 	var/result = 1
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
 		var/health_factor = 0.35 + part.health_fraction() * 0.65
@@ -3710,7 +3887,7 @@
 				result *= part.fuel_multiplier
 	return max(0.05, result)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_vehicle_corporate_synergy_multiplier(mob/living/driver)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_corporate_synergy_multiplier(mob/living/driver)
 	if(!driver)
 		return 1
 	var/base_manufacturer = "Starlight"
@@ -3725,7 +3902,7 @@
 		counted_parts++
 	return total_multiplier / max(1, counted_parts)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_current_turf_grip_multiplier()
+/obj/vehicle/sealed/car/cyberpunk/proc/get_current_turf_grip_multiplier()
 	var/turf/current_turf = get_turf(src)
 	var/datum/cyberpunk_vehicle_part/drivetrain = get_vehicle_part("drivetrain")
 	if(!current_turf || !drivetrain)
@@ -3740,7 +3917,7 @@
 		return drivetrain.rough_grip
 	return drivetrain.bad_grip
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/install_vehicle_part(datum/cyberpunk_vehicle_part/new_part)
+/obj/vehicle/sealed/car/cyberpunk/proc/install_vehicle_part(datum/cyberpunk_vehicle_part/new_part)
 	if(!new_part)
 		return FALSE
 	for(var/i in 1 to length(vehicle_parts))
@@ -3755,12 +3932,13 @@
 	recalculate_vehicle_body()
 	return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/recalculate_vehicle_body()
+/obj/vehicle/sealed/car/cyberpunk/proc/recalculate_vehicle_body()
 	var/datum/cyberpunk_vehicle_part/hull = get_vehicle_part("hull")
 	if(!hull)
 		return
+	var/datum/cyberpunk_vehicle_part/drivetrain = get_vehicle_part("drivetrain")
 	max_occupants = max(1, hull.passenger_capacity)
-	max_mechanism_slots = max(0, hull.mechanism_capacity)
+	max_mechanism_slots = min(max(0, hull.mechanism_capacity), max(0, drivetrain?.running_gear_slots || hull.running_gear_slots))
 	max_integrity = max(50, hull.max_health + 80)
 	if(atom_integrity <= 0)
 		atom_integrity = max_integrity
@@ -3769,7 +3947,7 @@
 	color = get_vehicle_body_color(hull.category, hull.name)
 	update_appearance(UPDATE_OVERLAYS)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_vehicle_body_color(category, hull_name)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_body_color(category, hull_name)
 	if(findtext(hull_name, "bike"))
 		return "#d0ecff"
 	if(findtext(hull_name, "minivan"))
@@ -3782,7 +3960,7 @@
 		return "#b8c2b0"
 	return "#ffffff"
 
-/obj/vehicle/sealed/car/cyberpunk_test/update_overlays()
+/obj/vehicle/sealed/car/cyberpunk/update_overlays()
 	. = ..()
 	if(panel_open)
 		var/mutable_appearance/panel_overlay = mutable_appearance(icon, icon_state, ABOVE_MOB_LAYER)
@@ -3800,29 +3978,49 @@
 		damage_overlay.alpha = 65
 		. += damage_overlay
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/refuel_vehicle(amount)
+/obj/vehicle/sealed/car/cyberpunk/proc/refuel_vehicle(amount)
 	if(amount <= 0 || fuel >= max_fuel)
 		return FALSE
 	fuel = min(max_fuel, fuel + amount)
 	return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_engine_resource_type()
+/obj/vehicle/sealed/car/cyberpunk/proc/get_engine_resource_type()
 	var/datum/cyberpunk_vehicle_part/engine = get_vehicle_part("engine")
 	return engine?.resource_type || "energy"
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_primary_driver()
+/obj/vehicle/sealed/car/cyberpunk/proc/get_primary_driver()
 	var/list/drivers = return_drivers()
 	if(!length(drivers))
 		return null
 	return drivers[1]
 
-/obj/vehicle/sealed/car/cyberpunk_test/attack_hand(mob/living/user, list/modifiers)
+/obj/vehicle/sealed/car/cyberpunk/proc/get_vehicle_mechanism_slot_cost(obj/machinery/machine)
+	if(!istype(machine))
+		return 1
+	if(machine.bound_width > 32 || machine.bound_height > 32)
+		return 3
+	if(machine.density || machine.max_integrity >= 300)
+		return 2
+	return 1
+
+/obj/vehicle/sealed/car/cyberpunk/proc/get_installed_vehicle_mechanism_slot_usage()
+	var/slot_usage = 0
+	for(var/obj/machinery/machine as anything in installed_mechanisms)
+		if(QDELETED(machine))
+			continue
+		slot_usage += get_vehicle_mechanism_slot_cost(machine)
+	return slot_usage
+
+/obj/vehicle/sealed/car/cyberpunk/proc/can_install_vehicle_mechanism(obj/machinery/machine)
+	return get_installed_vehicle_mechanism_slot_usage() + get_vehicle_mechanism_slot_cost(machine) <= max_mechanism_slots
+
+/obj/vehicle/sealed/car/cyberpunk/attack_hand(mob/living/user, list/modifiers)
 	if(panel_open)
 		ui_interact(user)
 		return
 	return ..()
 
-/obj/vehicle/sealed/car/cyberpunk_test/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+/obj/vehicle/sealed/car/cyberpunk/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(panel_open && istype(tool, /obj/item/cyberpunk_vehicle_part))
 		var/obj/item/cyberpunk_vehicle_part/part_item = tool
 		if(!user.transferItemToLoc(part_item, src))
@@ -3865,10 +4063,10 @@
 
 	return ..()
 
-/obj/vehicle/sealed/car/cyberpunk_test/mouse_drop_receive(atom/dropping, mob/M, params)
+/obj/vehicle/sealed/car/cyberpunk/mouse_drop_receive(atom/dropping, mob/M, params)
 	if(panel_open && istype(dropping, /obj/machinery) && istype(M))
 		var/obj/machinery/machine = dropping
-		if(length(installed_mechanisms) >= max_mechanism_slots)
+		if(!can_install_vehicle_mechanism(machine))
 			balloon_alert(M, "no slots")
 			return
 		if(machine.anchored)
@@ -3885,14 +4083,14 @@
 		return
 	return ..()
 
-/obj/vehicle/sealed/car/cyberpunk_test/screwdriver_act(mob/living/user, obj/item/tool)
+/obj/vehicle/sealed/car/cyberpunk/screwdriver_act(mob/living/user, obj/item/tool)
 	panel_open = !panel_open
 	balloon_alert(user, panel_open ? "panel open" : "panel closed")
 	playsound(src, 'sound/items/tools/screwdriver.ogg', 50, TRUE)
 	update_appearance(UPDATE_OVERLAYS)
 	return ITEM_INTERACT_SUCCESS
 
-/obj/vehicle/sealed/car/cyberpunk_test/wrench_act(mob/living/user, obj/item/tool)
+/obj/vehicle/sealed/car/cyberpunk/wrench_act(mob/living/user, obj/item/tool)
 	if(!panel_open)
 		balloon_alert(user, "open panel first")
 		return ITEM_INTERACT_BLOCKING
@@ -3909,7 +4107,7 @@
 	balloon_alert(user, "part repaired")
 	return ITEM_INTERACT_SUCCESS
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/get_most_damaged_part()
+/obj/vehicle/sealed/car/cyberpunk/proc/get_most_damaged_part()
 	var/datum/cyberpunk_vehicle_part/worst_part
 	var/worst_fraction = 2
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
@@ -3918,16 +4116,16 @@
 			worst_part = part
 	return worst_part
 
-/obj/vehicle/sealed/car/cyberpunk_test/ui_state(mob/user)
+/obj/vehicle/sealed/car/cyberpunk/ui_state(mob/user)
 	return GLOB.physical_state
 
-/obj/vehicle/sealed/car/cyberpunk_test/ui_interact(mob/user, datum/tgui/ui)
+/obj/vehicle/sealed/car/cyberpunk/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "CyberpunkVehicle", name)
 		ui.open()
 
-/obj/vehicle/sealed/car/cyberpunk_test/ui_data(mob/user)
+/obj/vehicle/sealed/car/cyberpunk/ui_data(mob/user)
 	var/list/data = list()
 	var/list/part_data = list()
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
@@ -3940,6 +4138,7 @@
 		mechanism_data += list(list(
 			"name" = machine.name,
 			"index" = i,
+			"slotCost" = get_vehicle_mechanism_slot_cost(machine),
 			"integrity" = machine.get_integrity(),
 			"maxIntegrity" = machine.max_integrity,
 		))
@@ -3956,7 +4155,8 @@
 	data["drift"] = drift_active
 	data["occupants"] = occupant_amount()
 	data["maxOccupants"] = max_occupants
-	data["mechanisms"] = length(installed_mechanisms)
+	data["mechanisms"] = get_installed_vehicle_mechanism_slot_usage()
+	data["mechanismCount"] = length(installed_mechanisms)
 	data["mechanismSlots"] = max_mechanism_slots
 	data["parts"] = part_data
 	data["mechanismData"] = mechanism_data
@@ -3968,7 +4168,7 @@
 	)
 	return data
 
-/obj/vehicle/sealed/car/cyberpunk_test/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+/obj/vehicle/sealed/car/cyberpunk/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
 	if(.)
 		return
@@ -3982,7 +4182,7 @@
 			machine.forceMove(drop_location())
 		return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cyberpunk_to_persistent_record()
+/obj/vehicle/sealed/car/cyberpunk/proc/cyberpunk_to_persistent_record()
 	var/list/part_records = list()
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
 		part_records += list(part.cyberpunk_to_persistent_record())
@@ -3996,7 +4196,7 @@
 		"parts" = part_records,
 	)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cyberpunk_apply_persistent_record(list/record)
+/obj/vehicle/sealed/car/cyberpunk/proc/cyberpunk_apply_persistent_record(list/record)
 	if(!islist(record))
 		return
 	var/list/part_records = record["parts"]
@@ -4011,26 +4211,25 @@
 	recalculate_vehicle_body()
 	max_fuel = max(0, isnum(record["max_fuel"]) ? record["max_fuel"] : max_fuel)
 	fuel = clamp(isnum(record["fuel"]) ? record["fuel"] : 0, 0, max_fuel)
-	max_integrity = max(1, isnum(record["max_integrity"]) ? record["max_integrity"] : max_integrity)
+	max_integrity = max(max_integrity, isnum(record["max_integrity"]) ? record["max_integrity"] : max_integrity)
 	atom_integrity = clamp(isnum(record["integrity"]) ? record["integrity"] : max_integrity, 1, max_integrity)
-	max_mechanism_slots = max(0, isnum(record["max_mechanism_slots"]) ? record["max_mechanism_slots"] : max_mechanism_slots)
 	current_speed = 0
 	cy_velocity_x = 0
 	cy_velocity_y = 0
 	clear_control_vector()
 	update_appearance(UPDATE_OVERLAYS)
 
-/obj/vehicle/sealed/car/cyberpunk_test/proc/cyberpunk_after_persistent_restore(list/record)
+/obj/vehicle/sealed/car/cyberpunk/proc/cyberpunk_after_persistent_restore(list/record)
 	installed_mechanisms = list()
 	for(var/obj/machinery/machine as anything in contents)
-		if(length(installed_mechanisms) >= max_mechanism_slots)
+		if(!can_install_vehicle_mechanism(machine))
 			break
 		installed_mechanisms += machine
 //CYBERPUNK BUILD - rebuild and delete before release
 
 //CYBERPUNK BUILD - rebuild and delete before release
-/client/proc/spawn_cyberpunk_test_vehicle()
-	set name = "Create Cyberpunk Test Vehicle"
+/client/proc/spawn_cyberpunk_vehicle()
+	set name = "Create Cyberpunk Vehicle"
 	set category = "Debug"
 	if(!check_rights(R_SPAWN))
 		return
@@ -4038,18 +4237,19 @@
 	if(!spawn_turf)
 		return
 	var/list/options = list(
-		"prototype car" = /obj/vehicle/sealed/car/cyberpunk_test,
-		"microbike" = /obj/vehicle/sealed/car/cyberpunk_test/microbike,
-		"bike" = /obj/vehicle/sealed/car/cyberpunk_test/bike,
-		"large car" = /obj/vehicle/sealed/car/cyberpunk_test/large_car,
-		"minivan" = /obj/vehicle/sealed/car/cyberpunk_test/minivan,
-		"cargo minivan" = /obj/vehicle/sealed/car/cyberpunk_test/cargo_minivan,
-		"bus" = /obj/vehicle/sealed/car/cyberpunk_test/bus,
-		"cargo truck" = /obj/vehicle/sealed/car/cyberpunk_test/cargo_truck,
-		"APC" = /obj/vehicle/sealed/car/cyberpunk_test/apc,
-		"tank" = /obj/vehicle/sealed/car/cyberpunk_test/tank,
+		"prototype car" = /obj/vehicle/sealed/car/cyberpunk,
+		"microbike" = /obj/vehicle/sealed/car/cyberpunk/microbike,
+		"bike" = /obj/vehicle/sealed/car/cyberpunk/bike,
+		"standard car" = /obj/vehicle/sealed/car/cyberpunk/standard_car,
+		"large car" = /obj/vehicle/sealed/car/cyberpunk/large_car,
+		"minivan" = /obj/vehicle/sealed/car/cyberpunk/minivan,
+		"cargo minivan" = /obj/vehicle/sealed/car/cyberpunk/cargo_minivan,
+		"bus" = /obj/vehicle/sealed/car/cyberpunk/bus,
+		"cargo truck" = /obj/vehicle/sealed/car/cyberpunk/cargo_truck,
+		"APC" = /obj/vehicle/sealed/car/cyberpunk/apc,
+		"tank" = /obj/vehicle/sealed/car/cyberpunk/tank,
 	)
 	var/choice = tgui_input_list(mob, "Choose temporary vehicle type.", "Starlight vehicle", options)
-	var/vehicle_type = options[choice] || /obj/vehicle/sealed/car/cyberpunk_test
+	var/vehicle_type = options[choice] || /obj/vehicle/sealed/car/cyberpunk
 	new vehicle_type(spawn_turf)
 //CYBERPUNK BUILD - rebuild and delete before release

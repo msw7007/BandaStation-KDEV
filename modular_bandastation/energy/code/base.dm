@@ -48,7 +48,7 @@
 	return anchored && !machine_stat && powernet && atom_integrity > 0
 
 /obj/machinery/power/cyberpunk_generator/proc/get_power_gen()
-	return max(0, base_power_gen * power_output * get_condition_multiplier())
+	return max(0, base_power_gen * power_output * get_condition_multiplier() * get_cyberpunk_machine_generator_output_multiplier())
 
 /obj/machinery/power/cyberpunk_generator/proc/get_condition_multiplier()
 	var/heat_factor = heat > max_safe_heat ? clamp(1 - ((heat - max_safe_heat) / max(max_safe_heat, 1)), 0.25, 1) : 1
@@ -157,10 +157,24 @@
 	. = handle_cyberpunk_power_ui_act(action, params, ui.user)
 
 /obj/machinery/power/cyberpunk_generator/wrench_act(mob/living/user, obj/item/tool)
+	var/wrench_time = 2 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, anchored ? "unanchor" : "anchor")
+	if(!tool.use_tool(src, user, wrench_time))
+		return ITEM_INTERACT_BLOCKING
 	set_anchored(!anchored)
 	tool.play_tool_sound(src)
 	balloon_alert(user, anchored ? "anchored" : "unanchored")
+	user.reward_cyberpunk_structure_anchor_experience(src)
 	return ITEM_INTERACT_SUCCESS
+
+/obj/machinery/power/cyberpunk_generator/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "fuel misfire")
+	heat += 50
+	wear = min(max_wear * 2, wear + 3)
+	do_sparks(3, TRUE, src)
+	apply_cyberpunk_machine_wear(3, "use", user)
+	if(prob(50))
+		set_active(FALSE)
+	return TRUE
 
 /obj/machinery/power/cyberpunk_generator/examine(mob/user)
 	. = ..()

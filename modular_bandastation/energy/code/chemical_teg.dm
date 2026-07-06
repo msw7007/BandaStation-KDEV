@@ -80,3 +80,68 @@
 			set_active(FALSE)
 			return TRUE
 	return FALSE
+
+/obj/machinery/power/cyberpunk_generator/gasoline
+	name = "gasoline generator"
+	desc = "A compact fuel-fed generator. Feed it welding fuel or equivalent gasoline blend and connect it to a cable node."
+	icon_state = "portgen0"
+	base_icon_state = "portgen0"
+	base_power_gen = 6 KILO WATTS
+	corp_manufacturer = CYBERPUNK_CORP_RYAZNOV
+	circuit = /obj/item/circuitboard/machine/cyberpunk_chemical_teg
+	var/fuel_units = 0
+	var/max_fuel_units = 250
+	var/fuel_burn_rate = 1
+
+/obj/machinery/power/cyberpunk_generator/gasoline/get_power_gen()
+	if(fuel_units <= 0)
+		return 0
+	return ..()
+
+/obj/machinery/power/cyberpunk_generator/gasoline/process_generator(seconds_per_tick)
+	if(fuel_units <= 0)
+		return FALSE
+	var/used = fuel_burn_rate * max(seconds_per_tick, 0.25) * power_output
+	fuel_units = max(0, fuel_units - used)
+	heat += clamp(power_output * 3, 1, 12) * seconds_per_tick
+	wear = min(max_wear * 2, wear + (0.05 * seconds_per_tick * power_output))
+	apply_cyberpunk_machine_wear(0.5 * seconds_per_tick * power_output, "use")
+	if(heat > critical_heat && prob(10))
+		spawn_gas_cloud(get_turf(src), /datum/gas_effect/smoke, 20, heat)
+	return TRUE
+
+/obj/machinery/power/cyberpunk_generator/gasoline/attackby(obj/item/item, mob/user, list/modifiers, list/attack_modifiers)
+	if(istype(item, /obj/item/reagent_containers/cup))
+		var/obj/item/reagent_containers/cup/cup = item
+		var/available = cup.reagents?.get_reagent_amount(/datum/reagent/fuel) || 0
+		var/available_space = max_fuel_units - fuel_units
+		var/added = min(available_space, available)
+		if(added <= 0)
+			balloon_alert(user, "no fuel")
+			return TRUE
+		cup.reagents.remove_reagent(/datum/reagent/fuel, added)
+		fuel_units += added
+		balloon_alert(user, "fuel loaded")
+		return TRUE
+	return ..()
+
+/obj/machinery/power/cyberpunk_generator/gasoline/examine(mob/user)
+	. = ..()
+	if(in_range(user, src) || isobserver(user))
+		. += span_notice("Fuel: [round(fuel_units)]/[max_fuel_units] units.")
+
+/obj/machinery/power/cyberpunk_generator/gasoline/get_cyberpunk_power_ui_data(mob/user)
+	return list(
+		"kind" = "gasoline",
+		"fuel" = round(fuel_units, 0.1),
+		"max_fuel" = max_fuel_units,
+		"fuel_ratio" = clamp(fuel_units / max(max_fuel_units, 1), 0, 1),
+	)
+
+/obj/machinery/power/cyberpunk_generator/gasoline/handle_cyberpunk_power_ui_act(action, list/params, mob/user)
+	switch(action)
+		if("purge_fuel")
+			fuel_units = 0
+			set_active(FALSE)
+			return TRUE
+	return FALSE

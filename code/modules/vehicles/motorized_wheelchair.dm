@@ -3,7 +3,7 @@
 	desc = "A chair with big wheels. It seems to have a motor in it."
 	icon_state = "motorized_wheelchair"
 	overlay_icon = "motorized_wheelchair_overlay"
-	foldabletype = null
+	foldabletype = /obj/item/wheelchair/motorized
 	max_integrity = 150
 	ttv_icon = "motor_chair_ttv"
 	custom_materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 14.5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
@@ -238,6 +238,17 @@
 	visible_message(span_warning("A bomb appears in [src], what the fuck?"))
 	obj_flags |= EMAGGED
 	return TRUE
+
+/obj/item/wheelchair/motorized
+	name = "motorized wheelchair"
+	desc = "A collapsed motorized wheelchair that can be carried around."
+	icon = 'icons/mob/rideables/vehicles.dmi'
+	icon_state = "motorized_wheelchair"
+	inhand_icon_state = "wheelchair_folded"
+	w_class = WEIGHT_CLASS_BULKY
+	force = 8
+	custom_materials = list(/datum/material/iron = SHEET_MATERIAL_AMOUNT * 14.5, /datum/material/glass = SMALL_MATERIAL_AMOUNT)
+	unfolded_type = /obj/vehicle/ridden/wheelchair/motorized
 
 ///Version with slightly better components. Used by deathmatches.
 /obj/vehicle/ridden/wheelchair/motorized/improved

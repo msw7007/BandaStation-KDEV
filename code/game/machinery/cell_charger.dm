@@ -133,6 +133,7 @@
 	charge_rate = 0.25 * STANDARD_CELL_RATE
 	for(var/datum/stock_part/capacitor/capacitor in component_parts)
 		charge_rate *= capacitor.tier
+	charge_rate *= get_cyberpunk_machine_charge_rate_multiplier()
 
 /obj/machinery/cell_charger/process(seconds_per_tick)
 	if(!charging || charging.percent() >= 100 || !anchored || !is_operational)

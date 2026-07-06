@@ -327,6 +327,19 @@ const SpecialPanel = ({
           </Button>
         </Section>
       );
+    case 'gasoline':
+      return (
+        <Section title="Gasoline Generator">
+          <LabeledList>
+            <LabeledList.Item label={`Fuel (${special.fuel}/${special.max_fuel})`}>
+              <ProgressBar value={special.fuel_ratio || 0} ranges={inverseBarRanges} />
+            </LabeledList.Item>
+          </LabeledList>
+          <Button icon="trash" color="bad" onClick={() => act('purge_fuel')}>
+            Purge Fuel
+          </Button>
+        </Section>
+      );
     case 'nuclear':
       return (
         <Section title="Nuclear Block">

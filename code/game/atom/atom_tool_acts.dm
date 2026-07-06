@@ -388,6 +388,23 @@
 /atom/proc/is_cyberpunk_repair_target()
 	return uses_integrity && is_cyberpunk_structure_target()
 
+/atom/proc/is_cyberpunk_mobile_structure()
+	return get_cyberpunk_structure_category() == "mobile_structure"
+
+/atom/proc/is_cyberpunk_foldable_structure()
+	return get_cyberpunk_structure_category() == "foldable_structure"
+
+/atom/proc/is_cyberpunk_heavy_mobile_structure()
+	if(!is_cyberpunk_mobile_structure())
+		return FALSE
+	var/atom/movable/movable_source = src
+	if(!istype(movable_source))
+		return FALSE
+	if(movable_source.move_resist >= MOVE_FORCE_STRONG)
+		return TRUE
+	var/obj/object_source = src
+	return istype(object_source) && object_source.drag_slowdown > 1
+
 /atom/proc/mark_cyberpunk_analyzed(mob/living/user)
 	if(!is_cyberpunk_analysis_target())
 		return FALSE
@@ -430,7 +447,7 @@
 		var/obj/structure/structure = src
 		if(!structure.anchored)
 			return "mobile_structure"
-		return "fixed_structure"
+		return "nonmobile_structure"
 	return "object"
 
 /atom/proc/get_cyberpunk_structure_category_name()

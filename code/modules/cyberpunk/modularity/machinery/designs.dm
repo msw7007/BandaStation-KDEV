@@ -191,3 +191,38 @@
 	build_path = /obj/item/cyberpunk_machine_module/vending_contract_terminal
 	cyberpunk_technology_corporation_id = "starlight"
 	cyberpunk_required_technology_id = "starlight_delivery"
+
+/datum/design/cyberpunk_machine_module/door_servo_matrix
+	name = "Ryaznov Door Servo Matrix"
+	id = "ryaznov_door_servo_matrix"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/door_servo_matrix
+	cyberpunk_required_technology_id = "ryaznov_tools"
+
+/datum/design/cyberpunk_machine_module/charger_regulator
+	name = "Ryaznov Charger Regulator"
+	id = "ryaznov_charger_regulator"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/charger_regulator
+	cyberpunk_required_technology_id = "ryaznov_power"
+
+/datum/design/cyberpunk_machine_module/generator_fuel_controller
+	name = "Ryaznov Generator Fuel Controller"
+	id = "ryaznov_generator_fuel_controller"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/generator_fuel_controller
+	cyberpunk_required_technology_id = "ryaznov_power"
+
+/datum/design/cyberpunk_machine_module/camera_signal_booster
+	name = "Ryaznov Camera Signal Booster"
+	id = "ryaznov_camera_signal_booster"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 3, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/silver = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/camera_signal_booster
+	cyberpunk_required_technology_id = "ryaznov_robotics"
+
+/datum/design/cyberpunk_machine_module/turret_targeting_limiter
+	name = "Ryaznov Turret Targeting Limiter"
+	id = "ryaznov_turret_targeting_limiter"
+	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/gold = SMALL_MATERIAL_AMOUNT)
+	build_path = /obj/item/cyberpunk_machine_module/turret_targeting_limiter
+	cyberpunk_required_technology_id = "ryaznov_robotics"

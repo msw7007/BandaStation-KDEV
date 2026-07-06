@@ -926,6 +926,7 @@
 		return
 	use_energy(7.5 KILO JOULES / severity)
 	new /obj/effect/temp_visual/emp(loc)
+	trigger_cyberpunk_machine_failure("emp")
 
 	if(!prob(70/severity))
 		return
@@ -1653,6 +1654,18 @@
 		shock_multiplier *= module.failure_shock_multiplier
 	return max(0, shock_multiplier)
 
+/obj/machinery/proc/get_cyberpunk_machine_charge_rate_multiplier()
+	var/charge_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		charge_multiplier *= module.charge_rate_multiplier
+	return max(0.1, charge_multiplier)
+
+/obj/machinery/proc/get_cyberpunk_machine_generator_output_multiplier()
+	var/output_multiplier = 1
+	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
+		output_multiplier *= module.generator_output_multiplier
+	return max(0.1, output_multiplier)
+
 /obj/machinery/proc/cyberpunk_business_consume_warehouse(item_label, amount)
 	if(!cyberpunk_business_warehouse_linked || !cyberpunk_business_id)
 		return 0
@@ -1798,21 +1811,29 @@
 			return "network loss"
 		if("unsafe")
 			return "unsafe mode"
+		if("wrong_function")
+			return "wrong function"
 	return "none"
 
 /obj/machinery/proc/pick_cyberpunk_failure_state(source = null)
-	if(source == "emp")
-		return pick("offline", "short", "network")
-	if(source == "hack" || source == "sabotage")
-		return pick("network", "unsafe", "jammed")
-	return pick("offline", "short", "jammed", "network", "unsafe")
+	var/static/list/failure_matrix = list(
+		"wear" = list("offline", "short", "jammed", "unsafe"),
+		"use" = list("offline", "short", "jammed", "network", "unsafe", "wrong_function"),
+		"damage" = list("offline", "short", "jammed", "unsafe"),
+		"power" = list("offline", "short"),
+		"emp" = list("offline", "short", "network"),
+		"hack" = list("network", "unsafe", "jammed", "wrong_function"),
+		"sabotage" = list("network", "unsafe", "jammed", "short", "wrong_function"),
+	)
+	var/list/possible_failures = failure_matrix[source] || failure_matrix["use"]
+	return pick(possible_failures)
 
 /obj/machinery/proc/set_cyberpunk_failure_state(new_state, mob/living/user = null)
 	if(cyberpunk_machine_failure_state == new_state)
 		return FALSE
 	cyberpunk_machine_failure_state = new_state
 	cyberpunk_last_failure_actor = user
-	if(new_state in list("offline", "jammed", "unsafe"))
+	if(new_state in list("offline", "jammed", "network", "unsafe"))
 		set_machine_stat(machine_stat | BROKEN)
 	update_appearance()
 	return TRUE
@@ -1851,11 +1872,106 @@
 		if("jammed")
 			balloon_alert(user, "jammed")
 			return TRUE
+		if("network")
+			if(!panel_open)
+				balloon_alert(user, "network fault")
+				return TRUE
 		if("offline")
 			if(!panel_open)
 				balloon_alert(user, "offline")
 				return TRUE
+		if("wrong_function")
+			return cyberpunk_handle_wrong_function(user)
 	return FALSE
+
+/obj/machinery/proc/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "miscalibrated")
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(2, "use", user)
+	return TRUE
+
+/obj/machinery/door/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "access loop")
+	do_sparks(2, TRUE, src)
+	if(prob(50))
+		open()
+	else
+		close()
+	apply_cyberpunk_machine_wear(2, "use", user)
+	return TRUE
+
+/obj/machinery/vending/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "wrong item")
+	new /obj/item/trash/can(drop_location())
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(3, "use", user)
+	return TRUE
+
+/obj/machinery/power/apc/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "bad routing")
+	if(prob(50))
+		overload_lighting()
+	else
+		break_lights()
+	apply_cyberpunk_machine_wear(3, "use", user)
+	return TRUE
+
+/obj/machinery/cell_charger/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "reverse charge")
+	if(charging)
+		charging.use(min(charging.charge, charge_rate))
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(2, "use", user)
+	update_appearance()
+	return TRUE
+
+/obj/machinery/recharger/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "charge fault")
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(2, "use", user)
+	update_appearance()
+	return TRUE
+
+/obj/machinery/rnd/production/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "bad print")
+	new /obj/item/shard(drop_location())
+	do_sparks(3, TRUE, src)
+	apply_cyberpunk_machine_wear(4, "use", user)
+	return TRUE
+
+/obj/machinery/autolathe/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "bad print")
+	new /obj/item/shard(drop_location())
+	do_sparks(3, TRUE, src)
+	apply_cyberpunk_machine_wear(4, "use", user)
+	return TRUE
+
+/obj/machinery/chem_dispenser/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "bad dispense")
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(3, "use", user)
+	return TRUE
+
+/obj/machinery/chem_master/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "bad mix")
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(3, "use", user)
+	return TRUE
+
+/obj/machinery/camera/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "signal drift")
+	if(camera_enabled)
+		toggle_cam(user, FALSE)
+	do_sparks(2, TRUE, src)
+	apply_cyberpunk_machine_wear(2, "use", user)
+	return TRUE
+
+/obj/machinery/porta_turret/cyberpunk_handle_wrong_function(mob/living/user)
+	balloon_alert(user, "targeting fault")
+	set_disabled(rand(6 SECONDS, 12 SECONDS))
+	do_sparks(3, TRUE, src)
+	apply_cyberpunk_machine_wear(3, "use", user)
+	return TRUE
 
 /obj/machinery/proc/apply_cyberpunk_machine_wear(amount = 1, source = null, mob/living/user = null)
 	if(amount <= 0 || (resistance_flags & INDESTRUCTIBLE))
@@ -1928,6 +2044,7 @@
 	recalculate_cyberpunk_machine_wear()
 	if(cyberpunk_machine_wear < cyberpunk_machine_wear_damage_threshold)
 		clear_cyberpunk_failure_state()
+	user.reward_cyberpunk_structure_tool_experience(src, "repair")
 	to_chat(user, span_notice("You service [get_cyberpunk_component_name(component)] in [src]."))
 	return TRUE
 
@@ -1950,6 +2067,7 @@
 			return FALSE
 	LAZYADD(cyberpunk_machine_modules, module)
 	module.on_install(src, user)
+	user?.reward_cyberpunk_structure_tool_experience(src, "module")
 	return TRUE
 
 /obj/machinery/proc/extract_cyberpunk_module(module_id, mob/living/user)
@@ -1958,6 +2076,7 @@
 			continue
 		module.on_remove(src, user)
 		cyberpunk_machine_modules -= module
+		user?.reward_cyberpunk_structure_tool_experience(src, "module")
 		return module
 	return null
 
@@ -2201,10 +2320,31 @@
 	if(screwdriver.tool_behaviour != TOOL_SCREWDRIVER)
 		return NONE
 
+	var/panel_time = 1 SECONDS * screwdriver.toolspeed
+	var/mob/living/living_user = user
+	if(istype(living_user))
+		panel_time *= living_user.get_cyberpunk_structure_time_multiplier(src, "panel")
+	if(!screwdriver.use_tool(src, user, panel_time))
+		return NONE
 	screwdriver.play_tool_sound(src, 50)
 	toggle_panel_open()
 	balloon_alert(user, "panel [panel_open ? "open" : "closed"]")
+	living_user?.reward_cyberpunk_structure_tool_experience(src, "panel")
 	return ITEM_INTERACT_SUCCESS
+
+/obj/machinery/add_context(atom/source, list/context, obj/item/held_item, mob/user)
+	. = ..()
+
+	if(!held_item)
+		return .
+
+	if(held_item.tool_behaviour == TOOL_SCREWDRIVER)
+		context[SCREENTIP_CONTEXT_LMB] = panel_open ? "Close panel" : "Open panel"
+		return CONTEXTUAL_SCREENTIP_SET
+	if(panel_open && (held_item.tool_behaviour in list(TOOL_WRENCH, TOOL_WELDER)))
+		context[SCREENTIP_CONTEXT_LMB] = "Service"
+		return CONTEXTUAL_SCREENTIP_SET
+	return .
 
 /**
  * Default method of rotating a machine with a wrench

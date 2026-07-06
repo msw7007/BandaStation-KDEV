@@ -58,7 +58,7 @@
 /proc/cyberpunk_persistent_capture_movable(atom/movable/thing, turf/base_turf, turf/center, obj/machinery/active_terminal, depth = 0, allow_vehicle = FALSE)
 	if(!thing || thing == active_terminal || ismob(thing))
 		return null
-	var/is_persistent_vehicle = allow_vehicle && istype(thing, /obj/vehicle/sealed/car/cyberpunk_test)
+	var/is_persistent_vehicle = allow_vehicle && istype(thing, /obj/vehicle/sealed/car/cyberpunk)
 	if(!(isitem(thing) || istype(thing, /obj/machinery) || istype(thing, /obj/structure) || is_persistent_vehicle))
 		return null
 	var/list/req_access = cyberpunk_persistent_read_var(thing, "req_access")
@@ -96,7 +96,7 @@
 	if(istype(clothing) && islist(clothing.cyberpunk_custom_design_data))
 		entry["clothing_design"] = clothing.cyberpunk_custom_design_data.Copy()
 	if(is_persistent_vehicle)
-		var/obj/vehicle/sealed/car/cyberpunk_test/vehicle = thing
+		var/obj/vehicle/sealed/car/cyberpunk/vehicle = thing
 		entry["cyberpunk_vehicle"] = vehicle.cyberpunk_to_persistent_record()
 	if(depth < 3 && length(thing.contents))
 		var/list/content_records = list()
@@ -115,7 +115,7 @@
 	for(var/turf/nearby_turf as anything in range(1, parking))
 		if(!nearby_turf || get_area(nearby_turf) != target_area)
 			continue
-		for(var/obj/vehicle/sealed/car/cyberpunk_test/vehicle as anything in nearby_turf.contents)
+		for(var/obj/vehicle/sealed/car/cyberpunk/vehicle as anything in nearby_turf.contents)
 			if(captured_vehicles[vehicle])
 				continue
 			var/list/entry = cyberpunk_persistent_capture_movable(vehicle, nearby_turf, center, active_terminal, allow_vehicle = TRUE)
@@ -172,7 +172,7 @@
 	var/obj/item/clothing/clothing = restored_atom
 	if(istype(clothing) && islist(entry["clothing_design"]))
 		clothing.cyberpunk_apply_design(entry["clothing_design"])
-	var/obj/vehicle/sealed/car/cyberpunk_test/vehicle = restored_atom
+	var/obj/vehicle/sealed/car/cyberpunk/vehicle = restored_atom
 	var/list/vehicle_record = entry["cyberpunk_vehicle"]
 	if(istype(vehicle) && islist(vehicle_record))
 		vehicle.cyberpunk_apply_persistent_record(vehicle_record)

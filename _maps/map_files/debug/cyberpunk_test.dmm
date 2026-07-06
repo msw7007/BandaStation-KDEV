@@ -1,6 +1,6 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "ab" = (
-/obj/vehicle/sealed/car/cyberpunk_test/minivan,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "ad" = (
@@ -1010,7 +1010,7 @@
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
 "oj" = (
-/obj/vehicle/sealed/car/cyberpunk_test/microbike,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "ok" = (
@@ -1335,7 +1335,7 @@
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_02)
 "tI" = (
-/obj/vehicle/sealed/car/cyberpunk_test/bus,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "tP" = (
@@ -1854,7 +1854,7 @@
 /turf/open/floor/wood,
 /area/station/security/brig)
 "BC" = (
-/obj/vehicle/sealed/car/cyberpunk_test/apc,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "BD" = (
@@ -1960,7 +1960,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/government)
 "DF" = (
-/obj/vehicle/sealed/car/cyberpunk_test/tank,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "DG" = (
@@ -2046,7 +2046,7 @@
 /turf/open/openspace,
 /area/station/commons/dorms)
 "EW" = (
-/obj/vehicle/sealed/car/cyberpunk_test/large_car,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "EZ" = (
@@ -2428,7 +2428,7 @@
 /turf/open/floor/iron,
 /area/station/commons/dorms)
 "Ld" = (
-/obj/vehicle/sealed/car/cyberpunk_test/cargo_minivan,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "Lk" = (
@@ -2794,7 +2794,7 @@
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/public_service/general_store)
 "Qx" = (
-/obj/vehicle/sealed/car/cyberpunk_test/bike,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "QI" = (
@@ -2866,7 +2866,7 @@
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
 "RH" = (
-/obj/vehicle/sealed/car/cyberpunk_test/cargo_truck,
+/obj/vehicle/sealed/car/cyberpunk/standard_car,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
 "RM" = (

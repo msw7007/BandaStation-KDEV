@@ -322,17 +322,33 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 		to_chat(user, span_notice("Вы начинаете [anchored ? "от" : "при"]креплять [declent_ru(ACCUSATIVE)]..."))
 	wrench.play_tool_sound(src, 50)
 	var/prev_anchored = anchored
+	var/effective_time = time
+	var/mob/living/living_user = user
+	if(istype(living_user))
+		effective_time *= living_user.get_cyberpunk_structure_time_multiplier(src, anchored ? "unanchor" : "anchor")
 	//as long as we're the same anchored state and we're either on a floor or are anchored, toggle our anchored state
-	if(!wrench.use_tool(src, user, time, extra_checks = CALLBACK(src, PROC_REF(unfasten_wrench_check), prev_anchored, user)))
+	if(!wrench.use_tool(src, user, effective_time, extra_checks = CALLBACK(src, PROC_REF(unfasten_wrench_check), prev_anchored, user)))
 		return FAILED_UNFASTEN
 	if(!anchored && ground.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
 		to_chat(user, span_notice("Вам не удалось прикрутить [declent_ru(ACCUSATIVE)]."))
 		return CANT_UNFASTEN
 	to_chat(user, span_notice("Вы [anchored ? "от" : "при"]кручиваете [declent_ru(ACCUSATIVE)]."))
 	set_anchored(!anchored)
+	if(istype(living_user))
+		living_user.reward_cyberpunk_structure_anchor_experience(src)
 	check_on_table()
 	playsound(src, 'sound/items/deconstruct.ogg', 50, TRUE)
 	return SUCCESSFUL_UNFASTEN
+
+/obj/add_context(atom/source, list/context, obj/item/held_item, mob/user)
+	. = ..()
+	if(held_item?.tool_behaviour != TOOL_WRENCH || !is_cyberpunk_structure_target())
+		return .
+	if(get_cyberpunk_structure_category() == "foldable_structure")
+		context[SCREENTIP_CONTEXT_RMB] ||= "Fold"
+	if(anchored || isfloorturf(loc) || isindestructiblefloor(loc))
+		context[SCREENTIP_CONTEXT_LMB] ||= anchored ? "Unanchor" : "Anchor"
+	return CONTEXTUAL_SCREENTIP_SET
 
 /// For the do_after, this checks if unfastening conditions are still valid
 /obj/proc/unfasten_wrench_check(prev_anchored, mob/user)

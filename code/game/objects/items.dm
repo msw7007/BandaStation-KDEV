@@ -1777,6 +1777,8 @@
 		var/obj/target_object = target
 		if(istype(target_object))
 			target_object.cyberpunk_last_deconstructor = user
+	if(target?.is_cyberpunk_structure_target())
+		user.reward_cyberpunk_structure_tool_experience(target, cyberpunk_action)
 
 	return TRUE
 

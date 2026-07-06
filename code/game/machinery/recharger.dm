@@ -23,8 +23,10 @@
 
 /obj/machinery/recharger/RefreshParts()
 	. = ..()
+	recharge_coeff = 1
 	for(var/datum/stock_part/capacitor/capacitor in component_parts)
 		recharge_coeff = capacitor.tier
+	recharge_coeff *= get_cyberpunk_machine_charge_rate_multiplier()
 
 /obj/machinery/recharger/examine(mob/user)
 	. = ..()
