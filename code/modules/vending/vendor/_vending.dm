@@ -23,9 +23,18 @@
 	var/category
 	///List of items that have been returned to the vending machine.
 	var/list/returned_products
+	/// Sale datum that controls dynamic price, availability and rotated stock.
+	var/datum/cyberpunk_sale_entry/cyberpunk_sale_entry
+	/// Full stock amount before daily sale rotation.
+	var/cyberpunk_base_amount = 0
+	/// FALSE when this product is not part of the current sale rotation.
+	var/cyberpunk_sale_available = TRUE
+	/// Sale source profile used by this product.
+	var/cyberpunk_sale_source = "vendor"
 
 /datum/data/vending_product/Destroy(force)
 	returned_products = null
+	QDEL_NULL(cyberpunk_sale_entry)
 	return ..()
 
 /**
@@ -150,6 +159,16 @@
 	var/default_price = 25
 	///Default price of premium items if not overridden
 	var/extra_price = 50
+	/// Whether this vendor rotates its public sale stock.
+	var/cyberpunk_sale_rotation_enabled = TRUE
+	/// One in-world day for current Cyberpunk economy pacing.
+	var/cyberpunk_sale_rotation_interval = 30 MINUTES
+	/// Next world time when this vendor should reroll sale availability.
+	var/cyberpunk_next_sale_rotation = 0
+	/// Sale source profile for normal and premium vending entries.
+	var/cyberpunk_sale_source = "vendor"
+	/// Sale source profile for hacked/contraband vending entries.
+	var/cyberpunk_hidden_sale_source = "vendor_hidden"
 	///fontawesome icon name to use in to display the user's balance in the vendor UI
 	var/displayed_currency_icon = "coins"
 	///String of the used currency to display in the vendor UI

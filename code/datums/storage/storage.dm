@@ -182,12 +182,30 @@
 	else if(istype(item_parent, /obj/item/storage/backpack))
 		cyberpunk_grid_width = 5
 		cyberpunk_grid_height = 5
+	else if(istype(item_parent, /obj/item/storage/toolbox))
+		cyberpunk_grid_width = 4
+		cyberpunk_grid_height = 4
+	else if(istype(item_parent, /obj/item/storage/medkit))
+		cyberpunk_grid_width = 4
+		cyberpunk_grid_height = 3
 	else if(istype(item_parent, /obj/item/storage/belt))
 		cyberpunk_grid_width = 2
 		cyberpunk_grid_height = 4
 	else if(istype(item_parent, /obj/item/storage/briefcase))
 		cyberpunk_grid_width = 3
 		cyberpunk_grid_height = 4
+	else if(istype(item_parent, /obj/item/storage/box))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 3
+	else if(istype(item_parent, /obj/item/storage/bag))
+		cyberpunk_grid_width = 4
+		cyberpunk_grid_height = 4
+	else if(istype(item_parent, /obj/item/storage/fancy))
+		cyberpunk_grid_width = 2
+		cyberpunk_grid_height = 2
+	else if(istype(item_parent, /obj/item/storage))
+		cyberpunk_grid_width = clamp(screen_max_columns || 3, 2, 5)
+		cyberpunk_grid_height = clamp(CEILING(max_slots / max(cyberpunk_grid_width, 1), 1), 2, 6)
 
 /datum/storage/proc/get_cyberpunk_grid_capacity()
 	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
@@ -236,6 +254,80 @@
 				return FALSE
 	return TRUE
 
+/datum/storage/proc/place_cyberpunk_grid_item_at(obj/item/stored_item, grid_x, grid_y)
+	if(!istype(stored_item) || !cyberpunk_grid_width || !cyberpunk_grid_height)
+		return FALSE
+	grid_x = round(text2num("[grid_x]") || 0)
+	grid_y = round(text2num("[grid_y]") || 0)
+	if(grid_x < 1 || grid_y < 1)
+		return FALSE
+	var/list/footprint = stored_item.get_cyberpunk_grid_footprint()
+	var/list/occupied = get_cyberpunk_grid_occupied(stored_item)
+	if(!cyberpunk_grid_rect_free(grid_x, grid_y, footprint[1], footprint[2], occupied))
+		return FALSE
+	stored_item.cyberpunk_grid_x = grid_x
+	stored_item.cyberpunk_grid_y = grid_y
+	return TRUE
+
+/datum/storage/proc/get_cyberpunk_grid_position_from_params(mob/user, params)
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height || !istype(user))
+		return null
+	var/list/modifiers = islist(params) ? params : params2list(params)
+	if(!LAZYACCESS(modifiers, SCREEN_LOC))
+		return null
+	var/list/click_offsets = screen_loc_to_offset(LAZYACCESS(modifiers, SCREEN_LOC), user.client?.view)
+	if(!length(click_offsets))
+		return null
+	var/adjusted_start_y = screen_start_y
+	var/number_of_hands = length(user.held_items)
+	while(user.default_hand_amount && number_of_hands > user.default_hand_amount)
+		number_of_hands /= user.default_hand_amount
+		adjusted_start_y++
+	var/start_pixel_x = screen_start_x * ICON_SIZE_X + screen_pixel_x
+	var/start_pixel_y = adjusted_start_y * ICON_SIZE_Y + screen_pixel_y
+	var/grid_x = round((click_offsets[1] - start_pixel_x) / ICON_SIZE_X) + 1
+	var/grid_y = round((click_offsets[2] - start_pixel_y) / ICON_SIZE_Y) + 1
+	if(grid_x < 1 || grid_x > cyberpunk_grid_width || grid_y < 1 || grid_y > cyberpunk_grid_height)
+		return null
+	return list(grid_x, grid_y)
+
+/datum/storage/proc/move_cyberpunk_grid_item(obj/item/stored_item, grid_x, grid_y, mob/user)
+	if(!istype(stored_item) || stored_item.loc != real_location)
+		return FALSE
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
+		return FALSE
+	var/old_x = stored_item.cyberpunk_grid_x
+	var/old_y = stored_item.cyberpunk_grid_y
+	if(place_cyberpunk_grid_item_at(stored_item, grid_x, grid_y))
+		refresh_views()
+		return TRUE
+	stored_item.cyberpunk_grid_x = old_x
+	stored_item.cyberpunk_grid_y = old_y
+	if(user)
+		user.balloon_alert(user, "нет места!")
+	return FALSE
+
+/datum/storage/proc/rotate_cyberpunk_grid_item(obj/item/stored_item, mob/user)
+	if(!istype(stored_item) || stored_item.loc != real_location)
+		return FALSE
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
+		return FALSE
+	var/old_rotation = stored_item.cyberpunk_grid_rotated
+	var/old_x = stored_item.cyberpunk_grid_x
+	var/old_y = stored_item.cyberpunk_grid_y
+	stored_item.rotate_cyberpunk_grid_footprint()
+	if((old_x && old_y && place_cyberpunk_grid_item_at(stored_item, old_x, old_y)) || place_cyberpunk_grid_item(stored_item))
+		refresh_views()
+		if(user)
+			to_chat(user, span_notice("Вы поворачиваете [stored_item.declent_ru(ACCUSATIVE)] в [parent.declent_ru(PREPOSITIONAL)]."))
+		return TRUE
+	stored_item.cyberpunk_grid_rotated = old_rotation
+	stored_item.cyberpunk_grid_x = old_x
+	stored_item.cyberpunk_grid_y = old_y
+	if(user)
+		user.balloon_alert(user, "нет места!")
+	return FALSE
+
 /datum/storage/proc/can_fit_cyberpunk_grid_item(obj/item/stored_item)
 	if(!istype(stored_item) || !cyberpunk_grid_width || !cyberpunk_grid_height)
 		return TRUE
@@ -252,11 +344,21 @@
 /datum/storage/proc/reflow_cyberpunk_grid()
 	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
 		return
+	var/list/unplaced_items = list()
 	for(var/obj/item/stored_item as anything in real_location)
+		if(stored_item.cyberpunk_grid_x && stored_item.cyberpunk_grid_y)
+			var/list/footprint = stored_item.get_cyberpunk_grid_footprint()
+			var/list/occupied = get_cyberpunk_grid_occupied(stored_item)
+			if(cyberpunk_grid_rect_free(stored_item.cyberpunk_grid_x, stored_item.cyberpunk_grid_y, footprint[1], footprint[2], occupied))
+				continue
+		unplaced_items += stored_item
 		stored_item.cyberpunk_grid_x = null
 		stored_item.cyberpunk_grid_y = null
-	for(var/obj/item/stored_item as anything in real_location)
-		place_cyberpunk_grid_item(stored_item)
+	for(var/obj/item/stored_item as anything in unplaced_items)
+		if(place_cyberpunk_grid_item(stored_item))
+			continue
+		attempt_remove(stored_item, parent.drop_location(), silent = TRUE, visual_updates = FALSE)
+	refresh_views()
 //CYBERPUNK BUILD - rebuild and delete before release
 
 /datum/storage/Destroy()
@@ -655,14 +757,22 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if(numerical_stacking)
 		return
 
-	var/drop_index = real_location.contents.Find(dropped_onto)
-	real_location.contents -= target
-	// Use an empty list if we're dropping onto the last item
-	var/list/to_move = real_location.contents.len >= drop_index ? real_location.contents.Copy(drop_index) : list()
-	real_location.contents -= to_move
-	real_location.contents += target
-	real_location.contents += to_move
-	refresh_views()
+	var/obj/item/target_item = target
+	var/obj/item/drop_target = dropped_onto
+	if(cyberpunk_grid_width && cyberpunk_grid_height && istype(target_item) && istype(drop_target) && drop_target.loc == real_location)
+		if(move_cyberpunk_grid_item(target_item, drop_target.cyberpunk_grid_x || 1, drop_target.cyberpunk_grid_y || 1, user))
+			return COMPONENT_CANCEL_MOUSEDROPPED_ONTO
+		return
+
+	if(!cyberpunk_grid_width || !cyberpunk_grid_height)
+		var/drop_index = real_location.contents.Find(dropped_onto)
+		real_location.contents -= target
+		// Use an empty list if we're dropping onto the last item
+		var/list/to_move = real_location.contents.len >= drop_index ? real_location.contents.Copy(drop_index) : list()
+		real_location.contents -= to_move
+		real_location.contents += target
+		real_location.contents += to_move
+		refresh_views()
 
 /**
  * Inserts every item in a given list, with a progress bar
@@ -1339,6 +1449,11 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 /// Signal proc for [COMSIG_ATOM_CONTENTS_WEIGHT_CLASS_CHANGED] to drop items out of our storage if they're suddenly too heavy.
 /datum/storage/proc/contents_changed_w_class(datum/source, obj/item/changed, old_w_class, new_w_class)
 	SIGNAL_HANDLER
+
+	if(cyberpunk_grid_width && cyberpunk_grid_height && changed?.loc == real_location)
+		reflow_cyberpunk_grid()
+		if(changed.loc != real_location)
+			return
 
 	// If old weight already overloaded the storage, don't drop the item out just in case we're inside of a premade box
 	if(new_w_class <= max_specific_storage && (get_total_weight() <= max_total_storage || get_total_weight() - new_w_class + old_w_class > max_total_storage))

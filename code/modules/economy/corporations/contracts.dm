@@ -10,6 +10,27 @@
 		contracts += list(contract.to_ui_data(null, FALSE))
 	return contracts
 
+/proc/pick_cyberpunk_generated_contract_item_type()
+	var/static/list/t1_items = list(
+		/obj/item/flashlight,
+		/obj/item/radio,
+		/obj/item/crowbar,
+		/obj/item/wrench,
+		/obj/item/screwdriver,
+		/obj/item/multitool,
+		/obj/item/healthanalyzer,
+		/obj/item/stack/sheet/iron,
+		/obj/item/stack/sheet/glass,
+	)
+	var/static/list/t2_items = list(
+		/obj/item/crowbar/power,
+		/obj/item/screwdriver/power,
+		/obj/item/stack/sheet/plasteel,
+		/obj/item/stack/sheet/mineral/plasma,
+		/obj/item/healthanalyzer/advanced,
+	)
+	return prob(12) ? pick(t2_items) : pick(t1_items)
+
 /datum/cyberpunk_corporation/proc/create_corporate_contract(contract_type = null)
 	if(hidden)
 		return null
@@ -20,8 +41,10 @@
 	var/required_percent = 75
 	switch(contract_type)
 		if(CYBERPUNK_CONTRACT_DELIVERY)
-			target = pick("sealed packet", "data disk", "medical crate", "machine component")
-			description = "Deliver the marked cargo to the corporate representative."
+			var/obj/item/generated_item = pick_cyberpunk_generated_contract_item_type()
+			target = initial(generated_item.name)
+			var/generated_tier = get_cyberpunk_item_tier_for_type(generated_item)
+			description = "Deliver the requested T[generated_tier] cargo to the corporate representative."
 		if(CYBERPUNK_CONTRACT_REPAIR)
 			target = pick("door", "machine", "terminal", "generator")
 			description = "Restore the target above the required integrity threshold."

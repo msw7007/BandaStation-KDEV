@@ -125,11 +125,22 @@
 	var/assigned_contractor = reject_bad_text(params["assigned_contractor"], max_length = 64, ascii_only = FALSE)
 	var/reserve_held = text2num(params["reserve_held"]) ? TRUE : FALSE
 	var/obj/item/reserved_item
+	if(is_delivery)
+		reserve_held = TRUE
 	if(reserve_held)
-		if(contract_type != CYBERPUNK_CONTRACT_DELIVERY)
+		if(!is_delivery)
 			return null
-		reserved_item = creator.get_active_held_item()
+		var/reserved_item_ref = params["reserved_item_ref"] || params["item_ref"]
+		if(reserved_item_ref)
+			var/obj/item/requested_item = locate(reserved_item_ref)
+			if(istype(requested_item) && requested_item in creator.get_all_gear())
+				reserved_item = requested_item
+		reserved_item ||= creator.get_active_held_item()
 		if(!reserved_item)
+			return null
+		if(!(reserved_item in creator.get_all_gear()))
+			return null
+		if(reserved_item.item_flags & ABSTRACT)
 			return null
 		if(!target)
 			target = reserved_item.name

@@ -10,8 +10,9 @@
  * * categories - A list in the format of product_categories to source category from
  * * startempty - should we set vending_product record amount from the product list (so it's prefilled at roundstart)
  * * premium - Whether the ending products shall have premium or default prices
+ * * sale_source - Sale source profile used for Cyberpunk sale datums
  */
-/obj/machinery/vending/proc/build_inventory(list/productlist, list/recordlist, list/categories, start_empty = FALSE, premium = FALSE)
+/obj/machinery/vending/proc/build_inventory(list/productlist, list/recordlist, list/categories, start_empty = FALSE, premium = FALSE, sale_source = null)
 	PRIVATE_PROC(TRUE)
 
 	var/inflation_value = HAS_TRAIT(SSeconomy, TRAIT_MARKET_CRASHING) ? SSeconomy.inflation_value() : 1
@@ -35,17 +36,23 @@
 		if(!start_empty)
 			new_record.amount = amount
 		new_record.max_amount = amount
+		new_record.cyberpunk_base_amount = amount
+		new_record.cyberpunk_sale_source = sale_source || cyberpunk_sale_source
+		new_record.cyberpunk_sale_entry = get_cyberpunk_sale_entry_for_type(typepath, new_record.cyberpunk_sale_source, premium)
 
 		///Prices of vending machines are all increased uniformly.
-		var/custom_price = round(initial(temp.custom_price) * inflation_value)
-		if(!premium)
-			new_record.price = custom_price || default_price
+		if(new_record.cyberpunk_sale_entry)
+			new_record.price = new_record.cyberpunk_sale_entry.get_price(default_price, extra_price, inflation_value, premium)
 		else
-			var/premium_custom_price = round(initial(temp.custom_premium_price) * inflation_value)
-			if(!premium_custom_price && custom_price) //For some ungodly reason, some premium only items only have a custom_price
-				new_record.price = extra_price + custom_price
+			var/custom_price = round(initial(temp.custom_price) * inflation_value)
+			if(!premium)
+				new_record.price = custom_price || default_price
 			else
-				new_record.price = premium_custom_price || extra_price
+				var/premium_custom_price = round(initial(temp.custom_premium_price) * inflation_value)
+				if(!premium_custom_price && custom_price) //For some ungodly reason, some premium only items only have a custom_price
+					new_record.price = extra_price + custom_price
+				else
+					new_record.price = premium_custom_price || extra_price
 
 		new_record.age_restricted = initial(temp.age_restricted)
 		new_record.colorable = !!(initial(temp.greyscale_config) && initial(temp.greyscale_colors) && (initial(temp.flags_1) & IS_PLAYER_COLORABLE_1))
@@ -59,9 +66,36 @@
  * start_empty - bool to pass into build_inventory that determines whether a product entry starts with available stock or not
 */
 /obj/machinery/vending/proc/build_inventories(start_empty = FALSE)
-	build_inventory(products, product_records, product_categories, start_empty)
-	build_inventory(contraband, hidden_records, list(list("name" = "Contraband", "icon" = "mask", "products" = contraband)), start_empty, premium = TRUE)
-	build_inventory(premium, coin_records, list(list("name" = "Premium", "icon" = "coins", "products" = premium)), start_empty, premium = TRUE)
+	build_inventory(products, product_records, product_categories, start_empty, FALSE, cyberpunk_sale_source)
+	build_inventory(contraband, hidden_records, list(list("name" = "Contraband", "icon" = "mask", "products" = contraband)), start_empty, TRUE, cyberpunk_hidden_sale_source)
+	build_inventory(premium, coin_records, list(list("name" = "Premium", "icon" = "coins", "products" = premium)), start_empty, TRUE, cyberpunk_sale_source)
+	rotate_cyberpunk_sale_stock(TRUE)
+
+/obj/machinery/vending/proc/should_use_cyberpunk_sale_rotation()
+	return cyberpunk_sale_rotation_enabled && !istype(src, /obj/machinery/vending/custom)
+
+/obj/machinery/vending/proc/maybe_rotate_cyberpunk_sale_stock()
+	if(!should_use_cyberpunk_sale_rotation())
+		return FALSE
+	if(world.time < cyberpunk_next_sale_rotation)
+		return FALSE
+	return rotate_cyberpunk_sale_stock(FALSE)
+
+/obj/machinery/vending/proc/rotate_cyberpunk_sale_stock(force = FALSE)
+	if(!should_use_cyberpunk_sale_rotation())
+		return FALSE
+	if(!force && world.time < cyberpunk_next_sale_rotation)
+		return FALSE
+	cyberpunk_next_sale_rotation = world.time + cyberpunk_sale_rotation_interval
+	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
+		if(!record.cyberpunk_sale_entry)
+			record.cyberpunk_sale_available = TRUE
+			continue
+		var/returned_count = LAZYLEN(record.returned_products)
+		var/rotated_amount = record.cyberpunk_sale_entry.get_rotated_stock_amount(record.cyberpunk_base_amount || record.max_amount)
+		record.cyberpunk_sale_available = rotated_amount > 0 || returned_count > 0
+		record.amount = rotated_amount + returned_count
+	return TRUE
 
 //Better would be to make constructable child
 /obj/machinery/vending/RefreshParts()
@@ -144,11 +178,16 @@
 	PROTECTED_PROC(TRUE)
 
 	. = TRUE
+	maybe_rotate_cyberpunk_sale_stock()
 	var/datum/data/vending_product/item_record = locate(params["ref"])
 	var/list/record_to_check = product_records + coin_records
 	if(extended_inventory)
 		record_to_check = product_records + coin_records + hidden_records
 	if(!item_record || !istype(item_record) || !item_record.product_path)
+		return
+	if(!item_record.cyberpunk_sale_available)
+		speak("Sold out of [item_record.name].")
+		flick(icon_deny, src)
 		return
 	var/price_to_use = item_record.price
 	if(item_record in hidden_records)

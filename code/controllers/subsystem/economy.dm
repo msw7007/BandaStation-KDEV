@@ -268,6 +268,7 @@ SUBSYSTEM_DEF(economy)
 		prices_to_update += vending_lad
 	for(var/i in 1 to length(prices_to_update))
 		var/obj/machinery/vending/vending = prices_to_update[i]
+		vending.maybe_rotate_cyberpunk_sale_stock()
 		vending.reset_prices(vending.product_records, vending.coin_records + vending.hidden_records)
 
 /**
@@ -285,16 +286,22 @@ SUBSYSTEM_DEF(economy)
 
 	for(var/datum/data/vending_product/record as anything in recordlist)
 		var/obj/item/potential_product = record.product_path
-		var/custom_price = round(initial(potential_product.custom_price) * inflation_value)
-		record.price = custom_price | default_price
+		if(record.cyberpunk_sale_entry)
+			record.price = record.cyberpunk_sale_entry.get_price(default_price, extra_price, inflation_value, FALSE)
+		else
+			var/custom_price = round(initial(potential_product.custom_price) * inflation_value)
+			record.price = custom_price || default_price
 	for(var/datum/data/vending_product/premium_record as anything in premiumlist)
 		var/obj/item/potential_product = premium_record.product_path
-		var/premium_custom_price = round(initial(potential_product.custom_premium_price) * inflation_value)
-		var/custom_price = initial(potential_product.custom_price)
-		if(!premium_custom_price && custom_price) //For some ungodly reason, some premium only items only have a custom_price
-			premium_record.price = extra_price + round(custom_price * inflation_value)
+		if(premium_record.cyberpunk_sale_entry)
+			premium_record.price = premium_record.cyberpunk_sale_entry.get_price(default_price, extra_price, inflation_value, TRUE)
 		else
-			premium_record.price = premium_custom_price || extra_price
+			var/premium_custom_price = round(initial(potential_product.custom_premium_price) * inflation_value)
+			var/custom_price = initial(potential_product.custom_price)
+			if(!premium_custom_price && custom_price) //For some ungodly reason, some premium only items only have a custom_price
+				premium_record.price = extra_price + round(custom_price * inflation_value)
+			else
+				premium_record.price = premium_custom_price || extra_price
 
 /datum/controller/subsystem/economy/proc/inflict_moneybags(datum/bank_account/moneybags)
 	if(!moneybags)

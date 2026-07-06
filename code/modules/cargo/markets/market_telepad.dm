@@ -309,6 +309,7 @@
 	new_item.name = name_to_use
 	new_item.desc = desc_to_use
 	new_item.price = price_to_use
+	new_item.apply_cyberpunk_market_sale_entry()
 
 	our_market.add_item(new_item)
 

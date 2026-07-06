@@ -58,7 +58,7 @@ GLOBAL_LIST_INIT(adventure_loot_generator_index,generate_generator_index())
 	var/loot_list
 
 /datum/adventure_loot_generator/simple/generate()
-	var/loot_type = pick(loot_list)
+	var/loot_type = pick_weight(build_cyberpunk_loot_weight_table(loot_list))
 	return list(new loot_type())
 
 /// Unique exploration-only rewards - this is contextless

@@ -800,6 +800,17 @@
 	data["acceptedContracts"] = list()
 	data["directContract"] = null
 	data["terminalOptions"] = SSeconomy.get_cyberpunk_contract_terminal_options()
+	data["reservableItems"] = list()
+	for(var/obj/item/item as anything in living_user?.get_all_gear())
+		if(!item || (item.item_flags & ABSTRACT))
+			continue
+		data["reservableItems"] += list(list(
+			"ref" = REF(item),
+			"name" = item.name,
+			"type" = "[item.type]",
+			"tier" = item.get_cyberpunk_item_tier(),
+			"value" = item.get_cyberpunk_price(living_user),
+		))
 	data["fundingOptions"] = list(list(
 		"id" = 0,
 		"name" = "Personal account",

@@ -123,6 +123,10 @@
 	var/cyberpunk_quality = 100
 	/// IC availability band used by shops, contracts, loot and black market systems.
 	var/cyberpunk_rarity = "common"
+	/// Cyberpunk equipment/weapon tier. 0 means derive from stats, modules and material.
+	var/cyberpunk_item_tier = 0
+	/// Sale datum path used by vendors, shops and black market entries.
+	var/cyberpunk_sale_entry_type = /datum/cyberpunk_sale_entry
 	/// Legal status hook for future markets/security scans.
 	var/cyberpunk_legality = "legal"
 	/// Baseline economic price before vending overrides and local economy modifiers.
@@ -137,14 +141,22 @@
 	var/cyberpunk_repair_threshold = 0.4
 	/// What happens at zero integrity: "tg" keeps normal TG destruction, "broken" keeps the item, "delete" deletes, "emergency" lets subtypes provide behavior.
 	var/cyberpunk_spoil_behavior = "tg"
+	/// Optional item type spawned when this item spoils or breaks down completely.
+	var/cyberpunk_spoil_result_type
+	/// Extra item state tags such as dirty, bloody, wet, acid-covered, charged, discharged or locked.
+	var/list/cyberpunk_condition_tags
 	//CYBERPUNK BUILD - rebuild and delete before release
 	/// Runtime broken flag for Cyberpunk item effects. Existing TG subtype-specific broken flags still work independently.
 	var/cyberpunk_broken = FALSE
 	/// Last time the item was created or repaired, used by passive wear systems.
 	var/cyberpunk_last_repaired = 0
+	/// Last lazy condition update. Prevents passive wear from needing a global tick processor.
+	var/cyberpunk_last_condition_update = 0
 	/// Optional explicit inventory grid footprint. Null means derive from w_class.
 	var/cyberpunk_grid_width
 	var/cyberpunk_grid_height
+	/// TRUE when the footprint was derived from generic Cyberpunk rules and may be recalculated after size changes.
+	var/cyberpunk_grid_auto_sized = FALSE
 	/// Current inventory-grid rotation metadata. Full 2D inventory will consume this later.
 	var/cyberpunk_grid_rotated = FALSE
 	/// Current 1-based position inside a Cyberpunk storage grid.
@@ -370,7 +382,9 @@
 		update_greyscale()
 
 	. = ..()
+	normalize_cyberpunk_item_baseline()
 	cyberpunk_last_repaired = world.time
+	cyberpunk_last_condition_update = world.time
 
 	// Handle adding item associated actions
 	for(var/path in actions_types)
@@ -572,18 +586,27 @@
 	if(analysis_depth <= 0 && !is_cyberpunk_recently_analyzed() && !cyberpunk_equipment_form)
 		return report
 
-	report += span_notice("Item condition: [get_cyberpunk_item_condition_name()].")
+	report += span_notice("Item condition: [get_cyberpunk_item_condition_name()] ([get_cyberpunk_item_condition_percent()]%).")
 	var/item_manufacturer = get_cyberpunk_manufacturer()
 	if(item_manufacturer && item_manufacturer != "independent")
 		report += span_notice("Manufacturer: [item_manufacturer].")
 	if(analysis_depth >= 1)
-		report += span_notice("Quality: [cyberpunk_quality]%. Rarity: [cyberpunk_rarity].")
-		var/list/footprint = get_cyberpunk_grid_footprint()
-		report += span_notice("Inventory footprint: [footprint[1]]x[footprint[2]][cyberpunk_grid_rotated ? " rotated" : ""].")
+		report += span_notice("Quality: [cyberpunk_quality]%. Tier: T[get_cyberpunk_item_tier()]. Rarity: [cyberpunk_rarity] (loot weight [get_cyberpunk_rarity_weight()]). Value: [get_cyberpunk_price(living_user)] cr.")
 	if(analysis_depth >= 2 && uses_integrity)
-		report += span_notice("Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%). Repair threshold: [round(cyberpunk_repair_threshold * 100)]%.")
+		report += span_notice("Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%). Spoil threshold: [get_cyberpunk_spoil_threshold_percent()]%.")
+	if(analysis_depth >= 2)
+		var/list/state_tags = get_cyberpunk_condition_tags()
+		if(length(state_tags))
+			report += span_notice("State tags: [state_tags.Join(", ")].")
+		var/list/material_report = get_cyberpunk_material_report()
+		if(length(material_report))
+			report += span_notice("Materials: [material_report.Join(", ")].")
 	if(analysis_depth >= 2 && (force || cyberpunk_guard_value || length(cyberpunk_damage_profile)))
 		report += span_notice("Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()].")
+	if(analysis_depth >= 2)
+		var/item_work_skill = get_cyberpunk_item_work_skill()
+		if(item_work_skill)
+			report += span_notice("Relevant skill: [get_cyberpunk_skill_display_name(item_work_skill)].")
 	if(cyberpunk_equipment_form)
 		report += span_notice("Equipment form: [cyberpunk_equipment_form]. Material: [get_cyberpunk_equipment_material_name()].")
 		var/list/module_report = get_cyberpunk_module_report()
@@ -606,22 +629,32 @@
 			report += span_notice("Protection: [armor_report.Join(", ")].")
 		if(cyberpunk_active_wear || cyberpunk_passive_wear)
 			report += span_notice("Wear: active [cyberpunk_active_wear], passive [cyberpunk_passive_wear].")
+		if(length(cyberpunk_storage_conditions))
+			var/list/missing_storage = get_cyberpunk_missing_storage_conditions()
+			report += span_notice("Storage conditions: [cyberpunk_storage_conditions.Join(", ")][length(missing_storage) ? "; missing [missing_storage.Join(", ")]" : ""].")
 	return report
 
 /obj/item/get_cyberpunk_diagnostic_data(mob/living/user)
 	var/list/diagnostics = list()
 	diagnostics += "Category: item."
-	diagnostics += "Condition: [get_cyberpunk_item_condition_name()]."
+	diagnostics += "Condition: [get_cyberpunk_item_condition_name()] ([get_cyberpunk_item_condition_percent()]%)."
 	var/item_manufacturer = get_cyberpunk_manufacturer()
 	if(item_manufacturer && item_manufacturer != "independent")
 		diagnostics += "Manufacturer: [item_manufacturer]."
-	diagnostics += "Quality: [cyberpunk_quality]%. Rarity: [cyberpunk_rarity]."
+	diagnostics += "Quality: [cyberpunk_quality]%. Tier: T[get_cyberpunk_item_tier()]. Rarity: [cyberpunk_rarity] (loot weight [get_cyberpunk_rarity_weight()]). Value: [get_cyberpunk_price(user)] cr."
 	if(uses_integrity)
-		diagnostics += "Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%)."
-	var/list/footprint = get_cyberpunk_grid_footprint()
-	diagnostics += "Inventory footprint: [footprint[1]]x[footprint[2]][cyberpunk_grid_rotated ? " rotated" : ""]."
+		diagnostics += "Integrity: [round(get_integrity())]/[max_integrity] ([round(get_integrity_percentage() * 100)]%). Spoil threshold: [get_cyberpunk_spoil_threshold_percent()]%."
+	var/list/state_tags = get_cyberpunk_condition_tags()
+	if(length(state_tags))
+		diagnostics += "State tags: [state_tags.Join(", ")]."
+	var/list/material_report = get_cyberpunk_material_report()
+	if(length(material_report))
+		diagnostics += "Materials: [material_report.Join(", ")]."
 	if(force || cyberpunk_guard_value || length(cyberpunk_damage_profile))
 		diagnostics += "Weapon profile: [get_cyberpunk_weapon_profile_name()]. Guard value: [get_cyberpunk_guard_value()]."
+	var/item_work_skill = get_cyberpunk_item_work_skill()
+	if(item_work_skill)
+		diagnostics += "Relevant skill: [get_cyberpunk_skill_display_name(item_work_skill)]."
 	if(cyberpunk_equipment_form)
 		diagnostics += "Equipment form: [cyberpunk_equipment_form]. Material: [get_cyberpunk_equipment_material_name()]."
 		var/list/module_report = get_cyberpunk_module_report()
@@ -633,6 +666,11 @@
 	var/list/armor_report = get_cyberpunk_armor_report()
 	if(length(armor_report))
 		diagnostics += "Protection: [armor_report.Join(", ")]."
+	if(cyberpunk_active_wear || cyberpunk_passive_wear)
+		diagnostics += "Wear: active [cyberpunk_active_wear], passive [cyberpunk_passive_wear]."
+	if(length(cyberpunk_storage_conditions))
+		var/list/missing_storage = get_cyberpunk_missing_storage_conditions()
+		diagnostics += "Storage conditions: [cyberpunk_storage_conditions.Join(", ")][length(missing_storage) ? "; missing [missing_storage.Join(", ")]" : ""]."
 	return diagnostics
 
 /obj/item/proc/get_cyberpunk_item_condition_name()
@@ -670,6 +708,14 @@
 	cyberpunk_grid_rotated = !cyberpunk_grid_rotated
 	return cyberpunk_grid_rotated
 
+/obj/item/Click(location, control, params)
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK) && (item_flags & IN_STORAGE) && loc?.atom_storage)
+		var/datum/storage/storage = loc.atom_storage
+		if(storage.rotate_cyberpunk_grid_item(src, usr))
+			return TRUE
+	return ..()
+
 /obj/item/verb/rotate_cyberpunk_inventory_footprint()
 	set name = "Rotate inventory footprint"
 	set category = null
@@ -677,14 +723,9 @@
 
 	if(!(item_flags & IN_STORAGE))
 		return
-	rotate_cyberpunk_grid_footprint()
-	cyberpunk_grid_x = null
-	cyberpunk_grid_y = null
 	var/datum/storage/storage = loc?.atom_storage
 	if(storage)
-		storage.reflow_cyberpunk_grid()
-		storage.refresh_views()
-	to_chat(usr, span_notice("You rotate [src]'s storage footprint."))
+		storage.rotate_cyberpunk_grid_item(src, usr)
 
 /obj/item/proc/set_cyberpunk_creator(mob/living/creator)
 	if(!istype(creator))
@@ -1499,6 +1540,7 @@
 
 /obj/item/acid_melt()
 	if(!QDELETED(src))
+		add_cyberpunk_condition_tag("acid-covered")
 		var/turf/T = get_turf(src)
 		var/obj/effect/decal/cleanable/molten_object/MO = new(T)
 		MO.pixel_x = rand(-16,16)
@@ -1767,6 +1809,7 @@
 	// Use tool's fuel, stack sheets or charges if amount is set.
 	if(amount && !use(amount))
 		return
+	apply_cyberpunk_active_wear(user, target)
 
 	// Play tool sound at the end of tool usage,
 	// but only if the delay between the beginning and the end is not too small
@@ -1981,6 +2024,14 @@
 	. = ..()
 	if(!.) // we don't need mob updates when the item was already clean
 		return
+	if(clean_types & CLEAN_TYPE_BLOOD)
+		remove_cyberpunk_condition_tag("bloody")
+	if(clean_types & CLEAN_TYPE_ACID)
+		remove_cyberpunk_condition_tag("acid-covered")
+	if(clean_types & (CLEAN_TYPE_LIGHT_DECAL|CLEAN_TYPE_HARD_DECAL))
+		remove_cyberpunk_condition_tag("dirty")
+	if(clean_types & CLEAN_WASH)
+		remove_cyberpunk_condition_tag("wet")
 	if(ismob(loc))
 		var/mob/mob_loc = loc
 		mob_loc.update_clothing(slot_flags)
@@ -2442,6 +2493,7 @@
 
 	var/old_w_class = w_class
 	w_class = new_w_class
+	normalize_cyberpunk_inventory_footprint(TRUE)
 	SEND_SIGNAL(src, COMSIG_ITEM_WEIGHT_CLASS_CHANGED, old_w_class, new_w_class)
 	if(!isnull(loc))
 		SEND_SIGNAL(loc, COMSIG_ATOM_CONTENTS_WEIGHT_CLASS_CHANGED, src, old_w_class, new_w_class)

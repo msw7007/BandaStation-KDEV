@@ -42,6 +42,10 @@
 			ref = REF(record),
 			colorable = record.colorable,
 		)
+		if(record.cyberpunk_sale_entry)
+			static_record["tier"] = record.cyberpunk_sale_entry.tier
+			static_record["rarity"] = record.cyberpunk_sale_entry.rarity
+			static_record["sale_source"] = record.cyberpunk_sale_source
 
 		var/atom/printed = record.product_path
 		// If it's not GAGS and has no innate colors we have to care about, we use DMIcon
@@ -67,6 +71,7 @@
 	return out_records
 
 /obj/machinery/vending/ui_static_data(mob/user)
+	maybe_rotate_cyberpunk_sale_stock()
 	var/list/data = list()
 	if(ad_list.len)
 		data["ad"] = ad_list[rand(1, ad_list.len)]
@@ -100,6 +105,7 @@
 	return passed_id.registered_account.account_balance
 
 /obj/machinery/vending/ui_data(mob/user)
+	maybe_rotate_cyberpunk_sale_stock()
 	. = list()
 
 	var/obj/item/card/id/card_used

@@ -37,6 +37,14 @@ type FundingOption = {
   balance: number;
 };
 
+type ReservableItem = {
+  ref: string;
+  name: string;
+  type: string;
+  tier: number;
+  value: number;
+};
+
 type Contract = {
   id: number;
   title: string;
@@ -101,6 +109,7 @@ type Data = {
   directContract?: Contract;
   terminalOptions?: TerminalOption[];
   fundingOptions?: FundingOption[];
+  reservableItems?: ReservableItem[];
 };
 
 const contractTypes = [
@@ -726,6 +735,7 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const { act, data } = useBackend<Data>();
   const terminalOptions = data.terminalOptions || [];
   const fundingOptions = data.fundingOptions || [];
+  const reservableItems = data.reservableItems || [];
   const [fundingBusinessId, setFundingBusinessId] = useState(0);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -751,7 +761,7 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const [legal, setLegal] = useState(true);
   const [isPublic, setPublic] = useState(true);
   const [creatorConfirm, setCreatorConfirm] = useState(false);
-  const [reserveHeld, setReserveHeld] = useState(false);
+  const [reservedItemRef, setReservedItemRef] = useState('');
   const [partialGuardPayment, setPartialGuardPayment] = useState(false);
   const isDelivery = contractType === 'delivery';
   const isMining = contractType === 'mining';
@@ -764,6 +774,9 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const usesThreshold = isRepair || isBuild || isSabotage;
   const usesAmount = isDelivery || isMining || isGuard;
   const cleanDestination = isDelivery ? destination : '';
+  const effectiveReservedItemRef = reservedItemRef || reservableItems[0]?.ref || '';
+  const selectedReservedItem = reservableItems.find((item) => item.ref === effectiveReservedItemRef);
+  const creationDisabled = props.disabled || (isDelivery && !selectedReservedItem);
 
   return (
     <div className="StyleGuide__blockShell">
@@ -930,6 +943,25 @@ const ContractCreation = (props: { disabled: boolean }) => {
 
         {isDelivery && (
           <div className="StyleGuide__formGrid">
+            <Field label="Груз">
+              {!!reservableItems.length ? (
+                <Dropdown
+                  options={reservableItems.map((item) => [
+                    item.ref,
+                    `${item.name} / T${item.tier} / ${formatMoney(item.value)} cr`,
+                  ])}
+                  selected={effectiveReservedItemRef}
+                  onSelected={setReservedItemRef}
+                />
+              ) : (
+                <div className="StyleGuide__trapezoidNote">Нет переносимых предметов для резерва.</div>
+              )}
+            </Field>
+          </div>
+        )}
+
+        {isDelivery && (
+          <div className="StyleGuide__formGrid">
             <Field label="Куда доставить">
               <Dropdown
                 options={destinationKinds}
@@ -993,9 +1025,6 @@ const ContractCreation = (props: { disabled: boolean }) => {
         <Toggle label={`Легальный: ${boolLabel(legal)}`} checked={legal} onClick={() => setLegal(!legal)} />
         <Toggle label={`Публичный: ${boolLabel(isPublic)}`} checked={isPublic} onClick={() => setPublic(!isPublic)} />
         <Toggle label={`Ручное подтверждение: ${boolLabel(creatorConfirm)}`} checked={creatorConfirm} onClick={() => setCreatorConfirm(!creatorConfirm)} />
-        {isDelivery && (
-          <Toggle label={`Резерв груза: ${boolLabel(reserveHeld)}`} checked={reserveHeld} onClick={() => setReserveHeld(!reserveHeld)} />
-        )}
         {isGuard && (
           <Toggle label={`Частичная охрана: ${boolLabel(partialGuardPayment)}`} checked={partialGuardPayment} onClick={() => setPartialGuardPayment(!partialGuardPayment)} />
         )}
@@ -1004,7 +1033,7 @@ const ContractCreation = (props: { disabled: boolean }) => {
       <button
         type="button"
         className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
-        disabled={props.disabled}
+        disabled={creationDisabled}
         onClick={() =>
           act('create', {
             title,
@@ -1031,7 +1060,8 @@ const ContractCreation = (props: { disabled: boolean }) => {
             legal: legal ? 1 : 0,
             public_contract: isPublic ? 1 : 0,
             creator_confirm_required: creatorConfirm ? 1 : 0,
-            reserve_held: isDelivery && reserveHeld ? 1 : 0,
+            reserve_held: isDelivery ? 1 : 0,
+            reserved_item_ref: isDelivery ? effectiveReservedItemRef : '',
             partial_guard_payment: isGuard && partialGuardPayment ? 1 : 0,
             funding_business_id: fundingBusinessId,
           })

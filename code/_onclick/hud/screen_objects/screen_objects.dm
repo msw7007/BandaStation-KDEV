@@ -641,7 +641,13 @@ INITIALIZE_IMMEDIATE(/atom/movable/screen) // I hate this place
 	if (target.loc != storage.real_location)
 		return
 
-	/// Due to items in storage ignoring transparency for click hitboxes, this only can happen if we drag onto a free cell - aka after all current contents
+	if(storage.cyberpunk_grid_width && storage.cyberpunk_grid_height)
+		var/list/grid_position = storage.get_cyberpunk_grid_position_from_params(user, params)
+		if(grid_position && storage.move_cyberpunk_grid_item(target, grid_position[1], grid_position[2], user))
+			return
+		return
+
+	// Due to items in storage ignoring transparency for click hitboxes, this only can happen if we drag onto a free cell - aka after all current contents.
 	storage.real_location.contents -= target
 	storage.real_location.contents += target
 	storage.refresh_views()

@@ -1,17 +1,793 @@
 // CYBERPUNK MODULARITY - moved out of code/game/objects/items.dm for architecture clarity.
 
+/obj/item/proc/normalize_cyberpunk_item_baseline()
+	cyberpunk_quality = clamp(round(cyberpunk_quality || 100), 1, 200)
+	normalize_cyberpunk_inventory_footprint()
+	if(!cyberpunk_base_price)
+		cyberpunk_base_price = get_cyberpunk_estimated_base_price()
+	normalize_cyberpunk_item_tier_and_rarity()
+	if(uses_integrity && cyberpunk_spoil_behavior == "tg" && !istype(src, /obj/item/stack))
+		cyberpunk_spoil_behavior = "broken"
+	if(uses_integrity && cyberpunk_active_wear <= 0 && is_cyberpunk_wear_tracked_item())
+		cyberpunk_active_wear = get_cyberpunk_default_active_wear()
+	if(uses_integrity && cyberpunk_passive_wear <= 0 && is_cyberpunk_passive_wear_item())
+		cyberpunk_passive_wear = 0.01
+	if(uses_integrity && cyberpunk_passive_wear > 0 && !length(cyberpunk_storage_conditions))
+		cyberpunk_storage_conditions = list("dry", "room_temp")
+	if(!get_cyberpunk_manufacturer())
+		set_cyberpunk_manufacturer("independent")
+
+/obj/item/proc/normalize_cyberpunk_inventory_footprint(force_auto = FALSE)
+	if(force_auto && cyberpunk_grid_auto_sized)
+		cyberpunk_grid_width = null
+		cyberpunk_grid_height = null
+	if(cyberpunk_grid_width && cyberpunk_grid_height)
+		return
+	cyberpunk_grid_auto_sized = TRUE
+	if(istype(src, /obj/item/cyberpunk_item_module))
+		cyberpunk_grid_width = 1
+		cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/ammo_casing))
+		cyberpunk_grid_width = 1
+		cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/ammo_box/magazine))
+		if(w_class >= WEIGHT_CLASS_BULKY)
+			cyberpunk_grid_width = 2
+			cyberpunk_grid_height = 2
+		else
+			cyberpunk_grid_width = 1
+			cyberpunk_grid_height = 2
+	else if(istype(src, /obj/item/ammo_box))
+		cyberpunk_grid_width = 2
+		cyberpunk_grid_height = 2
+	else if(istype(src, /obj/item/gun))
+		if(w_class >= WEIGHT_CLASS_HUGE)
+			cyberpunk_grid_width = 5
+			cyberpunk_grid_height = 2
+		else if(w_class >= WEIGHT_CLASS_BULKY)
+			cyberpunk_grid_width = 4
+			cyberpunk_grid_height = 2
+		else if(w_class >= WEIGHT_CLASS_NORMAL)
+			cyberpunk_grid_width = 3
+			cyberpunk_grid_height = 1
+		else
+			cyberpunk_grid_width = 2
+			cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/melee) || istype(src, /obj/item/knife))
+		if(w_class >= WEIGHT_CLASS_BULKY)
+			cyberpunk_grid_width = 4
+			cyberpunk_grid_height = 1
+		else if(w_class >= WEIGHT_CLASS_NORMAL)
+			cyberpunk_grid_width = 3
+			cyberpunk_grid_height = 1
+		else
+			cyberpunk_grid_width = 2
+			cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/clothing/suit))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 4
+	else if(istype(src, /obj/item/clothing/under))
+		cyberpunk_grid_width = 2
+		cyberpunk_grid_height = 3
+	else if(istype(src, /obj/item/clothing/head) || istype(src, /obj/item/clothing/mask))
+		cyberpunk_grid_width = 2
+		cyberpunk_grid_height = 2
+	else if(istype(src, /obj/item/clothing/shoes) || istype(src, /obj/item/clothing/gloves) || istype(src, /obj/item/clothing/glasses) || istype(src, /obj/item/clothing/neck))
+		cyberpunk_grid_width = 2
+		cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/storage/backpack/duffelbag))
+		cyberpunk_grid_width = 4
+		cyberpunk_grid_height = 3
+	else if(istype(src, /obj/item/storage/backpack/satchel) || istype(src, /obj/item/storage/backpack/messenger))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 3
+	else if(istype(src, /obj/item/storage/backpack))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 4
+	else if(istype(src, /obj/item/storage/belt))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/storage/toolbox) || istype(src, /obj/item/storage/briefcase) || istype(src, /obj/item/storage/box))
+		cyberpunk_grid_width = 3
+		cyberpunk_grid_height = 2
+	else if(istype(src, /obj/item/reagent_containers))
+		if(w_class >= WEIGHT_CLASS_NORMAL)
+			cyberpunk_grid_width = 2
+			cyberpunk_grid_height = 2
+		else
+			cyberpunk_grid_width = 1
+			cyberpunk_grid_height = 2
+	else if(istype(src, /obj/item/stack))
+		cyberpunk_grid_width = 1
+		cyberpunk_grid_height = 1
+	else if(istype(src, /obj/item/organ) || istype(src, /obj/item/implant))
+		cyberpunk_grid_width = 1
+		cyberpunk_grid_height = 1
+	else
+		cyberpunk_grid_auto_sized = FALSE
+
+/obj/item/proc/normalize_cyberpunk_item_tier_and_rarity()
+	var/explicit_tier = cyberpunk_item_tier > 0
+	cyberpunk_item_tier = get_cyberpunk_item_tier()
+	if(is_cyberpunk_tiered_weapon_or_armor(explicit_tier))
+		var/tier_rarity = get_cyberpunk_rarity_for_tier(cyberpunk_item_tier)
+		if(tier_rarity)
+			cyberpunk_rarity = tier_rarity
+			return
+	if(cyberpunk_rarity == "common" && cyberpunk_base_price >= 600)
+		cyberpunk_rarity = "epic"
+	else if(cyberpunk_rarity == "common" && cyberpunk_base_price >= 300)
+		cyberpunk_rarity = "rare"
+	else if(cyberpunk_rarity == "common" && cyberpunk_base_price >= 120)
+		cyberpunk_rarity = "uncommon"
+
+/obj/item/proc/is_cyberpunk_tiered_weapon_or_armor(explicit_tier = FALSE)
+	return explicit_tier || ("module_tier" in vars) || cyberpunk_weapon_form || cyberpunk_equipment_form || istype(src, /obj/item/gun) || (force > 0 || throwforce > 0) || (istype(src, /obj/item/clothing) && get_armor().has_any_armor())
+
+/obj/item/proc/get_cyberpunk_rarity_for_tier(tier)
+	switch(tier)
+		if(1)
+			return "common"
+		if(2)
+			return "rare"
+		if(3)
+			return "legendary"
+	return null
+
+/obj/item/proc/get_cyberpunk_item_tier()
+	if(cyberpunk_item_tier > 0)
+		return clamp(round(cyberpunk_item_tier), 1, 3)
+	var/derived_tier = 1
+	if(("module_tier" in vars) && isnum(vars["module_tier"]))
+		derived_tier = max(derived_tier, vars["module_tier"])
+	for(var/datum/cyberpunk_item_module/module as anything in cyberpunk_modules)
+		if(module)
+			derived_tier = max(derived_tier, module.module_tier)
+	if(length(cyberpunk_initial_module_types))
+		for(var/module_type in cyberpunk_initial_module_types)
+			if(!ispath(module_type, /datum/cyberpunk_item_module))
+				continue
+			var/datum/cyberpunk_item_module/module = module_type
+			derived_tier = max(derived_tier, initial(module.module_tier))
+	if(cyberpunk_weapon_form)
+		derived_tier = max(derived_tier, get_cyberpunk_weapon_frame_tier())
+	else if(istype(src, /obj/item/gun) || force > 0 || throwforce > 0)
+		derived_tier = max(derived_tier, get_cyberpunk_weapon_stat_tier())
+	if(cyberpunk_equipment_form)
+		derived_tier = max(derived_tier, get_cyberpunk_equipment_frame_tier())
+	else if(istype(src, /obj/item/clothing) && get_armor().has_any_armor())
+		derived_tier = max(derived_tier, get_cyberpunk_armor_stat_tier())
+	return clamp(round(derived_tier), 1, 3)
+
+/datum/cyberpunk_sale_entry
+	/// Item type sold by this entry.
+	var/item_type
+	/// Logical sale source: vendor, shop, vendor_hidden or black_market.
+	var/source_id = "vendor"
+	/// Whether this entry is sold from a premium/hidden slot.
+	var/premium = FALSE
+	/// Derived item tier used for price, availability and stock caps.
+	var/tier = 1
+	/// Derived rarity used for diagnostics/UI.
+	var/rarity = "common"
+	/// Baseline price before local vendor/economy overrides.
+	var/base_price = 1
+
+/datum/cyberpunk_sale_entry/proc/setup(item_type, source_id = "vendor", premium = FALSE)
+	src.item_type = item_type
+	src.source_id = source_id || "vendor"
+	src.premium = premium
+	tier = get_cyberpunk_item_tier_for_type(item_type)
+	rarity = get_cyberpunk_effective_rarity_for_type(item_type)
+	base_price = get_cyberpunk_estimated_base_price_for_type(item_type)
+	return src
+
+/datum/cyberpunk_sale_entry/proc/get_source_price_multiplier()
+	switch(source_id)
+		if("black_market")
+			return 1.7
+		if("vendor_hidden")
+			return 1.45
+		if("shop")
+			return 1.15
+	return 1
+
+/datum/cyberpunk_sale_entry/proc/get_tier_price_multiplier()
+	switch(tier)
+		if(2)
+			return 1.8
+		if(3)
+			return 4
+	return 1
+
+/datum/cyberpunk_sale_entry/proc/get_price(default_price = 25, extra_price = 50, inflation_value = 1, premium = FALSE)
+	if(!ispath(item_type, /obj/item))
+		return max(1, round(default_price))
+	var/obj/item/item = item_type
+	var/custom_price = round((initial(item.custom_price) || 0) * inflation_value)
+	var/premium_custom_price = round((initial(item.custom_premium_price) || 0) * inflation_value)
+	var/price
+	if(premium)
+		if(!premium_custom_price && custom_price)
+			price = extra_price + custom_price
+		else
+			price = premium_custom_price || extra_price
+	else
+		price = custom_price || default_price
+	price = max(price, round(base_price * inflation_value))
+	price = round(price * get_tier_price_multiplier() * get_source_price_multiplier())
+	return max(1, price)
+
+/datum/cyberpunk_sale_entry/proc/get_availability_chance()
+	switch(source_id)
+		if("black_market")
+			switch(tier)
+				if(3)
+					return 8
+				if(2)
+					return 32
+			return 72
+		if("vendor_hidden")
+			switch(tier)
+				if(3)
+					return 3
+				if(2)
+					return 12
+			return 35
+		if("shop")
+			switch(tier)
+				if(3)
+					return 4
+				if(2)
+					return 16
+			return 42
+	switch(tier)
+		if(3)
+			return 2
+		if(2)
+			return 10
+	return 30
+
+/datum/cyberpunk_sale_entry/proc/roll_available()
+	return prob(get_availability_chance())
+
+/datum/cyberpunk_sale_entry/proc/get_rotated_stock_amount(base_amount)
+	if(base_amount <= 0 || !roll_available())
+		return 0
+	var/stock_cap = max(1, base_amount)
+	switch(tier)
+		if(3)
+			stock_cap = min(stock_cap, 1)
+		if(2)
+			stock_cap = min(stock_cap, 2)
+	return rand(1, stock_cap)
+
+/datum/cyberpunk_sale_entry/proc/get_market_stock_max(base_stock_max)
+	var/stock_cap = max(1, base_stock_max)
+	switch(tier)
+		if(3)
+			return 1
+		if(2)
+			return min(stock_cap, 2)
+	return stock_cap
+
+/proc/get_cyberpunk_sale_entry_for_type(item_type, source_id = "vendor", premium = FALSE)
+	if(!ispath(item_type, /obj/item))
+		return null
+	var/obj/item/item = item_type
+	var/sale_entry_type = initial(item.cyberpunk_sale_entry_type) || /datum/cyberpunk_sale_entry
+	if(!ispath(sale_entry_type, /datum/cyberpunk_sale_entry))
+		sale_entry_type = /datum/cyberpunk_sale_entry
+	var/datum/cyberpunk_sale_entry/entry = new sale_entry_type
+	return entry.setup(item_type, source_id, premium)
+
+/proc/get_cyberpunk_sale_availability_for_type(item_type, source_id = "vendor", premium = FALSE)
+	var/datum/cyberpunk_sale_entry/entry = get_cyberpunk_sale_entry_for_type(item_type, source_id, premium)
+	if(!entry)
+		return 100
+	. = entry.get_availability_chance()
+	qdel(entry)
+
+/proc/get_cyberpunk_sale_price_for_type(item_type, source_id = "vendor", premium = FALSE, default_price = 25, extra_price = 50, inflation_value = 1)
+	var/datum/cyberpunk_sale_entry/entry = get_cyberpunk_sale_entry_for_type(item_type, source_id, premium)
+	if(!entry)
+		return max(1, round(default_price))
+	. = entry.get_price(default_price, extra_price, inflation_value, premium)
+	qdel(entry)
+
+/obj/item/proc/get_cyberpunk_weapon_frame_tier()
+	var/tier = 1
+	switch(cyberpunk_weapon_material)
+		if("ceramic", "plasteel")
+			tier = max(tier, 2)
+		if("composite")
+			tier = max(tier, 3)
+	switch(get_cyberpunk_effective_weapon_form())
+		if("sniper", "lmg", "rocket", "plasma")
+			tier = max(tier, 3)
+		if("rifle", "shotgun", "assault", "laser", "energy")
+			tier = max(tier, 2)
+	return max(tier, get_cyberpunk_weapon_stat_tier())
+
+/obj/item/proc/get_cyberpunk_weapon_stat_tier()
+	var/tier = 1
+	var/weapon_score = max(force, throwforce) + armour_penetration * 0.5 + block_chance * 0.25
+	var/obj/item/gun/gun = src
+	if(istype(gun))
+		weapon_score += 18
+		weapon_score += max(0, gun.projectile_damage_multiplier - 1) * 80
+		weapon_score += gun.projectile_wound_bonus
+		weapon_score += max(0, 10 - gun.fire_delay)
+		weapon_score += max(0, 8 - gun.spread) * 0.5
+	if(weapon_score >= 45)
+		tier = 3
+	else if(weapon_score >= 25)
+		tier = 2
+	return tier
+
+/obj/item/proc/get_cyberpunk_equipment_frame_tier()
+	var/tier = 1
+	switch(cyberpunk_equipment_material)
+		if("ceramic", "plasteel")
+			tier = max(tier, 2)
+		if("composite")
+			tier = max(tier, 3)
+	switch(cyberpunk_equipment_form)
+		if("suit")
+			tier = max(tier, 2)
+		if("rig", "exosuit")
+			tier = max(tier, 3)
+	return max(tier, get_cyberpunk_armor_stat_tier())
+
+/obj/item/proc/get_cyberpunk_armor_stat_tier()
+	var/tier = 1
+	var/armor_score = 0
+	var/list/armor_values = get_armor().get_rating_list()
+	for(var/armor_key in armor_values)
+		armor_score += max(0, armor_values[armor_key])
+	if(armor_score >= 180)
+		tier = 3
+	else if(armor_score >= 80)
+		tier = 2
+	return tier
+
+/obj/item/proc/get_cyberpunk_estimated_base_price()
+	var/base_price = custom_price || 0
+	if(base_price > 0)
+		return round(base_price)
+
+	base_price = max(1, w_class) * 25
+	var/material_market_value = get_cyberpunk_material_market_value()
+	if(material_market_value > 0)
+		base_price = max(base_price, round(material_market_value * 0.05))
+	if(uses_integrity)
+		base_price += round(max_integrity * 0.35)
+	if(force > 0)
+		base_price += round(force * 8)
+	if(throwforce > force)
+		base_price += round((throwforce - force) * 4)
+	if(block_chance > 0)
+		base_price += round(block_chance * 2)
+	if(armour_penetration > 0)
+		base_price += round(armour_penetration * 4)
+	if(tool_behaviour)
+		base_price += 60
+	if(istype(src, /obj/item/gun))
+		base_price += 250
+	if(istype(src, /obj/item/clothing) && get_armor().has_any_armor())
+		base_price += 100
+	if(length(cyberpunk_module_slots) || cyberpunk_equipment_form || cyberpunk_weapon_form)
+		base_price += 150
+	return max(1, round(base_price))
+
+/obj/item/proc/is_cyberpunk_engineering_tool()
+	return tool_behaviour in list(TOOL_CROWBAR, TOOL_MULTITOOL, TOOL_SCREWDRIVER, TOOL_WIRECUTTER, TOOL_WRENCH, TOOL_WELDER, TOOL_ANALYZER, TOOL_RUSTSCRAPER)
+
+/obj/item/proc/is_cyberpunk_medical_tool()
+	return tool_behaviour in list(TOOL_RETRACTOR, TOOL_HEMOSTAT, TOOL_CAUTERY, TOOL_DRILL, TOOL_SCALPEL, TOOL_SAW, TOOL_BONESET, TOOL_BLOODFILTER)
+
+/obj/item/proc/get_cyberpunk_item_work_skill()
+	if(is_cyberpunk_medical_tool())
+		return SKILL_SURGERY
+	if(tool_behaviour in list(TOOL_WELDER, TOOL_MULTITOOL, TOOL_SCREWDRIVER, TOOL_WIRECUTTER, TOOL_ANALYZER))
+		return SKILL_ELECTRICS
+	if(tool_behaviour in list(TOOL_CROWBAR, TOOL_WRENCH, TOOL_RUSTSCRAPER))
+		return SKILL_CONSTRUCTION
+	if(tool_behaviour in list(TOOL_MINING, TOOL_SHOVEL))
+		return SKILL_MINING
+	if(tool_behaviour in list(TOOL_KNIFE, TOOL_ROLLINGPIN))
+		return SKILL_COOKING
+	if(cyberpunk_equipment_form || cyberpunk_weapon_form || length(cyberpunk_module_slots))
+		return SKILL_INVENTION
+	if(istype(src, /obj/item/gun) || force > 0 || throwforce > 0)
+		return get_cyberpunk_weapon_skill()
+	return null
+
+/proc/get_cyberpunk_skill_display_name(skill_path)
+	switch(skill_path)
+		if(SKILL_SURGERY)
+			return "Surgery"
+		if(SKILL_CHEMISTRY)
+			return "Chemistry"
+		if(SKILL_ELECTRICS)
+			return "Electrics"
+		if(SKILL_CONSTRUCTION)
+			return "Construction"
+		if(SKILL_INVENTION)
+			return "Invention"
+		if(SKILL_ANALYSIS)
+			return "Analysis"
+		if(SKILL_MINING)
+			return "Mining"
+		if(SKILL_COOKING)
+			return "Cooking"
+		if(SKILL_LIGHT_RANGED)
+			return "Light ranged"
+		if(SKILL_MEDIUM_RANGED)
+			return "Medium ranged"
+		if(SKILL_HEAVY_RANGED)
+			return "Heavy ranged"
+		if(SKILL_LIGHT_PIERCING)
+			return "Light piercing"
+		if(SKILL_HEAVY_PIERCING)
+			return "Heavy piercing"
+		if(SKILL_LIGHT_SLASHING)
+			return "Light slashing"
+		if(SKILL_HEAVY_SLASHING)
+			return "Heavy slashing"
+		if(SKILL_LIGHT_BLUNT)
+			return "Light blunt"
+		if(SKILL_HEAVY_BLUNT)
+			return "Heavy blunt"
+		if(SKILL_CHOPPING)
+			return "Chopping"
+	return "[skill_path]"
+
+/obj/item/proc/is_cyberpunk_wear_tracked_item()
+	if(istype(src, /obj/item/stack))
+		return FALSE
+	return force > 0 || throwforce > 0 || block_chance > 0 || armour_penetration > 0 || tool_behaviour || istype(src, /obj/item/gun) || istype(src, /obj/item/clothing)
+
+/obj/item/proc/is_cyberpunk_passive_wear_item()
+	return istype(src, /obj/item/gun) || istype(src, /obj/item/clothing) || tool_behaviour || cyberpunk_equipment_form || cyberpunk_weapon_form
+
+/obj/item/proc/get_cyberpunk_default_active_wear()
+	var/wear = 0.25
+	if(tool_behaviour)
+		wear = max(wear, 0.5)
+	if(force > 0 || throwforce > 0)
+		wear = max(wear, 0.25 + max(force, throwforce) * 0.03)
+	if(istype(src, /obj/item/gun))
+		wear = max(wear, 0.75)
+	if(istype(src, /obj/item/clothing) && get_armor().has_any_armor())
+		wear = max(wear, 0.5)
+	if(w_class >= WEIGHT_CLASS_BULKY)
+		wear += 0.25
+	return round(wear, 0.1)
+
+/obj/item/proc/add_cyberpunk_condition_tag(condition_tag)
+	if(!condition_tag)
+		return FALSE
+	LAZYADD(cyberpunk_condition_tags, condition_tag)
+	return TRUE
+
+/obj/item/proc/remove_cyberpunk_condition_tag(condition_tag)
+	if(!condition_tag || !length(cyberpunk_condition_tags))
+		return FALSE
+	cyberpunk_condition_tags -= condition_tag
+	if(!length(cyberpunk_condition_tags))
+		cyberpunk_condition_tags = null
+	return TRUE
+
+/obj/item/proc/has_cyberpunk_condition_tag(condition_tag)
+	return condition_tag && (condition_tag in cyberpunk_condition_tags)
+
+/obj/item/proc/get_cyberpunk_condition_tags()
+	var/list/tags = list()
+	if(length(cyberpunk_condition_tags))
+		tags += cyberpunk_condition_tags
+	if(cyberpunk_broken)
+		tags += "broken"
+	else if(uses_integrity && max_integrity > 0 && get_integrity_percentage() < 0.75)
+		tags += "damaged"
+	else
+		tags += "intact"
+	if(("charges" in vars) && isnum(vars["charges"]))
+		tags += (vars["charges"] > 0) ? "charged" : "discharged"
+	if(("locked" in vars) && vars["locked"])
+		tags += "locked"
+	return tags
+
+/obj/item/proc/get_cyberpunk_material_report()
+	var/list/report = list()
+	if(!length(custom_materials))
+		report += "standard"
+		return report
+	for(var/material_key in custom_materials)
+		var/datum/material/material = SSmaterials.get_material(material_key)
+		if(!material)
+			continue
+		report += "[material.name] [round(custom_materials[material_key])]"
+	return report
+
+/obj/item/proc/get_cyberpunk_material_market_value()
+	var/material_value = 0
+	if(!length(custom_materials))
+		return material_value
+	for(var/material_key in custom_materials)
+		var/datum/material/material = SSmaterials.get_material(material_key)
+		if(!material)
+			continue
+		material_value += custom_materials[material_key] * material.value_per_unit
+	return material_value
+
+/obj/item/proc/get_cyberpunk_material_value_multiplier()
+	if(!length(custom_materials))
+		return 1
+	var/total_amount = 0
+	var/weighted_integrity = 0
+	var/weighted_hardness = 0
+	var/weighted_chemical = 0
+	var/weighted_thermal = 0
+	for(var/material_key in custom_materials)
+		var/datum/material/material = SSmaterials.get_material(material_key)
+		if(!material)
+			continue
+		var/material_amount = custom_materials[material_key]
+		total_amount += material_amount
+		weighted_integrity += material.get_property(MATERIAL_INTEGRITY) * material_amount
+		weighted_hardness += material.get_property(MATERIAL_HARDNESS) * material_amount
+		weighted_chemical += material.get_property(MATERIAL_CHEMICAL) * material_amount
+		weighted_thermal += material.get_property(MATERIAL_THERMAL) * material_amount
+	if(total_amount <= 0)
+		return 1
+	var/material_score = ((weighted_integrity / total_amount) + (weighted_hardness / total_amount) + (weighted_chemical / total_amount) + (weighted_thermal / total_amount)) / 4
+	return clamp(0.75 + material_score * 0.05, 0.75, 1.5)
+
+/obj/item/proc/get_cyberpunk_rarity_price_multiplier()
+	switch(cyberpunk_rarity)
+		if("trash")
+			return 0.35
+		if("common")
+			return 1
+		if("uncommon")
+			return 1.25
+		if("rare")
+			return 1.75
+		if("epic")
+			return 2.5
+		if("legendary")
+			return 4
+	return 1
+
+/obj/item/proc/get_cyberpunk_legality_price_multiplier()
+	switch(cyberpunk_legality)
+		if("restricted")
+			return 1.25
+		if("illegal")
+			return 1.6
+		if("contraband")
+			return 2
+	return 1
+
+/obj/item/proc/can_cyberpunk_spawn_in_source(source_id)
+	return cyberpunk_rarity_allows_source(cyberpunk_rarity, source_id)
+
+/proc/cyberpunk_rarity_allows_source(rarity, source_id)
+	switch(source_id)
+		if("shop", "vendor", "warehouse", "craft")
+			return rarity in list("trash", "common", "uncommon")
+		if("contract", "wasteland", "dungeon")
+			return rarity in list("common", "uncommon", "rare", "epic")
+		if("corporation", "research")
+			return rarity in list("uncommon", "rare", "epic", "legendary")
+		if("black_market")
+			return rarity in list("rare", "epic", "legendary", "illegal", "contraband")
+	return TRUE
+
+/obj/item/proc/get_cyberpunk_item_condition_percent()
+	update_cyberpunk_passive_wear()
+	if(cyberpunk_broken)
+		return 0
+	if(!uses_integrity || max_integrity <= 0)
+		return 100
+	return clamp(round((get_integrity() / max_integrity) * 100), 0, 100)
+
+/obj/item/proc/get_cyberpunk_spoil_threshold_percent()
+	if(!uses_integrity)
+		return 0
+	return clamp(round(cyberpunk_repair_threshold * 100), 0, 100)
+
+/obj/item/proc/get_cyberpunk_rarity_weight()
+	switch(cyberpunk_rarity)
+		if("trash")
+			return 200
+		if("common")
+			return 100
+		if("uncommon")
+			return 45
+		if("rare")
+			return 18
+		if("epic")
+			return 6
+		if("legendary")
+			return 1
+	return 100
+
+/obj/item/proc/get_cyberpunk_storage_condition_tags()
+	var/list/conditions = list("dry", "room_temp")
+	if(item_flags & IN_STORAGE)
+		conditions += "stored"
+	if(ismob(loc))
+		conditions += "carried"
+	if(istype(loc, /obj/item/storage))
+		conditions += "stored"
+	return conditions
+
+/obj/item/proc/get_cyberpunk_missing_storage_conditions()
+	var/list/missing = list()
+	if(!length(cyberpunk_storage_conditions))
+		return missing
+	var/list/current_conditions = get_cyberpunk_storage_condition_tags()
+	for(var/required_condition in cyberpunk_storage_conditions)
+		if(!(required_condition in current_conditions))
+			missing += required_condition
+	return missing
+
+/obj/item/proc/get_cyberpunk_passive_wear_multiplier()
+	var/list/missing = get_cyberpunk_missing_storage_conditions()
+	if(!length(missing))
+		return 1
+	return 1 + length(missing) * 0.5
+
+/obj/item/proc/update_cyberpunk_passive_wear()
+	if(cyberpunk_passive_wear <= 0 || !uses_integrity || (resistance_flags & INDESTRUCTIBLE) || cyberpunk_broken)
+		return FALSE
+	if(!cyberpunk_last_condition_update)
+		cyberpunk_last_condition_update = world.time
+		return FALSE
+	if(world.time - cyberpunk_last_repaired < 5 MINUTES)
+		return FALSE
+	var/elapsed = world.time - cyberpunk_last_condition_update
+	if(elapsed < 1 MINUTES)
+		return FALSE
+	var/wear_amount = (elapsed / (1 MINUTES)) * cyberpunk_passive_wear * get_cyberpunk_passive_wear_multiplier()
+	if(wear_amount < 0.1)
+		return FALSE
+	cyberpunk_last_condition_update = world.time
+	take_damage(round(wear_amount, 0.1), BRUTE, CONSUME, FALSE)
+	if(uses_integrity && get_integrity() <= max(1, max_integrity * cyberpunk_repair_threshold))
+		cyberpunk_broken = TRUE
+	return TRUE
+
+/proc/get_cyberpunk_item_rarity_weight_for_type(item_type)
+	if(!ispath(item_type, /obj/item))
+		return 100
+	switch(get_cyberpunk_effective_rarity_for_type(item_type))
+		if("trash")
+			return 200
+		if("common")
+			return 100
+		if("uncommon")
+			return 45
+		if("rare")
+			return 18
+		if("epic")
+			return 6
+		if("legendary")
+			return 1
+	return 100
+
+/proc/get_cyberpunk_effective_rarity_for_type(item_type)
+	if(!ispath(item_type, /obj/item))
+		return "common"
+	var/obj/item/item = item_type
+	var/rarity = initial(item.cyberpunk_rarity) || "common"
+	if(rarity != "common")
+		return rarity
+	var/static_tier = get_cyberpunk_item_tier_for_type(item_type)
+	var/item_name = lowertext(initial(item.name) || "")
+	if(static_tier > 1 || ispath(item_type, /obj/item/gun) || ispath(item_type, /obj/item/clothing) || initial(item.force) > 0 || initial(item.throwforce) > 0 || findtext(item_name, "t2") || findtext(item_name, "t3"))
+		var/tier_rarity = get_cyberpunk_rarity_for_tier_static(static_tier)
+		return tier_rarity
+	var/base_price = get_cyberpunk_estimated_base_price_for_type(item_type)
+	if(base_price >= 600)
+		return "epic"
+	if(base_price >= 300)
+		return "rare"
+	if(base_price >= 120)
+		return "uncommon"
+	return rarity
+
+/proc/get_cyberpunk_rarity_for_tier_static(tier)
+	switch(tier)
+		if(1)
+			return "common"
+		if(2)
+			return "rare"
+		if(3)
+			return "legendary"
+	return null
+
+/proc/get_cyberpunk_item_tier_for_type(item_type)
+	if(!ispath(item_type, /obj/item))
+		return 1
+	var/obj/item/item = item_type
+	var/explicit_tier = initial(item.cyberpunk_item_tier)
+	if(explicit_tier > 0)
+		return clamp(round(explicit_tier), 1, 3)
+	var/item_name = lowertext(initial(item.name) || "")
+	if(findtext(item_name, "t3"))
+		return 3
+	if(findtext(item_name, "t2"))
+		return 2
+	var/tier = 1
+	var/weapon_score = max(initial(item.force), initial(item.throwforce)) + initial(item.armour_penetration) * 0.5 + initial(item.block_chance) * 0.25
+	if(ispath(item_type, /obj/item/gun))
+		weapon_score += 18
+	if(weapon_score >= 45)
+		tier = 3
+	else if(weapon_score >= 25)
+		tier = 2
+	if(ispath(item_type, /obj/item/clothing))
+		var/base_price = get_cyberpunk_estimated_base_price_for_type(item_type)
+		if(base_price >= 600)
+			tier = max(tier, 3)
+		else if(base_price >= 300)
+			tier = max(tier, 2)
+	return tier
+
+/proc/get_cyberpunk_estimated_base_price_for_type(item_type)
+	if(!ispath(item_type, /obj/item))
+		return 1
+	var/obj/item/item = item_type
+	var/base_price = initial(item.cyberpunk_base_price) || initial(item.custom_price) || 0
+	if(base_price > 0)
+		return round(base_price)
+	base_price = max(1, initial(item.w_class)) * 25
+	if(initial(item.uses_integrity))
+		base_price += round(initial(item.max_integrity) * 0.35)
+	if(initial(item.force) > 0)
+		base_price += round(initial(item.force) * 8)
+	if(initial(item.throwforce) > initial(item.force))
+		base_price += round((initial(item.throwforce) - initial(item.force)) * 4)
+	if(initial(item.block_chance) > 0)
+		base_price += round(initial(item.block_chance) * 2)
+	if(initial(item.armour_penetration) > 0)
+		base_price += round(initial(item.armour_penetration) * 4)
+	if(initial(item.tool_behaviour))
+		base_price += 60
+	if(ispath(item_type, /obj/item/gun))
+		base_price += 250
+	if(ispath(item_type, /obj/item/clothing))
+		base_price += 100
+	if(length(initial(item.cyberpunk_module_slots)) || initial(item.cyberpunk_equipment_form) || initial(item.cyberpunk_weapon_form))
+		base_price += 150
+	return max(1, round(base_price))
+
+/proc/build_cyberpunk_loot_weight_table(list/item_types)
+	var/list/weighted_items = list()
+	for(var/item_type in item_types)
+		var/explicit_weight = item_types[item_type]
+		weighted_items[item_type] = explicit_weight || get_cyberpunk_item_rarity_weight_for_type(item_type)
+	return weighted_items
+
 /obj/item/proc/get_cyberpunk_price(mob/living/buyer)
+	update_cyberpunk_passive_wear()
 	var/base_price = cyberpunk_base_price || custom_price || 0
 	if(base_price <= 0)
-		base_price = max(1, w_class) * 10
+		base_price = get_cyberpunk_estimated_base_price()
 	var/quality_multiplier = max(0.1, cyberpunk_quality * 0.01)
 	var/condition_multiplier = 1
 	if(cyberpunk_broken)
 		condition_multiplier = 0.15
 	else if(uses_integrity && max_integrity)
 		condition_multiplier = clamp(get_integrity() / max_integrity, 0.15, 1)
+	var/material_multiplier = get_cyberpunk_material_value_multiplier()
+	var/rarity_multiplier = get_cyberpunk_rarity_price_multiplier()
+	var/legality_multiplier = get_cyberpunk_legality_price_multiplier()
 	var/synergy_multiplier = get_cyberpunk_synergy_multiplier(buyer)
-	return round(base_price * quality_multiplier * condition_multiplier * synergy_multiplier)
+	return round(base_price * quality_multiplier * condition_multiplier * material_multiplier * rarity_multiplier * legality_multiplier * synergy_multiplier)
 
 /obj/item/proc/get_cyberpunk_guard_value()
 	if(!isnull(cyberpunk_guard_value))
@@ -531,6 +1307,7 @@
 		module.apply_weapon_stats(src)
 	apply_cyberpunk_weapon_resource_quality()
 	update_cyberpunk_weapon_identity()
+	normalize_cyberpunk_item_tier_and_rarity()
 
 /obj/item/proc/setup_cyberpunk_weapon(form_id, list/base_slots, list/required_slots, assembled = FALSE, material_id = "steel")
 	cyberpunk_weapon_form = form_id
@@ -551,6 +1328,7 @@
 				continue
 			LAZYADD(cyberpunk_modules, module)
 		recalculate_cyberpunk_weapon_stats()
+	normalize_cyberpunk_item_tier_and_rarity()
 
 /obj/item/proc/assemble_cyberpunk_weapon(mob/living/user)
 	if(!is_cyberpunk_modular_weapon())
@@ -793,6 +1571,7 @@
 		modify_max_integrity(max(1, final_integrity), FALSE)
 	if(!isnull(final_slowdown) && ("slowdown" in vars))
 		vars["slowdown"] = max(0, final_slowdown)
+	normalize_cyberpunk_item_tier_and_rarity()
 
 /obj/item/proc/setup_cyberpunk_equipment(form_id, material_id, list/base_slots)
 	cyberpunk_equipment_form = form_id
@@ -809,6 +1588,7 @@
 				continue
 			LAZYADD(cyberpunk_modules, module)
 		recalculate_cyberpunk_equipment_stats()
+	normalize_cyberpunk_item_tier_and_rarity()
 
 /obj/item/proc/set_cyberpunk_equipment_material(material_id)
 	if(!cyberpunk_equipment_form || !material_id)
@@ -850,6 +1630,8 @@
 	if(kowalski > 0)
 		wear_amount *= max(0.1, 1 - 0.25 * kowalski)
 	take_damage(max(0, round(wear_amount, 0.1)), BRUTE, CONSUME, FALSE)
+	if(uses_integrity && get_integrity() <= max(1, max_integrity * cyberpunk_repair_threshold))
+		cyberpunk_broken = TRUE
 	return TRUE
 
 /obj/item/proc/repair_cyberpunk_item(amount, mob/living/user)
@@ -858,6 +1640,7 @@
 	. = repair_damage(amount)
 	if(. > 0)
 		cyberpunk_last_repaired = world.time
+		cyberpunk_last_condition_update = world.time
 		if(cyberpunk_broken && get_integrity() >= max(1, max_integrity * cyberpunk_repair_threshold))
 			cyberpunk_broken = FALSE
 	return .
@@ -908,6 +1691,10 @@
 		cyberpunk_broken = FALSE
 
 /obj/item/atom_destruction(damage_flag)
+	if(cyberpunk_spoil_result_type)
+		new cyberpunk_spoil_result_type(drop_location())
+		qdel(src)
+		return
 	switch(cyberpunk_spoil_behavior)
 		if("broken")
 			cyberpunk_broken = TRUE
@@ -945,6 +1732,7 @@
 			to_chat(user, span_notice("You replace [replaced_name] in [src]."))
 	LAZYADD(cyberpunk_modules, module)
 	module.on_install(src, user)
+	normalize_cyberpunk_item_tier_and_rarity()
 	return TRUE
 
 /obj/item/proc/remove_cyberpunk_module(datum/cyberpunk_item_module/module, mob/living/user)
@@ -954,4 +1742,5 @@
 	LAZYREMOVE(cyberpunk_modules, module)
 	module.on_remove(src, user)
 	qdel(module)
+	normalize_cyberpunk_item_tier_and_rarity()
 	return TRUE

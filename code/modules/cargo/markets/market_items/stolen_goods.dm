@@ -12,3 +12,4 @@
 	name = "Stolen [thing.name]"
 	desc = "A [thing.name], stolen from somewhere on the station. Whoever owned it probably wouldn't be happy to see it here."
 	price = thing_price
+	apply_cyberpunk_market_sale_entry()

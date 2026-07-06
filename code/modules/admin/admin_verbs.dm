@@ -910,6 +910,7 @@ ADMIN_VERB(new_blackmarket_item, R_BUILD, "Create Black Market Item", "Add an it
 	admin_item.stock = quantity
 	admin_item.category = category
 	admin_item.restockable = FALSE
+	admin_item.apply_cyberpunk_market_sale_entry()
 
 	SSmarket.admin_items_spawned++
 	admin_item.identifier = "admin_[SSmarket.admin_items_spawned]"

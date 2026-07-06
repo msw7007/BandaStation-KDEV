@@ -63,6 +63,12 @@
 
 	///Contains information of a specific trader
 	var/datum/trader_data/trader_data
+	/// Sale source profile used by trader stock.
+	var/cyberpunk_sale_source = "shop"
+	/// One in-world day for Cyberpunk shop stock pacing.
+	var/cyberpunk_sale_rotation_interval = 30 MINUTES
+	/// Next world time when this trader rerolls products.
+	var/cyberpunk_next_sale_rotation = 0
 
 /*
 Can accept both a type path, and an instance of a datum. Type path has priority.
@@ -103,6 +109,7 @@ Can accept both a type path, and an instance of a datum. Type path has priority.
 ///If our trader is alive, and the customer left clicks them with an empty hand without combat mode
 /datum/component/trader/proc/on_attack_hand(atom/source, mob/living/carbon/customer)
 	SIGNAL_HANDLER
+	maybe_rotate_cyberpunk_sale_stock()
 	if(!can_trade(customer) || customer.combat_mode)
 		return
 	var/list/npc_options = list()
@@ -160,6 +167,7 @@ Can accept both a type path, and an instance of a datum. Type path has priority.
  * * customer - (Mob REF) The mob trying to buy something
  */
 /datum/component/trader/proc/buy_item(mob/customer)
+	maybe_rotate_cyberpunk_sale_stock()
 	if(!can_trade(customer))
 		return
 
@@ -321,6 +329,10 @@ Can accept both a type path, and an instance of a datum. Type path has priority.
  * * Original cost; the original cost of the item, to be manipulated depending on the variables of the item, one example is using item.amount if it's a stack
  */
 /datum/component/trader/proc/apply_sell_price_mods(obj/item/selling, original_cost)
+	var/datum/cyberpunk_sale_entry/sale_entry = get_cyberpunk_sale_entry_for_type(selling.type, cyberpunk_sale_source)
+	if(sale_entry)
+		original_cost = max(original_cost, round(sale_entry.get_price(max(original_cost, 1), max(original_cost, 1)) * 0.45))
+		qdel(sale_entry)
 	if(isstack(selling))
 		var/obj/item/stack/stackoverflow = selling
 		original_cost *= stackoverflow.amount
@@ -398,6 +410,7 @@ Can accept both a type path, and an instance of a datum. Type path has priority.
 
 ///Displays to the customer what the trader is selling and how much is in stock
 /datum/component/trader/proc/trader_sells_what(mob/customer)
+	maybe_rotate_cyberpunk_sale_stock()
 	if(!can_trade(customer))
 		return
 	var/mob/living/trader = parent
@@ -417,11 +430,42 @@ Can accept both a type path, and an instance of a datum. Type path has priority.
 
 ///Sets quantity of all products to initial(quanity); this proc is currently called during initialize
 /datum/component/trader/proc/restock_products()
-	products = trader_data.initial_products.Copy()
+	products = list()
+	for(var/obj/item/thing as anything in trader_data.initial_products)
+		var/list/product_info = trader_data.initial_products[thing]
+		var/base_price = product_info[TRADER_PRODUCT_INFO_PRICE]
+		var/base_quantity = product_info[TRADER_PRODUCT_INFO_QUANTITY]
+		var/current_price = base_price
+		var/current_quantity = base_quantity
+		var/datum/cyberpunk_sale_entry/sale_entry = get_cyberpunk_sale_entry_for_type(thing, cyberpunk_sale_source)
+		if(sale_entry)
+			current_price = sale_entry.get_price(max(base_price, 1), max(base_price, 1))
+			if(base_quantity == INFINITY)
+				current_quantity = sale_entry.roll_available() ? INFINITY : 0
+			else
+				current_quantity = sale_entry.get_rotated_stock_amount(base_quantity)
+			qdel(sale_entry)
+		products[thing] = list(current_price, current_quantity)
+	cyberpunk_next_sale_rotation = world.time + cyberpunk_sale_rotation_interval
+
+/datum/component/trader/proc/maybe_rotate_cyberpunk_sale_stock()
+	if(world.time < cyberpunk_next_sale_rotation)
+		return FALSE
+	restock_products()
+	return TRUE
 
 ///Sets quantity of all wanted_items to initial(quanity);  this proc is currently called during initialize
 /datum/component/trader/proc/renew_item_demands()
-	wanted_items = trader_data.initial_wanteds.Copy()
+	wanted_items = list()
+	for(var/obj/item/thing as anything in trader_data.initial_wanteds)
+		var/list/wanted_info = trader_data.initial_wanteds[thing]
+		var/base_price = wanted_info[TRADER_PRODUCT_INFO_PRICE]
+		var/current_price = base_price
+		var/datum/cyberpunk_sale_entry/sale_entry = get_cyberpunk_sale_entry_for_type(thing, cyberpunk_sale_source)
+		if(sale_entry)
+			current_price = max(base_price, round(sale_entry.get_price(max(base_price, 1), max(base_price, 1)) * 0.45))
+			qdel(sale_entry)
+		wanted_items[thing] = list(current_price, wanted_info[TRADER_PRODUCT_INFO_QUANTITY], wanted_info[TRADER_PRODUCT_INFO_PRICE_MOD_DESCRIPTION])
 
 ///Returns if the trader is conscious and its combat mode is disabled.
 /datum/component/trader/proc/can_trade(mob/customer)

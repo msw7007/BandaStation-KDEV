@@ -37,7 +37,12 @@ SUBSYSTEM_DEF(market)
  * @param market_whitelist A list of markets to which the item should be added. If null, the item is added to all markets.
  */
 /datum/controller/subsystem/market/proc/initialize_item(datum/market_item/path, list/market_whitelist)
-	if(!path::item || !prob(path::availability_prob))
+	var/effective_availability = path::availability_prob
+	if(isnull(effective_availability))
+		effective_availability = 100
+	if(ispath(path::item, /obj/item) && (/datum/market/blackmarket in path::markets))
+		effective_availability = min(effective_availability, get_cyberpunk_sale_availability_for_type(path::item, "black_market"))
+	if(!path::item || !prob(effective_availability))
 		return
 	var/datum/market_item/item_instance = new path()
 	for(var/potential_market in item_instance.markets)

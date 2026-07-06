@@ -43,11 +43,31 @@
 	var/restockable = TRUE
 
 /datum/market_item/New()
+	apply_cyberpunk_market_sale_entry()
 	if(isnull(price))
 		price = rand(price_min, price_max)
 	if(isnull(stock))
 		stock = rand(stock_min, stock_max)
 	identifier = "[type]"
+
+/datum/market_item/proc/apply_cyberpunk_market_sale_entry()
+	var/item_path = item
+	if(ismovable(item))
+		var/atom/movable/movable_item = item
+		item_path = movable_item.type
+	if(!ispath(item_path, /obj/item) || !(/datum/market/blackmarket in markets))
+		return FALSE
+	var/datum/cyberpunk_sale_entry/sale_entry = get_cyberpunk_sale_entry_for_type(item_path, "black_market")
+	if(!sale_entry)
+		return FALSE
+	availability_prob = min(isnull(availability_prob) ? 100 : availability_prob, sale_entry.get_availability_chance())
+	stock_max = sale_entry.get_market_stock_max(stock_max || stock_min || stock || 1)
+	stock_min = min(stock_min, stock_max)
+	var/default_price = max(price || price_min, 1)
+	var/extra_price = max(price_max, default_price)
+	price = max(price || 0, sale_entry.get_price(default_price, extra_price))
+	qdel(sale_entry)
+	return TRUE
 
 ///For 'dynamic' market items generated on runtime, this proc is to be used to properly sets the item, especially if it's a hardref.
 /datum/market_item/proc/set_item(path_or_ref)
@@ -61,6 +81,7 @@
 		html_icon = icon2base64(getFlatIcon(item, no_anim=TRUE))
 		RegisterSignal(item, COMSIG_QDELETING, PROC_REF(on_item_del))
 		identifier = "[REF(src)]"
+	apply_cyberpunk_market_sale_entry()
 
 /datum/market_item/Destroy()
 	item = null
