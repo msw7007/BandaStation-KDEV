@@ -130,6 +130,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_storyteller_dynamic_rules_enabled = TRUE
 	/// Whether round phases project daylight onto open-sky turfs.
 	var/cyberpunk_daylight_enabled = TRUE
+	/// Prefer area base lighting for city outdoors instead of spawning sparse light sources over every open-sky turf.
+	var/cyberpunk_daylight_area_lighting_enabled = TRUE
 	/// Sparse daylight source spacing. One light source per N turfs.
 	var/cyberpunk_daylight_stride = 4
 	/// Last daylight phase applied to the world.
@@ -142,14 +144,20 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_daylight_current_range = 0
 	/// Last smooth daylight color pushed into open-sky sources.
 	var/cyberpunk_daylight_current_color = "#ffffff"
+	/// Last smooth daylight area alpha pushed into outdoor city areas.
+	var/cyberpunk_daylight_current_alpha = 0
 	/// World time before which daylight source generation should not run after round start.
 	var/cyberpunk_daylight_defer_until = 0
+	/// Outdoor city areas affected by area daylight.
+	var/list/cyberpunk_daylight_areas = list()
 	/// Sparse daylight source objects keyed by turf coordinate.
 	var/list/cyberpunk_daylight_sources = list()
 	/// Daylight strength per phase.
 	var/list/cyberpunk_daylight_power_by_phase = list("night" = 0.08, "morning" = 0.45, "day" = 0.85, "evening" = 0.35)
 	/// Daylight radius per phase.
 	var/list/cyberpunk_daylight_range_by_phase = list("night" = 1, "morning" = 3, "day" = 4, "evening" = 3)
+	/// Base-lighting alpha per phase for city outdoor areas.
+	var/list/cyberpunk_daylight_alpha_by_phase = list("night" = 35, "morning" = 150, "day" = 255, "evening" = 130)
 	/// Daylight color per phase.
 	var/list/cyberpunk_daylight_color_by_phase = list("night" = "#1a2540", "morning" = "#ffd08a", "day" = "#fff6d6", "evening" = "#e07a55")
 	//CYBERPUNK BUILD - rebuild and delete before release
@@ -212,7 +220,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_daylight_current_power = SScyberpunk_round.cyberpunk_daylight_current_power
 	cyberpunk_daylight_current_range = SScyberpunk_round.cyberpunk_daylight_current_range
 	cyberpunk_daylight_current_color = SScyberpunk_round.cyberpunk_daylight_current_color
+	cyberpunk_daylight_current_alpha = SScyberpunk_round.cyberpunk_daylight_current_alpha
 	cyberpunk_daylight_defer_until = SScyberpunk_round.cyberpunk_daylight_defer_until
+	cyberpunk_daylight_areas = list()
 	cyberpunk_daylight_sources = list()
 
 /datum/controller/subsystem/cyberpunk_round/fire(resumed = 0)
@@ -827,12 +837,25 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		clear_cyberpunk_daylight()
 		return
 	var/daylight_bucket = FLOOR(cyberpunk_round_ingame_minutes / 15, 1)
-	if(cyberpunk_daylight_last_phase == cyberpunk_round_phase && cyberpunk_daylight_last_bucket == daylight_bucket && length(cyberpunk_daylight_sources))
+	if(cyberpunk_daylight_last_phase == cyberpunk_round_phase && cyberpunk_daylight_last_bucket == daylight_bucket && (cyberpunk_daylight_area_lighting_enabled || length(cyberpunk_daylight_sources)))
 		return
-	ensure_cyberpunk_daylight_sources()
-	apply_cyberpunk_daylight()
+	if(cyberpunk_daylight_area_lighting_enabled)
+		apply_cyberpunk_daylight_area_lighting()
+		if(length(cyberpunk_daylight_sources))
+			clear_cyberpunk_daylight_sources()
+	else
+		ensure_cyberpunk_daylight_sources()
+		apply_cyberpunk_daylight_sources()
 	cyberpunk_daylight_last_phase = cyberpunk_round_phase
 	cyberpunk_daylight_last_bucket = daylight_bucket
+
+/datum/controller/subsystem/cyberpunk_round/proc/ensure_cyberpunk_daylight_areas()
+	if(length(cyberpunk_daylight_areas))
+		return
+	for(var/area/city_area as anything in GLOB.areas)
+		if(QDELETED(city_area) || !istype(city_area, /area/cyberpunk) || !area_is_outdoor(city_area))
+			continue
+		cyberpunk_daylight_areas += city_area
 
 /datum/controller/subsystem/cyberpunk_round/proc/ensure_cyberpunk_daylight_sources()
 	if(length(cyberpunk_daylight_sources))
@@ -902,10 +925,28 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	return list(
 		"power" = round(LERP(current_power, next_power, progress), 0.01),
 		"range" = round(LERP(current_range, next_range, progress), 0.1),
+		"alpha" = round(LERP(cyberpunk_daylight_value_for_phase(current_phase, cyberpunk_daylight_alpha_by_phase), cyberpunk_daylight_value_for_phase(next_phase, cyberpunk_daylight_alpha_by_phase), progress), 1),
 		"color" = BlendRGB(current_color, next_color, progress),
 	)
 
-/datum/controller/subsystem/cyberpunk_round/proc/apply_cyberpunk_daylight()
+/datum/controller/subsystem/cyberpunk_round/proc/apply_cyberpunk_daylight_area_lighting()
+	var/list/daylight_values = cyberpunk_daylight_current_values()
+	var/light_alpha = daylight_values["alpha"] || 0
+	var/light_color = daylight_values["color"] || "#ffffff"
+	cyberpunk_daylight_current_alpha = light_alpha
+	cyberpunk_daylight_current_color = light_color
+	ensure_cyberpunk_daylight_areas()
+	var/list/deleted_areas = list()
+	for(var/area/city_area as anything in cyberpunk_daylight_areas)
+		CHECK_TICK
+		if(QDELETED(city_area))
+			deleted_areas += city_area
+			continue
+		city_area.set_base_lighting(light_color, light_alpha)
+	for(var/area/deleted_area as anything in deleted_areas)
+		cyberpunk_daylight_areas -= deleted_area
+
+/datum/controller/subsystem/cyberpunk_round/proc/apply_cyberpunk_daylight_sources()
 	var/list/daylight_values = cyberpunk_daylight_current_values()
 	var/light_range = daylight_values["range"] || 0
 	var/light_power = daylight_values["power"] || 0
@@ -924,16 +965,26 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	for(var/source_key in deleted_sources)
 		cyberpunk_daylight_sources -= source_key
 
-/datum/controller/subsystem/cyberpunk_round/proc/clear_cyberpunk_daylight()
+/datum/controller/subsystem/cyberpunk_round/proc/clear_cyberpunk_daylight_sources()
 	for(var/source_key in cyberpunk_daylight_sources)
 		CHECK_TICK
 		var/obj/effect/cyberpunk_daylight_source/daylight_source = cyberpunk_daylight_sources[source_key]
 		qdel(daylight_source)
 	cyberpunk_daylight_sources = list()
+
+/datum/controller/subsystem/cyberpunk_round/proc/clear_cyberpunk_daylight()
+	clear_cyberpunk_daylight_sources()
+	for(var/area/city_area as anything in cyberpunk_daylight_areas)
+		CHECK_TICK
+		if(QDELETED(city_area))
+			continue
+		city_area.set_base_lighting(initial(city_area.base_lighting_color), initial(city_area.base_lighting_alpha))
+	cyberpunk_daylight_areas = list()
 	cyberpunk_daylight_last_phase = null
 	cyberpunk_daylight_last_bucket = -1
 	cyberpunk_daylight_current_power = 0
 	cyberpunk_daylight_current_range = 0
+	cyberpunk_daylight_current_alpha = 0
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_clock_text()
 	var/hour = FLOOR(cyberpunk_round_ingame_minutes / 60, 1)
@@ -1284,6 +1335,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"active_events" = length(cyberpunk_round_active_events),
 		"history_size" = length(cyberpunk_round_event_history),
 		"daylight_phase" = cyberpunk_round_phase,
+		"daylight_areas" = length(cyberpunk_daylight_areas),
 		"daylight_sources" = length(cyberpunk_daylight_sources),
 	)
 
@@ -2243,7 +2295,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"dynamic_pressure" = cyberpunk_storyteller_dynamic_request_pressure,
 		"next_pulse" = max((cyberpunk_round_last_storyteller_at + cyberpunk_round_storyteller_interval) - world.time, 0),
 		"next_execute" = max((cyberpunk_storyteller_last_executed_at + min_gap) - world.time, 0),
+		"daylight_areas" = length(cyberpunk_daylight_areas),
 		"daylight_sources" = length(cyberpunk_daylight_sources),
+		"daylight_alpha" = cyberpunk_daylight_current_alpha,
 		"daylight_power" = cyberpunk_daylight_current_power,
 		"daylight_range" = cyberpunk_daylight_current_range,
 		"daylight_color" = cyberpunk_daylight_current_color,
