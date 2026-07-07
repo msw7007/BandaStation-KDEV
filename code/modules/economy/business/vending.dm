@@ -23,6 +23,16 @@
 		return FALSE
 	return business.record_income(business_share, "Business vendor sale at [name]: [product_label]")
 
+/obj/machinery/vending/proc/get_cyberpunk_business_vending_price(base_price)
+	base_price = max(0, round(base_price))
+	if(!cyberpunk_business_id)
+		return base_price
+	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(cyberpunk_business_id)
+	if(!business)
+		return base_price
+	var/markup = clamp(round(cyberpunk_business_markup_percent), -100, 500)
+	return max(0, round(base_price * (100 + markup) / 100))
+
 /obj/machinery/vending/proc/cyberpunk_business_restock_from_warehouse()
 	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(cyberpunk_business_id)
 	if(!business || !business.warehouse_enabled || !business.warehouse_valid)

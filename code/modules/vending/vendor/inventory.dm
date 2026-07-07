@@ -189,7 +189,7 @@
 		speak("Sold out of [item_record.name].")
 		flick(icon_deny, src)
 		return
-	var/price_to_use = item_record.price
+	var/price_to_use = get_cyberpunk_business_vending_price(item_record.price)
 	if(item_record in hidden_records)
 		if(!extended_inventory)
 			return

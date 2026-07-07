@@ -13,6 +13,27 @@
 	var/arrival_time = 0
 	var/ai_dispatched = FALSE
 	var/ai_courier_status = "not requested"
+	var/list/flight_markers = list()
+
+/obj/effect/cyberpunk_business_delivery_marker
+	name = "business delivery flight marker"
+	desc = "A temporary logistics beacon marking an active business delivery flight."
+	icon = 'icons/obj/structures.dmi'
+	icon_state = "rack"
+	anchored = TRUE
+	density = FALSE
+	alpha = 160
+	var/delivery_id = 0
+
+/obj/effect/cyberpunk_business_delivery_marker/Initialize(mapload, new_delivery_id = 0, marker_label = null)
+	. = ..()
+	delivery_id = new_delivery_id
+	if(marker_label)
+		name = marker_label
+	addtimer(CALLBACK(src, PROC_REF(fade_out)), 2 MINUTES, TIMER_STOPPABLE)
+
+/obj/effect/cyberpunk_business_delivery_marker/proc/fade_out()
+	qdel(src)
 
 /datum/cyberpunk_business_delivery/proc/complete_delivery()
 	if(status != "enroute")
@@ -23,9 +44,21 @@
 	status = "completed"
 	business.add_stock(item_label, amount)
 	business.add_history("delivery #[id] arrived: [amount]x [item_label]; cost [cost][MONEY_SYMBOL]")
-	if(business.terminal)
-		business.terminal.say("Delivery #[id] arrived: [amount]x [item_label].")
+	var/atom/arrival_point = business.get_unload_zone() || business.terminal
+	var/atom/movable/arrival_speaker = arrival_point
+	if(istype(arrival_speaker))
+		arrival_speaker.say("Delivery #[id] arrived: [amount]x [item_label].")
+	QDEL_LIST(flight_markers)
 	return TRUE
+
+/datum/cyberpunk_business_delivery/proc/create_flight_visual(atom/source, atom/target)
+	var/turf/source_turf = get_turf(source)
+	var/turf/target_turf = get_turf(target)
+	if(source_turf)
+		flight_markers += new /obj/effect/cyberpunk_business_delivery_marker(source_turf, id, "AVI departure marker #[id]")
+	if(target_turf && target_turf != source_turf)
+		flight_markers += new /obj/effect/cyberpunk_business_delivery_marker(target_turf, id, "AVI arrival marker #[id]")
+	return length(flight_markers)
 
 /datum/cyberpunk_business_delivery/proc/dispatch_ai_courier(atom/source, atom/target)
 	if(ai_dispatched || status != "enroute" || !source || !target)
@@ -33,6 +66,7 @@
 	var/turf/source_turf = get_turf(source)
 	if(!source_turf)
 		return FALSE
+	create_flight_visual(source, target)
 	var/obj/item/cyberpunk_business_delivery_crate/crate = new(source_turf)
 	crate.delivery_id = id
 	crate.name = "[item_label] delivery crate"

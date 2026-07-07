@@ -35,5 +35,7 @@ SUBSYSTEM_DEF(cyberpunk_property)
 		var/datum/cyberpunk_business/business = cyberpunk_businesses[business_id]
 		if(business?.legal && business.tax_debt > 0)
 			business.auto_pay_taxes()
+		if(business)
+			business.process_payroll()
 		if(business?.warehouse_auto_restock)
 			business.auto_restock_linked_vendors()

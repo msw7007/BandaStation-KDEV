@@ -23,6 +23,21 @@
 		business_id = params["id"]
 		return TRUE
 	return cyberpunk_business_terminal_ui_act(action, params, ui.user, null, business_id)
+
+/datum/computer_file/program/business_registry
+	filename = "businessregistry"
+	filedesc = "City Business Registry"
+	downloader_category = PROGRAM_CATEGORY_SUPPLY
+	program_open_overlay = "generic"
+	extended_desc = "Public city registry of legal businesses, their directions, locations, and tax standing."
+	program_flags = PROGRAM_ON_NTNET_STORE | PROGRAM_REQUIRES_NTNET
+	can_run_on_flags = PROGRAM_ALL
+	size = 4
+	program_icon = "building"
+	tgui_id = "NtosBusinessRegistry"
+
+/datum/computer_file/program/business_registry/ui_data(mob/user)
+	return cyberpunk_business_registry_ui_data(user)
 /obj/machinery/computer/business_terminal
 	name = "business terminal"
 	desc = "A city business management terminal. It binds a deployed business to a neural interface owner."
@@ -82,6 +97,8 @@
 	data["hasNeural"] = living_user?.has_neural_implant() || FALSE
 	data["terminalSize"] = terminal?.size_class || "program"
 	data["terminalAnchored"] = terminal?.anchored || FALSE
+	data["terminalArea"] = terminal ? get_area_name(terminal) : "program"
+	data["terminalBusinessArea"] = terminal ? cyberpunk_is_business_area(get_area(terminal)) : FALSE
 	data["businesses"] = list()
 	for(var/datum/cyberpunk_business/business as anything in SScyberpunk_property.get_cyberpunk_businesses_for_user(living_user))
 		data["businesses"] += list(business.to_ui_data(living_user, FALSE))
@@ -105,7 +122,7 @@
 		if("create")
 			var/datum/cyberpunk_business/new_business = SScyberpunk_property.create_cyberpunk_business(living_user, terminal, params)
 			if(!new_business)
-				to_chat(living_user, span_warning("Business creation failed. A functional neural interface and a terminal inside a business area are required."))
+				to_chat(living_user, span_warning("Business creation failed. Legal businesses require a business area; off-ledger businesses require a functional terminal area. A neural interface is always required."))
 			else
 				to_chat(living_user, span_notice("Business #[new_business.id] created and linked to your neural interface."))
 			return TRUE
@@ -151,17 +168,47 @@
 			else
 				to_chat(living_user, span_warning("Warehouse validation failed."))
 			return TRUE
+		if("deploy_unload_zone")
+			if(business?.deploy_unload_zone(living_user))
+				to_chat(living_user, span_notice("Warehouse unload zone linked at your position."))
+			else
+				to_chat(living_user, span_warning("Unable to deploy an unload zone here. Stand inside valid premises and keep this tile free."))
+			return TRUE
 		if("request_delivery")
 			if(business?.request_delivery(living_user, params["item"], text2num(params["amount"]), params["source"]))
 				to_chat(living_user, span_notice("Delivery requested. ETA two minutes."))
 			else
 				to_chat(living_user, span_warning("Unable to request delivery. Enable and validate warehouse access first."))
 			return TRUE
+		if("deposit_warehouse_item")
+			if(business?.deposit_warehouse_item(living_user, living_user.get_active_held_item()))
+				to_chat(living_user, span_notice("Held item deposited into the business warehouse."))
+			else
+				to_chat(living_user, span_warning("Unable to deposit your held item. Stand next to a valid unload zone."))
+			return TRUE
+		if("absorb_warehouse_items")
+			if(business?.absorb_unload_zone_items(living_user))
+				to_chat(living_user, span_notice("Unload zone items absorbed into warehouse stock."))
+			else
+				to_chat(living_user, span_warning("No valid physical items were found around the unload zone."))
+			return TRUE
+		if("withdraw_warehouse_item")
+			if(business?.withdraw_warehouse_item(living_user, params["item"], text2num(params["amount"])))
+				to_chat(living_user, span_notice("Warehouse item withdrawn at the unload zone."))
+			else
+				to_chat(living_user, span_warning("Unable to withdraw that warehouse item."))
+			return TRUE
 		if("add_employee")
 			if(business?.add_employee(living_user, params["name"], text2num(params["wage"])))
-				to_chat(living_user, span_notice("Employee added."))
+				to_chat(living_user, span_notice("Employee invite sent."))
 			else
-				to_chat(living_user, span_warning("Unable to add employee."))
+				to_chat(living_user, span_warning("Unable to invite employee."))
+			return TRUE
+		if("accept_employee_invite")
+			if(business?.accept_employee_invite(living_user))
+				to_chat(living_user, span_notice("Employment accepted."))
+			else
+				to_chat(living_user, span_warning("Unable to accept this employment invite."))
 			return TRUE
 		if("remove_employee")
 			if(business?.remove_employee(living_user, params["employee"]))
@@ -213,3 +260,10 @@
 			return TRUE
 	return FALSE
 
+/proc/cyberpunk_business_registry_ui_data(mob/user)
+	var/mob/living/living_user = isliving(user) ? user : null
+	var/datum/bank_account/account = living_user?.get_bank_account()
+	return list(
+		"accountName" = account?.account_holder,
+		"businesses" = SScyberpunk_property.get_cyberpunk_public_business_registry(),
+	)

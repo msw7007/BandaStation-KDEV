@@ -27,6 +27,8 @@ type Employee = {
 type StockEntry = {
   name: string;
   amount: number;
+  itemType?: string;
+  canWithdraw?: BooleanLike;
 };
 
 type Delivery = {
@@ -75,6 +77,7 @@ type Business = {
     surplusPercent: number;
     markupPercent: number;
     unloadZone: string;
+    hasUnloadZone: BooleanLike;
     buyLinks: string;
     sellLinks: string;
     valid: BooleanLike;
@@ -82,6 +85,7 @@ type Business = {
     validation: string;
   };
   employees: Employee[];
+  pendingEmployees: Employee[];
   stock: StockEntry[];
   deliveries: Delivery[];
   savedObjects: number;
@@ -92,6 +96,7 @@ type Business = {
   canStock: BooleanLike;
   canStaff: BooleanLike;
   canContracts: BooleanLike;
+  canAcceptEmployment: BooleanLike;
   history?: string[];
 };
 
@@ -101,6 +106,8 @@ type Data = {
   hasNeural: BooleanLike;
   terminalSize: string;
   terminalAnchored: BooleanLike;
+  terminalArea: string;
+  terminalBusinessArea: BooleanLike;
   businesses: Business[];
   business?: Business;
   warehouseOptions?: WarehouseOption[];
@@ -121,6 +128,8 @@ export const NtosBusinessTerminal = () => {
     accountBalance = 0,
     hasNeural,
     terminalSize,
+    terminalArea,
+    terminalBusinessArea,
     businesses = [],
     business,
   } = data;
@@ -142,12 +151,16 @@ export const NtosBusinessTerminal = () => {
             <LabeledList.Item label="Premises">
               {terminalSize === 'program'
                 ? 'business area required'
-                : '17x17 business area'}
+                : `${terminalArea} / ${
+                    terminalBusinessArea
+                      ? 'registered business area'
+                      : 'off-ledger area'
+                  }`}
             </LabeledList.Item>
           </LabeledList>
         </Section>
 
-        <BusinessCreation disabled={!hasNeural} />
+        <BusinessCreation disabled={!hasNeural} terminalBusinessArea={!!terminalBusinessArea} />
 
         <Section title={`Accessible businesses (${businesses.length})`}>
           {!businesses.length ? (
@@ -175,7 +188,10 @@ export const NtosBusinessTerminal = () => {
   );
 };
 
-const BusinessCreation = (props: { disabled: boolean }) => {
+const BusinessCreation = (props: {
+  disabled: boolean;
+  terminalBusinessArea: boolean;
+}) => {
   const { act } = useBackend<Data>();
   const [name, setName] = useState('');
   const [direction, setDirection] = useState('general trade');
@@ -213,7 +229,7 @@ const BusinessCreation = (props: { disabled: boolean }) => {
           <Button
             fluid
             icon="file-signature"
-            disabled={props.disabled}
+            disabled={props.disabled || (legal && !props.terminalBusinessArea)}
             onClick={() =>
               act('create', {
                 name,
@@ -236,12 +252,33 @@ const BusinessPanel = (props: { business: Business }) => {
   return (
     <>
       <BusinessSummary business={business} />
+      {!!business.canAcceptEmployment && <BusinessInvite business={business} />}
       <BusinessSettings business={business} />
       <BusinessFinance business={business} />
       <BusinessWarehouse business={business} />
       <BusinessStaff business={business} />
       <BusinessSnapshot business={business} />
     </>
+  );
+};
+
+const BusinessInvite = (props: { business: Business }) => {
+  const { act } = useBackend<Data>();
+  const { business } = props;
+  return (
+    <Section
+      title="Employment invite"
+      buttons={
+        <Button
+          icon="user-check"
+          onClick={() => act('accept_employee_invite', { id: business.id })}
+        >
+          Accept
+        </Button>
+      }
+    >
+      You have a pending invite to work for {business.name}.
+    </Section>
   );
 };
 
@@ -514,6 +551,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
               {business.warehouse.validation}
             </LabeledList.Item>
             <LabeledList.Item label="Unload zone">
+              {business.warehouse.hasUnloadZone ? business.warehouse.unloadZone : 'not linked'} /{' '}
               {business.warehouse.unloadValid ? 'valid 3x3' : 'not valid'}
             </LabeledList.Item>
           </LabeledList>
@@ -525,6 +563,13 @@ const BusinessWarehouse = (props: { business: Business }) => {
             onClick={() => act('validate_premises', { id: business.id })}
           >
             Validate premises
+          </Button>
+          <Button
+            icon="map-marker-alt"
+            disabled={!business.canStock}
+            onClick={() => act('deploy_unload_zone', { id: business.id })}
+          >
+            Set unload zone here
           </Button>
           <Button
             icon="clipboard-check"
@@ -572,6 +617,20 @@ const BusinessWarehouse = (props: { business: Business }) => {
           >
             Restock vendors
           </Button>
+          <Button
+            icon="hand-holding-box"
+            disabled={!business.canStock || !business.warehouse.valid}
+            onClick={() => act('deposit_warehouse_item', { id: business.id })}
+          >
+            Deposit held
+          </Button>
+          <Button
+            icon="magnet"
+            disabled={!business.canStock || !business.warehouse.valid}
+            onClick={() => act('absorb_warehouse_items', { id: business.id })}
+          >
+            Absorb 3x3
+          </Button>
         </Stack.Item>
         <Stack.Item>
           <Stack>
@@ -617,11 +676,27 @@ const BusinessWarehouse = (props: { business: Business }) => {
             <Table.Row header>
               <Table.Cell>Stock</Table.Cell>
               <Table.Cell collapsing>Amount</Table.Cell>
+              <Table.Cell collapsing>Physical</Table.Cell>
             </Table.Row>
             {business.stock.map((stock) => (
               <Table.Row key={stock.name}>
                 <Table.Cell>{stock.name}</Table.Cell>
                 <Table.Cell>{stock.amount}</Table.Cell>
+                <Table.Cell collapsing>
+                  <Button
+                    icon="box-open"
+                    disabled={!business.canStock || !business.warehouse.valid || !stock.canWithdraw}
+                    onClick={() =>
+                      act('withdraw_warehouse_item', {
+                        id: business.id,
+                        item: stock.name,
+                        amount: 1,
+                      })
+                    }
+                  >
+                    Withdraw
+                  </Button>
+                </Table.Cell>
               </Table.Row>
             ))}
           </Table>
@@ -753,6 +828,31 @@ const BusinessStaff = (props: { business: Business }) => {
             </Stack>
           </Section>
         ))}
+        {!!business.pendingEmployees?.length && (
+          <Section title="Pending invites">
+            {business.pendingEmployees.map((employee) => (
+              <Stack key={employee.key} align="center">
+                <Stack.Item grow>
+                  {employee.name} / wage {employee.wage} cr
+                </Stack.Item>
+                <Stack.Item>
+                  <Button.Confirm
+                    icon="user-times"
+                    disabled={!business.canStaff}
+                    onClick={() =>
+                      act('remove_employee', {
+                        id: business.id,
+                        employee: employee.key,
+                      })
+                    }
+                  >
+                    Cancel
+                  </Button.Confirm>
+                </Stack.Item>
+              </Stack>
+            ))}
+          </Section>
+        )}
       </Stack>
     </Collapsible>
   );

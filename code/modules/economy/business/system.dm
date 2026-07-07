@@ -28,6 +28,26 @@
 		))
 	return options
 
+/datum/controller/subsystem/cyberpunk_property/proc/get_cyberpunk_public_business_registry()
+	var/list/entries = list()
+	for(var/business_id in cyberpunk_businesses)
+		var/datum/cyberpunk_business/business = cyberpunk_businesses[business_id]
+		if(!business || !business.legal)
+			continue
+		entries += list(list(
+			"id" = business.id,
+			"name" = business.name,
+			"direction" = business.direction,
+			"registeredTo" = business.registered_to,
+			"owner" = business.owner_name,
+			"area" = business.get_business_area()?.name || "unlisted",
+			"taxDebt" = business.tax_debt,
+			"taxPaid" = business.tax_paid,
+			"taxRate" = round(SScyberpunk_corporations.get_cyberpunk_business_tax_rate(business.id) * 100),
+			"status" = business.tax_debt > 0 ? "tax overdue" : "registered",
+		))
+	return entries
+
 /datum/controller/subsystem/cyberpunk_property/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label)
 	item_label = reject_bad_text(item_label, max_length = 48, ascii_only = FALSE)
 	if(!requester || !item_label)
@@ -47,7 +67,7 @@
 		if(source_key && source_key != "external supplier" && source_key != "auto")
 			if(source_key != lowertext("[supplier.id]") && source_key != lowertext(supplier.name))
 				continue
-		if(supplier.get_stock_amount(item_label) < amount)
+		if(supplier.get_sellable_stock_amount(item_label) < amount)
 			continue
 		var/unit_price = supplier.get_stock_price(item_label)
 		if(unit_price < best_price)
@@ -61,11 +81,14 @@
 	if(!owner.has_neural_implant())
 		return null
 	var/area/business_area = get_area(terminal)
-	if(!cyberpunk_is_business_area(business_area))
+	var/is_legal = text2num(params["legal"]) ? TRUE : FALSE
+	if(is_legal && !cyberpunk_is_business_area(business_area))
+		return null
+	if(!business_area)
 		return null
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/existing_business = cyberpunk_businesses[business_id]
-		if(existing_business?.get_business_area() == business_area)
+		if(existing_business?.legal && is_legal && existing_business.get_business_area() == business_area)
 			return null
 	var/datum/bank_account/owner_account = owner.get_bank_account()
 	var/name = reject_bad_text(params["name"], max_length = 48, ascii_only = FALSE)
@@ -76,8 +99,9 @@
 	business.id = next_cyberpunk_business_id++
 	business.name = name
 	business.direction = reject_bad_text(params["direction"], max_length = 64, ascii_only = FALSE) || "general trade"
-	business.legal = text2num(params["legal"]) ? TRUE : FALSE
-	business.size_class = "17x17"
+	business.legal = is_legal
+	business.registered_to = reject_bad_text(params["registered_to"], max_length = 48, ascii_only = FALSE) || (is_legal ? "city" : "off-ledger")
+	business.size_class = is_legal ? "17x17" : "off-ledger"
 	business.owner_ckey = owner.ckey
 	business.owner_name = owner.real_name || owner.name
 	business.owner_character_key = get_cyberpunk_business_key(owner, owner_account)
@@ -89,6 +113,7 @@
 	cyberpunk_businesses["[business.id]"] = business
 	terminal.business_id = business.id
 	business.apply_generated_access(owner)
+	business.validate_premises(owner)
 	return business
 /datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
 	if(!business)
@@ -121,10 +146,15 @@
 	cyberpunk_business_deliveries["[delivery.id]"] = delivery
 	business.deliveries += delivery
 	business.add_history("delivery #[delivery.id] requested: [amount]x [item_label] from [delivery.source_label]; cost [total_cost][MONEY_SYMBOL]")
-	if(supplier?.terminal && business.terminal)
-		if(delivery.dispatch_ai_courier(supplier.terminal, business.terminal))
+	var/atom/delivery_destination = business.get_unload_zone() || business.terminal
+	var/atom/delivery_source = supplier?.get_unload_zone() || supplier?.terminal
+	if(delivery_source && delivery_destination)
+		if(delivery.dispatch_ai_courier(delivery_source, delivery_destination))
 			business.add_history("delivery #[delivery.id] assigned to city courier from [supplier.name]")
 			supplier.add_history("delivery #[delivery.id] courier pickup requested for [business.name]")
+	else if(delivery_destination)
+		delivery.create_flight_visual(null, delivery_destination)
+		delivery.ai_courier_status = "external AVI inbound"
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "market", max(1, round(amount / 2)), max(0, round(total_cost * 0.03)), "business delivery #[delivery.id]")
 	if(SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_cargo_tracking"))
 		SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "cargo tracking: delivery #[delivery.id]")

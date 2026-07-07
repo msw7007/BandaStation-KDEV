@@ -63,6 +63,21 @@
 		return null
 	var/list/req_access = cyberpunk_persistent_read_var(thing, "req_access")
 	var/list/req_one_access = cyberpunk_persistent_read_var(thing, "req_one_access")
+	var/list/machine_module_types = list()
+	var/obj/machinery/machine = thing
+	if(istype(machine) && length(machine.cyberpunk_machine_modules))
+		for(var/datum/cyberpunk_machine_module/module as anything in machine.cyberpunk_machine_modules)
+			machine_module_types += "[module.type]"
+	var/list/vending_stock = list()
+	var/obj/machinery/vending/vendor = thing
+	if(istype(vendor))
+		for(var/datum/data/vending_product/record as anything in vendor.product_records + vendor.coin_records + vendor.hidden_records)
+			vending_stock += list(list(
+				"path" = "[record.product_path]",
+				"name" = record.name,
+				"amount" = record.amount,
+				"max_amount" = record.max_amount,
+			))
 	var/list/entry = list(
 		"type" = "[thing.type]",
 		"name" = thing.name,
@@ -86,6 +101,15 @@
 		"machine_stat" = cyberpunk_persistent_read_var(thing, "machine_stat"),
 		"manufacturer" = cyberpunk_persistent_read_var(thing, "manufacturer"),
 		"corp_manufacturer" = cyberpunk_persistent_read_var(thing, "corp_manufacturer"),
+		"cyberpunk_business_id" = cyberpunk_persistent_read_var(thing, "cyberpunk_business_id"),
+		"cyberpunk_business_warehouse_linked" = cyberpunk_persistent_read_var(thing, "cyberpunk_business_warehouse_linked"),
+		"cyberpunk_business_auto_restock" = cyberpunk_persistent_read_var(thing, "cyberpunk_business_auto_restock"),
+		"cyberpunk_business_markup_percent" = cyberpunk_persistent_read_var(thing, "cyberpunk_business_markup_percent"),
+		"cyberpunk_business_minimum_stock" = cyberpunk_persistent_read_var(thing, "cyberpunk_business_minimum_stock"),
+		"cyberpunk_unload_business_id" = cyberpunk_persistent_read_var(thing, "business_id"),
+		"cyberpunk_unload_business_name" = cyberpunk_persistent_read_var(thing, "business_name"),
+		"cyberpunk_machine_modules" = machine_module_types,
+		"cyberpunk_vending_stock" = vending_stock,
 		"req_access" = islist(req_access) ? req_access.Copy() : null,
 		"req_one_access" = islist(req_one_access) ? req_one_access.Copy() : null,
 	)
@@ -156,6 +180,13 @@
 	cyberpunk_persistent_write_var(restored_atom, "machine_stat", entry["machine_stat"])
 	cyberpunk_persistent_write_var(restored_atom, "manufacturer", entry["manufacturer"])
 	cyberpunk_persistent_write_var(restored_atom, "corp_manufacturer", entry["corp_manufacturer"])
+	cyberpunk_persistent_write_var(restored_atom, "cyberpunk_business_id", entry["cyberpunk_business_id"])
+	cyberpunk_persistent_write_var(restored_atom, "cyberpunk_business_warehouse_linked", entry["cyberpunk_business_warehouse_linked"])
+	cyberpunk_persistent_write_var(restored_atom, "cyberpunk_business_auto_restock", entry["cyberpunk_business_auto_restock"])
+	cyberpunk_persistent_write_var(restored_atom, "cyberpunk_business_markup_percent", entry["cyberpunk_business_markup_percent"])
+	cyberpunk_persistent_write_var(restored_atom, "cyberpunk_business_minimum_stock", entry["cyberpunk_business_minimum_stock"])
+	cyberpunk_persistent_write_var(restored_atom, "business_id", entry["cyberpunk_unload_business_id"])
+	cyberpunk_persistent_write_var(restored_atom, "business_name", entry["cyberpunk_unload_business_name"])
 	var/list/req_access = entry["req_access"]
 	if(islist(req_access))
 		cyberpunk_persistent_write_var(restored_atom, "req_access", req_access.Copy())
@@ -176,6 +207,27 @@
 	var/list/vehicle_record = entry["cyberpunk_vehicle"]
 	if(istype(vehicle) && islist(vehicle_record))
 		vehicle.cyberpunk_apply_persistent_record(vehicle_record)
+	var/obj/machinery/restored_machine = restored_atom
+	if(istype(restored_machine) && islist(entry["cyberpunk_machine_modules"]))
+		QDEL_LIST(restored_machine.cyberpunk_machine_modules)
+		for(var/module_type_text in entry["cyberpunk_machine_modules"])
+			var/module_type = text2path("[module_type_text]")
+			if(!ispath(module_type, /datum/cyberpunk_machine_module))
+				continue
+			var/datum/cyberpunk_machine_module/module = new module_type
+			if(restored_machine.can_install_cyberpunk_module(module, null))
+				LAZYADD(restored_machine.cyberpunk_machine_modules, module)
+				module.on_install(restored_machine, null)
+			else
+				qdel(module)
+	var/obj/machinery/vending/restored_vendor = restored_atom
+	if(istype(restored_vendor) && islist(entry["cyberpunk_vending_stock"]))
+		for(var/list/stock_entry as anything in entry["cyberpunk_vending_stock"])
+			for(var/datum/data/vending_product/record as anything in restored_vendor.product_records + restored_vendor.coin_records + restored_vendor.hidden_records)
+				if("[record.product_path]" != "[stock_entry["path"]]" && record.name != stock_entry["name"])
+					continue
+				record.amount = clamp(round(stock_entry["amount"] || record.amount), 0, max(record.max_amount, round(stock_entry["max_amount"] || record.max_amount)))
+				break
 	if(islist(entry["contents"]))
 		for(var/list/content_entry as anything in entry["contents"])
 			cyberpunk_persistent_restore_movable(content_entry, restored_atom, target_area, center, active_terminal)

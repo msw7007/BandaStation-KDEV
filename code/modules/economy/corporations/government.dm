@@ -4,7 +4,7 @@
 	var/list/businesses = list()
 	for(var/business_id in SScyberpunk_property.cyberpunk_businesses)
 		var/datum/cyberpunk_business/business = SScyberpunk_property.cyberpunk_businesses[business_id]
-		if(!business)
+		if(!business || !business.legal)
 			continue
 		businesses += list(list(
 			"id" = business.id,
