@@ -1,4 +1,3 @@
-// CYBERPUNK BUILD - rebuild and delete before release
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import {
@@ -136,6 +135,18 @@ type GovernmentTaxMonitor = {
     apartments: number;
   }[];
   businessDefaultTaxRate: number;
+  council?: {
+    emergencyActive: BooleanLike;
+    directive: string;
+    yesVotes: number;
+    noVotes: number;
+    requiredVotes: number;
+    votes: {
+      name: string;
+      vote: BooleanLike;
+      at: string;
+    }[];
+  };
 };
 
 type Corporation = {
@@ -145,6 +156,8 @@ type Corporation = {
   direction: string;
   combatDoctrine: string;
   hidden: BooleanLike;
+  canManage: BooleanLike;
+  canCouncilVote: BooleanLike;
   subsidiaries: CorporateSubsidiary[];
   level: number;
   experience: number;
@@ -157,6 +170,17 @@ type Corporation = {
   taxDebt: number;
   taxPaid: number;
   serviceAutoEnabled: BooleanLike;
+  agentPool: number;
+  agentsAvailable: number;
+  employees: {
+    key: string;
+    name: string;
+    role: string;
+    wage: number;
+    accountId?: number;
+    lastSeen: string;
+    accessGranted: BooleanLike;
+  }[];
   researchData: CorporateData[];
   technologies: CorporateTechnology[];
   edicts: CorporateEdict[];
@@ -391,6 +415,12 @@ function StateTab(props: { corporation: Corporation }) {
           <LabeledList.Item label="Подписчики">
             {corporation.subscribers || 0}
           </LabeledList.Item>
+          <LabeledList.Item label="Agents">
+            {corporation.agentsAvailable || 0} / {corporation.agentPool || 0}
+          </LabeledList.Item>
+          <LabeledList.Item label="Access">
+            {corporation.canManage ? 'manage' : 'public'}
+          </LabeledList.Item>
           <LabeledList.Item label="Чужие технологии">
             скидка {corporation.foreignTechBonus || 0}%
           </LabeledList.Item>
@@ -441,6 +471,8 @@ function StateTab(props: { corporation: Corporation }) {
 
       <ProfitPanel corporation={corporation} />
 
+      <EmployeesPanel corporation={corporation} />
+
       <HistoryPanel corporation={corporation} />
     </div>
   );
@@ -454,6 +486,8 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
   const [sourceAccount, setSourceAccount] = useState('');
   const [targetAccount, setTargetAccount] = useState('');
   const [transferAmount, setTransferAmount] = useState('100');
+  const council = monitor?.council;
+  const [directiveText, setDirectiveText] = useState(council?.directive || '');
   const selectedSource = transferOptions.some((option) => option.value === sourceAccount)
     ? sourceAccount
     : transferOptions[0]?.value || '';
@@ -482,6 +516,88 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
           </LabeledList.Item>
         </LabeledList>
       </MetricPanel>
+
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Council</div>
+        <LabeledList>
+          <LabeledList.Item label="Emergency">
+            {council?.emergencyActive ? 'active' : 'inactive'}
+          </LabeledList.Item>
+          <LabeledList.Item label="Votes">
+            {council?.yesVotes || 0} / {council?.requiredVotes || 4}
+          </LabeledList.Item>
+          <LabeledList.Item label="Directive">
+            {council?.directive || '-'}
+          </LabeledList.Item>
+        </LabeledList>
+        <div className="CorporateInterface__actions">
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+            disabled={!corporation.canCouncilVote}
+            onClick={() =>
+              act('government_emergency_vote', {
+                corporation_id: corporation.id,
+                vote: 1,
+              })
+            }
+          >
+            <Icon name="triangle-exclamation" />
+            <span>Vote emergency</span>
+          </button>
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+            disabled={!corporation.canCouncilVote}
+            onClick={() =>
+              act('government_emergency_vote', {
+                corporation_id: corporation.id,
+                vote: 0,
+              })
+            }
+          >
+            <Icon name="xmark" />
+            <span>Vote no</span>
+          </button>
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+            disabled={!corporation.canManage || !council?.emergencyActive}
+            onClick={() =>
+              act('government_end_emergency', {
+                corporation_id: corporation.id,
+              })
+            }
+          >
+            <Icon name="shield" />
+            <span>End emergency</span>
+          </button>
+        </div>
+        <div className="CorporateInterface__transferGrid">
+          <label className="CorporateInterface__field CorporateInterface__field--wide">
+            <span>Directive</span>
+            <input
+              className="StyleGuide__textInput StyleGuide__textInput--cyan"
+              value={directiveText}
+              onChange={(event) => setDirectiveText(event.currentTarget.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+            disabled={!corporation.canManage}
+            onClick={() =>
+              act('government_directive', {
+                corporation_id: corporation.id,
+                text: directiveText,
+              })
+            }
+          >
+            <Icon name="file-signature" />
+            <span>Set directive</span>
+          </button>
+        </div>
+      </div>
 
       <div className="StyleGuide__blockShell">
         <div className="StyleGuide__blockTitle">Принудительный перевод</div>
@@ -516,7 +632,7 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
           <button
             type="button"
             className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
-            disabled={!sourceRef.kind || !targetRef.kind || selectedSource === selectedTarget}
+            disabled={!sourceRef.kind || !targetRef.kind || selectedSource === selectedTarget || !corporation.canManage}
             onClick={() =>
               act('government_transfer', {
                 corporation_id: corporation.id,
@@ -739,6 +855,27 @@ function ServicesTab(props: { corporation: Corporation }) {
   return (
     <div className="CorporateInterface__tabGrid">
       <div className="StyleGuide__blockShell CorporateInterface__wide">
+        <div className="StyleGuide__blockTitle">Tax enforcement</div>
+        <div className="CorporateInterface__actions">
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+            disabled={!corporation.canManage}
+            onClick={() =>
+              act('collect_tax_debts', {
+                corporation_id: corporation.id,
+                kind: 'all',
+                target: '',
+              })
+            }
+          >
+            <Icon name="scale-balanced" />
+            <span>Collect debts</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="StyleGuide__blockShell CorporateInterface__wide">
         <div className="StyleGuide__blockTitle">Состояние услуг</div>
         <LabeledList>
           <LabeledList.Item label="Цена подписчика">
@@ -752,10 +889,14 @@ function ServicesTab(props: { corporation: Corporation }) {
           <LabeledList.Item label="Режим">
             {corporation.serviceAutoEnabled ? 'автоматический' : 'очередь'}
           </LabeledList.Item>
+          <LabeledList.Item label="Agents">
+            {corporation.agentsAvailable || 0} / {corporation.agentPool || 0}
+          </LabeledList.Item>
         </LabeledList>
         <div className="CorporateInterface__serviceControls">
           <button
             type="button"
+            disabled={!corporation.canManage}
             className={[
               'StyleGuide__switch',
               corporation.serviceAutoEnabled && 'active',
@@ -773,6 +914,18 @@ function ServicesTab(props: { corporation: Corporation }) {
             </span>
             <span className="StyleGuide__switchMark" />
           </button>
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+            onClick={() =>
+              act('subscribe', {
+                corporation_id: corporation.id,
+              })
+            }
+          >
+            <Icon name="id-badge" />
+            <span>Subscribe</span>
+          </button>
         </div>
         <div className="CorporateInterface__subTitle">Каталог</div>
         {!services.length ? (
@@ -785,12 +938,19 @@ function ServicesTab(props: { corporation: Corporation }) {
               <Tooltip key={service.id} content={service.description} position="bottom">
                 <button
                   type="button"
+                  disabled={!service.enabled}
                   className={[
                     'StyleGuide__dataCard',
                     service.enabled
                       ? 'StyleGuide__dataCard--enabled'
                       : 'StyleGuide__dataCard--disabled',
                   ].join(' ')}
+                  onClick={() =>
+                    act('request_service', {
+                      corporation_id: corporation.id,
+                      service_id: service.id,
+                    })
+                  }
                 >
                   <div className="StyleGuide__dataCardContent">
                     <b>{service.label}</b>
@@ -828,7 +988,7 @@ function ServicesTab(props: { corporation: Corporation }) {
                   <button
                     type="button"
                     className="StyleGuide__iconButton StyleGuide__iconButton--green StyleGuide__iconButton--compact"
-                    disabled={request.status !== 'created'}
+                    disabled={request.status !== 'created' || !corporation.canManage}
                     onClick={() =>
                       act('complete_service_request', {
                         corporation_id: corporation.id,
@@ -841,7 +1001,7 @@ function ServicesTab(props: { corporation: Corporation }) {
                   <button
                     type="button"
                     className="StyleGuide__iconButton StyleGuide__iconButton--red StyleGuide__iconButton--compact"
-                    disabled={request.status !== 'created'}
+                    disabled={request.status !== 'created' || !corporation.canManage}
                     onClick={() =>
                       act('cancel_service_request', {
                         corporation_id: corporation.id,
@@ -850,6 +1010,19 @@ function ServicesTab(props: { corporation: Corporation }) {
                     }
                   >
                     <Icon name="xmark" />
+                  </button>
+                  <button
+                    type="button"
+                    className="StyleGuide__iconButton StyleGuide__iconButton--compact"
+                    disabled={request.status !== 'created' || !corporation.canManage}
+                    onClick={() =>
+                      act('outsource_service_request', {
+                        corporation_id: corporation.id,
+                        request_id: request.id,
+                      })
+                    }
+                  >
+                    <Icon name="file-signature" />
                   </button>
                 </Table.Cell>
               </Table.Row>
@@ -920,7 +1093,7 @@ function ResearchTab(props: {
           />
           <button
               type="button"
-              disabled={!amountNumber}
+              disabled={!amountNumber || !corporation.canManage}
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-light"
               onClick={() =>
                 act('test_activity', {
@@ -935,7 +1108,7 @@ function ResearchTab(props: {
             </button>
           <button
               type="button"
-              disabled={!corporation.researchPoints}
+              disabled={!corporation.researchPoints || !corporation.canManage}
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
               onClick={() =>
                 act('exchange_research', {
@@ -965,6 +1138,7 @@ function ResearchTab(props: {
                   <button
                     type="button"
                     className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+                    disabled={!corporation.canManage}
                     onClick={() =>
                       act('convert_data', {
                         corporation_id: corporation.id,
@@ -1137,7 +1311,7 @@ function CorporateTechnologyNode(props: {
       <Tooltip content={unlocks || 'Прямых открытий нет'} position="bottom">
         <button
           type="button"
-          disabled={!!technology.unlocked || !technology.canUnlock}
+          disabled={!!technology.unlocked || !technology.canUnlock || !corporation.canManage}
           className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
           onClick={onResearch}
         >
@@ -1183,7 +1357,7 @@ function ForeignTechnologyPanel(props: { corporation: Corporation }) {
                     <button
                       type="button"
                       className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
-                      disabled={corporation.researchPoints < 20}
+                      disabled={corporation.researchPoints < 20 || !corporation.canManage}
                       onClick={() =>
                         act('invest_foreign_tech', {
                           corporation_id: corporation.id,
@@ -1221,7 +1395,7 @@ function EdictsTab(props: { corporation: Corporation }) {
             <Tooltip key={edict.id} content={edict.description} position="bottom">
               <button
                 type="button"
-                disabled={!!edict.active || !!edict.locked}
+                disabled={!!edict.active || !!edict.locked || !corporation.canManage}
                 className={[
                   'CorporateInterface__edictSwitch',
                   'StyleGuide__switch',
@@ -1261,6 +1435,7 @@ function ContractsTab(props: { corporation: Corporation }) {
             <button
               key={type}
               type="button"
+              disabled={!corporation.canManage}
               className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
               onClick={() =>
                 act('create_corporate_contract', {
@@ -1276,7 +1451,7 @@ function ContractsTab(props: { corporation: Corporation }) {
           {corporation.id !== 'government' && (
             <button
               type="button"
-              disabled={!corporation.taxDebt}
+              disabled={!corporation.taxDebt || !corporation.canManage}
               className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
               onClick={() =>
                 act('pay_corporate_taxes', {
@@ -1392,6 +1567,7 @@ function GovernmentTaxesTab(props: { corporation: Corporation }) {
                 />
                 <button
                   type="button"
+                  disabled={!corporation.canManage}
                   className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
                   onClick={() =>
                     act('charge_housing_rent', {
@@ -1543,6 +1719,125 @@ function ProfitPanel(props: { corporation: Corporation }) {
   );
 }
 
+function EmployeesPanel(props: { corporation: Corporation }) {
+  const { act } = useBackend<Data>();
+  const { corporation } = props;
+  const employees = corporation.employees || [];
+  const [wages, setWages] = useState<Record<string, string>>({});
+  const [roles, setRoles] = useState<Record<string, string>>({});
+
+  return (
+    <div className="StyleGuide__blockShell CorporateInterface__wide">
+      <div className="StyleGuide__blockTitle">Employees</div>
+      <div className="CorporateInterface__actions">
+        <button
+          type="button"
+          className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+          disabled={!corporation.canManage || !employees.length}
+          onClick={() =>
+            act('process_payroll', {
+              corporation_id: corporation.id,
+            })
+          }
+        >
+          <Icon name="coins" />
+          <span>Pay payroll</span>
+        </button>
+      </div>
+      {!employees.length ? (
+        <div className="StyleGuide__placeholder">Сотрудники не зарегистрированы.</div>
+      ) : (
+        <Table>
+          <Table.Row header>
+            <Table.Cell>Name</Table.Cell>
+            <Table.Cell>Role</Table.Cell>
+            <Table.Cell collapsing>Wage</Table.Cell>
+            <Table.Cell collapsing>Access</Table.Cell>
+            <Table.Cell collapsing>Last seen</Table.Cell>
+            <Table.Cell collapsing>Действия</Table.Cell>
+          </Table.Row>
+          {employees.map((employee, index) => (
+            <Table.Row key={`${employee.name}-${index}`}>
+              <Table.Cell>{employee.name}</Table.Cell>
+              <Table.Cell>
+                <input
+                  className="StyleGuide__textInput StyleGuide__textInput--cyan"
+                  disabled={!corporation.canManage}
+                  value={roles[employee.key] ?? employee.role ?? ''}
+                  onChange={(event) =>
+                    setRoles({
+                      ...roles,
+                      [employee.key]: event.currentTarget.value,
+                    })
+                  }
+                />
+              </Table.Cell>
+              <Table.Cell>
+                <input
+                  className="StyleGuide__textInput StyleGuide__textInput--cyan"
+                  disabled={!corporation.canManage}
+                  value={wages[employee.key] ?? String(employee.wage || 0)}
+                  onChange={(event) =>
+                    setWages({
+                      ...wages,
+                      [employee.key]: event.currentTarget.value,
+                    })
+                  }
+                />
+              </Table.Cell>
+              <Table.Cell>{employee.accessGranted ? 'yes' : 'no'}</Table.Cell>
+              <Table.Cell>{employee.lastSeen || '-'}</Table.Cell>
+              <Table.Cell>
+                <button
+                  type="button"
+                  className="StyleGuide__iconButton StyleGuide__iconButton--compact"
+                  disabled={!corporation.canManage}
+                  onClick={() =>
+                    act('set_employee_terms', {
+                      corporation_id: corporation.id,
+                      employee_key: employee.key,
+                      wage: Number(wages[employee.key] ?? (employee.wage || 0)),
+                      role: roles[employee.key] ?? employee.role,
+                    })
+                  }
+                >
+                  <Icon name="floppy-disk" />
+                </button>
+                <button
+                  type="button"
+                  className="StyleGuide__iconButton StyleGuide__iconButton--green StyleGuide__iconButton--compact"
+                  disabled={!corporation.canManage}
+                  onClick={() =>
+                    act('grant_employee_access', {
+                      corporation_id: corporation.id,
+                      employee_key: employee.key,
+                    })
+                  }
+                >
+                  <Icon name="key" />
+                </button>
+                <button
+                  type="button"
+                  className="StyleGuide__iconButton StyleGuide__iconButton--red StyleGuide__iconButton--compact"
+                  disabled={!corporation.canManage}
+                  onClick={() =>
+                    act('remove_employee', {
+                      corporation_id: corporation.id,
+                      employee_key: employee.key,
+                    })
+                  }
+                >
+                  <Icon name="trash" />
+                </button>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table>
+      )}
+    </div>
+  );
+}
+
 function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
   const { corporation } = props;
 
@@ -1559,6 +1854,7 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
           <Table.Cell className="CorporateInterface__moneyCell">Долг</Table.Cell>
           <Table.Cell className="CorporateInterface__moneyCell">Уплачено</Table.Cell>
           <Table.Cell className="CorporateInterface__centerCell">Просрочка</Table.Cell>
+          <Table.Cell className="CorporateInterface__actionsCell">Действия</Table.Cell>
         </Table.Row>
         {(corporation.taxMonitor?.businesses || []).map((business) => (
           <Table.Row key={business.id}>
@@ -1570,6 +1866,67 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
             <MoneyCell amount={business.taxPaid || 0} />
             <Table.Cell className="CorporateInterface__centerCell">
               {business.overdue ? 'да' : 'нет'}
+            </Table.Cell>
+            <Table.Cell className="CorporateInterface__actionsCell">
+              <button
+                type="button"
+                disabled={!corporation.canManage || !business.taxDebt}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('collect_tax_debts', {
+                    corporation_id: corporation.id,
+                    kind: 'business',
+                    target: String(business.id),
+                  })
+                }
+              >
+                <Icon name="coins" />
+              </button>
+              <button
+                type="button"
+                disabled={!corporation.canManage}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('government_sanction', {
+                    corporation_id: corporation.id,
+                    kind: 'business',
+                    target: String(business.id),
+                    sanction: 'fine',
+                  })
+                }
+              >
+                <Icon name="gavel" />
+              </button>
+              <button
+                type="button"
+                disabled={!corporation.canManage}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('government_sanction', {
+                    corporation_id: corporation.id,
+                    kind: 'business',
+                    target: String(business.id),
+                    sanction: 'audit',
+                  })
+                }
+              >
+                <Icon name="magnifying-glass-chart" />
+              </button>
+              <button
+                type="button"
+                disabled={!corporation.canManage}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('government_sanction', {
+                    corporation_id: corporation.id,
+                    kind: 'business',
+                    target: String(business.id),
+                    sanction: 'revoke',
+                  })
+                }
+              >
+                <Icon name="ban" />
+              </button>
             </Table.Cell>
           </Table.Row>
         ))}
@@ -1583,6 +1940,7 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
           <Table.Cell className="CorporateInterface__moneyCell">Уплачено</Table.Cell>
           <Table.Cell className="CorporateInterface__moneyCell">Баланс</Table.Cell>
           <Table.Cell className="CorporateInterface__centerCell">Просрочка</Table.Cell>
+          <Table.Cell className="CorporateInterface__actionsCell">Действия</Table.Cell>
         </Table.Row>
         {(corporation.taxMonitor?.corporations || []).map((entry) => (
           <Table.Row key={entry.id}>
@@ -1593,6 +1951,67 @@ function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
             <MoneyCell amount={entry.balance || 0} />
             <Table.Cell className="CorporateInterface__centerCell">
               {entry.overdue ? 'да' : 'нет'}
+            </Table.Cell>
+            <Table.Cell className="CorporateInterface__actionsCell">
+              <button
+                type="button"
+                disabled={!corporation.canManage || !entry.taxDebt}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('collect_tax_debts', {
+                    corporation_id: corporation.id,
+                    kind: 'corporation',
+                    target: entry.id,
+                  })
+                }
+              >
+                <Icon name="coins" />
+              </button>
+              <button
+                type="button"
+                disabled={!corporation.canManage}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('government_sanction', {
+                    corporation_id: corporation.id,
+                    kind: 'corporation',
+                    target: entry.id,
+                    sanction: 'fine',
+                  })
+                }
+              >
+                <Icon name="gavel" />
+              </button>
+              <button
+                type="button"
+                disabled={!corporation.canManage}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('government_sanction', {
+                    corporation_id: corporation.id,
+                    kind: 'corporation',
+                    target: entry.id,
+                    sanction: 'audit',
+                  })
+                }
+              >
+                <Icon name="magnifying-glass-chart" />
+              </button>
+              <button
+                type="button"
+                disabled={!corporation.canManage}
+                className="StyleGuide__iconButton"
+                onClick={() =>
+                  act('government_sanction', {
+                    corporation_id: corporation.id,
+                    kind: 'corporation',
+                    target: entry.id,
+                    sanction: 'suspend',
+                  })
+                }
+              >
+                <Icon name="ban" />
+              </button>
             </Table.Cell>
           </Table.Row>
         ))}

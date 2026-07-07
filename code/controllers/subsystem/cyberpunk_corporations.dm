@@ -21,6 +21,12 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	var/list/cyberpunk_business_tax_rates = list()
 	/// Round-local apartment rent fees. Keyed by apartment area type text, stored as flat credits.
 	var/list/cyberpunk_housing_rent_by_area = list()
+	/// Round-local city council emergency votes. Keyed by voter identity.
+	var/list/cyberpunk_government_emergency_votes = list()
+	/// Whether government emergency mode is currently active.
+	var/cyberpunk_government_emergency_active = FALSE
+	/// Round-local emergency directive text.
+	var/cyberpunk_government_directive = ""
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /datum/controller/subsystem/cyberpunk_corporations/Initialize()
@@ -37,6 +43,12 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	cyberpunk_business_default_tax_rate = SScyberpunk_corporations.cyberpunk_business_default_tax_rate
 	cyberpunk_business_tax_rates = SScyberpunk_corporations.cyberpunk_business_tax_rates
 	cyberpunk_housing_rent_by_area = SScyberpunk_corporations.cyberpunk_housing_rent_by_area
+	cyberpunk_government_emergency_votes = SScyberpunk_corporations.cyberpunk_government_emergency_votes
+	cyberpunk_government_emergency_active = SScyberpunk_corporations.cyberpunk_government_emergency_active
+	cyberpunk_government_directive = SScyberpunk_corporations.cyberpunk_government_directive
 
 /datum/controller/subsystem/cyberpunk_corporations/fire(resumed = 0)
 	ensure_cyberpunk_corporations_seeded()
+	for(var/corporation_id in cyberpunk_corporations)
+		var/datum/cyberpunk_corporation/corporation = cyberpunk_corporations[corporation_id]
+		corporation?.process_payroll()

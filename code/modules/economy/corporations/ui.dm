@@ -5,6 +5,7 @@
 	var/list/corporations = list()
 	var/locked_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(locked_corporation_id)
 	var/selected_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(selected_corporation_id)
+	var/include_hidden = !!locked_id
 	if(locked_id && selected_id != locked_id)
 		selected_id = locked_id
 	var/datum/cyberpunk_corporation/selected_corporation
@@ -12,7 +13,9 @@
 		if(locked_id && corporation_id != locked_id)
 			continue
 		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.cyberpunk_corporations[corporation_id]
-		var/list/corporation_data = corporation.to_ui_data(TRUE)
+		if(corporation.hidden && !include_hidden && !corporation.can_manage(user) && !corporation.can_vote_council(user))
+			continue
+		var/list/corporation_data = corporation.to_ui_data(include_hidden || corporation.can_manage(user) || corporation.can_vote_council(user), user)
 		if(!corporation_data)
 			continue
 		corporations += list(corporation_data)
@@ -26,15 +29,65 @@
 		"accountName" = user_account?.account_holder,
 		"accountBalance" = user_account?.account_balance || 0,
 		"corporations" = corporations,
-		"selected" = selected_corporation?.to_ui_data(TRUE),
+		"selected" = selected_corporation?.to_ui_data(include_hidden || selected_corporation.can_manage(user) || selected_corporation.can_vote_council(user), user),
 	)
 
 /proc/cyberpunk_corporations_ui_act(action, list/params, mob/user)
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(params && params["corporation_id"])
 	if(!corporation)
 		return FALSE
+	var/manage_action = action in list(
+		"unlock_technology",
+		"choose_edict",
+		"convert_data",
+		"exchange_research",
+		"toggle_service_auto",
+		"complete_service_request",
+		"cancel_service_request",
+		"create_corporate_contract",
+		"pay_corporate_taxes",
+		"government_transfer",
+		"set_tax_setting",
+		"charge_housing_rent",
+		"invest_foreign_tech",
+		"test_activity",
+		"government_emergency_vote",
+		"government_end_emergency",
+		"government_directive",
+		"set_employee_terms",
+		"remove_employee",
+		"grant_employee_access",
+		"process_payroll",
+		"outsource_service_request",
+		"collect_tax_debts",
+		"government_sanction",
+	)
+	if(action == "government_emergency_vote" && !corporation.can_vote_council(user))
+		to_chat(user, span_warning("Council access denied."))
+		return TRUE
+	if(manage_action && action != "government_emergency_vote" && !corporation.can_manage(user))
+		to_chat(user, span_warning("Corporate access denied."))
+		return TRUE
+	if(manage_action && action != "government_emergency_vote")
+		var/mob/living/living_manager = user
+		if(istype(living_manager))
+			corporation.register_employee(living_manager, corporation.id == CYBERPUNK_CORP_GOVERNMENT ? "council operator" : "corporate operator")
 	switch(action)
 		if("select")
+			return TRUE
+		if("subscribe")
+			var/mob/living/living_user = user
+			if(istype(living_user) && corporation.subscribe(living_user))
+				to_chat(user, span_notice("Subscription registered."))
+			else
+				to_chat(user, span_warning("Unable to register subscription."))
+			return TRUE
+		if("request_service")
+			var/mob/living/living_user = user
+			if(istype(living_user) && corporation.request_service(living_user, params["service_id"]))
+				to_chat(user, span_notice("Service request sent."))
+			else
+				to_chat(user, span_warning("Unable to request this service."))
 			return TRUE
 		if("unlock_technology")
 			if(corporation.unlock_technology(params["technology_id"]))
@@ -78,6 +131,13 @@
 			else
 				to_chat(user, span_warning("Unable to cancel this service request."))
 			return TRUE
+		if("outsource_service_request")
+			var/datum/cyberpunk_corporate_service_request/request = SScyberpunk_corporations.get_cyberpunk_corporate_service_request(text2num(params["request_id"]))
+			if(request?.corporation_id == corporation.id && request.outsource())
+				to_chat(user, span_notice("Service request outsourced as a public contract."))
+			else
+				to_chat(user, span_warning("Unable to outsource this service request."))
+			return TRUE
 		if("create_corporate_contract")
 			var/datum/cyberpunk_contract/contract = corporation.create_corporate_contract(params["contract_type"])
 			if(contract)
@@ -117,6 +177,45 @@
 			else
 				to_chat(user, span_warning("No housing rent was charged."))
 			return TRUE
+		if("collect_tax_debts")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			var/list/result = SScyberpunk_corporations.collect_cyberpunk_tax_debts(params["kind"], params["target"], user?.name || "government terminal")
+			if(result && result["total"])
+				to_chat(user, span_notice("Collected [result["total"]][MONEY_SYMBOL] from [result["count"]] tax debtor(s)."))
+			else
+				to_chat(user, span_warning("No tax debt was collected."))
+			return TRUE
+		if("government_sanction")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			if(SScyberpunk_corporations.apply_cyberpunk_government_sanction(params["kind"], params["target"], params["sanction"], user?.name || "government terminal"))
+				to_chat(user, span_notice("Government sanction applied."))
+			else
+				to_chat(user, span_warning("Unable to apply this sanction."))
+			return TRUE
+		if("government_emergency_vote")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			if(SScyberpunk_corporations.cast_cyberpunk_government_emergency_vote(user, params["vote"]))
+				to_chat(user, span_notice("Emergency vote recorded."))
+			else
+				to_chat(user, span_warning("Unable to record emergency vote."))
+			return TRUE
+		if("government_end_emergency")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			SScyberpunk_corporations.end_cyberpunk_government_emergency(user?.name || "government terminal")
+			to_chat(user, span_notice("Emergency mode ended."))
+			return TRUE
+		if("government_directive")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+				return FALSE
+			if(SScyberpunk_corporations.set_cyberpunk_government_directive(params["text"], user?.name || "government terminal"))
+				to_chat(user, span_notice("Government directive updated."))
+			else
+				to_chat(user, span_warning("Unable to update directive."))
+			return TRUE
 		if("invest_foreign_tech")
 			var/points = max(CYBERPUNK_CORP_RESEARCH_TO_FOREIGN_PROGRESS_COST, round(text2num(params["points"]) || CYBERPUNK_CORP_RESEARCH_TO_FOREIGN_PROGRESS_COST))
 			if(corporation.invest_research_into_foreign_technology(params["source"], params["technology_id"], points))
@@ -129,5 +228,29 @@
 			var/amount = clamp(round(text2num(params["amount"]) || 10), 1, 1000)
 			var/test_source_name = user?.name || "system"
 			corporation.add_data(data_type, amount, "[test_source_name] test activity")
+			return TRUE
+		if("set_employee_terms")
+			if(corporation.set_employee_terms(params["employee_key"], text2num(params["wage"]), params["role"]))
+				to_chat(user, span_notice("Employee terms updated."))
+			else
+				to_chat(user, span_warning("Unable to update employee terms."))
+			return TRUE
+		if("remove_employee")
+			if(corporation.remove_employee(params["employee_key"]))
+				to_chat(user, span_notice("Employee removed."))
+			else
+				to_chat(user, span_warning("Unable to remove employee."))
+			return TRUE
+		if("grant_employee_access")
+			if(corporation.grant_employee_access(params["employee_key"]))
+				to_chat(user, span_notice("Employee access granted."))
+			else
+				to_chat(user, span_warning("Employee must be online to receive neural access."))
+			return TRUE
+		if("process_payroll")
+			if(corporation.process_payroll(TRUE))
+				to_chat(user, span_notice("Corporate payroll processed."))
+			else
+				to_chat(user, span_warning("No corporate payroll was paid."))
 			return TRUE
 	return FALSE

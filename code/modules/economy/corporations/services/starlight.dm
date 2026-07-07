@@ -1,13 +1,59 @@
 //CYBERPUNK CORPORATIONS - Starlight service completion.
+/obj/item/flashlight/starlight_beacon
+	name = "Starlight Beacon lamp"
+	desc = "A compact Starlight courier lamp with route-marker firmware."
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_quality = 116
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_base_price = 125
+
+/obj/item/radio/starlight_burst
+	name = "Starlight Burst radio"
+	desc = "A Starlight-branded radio for short logistics confirmations."
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_quality = 115
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_base_price = 150
+
+/obj/item/multitool/starlight_pathfinder
+	name = "Starlight Pathfinder multitool"
+	desc = "A Starlight routing multitool used by premium courier crews."
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_quality = 122
+	cyberpunk_rarity = "rare"
+	cyberpunk_base_price = 260
+
+/obj/item/crowbar/starlight_quickjack
+	name = "Starlight Quickjack"
+	desc = "A lightweight courier crowbar sold as a route recovery tool."
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_quality = 114
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_base_price = 120
+
+/proc/cyberpunk_prepare_starlight_package(obj/item/storage/box/package, subscribed = FALSE)
+	if(!package)
+		return FALSE
+	new /obj/item/flashlight/starlight_beacon(package)
+	new /obj/item/radio/starlight_burst(package)
+	new /obj/item/crowbar/starlight_quickjack(package)
+	new /obj/item/stack/sheet/glass(package)
+	if(subscribed)
+		new /obj/item/multitool/starlight_pathfinder(package)
+		new /obj/item/stack/sheet/iron/five(package)
+	return TRUE
+
 /proc/cyberpunk_complete_starlight_service(datum/weakref/user_ref, corporation_id, service_id)
 	var/mob/living/user = user_ref?.resolve()
 	if(!user || QDELETED(user))
 		return FALSE
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
+	cyberpunk_spawn_service_agent(corporation_id, service_id, user, corporation?.get_service_label(service_id))
 	switch(service_id)
 		if("delivery")
 			var/obj/item/storage/box/package = new(get_turf(user))
 			package.name = "Starlight delivery pack"
+			cyberpunk_prepare_starlight_package(package, corporation?.is_subscribed(user))
 			if(hascall(package, "set_cyberpunk_manufacturer"))
 				call(package, "set_cyberpunk_manufacturer")("Starlight")
 			if(!user.put_in_hands(package))

@@ -93,3 +93,39 @@
 	addtimer(CALLBACK(contract, TYPE_PROC_REF(/datum/cyberpunk_contract, timeout_check)), contract.due_time - world.time, TIMER_STOPPABLE)
 	add_history("created corporate contract #[contract.id] for [payment][MONEY_SYMBOL]")
 	return contract
+
+/datum/cyberpunk_corporation/proc/create_service_outsource_contract(datum/cyberpunk_corporate_service_request/request)
+	if(hidden || !request || request.status != CYBERPUNK_CORP_SERVICE_CREATED)
+		return null
+	var/payment = max(CYBERPUNK_CORP_OUTSOURCE_PAYMENT, round((request.cost || 0) * 1.5))
+	if(!charge_funds(payment, "outsourced service escrow"))
+		add_history("failed to outsource service request #[request.id]: insufficient budget")
+		return null
+	var/datum/cyberpunk_contract/contract = new
+	contract.id = SSeconomy.next_cyberpunk_contract_id++
+	contract.title = "[name] outsourced service #[request.id]"
+	contract.description = "Complete or support corporate service '[request.service_label || request.service_id]' for [request.customer_name]."
+	contract.contract_type = CYBERPUNK_CONTRACT_GUARD
+	contract.target_text = request.service_label || request.service_id
+	contract.creator_name = name
+	contract.creator_character_key = "corp:[id]"
+	contract.creator_account_id = account_id
+	contract.payment = payment
+	contract.deposit = 0
+	contract.penalty = round(payment * 0.25)
+	contract.escrow_payment = payment
+	contract.legal = TRUE
+	contract.public_contract = TRUE
+	contract.source_corporation = id
+	contract.required_amount = 1
+	contract.required_percent = 75
+	contract.direct_access_code = uppertext(random_string(8, GLOB.hex_characters))
+	contract.due_time = world.time + 45 MINUTES
+	contract.created_at = world.time
+	contract.setup_default_condition()
+	contract.add_history("outsourced from corporate service request #[request.id]")
+	SSeconomy.cyberpunk_contracts["[contract.id]"] = contract
+	addtimer(CALLBACK(contract, TYPE_PROC_REF(/datum/cyberpunk_contract, timeout_check)), contract.due_time - world.time, TIMER_STOPPABLE)
+	request.add_history("outsourced as contract #[contract.id]")
+	add_history("outsourced service request #[request.id] as contract #[contract.id]")
+	return contract

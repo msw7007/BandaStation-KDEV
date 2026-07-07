@@ -90,6 +90,8 @@
 			return "corp:ryaznov"
 		if("starlight")
 			return "corp:starlight"
+		if("government", "gov")
+			return "city:council"
 	return null
 
 /proc/cyberpunk_is_corporate_access(access_id)

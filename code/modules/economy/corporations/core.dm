@@ -14,6 +14,11 @@
 	var/tax_debt = 0
 	var/tax_paid = 0
 	var/service_auto_enabled = TRUE
+	var/last_payroll_at = 0
+	var/agent_pool = 2
+	var/agents_available = 2
+	var/agent_recovery_time = 5 MINUTES
+	var/list/employees = list()
 	var/list/subsidiaries = list()
 	var/list/research_data = list()
 	var/list/unlocked_technologies = list()
@@ -75,6 +80,8 @@
 			direction = "Taxes, city stability, laws, emergency modes, police support."
 			combat_doctrine = "Police operations, cameras, emergency armories, council voting keys."
 			hidden = TRUE
+			agent_pool = 0
+			agents_available = 0
 			subsidiaries = list(
 				new /datum/cyberpunk_corporate_subsidiary(id, "gov_council", "Council", "City Council", "Votes, laws, emergency decrees.", "civic", 1, 1, 1),
 				new /datum/cyberpunk_corporate_subsidiary(id, "gov_police", "Police", "City Police", "Public order and emergency enforcement.", "security", 1, 1, 1),
@@ -96,6 +103,193 @@
 
 /datum/cyberpunk_corporation/proc/add_history(message)
 	LAZYADD(history, "[round_timestamp()] - [message]")
+
+/datum/cyberpunk_corporation/proc/get_access_id()
+	return cyberpunk_corporation_access_id(id)
+
+/datum/cyberpunk_corporation/proc/can_manage(mob/user)
+	var/mob/living/living_user = user
+	if(!istype(living_user))
+		return FALSE
+	if(id == CYBERPUNK_CORP_GOVERNMENT)
+		return living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("city:council")
+	var/access_id = get_access_id()
+	return !!(access_id && living_user.has_cyberpunk_crypto_access(access_id))
+
+/datum/cyberpunk_corporation/proc/can_vote_council(mob/user)
+	var/mob/living/living_user = user
+	if(!istype(living_user) || id != CYBERPUNK_CORP_GOVERNMENT)
+		return FALSE
+	if(living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("city:council") || living_user.has_cyberpunk_crypto_access("corp:heads"))
+		return TRUE
+	for(var/corporation_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+		if(living_user.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id)))
+			return TRUE
+	return FALSE
+
+/datum/cyberpunk_corporation/proc/register_employee(mob/living/user, role = "employee", wage = null)
+	if(!user)
+		return FALSE
+	var/datum/bank_account/account = user.get_bank_account()
+	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(user, account)
+	if(!character_key)
+		return FALSE
+	var/list/employee = employees[character_key]
+	if(!employee)
+		employee = list(
+			"key" = character_key,
+			"name" = user.real_name || user.name,
+			"role" = role,
+			"wage" = isnull(wage) ? 0 : max(0, round(wage)),
+			"accountId" = account?.account_id,
+			"lastSeen" = round_timestamp(),
+			"accessGranted" = FALSE,
+		)
+		employees[character_key] = employee
+	else
+		employee["name"] = user.real_name || user.name
+		employee["role"] = role || employee["role"]
+		if(!isnull(wage))
+			employee["wage"] = max(0, round(wage))
+		employee["accountId"] = account?.account_id || employee["accountId"]
+		employee["lastSeen"] = round_timestamp()
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/find_employee_account(employee_key)
+	var/list/employee = employees[employee_key]
+	if(!employee)
+		return null
+	var/account_id = employee["accountId"]
+	if(account_id)
+		var/datum/bank_account/stored_account = SSeconomy.bank_accounts_by_id["[account_id]"]
+		if(stored_account)
+			return stored_account
+	for(var/mob/living/person as anything in GLOB.player_list)
+		var/datum/bank_account/account = person.get_bank_account()
+		if(SSeconomy.get_cyberpunk_contract_character_key(person, account) == employee_key)
+			employee["accountId"] = account?.account_id
+			employee["lastSeen"] = round_timestamp()
+			return account
+	return null
+
+/datum/cyberpunk_corporation/proc/set_employee_terms(employee_key, wage = null, role = null)
+	employee_key = trim("[employee_key]")
+	var/list/employee = employees[employee_key]
+	if(!employee)
+		return FALSE
+	if(!isnull(wage))
+		employee["wage"] = max(0, round(wage))
+	if(!isnull(role))
+		employee["role"] = reject_bad_text(role, max_length = 48, ascii_only = FALSE) || employee["role"]
+	add_history("employee terms updated for [employee["name"]]: [employee["role"]], [employee["wage"] || 0][MONEY_SYMBOL]")
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/remove_employee(employee_key)
+	employee_key = trim("[employee_key]")
+	var/list/employee = employees[employee_key]
+	if(!employee)
+		return FALSE
+	add_history("employee removed: [employee["name"]]")
+	employees -= employee_key
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/grant_employee_access(employee_key)
+	employee_key = trim("[employee_key]")
+	var/list/employee = employees[employee_key]
+	if(!employee)
+		return FALSE
+	var/access_id = get_access_id()
+	if(!access_id)
+		return FALSE
+	var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
+	if(!access_key)
+		return FALSE
+	for(var/mob/living/person as anything in GLOB.player_list)
+		var/datum/bank_account/account = person.get_bank_account()
+		if(SSeconomy.get_cyberpunk_contract_character_key(person, account) != employee_key)
+			continue
+		person.remember_cyberpunk_crypto_key(access_key)
+		employee["accessGranted"] = TRUE
+		employee["lastSeen"] = round_timestamp()
+		add_history("corporate access granted to [employee["name"]]")
+		to_chat(person, span_notice("[name] corporate access key has been loaded into your neural interface."))
+		return TRUE
+	return FALSE
+
+/datum/cyberpunk_corporation/proc/process_payroll(force = FALSE)
+	if(id == CYBERPUNK_CORP_GOVERNMENT)
+		return FALSE
+	if(!force && world.time < last_payroll_at + CYBERPUNK_CORP_PAYROLL_INTERVAL)
+		return FALSE
+	last_payroll_at = world.time
+	if(!length(employees))
+		return FALSE
+	var/datum/bank_account/corporation_account = get_account()
+	if(!corporation_account)
+		return FALSE
+	var/paid_total = 0
+	var/paid_count = 0
+	for(var/employee_key in employees)
+		var/list/employee = employees[employee_key]
+		var/wage = max(0, round(employee["wage"] || 0))
+		if(wage <= 0)
+			continue
+		var/datum/bank_account/employee_account = find_employee_account(employee_key)
+		if(!employee_account)
+			add_history("payroll skipped [employee["name"]]: no bank account")
+			continue
+		if(!employee_account.transfer_money(corporation_account, wage, "Corporate payroll: [name]"))
+			add_history("payroll failed [employee["name"]]: insufficient corporate funds")
+			continue
+		paid_total += wage
+		paid_count++
+		employee_account.bank_card_talk("Payroll received from [name]: [wage][MONEY_SYMBOL].")
+	if(paid_total)
+		record_profit_entry("corporate payroll", -paid_total, -paid_total, 0, "expense")
+		add_history("payroll paid [paid_total][MONEY_SYMBOL] to [paid_count] employee(s)")
+		log_econ("[name] paid corporate payroll [paid_total][MONEY_NAME] to [paid_count] employee(s).")
+	return paid_total > 0
+
+/datum/cyberpunk_corporation/proc/get_employee_records_ui()
+	var/list/records = list()
+	for(var/character_key in employees)
+		var/list/record = employees[character_key]
+		if(islist(record))
+			records += list(record.Copy())
+	return records
+
+/datum/cyberpunk_corporation/proc/update_agent_pool()
+	if(id == CYBERPUNK_CORP_GOVERNMENT)
+		agent_pool = 0
+		agents_available = 0
+		return
+	var/new_pool = clamp(2 + level + round(influence / 75), 2, 8)
+	var/used_agents = max(0, agent_pool - agents_available)
+	agent_pool = new_pool
+	agents_available = clamp(new_pool - used_agents, 0, new_pool)
+
+/datum/cyberpunk_corporation/proc/restore_agent(source = "agent returned")
+	if(id == CYBERPUNK_CORP_GOVERNMENT)
+		return FALSE
+	update_agent_pool()
+	if(agents_available >= agent_pool)
+		return FALSE
+	agents_available++
+	add_history("[source]: agent resource restored ([agents_available]/[agent_pool])")
+	SStgui.update_uis(src)
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/dispatch_agent(source = "corporate operation", recovery_time = null)
+	if(id == CYBERPUNK_CORP_GOVERNMENT)
+		return FALSE
+	update_agent_pool()
+	if(agents_available <= 0)
+		add_history("[source]: no free agents")
+		return FALSE
+	agents_available--
+	add_history("[source]: agent dispatched ([agents_available]/[agent_pool])")
+	addtimer(CALLBACK(src, PROC_REF(restore_agent), source), recovery_time || agent_recovery_time, TIMER_STOPPABLE)
+	return TRUE
 
 /datum/cyberpunk_corporation/proc/record_profit_entry(source, gross_amount, net_amount, tax_amount = 0, kind = "income")
 	gross_amount = round(gross_amount)
@@ -291,6 +485,7 @@
 	research_data[data_type] = (research_data[data_type] || 0) + amount
 	research_points += amount
 	experience += amount
+	influence += max(1, round(amount / 5))
 	apply_technology_discounts(data_type, amount, source)
 	update_level()
 	add_history("[source]: +[amount] [data_type] data, +[amount] RP")
@@ -311,6 +506,8 @@
 	var/net_amount = amount - tax
 	if(net_amount)
 		account.adjust_money(net_amount, "Corporate funds: [source]")
+	if(amount > 0)
+		influence += max(1, round(amount / 250))
 	record_profit_entry(source, amount, net_amount, tax, "income")
 	var/amount_prefix = amount >= 0 ? "+" : ""
 	add_history("[source]: [amount_prefix][amount][MONEY_SYMBOL]")
@@ -351,6 +548,7 @@
 
 /datum/cyberpunk_corporation/proc/update_level()
 	level = clamp(1 + FLOOR(experience / CYBERPUNK_CORP_LEVEL_STEP, 1), 1, 5)
+	update_agent_pool()
 
 /datum/cyberpunk_corporation/proc/exchange_data_to_research(data_type, amount)
 	data_type = lowertext(trim("[data_type]")) || "general"
@@ -588,7 +786,7 @@
 	add_funds(cost, "service: [service_id]")
 	add_data(get_primary_data_type(), is_subscribed(user) ? 4 : 2, "service request")
 	add_history("[user.real_name || user.name] requested [service_id] service")
-	if(!service_auto_enabled)
+	if(!service_auto_enabled || !dispatch_agent("service: [service_id]", 3 MINUTES))
 		var/datum/cyberpunk_corporate_service_request/request = SScyberpunk_corporations.create_cyberpunk_corporate_service_request(src, user, service_id, cost)
 		if(request)
 			to_chat(user, span_notice("[name] accepted service request #[request.id]. It is queued for corporate handling."))
@@ -633,9 +831,10 @@
 			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_starlight_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
 	return TRUE
 
-/datum/cyberpunk_corporation/proc/to_ui_data(include_hidden = FALSE)
+/datum/cyberpunk_corporation/proc/to_ui_data(include_hidden = FALSE, mob/user = null)
 	if(hidden && !include_hidden)
 		return null
+	update_agent_pool()
 	var/datum/bank_account/account = ensure_account()
 	var/list/data_records = list()
 	for(var/data_type in research_data)
@@ -663,6 +862,8 @@
 		"direction" = direction,
 		"combatDoctrine" = combat_doctrine,
 		"hidden" = hidden,
+		"canManage" = can_manage(user),
+		"canCouncilVote" = can_vote_council(user),
 		"subsidiaries" = subsidiary_records,
 		"level" = level,
 		"experience" = experience,
@@ -675,6 +876,9 @@
 		"taxDebt" = tax_debt,
 		"taxPaid" = tax_paid,
 		"serviceAutoEnabled" = service_auto_enabled,
+		"agentPool" = agent_pool,
+		"agentsAvailable" = agents_available,
+		"employees" = get_employee_records_ui(),
 		"researchData" = is_government ? list() : data_records,
 		"technologies" = is_government ? list() : get_cyberpunk_technology_nodes_ui(),
 		"edicts" = is_government ? list() : edict_records,
