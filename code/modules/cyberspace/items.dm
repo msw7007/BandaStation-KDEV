@@ -60,6 +60,41 @@
 	playsound(src, 'sound/effects/magic/blink.ogg', 50, TRUE)
 	do_sparks(3, TRUE, loc, spark_type = /datum/effect_system/basic/spark_spread/quantum)
 
+/obj/structure/cyberspace_ice_bath
+	name = "neural ice bath"
+	desc = "A chilled bath for lowering neural-interface overheat while the body is connected to cyberspace."
+	icon = 'icons/obj/watercloset.dmi'
+	icon_state = "sink_alt"
+	density = FALSE
+	anchored = TRUE
+	layer = ABOVE_OBJ_LAYER
+
+/obj/structure/cyberspace_ice_bath/Initialize(mapload)
+	. = ..()
+	create_reagents(CYBERSPACE_ICE_BATH_CAPACITY, NO_REACT)
+
+/obj/structure/cyberspace_ice_bath/examine(mob/user)
+	. = ..()
+	var/ice_amount = reagents?.get_reagent_amount(/datum/reagent/consumable/ice) || 0
+	. += span_notice("It contains [round(ice_amount, 0.1)]/[CYBERSPACE_ICE_BATH_CAPACITY] units of ice.")
+	if(ice_amount < CYBERSPACE_ICE_BATH_MIN_ICE)
+		. += span_warning("It needs at least [CYBERSPACE_ICE_BATH_MIN_ICE] units of ice to cool a connected neural interface.")
+
+/obj/structure/cyberspace_ice_bath/attackby(obj/item/attacking_item, mob/user, list/modifiers, list/attack_modifiers)
+	if(attacking_item.reagents?.has_reagent(/datum/reagent/consumable/ice))
+		var/free_capacity = reagents.maximum_volume - reagents.total_volume
+		if(free_capacity <= 0)
+			to_chat(user, span_warning("[src] is already full."))
+			return TRUE
+		var/transferred = attacking_item.reagents.trans_to(src, min(30, free_capacity), target_id = /datum/reagent/consumable/ice, transferred_by = user)
+		if(transferred)
+			to_chat(user, span_notice("You add ice to [src]."))
+			return TRUE
+	return ..()
+
+/obj/structure/cyberspace_ice_bath/proc/has_cooling_ice()
+	return reagents?.has_reagent(/datum/reagent/consumable/ice, CYBERSPACE_ICE_BATH_MIN_ICE)
+
 /proc/get_redeemed_veil_reward_keys()
 	var/static/list/redeemed_keys = list()
 	return redeemed_keys
@@ -237,6 +272,12 @@
 /obj/item/cyberspace_engram_chip/proc/get_bound_body()
 	return bound_body_ref?.resolve()
 
+/obj/item/cyberspace_engram_chip/Destroy(force)
+	var/mob/living/bound_body = get_bound_body()
+	bound_body?.cyberspace_session?.on_engram_anchor_destroyed(src)
+	bound_body_ref = null
+	return ..()
+
 /obj/item/cyberspace_engram_chip/proc/bind_body(mob/living/target, mob/user)
 	if(!istype(target))
 		return FALSE
@@ -299,6 +340,8 @@
 	var/obj/item/cyberspace_engram_chip/inserted_chip
 
 /obj/machinery/engrammator/Destroy(force)
+	var/mob/living/bound_body = get_bound_body()
+	bound_body?.cyberspace_session?.on_engram_anchor_destroyed(src)
 	bound_body_ref = null
 	QDEL_NULL(inserted_chip)
 	return ..()
@@ -479,6 +522,7 @@
 	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
 	power *= synergy
 	power *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_recycling", "ryaznov_overload_loop", "starlight_suppression_loop"), 1, 1.1)
+	power *= caster?.cyberspace_session?.get_free_engram_power_multiplier() || 1
 	if(physical_world)
 		power *= CYBER_DEMON_PHYSICAL_WORLD_MULTIPLIER
 	var/master_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 6, "value_1") || 0
@@ -554,6 +598,12 @@
 	var/obj/effect/cyberspace_object_trace/trace = target
 	if(istype(trace))
 		return trace.node
+	return null
+
+/datum/cyberspace_demon/proc/get_target_node_object(atom/target)
+	var/obj/effect/cyberspace_object_trace/trace = target
+	if(istype(trace))
+		return trace.linked_object_ref?.resolve()
 	return null
 
 /datum/cyberspace_demon/proc/can_compile(mob/living/user, obj/item/clothing/gloves/cyberdeck/deck, obj/machinery/cyberdemon_terminal/terminal)
@@ -986,9 +1036,10 @@
 	var/absolute_power = abs(current_power)
 	var/effect_duration = duration
 	var/datum/cyberspace_node/target_node = get_target_node(target)
+	var/atom/movable/target_node_object = get_target_node_object(target)
 	var/target_node_name = target_node?.physical_area?.name || "node"
 	if(target_node && effect == CYBER_DEMON_EFFECT_PROTECTION)
-		var/datum/cyber_ice/protection_ice = target_node.get_ice()
+		var/datum/cyber_ice/protection_ice = target_node_object ? target_node.get_object_ice(target_node_object) : target_node.get_ice()
 		if(!protection_ice)
 			return FALSE
 		var/old_reserve = protection_ice.current_reserve
@@ -997,7 +1048,7 @@
 			to_chat(caster, span_notice("[demon_name] changes [target_node_name] protection by [protection_ice.current_reserve - old_reserve]. Reserve: [protection_ice.current_reserve]/[protection_ice.get_max_reserve()]."))
 		return TRUE
 	if(target_node && (effect in list(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX)))
-		var/datum/cyber_ice/ice = target_node.get_ice()
+		var/datum/cyber_ice/ice = target_node_object ? target_node.get_object_ice(target_node_object) : target_node.get_ice()
 		if(!ice)
 			return FALSE
 		ice.apply_reserve_damage(max(1, absolute_power))
@@ -1005,7 +1056,7 @@
 			to_chat(caster, span_notice("[demon_name] converts into network damage and lowers [target_node_name] protection by [max(1, absolute_power)]."))
 		return TRUE
 	if(target_node && (effect in list(CYBER_DEMON_EFFECT_BUFF, CYBER_DEMON_EFFECT_DEBUFF)))
-		var/datum/cyber_ice/network_ice = target_node.get_ice()
+		var/datum/cyber_ice/network_ice = target_node_object ? target_node.get_object_ice(target_node_object) : target_node.get_ice()
 		if(!network_ice)
 			return FALSE
 		var/network_delta = max(1, absolute_power * 2)

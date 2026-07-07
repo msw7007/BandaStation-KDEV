@@ -16,6 +16,8 @@
 	var/reserve_points = NEURAL_INTERFACE_DEFAULT_ICE_STAT
 	/// Current reserve left before this ice is considered breached.
 	var/current_reserve
+	/// Optional max reserve for object ICE. Neural and aggregate node ICE use point-derived reserve.
+	var/max_reserve_override
 	/// Whether this ice has raised an alarm during the current attack window.
 	var/alarm_triggered = FALSE
 
@@ -81,6 +83,8 @@
 	return clamp(round(sqrt(max(1, object_count)) * 1.5) - hacking_skill, NEURAL_INTERFACE_MIN_SEQUENCE, min(NEURAL_INTERFACE_MAX_SEQUENCE, max_cells))
 
 /datum/cyber_ice/proc/get_max_reserve()
+	if(!isnull(max_reserve_override))
+		return max(0, round(max_reserve_override))
 	return clamp(NEURAL_INTERFACE_BASE_RESERVE + (get_level() * NEURAL_INTERFACE_RESERVE_PER_LEVEL), 0, NEURAL_INTERFACE_MAX_RESERVE)
 
 /datum/cyber_ice/proc/set_distribution(timer, size, sequence, reserve, max_points = 0)
@@ -133,15 +137,48 @@
 	if(alarm_triggered)
 		return FALSE
 	alarm_triggered = TRUE
+	var/list/detection_context = get_cyberspace_detection_context(source, target)
 	if(source)
-		to_chat(source, span_warning("ICE alarm triggered: [reason]."))
+		to_chat(source, span_warning("ICE alarm triggered: [reason]. [detection_context["summary"]]"))
 	if(target)
-		target.visible_message(span_warning("[target] reports: intrusion detected."))
+		target.visible_message(span_warning("[target] reports: intrusion detected. [detection_context["summary"]]"))
 	if(source && target)
 		var/atom/beam_source = source.cyberspace_session?.avatar || source
-		beam_source.visible_message(span_danger("A red intrusion ping links [beam_source] to [target]."), span_danger("A red intrusion ping exposes your connection to [target]."))
-		beam_source.Beam(target, icon_state = "rped_upgrade", time = 4 SECONDS, beam_color = "#ff334a")
+		beam_source.visible_message(span_danger("A red intrusion ping links [beam_source] to [target]."), span_danger("A red intrusion ping exposes your connection to [target]. Signal strength: [detection_context["signal"]]%."))
+		beam_source.Beam(target, icon_state = "rped_upgrade", time = detection_context["duration"], beam_color = detection_context["color"])
 	return TRUE
+
+/proc/get_cyberspace_detection_context(mob/living/source, atom/target)
+	var/list/context = list(
+		"summary" = "No nearby sensors amplify it.",
+		"signal" = 25,
+		"duration" = 2 SECONDS,
+		"color" = "#ff8892",
+	)
+	if(!target)
+		return context
+	var/sensor_count = 0
+	var/owner_count = 0
+	for(var/obj/machinery/camera/camera in range(CYBERSPACE_DETECTION_SENSOR_RANGE, target))
+		if(camera.can_use())
+			sensor_count++
+	for(var/mob/living/nearby_living in range(CYBERSPACE_DETECTION_SENSOR_RANGE, target))
+		if(nearby_living.has_neural_implant())
+			owner_count++
+	var/hacking_skill = source?.get_cyber_hacking_skill() || 0
+	var/signal = clamp(25 + (sensor_count * 20) + (owner_count * 15) - (hacking_skill * 10), 10, 100)
+	context["signal"] = signal
+	context["duration"] = max(1 SECONDS, round((signal / 25) SECONDS))
+	context["color"] = signal >= 75 ? "#ff334a" : (signal >= 40 ? "#ff7a3d" : "#ffb1b8")
+	var/list/parts = list()
+	if(sensor_count)
+		parts += "[sensor_count] camera sensor(s)"
+	if(owner_count)
+		parts += "[owner_count] neural owner signature(s)"
+	if(!length(parts))
+		parts += "no nearby sensors"
+	context["summary"] = "Detection sources: [english_list(parts)]."
+	return context
 
 /datum/cyber_ice/proc/get_attack_timer(hacking_skill = 0, is_node = FALSE, object_count = 0, infinite_timer = FALSE)
 	if(is_node)
@@ -671,6 +708,20 @@
 	var/base_points = max(4, round(max(1, object_count)))
 	node_ice.set_even_distribution(max(4, round(base_points * (1 + max(0, manufacturer_diversity_bonus)))))
 	return node_ice
+
+/proc/create_cyber_object_ice(atom/movable/target)
+	var/datum/cyber_ice/object_ice = new()
+	var/max_reserve = get_cyberspace_object_ice_reserve(target)
+	object_ice.max_reserve_override = max_reserve
+	object_ice.current_reserve = max_reserve
+	return object_ice
+
+/proc/get_cyberspace_object_ice_reserve(atom/movable/target)
+	if(istype(target, /obj/machinery/door) || istype(target, /obj/machinery/camera))
+		return 1
+	if(is_cyberspace_ice_hack_target(target))
+		return 10
+	return rand(2, 9)
 
 /datum/cyberspace_cryptokey
 	/// Shared digital key. Objects of the same type/manufacturer/area resolve to the same key.

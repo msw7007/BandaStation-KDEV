@@ -50,7 +50,9 @@
 	return cyberspace_session?.avatar || src
 
 /mob/living/proc/get_cyber_hacking_skill()
-	return mind?.get_character_skill_level(SKILL_HACKING) || 0
+	var/hacking_skill = mind?.get_character_skill_level(SKILL_HACKING) || 0
+	hacking_skill *= cyberspace_session?.get_free_engram_check_multiplier() || 1
+	return round(hacking_skill)
 
 /mob/living/proc/get_cyberspace_avatar_name(mode = CYBERSPACE_MODE_AVATAR)
 	var/avatar_name = real_name || name

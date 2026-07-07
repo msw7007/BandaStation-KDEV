@@ -46,6 +46,9 @@
 	var/list/datum/cyberspace_cryptokey/cryptokeys = list()
 	var/datum/cyber_ice/ice
 	var/net_data = 0
+	var/list/datum/cyber_ice/object_ice_by_ref = list()
+	var/list/object_net_data_by_ref = list()
+	var/list/extracted_object_refs = list()
 	var/extracted = FALSE
 
 /datum/cyberspace_node/New(atom/movable/source)
@@ -64,6 +67,9 @@
 	physical_area_type = null
 	linked_object_refs = null
 	cryptokeys = null
+	object_ice_by_ref = null
+	object_net_data_by_ref = null
+	extracted_object_refs = null
 	QDEL_NULL(ice)
 	return ..()
 
@@ -86,7 +92,11 @@
 	var/old_count = length(linked_object_refs)
 	linked_object_refs += WEAKREF(target)
 	cryptokeys += new /datum/cyberspace_cryptokey(target)
-	net_data += get_cyberspace_net_data_amount(target)
+	var/ref_key = get_object_ref_key(target)
+	var/object_net_data = get_cyberspace_net_data_amount(target)
+	object_ice_by_ref[ref_key] = create_cyber_object_ice(target)
+	object_net_data_by_ref[ref_key] = object_net_data
+	net_data += object_net_data
 	if(recenter)
 		var/new_count = old_count + 1
 		cyber_x = round(((cyber_x * old_count) + target.x) / new_count)
@@ -143,6 +153,40 @@
 		ice = create_cyber_node_ice(max(1, get_object_count()), get_manufacturer_diversity_bonus())
 	return ice
 
+/datum/cyberspace_node/proc/get_object_ref_key(atom/movable/target)
+	return target ? REF(target) : null
+
+/datum/cyberspace_node/proc/get_object_ice(atom/movable/target) as /datum/cyber_ice
+	var/ref_key = get_object_ref_key(target)
+	if(!ref_key)
+		return null
+	var/datum/cyber_ice/object_ice = object_ice_by_ref[ref_key]
+	if(!object_ice)
+		object_ice = create_cyber_object_ice(target)
+		object_ice_by_ref[ref_key] = object_ice
+	return object_ice
+
+/datum/cyberspace_node/proc/get_object_protection_integrity_percent(atom/movable/target)
+	var/datum/cyber_ice/object_ice = get_object_ice(target)
+	if(!object_ice)
+		return 0
+	var/max_reserve = max(1, object_ice.get_max_reserve())
+	return clamp(round((object_ice.current_reserve / max_reserve) * 100), 0, 100)
+
+/datum/cyberspace_node/proc/object_key_matches_user(mob/living/user, atom/movable/target)
+	if(!user?.mind || !target)
+		return FALSE
+	var/datum/cyberspace_cryptokey/target_key = new(target)
+	var/result = user.mind.has_cyber_cryptokey(target_key)
+	qdel(target_key)
+	return result
+
+/datum/cyberspace_node/proc/has_object_access(mob/living/user, atom/movable/target)
+	if(!target)
+		return has_access(user)
+	var/datum/cyber_ice/object_ice = get_object_ice(target)
+	return has_access(user) || object_key_matches_user(user, target) || object_ice?.is_breached()
+
 /datum/cyberspace_node/proc/get_manufacturer_diversity_count()
 	var/list/seen_manufacturers = list()
 	for(var/datum/cyberspace_cryptokey/cryptokey as anything in cryptokeys)
@@ -192,60 +236,74 @@
 	var/max_reserve = max(1, node_ice.get_max_reserve())
 	return clamp(round((node_ice.current_reserve / max_reserve) * 100), 0, 100)
 
-/datum/cyberspace_node/proc/can_use_control_function(mob/living/user, function_id)
+/datum/cyberspace_node/proc/can_use_control_function(mob/living/user, function_id, atom/movable/target = null)
+	var/has_target_access = has_object_access(user, target)
+	var/protection_integrity = target ? get_object_protection_integrity_percent(target) : get_protection_integrity_percent()
 	switch(function_id)
 		if("control")
-			return has_access(user)
+			return has_target_access
 		if("open_ui")
-			return has_access(user)
+			return has_target_access
 		if("settings")
-			return has_access(user)
+			return has_target_access
 		if("door_toggle")
-			return has_access(user)
+			return has_target_access
 		if("camera_inspect")
-			return has_access(user)
+			return has_target_access
 		if("camera_rotate")
-			return has_access(user)
+			return has_target_access
 		if("panel_toggle")
-			return has_access(user)
+			return has_target_access
 		if("power_toggle")
-			return has_access(user)
+			return has_target_access
 		if("contraband_toggle")
-			return has_access(user)
+			return has_target_access
 		if("apc_breaker_toggle")
-			return has_access(user)
+			return has_target_access
 		if("apc_nightshift_toggle")
-			return has_access(user)
+			return has_target_access
 		if("turret_power_toggle")
-			return has_access(user)
+			return has_target_access
 		if("turret_lethal_toggle")
-			return has_access(user)
+			return has_target_access
 		if("turret_silicon_toggle")
-			return has_access(user)
+			return has_target_access
 		if("light_toggle")
-			return has_access(user)
+			return has_target_access
 		if("device_toggle")
-			return has_access(user)
+			return has_target_access
 		if("bolt_toggle")
-			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD || has_access(user)
+			return protection_integrity <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD || has_target_access
 		if("electrify_toggle")
-			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD || has_access(user)
+			return protection_integrity <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD || has_target_access
 		if("emag_activate")
-			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMAG_INTEGRITY_THRESHOLD
+			return protection_integrity <= CYBERSPACE_NODE_EMAG_INTEGRITY_THRESHOLD
 		if("emp_activate")
-			return get_protection_integrity_percent() <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD
+			return protection_integrity <= CYBERSPACE_NODE_EMP_INTEGRITY_THRESHOLD
 		if("shutdown")
-			return get_protection_integrity_percent() <= CYBERSPACE_NODE_SHUTDOWN_INTEGRITY_THRESHOLD
+			return protection_integrity <= CYBERSPACE_NODE_SHUTDOWN_INTEGRITY_THRESHOLD
 	return FALSE
 
 /datum/cyberspace_node/proc/extract_net_data(mob/living/user)
-	if(!user || extracted || !has_access(user))
+	if(!user || extracted)
 		return 0
-	extracted = TRUE
-	for(var/datum/cyberspace_cryptokey/cryptokey as anything in cryptokeys)
-		user.mind?.remember_cyber_cryptokey(cryptokey)
-	var/extracted_data = net_data + round(user.mind?.get_character_perk_effectiveness(SKILL_HACKING, 6) || 0)
-	net_data = 0
+	var/extracted_data = 0
+	var/extracted_count = 0
+	for(var/atom/movable/object as anything in get_live_objects())
+		var/ref_key = get_object_ref_key(object)
+		if(!ref_key || extracted_object_refs[ref_key] || !has_object_access(user, object))
+			continue
+		extracted_count++
+		extracted_object_refs[ref_key] = TRUE
+		var/object_data = object_net_data_by_ref[ref_key] || 0
+		extracted_data += object_data
+		net_data = max(0, net_data - object_data)
+		var/datum/cyberspace_cryptokey/object_key = new(object)
+		user.mind?.remember_cyber_cryptokey(object_key)
+	if(extracted_count > 0)
+		extracted_data += round(user.mind?.get_character_perk_effectiveness(SKILL_HACKING, 6) || 0)
+	if(net_data <= 0)
+		extracted = TRUE
 	user.mind?.add_cyber_net_data(extracted_data)
 	return extracted_data
 
@@ -287,17 +345,25 @@
 	if(!user)
 		return FALSE
 	var/damage = get_cyber_attack_damage(user)
-	get_ice().apply_reserve_damage(damage)
+	var/atom/movable/target_object = get_visual_anchor_object(visual_anchor)
+	var/datum/cyber_ice/target_ice = target_object ? get_object_ice(target_object) : get_ice()
+	target_ice.apply_reserve_damage(damage)
 	roll_connection_alarm(user, visual_anchor, FALSE)
-	if(get_ice().is_breached())
+	if(target_ice.is_breached())
 		to_chat(user, span_notice("[visual_anchor || anchor] digital protection breaks open."))
 	else
-		to_chat(user, span_notice("You damage [visual_anchor || anchor] digital protection by [damage]. Reserve left: [get_ice().current_reserve]."))
+		to_chat(user, span_notice("You damage [visual_anchor || anchor] digital protection by [damage]. Reserve left: [target_ice.current_reserve]."))
 	return TRUE
 
 /datum/cyberspace_node/proc/should_suppress_damage_alarm(mob/living/user)
 	var/suppress_chance = user?.mind?.get_character_perk_effectiveness(SKILL_HACKING, 5) || 0
 	return suppress_chance > 0 && prob(suppress_chance)
+
+/datum/cyberspace_node/proc/get_visual_anchor_object(atom/visual_anchor)
+	var/obj/effect/cyberspace_object_trace/trace = visual_anchor
+	if(istype(trace))
+		return trace.linked_object_ref?.resolve()
+	return null
 
 /datum/cyberspace_node/proc/start_cyberspace_attack(mob/living/user, atom/visual_anchor)
 	if(!user?.cyberspace_session || !visual_anchor)
@@ -307,7 +373,8 @@
 	var/datum/cyberspace_session/session = user.cyberspace_session
 	if(session.attack_token)
 		return session.cancel_cyber_attack()
-	if(has_access(user))
+	var/atom/movable/target_object = get_visual_anchor_object(visual_anchor)
+	if(target_object ? has_object_access(user, target_object) : has_access(user))
 		to_chat(user, span_notice("[visual_anchor] is already open to you."))
 		return FALSE
 	if(!session.start_cyber_attack(visual_anchor))
@@ -363,7 +430,7 @@
 		return FALSE
 	if(visual_anchor && !cyberspace_node_requires_adjacent(user, visual_anchor))
 		return FALSE
-	if(!can_use_control_function(user, mode))
+	if(!can_use_control_function(user, mode, target))
 		to_chat(user, span_warning("Cyberspace command failed: [target] refuses [mode]. Break more protection or use a valid cryptographic key."))
 		return FALSE
 	switch(mode)

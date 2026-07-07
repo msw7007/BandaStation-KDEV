@@ -401,6 +401,8 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 		var/mob/living/net_target = object_ref.resolve()
 		if(!istype(net_target) || !net_target.can_be_net_target())
 			continue
+		if(net_target.is_projected_into_cyberspace())
+			continue
 		var/turf/imprint_turf = get_step(node_turf, pick(GLOB.alldirs))
 		if(!imprint_turf)
 			imprint_turf = node_turf

@@ -179,7 +179,7 @@
 	var/list/objects = list()
 	var/object_index = 1
 	for(var/atom/movable/live_object as anything in live_objects)
-		objects += list(cyberspace_node_object_ui_data(live_object, object_index))
+		objects += list(cyberspace_node_object_ui_data(live_object, object_index, node, body))
 		object_index++
 	data["objects"] = objects
 	return data
@@ -284,7 +284,7 @@
 		return null
 	return live_objects[target_index]
 
-/proc/cyberspace_node_object_ui_data(atom/movable/target, object_index)
+/proc/cyberspace_node_object_ui_data(atom/movable/target, object_index, datum/cyberspace_node/node = null, mob/living/user = null)
 	var/list/functions = list()
 	if(cyberspace_target_can_open_ui(target))
 		functions += "interface"
@@ -326,6 +326,8 @@
 		functions += "light_toggle"
 	if(cyberspace_target_can_toggle_device(target))
 		functions += "device_toggle"
+	var/datum/cyber_ice/object_ice = node?.get_object_ice(target)
+	var/ref_key = node?.get_object_ref_key(target)
 	return list(
 		"index" = object_index,
 		"name" = target.name,
@@ -334,6 +336,11 @@
 		"status" = cyberspace_node_object_status(target),
 		"has_ui" = cyberspace_target_can_open_ui(target),
 		"critical_ice" = is_cyberspace_ice_hack_target(target),
+		"access" = node?.has_object_access(user, target),
+		"extracted" = ref_key ? !!node?.extracted_object_refs[ref_key] : FALSE,
+		"reserve" = object_ice?.current_reserve || 0,
+		"max_reserve" = object_ice?.get_max_reserve() || 0,
+		"protection_integrity" = node ? node.get_object_protection_integrity_percent(target) : 0,
 		"functions" = functions,
 	)
 
@@ -496,7 +503,11 @@
 	return ..()
 
 /obj/effect/cyberspace_imprint_shell/Click(location, control, params)
-	attack_hand(usr, params2list(params))
+	var/list/modifiers = params2list(params)
+	if(LAZYACCESS(modifiers, RIGHT_CLICK))
+		attack_hand_secondary(usr, modifiers)
+	else
+		attack_hand(usr, modifiers)
 	return TRUE
 
 /obj/effect/cyberspace_imprint_shell/attack_hand(mob/user, list/modifiers)
@@ -508,7 +519,67 @@
 	if(!interface)
 		to_chat(body, span_warning("The imprint collapses: no neural interface answers."))
 		return TRUE
+	if(interface.get_ice()?.is_breached())
+		if(body.combat_mode)
+			disrupt_target_implant(body, target_body)
+		else
+			start_sensory_tap(body, target_body)
+		return TRUE
 	interface.start_ice_hack(body)
+	return TRUE
+
+/obj/effect/cyberspace_imprint_shell/attack_hand_secondary(mob/user, list/modifiers)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	var/mob/living/target_body = body_ref?.resolve()
+	if(!body || !target_body)
+		return TRUE
+	var/obj/item/organ/cyberimp/brain/neural_interface/interface = target_body.get_neural_interface()
+	if(!interface)
+		return TRUE
+	if(!interface.get_ice()?.is_breached())
+		interface.start_ice_hack(body)
+		return TRUE
+	return disrupt_target_implant(body, target_body)
+
+/obj/effect/cyberspace_imprint_shell/proc/start_sensory_tap(mob/living/body, mob/living/target_body)
+	if(!body.client || !target_body)
+		return FALSE
+	body.reset_perspective(target_body)
+	body.update_sight()
+	to_chat(body, span_notice("You tap [target_body]'s neural imprint and ride their senses for [DisplayTimeText(CYBERSPACE_IMPRINT_SENSOR_TAP_DURATION)]."))
+	addtimer(CALLBACK(src, PROC_REF(end_sensory_tap), WEAKREF(body)), CYBERSPACE_IMPRINT_SENSOR_TAP_DURATION)
+	return TRUE
+
+/obj/effect/cyberspace_imprint_shell/proc/end_sensory_tap(datum/weakref/body_ref)
+	var/mob/living/body = body_ref?.resolve()
+	if(!body)
+		return FALSE
+	if(body.cyberspace_session?.avatar)
+		body.reset_perspective(body.cyberspace_session.avatar)
+	else
+		body.reset_perspective(null)
+	body.update_sight()
+	return TRUE
+
+/obj/effect/cyberspace_imprint_shell/proc/disrupt_target_implant(mob/living/body, mob/living/target_body)
+	var/obj/item/organ/cyberimp/target_implant
+	if(iscarbon(target_body))
+		var/mob/living/carbon/carbon_target = target_body
+		var/list/implants = list()
+		for(var/obj/item/organ/cyberimp/implant as anything in carbon_target.organs)
+			if(!istype(implant, /obj/item/organ/cyberimp/brain/neural_interface))
+				implants += implant
+		if(length(implants))
+			target_implant = pick(implants)
+	if(target_implant)
+		target_implant.emp_act(EMP_LIGHT)
+		target_implant.apply_organ_damage(5)
+		to_chat(body, span_notice("You force a malfunction through [target_body]'s [target_implant]."))
+		to_chat(target_body, span_userdanger("Your [target_implant] stutters under hostile network pressure."))
+	else
+		target_body.adjust_chromity_overheat(10)
+		to_chat(body, span_notice("You force a fault through [target_body]'s neural imprint."))
+		to_chat(target_body, span_userdanger("Your neural interface spikes with hostile network heat."))
 	return TRUE
 
 /obj/effect/cyberspace_storage_node
@@ -864,8 +935,8 @@
 				return
 			var/index = 1
 			for(var/atom/movable/object as anything in connected_node.get_live_objects())
-				var/list/object_data = cyberspace_node_object_ui_data(object, index)
-				append_log("[app_cracker_dns(object, "O")] [object.name] functions:[english_list(object_data["functions"] || list(), "none")]")
+				var/list/object_data = cyberspace_node_object_ui_data(object, index, connected_node, operator_ref?.resolve())
+				append_log("[app_cracker_dns(object, "O")] [object.name] ice:[object_data["reserve"]]/[object_data["max_reserve"]] access:[object_data["access"] ? "open" : "locked"] functions:[english_list(object_data["functions"] || list(), "none")]")
 				index++
 			if(index == 1)
 				append_log("Node has no live objects.")
@@ -882,8 +953,9 @@
 		return
 	var/atom/movable/object = find_object_by_dns(arg)
 	if(object)
-		var/list/object_data = cyberspace_node_object_ui_data(object, 1)
-		append_log("PING [app_cracker_dns(object, "O")]: [object.name] [object_data["category"]] functions:[english_list(object_data["functions"] || list(), "none")]")
+		var/datum/cyberspace_node/object_node = find_node_for_object(object)
+		var/list/object_data = cyberspace_node_object_ui_data(object, 1, object_node, operator_ref?.resolve())
+		append_log("PING [app_cracker_dns(object, "O")]: [object.name] [object_data["category"]] ice:[object_data["reserve"]]/[object_data["max_reserve"]] functions:[english_list(object_data["functions"] || list(), "none")]")
 		return
 	append_log("ERR: no node, trace, or object matches [arg].")
 
@@ -905,8 +977,8 @@
 		append_log("ERR: object not found in connected node. Use ls -objs.")
 		return
 	selected_object = object
-	var/list/object_data = cyberspace_node_object_ui_data(object, 1)
-	append_log("Selected [app_cracker_dns(object, "O")] [object.name]. Functions: [english_list(object_data["functions"] || list(), "none")].")
+	var/list/object_data = cyberspace_node_object_ui_data(object, 1, connected_node, operator_ref?.resolve())
+	append_log("Selected [app_cracker_dns(object, "O")] [object.name]. ICE [object_data["reserve"]]/[object_data["max_reserve"]]. Functions: [english_list(object_data["functions"] || list(), "none")].")
 
 /datum/computer_file/program/app_cracker/proc/run_crack(mob/living/user, arg)
 	if(length(arg))
@@ -988,7 +1060,7 @@
 	if(!selected_object)
 		append_log("ERR: select an object first.")
 		return
-	var/list/object_data = cyberspace_node_object_ui_data(selected_object, 1)
+	var/list/object_data = cyberspace_node_object_ui_data(selected_object, 1, connected_node, user)
 	if(!(function_id in object_data["functions"]))
 		append_log("ERR: [selected_object.name] has no [function_id] endpoint.")
 		return
@@ -1076,6 +1148,16 @@
 				continue
 			if(uppertext(app_cracker_dns(object, "T")) == query || uppertext(app_cracker_dns(object, "O")) == query)
 				return object
+	return null
+
+/datum/computer_file/program/app_cracker/proc/find_node_for_object(atom/movable/target)
+	if(!target)
+		return null
+	if(connected_node?.has_object(target))
+		return connected_node
+	for(var/datum/cyberspace_node/node as anything in get_scanned_nodes())
+		if(node.has_object(target))
+			return node
 	return null
 
 /datum/computer_file/program/app_cracker/proc/find_connected_object_by_dns(dns)

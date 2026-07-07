@@ -39,6 +39,29 @@
 	QDEL_NULL(wall_data)
 	return ..()
 
+/obj/effect/cyberspace_wall_shell/Click(location, control, params)
+	attack_hand(usr, params2list(params))
+	return TRUE
+
+/obj/effect/cyberspace_wall_shell/attack_hand(mob/user, list/modifiers)
+	var/mob/living/body = get_cyberspace_user_body(user)
+	if(!body)
+		return TRUE
+	if(get_dist(user, src) > 1)
+		to_chat(body, span_warning("You need to be adjacent to the cyberspace wall."))
+		return TRUE
+	var/hacking_skill = body.get_cyber_hacking_skill()
+	var/hack_time = max(1 SECONDS, CYBERSPACE_BASE_ATTACK_TIME - (hacking_skill SECONDS))
+	to_chat(body, span_notice("You begin forcing a breach through [src]."))
+	if(!do_after(user, hack_time, target = src))
+		return TRUE
+	var/damage = max(5, 10 + (hacking_skill * 5))
+	if(take_wall_damage(damage))
+		to_chat(body, span_notice("You break [src] apart."))
+	else
+		to_chat(body, span_notice("You weaken [src]. [wall_data?.integrity || 0]% integrity remains."))
+	return TRUE
+
 /obj/effect/cyberspace_wall_shell/CanAllowThrough(atom/movable/mover, border_dir)
 	..()
 	var/mob/eye/cyberspace_avatar/avatar = mover
