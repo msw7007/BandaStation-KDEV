@@ -68,6 +68,9 @@ type Contract = {
   deliveredAmount: number;
   requiredPercent: number;
   conditions?: ContractCondition[];
+  failureConditions?: ContractCondition[];
+  evidenceDisclosed?: BooleanLike;
+  evidenceSummary?: string;
   deadline: string;
   canAccept: BooleanLike;
   canRefuse: BooleanLike;
@@ -83,6 +86,7 @@ type ContractCondition = {
   description?: string;
   target?: string;
   targetArea?: string;
+  targetType?: string;
   targetX?: number;
   targetY?: number;
   targetZ?: number;
@@ -94,7 +98,11 @@ type ContractCondition = {
   minimumRarity?: number;
   destinationKind?: string;
   destination?: string;
+  targetKind?: string;
   sabotageMode?: string;
+  repairMode?: string;
+  guardKind?: string;
+  eliminationMode?: string;
   partialPayment?: BooleanLike;
 };
 
@@ -129,6 +137,24 @@ const destinationKinds = [
   ['coordinates', 'Координаты'],
 ];
 
+const deliveryTargetKinds = [
+  ['item', 'Предмет'],
+  ['object', 'Объект'],
+  ['mob', 'Кукла/цель'],
+  ['cargo', 'Груз'],
+];
+
+const repairModes = [
+  ['integrity', 'Прочность'],
+  ['functional', 'Функциональность'],
+];
+
+const guardKinds = [
+  ['target', 'Цель'],
+  ['area', 'Зона'],
+  ['cargo', 'Груз'],
+];
+
 const sabotageModes = [
   ['damage', 'Повредить'],
   ['disabled', 'Отключить'],
@@ -137,6 +163,13 @@ const sabotageModes = [
   ['hacked', 'Взломать'],
   ['emagged', 'Emag'],
   ['destroyed', 'Уничтожить'],
+];
+
+const eliminationModes = [
+  ['critical', 'Крит'],
+  ['dead', 'Смерть'],
+  ['incapacitated', 'Выведен из строя'],
+  ['removed', 'Выведен из раунда'],
 ];
 
 function contractTypeLabel(type: string) {
@@ -558,6 +591,11 @@ const ContractDetails = (props: { contract: Contract; collapsed?: boolean }) => 
           value={`${contract.deliveredAmount}/${contract.requiredAmount}, ${contract.requiredPercent}%`}
           tone={contract.deliveredAmount >= contract.requiredAmount ? 'good' : 'base'}
         />
+        <ContractCell
+          label="Доказательство"
+          value={contract.evidenceDisclosed ? 'раскрыто' : contract.legal ? 'гражданское' : 'криминальное'}
+          tone={contract.evidenceDisclosed ? 'bad' : 'base'}
+        />
         {!!contract.directAccessCode && (
           <ContractCell
             label="Приватный код"
@@ -568,6 +606,31 @@ const ContractDetails = (props: { contract: Contract; collapsed?: boolean }) => 
       </div>
       {!!contract.description && (
         <div className="StyleGuide__trapezoidNote">{contract.description}</div>
+      )}
+      {!!contract.conditions?.length && (
+        <details>
+          <summary>Условия выполнения</summary>
+          {contract.conditions.map((condition) => (
+            <div key={condition.id} className="StyleGuide__trapezoidNote">
+              {condition.name}: {condition.target || '-'}
+              {condition.targetType ? ` / ${condition.targetType}` : ''}
+              {condition.targetArea ? ` / ${condition.targetArea}` : ''}
+            </div>
+          ))}
+        </details>
+      )}
+      {!!contract.failureConditions?.length && (
+        <details>
+          <summary>Условия провала</summary>
+          {contract.failureConditions.map((condition) => (
+            <div key={condition.id} className="StyleGuide__trapezoidNote">
+              {condition.name}: {condition.description || '-'}
+            </div>
+          ))}
+        </details>
+      )}
+      {!!contract.evidenceSummary && (
+        <div className="StyleGuide__trapezoidNote">{contract.evidenceSummary}</div>
       )}
       {!!contract.history?.length && !props.collapsed && (
         <details>
@@ -689,6 +752,16 @@ const ContractActions = (props: { contract: Contract }) => {
           </button>
         </>
       )}
+      {(!!contract.canManage || !!contract.canAct) && !contract.evidenceDisclosed && (
+        <button
+          type="button"
+          className="StyleGuide__cutButton StyleGuide__cutButton--red-dark"
+          onClick={() => act('disclose_evidence', { id: contract.id })}
+        >
+          <Icon name="balance-scale" />
+          <span>Раскрыть</span>
+        </button>
+      )}
     </div>
   );
 };
@@ -749,15 +822,20 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const [requiredAmount, setRequiredAmount] = useState(1);
   const [requiredPercent, setRequiredPercent] = useState(75);
   const [targetArea, setTargetArea] = useState('');
+  const [targetType, setTargetType] = useState('');
   const [targetX, setTargetX] = useState(0);
   const [targetY, setTargetY] = useState(0);
   const [targetZ, setTargetZ] = useState(0);
   const [targetRadius, setTargetRadius] = useState(0);
   const [minimumQuality, setMinimumQuality] = useState(0);
   const [minimumRarity, setMinimumRarity] = useState(0);
+  const [deliveryTargetKind, setDeliveryTargetKind] = useState('item');
   const [destinationKind, setDestinationKind] = useState('creator');
   const [destination, setDestination] = useState('');
+  const [repairMode, setRepairMode] = useState('integrity');
+  const [guardKind, setGuardKind] = useState('target');
   const [sabotageMode, setSabotageMode] = useState('damage');
+  const [eliminationMode, setEliminationMode] = useState('critical');
   const [legal, setLegal] = useState(true);
   const [isPublic, setPublic] = useState(true);
   const [creatorConfirm, setCreatorConfirm] = useState(false);
@@ -769,14 +847,15 @@ const ContractCreation = (props: { disabled: boolean }) => {
   const isBuild = contractType === 'build';
   const isGuard = contractType === 'guard';
   const isSabotage = contractType === 'sabotage';
-  const usesLocation = isDelivery && destinationKind === 'coordinates';
+  const usesLocation = (isDelivery && destinationKind === 'coordinates') || isRepair || isBuild || isGuard || isSabotage;
   const usesQuality = isDelivery || isMining;
   const usesThreshold = isRepair || isBuild || isSabotage;
   const usesAmount = isDelivery || isMining || isGuard;
   const cleanDestination = isDelivery ? destination : '';
   const effectiveReservedItemRef = reservedItemRef || reservableItems[0]?.ref || '';
   const selectedReservedItem = reservableItems.find((item) => item.ref === effectiveReservedItemRef);
-  const creationDisabled = props.disabled || (isDelivery && !selectedReservedItem);
+  const deliveryNeedsReservedItem = isDelivery && ['item', 'cargo'].includes(deliveryTargetKind);
+  const creationDisabled = props.disabled || (deliveryNeedsReservedItem && !selectedReservedItem);
 
   return (
     <div className="StyleGuide__blockShell">
@@ -894,6 +973,49 @@ const ContractCreation = (props: { disabled: boolean }) => {
         <div className="StyleGuide__blockTitle">
           Детали: {contractTypeLabel(contractType)}
         </div>
+        <div className="StyleGuide__formGrid">
+          {(isBuild || isRepair || isSabotage) && (
+            <Field label="Typepath цели">
+              <input className="StyleGuide__textInput" value={targetType} onChange={(event) => setTargetType(event.currentTarget.value)} />
+            </Field>
+          )}
+          {isDelivery && (
+            <Field label="Тип доставки">
+              <Dropdown
+                options={deliveryTargetKinds}
+                selected={deliveryTargetKind}
+                onSelected={setDeliveryTargetKind}
+              />
+            </Field>
+          )}
+          {isRepair && (
+            <Field label="Критерий ремонта">
+              <Dropdown
+                options={repairModes}
+                selected={repairMode}
+                onSelected={setRepairMode}
+              />
+            </Field>
+          )}
+          {isGuard && (
+            <Field label="Что охранять">
+              <Dropdown
+                options={guardKinds}
+                selected={guardKind}
+                onSelected={setGuardKind}
+              />
+            </Field>
+          )}
+          {contractType === 'elimination' && (
+            <Field label="Критерий устранения">
+              <Dropdown
+                options={eliminationModes}
+                selected={eliminationMode}
+                onSelected={setEliminationMode}
+              />
+            </Field>
+          )}
+        </div>
         <div className="StyleGuide__sliderStack">
           {usesAmount && (
             <DragField
@@ -941,7 +1063,7 @@ const ContractCreation = (props: { disabled: boolean }) => {
           )}
         </div>
 
-        {isDelivery && (
+        {deliveryNeedsReservedItem && (
           <div className="StyleGuide__formGrid">
             <Field label="Груз">
               {!!reservableItems.length ? (
@@ -1048,20 +1170,25 @@ const ContractCreation = (props: { disabled: boolean }) => {
             required_amount: usesAmount ? requiredAmount : 1,
             required_percent: usesThreshold ? requiredPercent : 75,
             target_area: targetArea,
+            target_type: targetType,
             target_x: targetX,
             target_y: targetY,
             target_z: targetZ,
             target_radius: targetRadius,
             minimum_quality: usesQuality ? minimumQuality : 0,
             minimum_rarity: usesQuality ? minimumRarity : 0,
+            delivery_target_kind: isDelivery ? deliveryTargetKind : 'item',
             destination_kind: isDelivery ? destinationKind : 'creator',
             destination: cleanDestination,
+            repair_mode: isRepair ? repairMode : 'integrity',
+            guard_kind: isGuard ? guardKind : 'target',
             sabotage_mode: isSabotage ? sabotageMode : 'damage',
+            elimination_mode: contractType === 'elimination' ? eliminationMode : 'critical',
             legal: legal ? 1 : 0,
             public_contract: isPublic ? 1 : 0,
             creator_confirm_required: creatorConfirm ? 1 : 0,
-            reserve_held: isDelivery ? 1 : 0,
-            reserved_item_ref: isDelivery ? effectiveReservedItemRef : '',
+            reserve_held: deliveryNeedsReservedItem ? 1 : 0,
+            reserved_item_ref: deliveryNeedsReservedItem ? effectiveReservedItemRef : '',
             partial_guard_payment: isGuard && partialGuardPayment ? 1 : 0,
             funding_business_id: fundingBusinessId,
           })

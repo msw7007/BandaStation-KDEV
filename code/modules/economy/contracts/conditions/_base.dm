@@ -6,6 +6,8 @@
 	var/description = ""
 	var/target_text = ""
 	var/target_area_text = ""
+	var/target_type_text = ""
+	var/target_type
 	var/target_x = 0
 	var/target_y = 0
 	var/target_z = 0
@@ -28,6 +30,12 @@
 		var/new_area = reject_bad_text(params["target_area"], max_length = 64, ascii_only = FALSE)
 		if(new_area)
 			target_area_text = new_area
+		var/new_type = reject_bad_text(params["target_type"], max_length = 96, ascii_only = TRUE)
+		if(new_type)
+			var/type_path = text2path(new_type)
+			if(ispath(type_path, /atom))
+				target_type_text = new_type
+				target_type = type_path
 		target_x = round(text2num(params["target_x"]))
 		target_y = round(text2num(params["target_y"]))
 		target_z = round(text2num(params["target_z"]))
@@ -43,6 +51,7 @@
 		"description" = description,
 		"target" = target_text,
 		"targetArea" = target_area_text,
+		"targetType" = target_type_text,
 		"targetX" = target_x,
 		"targetY" = target_y,
 		"targetZ" = target_z,
@@ -52,6 +61,14 @@
 		"requiredPercent" = required_percent,
 		"minimumQuality" = minimum_quality,
 		"minimumRarity" = minimum_rarity,
+	)
+
+
+/datum/cyberpunk_contract_condition/proc/to_failure_ui_data(datum/cyberpunk_contract/contract)
+	return list(
+		"id" = "[id]_deadline",
+		"name" = "Deadline",
+		"description" = "Fails if the contract is not completed before its deadline.",
 	)
 
 
@@ -86,12 +103,18 @@
 	return TRUE
 
 
+/datum/cyberpunk_contract_condition/proc/matches_type(atom/target)
+	if(!target_type)
+		return TRUE
+	return istype(target, target_type)
+
+
 /datum/cyberpunk_contract_condition/proc/matches_location(atom/target)
 	return matches_area(target) && matches_coordinates(target)
 
 
 /datum/cyberpunk_contract_condition/proc/matches_atom(atom/target)
-	return matches_target_text(target) && matches_location(target)
+	return matches_target_text(target) && matches_type(target) && matches_location(target)
 
 
 /datum/cyberpunk_contract_condition/proc/record_atom(datum/cyberpunk_contract/contract, mob/living/user, atom/target)

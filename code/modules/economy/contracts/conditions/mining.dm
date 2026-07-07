@@ -5,6 +5,14 @@
 	name = "Resource turn-in"
 
 
+/datum/cyberpunk_contract_condition/mining/to_failure_ui_data(datum/cyberpunk_contract/contract)
+	return list(
+		"id" = "mining_failure",
+		"name" = "Resources not submitted",
+		"description" = "Fails if the required resource amount, quality, and rarity are not submitted before the deadline.",
+	)
+
+
 /datum/cyberpunk_contract_condition/mining/record_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item)
 	if(!contract || !user || !item)
 		return FALSE

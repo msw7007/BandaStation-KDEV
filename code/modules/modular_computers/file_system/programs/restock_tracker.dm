@@ -943,6 +943,12 @@
 			else
 				to_chat(living_user, span_warning("Unable to complete this contract."))
 			return TRUE
+		if("disclose_evidence")
+			if(contract?.disclose_evidence(living_user))
+				to_chat(living_user, span_notice("Contract evidence disclosed."))
+			else
+				to_chat(living_user, span_warning("Unable to disclose this contract."))
+			return TRUE
 		if("submit_held")
 			if(contract?.submit_held_item(living_user))
 				to_chat(living_user, span_notice("Submission recorded."))

@@ -19,6 +19,14 @@
 	.["sabotageMode"] = sabotage_mode
 
 
+/datum/cyberpunk_contract_condition/sabotage/to_failure_ui_data(datum/cyberpunk_contract/contract)
+	return list(
+		"id" = "sabotage_failure",
+		"name" = "Sabotage not reached",
+		"description" = "Fails if the target is not damaged, disabled, hacked, emagged, unpowered, broken, or destroyed as required before the deadline.",
+	)
+
+
 /datum/cyberpunk_contract_condition/sabotage/proc/target_sabotaged(atom/target)
 	if(!target)
 		return FALSE
@@ -92,6 +100,8 @@
 			continue
 		if(contract.try_record_atom_condition(CYBERPUNK_CONTRACT_SABOTAGE, user, target))
 			return TRUE
+		if(LAZYLEN(contract.completion_conditions))
+			continue
 		if(target.max_integrity <= 0)
 			continue
 		if(!contract.matches_target(target))
@@ -117,5 +127,4 @@
 			return complete("sabotage threshold reached")
 		return TRUE
 	return FALSE
-
 

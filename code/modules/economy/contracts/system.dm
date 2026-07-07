@@ -118,6 +118,10 @@
 	var/uses_quality = is_delivery || is_mining
 	var/uses_amount = is_delivery || is_mining || is_guard
 	var/uses_threshold = is_repair || is_build || is_sabotage
+	var/delivery_target_kind = reject_bad_text(params["delivery_target_kind"], max_length = 32, ascii_only = TRUE)
+	if(!(delivery_target_kind in list("item", "object", "mob", "cargo")))
+		delivery_target_kind = "item"
+	params["delivery_target_kind"] = delivery_target_kind
 
 	var/title = reject_bad_text(params["title"], max_length = 48, ascii_only = FALSE)
 	var/target = reject_bad_text(params["target"], max_length = 64, ascii_only = FALSE)
@@ -125,7 +129,7 @@
 	var/assigned_contractor = reject_bad_text(params["assigned_contractor"], max_length = 64, ascii_only = FALSE)
 	var/reserve_held = text2num(params["reserve_held"]) ? TRUE : FALSE
 	var/obj/item/reserved_item
-	if(is_delivery)
+	if(is_delivery && (delivery_target_kind in list("item", "cargo")))
 		reserve_held = TRUE
 	if(reserve_held)
 		if(!is_delivery)
@@ -133,7 +137,7 @@
 		var/reserved_item_ref = params["reserved_item_ref"] || params["item_ref"]
 		if(reserved_item_ref)
 			var/obj/item/requested_item = locate(reserved_item_ref)
-			if(istype(requested_item) && requested_item in creator.get_all_gear())
+			if(istype(requested_item) && (requested_item in creator.get_all_gear()))
 				reserved_item = requested_item
 		reserved_item ||= creator.get_active_held_item()
 		if(!reserved_item)
@@ -182,7 +186,8 @@
 	if(!is_delivery)
 		params["destination_kind"] = "creator"
 		params["destination"] = ""
-	if(!is_delivery || destination_kind != "coordinates")
+	var/uses_location = (is_delivery && destination_kind == "coordinates") || is_repair || is_build || is_guard || is_sabotage
+	if(!uses_location)
 		params["target_area"] = ""
 		params["target_x"] = 0
 		params["target_y"] = 0

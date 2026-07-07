@@ -8,6 +8,7 @@
 	var/guard_started_at = 0
 	var/last_verified_at = 0
 	var/partial_payment_enabled = FALSE
+	var/guard_kind = "target"
 
 
 /datum/cyberpunk_contract_condition/guard/configure_from_contract(datum/cyberpunk_contract/contract, list/params)
@@ -16,15 +17,27 @@
 		var/new_ref = reject_bad_text(params["target_ref"], max_length = 96, ascii_only = TRUE)
 		if(new_ref)
 			protected_ref = new_ref
+		var/new_guard_kind = reject_bad_text(params["guard_kind"], max_length = 32, ascii_only = TRUE)
+		if(new_guard_kind in list("target", "area", "cargo"))
+			guard_kind = new_guard_kind
 		partial_payment_enabled = text2num(params["partial_guard_payment"]) ? TRUE : FALSE
 
 
 /datum/cyberpunk_contract_condition/guard/to_ui_data()
 	. = ..()
 	.["protectedRef"] = protected_ref
+	.["guardKind"] = guard_kind
 	.["guardStartedAt"] = guard_started_at
 	.["lastVerifiedAt"] = last_verified_at
 	.["partialPayment"] = partial_payment_enabled
+
+
+/datum/cyberpunk_contract_condition/guard/to_failure_ui_data(datum/cyberpunk_contract/contract)
+	return list(
+		"id" = "guard_failure",
+		"name" = "Protected target lost",
+		"description" = "Fails if the protected target, area, or marked cargo is lost before the deadline.",
+	)
 
 
 /datum/cyberpunk_contract_condition/guard/on_accept(datum/cyberpunk_contract/contract, mob/living/user)
@@ -44,6 +57,10 @@
 	for(var/mob/living/person as anything in GLOB.player_list)
 		if(target_text && findtext(lowertext(person.real_name || person.name), lowertext(target_text)))
 			return person
+	if(guard_kind == "cargo")
+		for(var/obj/item/item as anything in world)
+			if(matches_target_text(item))
+				return item
 	for(var/obj/machinery/thing as anything in SSmachines.get_all_machines())
 		if(matches_target_text(thing))
 			return thing
@@ -51,6 +68,8 @@
 
 
 /datum/cyberpunk_contract_condition/guard/proc/target_safe()
+	if(guard_kind == "area")
+		return !!target_area_text
 	var/atom/target = find_protected_target()
 	if(!target || QDELETED(target))
 		return FALSE

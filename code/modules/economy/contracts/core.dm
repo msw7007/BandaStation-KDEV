@@ -35,6 +35,8 @@
 	var/required_percent = 75
 	var/tax_paid = 0
 	var/direct_access_code
+	var/evidence_disclosed = FALSE
+	var/evidence_summary = ""
 	var/list/history = list()
 	var/list/datum/cyberpunk_contract_condition/completion_conditions = list()
 	var/list/obj/item/delivery_items = list()
@@ -47,6 +49,59 @@
 
 /datum/cyberpunk_contract/proc/get_contractor_account()
 	return SSeconomy.bank_accounts_by_id["[contractor_account_id]"]
+
+
+/datum/cyberpunk_contract/proc/find_security_record(character_name)
+	if(!character_name)
+		return null
+	var/normalized_name = ckey(character_name)
+	for(var/datum/record/crew/record as anything in GLOB.manifest.general)
+		if(ckey(record.name) == normalized_name)
+			return record
+	return null
+
+
+/datum/cyberpunk_contract/proc/add_security_incident(character_name, incident_name, details, fine = 0)
+	var/datum/record/crew/record = find_security_record(character_name)
+	if(!record)
+		add_history("security incident could not be filed for [character_name]: no crew record")
+		return FALSE
+	if(fine > 0)
+		var/datum/crime/citation/new_citation = new(name = incident_name, details = details, author = "Contract Registry", fine = fine)
+		record.citations += new_citation
+		SSblackbox.ReportCitation(REF(new_citation), "contract_registry", "Contract Registry", record.name, incident_name, details, fine)
+	else
+		var/datum/crime/new_crime = new(name = incident_name, details = details, author = "Contract Registry")
+		record.crimes += new_crime
+		record.wanted_status = WANTED_SUSPECT
+		update_matching_security_huds(record.name)
+		SSblackbox.ReportCitation(REF(new_crime), "contract_registry", "Contract Registry", record.name, incident_name, details)
+	add_history("security incident filed for [record.name]: [incident_name]")
+	return TRUE
+
+
+/datum/cyberpunk_contract/proc/apply_legal_breach(actor_name, incident_name, details, fine = 0)
+	if(!legal || !actor_name)
+		return FALSE
+	return add_security_incident(actor_name, incident_name, details, fine)
+
+
+/datum/cyberpunk_contract/proc/disclose_evidence(mob/living/user)
+	if(!can_view(user))
+		return FALSE
+	if(evidence_disclosed)
+		return TRUE
+	evidence_disclosed = TRUE
+	evidence_summary = legal ? "Legal contract #[id] disclosed as civil evidence." : "Illegal contract #[id] disclosed as criminal evidence."
+	add_history("[user.real_name || user.name] disclosed contract evidence")
+	if(!legal)
+		var/details = "Illegal contract #[id]: [title]. Type: [contract_type]. Target: [target_text]. Payment: [payment][MONEY_SYMBOL]."
+		add_security_incident(creator_name, "Illegal contract", details)
+		if(contractor_name)
+			add_security_incident(contractor_name, "Illegal contract", details)
+		else if(assigned_contractor_name)
+			add_security_incident(assigned_contractor_name, "Illegal contract offer", details)
+	return TRUE
 
 
 /datum/cyberpunk_contract/proc/add_history(message)
@@ -183,6 +238,13 @@
 	return conditions
 
 
+/datum/cyberpunk_contract/proc/get_failure_conditions_ui_data()
+	var/list/conditions = list()
+	for(var/datum/cyberpunk_contract_condition/condition as anything in completion_conditions)
+		conditions += list(condition.to_failure_ui_data(src))
+	return conditions
+
+
 /datum/cyberpunk_contract/proc/try_record_atom_condition(condition_id, mob/living/user, atom/target)
 	for(var/datum/cyberpunk_contract_condition/condition as anything in completion_conditions)
 		if(condition.id != condition_id)
@@ -239,6 +301,7 @@
 		escrow_deposit = 0
 	if(status == CYBERPUNK_CONTRACT_ACCEPTED && penalty > 0 && creator_account?.adjust_money(-penalty, "Contract cancellation penalty: [title]"))
 		contractor_account?.adjust_money(penalty, "Contract cancellation penalty: [title]")
+		apply_legal_breach(creator_name, "Contract cancellation breach", "Cancelled accepted legal contract #[id]: [title].", penalty)
 	status = CYBERPUNK_CONTRACT_CANCELLED
 	add_history("cancelled by [user.real_name || user.name]")
 	clear_delivery_tracking()
@@ -265,6 +328,7 @@
 		escrow_deposit = 0
 	if(penalty > 0 && contractor_account?.adjust_money(-penalty, "Contract failure penalty: [title]"))
 		creator_account?.adjust_money(penalty, "Contract failure penalty: [title]")
+		apply_legal_breach(contractor_name, "Contract failure breach", "Failed legal contract #[id]: [title]. Reason: [reason].", penalty)
 	status = CYBERPUNK_CONTRACT_FAILED
 	add_history("failed: [reason]")
 	clear_delivery_tracking()
@@ -324,6 +388,8 @@
 		if(condition.check_nearby(src, user))
 			delivered_amount = max(delivered_amount, condition.delivered_amount)
 			return TRUE
+	if(LAZYLEN(completion_conditions))
+		return FALSE
 	switch(contract_type)
 		if(CYBERPUNK_CONTRACT_REPAIR)
 			return check_nearby_repair_target(user)
@@ -364,6 +430,9 @@
 		"deliveredAmount" = delivered_amount,
 		"requiredPercent" = required_percent,
 		"conditions" = get_conditions_ui_data(),
+		"failureConditions" = get_failure_conditions_ui_data(),
+		"evidenceDisclosed" = evidence_disclosed,
+		"evidenceSummary" = evidence_summary,
 		"deadline" = due_time > world.time ? DisplayTimeText(due_time - world.time) : "expired",
 		"canAccept" = can_accept(user),
 		"canRefuse" = can_refuse(user),

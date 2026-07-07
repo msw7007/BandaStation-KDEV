@@ -5,6 +5,14 @@
 	name = "Construction"
 
 
+/datum/cyberpunk_contract_condition/build/to_failure_ui_data(datum/cyberpunk_contract/contract)
+	return list(
+		"id" = "build_failure",
+		"name" = "Construction missing",
+		"description" = "Fails if the required object type is not present in the target area or coordinates before the deadline.",
+	)
+
+
 /datum/cyberpunk_contract_condition/build/record_atom(datum/cyberpunk_contract/contract, mob/living/user, atom/target)
 	if(!contract || !user || !target)
 		return FALSE
@@ -35,6 +43,8 @@
 			continue
 		if(contract.try_record_atom_condition(CYBERPUNK_CONTRACT_BUILD, user, target))
 			return TRUE
+		if(LAZYLEN(contract.completion_conditions))
+			continue
 		if(!contract.matches_target(target))
 			continue
 		contract.add_history("[user.real_name || user.name] constructed [target]")
@@ -52,5 +62,4 @@
 			return complete("construction target present")
 		return TRUE
 	return FALSE
-
 
