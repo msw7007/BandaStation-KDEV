@@ -28,6 +28,7 @@
 
 	var/scrubbable = TRUE
 	var/pressure_override = null
+	var/beneficial = FALSE
 
 	var/list/default_chemicals = null
 

@@ -55,9 +55,13 @@
 	if(!effect || amount <= 0)
 		return
 	if(effect.touch_on_cross)
-		effect.on_touch(AM, amount, 1)
+		var/effective_amount = amount
+		var/mob/living/L = AM
+		if(istype(L) && !effect.beneficial)
+			effective_amount *= L.get_cyberpunk_environment_hazard_multiplier()
+		effect.on_touch(AM, effective_amount, 1)
 		if(length(chemicals) || length(effect.default_chemicals))
-			effect.apply_chemicals_on_touch(AM, chemicals || effect.default_chemicals, amount, 1)
+			effect.apply_chemicals_on_touch(AM, chemicals || effect.default_chemicals, effective_amount, 1)
 
 /obj/effect/gas_cloud/proc/can_merge(datum/gas_effect/incoming)
 	return effect == incoming
@@ -178,19 +182,21 @@
 	var/source_dist
 	var/target_dist
 	for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrub as anything in source_area.air_scrubbers)
-		if(QDELETED(scrub) || !scrub.on || !scrub.is_operational)
+		var/scrub_efficiency = scrub.get_lightweight_scrubber_efficiency()
+		if(scrub_efficiency <= 0)
 			continue
 		source_dist = get_dist(source, scrub)
 		target_dist = get_dist(target, scrub)
 		if(target_dist < source_dist)
-			. += effect.vent_flow_weight
+			. += max(1, round(effect.vent_flow_weight * scrub_efficiency))
 	for(var/obj/machinery/atmospherics/components/unary/vent_pump/pump as anything in source_area.air_vents)
-		if(QDELETED(pump) || !pump.on || !pump.is_operational)
+		var/pump_efficiency = pump.get_lightweight_vent_efficiency()
+		if(pump_efficiency <= 0)
 			continue
 		source_dist = get_dist(source, pump)
 		target_dist = get_dist(target, pump)
 		if(target_dist < source_dist)
-			. += max(1, round(effect.vent_flow_weight * 0.5))
+			. += max(1, round(effect.vent_flow_weight * 0.5 * pump_efficiency))
 
 /proc/cloud_can_pass(turf/source, turf/target)
 	if(!target || target.density)

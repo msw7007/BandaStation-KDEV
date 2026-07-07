@@ -85,11 +85,13 @@ SUBSYSTEM_DEF(gas_effects)
 	if(effect.scrubbable && A?.air_scrubbers?.len)
 		var/scrub_total = 0
 		for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrub as anything in A.air_scrubbers)
-			if(QDELETED(scrub) || !scrub.on || !scrub.is_operational)
+			var/scrub_efficiency = scrub.get_lightweight_scrubber_efficiency()
+			if(scrub_efficiency <= 0)
 				continue
 			if(scrub.scrubbing != ATMOS_DIRECTION_SCRUBBING)
 				continue
-			scrub_total += LIGHTWEIGHT_ATMOS_VENT_SCRUB_RATE
+			scrub_total += LIGHTWEIGHT_ATMOS_VENT_SCRUB_RATE * scrub_efficiency
+			scrub.add_lightweight_filter_clog(0.01 * seconds_per_tick)
 		decay += scrub_total
 	cloud.amount -= decay * seconds_per_tick
 
@@ -100,12 +102,13 @@ SUBSYSTEM_DEF(gas_effects)
 		var/list/blocked = C.get_breath_filter_tags()
 		if(effect.is_filtered_by(blocked))
 			continue
-		effect.on_breathe(C, cloud.amount, seconds_per_tick)
+		var/effective_amount = effect.beneficial ? cloud.amount : cloud.amount * C.get_cyberpunk_environment_hazard_multiplier()
+		effect.on_breathe(C, effective_amount, seconds_per_tick)
 		if(length(chem_pool))
-			effect.apply_chemicals_on_breathe(C, chem_pool, cloud.amount, seconds_per_tick)
+			effect.apply_chemicals_on_breathe(C, chem_pool, effective_amount, seconds_per_tick)
 		if(effect.visibility_modifier > 0)
-			C.set_eye_blur_if_lower((effect.visibility_modifier * min(cloud.amount, GAS_EFFECT_PER_TICK_MAX) * 0.4 * seconds_per_tick) SECONDS)
-			if(cloud.amount > 50 && effect.visibility_modifier >= 2)
+			C.set_eye_blur_if_lower((effect.visibility_modifier * min(effective_amount, GAS_EFFECT_PER_TICK_MAX) * 0.4 * seconds_per_tick) SECONDS)
+			if(effective_amount > 50 && effect.visibility_modifier >= 2)
 				C.adjust_temp_blindness((1 SECONDS) * seconds_per_tick)
 
 	if(cloud.amount >= effect.spread_threshold && cloud.get_pressure() >= effect.pressure_spread_threshold && world.time >= cloud.next_spread_at)
@@ -114,6 +117,7 @@ SUBSYSTEM_DEF(gas_effects)
 
 	if(effect.temperature_delta != 0)
 		var/synth_temp = cloud.temperature + effect.temperature_delta
+		A?.exchange_environment_temperature(synth_temp, LIGHTWEIGHT_ATMOS_CLOUD_TEMP_EXCHANGE * min(cloud.amount / GAS_EFFECT_PER_TICK_MAX, 1), seconds_per_tick)
 		var/datum/gas_mixture/synth_air = null
 		if(istype(T, /turf/open))
 			var/turf/open/OT = T

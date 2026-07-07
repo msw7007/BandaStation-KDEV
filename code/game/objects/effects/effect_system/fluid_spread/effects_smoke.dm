@@ -425,10 +425,16 @@
 /datum/effect_system/fluid_spread/smoke/chem
 	/// Evil evil hack so we have something to "hold" our reagents
 	var/datum/reagents/chemholder
+	/// Original atom associated with the reagent source, used for skill scaling.
+	var/atom/source_atom
+	/// Radius originally requested by do_chem_smoke.
+	var/smoke_range = 1
 	effect_type = /obj/effect/particle_effect/fluid/smoke/chem
 
 /datum/effect_system/fluid_spread/smoke/chem/New(turf/location, range = 1, amount = null, atom/holder = null, datum/reagents/carry = null, carry_limit = null, silent = FALSE)
 	. = ..()
+	smoke_range = range
+	source_atom = carry?.my_atom || holder
 	chemholder = new(1000, NO_REACT)
 	carry?.trans_to(chemholder, isnull(carry_limit) ? carry.total_volume : carry_limit, copy_only = TRUE)
 
@@ -457,19 +463,24 @@
 
 /datum/effect_system/fluid_spread/smoke/chem/Destroy()
 	QDEL_NULL(chemholder)
+	source_atom = null
 	return ..()
 
 /datum/effect_system/fluid_spread/smoke/chem/start(log = FALSE)
 	var/start_loc = holder ? get_turf(holder) : src.location
-	var/mixcolor = mix_color_from_reagents(chemholder.reagent_list)
-	var/obj/effect/particle_effect/fluid/smoke/chem/smoke = new effect_type(start_loc, new /datum/fluid_group(amount))
-	chemholder.trans_to(smoke, chemholder.total_volume, copy_only = TRUE)
+	if(!start_loc || !chemholder?.total_volume)
+		return
 
-	if(mixcolor)
-		smoke.add_atom_colour(mixcolor, FIXED_COLOUR_PRIORITY) // give the smoke color, if it has any to begin with
-	if (log)
-		help_out_the_admins(smoke, holder, location)
-	smoke.spread() // Making the smoke spread immediately.
+	var/mob/living/chemist
+	if(istype(source_atom, /mob/living))
+		chemist = source_atom
+	else if(istype(source_atom?.loc, /mob/living))
+		chemist = source_atom.loc
+	var/yield_multiplier = chemist?.get_cyberpunk_chemistry_yield_multiplier() || 1
+	var/list/cloud_chemicals = list()
+	for(var/datum/reagent/reagent as anything in chemholder.reagent_list)
+		cloud_chemicals[reagent.type] = reagent.volume * amount * yield_multiplier
+	spawn_gas_cloud_radial(start_loc, /datum/gas_effect/chemical, max(1, amount) * 30 * yield_multiplier, smoke_range, chemholder.chem_temp, cloud_chemicals)
 
 /**
  * A version of chemical smoke with a very short lifespan.

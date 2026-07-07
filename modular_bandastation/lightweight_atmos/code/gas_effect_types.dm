@@ -210,6 +210,7 @@
 	decay_rate = 2
 	visible = FALSE
 	affects_underwater = FALSE
+	beneficial = TRUE
 
 /datum/gas_effect/oxygen/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	breather.adjust_oxy_loss(-2 * seconds_per_tick)
@@ -224,6 +225,7 @@
 	decay_rate = 2
 	filter_tags = list(GAS_FILTER_PARTICLE)
 	affects_underwater = TRUE
+	beneficial = TRUE
 
 /datum/gas_effect/healing_smoke/on_breathe(mob/living/carbon/breather, amount, seconds_per_tick)
 	breather.adjust_brute_loss(-0.5 * seconds_per_tick)

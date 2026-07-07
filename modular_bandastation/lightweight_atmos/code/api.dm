@@ -49,6 +49,20 @@
 		return null
 	return spawn_gas_cloud(T, effect_path, amount, temperature, chemicals)
 
+/proc/get_lightweight_atmos_temperature(turf/T)
+	if(!isturf(T))
+		T = get_turf(T)
+	if(!isturf(T))
+		return T20C
+	var/area/A = T.loc
+	. = isarea(A) ? A.get_environment_temperature() : T20C
+	for(var/obj/effect/gas_cloud/cloud in T)
+		if(QDELETED(cloud) || !cloud.effect)
+			continue
+		var/cloud_temperature = cloud.temperature + cloud.effect.temperature_delta
+		var/cloud_weight = clamp(cloud.amount / max(cloud.effect.tile_capacity, 1), 0, 1)
+		. += (cloud_temperature - .) * cloud_weight
+
 /proc/apply_lightweight_hotspot(turf/T, exposed_temperature, exposed_volume)
 	if(!isturf(T))
 		T = get_turf(T)
@@ -163,10 +177,11 @@
 	if(!T)
 		return null
 	var/datum/gas_mixture/scan = new /datum/gas_mixture(LIGHTWEIGHT_ATMOS_TILE_CAPACITY)
-	scan.temperature = T20C
+	scan.temperature = get_lightweight_atmos_temperature(T)
 	var/area/A = T.loc
 	if(isarea(A))
-		var/total_air_moles = (ONE_ATMOSPHERE * scan.volume) / (R_IDEAL_GAS_EQUATION * scan.temperature)
+		var/air_temperature = max(scan.temperature, TCMB)
+		var/total_air_moles = (ONE_ATMOSPHERE * scan.volume) / (R_IDEAL_GAS_EQUATION * air_temperature)
 		var/o2_ratio = clamp(O2STANDARD * A.oxygen_level, 0, 1)
 		var/co2_ratio = clamp(A.co2_level * 0.05, 0, 0.5)
 		var/n2_ratio = max(0, 1 - o2_ratio - co2_ratio)
@@ -184,7 +199,6 @@
 			scan.adjust_gas(gas_path, max(cloud.amount, 0) / 0.2)
 		if(cloud.effect.pressure_override != null)
 			T.set_lightweight_pressure_hazard(cloud.effect.pressure_override, LIGHTWEIGHT_ATMOS_PRESSURE_HAZARD_EXPIRE)
-		scan.temperature = max(scan.temperature, cloud.temperature)
 	var/pressure_override = get_lightweight_pressure_override(T)
 	if(pressure_override != null)
 		var/current_pressure = scan.return_pressure()

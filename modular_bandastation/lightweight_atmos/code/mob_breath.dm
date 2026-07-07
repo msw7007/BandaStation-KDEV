@@ -17,6 +17,9 @@
 
 	return tags
 
+/mob/living/proc/get_cyberpunk_environment_hazard_multiplier()
+	return get_cyberpunk_survival_penalty_multiplier()
+
 /mob/living/carbon/proc/apply_active_gas_clouds(seconds_per_tick)
 	var/turf/T = get_turf(src)
 	if(!T)
@@ -33,7 +36,8 @@
 			continue
 		if(cloud.effect.is_filtered_by(blocked))
 			continue
-		cloud.effect.on_breathe(src, cloud.amount, seconds_per_tick)
+		var/effective_amount = cloud.effect.beneficial ? cloud.amount : cloud.amount * get_cyberpunk_environment_hazard_multiplier()
+		cloud.effect.on_breathe(src, effective_amount, seconds_per_tick)
 
 /mob/living/carbon/proc/breathe_from_area(seconds_per_tick)
 	if(HAS_TRAIT(src, TRAIT_NOBREATH) || HAS_TRAIT(src, TRAIT_GODMODE))
@@ -61,21 +65,22 @@
 				emote("cough")
 			return TRUE
 		if(AREA_AIR_QUALITY_SUFFOCATING)
-			adjust_oxy_loss(1 * seconds_per_tick)
+			adjust_oxy_loss(1 * get_cyberpunk_environment_hazard_multiplier() * seconds_per_tick)
 			throw_alert(ALERT_NOT_ENOUGH_OXYGEN, /atom/movable/screen/alert/not_enough_oxy)
 			if(prob(20 * seconds_per_tick))
 				emote("gasp")
 			return FALSE
 		if(AREA_AIR_QUALITY_LETHAL)
-			adjust_oxy_loss(3 * seconds_per_tick)
+			adjust_oxy_loss(3 * get_cyberpunk_environment_hazard_multiplier() * seconds_per_tick)
 			losebreath += 0.5 * seconds_per_tick
 			throw_alert(ALERT_NOT_ENOUGH_OXYGEN, /atom/movable/screen/alert/not_enough_oxy)
 			if(prob(40 * seconds_per_tick))
 				emote("gasp")
 			return FALSE
 		if(AREA_AIR_QUALITY_TOXIC)
-			adjust_tox_loss(0.5 * seconds_per_tick)
-			adjust_oxy_loss(0.5 * seconds_per_tick)
+			var/hazard_multiplier = get_cyberpunk_environment_hazard_multiplier()
+			adjust_tox_loss(0.5 * hazard_multiplier * seconds_per_tick)
+			adjust_oxy_loss(0.5 * hazard_multiplier * seconds_per_tick)
 			if(prob(20 * seconds_per_tick))
 				emote("cough")
 			return FALSE
