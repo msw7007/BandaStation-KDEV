@@ -13,10 +13,12 @@
 
 	if(HAS_TRAIT(src, TRAIT_STASIS))
 		. = ..()
+		if(QDELETED(src))
+			return
+
 		reagents?.handle_stasis_chems(src, seconds_per_tick)
 	else
 		//Reagent processing needs to come before breathing, to prevent edge cases.
-		handle_hardcrit_circulation(seconds_per_tick)
 		handle_dead_metabolization(seconds_per_tick) //Dead metabolization first since it can modify life metabolization.
 		handle_organs(seconds_per_tick)
 
@@ -26,7 +28,6 @@
 
 		if(.) //not dead
 			handle_blood(seconds_per_tick)
-			handle_oxygenation(seconds_per_tick)
 
 		if(stat != DEAD) // still not dead (blood could have changed that)
 			for(var/key in mind?.addiction_points)
@@ -34,20 +35,9 @@
 			handle_brain_damage(seconds_per_tick)
 
 	if(stat != DEAD)
-		handle_bodyparts(seconds_per_tick)
-
-	if(stat != DEAD)
 		return TRUE
 
 ///////////////
-
-/mob/living/carbon/get_chromity_overheat_floor()
-	if(!has_neural_implant())
-		return 0
-
-	. = 0
-	for(var/obj/item/organ/organ as anything in organs)
-		. += organ.get_chromity_overheat_floor()
 // BREATHING //
 ///////////////
 
@@ -84,55 +74,24 @@
 
 	SEND_SIGNAL(src, COMSIG_CARBON_PRE_BREATHE, seconds_per_tick)
 
-	// LIGHTWEIGHT ATMOS: water environment short-circuits normal breathing.
-	// On a water turf without underwater gear, run the breath-hold timer
-	// instead of pulling air from the environment.
-	if(is_water_turf(get_turf(src)))
-		handle_water_breath(seconds_per_tick)
-		if(!has_underwater_breathing())
-			return
-	else
-		end_water_breath()
-
-	var/area_breath_success = breathe_from_area(seconds_per_tick)
+	var/datum/gas_mixture/environment
+	if(loc)
+		environment = loc.return_air()
 
 	var/datum/gas_mixture/breath
 
 	if(lungs?.organ_flags & ORGAN_FAILING)
 		losebreath++
-	else if(!can_breathe_tube())
-		if(pulledby?.grab_state >= GRAB_KILL)
-			adjust_oxy_loss(CARBON_KILL_GRAB_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
-			adjust_brute_loss(0.5 * seconds_per_tick, required_bodytype = BODYTYPE_ORGANIC, brute_type = BODYPART_DAMAGE_BLUNT)
-			losebreath++
-		else if(stat == HARD_CRIT)
-			adjust_oxy_loss(CARBON_HARDCRIT_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
-			losebreath++
+	else if(!get_organ_slot(ORGAN_SLOT_BREATHING_TUBE))
+		if(health <= HEALTH_THRESHOLD_FULLCRIT || pulledby?.grab_state >= GRAB_KILL)
+			losebreath++  //You can't breath at all when in critical or when being choked, so you're going to miss a breath
 
-	// LIGHTWEIGHT ATMOS: external turf breathing uses Area oxygen only.
-	// Internals, tanks and object-contained atmos keep the old gas mixture path.
-	if(isturf(loc) && !internal && !external)
-		if(!lungs)
-			failed_last_breath = TRUE
-			adjust_oxy_loss(CARBON_NO_LUNGS_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
-			throw_alert(ALERT_NOT_ENOUGH_OXYGEN, /atom/movable/screen/alert/not_enough_oxy)
-			return
-		if(losebreath >= 1)
-			losebreath--
-			failed_last_breath = TRUE
-			adjust_oxy_loss(CARBON_MISSED_BREATH_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
-			if(prob(10))
-				emote("gasp")
-			return
-		failed_last_breath = !area_breath_success
-		if(area_breath_success && get_oxy_loss())
-			adjust_oxy_loss(-5 * seconds_per_tick, forced = TRUE)
-		return
+		else if(health <= crit_threshold)
+			losebreath += 0.25 //You're having trouble breathing in soft crit, so you'll miss a breath one in four times
 
 	//Suffocate
 	if(losebreath >= 1) //You've missed a breath, take oxy damage
 		losebreath--
-		adjust_oxy_loss(CARBON_MISSED_BREATH_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
 		if(prob(10))
 			emote("gasp")
 		if(isobj(loc))
@@ -147,6 +106,13 @@
 			if(isobj(loc)) //Breathe from loc as object
 				var/obj/loc_as_obj = loc
 				breath = loc_as_obj.handle_internal_lifeform(src, BREATH_VOLUME)
+
+			else if(isturf(loc)) //Breathe from loc as turf
+				var/breath_moles = 0
+				if(environment)
+					breath_moles = environment.total_moles()*BREATH_PERCENTAGE
+
+				breath = loc.remove_air(breath_moles)
 		else //Breathe from loc as obj again
 			is_on_internals = TRUE
 
@@ -160,10 +126,7 @@
 			breathing_loop.start()
 
 	if(breath)
-		if(isturf(loc))
-			dump_gas_mixture_as_cloud(loc, breath)
-		else
-			loc.assume_air(breath)
+		loc.assume_air(breath)
 
 /mob/living/carbon/proc/has_smoke_protection()
 	if(HAS_TRAIT(src, TRAIT_NOBREATH))
@@ -212,7 +175,7 @@
 		// Simulates breathing zero moles of gas.
 		has_moles = FALSE
 		// Extra damage, let God sort ’em out!
-		adjust_oxy_loss(CARBON_NO_LUNGS_OXYLOSS_RATE * SSMOBS_DT, forced = TRUE)
+		adjust_oxy_loss(2)
 
 	/// Minimum O2 before suffocation.
 	var/safe_oxygen_min = 16
@@ -352,7 +315,7 @@
 
 	//-- FREON --//
 	if(freon_pp)
-		adjust_fire_loss(freon_pp * 0.25, burn_type = BODYPART_DAMAGE_COLD)
+		adjust_fire_loss(freon_pp * 0.25)
 
 	//-- MIASMA --//
 	if(!miasma_pp)
@@ -504,67 +467,6 @@
 		reagents.remove_reagent(chem.type, chem.metabolization_rate * seconds_per_tick)
 		return COMSIG_MOB_STOP_REAGENT_TICK
 
-/mob/living/carbon/proc/get_bloodstream_reagent_multiplier(methods, list/cached_reagents)
-	if(methods & INHALE)
-		return get_organ_efficiency(ORGAN_SLOT_LUNGS)
-	if(methods & (INJECT|PATCH|TOUCH))
-		if(reagents_bypass_bloodstream_multiplier(cached_reagents))
-			return 1
-		return BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
-	return 1
-
-/mob/living/carbon/proc/get_reagent_metabolism_organ_multiplier()
-	if(isnull(has_dna()))
-		return 1
-
-	var/heart_efficiency = needs_heart() ? get_organ_efficiency(ORGAN_SLOT_HEART) : 1
-	var/obj/item/organ/liver/liver = get_organ_slot(ORGAN_SLOT_LIVER)
-	var/liver_efficiency = liver?.get_efficiency() || 0
-	if(!liver && (HAS_TRAIT(src, TRAIT_STABLELIVER) || HAS_TRAIT(src, TRAIT_LIVERLESS_METABOLISM)))
-		liver_efficiency = 1
-
-	return clamp(heart_efficiency * liver_efficiency, 0, 1.25)
-
-/mob/living/carbon/proc/reagents_bypass_bloodstream_multiplier(list/cached_reagents)
-	if(!length(cached_reagents))
-		return FALSE
-
-	var/datum/blood_type/blood_type = get_bloodtype()
-	var/datum/reagent/blood_reagent = get_blood_reagent()
-	for(var/datum/reagent/reagent as anything in cached_reagents)
-		if(reagent.type == blood_reagent)
-			continue
-		if(reagent.type == /datum/reagent/medicine/salglu_solution)
-			continue
-		if(blood_type?.restoration_chem && reagent.type == blood_type.restoration_chem)
-			continue
-		return FALSE
-	return TRUE
-
-/mob/living/carbon/proc/convert_liverless_reagents_to_toxin(seconds_per_tick)
-	if(!reagents?.total_volume)
-		return 0
-
-	var/converted_toxin = 0
-	var/datum/blood_type/blood_type = get_bloodtype()
-	var/datum/reagent/blood_reagent = get_blood_reagent()
-	var/list/cached_reagents = reagents.reagent_list.Copy()
-	for(var/datum/reagent/reagent as anything in cached_reagents)
-		if(QDELETED(reagent) || reagent.self_consuming)
-			continue
-		if(reagent.type == blood_reagent)
-			continue
-		if(reagent.type == /datum/reagent/medicine/salglu_solution)
-			continue
-		if(blood_type?.restoration_chem && reagent.type == blood_type.restoration_chem)
-			continue
-		var/converted_amount = min(reagent.volume, reagent.compute_metabolization(src, seconds_per_tick))
-		if(converted_amount <= 0)
-			continue
-		reagents.remove_reagent(reagent.type, converted_amount)
-		converted_toxin += converted_amount
-	return converted_toxin
-
 /mob/living/carbon/reagent_expose(datum/reagent/chem, methods = TOUCH, reac_volume, show_message = TRUE, touch_protection = 0)
 	. = ..()
 
@@ -599,87 +501,6 @@
 
 	return COMPONENT_NO_EXPOSE_REAGENTS
 
-/mob/living/carbon/proc/handle_bodyparts(seconds_per_tick)
-	for(var/obj/item/bodypart/limb as anything in get_bodyparts(include_stumps = TRUE))
-		. |= limb.on_life(seconds_per_tick)
-
-/mob/living/carbon/proc/get_organ_efficiency(slot)
-	var/obj/item/organ/organ = get_organ_slot(slot)
-	return organ?.get_efficiency() || 0
-
-/mob/living/carbon/proc/get_lung_puncture_count()
-	var/obj/item/organ/lungs/lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
-	return lungs?.lung_punctures || 0
-
-/mob/living/carbon/proc/get_blood_oxygen_transport_ratio()
-	return BLOOD_VOLUME_NORMAL ? clamp(get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL, 0, 1) : 1
-
-/mob/living/carbon/proc/get_lung_oxygen_uptake_multiplier(lung_efficiency)
-	if(HAS_TRAIT(src, TRAIT_NOBREATH))
-		lung_efficiency = max(lung_efficiency, 1)
-	return lung_efficiency * 2
-
-/mob/living/carbon/proc/get_heart_oxygen_delivery_multiplier(heart_efficiency)
-	if(undergoing_cardiac_arrest())
-		heart_efficiency = 0
-	else
-		heart_efficiency *= 1 - get_hardcrit_circulation_ratio()
-	return heart_efficiency * 3
-
-/mob/living/carbon/proc/handle_hardcrit_circulation(seconds_per_tick)
-	if(stat == DEAD || !has_cyberpunk_hardcrit_damage() || HAS_TRAIT(src, TRAIT_NOHARDCRIT))
-		hardcrit_circulation_seconds = 0
-		return
-	hardcrit_circulation_seconds = min(CARBON_HARDCRIT_CIRCULATION_COLLAPSE_TIME, hardcrit_circulation_seconds + seconds_per_tick)
-
-/mob/living/carbon/proc/get_hardcrit_circulation_ratio()
-	return clamp(hardcrit_circulation_seconds / CARBON_HARDCRIT_CIRCULATION_COLLAPSE_TIME, 0, 1)
-
-/mob/living/carbon/proc/has_hardcrit_circulatory_collapse()
-	return get_hardcrit_circulation_ratio() >= 1
-
-/mob/living/carbon/proc/get_oxygenation_target(blood_transport, heart_delivery, lung_uptake, pressure)
-	return clamp(blood_transport * heart_delivery * pressure * lung_uptake * 16.7, 0, 100)
-
-/mob/living/carbon/proc/handle_oxygenation(seconds_per_tick)
-	var/blood_transport = get_blood_oxygen_transport_ratio()
-	var/heart_efficiency = get_organ_efficiency(ORGAN_SLOT_HEART)
-	var/lung_efficiency = get_organ_efficiency(ORGAN_SLOT_LUNGS)
-	if(IsSleeping() || body_position == LYING_DOWN)
-		blood_pressure = max(0.4, blood_pressure - 0.02 * seconds_per_tick)
-	else
-		var/stamina_pressure = max_stamina ? clamp(1 - (stamina / max_stamina), 0, 1) : 0
-		blood_pressure = clamp(0.75 + heart_efficiency * 0.5 + stamina_pressure * 0.5, 0.1, 2)
-	var/new_oxygenation = get_oxygenation_target(
-		blood_transport,
-		get_heart_oxygen_delivery_multiplier(heart_efficiency),
-		get_lung_oxygen_uptake_multiplier(lung_efficiency),
-		blood_pressure,
-	)
-	if(new_oxygenation < oxygenation)
-		oxygenation = max(new_oxygenation, oxygenation - 2 * seconds_per_tick)
-	else
-		oxygenation = min(new_oxygenation, oxygenation + 5 * seconds_per_tick)
-	oxyloss = max(oxyloss, 100 - oxygenation)
-	handle_low_oxygen_organ_damage(seconds_per_tick)
-
-/mob/living/carbon/proc/handle_low_oxygen_organ_damage(seconds_per_tick)
-	var/blood_percent = (BLOOD_VOLUME_NORMAL && CAN_HAVE_BLOOD(src)) ? clamp((get_blood_volume(apply_modifiers = TRUE) / BLOOD_VOLUME_NORMAL) * 100, 0, 100) : 100
-	var/heart_supply_deficit = max(40 - oxygenation, 40 - blood_percent)
-	if(heart_supply_deficit > 0)
-		adjust_organ_loss(ORGAN_SLOT_HEART, (heart_supply_deficit / 40) * 0.5 * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
-	if(oxygenation < 70)
-		adjust_organ_loss(ORGAN_SLOT_BRAIN, ((70 - oxygenation) / 70) * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
-	if(oxygenation < 10)
-		adjust_organ_loss(ORGAN_SLOT_LIVER, ((10 - oxygenation) / 10) * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
-	if(oxygenation < 5)
-		var/damage = ((5 - oxygenation) / 5) * seconds_per_tick
-		adjust_organ_loss(ORGAN_SLOT_STOMACH, damage, required_organ_flag = ORGAN_ORGANIC)
-		adjust_organ_loss(ORGAN_SLOT_EYES, damage, required_organ_flag = ORGAN_ORGANIC)
-		adjust_organ_loss(ORGAN_SLOT_EARS, damage, required_organ_flag = ORGAN_ORGANIC)
-	if(oxygenation <= 0)
-		adjust_organ_loss(ORGAN_SLOT_TONGUE, 1 * seconds_per_tick, required_organ_flag = ORGAN_ORGANIC)
-
 /mob/living/carbon/proc/handle_organs(seconds_per_tick)
 	if(stat == DEAD)
 		if(reagents && (reagents.has_reagent(/datum/reagent/toxin/formaldehyde, 1) || reagents.has_reagent(/datum/reagent/cryostylane))) // No organ decay if the body contains formaldehyde.
@@ -701,53 +522,20 @@
 		if(organ?.owner) // This exist mostly because reagent metabolization can cause organ reshuffling
 			organ.on_life(seconds_per_tick)
 
-	if(undergoing_cardiac_arrest())
-		for(var/obj/item/organ/organ as anything in organs)
-			if(organ?.owner)
-				organ.on_death(seconds_per_tick)
+/**
+ * Returns a multiplier representing how effectively this mob can regenerate blood
+ *
+ * A return value of 0 means the mob cannot regenerate blood at all. (missing heart or the heart has stopped or is failing)
+ * Mobs that do not require a heart always return 1, as their blood regeneration is unaffected by heart status.
+ */
+/mob/living/carbon/proc/get_heart_blood_regeneration_multiplier()
+	if(!needs_heart())
+		return 1
+	var/obj/item/organ/heart/heart = get_organ_slot(ORGAN_SLOT_HEART)
+	if(isnull(heart))
+		return 0
 
-/mob/living/carbon/handle_diseases(seconds_per_tick)
-	for(var/datum/disease/disease as anything in diseases)
-		if(QDELETED(disease)) //Got cured/deleted while the loop was still going.
-			continue
-		if(stat != DEAD || disease.process_dead)
-			disease.stage_act(seconds_per_tick)
-
-/mob/living/carbon/handle_mutations(time_since_irradiated, seconds_per_tick)
-	if(!LAZYLEN(dna?.temporary_mutations))
-		return
-
-	for(var/mut, mut_data in dna.temporary_mutations)
-		if(mut_data < world.time)
-			if(!LAZYLEN(dna.previous))
-				continue
-			if(mut == UI_CHANGED)
-				if(dna.previous["UI"])
-					dna.unique_identity = merge_text(dna.unique_identity,dna.previous["UI"])
-					updateappearance(mutations_overlay_update=1)
-					dna.previous.Remove("UI")
-				LAZYREMOVE(dna.temporary_mutations, mut)
-				continue
-			if(mut == UF_CHANGED)
-				if(dna.previous["UF"])
-					dna.unique_features = merge_text(dna.unique_features,dna.previous["UF"])
-					updateappearance(mutcolor_update=1, mutations_overlay_update=1)
-					dna.previous.Remove("UF")
-				LAZYREMOVE(dna.temporary_mutations, mut)
-				continue
-			if(mut == UE_CHANGED)
-				if(dna.previous["name"])
-					real_name = dna.previous["name"]
-					name = real_name
-					dna.previous.Remove("name")
-				if(dna.previous["UE"])
-					dna.unique_enzymes = dna.previous["UE"]
-					dna.previous.Remove("UE")
-				if(dna.previous["blood_type"])
-					set_blood_type(dna.previous["blood_type"])
-					dna.previous.Remove("blood_type")
-				LAZYREMOVE(dna.temporary_mutations, mut)
-				continue
+	return heart.get_blood_regeneration_multiplier()
 
 /**
  * Handles calling metabolization for dead people.
@@ -952,9 +740,6 @@
 
 	reagents.end_metabolization(src, keep_liverless = TRUE) //Stops trait-based effects on reagents, to prevent permanent buffs
 	reagents.metabolize(src, seconds_per_tick, can_overdose = TRUE, liverless = TRUE)
-	var/liverless_toxin = convert_liverless_reagents_to_toxin(seconds_per_tick)
-	if(liverless_toxin)
-		adjust_tox_loss(liverless_toxin, updating_health = FALSE, forced = TRUE)
 
 	if(HAS_TRAIT(src, TRAIT_STABLELIVER) || HAS_TRAIT(src, TRAIT_LIVERLESS_METABOLISM))
 		return

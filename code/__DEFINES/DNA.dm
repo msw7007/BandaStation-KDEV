@@ -21,8 +21,6 @@
 #define MUTATION_SOURCE_ACTIVATED "activated"
 ///Source for mutations that have been added via mutators
 #define MUTATION_SOURCE_MUTATOR "mutator"
-///From timed dna injectors.
-#define MUTATION_SOURCE_TIMED_INJECTOR "timed_injector"
 ///From mob/living/carbon/human/proc/crewlike_monkify()
 #define MUTATION_SOURCE_CREW_MONKEY "crew_monkey"
 #define MUTATION_SOURCE_MEDIEVAL_CTF "medieval_ctf"
@@ -77,43 +75,6 @@
 #define FEATURE_TAIL_XENO "tail_xeno"
 #define FEATURE_TAILSPINES "tailspines" // Different from regular spines, these appear on tails
 #define FEATURE_LEGS "legs"
-#define FEATURE_HUMAN_TATTOO_COLOR "human_tattoo_color"
-#define FEATURE_HUMAN_TATTOO_HEAD_1 "human_tattoo_head_1"
-#define FEATURE_HUMAN_TATTOO_HEAD_2 "human_tattoo_head_2"
-#define FEATURE_HUMAN_TATTOO_HEAD_3 "human_tattoo_head_3"
-#define FEATURE_HUMAN_TATTOO_HEAD_4 "human_tattoo_head_4"
-#define FEATURE_HUMAN_TATTOO_HEAD_5 "human_tattoo_head_5"
-#define FEATURE_HUMAN_TATTOO_HEAD_6 "human_tattoo_head_6"
-#define FEATURE_HUMAN_TATTOO_CHEST_1 "human_tattoo_chest_1"
-#define FEATURE_HUMAN_TATTOO_CHEST_2 "human_tattoo_chest_2"
-#define FEATURE_HUMAN_TATTOO_CHEST_3 "human_tattoo_chest_3"
-#define FEATURE_HUMAN_TATTOO_CHEST_4 "human_tattoo_chest_4"
-#define FEATURE_HUMAN_TATTOO_CHEST_5 "human_tattoo_chest_5"
-#define FEATURE_HUMAN_TATTOO_CHEST_6 "human_tattoo_chest_6"
-#define FEATURE_HUMAN_TATTOO_L_ARM_1 "human_tattoo_l_arm_1"
-#define FEATURE_HUMAN_TATTOO_L_ARM_2 "human_tattoo_l_arm_2"
-#define FEATURE_HUMAN_TATTOO_L_ARM_3 "human_tattoo_l_arm_3"
-#define FEATURE_HUMAN_TATTOO_L_ARM_4 "human_tattoo_l_arm_4"
-#define FEATURE_HUMAN_TATTOO_L_ARM_5 "human_tattoo_l_arm_5"
-#define FEATURE_HUMAN_TATTOO_L_ARM_6 "human_tattoo_l_arm_6"
-#define FEATURE_HUMAN_TATTOO_R_ARM_1 "human_tattoo_r_arm_1"
-#define FEATURE_HUMAN_TATTOO_R_ARM_2 "human_tattoo_r_arm_2"
-#define FEATURE_HUMAN_TATTOO_R_ARM_3 "human_tattoo_r_arm_3"
-#define FEATURE_HUMAN_TATTOO_R_ARM_4 "human_tattoo_r_arm_4"
-#define FEATURE_HUMAN_TATTOO_R_ARM_5 "human_tattoo_r_arm_5"
-#define FEATURE_HUMAN_TATTOO_R_ARM_6 "human_tattoo_r_arm_6"
-#define FEATURE_HUMAN_TATTOO_L_LEG_1 "human_tattoo_l_leg_1"
-#define FEATURE_HUMAN_TATTOO_L_LEG_2 "human_tattoo_l_leg_2"
-#define FEATURE_HUMAN_TATTOO_L_LEG_3 "human_tattoo_l_leg_3"
-#define FEATURE_HUMAN_TATTOO_L_LEG_4 "human_tattoo_l_leg_4"
-#define FEATURE_HUMAN_TATTOO_L_LEG_5 "human_tattoo_l_leg_5"
-#define FEATURE_HUMAN_TATTOO_L_LEG_6 "human_tattoo_l_leg_6"
-#define FEATURE_HUMAN_TATTOO_R_LEG_1 "human_tattoo_r_leg_1"
-#define FEATURE_HUMAN_TATTOO_R_LEG_2 "human_tattoo_r_leg_2"
-#define FEATURE_HUMAN_TATTOO_R_LEG_3 "human_tattoo_r_leg_3"
-#define FEATURE_HUMAN_TATTOO_R_LEG_4 "human_tattoo_r_leg_4"
-#define FEATURE_HUMAN_TATTOO_R_LEG_5 "human_tattoo_r_leg_5"
-#define FEATURE_HUMAN_TATTOO_R_LEG_6 "human_tattoo_r_leg_6"
 
 // BANDASTATION ADDITION START - Species Features
 // keep in line with sprite_accessories .dmi
@@ -146,48 +107,42 @@
 #define FEATURE_SKRELL_CLOTH_WRAP_COLOR "skrell_cloth_wrap_color"
 // BANDASTATION ADDITION END - Species Features
 
-///flag for the transfer_flag argument from dna/proc/copy_dna(). This one makes it so the SE is copied too.
+// flag for the transfer_flag argument from dna/proc/copy_dna().
+/// Copies SE (mob's innate mutations)
 #define COPY_DNA_SE (1<<0)
-///flag for the transfer_flag argument from dna/proc/copy_dna(). This one copies the species.
+/// Copies the species.
 #define COPY_DNA_SPECIES (1<<1)
-///flag for the transfer_flag argument from dna/proc/copy_dna(). This one copies the mutations.
+/// Copies active mutations and anything mutated from other means
 #define COPY_DNA_MUTATIONS (1<<2)
-
-#define HUMANOIDITY_DEFAULT 100
-#define HUMANOIDITY_CHROMITY_START 90
-#define HUMANOIDITY_CHROMITY_ZERO 40
-#define HUMANOIDITY_COLLAPSE_THRESHOLD 0
-#define DNA_INFUSER_BASE_HUMANOIDITY_COST 5
-#define VISCEROID_CONTAINMENT_TUMOR_TIME (15 MINUTES)
-#define GENETIC_TUMOR_DORMANT_TIME (10 MINUTES)
-#define GENETIC_TUMOR_GROWTH_TIME (2 MINUTES)
-#define GENETIC_TUMOR_SEVERITY_INTERVAL (5 MINUTES)
-
 
 //organ slots
 #define ORGAN_SLOT_ADAMANTINE_RESONATOR "adamantine_resonator"
 #define ORGAN_SLOT_APPENDIX "appendix"
 #define ORGAN_SLOT_BRAIN "brain"
-#define ORGAN_SLOT_BELLY_AUG "belly_device"
-#define ORGAN_SLOT_CHEST_AUG "chest_device"
+/// Brain implants that affect the mob's motor control (grabbing, moving, attacking)
+#define ORGAN_SLOT_BRAIN_CEREBELLUM "brain_motorcontrol"
+/// Brain implants that affect the mob's sensory systems (pain, vision, hearing, etc)
+#define ORGAN_SLOT_BRAIN_CNS "brain_cns"
+/// Brain implants that affect the mob's memory and cognition (skills, knowledge, etc)
+#define ORGAN_SLOT_BRAIN_HIPPOCAMPUS "brain_memory"
+#define ORGAN_SLOT_BREATHING_TUBE "breathing_tube"
 #define ORGAN_SLOT_EARS "ears"
 #define ORGAN_SLOT_EYES "eye_sight"
 #define ORGAN_SLOT_HEART "heart"
+#define ORGAN_SLOT_HEART_AID "heartdrive"
+#define ORGAN_SLOT_HUD "eye_hud"
 #define ORGAN_SLOT_LIVER "liver"
 #define ORGAN_SLOT_LUNGS "lungs"
 #define ORGAN_SLOT_PARASITE_EGG "parasite_egg"
 #define ORGAN_SLOT_MONSTER_CORE "monstercore"
-#define ORGAN_SLOT_NECK_AUG "neck_device"
-#define ORGAN_SLOT_NEURAL_IMPLANT "neural_implant"
-#define ORGAN_SLOT_OS "os_device"
-#define CYBERPUNK_OS_SLOT_CAPACITY 1
-#define ORGAN_SLOT_RIGHT_LEG_AUG "r_leg_device"
-#define ORGAN_SLOT_LEFT_LEG_AUG "l_leg_device"
 #define ORGAN_SLOT_RIGHT_ARM_AUG "r_arm_device"
 #define ORGAN_SLOT_LEFT_ARM_AUG "l_arm_device" //This one ignores alphabetical order cause the arms should be together
+#define ORGAN_SLOT_RIGHT_ARM_MUSCLE "r_arm_muscle"
+#define ORGAN_SLOT_LEFT_ARM_MUSCLE "l_arm_muscle" //same as above
 #define ORGAN_SLOT_SPINE "spine"
-#define ORGAN_SLOT_EYELID_AUG "eyelid_device"
 #define ORGAN_SLOT_STOMACH "stomach"
+#define ORGAN_SLOT_STOMACH_AID "stomach_aid"
+#define ORGAN_SLOT_THRUSTERS "thrusters"
 #define ORGAN_SLOT_TONGUE "tongue"
 #define ORGAN_SLOT_VOICE "vocal_cords"
 #define ORGAN_SLOT_ZOMBIE "zombie_infection"
@@ -239,28 +194,28 @@
 /// Exists so Life()'s organ process order is consistent
 GLOBAL_LIST_INIT(organ_process_order, list(
 	ORGAN_SLOT_BRAIN,
-	ORGAN_SLOT_NEURAL_IMPLANT,
-	ORGAN_SLOT_OS,
 	ORGAN_SLOT_APPENDIX,
 	ORGAN_SLOT_RIGHT_ARM_AUG,
 	ORGAN_SLOT_LEFT_ARM_AUG,
-	ORGAN_SLOT_RIGHT_LEG_AUG,
-	ORGAN_SLOT_LEFT_LEG_AUG,
+	ORGAN_SLOT_LEFT_ARM_MUSCLE,
+	ORGAN_SLOT_RIGHT_ARM_MUSCLE,
 	ORGAN_SLOT_STOMACH,
+	ORGAN_SLOT_STOMACH_AID,
+	ORGAN_SLOT_BREATHING_TUBE,
 	ORGAN_SLOT_EARS,
 	ORGAN_SLOT_EYES,
-	ORGAN_SLOT_EYELID_AUG,
 	ORGAN_SLOT_LUNGS,
 	ORGAN_SLOT_HEART,
 	ORGAN_SLOT_ZOMBIE,
-	ORGAN_SLOT_CHEST_AUG,
-	ORGAN_SLOT_BELLY_AUG,
-	ORGAN_SLOT_NECK_AUG,
+	ORGAN_SLOT_THRUSTERS,
+	ORGAN_SLOT_HUD,
 	ORGAN_SLOT_LIVER,
 	ORGAN_SLOT_TONGUE,
 	ORGAN_SLOT_VOICE,
 	ORGAN_SLOT_ADAMANTINE_RESONATOR,
-	ORGAN_SLOT_SPINE,
+	ORGAN_SLOT_HEART_AID,
+	ORGAN_SLOT_BRAIN_CEREBELLUM,
+	ORGAN_SLOT_BRAIN_CNS,
 	ORGAN_SLOT_PARASITE_EGG,
 	ORGAN_SLOT_MONSTER_CORE,
 	ORGAN_SLOT_XENO_PLASMAVESSEL,

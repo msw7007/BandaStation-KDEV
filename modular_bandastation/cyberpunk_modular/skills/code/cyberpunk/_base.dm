@@ -1010,9 +1010,8 @@
 /mob/living/proc/apply_cyberpunk_fast_unarmed_kick_effects(mob/living/target, target_was_staggered)
 	if(!target)
 		return FALSE
-	adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
+	target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
 	var/turf/target_start_turf = get_turf(target)
-	disarm(target)
 	if(target_was_staggered)
 		var/knocked_down = target.Knockdown(SHOVE_KNOCKDOWN_HUMAN, daze_amount = 3 SECONDS)
 		if(knocked_down)
@@ -1020,6 +1019,13 @@
 	if(has_character_giga_perk(ATTRIBUTE_DEXTERITY) && prob(get_character_skill_level(SKILL_ACROBATICS) * 15))
 		target.Knockdown(SHOVE_KNOCKDOWN_HUMAN, daze_amount = 3 SECONDS)
 		to_chat(src, span_notice("Your acrobatic strike drops [target.declent_ru(ACCUSATIVE)]."))
+	if(get_attribute_value(ATTRIBUTE_STRENGTH) < 10 && target != src)
+		var/throw_dir = get_dir(src, target) || dir
+		if(throw_dir)
+			var/throw_distance = max(0, 1 - get_dist(target_start_turf, get_turf(target)))
+			if(throw_distance > 0)
+				var/turf/throw_target = get_edge_target_turf(target, throw_dir)
+				target.safe_throw_at(throw_target, throw_distance, 1, src, gentle = FALSE)
 	if(get_attribute_value(ATTRIBUTE_STRENGTH) >= 10 && target != src)
 		var/throw_dir = get_dir(src, target) || dir
 		if(throw_dir)

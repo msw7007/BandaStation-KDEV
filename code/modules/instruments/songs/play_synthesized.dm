@@ -46,7 +46,6 @@
 	key = clamp(key + note_shift, key_min, key_max)
 	if((world.time - MUSICIAN_HEARCHECK_MINDELAY) > last_hearcheck)
 		do_hearcheck()
-	pulse_cyberpunk_music_perks(player)
 	var/datum/instrument_key/K = using_instrument.samples[num2text(key)] //See how fucking easy it is to make a number text? You don't need a complicated 9 line proc!
 	//Should probably add channel limiters here at some point but I don't care right now.
 	var/channel = pop_channel()
@@ -54,7 +53,7 @@
 		return FALSE
 	. = TRUE
 	var/sound/copy = sound(K.sample)
-	var/volume = get_output_volume(src.volume * using_instrument.volume_multiplier)
+	var/volume = src.volume * using_instrument.volume_multiplier
 	copy.frequency = K.frequency
 	copy.volume = volume
 	var/channel_text = num2text(channel)
@@ -62,10 +61,13 @@
 	last_channel_played = channel_text
 	for(var/i in hearing_mobs)
 		var/mob/M = i
-		var/listener_volume = get_listener_volume_multiplier(M)
-		if(!listener_volume)
+		if(player && HAS_TRAIT(player, TRAIT_MUSICIAN) && isliving(M))
+			var/mob/living/L = M
+			L.apply_status_effect(/datum/status_effect/good_music)
+		var/pref_volume = M?.client?.prefs.read_preference(/datum/preference/numeric/volume/sound_instruments)
+		if(!pref_volume)
 			continue
-		M.playsound_local(get_turf(parent), null, volume * listener_volume, FALSE, K.frequency, INSTRUMENT_FALLOFF_EXPONENT, channel, FALSE, copy, instrument_range, get_sound_falloff_distance())
+		M.playsound_local(get_turf(parent), null, volume * (pref_volume/100), FALSE, K.frequency, exponential_falloff, channel, null, copy)
 		// Could do environment and echo later but not for now
 
 /**
@@ -132,4 +134,4 @@
 		else
 			for(var/i in hearing_mobs)
 				var/mob/M = i
-				M.set_sound_channel_volume(channelnumber, (current_volume * 0.01) * get_output_volume(volume * using_instrument.volume_multiplier) * get_listener_volume_multiplier(M))
+				M.set_sound_channel_volume(channelnumber, (current_volume * 0.01) * volume * using_instrument.volume_multiplier)

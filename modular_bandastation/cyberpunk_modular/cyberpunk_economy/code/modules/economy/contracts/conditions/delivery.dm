@@ -223,4 +223,4 @@
 	SIGNAL_HANDLER
 	delivery_items -= source
 	if(status == CYBERPUNK_CONTRACT_ACCEPTED)
-		fail("marked cargo was destroyed or lost")
+		addtimer(CALLBACK(src, PROC_REF(fail), "marked cargo was destroyed or lost"), 0)

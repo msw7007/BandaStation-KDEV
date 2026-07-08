@@ -6,14 +6,10 @@
 	difficulty = 18
 	text_gain_indication = span_notice("You feel smarter!")
 	limb_req = BODY_ZONE_HEAD
-	instability = HUMANOIDITY_LOAD_MAJOR
+	instability = POSITIVE_INSTABILITY_MAJOR
+	mutation_icon_state = "telekinesishead"
 	///Typecache of atoms that TK shouldn't interact with
 	var/static/list/blacklisted_atoms = typecacheof(list(/atom/movable/screen))
-
-/datum/mutation/telekinesis/New(datum/mutation/copymut)
-	..()
-	if(!(type in visual_indicators))
-		visual_indicators[type] = list(mutable_appearance('icons/mob/effects/genetics.dmi', "telekinesishead", -MUTATIONS_LAYER))
 
 /datum/mutation/telekinesis/on_acquiring(mob/living/carbon/human/homan)
 	. = ..()
@@ -27,15 +23,9 @@
 		return
 	UnregisterSignal(homan, COMSIG_MOB_ATTACK_RANGED)
 
-/datum/mutation/telekinesis/get_visual_indicator()
-	return visual_indicators[type][1]
-
 ///Triggers on COMSIG_MOB_ATTACK_RANGED. Usually handles stuff like picking up items at range.
 /datum/mutation/telekinesis/proc/on_ranged_attack(mob/source, atom/target)
 	SIGNAL_HANDLER
-	if(!HAS_TRAIT(source, TRAIT_PSI_EYES))
-		to_chat(source, span_warning("Your psionic sense cannot resolve the target without psi eyes."))
-		return
 	if(is_type_in_typecache(target, blacklisted_atoms))
 		return
 	if(!tkMaxRangeCheck(source, target) || source.z != target.z)
@@ -46,7 +36,7 @@
 	name = "Elastic Arms"
 	desc = "Руки субъекта становятся эластичными, позволяя им растягиваться до метра. Однако, такая эластичность затрудняет ношение перчаток, выполнение сложных задач и взятие больших объектов."
 	quality = POSITIVE
-	instability = HUMANOIDITY_LOAD_MAJOR
+	instability = POSITIVE_INSTABILITY_MAJOR
 	text_gain_indication = span_warning("Твои руки становятся похожими на... на... НА СПАГЕТТИ!")
 	text_lose_indication = span_warning("Твои руки перестают быть такими отвисшими всё время.")
 	difficulty = 32

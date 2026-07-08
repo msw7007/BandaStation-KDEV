@@ -110,21 +110,12 @@
 		for(var/obj/item as anything in real_location)
 			storage_contents[item] = ""
 
-	for(var/obj/item/stored_item as anything in storage_contents)
-		stored_item.mouse_opacity = MOUSE_OPACITY_OPAQUE
-		if(parent_storage.cyberpunk_grid_width && parent_storage.cyberpunk_grid_height && stored_item.cyberpunk_grid_x && stored_item.cyberpunk_grid_y)
-			var/list/footprint = stored_item.get_cyberpunk_grid_footprint()
-			stored_item.screen_loc = spanning_screen_loc(
-				(screen_start_x + stored_item.cyberpunk_grid_x - 1) * 32 + screen_pixel_x,
-				(screen_start_y + stored_item.cyberpunk_grid_y - 1) * 32 + screen_pixel_y,
-				(screen_start_x + stored_item.cyberpunk_grid_x + footprint[1] - 2) * 32 + screen_pixel_x,
-				(screen_start_y + stored_item.cyberpunk_grid_y + footprint[2] - 2) * 32 + screen_pixel_y,
-			)
-		else
-			stored_item.screen_loc = "[current_x]:[screen_pixel_x],[current_y]:[screen_pixel_y]"
+	for(var/obj/item as anything in storage_contents)
+		item.mouse_opacity = MOUSE_OPACITY_OPAQUE
+		item.screen_loc = "[current_x]:[screen_pixel_x + item.base_pixel_x],[current_y]:[screen_pixel_y + item.base_pixel_y]"
 		if(parent_storage.numerical_stacking)
-			stored_item.maptext = storage_contents[stored_item]
-		SET_PLANE(stored_item, ABOVE_HUD_PLANE, our_turf)
+			item.maptext = storage_contents[item]
+		SET_PLANE(item, ABOVE_HUD_PLANE, our_turf)
 		current_x++
 		if(current_x - screen_start_x < columns)
 			continue
@@ -159,28 +150,18 @@
 	var/current_y = screen_start_y
 	var/turf/our_turf = get_turf(real_location)
 
-	for(var/i in 1 to length(usable_modules))
-		var/atom/movable/item = usable_modules[i]
-		if(item in robot_model.robot.held_items)
-			current_x++
-			if(current_x - screen_start_x < columns)
-				continue
-			current_x = screen_start_x
-
-			current_y++
-			if(current_y - screen_start_y >= rows)
-				break
-			//Module is currently active
-			continue
-
-		item.mouse_opacity = MOUSE_OPACITY_OPAQUE
-		SET_PLANE(item, ABOVE_HUD_PLANE, our_turf)
-		item.screen_loc = "[current_x]:[screen_pixel_x],[current_y]:[screen_pixel_y]"
+	for(var/obj/item/item in usable_modules)
+		//Only for non active modules
+		if(item.item_flags & IN_STORAGE)
+			item.mouse_opacity = MOUSE_OPACITY_OPAQUE
+			SET_PLANE(item, ABOVE_HUD_PLANE, our_turf)
+			item.screen_loc = "[current_x]:[screen_pixel_x + item.base_pixel_x],[current_y]:[screen_pixel_y + item.base_pixel_y]"
 
 		current_x++
 		if(current_x - screen_start_x < columns)
 			continue
 		current_x = screen_start_x
+
 		current_y++
 		if(current_y - screen_start_y >= rows)
 			break

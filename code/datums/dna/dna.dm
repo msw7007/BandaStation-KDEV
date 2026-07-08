@@ -4,7 +4,7 @@
  */
 GLOBAL_LIST_INIT(total_ui_len_by_block, populate_total_ui_len_by_block())
 
-GLOBAL_LIST_INIT(standard_mutation_sources, list(MUTATION_SOURCE_ACTIVATED, MUTATION_SOURCE_MUTATOR, MUTATION_SOURCE_TIMED_INJECTOR))
+GLOBAL_LIST_INIT(standard_mutation_sources, list(MUTATION_SOURCE_ACTIVATED, MUTATION_SOURCE_MUTATOR))
 
 /proc/populate_total_ui_len_by_block()
 	. = list()
@@ -44,23 +44,12 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	var/real_name
 	///All mutations are from now on here
 	var/list/mutations
-	///Temporary changes to the UE
-	var/list/temporary_mutations
-	///For temporary name/ui/ue/blood_type modifications
-	var/list/previous
 	var/mob/living/holder
 	///List of which mutations this carbon has and its assigned block
 	var/mutation_index[DNA_MUTATION_BLOCKS]
 	///List of the default genes from this mutation to allow DNA Scanner highlighting
 	var/default_mutation_genes[DNA_MUTATION_BLOCKS]
-	/// CP13 body compatibility with chrome and neural interfaces.
-	var/humanoidity = HUMANOIDITY_DEFAULT
-	/// Permanent penalty from DNA infusions, genetic segments and non-cosmetic bio-modification.
-	var/humanoidity_genetic_penalty = 0
-	/// Temporary bonus from stabilizers. Does not remove the underlying genetic changes.
-	var/humanoidity_stabilized_bonus = 0
-	/// Prevents immediate repeated collapse until a forced genetic tumor relapse fires.
-	var/humanoidity_collapsed = FALSE
+	var/stability = 100
 	///Did we take something like mutagen? In that case we can't get our genes scanned to instantly cheese all the powers.
 	var/scrambled = FALSE
 	/// Weighted list of nonlethal meltdowns
@@ -84,8 +73,6 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	QDEL_NULL(species)
 
 	LAZYNULL(mutations) //This only references mutations, just dereference.
-	LAZYNULL(temporary_mutations) //^
-	LAZYNULL(previous) //^
 
 	return ..()
 
@@ -96,13 +83,9 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	new_dna.unique_features = unique_features
 	new_dna.features = features.Copy()
 	new_dna.real_name = real_name
-	new_dna.temporary_mutations = LAZYLISTDUPLICATE(temporary_mutations)
-	new_dna.mutation_index = mutation_index
-	new_dna.default_mutation_genes = default_mutation_genes
-	new_dna.humanoidity = humanoidity
-	new_dna.humanoidity_genetic_penalty = humanoidity_genetic_penalty
-	new_dna.humanoidity_stabilized_bonus = humanoidity_stabilized_bonus
-	new_dna.humanoidity_collapsed = humanoidity_collapsed
+	if(transfer_flags & COPY_DNA_SE)
+		new_dna.mutation_index = mutation_index
+		new_dna.default_mutation_genes = default_mutation_genes
 	//if the new DNA has a holder, transform them immediately, otherwise save it
 	if(new_dna.holder)
 		if (iscarbon(new_dna.holder))
@@ -155,7 +138,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	if(MUTATION_SOURCE_ACTIVATED in sources)
 		set_se(1, actual_mutation)
 
-	update_humanoidity()
+	update_instability()
 
 /datum/dna/proc/remove_mutation(mutation_to_remove, list/sources)
 	if(!islist(sources))
@@ -166,7 +149,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	var/datum/mutation/actual_mutation = get_mutation(mutation_to_remove)
 
 	if(!actual_mutation || !(sources & actual_mutation.sources))
-		return
+		return FALSE
 
 	actual_mutation.sources -= sources
 
@@ -179,7 +162,8 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		actual_mutation.on_losing(holder)
 		qdel(actual_mutation)
 
-	update_humanoidity(FALSE)
+	update_instability(FALSE)
+	return TRUE
 
 /datum/dna/proc/check_mutation(mutation_type)
 	return get_mutation(mutation_type)
@@ -308,58 +292,32 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 	return FALSE
 
-/datum/dna/proc/get_effective_humanoidity()
-	var/effective_bonus = humanoidity_stabilized_bonus
-	var/datum/mutation/biotechcompat/biotech_compatibility = get_mutation(/datum/mutation/biotechcompat)
-	if(biotech_compatibility)
-		effective_bonus += biotech_compatibility.humanoidity_bonus
-	return clamp(humanoidity + effective_bonus, 0, HUMANOIDITY_DEFAULT)
-
-/datum/dna/proc/get_humanoidity_chromity_multiplier()
-	var/effective_humanoidity = get_effective_humanoidity()
-	if(effective_humanoidity >= HUMANOIDITY_CHROMITY_START)
-		return 1
-	if(effective_humanoidity <= HUMANOIDITY_CHROMITY_ZERO)
-		return 0
-	return (effective_humanoidity - HUMANOIDITY_CHROMITY_ZERO) / (HUMANOIDITY_CHROMITY_START - HUMANOIDITY_CHROMITY_ZERO)
-
-/datum/dna/proc/adjust_humanoidity_stabilized_bonus(amount)
-	var/old_bonus = humanoidity_stabilized_bonus
-	humanoidity_stabilized_bonus = clamp(humanoidity_stabilized_bonus + amount, 0, HUMANOIDITY_DEFAULT)
-	if(holder && old_bonus != humanoidity_stabilized_bonus)
-		update_humanoidity(FALSE)
-	return humanoidity_stabilized_bonus - old_bonus
-
-/datum/dna/proc/process_humanoidity_stabilization(seconds_per_tick)
-	if(humanoidity_stabilized_bonus <= 0)
-		return
-	if(holder?.reagents?.has_reagent(/datum/reagent/medicine/immunosuppressant, needs_metabolizing = TRUE))
-		return
-	adjust_humanoidity_stabilized_bonus(-10 * seconds_per_tick)
-
-/datum/dna/proc/adjust_humanoidity_genetic_penalty(amount, alert = TRUE)
-	humanoidity_genetic_penalty = max(0, humanoidity_genetic_penalty + amount)
-	return update_humanoidity(alert)
-
-/datum/dna/proc/update_humanoidity(alert = TRUE)
-	var/old_humanoidity = humanoidity
-	var/mutation_penalty = 0
+/datum/dna/proc/update_instability(alert=TRUE)
+	var/old_stability = stability
+	stability = 100
 	for(var/datum/mutation/mutation in mutations)
-		if(istype(mutation, /datum/mutation/race))
-			continue
-		if(!(mutation.sources & GLOB.standard_mutation_sources))
-			continue
-		mutation_penalty += max(1, abs(mutation.instability) * GET_MUTATION_STABILIZER(mutation))
-	humanoidity = clamp(HUMANOIDITY_DEFAULT - humanoidity_genetic_penalty - mutation_penalty, 0, HUMANOIDITY_DEFAULT)
-	if(holder && alert && humanoidity < old_humanoidity)
-		to_chat(holder, span_warning("Your body feels less human."))
-	if(holder && humanoidity <= 0)
-		holder.apply_status_effect(/datum/status_effect/dna_melt)
-	if(holder && get_effective_humanoidity() <= HUMANOIDITY_COLLAPSE_THRESHOLD && !humanoidity_collapsed && ishuman(holder))
-		var/mob/living/carbon/human/human_holder = holder
-		humanoidity_collapsed = TRUE
-		human_holder.cy_check_humanoidity_collapse()
-	return humanoidity
+		if((MUTATION_SOURCE_MUTATOR in mutation.sources) || mutation.instability < 0)
+			stability -= mutation.instability * GET_MUTATION_STABILIZER(mutation)
+	if(holder)
+		var/message
+		if(alert)
+			switch(stability)
+				if(70 to 90)
+					message = span_warning("You shiver.")
+				if(60 to 69)
+					message = span_warning("You feel cold.")
+				if(40 to 59)
+					message = span_warning("You feel sick.")
+				if(20 to 39)
+					message = span_warning("It feels like your skin is moving.")
+				if(1 to 19)
+					message = span_warning("You can feel your cells burning.")
+				if(-INFINITY to 0)
+					message = span_boldwarning("You can feel your DNA exploding, we need to do something fast!")
+		if(stability <= 0)
+			holder.apply_status_effect(/datum/status_effect/dna_melt)
+		if(message && stability < old_stability)
+			to_chat(holder, message)
 
 /// Updates the UI, UE, and UF of the DNA according to the features, appearance, name, etc. of the DNA / holder.
 /datum/dna/proc/update_dna_identity()
@@ -452,10 +410,9 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	log_mob_tag("TAG: [tag] SPECIES: [key_name(src)] \[[mrace]\]")
 
 /mob/living/carbon/human/set_species(datum/species/mrace, icon_update = TRUE, pref_load = FALSE, replace_missing = TRUE)
-	..()
+	. = ..()
 	if(icon_update)
 		update_body(is_creating = TRUE)
-		update_mutations_overlay()// no lizard with human hulk overlay please.
 
 /mob/proc/has_dna()
 	return
@@ -506,7 +463,6 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 	if(mrace || newfeatures || unique_identity)
 		update_body(is_creating = TRUE)
-		update_mutations_overlay()
 
 	if(LAZYLEN(mutations) && force_transfer_mutations && can_mutate())
 		for(var/datum/mutation/mutation as anything in mutations)
@@ -544,7 +500,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	if(icon_update)
 		update_body(is_creating = mutcolor_update)
 	if(mutations_overlay_update)
-		update_mutations_overlay()
+		update_appearance(UPDATE_OVERLAYS)
 
 /mob/proc/domutcheck()
 	return
@@ -556,7 +512,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 	for(var/mutation in dna.mutation_index)
 		dna.check_block(mutation)
 
-	update_mutations_overlay()
+	update_appearance(UPDATE_OVERLAYS)
 
 /datum/dna/proc/check_block(mutation_path)
 	var/datum/mutation/mutation = get_mutation(mutation_path)
@@ -702,7 +658,7 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 		for(var/block_id in GLOB.dna_feature_blocks)
 			var/datum/dna_block/feature/block = GLOB.dna_feature_blocks[block_id]
 			if(prob(probability))
-				M.dna.unique_identity = block.modified_hash(M.dna.unique_identity, random_string(block.block_length, GLOB.hex_characters))
+				M.dna.unique_features = block.modified_hash(M.dna.unique_features, random_string(block.block_length, GLOB.hex_characters)) // BANDASTATION EDIT: was unique_identity
 	if(ui || uf)
 		M.updateappearance(mutcolor_update=uf, mutations_overlay_update=1)
 
@@ -725,16 +681,16 @@ GLOBAL_LIST_INIT(total_uf_len_by_block, populate_total_uf_len_by_block())
 
 /////////////////////////// DNA HELPER-PROCS
 
-/mob/living/carbon/human/proc/something_horrible(ignore_humanoidity)
+/mob/living/carbon/human/proc/something_horrible(ignore_stability)
 	if(!has_dna()) //shouldn't ever happen anyway so it's just in really weird cases
 		return
-	var/humanoidity_deficit = HUMANOIDITY_DEFAULT - dna.get_effective_humanoidity()
-	if(!ignore_humanoidity && (humanoidity_deficit < HUMANOIDITY_DEFAULT))
+	if(!ignore_stability && (dna.stability > 0))
 		return
+	var/instability = -dna.stability
 	dna.remove_all_mutations()
-	dna.update_humanoidity(FALSE)
+	dna.stability = 100
 
-	var/nonfatal = prob(max(70 - humanoidity_deficit, 0))
+	var/nonfatal = prob(max(70-instability, 0))
 
 	if(!dna.nonfatal_meltdowns.len)
 		for(var/datum/instability_meltdown/meltdown_type as anything in typecacheof(/datum/instability_meltdown, ignore_root_path = TRUE))

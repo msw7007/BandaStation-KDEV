@@ -28,6 +28,13 @@
 	icon_state = "atmos_sanity_goal"
 
 /**
+ * Marks an area as forbidden for atmospheric connectivity.
+ */
+/obj/effect/landmark/atmospheric_sanity/forbidden_area
+	name = "Atmospheric Sanity Forbidden"
+	icon_state = "atmos_sanity_forbidden"
+
+/**
  * Marks an area as ignored for purposes of default station connectivity.
  */
 /obj/effect/landmark/atmospheric_sanity/ignore_area

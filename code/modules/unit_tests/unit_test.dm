@@ -46,6 +46,7 @@ GLOBAL_VAR_INIT(focused_tests, focused_tests())
 	var/turf/run_loc_floor_top_right
 	///The priority of the test, the larger it is the later it fires
 	var/priority = TEST_DEFAULT
+	var/test_flags = NONE
 	//internal shit
 	var/focus = FALSE
 	var/succeeded = TRUE

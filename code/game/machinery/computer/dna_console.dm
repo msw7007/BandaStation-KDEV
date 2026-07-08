@@ -99,8 +99,8 @@
 	var/max_injector_selections = 2
 	/// Maximum number of mutation that an advanced injector can store
 	var/max_injector_mutations = 10
-	/// Maximum total humanoidity load of all combined mutations allowed on an advanced injector
-	var/max_injector_humanoidity_load = 50
+	/// Maximum total instability of all combined mutations allowed on an advanced injector
+	var/max_injector_instability = 50
 
 	/// World time when injectors are ready to be printed
 	var/injector_ready = 0
@@ -287,7 +287,7 @@
 
 
 	// Populates various buffers for passing to tgui
-	build_mutation_list(can_modify_occ, user)
+	build_mutation_list(can_modify_occ)
 	build_genetic_makeup_list()
 
 	// Populate variables for passing to tgui interface
@@ -315,60 +315,11 @@
 	. = ..() || list()
 	. += get_asset_datum(/datum/asset/simple/genetics)
 
-//CYBERPUNK BUILD - rebuild and delete before release
-/obj/machinery/computer/dna_console/proc/get_analysis_level(mob/user)
-	return user?.mind?.get_character_skill_level(SKILL_ANALYSIS) || CHARACTER_SKILL_LEVEL_NONE
-
-/obj/machinery/computer/dna_console/proc/get_analysis_speed_multiplier(mob/user)
-	var/level = get_analysis_level(user)
-	var/speed_bonus = max(0, level * 5)
-	if(isliving(user))
-		var/mob/living/living_user = user
-		speed_bonus = max(speed_bonus, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 1))
-	return 1 / max(0.1, 1 + speed_bonus * 0.01)
-
-/obj/machinery/computer/dna_console/proc/get_analysis_decode_bonus(mob/user)
-	var/bonus = max(0, get_analysis_level(user) * 5)
-	if(isliving(user))
-		var/mob/living/living_user = user
-		bonus = max(bonus, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
-	return bonus
-
-/obj/machinery/computer/dna_console/proc/get_analysis_damage_multiplier(mob/user)
-	return max(0.5, 1 - (get_analysis_level(user) * 0.05))
-
-/obj/machinery/computer/dna_console/proc/get_analysis_hint(mob/user, datum/mutation/mutation, sequence)
-	if(!mutation || !sequence)
-		return null
-	var/level = get_analysis_level(user)
-	var/info_bonus = 0
-	if(isliving(user))
-		var/mob/living/living_user = user
-		info_bonus = living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2)
-	if(level < CHARACTER_SKILL_LEVEL_SKILLED && info_bonus <= 0)
-		return null
-	var/matched_pairs = 0
-	for(var/index = 1, index <= length(sequence), index += 2)
-		var/gene_pair = copytext(sequence, index, index + 2)
-		if(gene_pair in list("AT", "TA", "GC", "CG"))
-			matched_pairs++
-	var/list/hints = list("paired sections: [matched_pairs]/[round(length(sequence) / 2)]")
-	if(level >= CHARACTER_SKILL_LEVEL_TRAINED || info_bonus >= 40)
-		hints += "humanoidity load: [mutation.instability >= 0 ? "burden" : "recovery"] [abs(mutation.instability)]"
-	if(level >= CHARACTER_SKILL_LEVEL_EXPERT || info_bonus >= 60)
-		hints += "quality signature: [mutation.quality]"
-	return english_list(hints)
-//CYBERPUNK BUILD - rebuild and delete before release
-
 /obj/machinery/computer/dna_console/ui_data(mob/user)
 	var/list/data = list()
 
 	data["view"] = tgui_view_state
 	data["storage"] = list()
-	//CYBERPUNK BUILD - rebuild and delete before release
-	data["analysisLevel"] = get_analysis_level(user)
-	data["analysisDecodeBonus"] = get_analysis_decode_bonus(user)
-	//CYBERPUNK BUILD - rebuild and delete before release
 
 	// This block of code generates the huge data structure passed to the tgui
 	// interface for displaying all the various bits of console/scanner data
@@ -399,10 +350,6 @@
 			data["subjectStatus"] = scanner_occupant.stat
 		data["subjectHealth"] = scanner_occupant.health
 		data["subjectEnzymes"] = scanner_occupant.dna.unique_enzymes
-		data["subjectHumanoidity"] = scanner_occupant.dna.get_effective_humanoidity()
-		data["subjectHumanoidityRaw"] = scanner_occupant.dna.humanoidity
-		data["subjectHumanoidityPenalty"] = scanner_occupant.dna.humanoidity_genetic_penalty
-		data["subjectHumanoidityStabilizedBonus"] = scanner_occupant.dna.humanoidity_stabilized_bonus
 		data["isMonkey"] = ismonkey(scanner_occupant)
 		data["subjectUNI"] = scanner_occupant.dna.unique_identity
 		data["subjectUF"] = scanner_occupant.dna.unique_features
@@ -416,10 +363,6 @@
 		data["subjectHealth"] = null
 		data["subjectDamage"] = null
 		data["subjectEnzymes"] = null
-		data["subjectHumanoidity"] = null
-		data["subjectHumanoidityRaw"] = null
-		data["subjectHumanoidityPenalty"] = null
-		data["subjectHumanoidityStabilizedBonus"] = null
 		data["storage"]["occupant"] = null
 
 	data["hasDelayedAction"] = (delayed_action != null)
@@ -461,6 +404,17 @@
 	//data["advInjectors"] = tgui_advinjector_mutations
 	data["storage"]["injector"] = tgui_advinjector_mutations
 	data["maxAdvInjectors"] = max_injector_selections
+
+	data["heldScannerBuffer"] = null
+	for(var/obj/item/sequence_scanner/scanner in user.held_items) //We got one or more scanners in our hands, lets get the data from them.
+		if(!LAZYLEN(scanner.buffer))
+			continue
+		var/list/scanner_data = list()
+		for(var/mutation_type in scanner.buffer)
+			var/datum/mutation/mutation = GET_INITIALIZED_MUTATION(mutation_type)
+			if(mutation)
+				scanner_data[mutation.alias] = scanner.buffer[mutation_type]
+		data["heldScannerBuffer"] = scanner_data
 
 	return data
 
@@ -511,9 +465,7 @@
 
 			scanner_occupant.dna.remove_all_mutations()
 			scanner_occupant.dna.generate_dna_blocks()
-			//CYBERPUNK BUILD - rebuild and delete before release
-			scramble_ready = world.time + (SCRAMBLE_TIMEOUT * get_analysis_speed_multiplier(usr))
-			//CYBERPUNK BUILD - rebuild and delete before release
+			scramble_ready = world.time + SCRAMBLE_TIMEOUT
 			to_chat(usr,span_notice("DNA scrambled."))
 			scanner_occupant.apply_status_effect(/datum/status_effect/genetic_damage, GENETIC_DAMAGE_STRENGTH_MULTIPLIER*50/(connected_scanner.damage_coeff ** 2))
 			if(connected_scanner)
@@ -624,8 +576,7 @@
 					if((tgui_view_state["jokerActive"]) && (joker_ready < world.time))
 						var/truegenes = GET_SEQUENCE(path)
 						newgene = truegenes[genepos]
-						var/joker_cooldown = JOKER_TIMEOUT - (JOKER_UPGRADE * (connected_scanner.precision_coeff-1))
-						joker_ready = world.time + (joker_cooldown * get_analysis_speed_multiplier(usr))
+						joker_ready = world.time + JOKER_TIMEOUT - (JOKER_UPGRADE * (connected_scanner.precision_coeff-1))
 						tgui_view_state["jokerActive"] = FALSE
 					else
 						var/current_letter = gene_letters.Find(sequence[genepos])
@@ -641,11 +592,8 @@
 			// Copy genome to scanner occupant and do some basic mutation checks as
 			//  we've increased the occupant genetic damage
 			scanner_occupant.dna.mutation_index[path] = copytext(sequence, 1, genepos) + newgene + copytext(sequence, genepos + 1)
-			//CYBERPUNK BUILD - rebuild and delete before release
-			scanner_occupant.apply_status_effect(/datum/status_effect/genetic_damage, (GENETIC_DAMAGE_STRENGTH_MULTIPLIER * get_analysis_damage_multiplier(usr)) / connected_scanner.damage_coeff)
+			scanner_occupant.apply_status_effect(/datum/status_effect/genetic_damage, GENETIC_DAMAGE_STRENGTH_MULTIPLIER/connected_scanner.damage_coeff)
 			scanner_occupant.domutcheck()
-			usr?.mind?.adjust_experience(SKILL_ANALYSIS, 1, TRUE)
-			//CYBERPUNK BUILD - rebuild and delete before release
 
 			// GUARD CHECK - Modifying genetics can lead to edge cases where the
 			//  scanner occupant is qdel'd and replaced with a different entity.
@@ -892,7 +840,7 @@
 
 			// Create a new DNA Injector and add the appropriate mutations to it
 			var/obj/item/dnainjector/activator/injector = new /obj/item/dnainjector/activator(loc)
-			injector.add_mutations += mutation.make_copy()
+			LAZYADD(injector.add_mutations, mutation.make_copy())
 
 			var/is_activator = text2num(params["is_activator"])
 
@@ -913,7 +861,7 @@
 					// 25% reduction per tier
 					cd_reduction_mult -= ACTIVATOR_COOLDOWN_MULTIPLIER * (connected_scanner.precision_coeff)
 
-				injector_ready = world.time + (base_cd_time * cd_reduction_mult * get_analysis_speed_multiplier(usr))
+				injector_ready = world.time + (base_cd_time * cd_reduction_mult)
 			else
 				injector.name = "[mutation.name] mutator"
 				injector.force_mutate = TRUE
@@ -929,7 +877,7 @@
 					// 15% reduction per tier
 					cd_reduction_mult -= (INJECTOR_COOLDOWN_MULTIPLIER * connected_scanner.precision_coeff)
 
-				injector_ready = world.time + (base_cd_time * cd_reduction_mult * get_analysis_speed_multiplier(usr))
+				injector_ready = world.time + (base_cd_time * cd_reduction_mult)
 			if(connected_scanner)
 				connected_scanner.use_energy(connected_scanner.active_power_usage)
 			else
@@ -1366,93 +1314,19 @@
 		//  number later
 		// params["type"] - Type of injector to create
 		//  Expected results:
-		//   "ue" - Unique Enzyme, changes name and blood type
+		//  "ue" - Unique Enzyme, changes name and blood type
 		//  "ui" - Unique Identity, changes looks
 		//  "uf" - Unique Features, changes mutant bodyparts and mutcolors
 		//  "mixed" - Combination of both ue and ui
 		if("makeup_injector")
 			if(!COOLDOWN_FINISHED(src, enzyme_copy_timer))
 				return
-			// Convert the index to a number and clamp within the array range, then
-			//  copy the data from the disk to that buffer
-			var/buffer_index = text2num(params["index"])
-			buffer_index = clamp(buffer_index, 1, NUMBER_OF_BUFFERS)
-			var/list/buffer_slot = genetic_makeup_buffer[buffer_index]
-
-			// GUARD CHECK - This shouldn't be possible to execute this on a null
-			//  buffer. Unexpected resut
-			if(!istype(buffer_slot))
+			// Convert the index to a number and clamp within the array range, then copy the data from the disk to that buffer
+			var/buffer_index = clamp(text2num(params["index"]), 1, NUMBER_OF_BUFFERS)
+			if(!make_cosmetic_dna_injector(dna_injector_type_to_flag(params["type"]), genetic_makeup_buffer[buffer_index]))
+				to_chat(usr, span_warning("Genetic data corrupted, unable to create injector."))
 				return
-
-			var/type = params["type"]
-			var/obj/item/dnainjector/timed/I
-
-			switch(type)
-				if("ui")
-					// GUARD CHECK - There's currently no way to save partial genetic data.
-					//  However, if this is the case, we can't make a complete injector and
-					//  this catches that edge case
-					if(!buffer_slot["UI"])
-						to_chat(usr,span_warning("Genetic data corrupted, unable to create injector."))
-						return
-
-					I = new /obj/item/dnainjector/timed(loc)
-					I.fields = list("UI"=buffer_slot["UI"])
-
-					// If there is a connected scanner, we can use its upgrades to reduce
-					//  the genetic damage generated by this injector
-					if(scanner_operational())
-						I.damage_coeff = connected_scanner.damage_coeff
-				if("ue")
-					// GUARD CHECK - There's currently no way to save partial genetic data.
-					//  However, if this is the case, we can't make a complete injector and
-					//  this catches that edge case
-					if(!buffer_slot["name"] || !buffer_slot["UE"] || !buffer_slot["blood_type"])
-						to_chat(usr,span_warning("Genetic data corrupted, unable to create injector."))
-						return
-
-					I = new /obj/item/dnainjector/timed(loc)
-					I.fields = list("name"=buffer_slot["name"], "UE"=buffer_slot["UE"], "blood_type"=buffer_slot["blood_type"])
-
-					// If there is a connected scanner, we can use its upgrades to reduce
-					//  the genetic damage generated by this injector
-					if(scanner_operational())
-						I.damage_coeff = connected_scanner.damage_coeff
-				if("uf")
-					// GUARD CHECK - There's currently no way to save partial genetic data.
-					//  However, if this is the case, we can't make a complete injector and
-					//  this catches that edge case
-					if(!buffer_slot["name"] || !buffer_slot["UF"] || !buffer_slot["blood_type"])
-						to_chat(usr,span_warning("Genetic data corrupted, unable to create injector."))
-						return
-
-					I = new /obj/item/dnainjector/timed(loc)
-					I.fields = list("name"=buffer_slot["name"], "UF"=buffer_slot["UF"])
-
-					// If there is a connected scanner, we can use its upgrades to reduce
-					//  the genetic damage generated by this injector
-					if(scanner_operational())
-						I.damage_coeff = connected_scanner.damage_coeff
-				if("mixed")
-					// GUARD CHECK - There's currently no way to save partial genetic data.
-					//  However, if this is the case, we can't make a complete injector and
-					//  this catches that edge case
-					if(!buffer_slot["UI"] || !buffer_slot["name"] || !buffer_slot["UE"] || !buffer_slot["UF"] || !buffer_slot["blood_type"])
-						to_chat(usr,span_warning("Genetic data corrupted, unable to create injector."))
-						return
-
-					I = new /obj/item/dnainjector/timed(loc)
-					I.fields = list("UI"=buffer_slot["UI"],"name"=buffer_slot["name"], "UE"=buffer_slot["UE"], "UF"=buffer_slot["UF"], "blood_type"=buffer_slot["blood_type"])
-
-					// If there is a connected scanner, we can use its upgrades to reduce
-					//  the genetic damage generated by this injector
-					if(scanner_operational())
-						I.damage_coeff = connected_scanner.damage_coeff
-
-			// If we successfully created an injector, don't forget to set the new
-			//  ready timer.
-			if(I)
-				injector_ready = world.time + MISC_INJECTOR_TIMEOUT
+			injector_ready = world.time + MISC_INJECTOR_TIMEOUT
 			if(connected_scanner)
 				connected_scanner.use_energy(connected_scanner.active_power_usage)
 			else
@@ -1559,7 +1433,7 @@
 					len = length(scanner_occupant.dna.unique_identity)
 				if("uf")
 					len = length(scanner_occupant.dna.unique_features)
-			genetic_damage_pulse_timer = world.time + (pulse_duration * 10 * get_analysis_speed_multiplier(usr))
+			genetic_damage_pulse_timer = world.time + (pulse_duration*10)
 			genetic_damage_pulse_index = WRAP(text2num(params["index"]), 1, len+1)
 			begin_processing()
 			if(connected_scanner)
@@ -1640,10 +1514,10 @@
 
 			// Run through each mutation in our Advanced Injector and add them to a
 			//  new injector
-			var/total_humanoidity_load = 0
+			var/total_stability = 0
 			for(var/datum/mutation/mutation as anything in injector_selection[inj_name])
-				injector.add_mutations += mutation.make_copy()
-				total_humanoidity_load += mutation.instability
+				LAZYADD(injector.add_mutations, mutation.make_copy())
+				total_stability += mutation.instability
 
 			// Force apply any mutations, this is functionality similar to mutators
 			injector.force_mutate = TRUE
@@ -1652,7 +1526,7 @@
 			// If there's an operational connected scanner, we can use its upgrades
 			//  to improve our injector's genetic damage generation
 			var/cd_reduction_mult = 1 + ADVANCED_COOLDOWN_MULTIPLIER
-			var/base_cd_time = max(MIN_ADVANCED_TIMEOUT, abs(total_humanoidity_load) SECONDS)
+			var/base_cd_time = max(MIN_ADVANCED_TIMEOUT, abs(total_stability) SECONDS)
 
 			if(scanner_operational())
 				injector.damage_coeff = connected_scanner.damage_coeff*4
@@ -1662,7 +1536,7 @@
 				cd_reduction_mult -= ADVANCED_COOLDOWN_MULTIPLIER * (connected_scanner.precision_coeff)
 
 			// Applies a hard cap to advanced injector cooldowns to avoid excessive wait times
-			var/adv_cd_time = min(ADVANCED_INJECTOR_MAX_COOLDOWN, (base_cd_time * cd_reduction_mult * get_analysis_speed_multiplier(usr)))
+			var/adv_cd_time = min(ADVANCED_INJECTOR_MAX_COOLDOWN, (base_cd_time * cd_reduction_mult))
 			injector_ready = world.time + adv_cd_time
 			return
 
@@ -1711,18 +1585,18 @@
 			if(!original)
 				return
 
-			// We want to make sure we stick within the humanoidity load limit.
-			// We start with the humanoidity load of the mutation we're intending to add.
-			var/humanoidity_load_total = original.instability
+			// We want to make sure we stick within the instability limit.
+			// We start with the instability of the mutation we're intending to add.
+			var/instability_total = original.instability
 
-			// We then add the load of all other mutations in the injector,
-			//  remembering to apply the stabilizer chromosome modifiers
+			// We then add the instabilities of all other mutations in the injector,
+			//  remembering to apply the Stabilizer chromosome modifiers
 			for(var/datum/mutation/mutation in injector_selection[adv_inj])
-				humanoidity_load_total += mutation.instability * GET_MUTATION_STABILIZER(mutation)
+				instability_total += mutation.instability * GET_MUTATION_STABILIZER(mutation)
 
-			// If this would take us over the max humanoidity load, we inform the user.
-			if(humanoidity_load_total > max_injector_humanoidity_load)
-				to_chat(usr,span_warning("Extra mutation would exceed the advanced injector humanoidity load limit."))
+			// If this would take us over the max instability, we inform the user.
+			if(instability_total > max_injector_instability)
+				to_chat(usr,span_warning("Extra mutation would make the advanced injector too instable."))
 				return
 
 			// If we've got here, all our checks are passed and we can successfully
@@ -1848,11 +1722,89 @@
 			return TRUE
 
 	return FALSE
+
 /**
  * Checks if there is a connected DNA Scanner that is operational
  */
 /obj/machinery/computer/dna_console/proc/scanner_operational()
 	return connected_scanner?.is_operational
+
+/**
+ * Gets the damage coefficient of the connected DNA Scanner, or 1 if there isn't an operational one
+ */
+/obj/machinery/computer/dna_console/proc/get_injector_damage_coeff()
+	if(scanner_operational())
+		return connected_scanner.damage_coeff
+	return 1
+
+/// Copy UI to the dna injector
+#define DNA_INJECTOR_FLAG_UI (1<<0)
+/// Copy UE to the dna injector
+#define DNA_INJECTOR_FLAG_UE (1<<1)
+/// Copy UF to the dna injector
+#define DNA_INJECTOR_FLAG_UF (1<<2)
+/// Copy name to the dna injector
+#define DNA_INJECTOR_FLAG_NAME (1<<3)
+/// Copy blood type to the dna injector
+#define DNA_INJECTOR_FLAG_BLOOD (1<<4)
+
+/**
+ * Converts a string (from tgui) to a series of flags determine what we should put in a DNA Injector
+ */
+/obj/machinery/computer/dna_console/proc/dna_injector_type_to_flag(injector_type)
+	switch(injector_type)
+		if("ui")
+			return DNA_INJECTOR_FLAG_UI
+		if("ue")
+			return DNA_INJECTOR_FLAG_UE | DNA_INJECTOR_FLAG_NAME | DNA_INJECTOR_FLAG_BLOOD
+		if("uf")
+			return DNA_INJECTOR_FLAG_UF | DNA_INJECTOR_FLAG_NAME
+		if("mixed")
+			return ALL
+	return NONE
+
+/**
+ * Pass an injector flag and a genetic makeup buffer slot to create a DNA Injector
+ */
+/obj/machinery/computer/dna_console/proc/make_cosmetic_dna_injector(dna_flag, list/buffer_slot = list())
+	if(!dna_flag || !length(buffer_slot))
+		return FALSE
+
+	var/datum/dna/stored_dna = new()
+
+	if(dna_flag & DNA_INJECTOR_FLAG_NAME)
+		if(!buffer_slot["name"])
+			return FALSE
+		stored_dna.real_name = buffer_slot["name"]
+
+	if(dna_flag & DNA_INJECTOR_FLAG_BLOOD)
+		if(!buffer_slot["blood_type"])
+			return FALSE
+		stored_dna.blood_type = buffer_slot["blood_type"]
+
+	if(dna_flag & DNA_INJECTOR_FLAG_UI)
+		if(!buffer_slot["UI"])
+			return FALSE
+		stored_dna.unique_identity = buffer_slot["UI"]
+
+	if(dna_flag & DNA_INJECTOR_FLAG_UE)
+		if(!buffer_slot["UE"])
+			return FALSE
+		stored_dna.unique_enzymes = buffer_slot["UE"]
+
+	if(dna_flag & DNA_INJECTOR_FLAG_UF)
+		if(!buffer_slot["UF"])
+			return FALSE
+		stored_dna.unique_features = buffer_slot["UF"]
+
+	new /obj/item/dnainjector/timed(loc, stored_dna, get_injector_damage_coeff())
+	return TRUE
+
+#undef DNA_INJECTOR_FLAG_UI
+#undef DNA_INJECTOR_FLAG_UE
+#undef DNA_INJECTOR_FLAG_UF
+#undef DNA_INJECTOR_FLAG_NAME
+#undef DNA_INJECTOR_FLAG_BLOOD
 
 /**
  * Checks if there is a valid DNA Scanner occupant for genetic modification
@@ -1972,7 +1924,7 @@
 	* diskette and chromosomes and any advanced injectors, building the main data
 	* structures which get passed to the tgui interface.
  */
-/obj/machinery/computer/dna_console/proc/build_mutation_list(can_modify_occ, mob/user)
+/obj/machinery/computer/dna_console/proc/build_mutation_list(can_modify_occ)
 	// No code will ever null these lists. We can safely Cut them.
 	tgui_occupant_mutations.Cut()
 	tgui_diskette_mutations.Cut()
@@ -2000,9 +1952,6 @@
 			mutation_data["DefaultSeq"] = default_sequence
 			mutation_data["Discovered"] = discovered
 			mutation_data["Source"] = "occupant"
-			//CYBERPUNK BUILD - rebuild and delete before release
-			mutation_data["AnalysisHint"] = get_analysis_hint(user, mutation, text_sequence)
-			//CYBERPUNK BUILD - rebuild and delete before release
 
 			// We only want to pass this information along to the tgui interface if
 			//  the mutation has been discovered. Prevents people being able to cheese
@@ -2010,10 +1959,8 @@
 			if(discovered)
 				mutation_data["Name"] = mutation.name
 				mutation_data["Description"] = mutation.desc
-				mutation_data["HumanoidityLoad"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
+				mutation_data["Instability"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
 				mutation_data["Quality"] = mutation.quality
-			else if(mutation_data["AnalysisHint"])
-				mutation_data["Description"] = "Undiscovered sequence. Analysis has partial diagnostic data."
 
 			// Assume the mutation is normal unless assigned otherwise.
 			var/mut_class = SCANNER_MUTATION_CLASS_ACTIVATOR
@@ -2076,7 +2023,7 @@
 
 			mutation_data["Name"] = mutation.name
 			mutation_data["Description"] = mutation.desc
-			mutation_data["HumanoidityLoad"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
+			mutation_data["Instability"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
 
 			mutation_data["Active"] = TRUE
 			mutation_data["Scrambled"] = mutation.scrambled
@@ -2111,7 +2058,7 @@
 		mutation_data["Source"] = "console"
 		mutation_data["Active"] = TRUE
 		mutation_data["Description"] = mutation.desc
-		mutation_data["HumanoidityLoad"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
+		mutation_data["Instability"] = mutation.instability * GET_MUTATION_STABILIZER(mutation)
 		mutation_data["ByondRef"] = REF(mutation)
 		mutation_data["Type"] = mutation.type
 
@@ -2150,7 +2097,7 @@
 			//mutation_data["Sequence"] = GET_SEQUENCE(HM.type)
 			mutation_data["Source"] = "disk"
 			mutation_data["Description"] = HM.desc
-			mutation_data["HumanoidityLoad"] = HM.instability * GET_MUTATION_STABILIZER(HM)
+			mutation_data["Instability"] = HM.instability * GET_MUTATION_STABILIZER(HM)
 			mutation_data["ByondRef"] = REF(HM)
 			mutation_data["Type"] = HM.type
 
@@ -2178,7 +2125,7 @@
 				//mutation_data["Sequence"] = GET_SEQUENCE(HM.type)
 				mutation_data["Source"] = "injector"
 				mutation_data["Description"] = HM.desc
-				mutation_data["HumanoidityLoad"] = HM.instability * GET_MUTATION_STABILIZER(HM)
+				mutation_data["Instability"] = HM.instability * GET_MUTATION_STABILIZER(HM)
 				mutation_data["ByondRef"] = REF(HM)
 				mutation_data["Type"] = HM.type
 

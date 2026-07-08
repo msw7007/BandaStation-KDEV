@@ -54,6 +54,7 @@
 #define UNIT_TEST_PASSED 0
 #define UNIT_TEST_FAILED 1
 #define UNIT_TEST_SKIPPED 2
+#define UNIT_TEST_MAP_TEST (1<<0)
 
 #define TEST_PRE 0
 #define TEST_DEFAULT 1

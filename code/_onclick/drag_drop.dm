@@ -182,7 +182,7 @@
 		return FALSE
 	if(LAZYACCESS(modifiers, SHIFT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || LAZYACCESS(modifiers, ALT_CLICK) || LAZYACCESS(modifiers, MIDDLE_CLICK))
 		return FALSE
-	var/used_button = LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
+	var/used_button = get_cyberpunk_charged_click_button(modifiers)
 	if(used_button == RIGHT_CLICK && !living_user.can_cyberpunk_kick())
 		living_user.balloon_alert(living_user, "kick recovering")
 		return FALSE
@@ -205,7 +205,10 @@
 		clear_cyberpunk_charged_click()
 		return FALSE
 	var/atom/charged_target = cyberpunk_charged_click_ref.resolve()
-	if(charged_target == object && world.time >= cyberpunk_charged_click_started + get_cyberpunk_charged_click_delay(cyberpunk_charged_click_button))
+	var/valid_target = charged_target == object
+	if(!valid_target && cyberpunk_charged_click_button == RIGHT_CLICK && isliving(object))
+		valid_target = TRUE
+	if(valid_target && world.time >= cyberpunk_charged_click_started + get_cyberpunk_charged_click_delay(cyberpunk_charged_click_button))
 		cyberpunk_next_charged_intent = get_cyberpunk_charged_intent_for_button(cyberpunk_charged_click_button)
 	clear_cyberpunk_charged_click(FALSE)
 	return !!cyberpunk_next_charged_intent
@@ -225,9 +228,9 @@
 	if(!cyberpunk_charged_click_started || !cyberpunk_charged_click_ref)
 		return null
 	var/atom/charged_target = cyberpunk_charged_click_ref.resolve()
-	if(charged_target != target)
+	if(charged_target != target && !(cyberpunk_charged_click_button == RIGHT_CLICK && isliving(target)))
 		return null
-	var/expected_button = LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
+	var/expected_button = get_cyberpunk_charged_click_button(modifiers)
 	if(expected_button != cyberpunk_charged_click_button)
 		return null
 	if(world.time < cyberpunk_charged_click_started + get_cyberpunk_charged_click_delay(cyberpunk_charged_click_button))
@@ -243,6 +246,12 @@
 		if(living_user.cyberpunk_combat_intent == "stab")
 			return "pierce"
 	return "chop"
+
+/client/proc/get_cyberpunk_charged_click_button(list/modifiers)
+	var/used_button = LAZYACCESS(modifiers, BUTTON)
+	if(used_button)
+		return used_button
+	return LAZYACCESS(modifiers, RIGHT_CLICK) ? RIGHT_CLICK : LEFT_CLICK
 
 /client/proc/get_cyberpunk_charged_click_delay(used_button)
 	return used_button == RIGHT_CLICK ? 0.25 SECONDS : 1 SECONDS

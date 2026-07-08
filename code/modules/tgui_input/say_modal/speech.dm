@@ -128,44 +128,24 @@
  *  boolean - success or failure
  */
 /datum/tgui_say/proc/handle_entry(type, payload)
-	if(!islist(payload))
-		if(type != "save")
-			return FALSE
-		payload = list(
-			"entry" = "",
-			"channel" = saved_channel || SAY_CHANNEL,
-		)
-
-	var/entry = payload["entry"]
-	var/channel = payload["channel"]
-	if(!channel)
-		if(type != "save")
-			return FALSE
-		channel = saved_channel || SAY_CHANNEL
-	if(!istext(entry))
-		entry = ""
-
-	payload["entry"] = entry
-	payload["channel"] = channel
-
-	if(type == "entry" && !entry)
-		return TRUE
-	if(length(entry) > max_length)
+	if(!payload?["channel"] || isnull(payload["entry"]))
+		CRASH("[usr] entered in a null payload to the chat window.")
+	if(length(payload["entry"]) > max_length)
 		CRASH("[usr] has entered more characters than allowed into a TGUI-Say")
 	if(type == "entry")
-		delegate_speech(entry, channel)
+		delegate_speech(payload["entry"], payload["channel"])
 		return TRUE
 	if(type == "force")
-		var/target_channel = channel
+		var/target_channel = payload["channel"]
 		if(target_channel == ME_CHANNEL || target_channel == OOC_CHANNEL || target_channel == PRAY_CHANNEL)
 			target_channel = SAY_CHANNEL // No ooc leaks
 		delegate_speech(alter_entry(payload), target_channel)
 		return TRUE
 	if(type == "save")
 		saved_text = "" // so we can differentiate null (nothing saved) and empty (nothing typed)
-		var/target_channel = channel
+		var/target_channel = payload["channel"]
 		if(target_channel == SAY_CHANNEL || target_channel == RADIO_CHANNEL)
-			saved_text = entry // only save IC text
+			saved_text = payload["entry"] // only save IC text
 			saved_channel = target_channel
 		return TRUE
 	return FALSE

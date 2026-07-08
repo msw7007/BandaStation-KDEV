@@ -813,7 +813,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	var/obj/item/bodypart/attacking_bodypart = attacker_style?.get_attacking_limb(user, target) || brain?.get_attacking_limb(target) || user.get_active_hand()
 	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
 	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
-	if(charged_intent == "kick")
+	var/is_cyberpunk_kick = charged_intent == "kick"
+	if(is_cyberpunk_kick)
 		attacking_bodypart = user.get_bodypart(BODY_ZONE_R_LEG) || user.get_bodypart(BODY_ZONE_L_LEG) || attacking_bodypart
 
 	// Whether or not we get some protein for a successful attack. Nom.
@@ -826,6 +827,8 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		atk_verb_continuous = attacking_bodypart.unarmed_attack_verbs_continuous[atk_verb_index]
 
 	var/atk_effect = attacking_bodypart.unarmed_attack_effect
+	if(is_cyberpunk_kick)
+		atk_effect = ATTACK_EFFECT_KICK
 
 	if(atk_effect == ATTACK_EFFECT_BITE)
 		if(!user.is_mouth_covered(ITEM_SLOT_MASK))
@@ -872,7 +875,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		damage *= 1.15
 	else if(charged_intent == "pierce")
 		damage *= 1.12
-	else if(charged_intent == "kick")
+	else if(is_cyberpunk_kick)
 		damage *= 1.1
 	// Limb accuracy is used to determine miss probabilities (higher the value, the less likely you are to miss), armor penetration (if entitled) and the possible result from a stagger combo hit.
 	var/limb_accuracy = attacking_bodypart.unarmed_effectiveness
@@ -883,7 +886,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		limb_accuracy += 10
 	else if(charged_intent == "pierce")
 		limb_accuracy += 12
-	else if(charged_intent == "kick")
+	else if(is_cyberpunk_kick)
 		limb_accuracy += 8
 	// Limb sharpness determines the type of wounds this unarmed strike could possibly roll. By default, most limbs are blunt and have no sharpness.
 	var/limb_sharpness = attacking_bodypart.unarmed_sharpness
@@ -973,7 +976,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	else if(charged_intent == "chop")
 		atk_verb = "chop"
 		atk_verb_continuous = "chops"
-	else if(charged_intent == "kick")
+	else if(is_cyberpunk_kick)
 		atk_verb = "kick"
 		atk_verb_continuous = "kicks"
 	else if(combat_intent == "stab")
@@ -995,7 +998,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 
 	var/attack_direction = get_dir(user, target)
 	var/attack_type = attacking_bodypart.attack_type
-	var/kicking = (atk_effect == ATTACK_EFFECT_KICK)
+	var/kicking = (atk_effect == ATTACK_EFFECT_KICK) || is_cyberpunk_kick
 	var/final_armor_block = armor_block
 	var/damage_done = 0
 	if(kicking || grappled) //kicks and punches when grappling bypass armor slightly.
@@ -1011,8 +1014,9 @@ GLOBAL_LIST_EMPTY(features_by_species)
 		log_combat(user, target, "punched")
 	if(damage_done > 0 && !kicking && !biting)
 		user.apply_cyberpunk_precise_unarmed_pain(target, affecting, damage_done)
-	if(damage_done > 0 && kicking)
-		user.try_cyberpunk_fast_unarmed_prepare_free_hand_attack()
+	if(kicking && (damage_done > 0 || is_cyberpunk_kick))
+		if(damage_done > 0)
+			user.try_cyberpunk_fast_unarmed_prepare_free_hand_attack()
 		user.apply_cyberpunk_fast_unarmed_kick_effects(target, staggered)
 	if(damage_done > 0)
 		target.cyberpunk_report_violence_by(user)
