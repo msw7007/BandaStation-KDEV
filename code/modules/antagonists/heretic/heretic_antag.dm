@@ -417,10 +417,12 @@
 			COMSIG_LIVING_POST_FULLY_HEAL,
 			COMSIG_LIVING_CULT_SACRIFICED,
 			COMSIG_ATOM_EXAMINE,
+			COMSIG_ATOM_UPDATE_OVERLAYS,
 			SIGNAL_ADDTRAIT(TRAIT_HERETIC_AURA_HIDDEN),
-			SIGNAL_REMOVETRAIT(TRAIT_HERETIC_AURA_HIDDEN)
+			SIGNAL_REMOVETRAIT(TRAIT_HERETIC_AURA_HIDDEN),
 		)
 	)
+	our_mob.update_appearance(UPDATE_OVERLAYS)
 
 /// Removes the ability to blade break, removes cloak of shadows and removes the cap on how many blades you can craft
 /datum/antagonist/heretic/proc/disable_blade_breaking()
@@ -942,7 +944,7 @@
 		else
 			string_of_knowledge += knowledge.name
 
-	return "<br><b>Исследованые знания:</b><br>[english_list(string_of_knowledge, and_text = ", and ")]<br>"
+	return "<br><b>Исследованые знания:</b><br>[english_list(string_of_knowledge, and_text = ", и ")]<br>"
 
 /datum/antagonist/heretic/antag_panel_objectives()
 	. = ..()

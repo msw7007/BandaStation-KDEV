@@ -114,6 +114,9 @@ GLOBAL_LIST_EMPTY(antagonist_teams)
 	GLOB.antagonist_teams -= src
 	QDEL_NULL(cyberpunk_faction_resources)
 	members = null
+	for(var/datum/objective/objective as anything in objectives)
+		if(objective.team == src)
+			objective.team = null
 	objectives = null
 	return ..()
 

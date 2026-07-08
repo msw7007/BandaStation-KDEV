@@ -1552,7 +1552,7 @@
  */
 /obj/item/toy/reality_pierce
 	name = "Pierced reality"
-	desc = "Hah. You thought it was the real deal!"
+	desc = "Ха! Поверил, что он настоящий?"
 	icon = 'icons/effects/eldritch.dmi'
 	icon_state = "pierced_illusion"
 	item_flags = NO_PIXEL_RANDOM_DROP
@@ -1834,7 +1834,7 @@ GLOBAL_LIST_EMPTY(intento_players)
  */
 /obj/item/toy/foam_runic_scepter
 	name = "foam scepter"
-	desc = "A foam replica of the scepters Wizards us on Vendormancy Soccer."
+	desc = "A foam replica of the scepters Wizards use on Vendormancy Soccer."
 	icon_state = "vendor_staff"
 	worn_icon_state = "vendor_staff" //For the back
 	inhand_icon_state = "vendor_staff"

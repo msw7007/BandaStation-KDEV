@@ -112,7 +112,7 @@
 
 	// We should never find these
 	var/list/area/forbidden_types = list(
-		/area/station/engineering/supermatter/room,
+		/area/station/engineering/supermatter/engine,
 		/area/station/tcommsat/server,
 	)
 

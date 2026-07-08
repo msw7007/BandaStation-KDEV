@@ -72,6 +72,6 @@
 	if(istype(food_target))
 		food_target.cyberpunk_update_quality_effects()
 
-/datum/element/quality_food_ingredient/proc/add_complexity(datum/source, list/extra_complexity)
+/datum/element/quality_food_ingredient/proc/add_complexity(datum/source, list/complexity)
 	SIGNAL_HANDLER
-	extra_complexity[1] += complexity_increase
+	complexity[1] += complexity_increase
