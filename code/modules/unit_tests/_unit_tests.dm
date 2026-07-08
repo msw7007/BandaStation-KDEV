@@ -76,8 +76,6 @@
 #define UNIT_TEST_DEBUG_MAP_ONLY (1<<1)
 
 #define UNIT_TEST_BASIC (UNIT_TEST_DEBUG_MAP_ONLY)
-#define UNIT_TEST_MAP_TEST (NONE)
-
 /// Change color to red on ANSI terminal output, if enabled with -DANSICOLORS.
 #ifdef ANSICOLORS
 #define TEST_OUTPUT_RED(text) "\x1B\x5B1;31m[text]\x1B\x5B0m"

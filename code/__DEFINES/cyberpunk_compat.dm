@@ -10,6 +10,18 @@
 #define MODE_TTS_IDENTIFIER "tts_identifier"
 #endif
 
+#ifndef TRAIT_FOOD_CHEF_MADE
+#define TRAIT_FOOD_CHEF_MADE TRAIT_HANDMADE
+#endif
+
+#ifndef SKILL_XP_GARDENING_PER_HARVEST
+#define SKILL_XP_GARDENING_PER_HARVEST 8
+#endif
+
+#ifndef SKILL_XP_GARDENING_PER_WATERING
+#define SKILL_XP_GARDENING_PER_WATERING 3
+#endif
+
 #ifndef ORGAN_SLOT_BREATHING_TUBE
 #define ORGAN_SLOT_BREATHING_TUBE ORGAN_SLOT_NECK_AUG
 #endif
@@ -30,36 +42,8 @@
 #define ENTIRE_BODY "entire body"
 #endif
 
-#ifndef bodyshapes_with_variations
-#define bodyshapes_with_variations BODYSHAPE_DIGITIGRADE
-#endif
-
 #ifndef GRAB_NECK
 #define GRAB_NECK GRAB_TWOHANDED
-#endif
-
-#ifndef COMPONENT_BLOCK_RESIST
-#define COMPONENT_BLOCK_RESIST (1<<0)
-#endif
-
-#ifndef COMSIG_MOVABLE_GRABBED_RESISTING
-#define COMSIG_MOVABLE_GRABBED_RESISTING "movable_grabbed_resisting"
-#endif
-
-#ifndef GRAB_STAT_EFFECTIVE_STATE
-#define GRAB_STAT_EFFECTIVE_STATE 1
-#endif
-
-#ifndef GRAB_STAT_FAIL_DAMAGE
-#define GRAB_STAT_FAIL_DAMAGE 2
-#endif
-
-#ifndef GRAB_STAT_ESCAPE_CHANCE
-#define GRAB_STAT_ESCAPE_CHANCE 3
-#endif
-
-#ifndef COMSIG_BODYPART_UPDATED
-#define COMSIG_BODYPART_UPDATED "bodypart_updated"
 #endif
 
 #ifndef MUTATION_SOURCE_TIMED_INJECTOR

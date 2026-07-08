@@ -130,8 +130,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_storyteller_dynamic_rules_enabled = TRUE
 	/// Whether round phases project daylight onto open-sky turfs.
 	var/cyberpunk_daylight_enabled = TRUE
-	/// Prefer area base lighting for city outdoors instead of spawning sparse light sources over every open-sky turf.
-	var/cyberpunk_daylight_area_lighting_enabled = TRUE
+	/// Fallback/debug mode: apply daylight to whole outdoor areas instead of open-sky turfs.
+	var/cyberpunk_daylight_area_lighting_enabled = FALSE
 	/// Sparse daylight source spacing. One light source per N turfs.
 	var/cyberpunk_daylight_stride = 4
 	/// Last daylight phase applied to the world.
@@ -844,6 +844,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		if(length(cyberpunk_daylight_sources))
 			clear_cyberpunk_daylight_sources()
 	else
+		clear_cyberpunk_daylight_area_lighting()
 		ensure_cyberpunk_daylight_sources()
 		apply_cyberpunk_daylight_sources()
 	cyberpunk_daylight_last_phase = cyberpunk_round_phase
@@ -853,9 +854,14 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	if(length(cyberpunk_daylight_areas))
 		return
 	for(var/area/city_area as anything in GLOB.areas)
-		if(QDELETED(city_area) || !istype(city_area, /area/cyberpunk) || !area_is_outdoor(city_area))
+		if(!cyberpunk_area_uses_daylight(city_area))
 			continue
 		cyberpunk_daylight_areas += city_area
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_area_uses_daylight(area/city_area)
+	if(QDELETED(city_area) || !istype(city_area, /area/cyberpunk))
+		return FALSE
+	return city_area.outdoors || HAS_TRAIT(city_area, TRAIT_OUTDOOR_AIR)
 
 /datum/controller/subsystem/cyberpunk_round/proc/ensure_cyberpunk_daylight_sources()
 	if(length(cyberpunk_daylight_sources))
@@ -864,6 +870,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	for(var/turf/source_turf as anything in world)
 		CHECK_TICK
 		if(!isopenturf(source_turf))
+			continue
+		if(!cyberpunk_area_uses_daylight(get_area(source_turf)))
 			continue
 		if(is_space_or_openspace(source_turf))
 			continue
@@ -942,9 +950,23 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		if(QDELETED(city_area))
 			deleted_areas += city_area
 			continue
+		if(!cyberpunk_area_uses_daylight(city_area))
+			city_area.set_base_lighting(initial(city_area.base_lighting_color), initial(city_area.base_lighting_alpha))
+			deleted_areas += city_area
+			continue
 		city_area.set_base_lighting(light_color, light_alpha)
 	for(var/area/deleted_area as anything in deleted_areas)
 		cyberpunk_daylight_areas -= deleted_area
+
+/datum/controller/subsystem/cyberpunk_round/proc/clear_cyberpunk_daylight_area_lighting()
+	if(!length(cyberpunk_daylight_areas))
+		return
+	for(var/area/city_area as anything in cyberpunk_daylight_areas)
+		CHECK_TICK
+		if(QDELETED(city_area))
+			continue
+		city_area.set_base_lighting(initial(city_area.base_lighting_color), initial(city_area.base_lighting_alpha))
+	cyberpunk_daylight_areas = list()
 
 /datum/controller/subsystem/cyberpunk_round/proc/apply_cyberpunk_daylight_sources()
 	var/list/daylight_values = cyberpunk_daylight_current_values()

@@ -382,7 +382,7 @@
 	..()
 	if(icon_update)
 		update_body(is_creating = TRUE)
-		update_mutations_overlay()// no lizard with human hulk overlay please.
+		update_appearance(UPDATE_OVERLAYS)// no lizard with human hulk overlay please.
 
 /mob/has_dna()
 	return
@@ -433,7 +433,7 @@
 
 	if(mrace || newfeatures || unique_identity)
 		update_body(is_creating = TRUE)
-		update_mutations_overlay()
+		update_appearance(UPDATE_OVERLAYS)
 
 	if(LAZYLEN(mutations) && force_transfer_mutations && can_mutate())
 		for(var/datum/mutation/mutation as anything in mutations)
@@ -471,7 +471,7 @@
 	if(icon_update)
 		update_body(is_creating = mutcolor_update)
 	if(mutations_overlay_update)
-		update_mutations_overlay()
+		update_appearance(UPDATE_OVERLAYS)
 
 /mob/domutcheck()
 	return
@@ -483,7 +483,7 @@
 	for(var/mutation in dna.mutation_index)
 		dna.check_block(mutation)
 
-	update_mutations_overlay()
+	update_appearance(UPDATE_OVERLAYS)
 
 /datum/dna/check_block(mutation_path)
 	var/datum/mutation/mutation = get_mutation(mutation_path)

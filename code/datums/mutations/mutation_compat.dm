@@ -1,3 +1,1 @@
-/datum/mutation
-	var/mutation_icon_state
-	var/offset_location
+// Compatibility shims were needed before the upstream merge restored these APIs.

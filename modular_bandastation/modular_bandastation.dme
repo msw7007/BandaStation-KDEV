@@ -95,11 +95,6 @@
 #include "uplink_items/_uplink_items.dme"
 #include "weapon/_weapon.dme"
 #include "world_topics/_world_topics.dme"
-#include "movespeed_limit/_movespeed_limit.dme"
-#include "tesla_rework/_teslarework.dme"
-#include "job_restrictions/_job_restrictions.dme"
-#include "contraband/_contraband.dme"
-#include "quirks/_quirks.dme"
 #include "resources/_resources.dme"
 // --- MODULES END --- //
 

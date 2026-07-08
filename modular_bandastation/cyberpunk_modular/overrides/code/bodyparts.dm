@@ -1631,9 +1631,6 @@
 			for (var/mutable_appearance/actual_overlay as anything in external_overlay)
 				. += image(actual_overlay, dir = SOUTH)
 
-		for(var/datum/layer in .)
-			overlay.modify_bodypart_appearance(layer)
-
 	SEND_SIGNAL(src, COMSIG_BODYPART_GET_LIMB_ICON, ., dropped)
 	return .
 

@@ -708,14 +708,14 @@
 			if(organ?.owner)
 				organ.on_death(seconds_per_tick)
 
-/mob/living/carbon/handle_diseases(seconds_per_tick)
+/mob/living/carbon/proc/handle_diseases(seconds_per_tick)
 	for(var/datum/disease/disease as anything in diseases)
 		if(QDELETED(disease)) //Got cured/deleted while the loop was still going.
 			continue
 		if(stat != DEAD || disease.process_dead)
 			disease.stage_act(seconds_per_tick)
 
-/mob/living/carbon/handle_mutations(time_since_irradiated, seconds_per_tick)
+/mob/living/carbon/proc/handle_mutations(time_since_irradiated, seconds_per_tick)
 	if(!LAZYLEN(dna?.temporary_mutations))
 		return
 

@@ -39,8 +39,13 @@ SUBSYSTEM_DEF(statpanels)
 			"Round ID: [GLOB.round_id ? GLOB.round_id : "NULL"]",
 			"Server Time/NST: [server_timestamp(format = "YYYY-MM-DD hh:mm:ss", ic_time = TRUE)]",
 			"Shift Time/PT: [(SSticker.round_start_time == 0) ? "Pre-Game" : round_timestamp()]",
-			"Time Dilation: [round(SStime_track.time_dilation_current,1)]% AVG:([round(SStime_track.time_dilation_avg_fast,1)]%, [round(SStime_track.time_dilation_avg,1)]%, [round(SStime_track.time_dilation_avg_slow,1)]%)",
 		)
+
+		if(SScyberpunk_round?.cyberpunk_round_started_at)
+			SScyberpunk_round.update_cyberpunk_round_clock()
+			global_data += "City Time/CT: [SScyberpunk_round.cyberpunk_round_clock_text()]"
+
+		global_data += "Time Dilation: [round(SStime_track.time_dilation_current,1)]% AVG:([round(SStime_track.time_dilation_avg_fast,1)]%, [round(SStime_track.time_dilation_avg,1)]%, [round(SStime_track.time_dilation_avg_slow,1)]%)"
 
 		if(SSshuttle.emergency)
 			var/ETA = SSshuttle.emergency.getModeStr()

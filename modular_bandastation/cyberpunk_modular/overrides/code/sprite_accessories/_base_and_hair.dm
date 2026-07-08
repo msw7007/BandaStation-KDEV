@@ -17,154 +17,9 @@
  *	conversion in savefile.dm
  */
 
-/datum/sprite_accessory
-	/// The icon file the accessory is located in.
-	var/icon
-	/// The icon_state of the accessory.
-	var/icon_state
-	/// The preview name of the accessory.
-	var/name
-	/// Determines if the accessory will be skipped or included in random hair generations.
-	var/gender = NEUTER
-	/// Something that can be worn by either gender, but looks different on each.
-	var/gender_specific = FALSE
-	/// Determines if the accessory will be skipped by color preferences.
-	var/use_static
-	/**
-	 * Currently only used by mutantparts so don't worry about hair and stuff.
-	 * This is the source that this accessory will get its color from. Default is MUTCOLOR, but can also be HAIR, FACEHAIR, EYECOLOR and 0 if none.
-	 */
-	var/color_src = MUTANT_COLOR
-	/// Is this part locked from roundstart selection? Used for parts that apply effects.
-	var/locked = FALSE
-	/// Should we center the sprite?
-	var/center = FALSE
-	/// The width of the sprite in pixels. Used to center it if necessary.
-	var/dimension_x = 32
-	/// The height of the sprite in pixels. Used to center it if necessary.
-	var/dimension_y = 32
-	/// Should this sprite block emissives?
-	var/em_block = FALSE
-	/// Determines if this is considered "sane" for the purpose of [/proc/randomize_human_normie]
-	/// Basically this is to blacklist the extremely wacky stuff from being picked in random human generation.
-	var/natural_spawn = TRUE
-
-/datum/sprite_accessory/blank
-	name = SPRITE_ACCESSORY_NONE
-	icon_state = SPRITE_ACCESSORY_NONE
-
-////////////////
-// Hair Masks //
-////////////////
-
-/datum/hair_mask
-	var/icon/icon = 'icons/mob/human/hair_masks.dmi'
-	var/icon_state = ""
-	/// Strict coverage zones will always have the hair mask applied to them, even if a piece of hair at that location would normally resist being masked.
-	/// If a piece of headware only covers the top of the head, it should only strictly cover the top zone. But a mostly-enclosed helmet might strictly cover almost all zones.
-	var/strict_coverage_zones = NONE
-
-/datum/hair_mask/standard_hat_middle
-	icon_state = "hide_above_45deg"
-	strict_coverage_zones = HAIR_APPENDAGE_TOP
-
-/datum/hair_mask/standard_hat_low
-	icon_state = "hide_above_45deg_low"
-	strict_coverage_zones = HAIR_APPENDAGE_TOP | HAIR_APPENDAGE_LEFT | HAIR_APPENDAGE_RIGHT | HAIR_APPENDAGE_REAR
-
-/datum/hair_mask/winterhood
-	icon_state = "hide_winterhood"
-	strict_coverage_zones = HAIR_APPENDAGE_TOP | HAIR_APPENDAGE_LEFT | HAIR_APPENDAGE_RIGHT | HAIR_APPENDAGE_REAR | HAIR_APPENDAGE_HANGING_REAR
-
-/datum/hair_mask/hoodie
-	icon_state = "hide_hoodie"
-	strict_coverage_zones = HAIR_APPENDAGE_TOP | HAIR_APPENDAGE_LEFT | HAIR_APPENDAGE_RIGHT | HAIR_APPENDAGE_REAR | HAIR_APPENDAGE_HANGING_REAR
-
 //////////////////////
 // Hair Definitions //
 //////////////////////
-// Cache of each hairstyle's icon after being blended with the given masks
-// "joined mask types" is each mask's type as a string joined by commas (for no masks, it is the empty string)
-// /datum/sprite_accessory/hair path -> list(joined mask types -> icon)
-GLOBAL_LIST_EMPTY(blended_hair_icons_cache)
-
-/datum/sprite_accessory/hair
-	icon = 'icons/mob/human/human_face.dmi'   // default icon for all hairs
-	var/y_offset = 0 // Y offset to apply so we can have hair that reaches above the player sprite's visual bounding box
-
-	// Some hair will have "appendages", such as pony tails, that stick out from certain parts of the head. These can be layered above or below headwear and resist being masked away by hair masks.
-	// Lists should be icon_state strings associated with the HAIR_APPENDAGE defines specifying the part of the head they stick out from.
-	// hair_appendages_inner contains icon_states that go in the normal hair layer, hair_appendages_outer contains icon_states that go above the layer for headwear.
-	// hair_appendages_inner will be masked normally if their HAIR_APPENDAGE zone is strictly masked by a piece of clothing (a fully enclosed helmet with a transparent visor will strictly mask all zones, a small hat will only strictly mask the top, etc.).
-	// hair_appendages_outer will never be masked at all and will just not be shown if their zone has strict masking. These should generally not have visible sprites for every dir.
-	var/list/hair_appendages_inner = null
-	var/list/hair_appendages_outer = null
-
-/// Retrieve the base hair icon with all hair appendeges blended in, with hair masks applied, from the cache, or generate it if it doesn't exist
-/datum/sprite_accessory/hair/proc/getCachedIcon(list/hair_masks)
-	var/icon/cachedIcon
-	var/joinedMasks = LAZYLEN(hair_masks) ? jointext(hair_masks, ",") : ""
-	var/list/masks_to_icons = GLOB.blended_hair_icons_cache[type]
-	if(!masks_to_icons)
-		GLOB.blended_hair_icons_cache[type] = list()
-	else
-		cachedIcon = masks_to_icons[joinedMasks]
-
-	if(!cachedIcon)
-		if(LAZYLEN(hair_masks))
-			if(LAZYLEN(hair_appendages_inner))
-				// Check if there are any hair appendages in a zone that is not strictly masked
-				var/found_mask_dodger = FALSE
-				for(var/datum/hair_mask/mask as anything in hair_masks)
-					for(var/appendage in hair_appendages_inner)
-						var/zone = hair_appendages_inner[appendage]
-						if(!(zone & mask.strict_coverage_zones))
-							found_mask_dodger = TRUE
-
-				if(found_mask_dodger)
-					// We have to process each icon individually
-					cachedIcon = icon(icon, icon_state)
-					// mask the base icon
-					for(var/datum/hair_mask/mask as anything in hair_masks)
-						var/icon/mask_icon = icon(mask.icon, mask.icon_state) // BANDASTATION MOD: Ears overlay mask
-						mask_icon.Shift(SOUTH, y_offset)
-						cachedIcon.Blend(mask_icon, ICON_ADD)
-
-					// mask the appendages if required and add them to the base icon
-					for(var/appendage_icon_state in hair_appendages_inner)
-						var/icon/appendage_icon = icon(icon, appendage_icon_state)
-						var/zone = hair_appendages_inner[appendage_icon_state]
-						for(var/datum/hair_mask/mask as anything in hair_masks)
-							if(zone & mask.strict_coverage_zones)
-								var/icon/mask_icon = icon(mask.icon, mask.icon_state) // BANDASTATION MOD: Ears overlay mask
-								mask_icon.Shift(SOUTH, y_offset)
-								appendage_icon.Blend(mask_icon, ICON_ADD)
-						cachedIcon.Blend(appendage_icon, ICON_OVERLAY)
-				else
-					// No mask dodgers, so we can just mask the full (hopefully cached) icon
-					cachedIcon = icon(getCachedIcon())
-					for(var/datum/hair_mask/mask as anything in hair_masks)
-						var/icon/mask_icon = icon(mask.icon, mask.icon_state) // BANDASTATION MOD: Ears overlay mask
-						mask_icon.Shift(SOUTH, y_offset)
-						cachedIcon.Blend(mask_icon, ICON_ADD)
-			else
-				// No hair appendages, so just apply all hair masks to the base icon
-				cachedIcon = icon(icon, icon_state)
-				for(var/datum/hair_mask/mask as anything in hair_masks)
-					var/icon/mask_icon = icon(mask.icon, mask.icon_state) // BANDASTATION MOD: Ears overlay mask
-					mask_icon.Shift(SOUTH, y_offset)
-					cachedIcon.Blend(mask_icon, ICON_ADD)
-		else
-			// no hair masks
-			cachedIcon = icon(icon, icon_state)
-			if(LAZYLEN(hair_appendages_inner))
-				for(var/appendage_icon_state in hair_appendages_inner)
-					var/icon/appendage_icon = icon(icon, appendage_icon_state)
-					cachedIcon.Blend(appendage_icon, ICON_OVERLAY)
-		// set cache
-		GLOB.blended_hair_icons_cache[type][joinedMasks] = cachedIcon
-	return cachedIcon
-
 
 // please make sure they're sorted alphabetically and, where needed, categorized
 // try to capitalize the names please~
@@ -1003,8 +858,6 @@ GLOBAL_LIST_EMPTY(blended_hair_icons_cache)
 
 /datum/sprite_accessory/gradient
 	icon = 'icons/mob/human/species/hair_gradients.dmi'
-	///whether this gradient applies to hair and/or beards. Some gradients do not work well on beards.
-	var/gradient_category = GRADIENT_APPLIES_TO_HAIR|GRADIENT_APPLIES_TO_FACIAL_HAIR
 
 /datum/sprite_accessory/gradient/none
 	name = SPRITE_ACCESSORY_NONE
@@ -1091,4 +944,3 @@ GLOBAL_LIST_EMPTY(blended_hair_icons_cache)
 /datum/sprite_accessory/gradient/striped_vertical
 	name = "Striped Vertical"
 	icon_state = "striped_vertical"
-

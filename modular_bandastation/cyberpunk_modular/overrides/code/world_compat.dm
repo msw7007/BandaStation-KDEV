@@ -1,13 +1,3 @@
-// Compatibility vars for upstream code restored into core during modularization.
-
-/area
-	var/tacmap_color
-	var/skip_minimap_rendering = FALSE
-
-/turf
-	var/tacmap_color
-	var/skip_minimap_rendering = FALSE
-
 /turf/closed
 	appearance_flags = LONG_GLIDE
 	/// Suffix used by diagonal bitmask smoothing states.

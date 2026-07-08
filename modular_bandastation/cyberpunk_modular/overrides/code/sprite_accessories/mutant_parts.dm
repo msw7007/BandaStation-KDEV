@@ -40,8 +40,6 @@
 
 /datum/sprite_accessory/tails
 	em_block = TRUE
-	/// Describes which tail spine sprites to use, if any.
-	var/spine_key = NONE
 
 ///Used for fish-infused tails, which come in different flavors.
 /datum/sprite_accessory/tails/fish

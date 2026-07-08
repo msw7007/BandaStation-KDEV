@@ -45,7 +45,7 @@
 	var/datum/sprite_accessory/clothing/accessory = get_accessory()
 	if(!accessory)
 		return null
-	return accessory.make_appearance(accessory_color, wearer.physique, wearer.get_active_bodyshapes())
+	return accessory.make_appearance(accessory_color, wearer.physique, wearer.bodyshape)
 
 /obj/item/clothing/cyberpunk_underwear/undershirt
 	name = "undershirt"

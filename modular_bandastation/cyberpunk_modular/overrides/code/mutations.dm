@@ -14,16 +14,14 @@
 	conflicts = list(/datum/mutation/adaptation)
 	mutation_traits = list(TRAIT_WADDLING)
 	/// Icon used for the adaptation overlay
-	var/adapt_icon = "meow"
+	mutation_icon_state = "meow"
+	layer_used = MUTATIONS_LAYER
+	offset_location = FULL_BODY
 
 /datum/mutation/adaptation/New(datum/mutation/copymut)
 	..()
 	conflicts = typesof(/datum/mutation/adaptation)
-	if(!(type in visual_indicators))
-		visual_indicators[type] = list(mutable_appearance('icons/mob/effects/genetics.dmi', adapt_icon, -MUTATIONS_LAYER))
 
-/datum/mutation/adaptation/get_visual_indicator()
-	return visual_indicators[type][1]
 
 /datum/mutation/adaptation/cold
 	name = "Cold Adaptation"
@@ -31,7 +29,7 @@
 	text_gain_indication = span_notice("Твое тело наполняет освежающий холод.")
 	instability = HUMANOIDITY_LOAD_MODERATE
 	mutation_traits = list(TRAIT_RESISTCOLD, TRAIT_NO_SLIP_ICE)
-	adapt_icon = "cold"
+	mutation_icon_state = "cold"
 	locked = FALSE
 
 /datum/mutation/adaptation/heat
@@ -40,7 +38,7 @@
 	text_gain_indication = span_notice("Твоё тело наполняет лёгкое тепло.")
 	instability = HUMANOIDITY_LOAD_MODERATE
 	mutation_traits = list(TRAIT_RESISTHEAT, TRAIT_ASHSTORM_IMMUNE)
-	adapt_icon = "fire"
+	mutation_icon_state = "fire"
 	locked = FALSE
 
 /datum/mutation/adaptation/thermal
@@ -50,7 +48,7 @@
 	text_gain_indication = span_notice("Твоё тело ощущает комфорто-комнатную температуру.")
 	instability = HUMANOIDITY_LOAD_MAJOR
 	mutation_traits = list(TRAIT_RESISTHEAT, TRAIT_RESISTCOLD)
-	adapt_icon = "thermal"
+	mutation_icon_state = "thermal"
 	locked = TRUE // recipe
 
 /datum/mutation/adaptation/pressure
@@ -58,7 +56,7 @@
 	desc = "Странная мутация, которая адаптирует иммунную систему организма к низкому и высокому давлению. Не защищает от температуры и холодного космоса в том числе."
 	text_gain_indication = span_notice("Ваше тело испытывает сильное давление.")
 	instability = HUMANOIDITY_LOAD_MODERATE
-	adapt_icon = "pressure"
+	mutation_icon_state = "pressure"
 	mutation_traits = list(TRAIT_RESISTLOWPRESSURE, TRAIT_RESISTHIGHPRESSURE)
 	locked = TRUE
 
@@ -73,6 +71,8 @@
 	instability = HUMANOIDITY_LOAD_MINOR
 	difficulty = 8
 	locked = TRUE
+	mutation_icon_state = "antenna"
+	layer_used = FRONT_MUTATIONS_LAYER - 1
 
 /obj/item/implant/radio/antenna
 	name = "internal antenna organ"
@@ -101,11 +101,7 @@
 
 /datum/mutation/antenna/New(datum/mutation/copymut)
 	..()
-	if(!(type in visual_indicators))
-		visual_indicators[type] = list(mutable_appearance('icons/mob/effects/genetics.dmi', "antenna", -FRONT_MUTATIONS_LAYER+1))//-MUTATIONS_LAYER+1
 
-/datum/mutation/antenna/get_visual_indicator()
-	return visual_indicators[type][1]
 
 /datum/mutation/mindreader
 	name = "Mind Reader"
@@ -117,6 +113,8 @@
 	instability = HUMANOIDITY_LOAD_MINOR
 	difficulty = 8
 	locked = TRUE
+	mutation_icon_state = "antenna"
+	layer_used = FRONT_MUTATIONS_LAYER - 1
 
 /datum/action/cooldown/spell/pointed/mindread
 	name = "Mindread"
@@ -242,11 +240,7 @@
 
 /datum/mutation/mindreader/New(datum/mutation/copymut)
 	..()
-	if(!(type in visual_indicators))
-		visual_indicators[type] = list(mutable_appearance('icons/mob/effects/genetics.dmi', "antenna", -FRONT_MUTATIONS_LAYER+1))
 
-/datum/mutation/mindreader/get_visual_indicator()
-	return visual_indicators[type][1]
 
 // From code/datums/mutations/reach.dm
 
@@ -259,11 +253,11 @@
 	text_gain_indication = span_notice("You feel smarter!")
 	limb_req = BODY_ZONE_HEAD
 	instability = HUMANOIDITY_LOAD_MAJOR
+	mutation_icon_state = "telekinesishead"
+	layer_used = MUTATIONS_LAYER
 
 /datum/mutation/telekinesis/New(datum/mutation/copymut)
 	..()
-	if(!(type in visual_indicators))
-		visual_indicators[type] = list(mutable_appearance('icons/mob/effects/genetics.dmi', "telekinesishead", -MUTATIONS_LAYER))
 
 /datum/mutation/telekinesis/on_acquiring(mob/living/carbon/human/homan)
 	. = ..()
@@ -277,8 +271,6 @@
 		return
 	UnregisterSignal(homan, COMSIG_MOB_ATTACK_RANGED)
 
-/datum/mutation/telekinesis/get_visual_indicator()
-	return visual_indicators[type][1]
 
 ///Triggers on COMSIG_MOB_ATTACK_RANGED. Usually handles stuff like picking up items at range.
 /datum/mutation/telekinesis/on_ranged_attack(mob/source, atom/target)

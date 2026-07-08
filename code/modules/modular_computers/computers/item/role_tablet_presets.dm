@@ -26,8 +26,12 @@
 
 	if (ispath(fax_type, /obj/machinery/fax))
 		var/datum/computer_file/program/faxbond/fax_notifier = locate() in stored_files
+		if(!fax_notifier)
+			return
 		var/list/faxes_list = SSmachines.get_machines_by_type(fax_type)
 		var/obj/machinery/fax/heads_fax = length(faxes_list) ? pick(faxes_list) : null //there really shouldnt be more than one
+		if(!heads_fax)
+			return
 		fax_notifier.connect_fax(heads_fax)
 
 /obj/item/modular_computer/pda/heads/captain

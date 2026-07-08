@@ -88,7 +88,7 @@
 		. += span_notice("Genetic payload: adds [get_mutation_payload_text(add_mutations)].")
 	if(length(remove_mutations))
 		. += span_notice("Genetic payload: suppresses [get_mutation_payload_text(remove_mutations)].")
-	if(fields)
+	if(stored_dna)
 		. += span_notice("Genetic payload: identity/profile rewrite data present.")
 	if(analysis_info >= 40)
 		if(length(add_mutations))

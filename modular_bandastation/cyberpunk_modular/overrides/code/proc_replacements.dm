@@ -1,11 +1,6 @@
 // Cyberpunk proc replacements. These intentionally shadow upstream core procs
 // so the core files can stay close to upstream during merges.
 
-/datum/song
-	var/exponential_falloff = INSTRUMENT_FALLOFF_EXPONENT
-
-/var/TRAIT_HANDMADE = TRAIT_FOOD_CHEF_MADE
-
 /obj/machinery/deepfryer
 	/// Last living user who placed the current item. Used by CP13 cooking skill hooks.
 	var/tmp/mob/living/cyberpunk_fryer_user

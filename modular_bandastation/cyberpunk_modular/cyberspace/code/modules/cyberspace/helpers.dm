@@ -186,7 +186,6 @@
 		|| istype(candidate, /obj/machinery/status_display) \
 		|| istype(candidate, /obj/machinery/porta_turret) \
 		|| istype(candidate, /mob/living/basic/bot) \
-		|| istype(candidate, /mob/living/simple_animal/bot) \
 		|| istype(candidate, /obj/item/organ/cyberimp)
 
 /proc/is_cyberspace_trace_object(atom/movable/candidate)

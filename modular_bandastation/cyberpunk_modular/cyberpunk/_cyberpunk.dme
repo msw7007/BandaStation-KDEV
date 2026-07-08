@@ -1,6 +1,7 @@
 #include "_cyberpunk.dm"
 
 #include "code/controllers/subsystem/cyberpunk_round.dm"
+#include "code/modules/cyberpunk/area_lighting.dm"
 #include "code/modules/cyberpunk/property_persistence.dm"
 #include "code/modules/cyberpunk/metro.dm"
 #include "code/modules/cyberpunk/modularity/machinery/modules.dm"
