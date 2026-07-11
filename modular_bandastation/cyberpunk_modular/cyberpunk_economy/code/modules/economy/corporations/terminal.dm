@@ -285,6 +285,7 @@
 	var/collection_cooldown = 5 MINUTES
 	var/next_collection_at = 0
 	var/minigame_reward = 50
+	var/next_ai_theory_at = 0
 
 /obj/machinery/computer/corporate_data_terminal/Initialize(mapload)
 	. = ..()
@@ -354,6 +355,18 @@
 		return FALSE
 	var/collected_data_type = data_type || corporation.get_primary_data_type()
 	return SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation.id, collected_data_type, 1, 0, "Research correction by [user.real_name || user.name]")
+
+/obj/machinery/computer/corporate_data_terminal/proc/record_ai_theory_tick(mob/living/worker)
+	if(!worker?.Adjacent(src) || world.time < next_ai_theory_at)
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
+	if(!corporation)
+		return FALSE
+	var/collected_data_type = data_type || corporation.get_primary_data_type()
+	if(!SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation.id, collected_data_type, 1, 0, "AI theory work by [worker.real_name || worker.name]"))
+		return FALSE
+	next_ai_theory_at = world.time + 1 SECONDS
+	return TRUE
 
 // Per-player game sessions keep board state out of terminals and the shared economy subsystem.
 /datum/cyberpunk_corporate_minigame

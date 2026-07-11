@@ -540,6 +540,7 @@
 	action_cooldown = 1 SECONDS
 
 /datum/ai_behavior/cyberpunk_work_task/perform(seconds_per_tick, datum/ai_controller/controller)
+	var/mob/living/living_pawn = controller.pawn
 	if(controller.blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_REPAIR)
 		var/atom/repair_target = controller.blackboard[BB_CP_ROUTE_TARGET]
 		if(!repair_target?.uses_integrity)
@@ -555,12 +556,14 @@
 	var/finish_at = controller.blackboard[BB_CP_CITY_TASK_FINISH_AT]
 	if(finish_at && world.time < finish_at)
 		var/atom/target = controller.blackboard[BB_CP_ROUTE_TARGET]
-		if(target && controller.cyberpunk_has_capability(CP_AI_CAP_USE_TERMINAL))
+		var/obj/machinery/computer/corporate_data_terminal/data_terminal = target
+		if(istype(living_pawn) && istype(data_terminal) && controller.blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_WORK)
+			data_terminal.record_ai_theory_tick(living_pawn)
+		if(target && !istype(data_terminal) && controller.cyberpunk_has_capability(CP_AI_CAP_USE_TERMINAL))
 			controller.ai_interact(target, combat_mode = FALSE)
 		return AI_BEHAVIOR_DELAY
 
 	var/datum/cyberpunk_contract/contract = controller.blackboard[BB_CP_CONTRACT_REF]
-	var/mob/living/living_pawn = controller.pawn
 	if(contract && istype(living_pawn))
 		contract.check_nearby_target(living_pawn)
 	controller.cyberpunk_complete_city_task("work finished")

@@ -1031,6 +1031,9 @@
 		"bystander" = /mob/living/carbon/human/cyberpunk_npc/bystander,
 		"runner" = /mob/living/carbon/human/cyberpunk_npc/runner,
 		"worker" = /mob/living/carbon/human/cyberpunk_npc/worker,
+		"Benn specialist" = /mob/living/carbon/human/cyberpunk_npc/corporate_specialist/benn,
+		"Ryaznov specialist" = /mob/living/carbon/human/cyberpunk_npc/corporate_specialist/ryaznov,
+		"Starlight specialist" = /mob/living/carbon/human/cyberpunk_npc/corporate_specialist/starlight,
 		"security test heavy" = /mob/living/carbon/human/cyberpunk_npc/security,
 	)
 	var/picked = tgui_input_list(src, "Spawn which temporary NPC?", "Cyberpunk NPC", choices)
@@ -1065,12 +1068,19 @@
 	var/cyberpunk_ambient_phrase_key = "bystander"
 	var/cyberpunk_ambient_speech_interval = 10 SECONDS
 	var/cyberpunk_next_ambient_speech = 0
+	var/cyberpunk_corporation_id
 
 /mob/living/carbon/human/cyberpunk_npc/Initialize(mapload)
 	. = ..()
 	set_species(/datum/species/human)
 	equip_to_slot_or_del(new /obj/item/clothing/under/color/grey(src), ITEM_SLOT_ICLOTHING, initial = TRUE)
 	equip_to_slot_or_del(new /obj/item/clothing/shoes/sneakers/black(src), ITEM_SLOT_FEET, initial = TRUE)
+	if(cyberpunk_corporation_id)
+		for(var/access_id in cyberpunk_corporation_role_accesses(cyberpunk_corporation_id, "specialist"))
+			add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key(access_id))
+	if(istype(src, /mob/living/carbon/human/cyberpunk_npc/security))
+		add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key("city:police"))
+		add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key("corp:heads"))
 	if(cyberpunk_stationary_npc)
 		ADD_TRAIT(src, TRAIT_IMMOBILIZED, "cyberpunk_stationary_npc")
 		QDEL_NULL(ai_controller)
@@ -1324,6 +1334,29 @@
 	cyberpunk_vendor_profile = "worker"
 	cyberpunk_vendor_categories = list("parts", "water")
 	cyberpunk_ambient_phrase_key = "worker"
+
+/mob/living/carbon/human/cyberpunk_npc/corporate_specialist
+	real_name = "corporate specialist"
+	name = "corporate specialist"
+	ai_controller = /datum/ai_controller/basic_controller/simple/cyberpunk_city/corporate
+	cyberpunk_vendor_profile = "corporate specialist"
+	cyberpunk_vendor_categories = list("parts", "water")
+	cyberpunk_ambient_phrase_key = "worker"
+
+/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/benn
+	real_name = "Benn specialist"
+	name = "Benn specialist"
+	cyberpunk_corporation_id = CYBERPUNK_CORP_BENN
+
+/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/ryaznov
+	real_name = "Ryaznov specialist"
+	name = "Ryaznov specialist"
+	cyberpunk_corporation_id = CYBERPUNK_CORP_RYAZNOV
+
+/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/starlight
+	real_name = "Starlight specialist"
+	name = "Starlight specialist"
+	cyberpunk_corporation_id = CYBERPUNK_CORP_STARLIGHT
 
 /mob/living/carbon/human/cyberpunk_npc/security
 	real_name = "security contractor"

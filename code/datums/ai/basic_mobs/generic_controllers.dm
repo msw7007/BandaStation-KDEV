@@ -142,6 +142,17 @@
 		BB_CP_PHANTOM_STATE = CP_AI_PHANTOM_INACTIVE,
 	)
 
+/datum/ai_controller/basic_controller/simple/cyberpunk_city/corporate
+	blackboard = list(
+		BB_TARGETING_STRATEGY = /datum/targeting_strategy/basic,
+		BB_CP_AI_ROLE_PROFILE = CP_AI_ROLE_CORPORATE,
+		BB_CP_AI_CAPABILITIES = CP_AI_CAP_HANDS | CP_AI_CAP_USE_TERMINAL | CP_AI_CAP_USE_CONTRACTS,
+		BB_CP_AI_LEVEL = 2,
+		BB_CP_PHANTOM_ENABLED = TRUE,
+		BB_CP_PHANTOM_PROFILE = CP_AI_PHANTOM_PROFILE_LIGHT,
+		BB_CP_PHANTOM_STATE = CP_AI_PHANTOM_INACTIVE,
+	)
+
 /datum/ai_controller/basic_controller/simple/cyberpunk_city/runner
 	idle_behavior = /datum/idle_behavior/cyberpunk_phantom/runner
 	blackboard = list(

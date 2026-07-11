@@ -84,6 +84,9 @@
 	cyberpunk_district_id = "cyberpunk"
 	cyberpunk_district_name = "Киберпанк"
 	cyberpunk_district_kind = "world"
+	var/cyberpunk_corporate_protected = FALSE
+	var/cyberpunk_corporate_public = FALSE
+	var/cyberpunk_corporation_id
 
 /area/cyberpunk/city
 	name = "Брайт-Сити"
@@ -527,24 +530,28 @@
 	cyberpunk_world_tags = list("corporate")
 	cyberpunk_violence_control = "high"
 	cyberpunk_district_base_danger = 5
+	cyberpunk_corporate_protected = TRUE
 
 /area/cyberpunk/city/corporate/benn
 	name = "Территория Бэнь"
 	cyberpunk_district_id = "benn"
 	cyberpunk_district_name = "Территория Бэнь"
 	cyberpunk_world_owner = "benn"
+	cyberpunk_corporation_id = "benn"
 
 /area/cyberpunk/city/corporate/ryaznov
 	name = "Территория Рязнова"
 	cyberpunk_district_id = "ryaznov"
 	cyberpunk_district_name = "Территория Рязнова"
 	cyberpunk_world_owner = "ryaznov"
+	cyberpunk_corporation_id = "ryaznov"
 
 /area/cyberpunk/city/corporate/starlight
 	name = "Территория Старлайт"
 	cyberpunk_district_id = "starlight"
 	cyberpunk_district_name = "Территория Старлайт"
 	cyberpunk_world_owner = "starlight"
+	cyberpunk_corporation_id = "starlight"
 
 /area/cyberpunk/city/government
 	name = "Правительство"

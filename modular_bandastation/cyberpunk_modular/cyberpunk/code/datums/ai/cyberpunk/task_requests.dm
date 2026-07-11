@@ -1,6 +1,8 @@
 // CP13 city task request layer.
 // This is a producer/dispatcher shim over tg AI controllers, not a separate AI core.
 
+/mob/living/var/next_cyberpunk_corporate_trespass_report = 0
+
 /datum/cyberpunk_ai_task_request
 	var/task_type = CP_AI_TASK_WORK
 	var/atom/source
@@ -503,6 +505,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/max_runners = 4
 	var/max_workers = 5
 	var/max_security = 6
+	var/max_corporate_specialists_per_corp = 1
 	var/max_traffic_nodes = 48
 	var/max_traffic_lights = 12
 	var/max_traffic_vehicles = 4
@@ -529,8 +532,11 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	maintain_runners(active_players)
 	maintain_workers(active_players)
 	maintain_security()
+	maintain_corporate_specialists(active_players)
 	process_city_vendors(active_players)
 	process_city_needs(active_players)
+	process_corporate_specialist_work(active_players)
+	process_corporate_trespass(active_players)
 	maintain_roaming(active_players)
 	process_ambient_speech(active_players)
 
@@ -736,6 +742,150 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/turf/patrol_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district)
 	if(patrol_turf)
 		cyberpunk_order_city_ai(security_npc, CP_AI_TASK_PATROL, spawn_turf, patrol_turf, null)
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/maintain_corporate_specialists(list/active_players)
+	for(var/corporation_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+		if(count_corporate_specialists(corporation_id) >= max_corporate_specialists_per_corp)
+			continue
+		if(!find_corporate_data_terminal(corporation_id))
+			continue
+		var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(corporate_area_type(corporation_id), active_players, 0, INFINITY) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, 8, 20)
+		if(!spawn_turf)
+			continue
+		var/specialist_type = corporate_specialist_type(corporation_id)
+		if(specialist_type)
+			new specialist_type(spawn_turf)
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/count_corporate_specialists(corporation_id)
+	var/count = 0
+	for(var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist as anything in GLOB.mob_living_list)
+		if(QDELETED(specialist) || specialist.stat == DEAD)
+			continue
+		if(specialist.cyberpunk_corporation_id == corporation_id)
+			count++
+	return count
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/corporate_specialist_type(corporation_id)
+	switch(corporation_id)
+		if(CYBERPUNK_CORP_BENN)
+			return /mob/living/carbon/human/cyberpunk_npc/corporate_specialist/benn
+		if(CYBERPUNK_CORP_RYAZNOV)
+			return /mob/living/carbon/human/cyberpunk_npc/corporate_specialist/ryaznov
+		if(CYBERPUNK_CORP_STARLIGHT)
+			return /mob/living/carbon/human/cyberpunk_npc/corporate_specialist/starlight
+	return null
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/corporate_area_type(corporation_id)
+	switch(corporation_id)
+		if(CYBERPUNK_CORP_BENN)
+			return /area/cyberpunk/city/corporate/benn
+		if(CYBERPUNK_CORP_RYAZNOV)
+			return /area/cyberpunk/city/corporate/ryaznov
+		if(CYBERPUNK_CORP_STARLIGHT)
+			return /area/cyberpunk/city/corporate/starlight
+	return /area/cyberpunk/city/corporate
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/find_corporate_data_terminal(corporation_id, atom/nearby = null)
+	var/obj/machinery/computer/corporate_data_terminal/best_terminal
+	var/best_distance = INFINITY
+	for(var/obj/machinery/computer/corporate_data_terminal/terminal as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/computer/corporate_data_terminal))
+		if(QDELETED(terminal) || terminal.corporation_id != corporation_id)
+			continue
+		if(!nearby)
+			return terminal
+		var/distance = get_dist(nearby, terminal)
+		if(distance >= best_distance)
+			continue
+		best_terminal = terminal
+		best_distance = distance
+	return best_terminal
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/process_corporate_specialist_work(list/active_players)
+	for(var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist as anything in GLOB.mob_living_list)
+		if(QDELETED(specialist) || !specialist.cyberpunk_corporation_id || !can_roam(specialist))
+			continue
+		var/obj/machinery/computer/corporate_data_terminal/terminal = find_corporate_data_terminal(specialist.cyberpunk_corporation_id, specialist)
+		if(!terminal)
+			continue
+		specialist.ai_controller.cyberpunk_assign_city_task(CP_AI_TASK_WORK, null, terminal, null, null, 2 MINUTES, terminal)
+
+/proc/cyberpunk_corporate_area_id(atom/location)
+	var/area/current_area = get_area(location)
+	if(!istype(current_area, /area/cyberpunk))
+		return null
+	var/area/cyberpunk/cyber_area = current_area
+	if(!cyber_area.cyberpunk_corporate_protected || cyber_area.cyberpunk_corporate_public)
+		return null
+	return cyber_area.cyberpunk_corporation_id || cyber_area.cyberpunk_world_owner
+
+/proc/cyberpunk_living_has_corporate_zone_access(mob/living/person, corporation_id)
+	if(!istype(person) || !corporation_id)
+		return FALSE
+	if(istype(person, /mob/living/carbon/human/cyberpunk_npc/security))
+		return TRUE
+	for(var/access_level in list("basic", "agent", "specialist", "head"))
+		if(person.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id, access_level)))
+			return TRUE
+	return FALSE
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/process_corporate_trespass(list/active_players)
+	for(var/mob/living/person as anything in GLOB.mob_living_list)
+		if(QDELETED(person) || person.stat == DEAD || world.time < person.next_cyberpunk_corporate_trespass_report)
+			continue
+		var/corporation_id = cyberpunk_corporate_area_id(person)
+		if(!corporation_id || cyberpunk_living_has_corporate_zone_access(person, corporation_id))
+			continue
+		var/turf/public_turf = find_corporate_public_turf(corporation_id, person)
+		if(!public_turf)
+			continue
+		person.next_cyberpunk_corporate_trespass_report = world.time + 30 SECONDS
+		var/mob/living/carbon/human/cyberpunk_npc/security/security = find_nearby_corporate_security(person)
+		if(security)
+			cyberpunk_order_city_ai(security, CP_AI_TASK_GUARD, person, public_turf, person)
+		report_corporate_trespass_to_police(person, corporation_id)
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/find_corporate_public_turf(corporation_id, atom/origin)
+	var/turf/best_turf
+	var/best_distance = INFINITY
+	for(var/area/current_area as anything in GLOB.areas)
+		if(!istype(current_area, /area/cyberpunk))
+			continue
+		var/area/cyberpunk/cyber_area = current_area
+		if(cyber_area.cyberpunk_corporate_protected && !cyber_area.cyberpunk_corporate_public)
+			continue
+		if(cyber_area.cyberpunk_corporation_id && cyber_area.cyberpunk_corporation_id != corporation_id)
+			continue
+		if(!istype(cyber_area, /area/cyberpunk/city/district) && !cyber_area.cyberpunk_corporate_public)
+			continue
+		for(var/turf/current_turf as anything in cyberpunk_area_turfs(cyber_area))
+			if(!cyberpunk_turf_is_clear_for_city_spawn(current_turf))
+				continue
+			var/distance = origin ? get_dist(origin, current_turf) : 0
+			if(distance >= best_distance)
+				continue
+			best_turf = current_turf
+			best_distance = distance
+	return best_turf
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/find_nearby_corporate_security(atom/origin)
+	var/mob/living/carbon/human/cyberpunk_npc/security/best_security
+	var/best_distance = INFINITY
+	for(var/mob/living/carbon/human/cyberpunk_npc/security/security as anything in GLOB.mob_living_list)
+		if(QDELETED(security) || security.stat == DEAD || !security.ai_controller || security.ai_controller.blackboard_key_exists(BB_CP_CITY_TASK))
+			continue
+		var/distance = get_dist(origin, security)
+		if(distance >= best_distance)
+			continue
+		best_security = security
+		best_distance = distance
+	return best_security
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/report_corporate_trespass_to_police(mob/living/person, corporation_id)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		var/datum/ai_controller/controller = candidate.ai_controller
+		if(!controller || controller.blackboard[BB_CP_AI_ROLE_PROFILE] != CP_AI_ROLE_POLICE)
+			continue
+		controller.cyberpunk_report_threat(person, 2, "[corporation_id] corporate trespass")
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/maintain_roaming(list/active_players)
 	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
