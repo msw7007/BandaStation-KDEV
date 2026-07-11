@@ -85,7 +85,7 @@ GLOBAL_LIST_EMPTY(antagonists)
 	owner = null
 	return ..()
 
-/datum/antagonist/proc/get_cyberpunk_faction_resources()
+/datum/antagonist/proc/get_cyberpunk_faction_resources() as /datum/cyberpunk_faction_resources
 	var/datum/team/team = get_team()
 	if(team)
 		return team.get_cyberpunk_faction_resources()
@@ -401,7 +401,7 @@ GLOBAL_LIST_EMPTY(antagonists)
 /**
  * Proc that will return the team this antagonist belongs to, when called. Helpful with antagonists that may belong to multiple potential teams in a single round.
  */
-/datum/antagonist/proc/get_team()
+/datum/antagonist/proc/get_team() as /datum/team
 	return
 
 /**

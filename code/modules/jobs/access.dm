@@ -82,26 +82,78 @@
 			return bank_key
 	return new /datum/cyberpunk_crypto_key("access: [access_id]", "station access", get_cyberpunk_crypto_access_code(access_id))
 
-/proc/cyberpunk_corporation_access_id(corporation_id)
+/proc/cyberpunk_corporation_access_id(corporation_id, access_level = null)
 	switch(lowertext("[corporation_id]"))
 		if("benn")
-			return "corp:benn"
+			return access_level ? "corp:benn:[lowertext("[access_level]")]" : "corp:benn"
 		if("ryaznov")
-			return "corp:ryaznov"
+			return access_level ? "corp:ryaznov:[lowertext("[access_level]")]" : "corp:ryaznov"
 		if("starlight")
-			return "corp:starlight"
+			return access_level ? "corp:starlight:[lowertext("[access_level]")]" : "corp:starlight"
 		if("government", "gov")
 			return "city:council"
 	return null
 
+/proc/cyberpunk_corporation_role_accesses(corporation_id, role_level)
+	var/basic_access = cyberpunk_corporation_access_id(corporation_id, "basic")
+	var/agent_access = cyberpunk_corporation_access_id(corporation_id, "agent")
+	var/specialist_access = cyberpunk_corporation_access_id(corporation_id, "specialist")
+	var/head_access = cyberpunk_corporation_access_id(corporation_id, "head")
+	switch(lowertext("[role_level]"))
+		if("basic", "intern")
+			return list(basic_access)
+		if("agent")
+			return list(basic_access, agent_access)
+		if("specialist")
+			return list(basic_access, specialist_access)
+		if("head", "representative")
+			return list(basic_access, agent_access, specialist_access, head_access)
+	return list()
+
+/proc/cyberpunk_corporate_access_corporation_id(access_id)
+	switch(lowertext("[access_id]"))
+		if("corp:benn", "corp:benn:basic", "corp:benn:agent", "corp:benn:specialist", "corp:benn:head")
+			return "benn"
+		if("corp:ryaznov", "corp:ryaznov:basic", "corp:ryaznov:agent", "corp:ryaznov:specialist", "corp:ryaznov:head")
+			return "ryaznov"
+		if("corp:starlight", "corp:starlight:basic", "corp:starlight:agent", "corp:starlight:specialist", "corp:starlight:head")
+			return "starlight"
+	return null
+
+/proc/cyberpunk_corporate_access_level(access_id)
+	switch(lowertext("[access_id]"))
+		if("corp:benn", "corp:ryaznov", "corp:starlight")
+			return "legacy"
+		if("corp:benn:basic", "corp:ryaznov:basic", "corp:starlight:basic")
+			return "basic"
+		if("corp:benn:agent", "corp:ryaznov:agent", "corp:starlight:agent")
+			return "agent"
+		if("corp:benn:specialist", "corp:ryaznov:specialist", "corp:starlight:specialist")
+			return "specialist"
+		if("corp:benn:head", "corp:ryaznov:head", "corp:starlight:head")
+			return "head"
+	return null
+
 /proc/cyberpunk_is_corporate_access(access_id)
-	return access_id in list("corp:benn", "corp:ryaznov", "corp:starlight")
+	return !!cyberpunk_corporate_access_corporation_id(access_id)
 
 /proc/cyberpunk_named_accesses()
 	return list(
-		"corp:benn" = list("Benn corporate access", "Benn"),
-		"corp:ryaznov" = list("Ryaznov corporate access", "Ryaznov"),
-		"corp:starlight" = list("Starlight corporate access", "Starlight"),
+		"corp:benn" = list("Benn legacy corporate access", "Benn"),
+		"corp:benn:basic" = list("Benn basic access", "Benn Basic"),
+		"corp:benn:agent" = list("Benn agent access", "Benn Agent"),
+		"corp:benn:specialist" = list("Benn specialist access", "Benn Specialist"),
+		"corp:benn:head" = list("Benn head access", "Benn Head"),
+		"corp:ryaznov" = list("Ryaznov legacy corporate access", "Ryaznov"),
+		"corp:ryaznov:basic" = list("Ryaznov basic access", "Ryaznov Basic"),
+		"corp:ryaznov:agent" = list("Ryaznov agent access", "Ryaznov Agent"),
+		"corp:ryaznov:specialist" = list("Ryaznov specialist access", "Ryaznov Specialist"),
+		"corp:ryaznov:head" = list("Ryaznov head access", "Ryaznov Head"),
+		"corp:starlight" = list("Starlight legacy corporate access", "Starlight"),
+		"corp:starlight:basic" = list("Starlight basic access", "Starlight Basic"),
+		"corp:starlight:agent" = list("Starlight agent access", "Starlight Agent"),
+		"corp:starlight:specialist" = list("Starlight specialist access", "Starlight Specialist"),
+		"corp:starlight:head" = list("Starlight head access", "Starlight Head"),
 		"city:council" = list("City Council access", "Council"),
 		"city:police" = list("Police access", "Police"),
 		"corp:heads" = list("Corporate heads access", "Corporate Heads"),
@@ -190,6 +242,13 @@
 		return TRUE
 	if(access_id != "corp:heads" && cyberpunk_is_corporate_access(access_id) && has_cyberpunk_crypto_exact_access("corp:heads"))
 		return TRUE
+	var/corporation_id = cyberpunk_corporate_access_corporation_id(access_id)
+	var/access_level = cyberpunk_corporate_access_level(access_id)
+	if(corporation_id && access_level != "head")
+		if(has_cyberpunk_crypto_exact_access(cyberpunk_corporation_access_id(corporation_id, "head")))
+			return TRUE
+		if(access_level != "legacy" && has_cyberpunk_crypto_exact_access(cyberpunk_corporation_access_id(corporation_id)))
+			return TRUE
 	return has_cyberpunk_crypto_exact_access(access_id)
 
 /mob/living/proc/has_cyberpunk_crypto_exact_access(access_id)
@@ -215,6 +274,13 @@
 		return TRUE
 	if(access_id != "corp:heads" && cyberpunk_is_corporate_access(access_id) && has_cyberpunk_crypto_exact_access("corp:heads"))
 		return TRUE
+	var/corporation_id = cyberpunk_corporate_access_corporation_id(access_id)
+	var/access_level = cyberpunk_corporate_access_level(access_id)
+	if(corporation_id && access_level != "head")
+		if(has_cyberpunk_crypto_exact_access(cyberpunk_corporation_access_id(corporation_id, "head")))
+			return TRUE
+		if(access_level != "legacy" && has_cyberpunk_crypto_exact_access(cyberpunk_corporation_access_id(corporation_id)))
+			return TRUE
 	return has_cyberpunk_crypto_exact_access(access_id)
 
 /obj/item/proc/has_cyberpunk_crypto_exact_access(access_id)

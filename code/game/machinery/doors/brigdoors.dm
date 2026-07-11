@@ -274,6 +274,31 @@
 		else
 			. = FALSE
 
+/obj/machinery/computer/cyberpunk_council_lockdown
+	name = "council lockdown terminal"
+	desc = "A city council terminal for sealing nearby council vault doors."
+	icon_screen = "security"
+	icon_keyboard = "security_key"
+	req_access = list(ACCESS_COMMAND)
+	var/lockdown_range = 20
+
+/obj/machinery/computer/cyberpunk_council_lockdown/proc/can_use_council_lockdown(mob/living/user)
+	if(!istype(user))
+		return FALSE
+	return user.has_cyberpunk_crypto_access("government:all") || user.has_cyberpunk_crypto_access("city:council") || allowed(user)
+
+/obj/machinery/computer/cyberpunk_council_lockdown/attack_hand(mob/living/user, list/modifiers)
+	if(!can_use_council_lockdown(user))
+		to_chat(user, span_warning("Access denied."))
+		return
+	var/closed = 0
+	for(var/obj/machinery/door/airlock/vault/cyberpunk_council/door in urange(lockdown_range, src))
+		if(!door.density)
+			INVOKE_ASYNC(door, TYPE_PROC_REF(/obj/machinery/door/airlock, close), DEFAULT_DOOR_CHECKS, FALSE)
+		door.lock()
+		closed++
+	to_chat(user, span_notice("Council lockdown sealed [closed] nearby vault door(s)."))
+
 /obj/machinery/status_display/door_timer/proc/grey_tide(datum/source, list/grey_tide_areas)
 	SIGNAL_HANDLER
 

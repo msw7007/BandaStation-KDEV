@@ -23,6 +23,10 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	var/list/cyberpunk_housing_rent_by_area = list()
 	/// Round-local city council emergency votes. Keyed by voter identity.
 	var/list/cyberpunk_government_emergency_votes = list()
+	/// Round-local council emergency chips inserted into emergency terminals. Keyed by voter identity.
+	var/list/cyberpunk_government_emergency_chips = list()
+	/// Round-local dispatch records created from council emergency terminals.
+	var/list/cyberpunk_government_dispatch_history = list()
 	/// Whether government emergency mode is currently active.
 	var/cyberpunk_government_emergency_active = FALSE
 	/// Round-local emergency directive text.
@@ -44,6 +48,8 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	cyberpunk_business_tax_rates = SScyberpunk_corporations.cyberpunk_business_tax_rates
 	cyberpunk_housing_rent_by_area = SScyberpunk_corporations.cyberpunk_housing_rent_by_area
 	cyberpunk_government_emergency_votes = SScyberpunk_corporations.cyberpunk_government_emergency_votes
+	cyberpunk_government_emergency_chips = SScyberpunk_corporations.cyberpunk_government_emergency_chips
+	cyberpunk_government_dispatch_history = SScyberpunk_corporations.cyberpunk_government_dispatch_history
 	cyberpunk_government_emergency_active = SScyberpunk_corporations.cyberpunk_government_emergency_active
 	cyberpunk_government_directive = SScyberpunk_corporations.cyberpunk_government_directive
 

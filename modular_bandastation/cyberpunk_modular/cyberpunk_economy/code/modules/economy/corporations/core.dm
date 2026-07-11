@@ -107,13 +107,21 @@
 /datum/cyberpunk_corporation/proc/get_access_id()
 	return cyberpunk_corporation_access_id(id)
 
+/datum/cyberpunk_corporation/proc/get_basic_access_id()
+	return cyberpunk_corporation_access_id(id, "basic")
+
+/datum/cyberpunk_corporation/proc/get_head_access_id()
+	return cyberpunk_corporation_access_id(id, "head")
+
 /datum/cyberpunk_corporation/proc/can_manage(mob/user)
 	var/mob/living/living_user = user
 	if(!istype(living_user))
 		return FALSE
 	if(id == CYBERPUNK_CORP_GOVERNMENT)
 		return living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("city:council")
-	var/access_id = get_access_id()
+	if(living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("corp:heads"))
+		return TRUE
+	var/access_id = get_head_access_id()
 	return !!(access_id && living_user.has_cyberpunk_crypto_access(access_id))
 
 /datum/cyberpunk_corporation/proc/can_vote_council(mob/user)
@@ -123,7 +131,7 @@
 	if(living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("city:council") || living_user.has_cyberpunk_crypto_access("corp:heads"))
 		return TRUE
 	for(var/corporation_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
-		if(living_user.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id)))
+		if(living_user.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id, "head")))
 			return TRUE
 	return FALSE
 
@@ -198,7 +206,7 @@
 	var/list/employee = employees[employee_key]
 	if(!employee)
 		return FALSE
-	var/access_id = get_access_id()
+	var/access_id = get_basic_access_id()
 	if(!access_id)
 		return FALSE
 	var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
@@ -211,8 +219,8 @@
 		person.remember_cyberpunk_crypto_key(access_key)
 		employee["accessGranted"] = TRUE
 		employee["lastSeen"] = round_timestamp()
-		add_history("corporate access granted to [employee["name"]]")
-		to_chat(person, span_notice("[name] corporate access key has been loaded into your neural interface."))
+		add_history("basic corporate access granted to [employee["name"]]")
+		to_chat(person, span_notice("[name] basic corporate access key has been loaded into your neural interface."))
 		return TRUE
 	return FALSE
 

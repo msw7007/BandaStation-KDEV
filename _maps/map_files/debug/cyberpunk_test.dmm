@@ -279,6 +279,39 @@
 /obj/machinery/suit_storage_unit/captain,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
+"zA" = (
+/obj/machinery/door/airlock/glass{
+	name = "Benn basic access";
+	req_access = list("corp:benn:basic")
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zB" = (
+/obj/machinery/door/airlock/glass{
+	name = "Ryaznov basic access";
+	req_access = list("corp:ryaznov:basic")
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zC" = (
+/obj/machinery/door/airlock/glass{
+	name = "Starlight basic access";
+	req_access = list("corp:starlight:basic")
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zE" = (
+/obj/machinery/modular_computer/preset/corporate_terminal/benn,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zF" = (
+/obj/machinery/modular_computer/preset/corporate_terminal/ryaznov,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zG" = (
+/obj/machinery/modular_computer/preset/corporate_terminal/starlight,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
 "fa" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/small,
@@ -845,6 +878,18 @@
 "mA" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
+"ZZ" = (
+/obj/machinery/computer/business_terminal{
+	name = "test business terminal"
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/business/lot_01)
+"ZY" = (
+/obj/machinery/computer/business_terminal/medium{
+	name = "test medium business terminal"
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/business/lot_01)
 "mJ" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
@@ -1224,6 +1269,48 @@
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_01)
+"AA" = (
+/obj/machinery/cyberpunk_traffic_light,
+/obj/effect/cyberpunk_traffic_node,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
+"AB" = (
+/obj/machinery/cyberpunk_traffic_light,
+/obj/effect/cyberpunk_traffic_node,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
+"AC" = (
+/obj/effect/cyberpunk_traffic_node/vehicle,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/road)
+"AD" = (
+/mob/living/carbon/human/cyberpunk_npc/bystander,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
+"AF" = (
+/mob/living/carbon/human/cyberpunk_npc/runner,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
+"AG" = (
+/mob/living/carbon/human/cyberpunk_npc/worker,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
+"AH" = (
+/mob/living/carbon/human/cyberpunk_npc/security,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/security)
+"AI" = (
+/obj/effect/landmark/cyberpunk_npc_trader_home,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
+"AK" = (
+/obj/effect/landmark/cyberpunk_npc_trader_home,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
+"AL" = (
+/obj/effect/landmark/cyberpunk_npc_trader/supplies,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
 "qY" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
@@ -1344,6 +1431,14 @@
 /area/cyberpunk/city/civic/city_hall)
 "tQ" = (
 /obj/machinery/light/directional/south,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/civic/city_hall)
+"ZQ" = (
+/obj/machinery/door/airlock/vault/cyberpunk_council,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/civic/city_hall)
+"ZP" = (
+/obj/machinery/computer/cyberpunk_council_lockdown,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/city_hall)
 "tZ" = (
@@ -7507,9 +7602,9 @@ AY
 ok
 ok
 ok
+zA
 ok
-ok
-ok
+zE
 ok
 ok
 ok
@@ -7733,11 +7828,11 @@ mA
 mA
 mA
 mA
+ZZ
 mA
 mA
 mA
-mA
-mA
+ZY
 mA
 mA
 ll
@@ -7817,9 +7912,9 @@ AY
 ok
 ok
 ok
+zB
 ok
-ok
-ok
+zF
 ok
 ok
 ok
@@ -8127,9 +8222,9 @@ AY
 ok
 ok
 ok
+zC
 ok
-ok
-ok
+zG
 ok
 ok
 ok
@@ -8383,7 +8478,7 @@ Pz
 ok
 ok
 AY
-qQ
+AI
 MI
 qQ
 cK
@@ -8445,7 +8540,7 @@ ok
 ok
 ok
 AY
-qQ
+AD
 MI
 qQ
 cK
@@ -8507,7 +8602,7 @@ ok
 ok
 ok
 AY
-qQ
+AF
 MI
 qQ
 cK
@@ -8569,7 +8664,7 @@ ok
 ok
 ok
 AY
-qQ
+AA
 MI
 qQ
 TE
@@ -8632,31 +8727,31 @@ ok
 ok
 AY
 qQ
-Fm
+AC
 MI
 MI
 MI
+AC
 MI
 MI
 MI
+AC
 MI
 MI
 MI
+AC
 MI
 MI
 MI
+AC
 MI
 MI
 MI
+AC
 MI
 MI
 MI
-MI
-MI
-MI
-MI
-MI
-Fm
+AC
 MI
 MI
 MI
@@ -8695,7 +8790,7 @@ ok
 AY
 qQ
 MI
-qQ
+AA
 TE
 TE
 TE
@@ -9181,9 +9276,9 @@ dO
 Ng
 Ng
 Ng
+ZQ
 Ng
-Ng
-Ng
+ZP
 Ng
 Ng
 Ng
@@ -9461,7 +9556,7 @@ Yx
 Yx
 Yx
 Yx
-FQ
+AK
 MI
 FQ
 Sy
@@ -9523,7 +9618,7 @@ EJ
 EJ
 EJ
 EJ
-FQ
+AG
 MI
 FQ
 Tt
@@ -9585,9 +9680,9 @@ FQ
 FQ
 FQ
 FQ
-FQ
+AB
 MI
-FQ
+AL
 FQ
 FQ
 Gb
@@ -9645,13 +9740,13 @@ MI
 MI
 MI
 MI
+AC
 MI
 MI
-MI
-Fm
-MI
+AC
 MI
 MI
+AC
 MI
 MI
 MI
@@ -9711,7 +9806,7 @@ FQ
 FQ
 FQ
 FQ
-FQ
+AB
 FQ
 FQ
 FQ
@@ -10082,7 +10177,7 @@ Mf
 is
 is
 is
-is
+AH
 is
 is
 is
@@ -10586,15 +10681,15 @@ MI
 MI
 MI
 MI
+AC
 MI
 MI
 MI
+AC
 MI
 MI
 MI
-MI
-MI
-Fm
+AC
 FQ
 Ws
 "}

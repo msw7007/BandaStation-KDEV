@@ -120,7 +120,7 @@ GLOBAL_LIST_EMPTY(antagonist_teams)
 	objectives = null
 	return ..()
 
-/datum/team/proc/get_cyberpunk_faction_resources()
+/datum/team/proc/get_cyberpunk_faction_resources() as /datum/cyberpunk_faction_resources
 	if(!cyberpunk_faction_resources)
 		cyberpunk_faction_resources = new(name)
 	return cyberpunk_faction_resources

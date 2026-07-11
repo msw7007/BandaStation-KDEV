@@ -337,6 +337,7 @@ Security HUDs! Basic mode shows only the job.
 	for (var/mob/living/carbon/human/h as anything in GLOB.human_list)
 		if (h.get_face_name(h.get_id_name("")) == perp_name)
 			h.sec_hud_set_security_status()
+	cyberpunk_police_notify_record_change(perp_name)
 
 /**
  * Updates the visual security huds on all mobs in GLOB.human_list
@@ -344,6 +345,8 @@ Security HUDs! Basic mode shows only the job.
 /proc/update_all_security_huds()
 	for(var/mob/living/carbon/human/h as anything in GLOB.human_list)
 		h.sec_hud_set_security_status()
+	for(var/datum/record/crew/record as anything in GLOB.manifest.general)
+		cyberpunk_police_notify_record_change(record.name)
 
 /***********************************************
 Diagnostic HUDs!

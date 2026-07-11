@@ -104,6 +104,7 @@
 #define CP_AI_TASK_REPAIR "repair"
 #define CP_AI_TASK_RETURN "return"
 #define CP_AI_TASK_FLEE "flee"
+#define CP_AI_TASK_EMERGENCY_RESPONSE "emergency_response"
 
 // Cyberpunk city task states / route phases.
 #define CP_AI_TASK_CREATED "created"
@@ -136,6 +137,13 @@
 // Cyberpunk phantom simulation profiles.
 #define CP_AI_PHANTOM_PROFILE_LIGHT "light"
 #define CP_AI_PHANTOM_PROFILE_HEAVY "heavy"
+
+// Cyberpunk route transition methods.
+#define CP_AI_ROUTE_Z_METHOD_NONE "none"
+#define CP_AI_ROUTE_Z_METHOD_LADDER "ladder"
+#define CP_AI_ROUTE_Z_METHOD_STAIRS "stairs"
+#define CP_AI_ROUTE_Z_METHOD_FLY "fly"
+#define CP_AI_ROUTE_Z_METHOD_CLIMB "climb"
 
 //Base Subtree defines
 

@@ -6,6 +6,23 @@ GLOBAL_LIST_INIT(non_ruleset_antagonists, list(
 	ROLE_SENTIENCE = /datum/antagonist/sentient_creature,
 ))
 
+GLOBAL_LIST_INIT(cyberpunk_antagonist_preferences, list(
+	ROLE_CYBERPUNK_BANDIT,
+	ROLE_CYBERPUNK_CORPORATE_SPY,
+	ROLE_CYBERPUNK_ANARCHIST,
+	ROLE_CYBERPUNK_BENN_SHIFTER,
+	ROLE_CYBERPUNK_BENN_PROTOTYPE,
+	ROLE_CYBERPUNK_BENN_EVOLUTIONARY,
+	ROLE_CYBERPUNK_WILD_ISKIN,
+	ROLE_CYBERPUNK_ROGUE_AI,
+	ROLE_CYBERPUNK_COMBAT_SYNTHETIC,
+	ROLE_CYBERPUNK_STARLIGHT_SWARM,
+	ROLE_CYBERPUNK_TRANSFORMER,
+	ROLE_CYBERPUNK_BROKER,
+	ROLE_CYBERPUNK_LIBERATION_ARMY,
+	ROLE_CYBERPUNK_DATA_CULT,
+))
+
 /datum/preference_middleware/antags
 	action_delegations = list(
 		"set_antags" = PROC_REF(set_antags),
@@ -20,7 +37,8 @@ GLOBAL_LIST_INIT(non_ruleset_antagonists, list(
 	var/list/selected_antags = list()
 
 	for (var/antag in preferences.be_special)
-		selected_antags += serialize_antag_name(antag)
+		if(antag in get_all_antag_flags())
+			selected_antags += serialize_antag_name(antag)
 
 	data["selected_antags"] = selected_antags
 
@@ -107,17 +125,7 @@ GLOBAL_LIST_INIT(non_ruleset_antagonists, list(
 	if(antag_flags)
 		return antag_flags
 
-	var/list/ruleset_antags = list()
-	for(var/datum/dynamic_ruleset/ruleset as anything in subtypesof(/datum/dynamic_ruleset))
-		var/antag_flag = initial(ruleset.pref_flag)
-		var/jobban_flag = initial(ruleset.jobban_flag)
-
-		if(antag_flag)
-			ruleset_antags |= antag_flag
-		if(jobban_flag)
-			ruleset_antags |= jobban_flag
-
-	antag_flags = ruleset_antags | GLOB.non_ruleset_antagonists
+	antag_flags = GLOB.cyberpunk_antagonist_preferences.Copy()
 	return antag_flags
 
 /**
@@ -144,12 +152,15 @@ GLOBAL_LIST_INIT(non_ruleset_antagonists, list(
 	var/list/antag_icons = list()
 
 /datum/asset/spritesheet_batched/antagonists/create_spritesheets()
-	var/list/antagonists = GLOB.non_ruleset_antagonists.Copy()
+	var/list/antagonists = list()
+	var/list/allowed_antags = get_all_antag_flags()
 
 	for (var/datum/dynamic_ruleset/ruleset as anything in subtypesof(/datum/dynamic_ruleset))
 		var/datum/antagonist/antagonist_type = initial(ruleset.preview_antag_datum)
 		var/antag_flag = initial(ruleset.pref_flag)
 		if(isnull(antagonist_type) || isnull(antag_flag))
+			continue
+		if(!(antag_flag in allowed_antags))
 			continue
 
 		// antag_flag is guaranteed to be unique for all non-RULESET_VARIATION rulesets

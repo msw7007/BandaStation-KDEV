@@ -487,6 +487,195 @@
 /datum/dynamic_ruleset/roundstart/spies/assign_role(datum/mind/candidate)
 	candidate.add_antag_datum(/datum/antagonist/spy)
 
+/datum/dynamic_ruleset/roundstart/cyberpunk_bandits
+	name = "Cyberpunk Bandits"
+	config_tag = "Roundstart Cyberpunk Bandits"
+	preview_antag_datum = /datum/antagonist/cyberpunk/bandit
+	pref_flag = ROLE_CYBERPUNK_BANDIT
+	weight = alist(
+		DYNAMIC_TIER_LOW = 1,
+		DYNAMIC_TIER_LOWMEDIUM = 2,
+		DYNAMIC_TIER_MEDIUMHIGH = 3,
+		DYNAMIC_TIER_HIGH = 3,
+	)
+	min_pop = 5
+	max_antag_cap = list("denominator" = 18, "offset" = 1)
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_bandits/is_valid_candidate(mob/candidate, client/candidate_client)
+	if(!..())
+		return FALSE
+	var/group = candidate.mind?.assigned_role?.get_cyberpunk_role_group()
+	var/role_class = candidate.mind?.assigned_role?.get_cyberpunk_role_class()
+	return group == "mercenary" || role_class == "worker"
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_bandits/assign_role(datum/mind/candidate)
+	candidate.add_antag_datum(/datum/antagonist/cyberpunk/bandit)
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_corporate_spies
+	name = "Cyberpunk Corporate Spies"
+	config_tag = "Roundstart Cyberpunk Corporate Spies"
+	preview_antag_datum = /datum/antagonist/cyberpunk/corporate_spy
+	pref_flag = ROLE_CYBERPUNK_CORPORATE_SPY
+	weight = alist(
+		DYNAMIC_TIER_LOW = 0,
+		DYNAMIC_TIER_LOWMEDIUM = 1,
+		DYNAMIC_TIER_MEDIUMHIGH = 2,
+		DYNAMIC_TIER_HIGH = 3,
+	)
+	min_pop = 10
+	max_antag_cap = list("denominator" = 24, "offset" = 1)
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_corporate_spies/is_valid_candidate(mob/candidate, client/candidate_client)
+	if(!..())
+		return FALSE
+	var/group = candidate.mind?.assigned_role?.get_cyberpunk_role_group()
+	var/role_class = candidate.mind?.assigned_role?.get_cyberpunk_role_class()
+	return group == "corporate" && (role_class == "agent" || findtext(role_class, "specialist"))
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_corporate_spies/assign_role(datum/mind/candidate)
+	candidate.add_antag_datum(/datum/antagonist/cyberpunk/corporate_spy)
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_anarchists
+	name = "Cyberpunk Anarchists"
+	config_tag = "Roundstart Cyberpunk Anarchists"
+	preview_antag_datum = /datum/antagonist/cyberpunk/anarchist
+	pref_flag = ROLE_CYBERPUNK_ANARCHIST
+	ruleset_flags = RULESET_HIGH_IMPACT
+	weight = alist(
+		DYNAMIC_TIER_LOW = 0,
+		DYNAMIC_TIER_LOWMEDIUM = 1,
+		DYNAMIC_TIER_MEDIUMHIGH = 2,
+		DYNAMIC_TIER_HIGH = 3,
+	)
+	min_pop = 15
+	min_antag_cap = 1
+	max_antag_cap = 2
+	repeatable = FALSE
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_anarchists/is_valid_candidate(mob/candidate, client/candidate_client)
+	if(!..())
+		return FALSE
+	return candidate.mind?.assigned_role?.get_cyberpunk_role_group() != "corporate"
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_anarchists/create_execute_args()
+	return list(new /datum/team/cyberpunk_anarchists())
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_anarchists/assign_role(datum/mind/candidate, datum/team/cyberpunk_anarchists/anarchist_team)
+	candidate.add_antag_datum(/datum/antagonist/cyberpunk/anarchist, anarchist_team)
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag
+	name = "Cyberpunk Major Antagonist"
+	config_tag = "Roundstart Cyberpunk Major Antagonist"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major
+	ruleset_flags = RULESET_HIGH_IMPACT
+	weight = alist(
+		DYNAMIC_TIER_LOW = 0,
+		DYNAMIC_TIER_LOWMEDIUM = 0,
+		DYNAMIC_TIER_MEDIUMHIGH = 1,
+		DYNAMIC_TIER_HIGH = 2,
+	)
+	min_pop = 18
+	min_antag_cap = 1
+	max_antag_cap = 1
+	repeatable = FALSE
+	var/antag_path = /datum/antagonist/cyberpunk/major
+	var/team_path
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/is_valid_candidate(mob/candidate, client/candidate_client)
+	if(type == /datum/dynamic_ruleset/roundstart/cyberpunk_major_antag)
+		return FALSE
+	return ..()
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/create_execute_args()
+	if(team_path)
+		return list(new team_path())
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/assign_role(datum/mind/candidate, datum/team/team)
+	if(team)
+		candidate.add_antag_datum(antag_path, team)
+	else
+		candidate.add_antag_datum(antag_path)
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/benn_shifter
+	name = "Cyberpunk Benn Shifter"
+	config_tag = "Roundstart Cyberpunk Benn Shifter"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/benn_shifter
+	pref_flag = ROLE_CYBERPUNK_BENN_SHIFTER
+	antag_path = /datum/antagonist/cyberpunk/major/benn_shifter
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/benn_prototype
+	name = "Cyberpunk Benn Prototype"
+	config_tag = "Roundstart Cyberpunk Benn Prototype"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/benn_prototype
+	pref_flag = ROLE_CYBERPUNK_BENN_PROTOTYPE
+	antag_path = /datum/antagonist/cyberpunk/major/benn_prototype
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/benn_evolutionary
+	name = "Cyberpunk Benn Evolutionary"
+	config_tag = "Roundstart Cyberpunk Benn Evolutionary"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/benn_evolutionary
+	pref_flag = ROLE_CYBERPUNK_BENN_EVOLUTIONARY
+	antag_path = /datum/antagonist/cyberpunk/major/benn_evolutionary
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/wild_iskin
+	name = "Cyberpunk Wild ISKIN"
+	config_tag = "Roundstart Cyberpunk Wild ISKIN"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/wild_iskin
+	pref_flag = ROLE_CYBERPUNK_WILD_ISKIN
+	antag_path = /datum/antagonist/cyberpunk/major/wild_iskin
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/rogue_ai
+	name = "Cyberpunk Rogue AI"
+	config_tag = "Roundstart Cyberpunk Rogue AI"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/rogue_ai
+	pref_flag = ROLE_CYBERPUNK_ROGUE_AI
+	antag_path = /datum/antagonist/cyberpunk/major/rogue_ai
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/combat_synthetic
+	name = "Cyberpunk Combat Synthetic"
+	config_tag = "Roundstart Cyberpunk Combat Synthetic"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/combat_synthetic
+	pref_flag = ROLE_CYBERPUNK_COMBAT_SYNTHETIC
+	antag_path = /datum/antagonist/cyberpunk/major/combat_synthetic
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/starlight_swarm
+	name = "Cyberpunk Starlight Swarm"
+	config_tag = "Roundstart Cyberpunk Starlight Swarm"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/starlight_swarm
+	pref_flag = ROLE_CYBERPUNK_STARLIGHT_SWARM
+	antag_path = /datum/antagonist/cyberpunk/major/starlight_swarm
+	team_path = /datum/team/cyberpunk_star_swarm
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/transformer
+	name = "Cyberpunk Transformer"
+	config_tag = "Roundstart Cyberpunk Transformer"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/transformer
+	pref_flag = ROLE_CYBERPUNK_TRANSFORMER
+	antag_path = /datum/antagonist/cyberpunk/major/transformer
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/broker
+	name = "Cyberpunk Broker"
+	config_tag = "Roundstart Cyberpunk Broker"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/broker
+	pref_flag = ROLE_CYBERPUNK_BROKER
+	antag_path = /datum/antagonist/cyberpunk/major/broker
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/liberation_army
+	name = "Cyberpunk Liberation Army"
+	config_tag = "Roundstart Cyberpunk Liberation Army"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/liberation_army
+	pref_flag = ROLE_CYBERPUNK_LIBERATION_ARMY
+	antag_path = /datum/antagonist/cyberpunk/major/liberation_army
+	team_path = /datum/team/cyberpunk_liberation_army
+
+/datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/data_cult
+	name = "Cyberpunk Data Cult"
+	config_tag = "Roundstart Cyberpunk Data Cult"
+	preview_antag_datum = /datum/antagonist/cyberpunk/major/data_cult
+	pref_flag = ROLE_CYBERPUNK_DATA_CULT
+	antag_path = /datum/antagonist/cyberpunk/major/data_cult
+	team_path = /datum/team/cyberpunk_data_cult
+
 /datum/dynamic_ruleset/roundstart/extended
 	name = "Extended"
 	config_tag = "Extended"

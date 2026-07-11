@@ -164,3 +164,175 @@
 	skill_icon = "trash-can"
 	activate_message = span_notice("You seem laser focused on the nearby disposal unit.")
 	deactivate_message = span_notice("The nearby disposal unit fades into the background of your vision.")
+
+/mob/living/var/cyberpunk_police_last_custody_pay = 0
+/mob/living/var/cyberpunk_police_watch_active = FALSE
+/mob/living/var/atom/movable/screen/text/cyberpunk_police_watch_hud/cyberpunk_police_watch_hud
+/mob/living/var/atom/movable/screen/text/cyberpunk_police_dispatch_hud/cyberpunk_police_dispatch_hud
+/mob/living/var/cyberpunk_police_watch_signature
+/mob/living/var/cyberpunk_police_dispatch_signature
+
+/obj/item/skillchip/cyberpunk_police
+	name = "POLWATCH skillchip"
+	desc = "A city police skillchip that keeps arrest targets and custody payouts visible."
+	skill_name = "Police Watch"
+	skill_description = "Shows wanted and detained people, and pays active officers for prisoners held in security custody."
+	skill_icon = "shield-halved"
+	activate_message = span_notice("City police watchlist routines come online.")
+	deactivate_message = span_notice("City police watchlist routines shut down.")
+	actions_types = list(/datum/action/cooldown/cyberpunk_police_watch)
+	complexity = 1
+
+/obj/item/skillchip/cyberpunk_police/on_activate(mob/living/carbon/user, silent = FALSE)
+	. = ..()
+	user.start_cyberpunk_police_watch()
+
+/obj/item/skillchip/cyberpunk_police/on_deactivate(mob/living/carbon/user, silent = FALSE)
+	user.stop_cyberpunk_police_watch()
+	return ..()
+
+/atom/movable/screen/text/cyberpunk_police_watch_hud
+	name = "POLWATCH"
+	screen_loc = "EAST-6:0,NORTH-2:0"
+	maptext_width = 192
+	maptext_height = 96
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+
+/atom/movable/screen/text/cyberpunk_police_dispatch_hud
+	name = "POLICE DISPATCH"
+	screen_loc = "CENTER-5:0,NORTH-1:0"
+	maptext_width = 360
+	maptext_height = 72
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+
+/mob/living/proc/start_cyberpunk_police_watch()
+	cyberpunk_police_watch_active = TRUE
+	update_cyberpunk_police_watch(TRUE)
+
+/mob/living/proc/stop_cyberpunk_police_watch()
+	cyberpunk_police_watch_active = FALSE
+	if(client && cyberpunk_police_watch_hud)
+		client.screen -= cyberpunk_police_watch_hud
+	QDEL_NULL(cyberpunk_police_watch_hud)
+	cyberpunk_police_watch_signature = null
+
+/mob/living/proc/update_cyberpunk_police_watch(pay_custody = FALSE)
+	if(!cyberpunk_police_watch_active || QDELETED(src))
+		return
+	if(!client)
+		addtimer(CALLBACK(src, PROC_REF(update_cyberpunk_police_watch), pay_custody), 30 SECONDS, TIMER_UNIQUE | TIMER_STOPPABLE)
+		return
+	if(!cyberpunk_police_watch_hud)
+		cyberpunk_police_watch_hud = new
+		client.screen += cyberpunk_police_watch_hud
+	var/list/report = cyberpunk_police_watch_report(src, pay_custody)
+	cyberpunk_police_watch_hud.maptext = MAPTEXT("<div style='font-family: monospace; font-size: 8px; color: #8fffd2; background: #07110dcc; padding: 3px; border: 1px solid #1cff9a;'>[report["hud"]]</div>")
+	addtimer(CALLBACK(src, PROC_REF(update_cyberpunk_police_watch), TRUE), 30 SECONDS, TIMER_UNIQUE | TIMER_STOPPABLE)
+
+/mob/living/proc/cyberpunk_police_watch_alert(record_name, wanted_status)
+	if(!cyberpunk_police_watch_active || !client)
+		return
+	var/signature = "[record_name]:[wanted_status]"
+	if(cyberpunk_police_watch_signature == signature)
+		return
+	cyberpunk_police_watch_signature = signature
+	to_chat(src, span_notice("<b>POLWATCH:</b> [record_name] status changed to [wanted_status || WANTED_NONE]."))
+	update_cyberpunk_police_watch(FALSE)
+
+/mob/living/proc/cyberpunk_show_police_dispatch(text, duration = 20 SECONDS)
+	if(!client || QDELETED(src))
+		return
+	if(!cyberpunk_police_dispatch_hud)
+		cyberpunk_police_dispatch_hud = new
+		client.screen += cyberpunk_police_dispatch_hud
+	cyberpunk_police_dispatch_signature = "[world.time]-[text]"
+	cyberpunk_police_dispatch_hud.maptext = MAPTEXT("<div style='font-family: monospace; font-size: 18px; font-weight: 700; color: #ffef8a; text-align: center; background: #190705e6; padding: 8px; border: 2px solid #ff3b2f;'>[text]</div>")
+	playsound_local(get_turf(src), 'sound/machines/beep/twobeep_high.ogg', 60, TRUE)
+	to_chat(src, span_warning("<b>POLICE DISPATCH:</b> [text]"))
+	addtimer(CALLBACK(src, PROC_REF(cyberpunk_clear_police_dispatch), cyberpunk_police_dispatch_signature), duration, TIMER_UNIQUE | TIMER_STOPPABLE)
+
+/mob/living/proc/cyberpunk_clear_police_dispatch(signature)
+	if(signature && cyberpunk_police_dispatch_signature != signature)
+		return
+	if(client && cyberpunk_police_dispatch_hud)
+		client.screen -= cyberpunk_police_dispatch_hud
+	QDEL_NULL(cyberpunk_police_dispatch_hud)
+	cyberpunk_police_dispatch_signature = null
+
+/proc/cyberpunk_police_notify_record_change(record_name)
+	if(!record_name)
+		return
+	var/wanted_status = WANTED_NONE
+	for(var/datum/record/crew/record as anything in GLOB.manifest.general)
+		if(ckey(record.name) == ckey(record_name))
+			wanted_status = record.wanted_status
+			break
+	for(var/mob/living/officer as anything in GLOB.player_list)
+		officer.cyberpunk_police_watch_alert(record_name, wanted_status)
+
+/proc/cyberpunk_police_watch_report(mob/living/officer, pay_custody = FALSE)
+	var/list/wanted = list()
+	var/list/detained = list()
+	var/payout = 0
+	for(var/datum/record/crew/record as anything in GLOB.manifest.general)
+		if(!record)
+			continue
+		var/status = record.wanted_status
+		var/mob/living/person
+		for(var/mob/living/candidate as anything in GLOB.player_list)
+			if(candidate && ckey(candidate.real_name || candidate.name) == ckey(record.name))
+				person = candidate
+				break
+		if(status in list(WANTED_ARREST, WANTED_SUSPECT))
+			wanted += "[record.name] ([person ? get_area_name(person, TRUE) : "offline"])"
+		if(status != WANTED_PRISONER)
+			continue
+		var/area/current_area = person ? get_area(person) : null
+		var/in_security = person ? cyberpunk_is_police_custody_area(person) : FALSE
+		detained += "[record.name] - [in_security ? "in custody" : "outside custody"] ([current_area?.name || "unknown"])"
+		if(!pay_custody || !in_security)
+			continue
+		if(world.time < person.cyberpunk_police_last_custody_pay + 5 MINUTES)
+			continue
+		person.cyberpunk_police_last_custody_pay = world.time
+		payout += 50
+	if(payout)
+		var/datum/bank_account/account = officer.get_bank_account()
+		account?.adjust_money(payout, "Police custody payout")
+	var/list/hud_lines = list("<b>POLWATCH</b>")
+	hud_lines += "Wanted: [length(wanted)]"
+	hud_lines += "Custody: [length(detained)]"
+	if(length(wanted))
+		hud_lines += "Target: [wanted[1]]"
+	if(length(detained))
+		hud_lines += "Held: [detained[1]]"
+	if(payout)
+		hud_lines += "Paid: [payout][MONEY_SYMBOL]"
+	var/list/chat_lines = list("<b>Wanted targets:</b>")
+	chat_lines += length(wanted) ? wanted : "none"
+	chat_lines += "<br><b>Detained:</b>"
+	chat_lines += length(detained) ? detained : "none"
+	if(payout)
+		chat_lines += "<br><b>Payout:</b> [payout][MONEY_SYMBOL]"
+	return list(
+		"hud" = jointext(hud_lines, "<br>"),
+		"chat" = jointext(chat_lines, "<br>"),
+	)
+
+/datum/action/cooldown/cyberpunk_police_watch
+	name = "Police Watch"
+	desc = "Review wanted targets and confirm custody payouts."
+	button_icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	button_icon_state = "skillchip"
+	background_icon_state = "bg_default"
+	overlay_icon_state = "bg_default_border"
+	cooldown_time = 10 SECONDS
+
+/datum/action/cooldown/cyberpunk_police_watch/Activate(atom/target_atom)
+	. = ..()
+	var/mob/living/officer = owner
+	if(!istype(officer))
+		return
+	var/list/report = cyberpunk_police_watch_report(officer, TRUE)
+	officer.update_cyberpunk_police_watch(FALSE)
+	to_chat(officer, span_notice(report["chat"]))

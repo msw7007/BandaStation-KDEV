@@ -74,6 +74,12 @@
 #define BB_CP_CITY_TASK_RESULT "BB_cp_city_task_result"
 /// World time when a timed task can complete.
 #define BB_CP_CITY_TASK_FINISH_AT "BB_cp_city_task_finish_at"
+/// Compact success condition for city task debugging/phantom resolution.
+#define BB_CP_CITY_TASK_SUCCESS_CONDITION "BB_cp_city_task_success_condition"
+/// Compact failure condition for city task debugging/phantom resolution.
+#define BB_CP_CITY_TASK_FAILURE_CONDITION "BB_cp_city_task_failure_condition"
+/// Expected result text if the city task resolves while profiled.
+#define BB_CP_CITY_TASK_EXPECTED_RESULT "BB_cp_city_task_expected_result"
 
 /// Numeric contract id for contract-backed tasks.
 #define BB_CP_CONTRACT_ID "BB_cp_contract_id"
@@ -107,8 +113,12 @@
 #define BB_CP_ROUTE_TARGET_Z "BB_cp_route_target_z"
 /// Z transition target/method.
 #define BB_CP_ROUTE_Z_TRANSITION "BB_cp_route_z_transition"
+/// Z transition method selected for the current route.
+#define BB_CP_ROUTE_Z_METHOD "BB_cp_route_z_method"
 /// Profiling visibility hint.
 #define BB_CP_ROUTE_VISIBLE "BB_cp_route_visible"
+/// Observation/proxy reason when profiled AI must be externally represented.
+#define BB_CP_ROUTE_OBSERVATION_PROXY "BB_cp_route_observation_proxy"
 
 /// Phantom mode enabled flag.
 #define BB_CP_PHANTOM_ENABLED "BB_cp_phantom_enabled"
@@ -124,17 +134,30 @@
 #define BB_CP_PHANTOM_APPROX_TURF "BB_cp_phantom_approx_turf"
 /// Compact health/damage state while profiled.
 #define BB_CP_PHANTOM_HEALTH_STATE "BB_cp_phantom_health_state"
+/// Numeric health value captured/updated while profiled.
+#define BB_CP_PHANTOM_HEALTH_VALUE "BB_cp_phantom_health_value"
+/// World time when compact health should degrade next.
+#define BB_CP_PHANTOM_HEALTH_DEGRADE_AT "BB_cp_phantom_health_degrade_at"
 /// Light or heavy compact simulation profile.
 #define BB_CP_PHANTOM_PROFILE "BB_cp_phantom_profile"
 /// Next world.time when compact simulation may advance.
 #define BB_CP_PHANTOM_NEXT_TICK "BB_cp_phantom_next_tick"
 /// Accumulated hidden seconds since the last compact simulation advance.
 #define BB_CP_PHANTOM_ACCUMULATED_SECONDS "BB_cp_phantom_accumulated_seconds"
+/// Last compact simulation risk roll/result for debugging.
+#define BB_CP_PHANTOM_RISK_RESULT "BB_cp_phantom_risk_result"
 
 /// Current threat target.
 #define BB_CP_THREAT_TARGET "BB_cp_threat_target"
 /// Current threat level.
 #define BB_CP_THREAT_LEVEL "BB_cp_threat_level"
+
+/// Current high-level GOAP plan for city AI tasks.
+#define BB_CP_GOAP_PLAN "BB_cp_goap_plan"
+/// Current high-level GOAP action for city AI tasks.
+#define BB_CP_GOAP_CURRENT_ACTION "BB_cp_goap_current_action"
+/// Last city-task state signature used to build the GOAP plan.
+#define BB_CP_GOAP_PLAN_SIGNATURE "BB_cp_goap_plan_signature"
 
 ///song instrument blackboard, set by instrument subtrees
 #define BB_SONG_INSTRUMENT "BB_SONG_INSTRUMENT"

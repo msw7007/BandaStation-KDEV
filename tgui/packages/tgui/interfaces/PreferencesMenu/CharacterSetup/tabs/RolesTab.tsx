@@ -4,7 +4,11 @@ import { useBackend } from 'tgui/backend';
 import { Button } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
-import { type Antagonist, Category } from '../../antagonists/base';
+import {
+  type Antagonist,
+  Category,
+  CYBERPUNK_ANTAGONIST_KEYS,
+} from '../../antagonists/base';
 import {
   JobPriority,
   type Job,
@@ -47,6 +51,9 @@ for (const antagKey of requireAntag.keys()) {
   }>(antagKey).default;
 
   if (!antag) {
+    continue;
+  }
+  if (!CYBERPUNK_ANTAGONIST_KEYS.has(antag.key)) {
     continue;
   }
 

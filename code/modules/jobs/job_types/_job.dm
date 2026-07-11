@@ -221,19 +221,19 @@
 		if("HEAD_OF_SECURITY", "WARDEN", "DETECTIVE", "SECURITY_OFFICER", "BLUESHIELD")
 			return list("city", "officer", null, list("city:police"), 150)
 		if("CHIEF_MEDICAL_OFFICER")
-			return list("corporate", "representative", "benn", list("corp:benn", "corp:heads"), 300)
+			return list("corporate", "representative", "benn", cyberpunk_corporation_role_accesses("benn", "head"), 300)
 		if("RESEARCH_DIRECTOR")
-			return list("corporate", "representative", "benn", list("corp:benn", "corp:heads"), 300)
+			return list("corporate", "representative", "benn", cyberpunk_corporation_role_accesses("benn", "head"), 300)
 		if("MEDICAL_DOCTOR", "CHEMIST", "PARAMEDIC", "CORONER", "GENETICIST", "PSYCHOLOGIST", "SCIENTIST")
-			return list("corporate", "specialist-ripper", "benn", list("corp:benn"), 120)
+			return list("corporate", "specialist-ripper", "benn", cyberpunk_corporation_role_accesses("benn", "specialist"), 120)
 		if("CHIEF_ENGINEER")
-			return list("corporate", "representative", "ryaznov", list("corp:ryaznov", "corp:heads"), 300)
+			return list("corporate", "representative", "ryaznov", cyberpunk_corporation_role_accesses("ryaznov", "head"), 300)
 		if("STATION_ENGINEER", "ATMOSPHERIC_TECHNICIAN", "ROBOTICIST", "SHAFT_MINER")
-			return list("corporate", "specialist-engineer", "ryaznov", list("corp:ryaznov"), 120)
+			return list("corporate", "specialist-engineer", "ryaznov", cyberpunk_corporation_role_accesses("ryaznov", "specialist"), 120)
 		if("QUARTERMASTER")
-			return list("corporate", "representative", "starlight", list("corp:starlight", "corp:heads"), 300)
+			return list("corporate", "representative", "starlight", cyberpunk_corporation_role_accesses("starlight", "head"), 300)
 		if("CARGO_TECHNICIAN", "EXPLORER")
-			return list("corporate", "specialist-logist", "starlight", list("corp:starlight"), 120)
+			return list("corporate", "specialist-logist", "starlight", cyberpunk_corporation_role_accesses("starlight", "specialist"), 120)
 		if("BITRUNNER")
 			return list("mercenary", "netrunner", null, list(), 80)
 		if("PRISONER")
@@ -423,7 +423,7 @@
 	spawn_positions = 4
 	department_for_prefs = /datum/job_department/captain
 	departments_list = list(/datum/job_department/command)
-	outfit = /datum/outfit/job/hop
+	outfit = /datum/outfit/job/cyberpunk_councilor
 	paycheck = PAYCHECK_COMMAND
 	cyberpunk_role_group = "city"
 	cyberpunk_role_class = "council"
@@ -431,6 +431,12 @@
 	cyberpunk_bonus_credits = 250
 	cyberpunk_role_professional_skill_points = 6
 	job_flags = STATION_JOB_FLAGS | JOB_BOLD_SELECT_TEXT | JOB_CANNOT_OPEN_SLOTS | JOB_ANTAG_PROTECTED
+
+/datum/outfit/job/cyberpunk_councilor
+	parent_type = /datum/outfit/job/hop
+	name = "Council Member"
+	jobtype = /datum/job/cyberpunk/councilor
+	backpack_contents = list(/obj/item/cyberpunk_council_emergency_chip = 1)
 
 /datum/job/cyberpunk/government
 	title = "Government Officer"
@@ -456,7 +462,7 @@
 	spawn_positions = 8
 	department_for_prefs = /datum/job_department/security
 	departments_list = list(/datum/job_department/security)
-	outfit = /datum/outfit/job/security
+	outfit = /datum/outfit/job/cyberpunk_police_officer
 	paycheck_department = ACCOUNT_SEC
 	cyberpunk_role_group = "city"
 	cyberpunk_role_class = "officer"
@@ -465,6 +471,12 @@
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_STRENGTH = 1)
 	cyberpunk_role_weapon_skill_points = 6
 	job_flags = STATION_JOB_FLAGS | JOB_ANTAG_PROTECTED
+
+/datum/outfit/job/cyberpunk_police_officer
+	parent_type = /datum/outfit/job/security
+	name = "Police Officer"
+	jobtype = /datum/job/cyberpunk/police_officer
+	skillchips = list(/obj/item/skillchip/cyberpunk_police)
 
 /datum/job/cyberpunk/corporate
 	job_flags = NONE
@@ -476,7 +488,7 @@
 
 /datum/job/cyberpunk/corporate/intern
 	title = "Corporate Intern"
-	description = "Entry corporate role without starting keys. Learn the chain and request access from staff."
+	description = "Entry corporate role with basic site access. Learn the chain and request working access from staff."
 	config_tag = "CYBERPUNK_CORPORATE_INTERN"
 	total_positions = 9
 	spawn_positions = 9
@@ -492,6 +504,7 @@
 	department_for_prefs = /datum/job_department/medical
 	departments_list = list(/datum/job_department/medical)
 	cyberpunk_corporation_id = "benn"
+	cyberpunk_role_accesses = list("corp:benn:basic")
 
 /datum/job/cyberpunk/corporate/ryaznov_intern
 	title = "Ryaznov Intern"
@@ -501,6 +514,7 @@
 	department_for_prefs = /datum/job_department/engineering
 	departments_list = list(/datum/job_department/engineering)
 	cyberpunk_corporation_id = "ryaznov"
+	cyberpunk_role_accesses = list("corp:ryaznov:basic")
 
 /datum/job/cyberpunk/corporate/starlight_intern
 	title = "Starlight Intern"
@@ -510,6 +524,7 @@
 	department_for_prefs = /datum/job_department/cargo
 	departments_list = list(/datum/job_department/cargo)
 	cyberpunk_corporation_id = "starlight"
+	cyberpunk_role_accesses = list("corp:starlight:basic")
 
 /datum/job/cyberpunk/corporate/agent
 	title = "Corporate Agent"
@@ -531,7 +546,7 @@
 	department_for_prefs = /datum/job_department/medical
 	departments_list = list(/datum/job_department/medical)
 	cyberpunk_corporation_id = "benn"
-	cyberpunk_role_accesses = list("corp:benn")
+	cyberpunk_role_accesses = list("corp:benn:basic", "corp:benn:agent")
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_PERCEPTION = 2)
 
 /datum/job/cyberpunk/corporate/ryaznov_agent
@@ -542,7 +557,7 @@
 	department_for_prefs = /datum/job_department/engineering
 	departments_list = list(/datum/job_department/engineering)
 	cyberpunk_corporation_id = "ryaznov"
-	cyberpunk_role_accesses = list("corp:ryaznov")
+	cyberpunk_role_accesses = list("corp:ryaznov:basic", "corp:ryaznov:agent")
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_STRENGTH = 2)
 
 /datum/job/cyberpunk/corporate/starlight_agent
@@ -553,7 +568,7 @@
 	department_for_prefs = /datum/job_department/cargo
 	departments_list = list(/datum/job_department/cargo)
 	cyberpunk_corporation_id = "starlight"
-	cyberpunk_role_accesses = list("corp:starlight")
+	cyberpunk_role_accesses = list("corp:starlight:basic", "corp:starlight:agent")
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_DEXTERITY = 2)
 
 /datum/job/cyberpunk/corporate/benn_ripper
@@ -565,11 +580,11 @@
 	job_flags = STATION_JOB_FLAGS
 	department_for_prefs = /datum/job_department/medical
 	departments_list = list(/datum/job_department/medical)
-	outfit = /datum/outfit/job/doctor
+	outfit = /datum/outfit/job/doctor/cyberpunk_benn_ripper
 	paycheck_department = ACCOUNT_MED
 	cyberpunk_role_class = "specialist-ripper"
 	cyberpunk_corporation_id = "benn"
-	cyberpunk_role_accesses = list("corp:benn")
+	cyberpunk_role_accesses = list("corp:benn:basic", "corp:benn:specialist")
 	cyberpunk_bonus_credits = 120
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_INTELLIGENCE = 2)
 	cyberpunk_role_professional_skill_points = 8
@@ -583,11 +598,11 @@
 	job_flags = STATION_JOB_FLAGS
 	department_for_prefs = /datum/job_department/engineering
 	departments_list = list(/datum/job_department/engineering)
-	outfit = /datum/outfit/job/engineer
+	outfit = /datum/outfit/job/engineer/cyberpunk_ryaznov_engineer
 	paycheck_department = ACCOUNT_ENG
 	cyberpunk_role_class = "specialist-engineer"
 	cyberpunk_corporation_id = "ryaznov"
-	cyberpunk_role_accesses = list("corp:ryaznov")
+	cyberpunk_role_accesses = list("corp:ryaznov:basic", "corp:ryaznov:specialist")
 	cyberpunk_bonus_credits = 120
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_SPIRIT = 2)
 	cyberpunk_role_professional_skill_points = 8
@@ -601,11 +616,11 @@
 	job_flags = STATION_JOB_FLAGS
 	department_for_prefs = /datum/job_department/cargo
 	departments_list = list(/datum/job_department/cargo)
-	outfit = /datum/outfit/job/cargo_tech
+	outfit = /datum/outfit/job/cargo_tech/cyberpunk_starlight_logist
 	paycheck_department = ACCOUNT_CAR
 	cyberpunk_role_class = "specialist-logist"
 	cyberpunk_corporation_id = "starlight"
-	cyberpunk_role_accesses = list("corp:starlight")
+	cyberpunk_role_accesses = list("corp:starlight:basic", "corp:starlight:specialist")
 	cyberpunk_bonus_credits = 120
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_CHARISMA = 2)
 	cyberpunk_role_professional_skill_points = 8
@@ -631,7 +646,7 @@
 	outfit = /datum/outfit/job/cmo
 	paycheck_department = ACCOUNT_MED
 	cyberpunk_corporation_id = "benn"
-	cyberpunk_role_accesses = list("corp:benn", "corp:heads")
+	cyberpunk_role_accesses = list("corp:benn:basic", "corp:benn:agent", "corp:benn:specialist", "corp:benn:head")
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_PERCEPTION = 1, ATTRIBUTE_INTELLIGENCE = 1)
 
 /datum/job/cyberpunk/corporate/ryaznov_representative
@@ -644,7 +659,7 @@
 	outfit = /datum/outfit/job/ce
 	paycheck_department = ACCOUNT_ENG
 	cyberpunk_corporation_id = "ryaznov"
-	cyberpunk_role_accesses = list("corp:ryaznov", "corp:heads")
+	cyberpunk_role_accesses = list("corp:ryaznov:basic", "corp:ryaznov:agent", "corp:ryaznov:specialist", "corp:ryaznov:head")
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_STRENGTH = 1, ATTRIBUTE_SPIRIT = 1)
 
 /datum/job/cyberpunk/corporate/starlight_representative
@@ -657,7 +672,7 @@
 	outfit = /datum/outfit/job/quartermaster
 	paycheck_department = ACCOUNT_CAR
 	cyberpunk_corporation_id = "starlight"
-	cyberpunk_role_accesses = list("corp:starlight", "corp:heads")
+	cyberpunk_role_accesses = list("corp:starlight:basic", "corp:starlight:agent", "corp:starlight:specialist", "corp:starlight:head")
 	cyberpunk_role_attribute_point_limits = list(ATTRIBUTE_DEXTERITY = 1, ATTRIBUTE_CHARISMA = 1)
 
 /datum/job/cyberpunk/mercenary
@@ -669,6 +684,7 @@
 	job_flags = STATION_JOB_FLAGS
 	department_for_prefs = /datum/job_department/assistant
 	departments_list = list(/datum/job_department/assistant)
+	outfit = /datum/outfit/job/cyberpunk_mercenary
 	cyberpunk_role_group = "mercenary"
 	cyberpunk_role_class = "mercenary"
 	cyberpunk_bonus_credits = 80
@@ -676,6 +692,11 @@
 	cyberpunk_role_weapon_skill_points = 2
 	cyberpunk_allow_custom_title = TRUE
 	supervisors = "active contracts"
+
+/datum/outfit/job/cyberpunk_mercenary
+	name = "Mercenary"
+	jobtype = /datum/job/cyberpunk/mercenary
+	belt = /obj/item/modular_computer/pda/cyberpunk_mercenary
 
 /datum/job/cyberpunk/netrunner
 	title = "Netrunner"

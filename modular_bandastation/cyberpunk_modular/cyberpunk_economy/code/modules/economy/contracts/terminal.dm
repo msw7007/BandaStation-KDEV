@@ -75,6 +75,25 @@
 		return
 	return SSeconomy.cyberpunk_contract_terminal_ui_act(action, params, ui.user, terminal)
 
+/datum/computer_file/program/cyberpunk_contract_phone
+	filename = "contract_work"
+	filedesc = "Contract Work"
+	extended_desc = "Personal contract board for independent workers."
+	program_icon = "briefcase"
+	downloader_category = PROGRAM_CATEGORY_EQUIPMENT
+	size = 4
+	can_run_on_flags = PROGRAM_PDA
+	tgui_id = "CyberpunkContractPhone"
+
+/datum/computer_file/program/cyberpunk_contract_phone/ui_data(mob/user)
+	return SSeconomy.cyberpunk_contract_phone_ui_data(user)
+
+/datum/computer_file/program/cyberpunk_contract_phone/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	. = ..()
+	if(.)
+		return
+	return SSeconomy.cyberpunk_contract_phone_ui_act(action, params, ui.user)
+
 
 /datum/cyberpunk_contract_condition/delivery/proc/terminal_matches(obj/machinery/vending/terminal)
 	if(destination_kind != "terminal" || !terminal)
@@ -325,3 +344,54 @@
 	contract.add_history("[user.real_name || user.name] dispatched AI courier from [terminal.get_cyberpunk_contract_terminal_label()]")
 	to_chat(user, span_notice("Courier task dispatched for contract #[contract.id]."))
 	return TRUE
+
+/datum/controller/subsystem/economy/proc/cyberpunk_contract_phone_ui_data(mob/user)
+	var/list/data = list(
+		"contracts" = list(),
+		"stats" = null,
+	)
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!living_user)
+		return data
+	var/character_key = get_cyberpunk_contract_character_key(living_user, living_user.get_bank_account())
+	data["stats"] = get_cyberpunk_contract_stats(character_key)
+	for(var/contract_id in cyberpunk_contracts)
+		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
+		if(!contract?.can_view(living_user))
+			continue
+		if(contract.status in list(CYBERPUNK_CONTRACT_COMPLETED, CYBERPUNK_CONTRACT_FAILED, CYBERPUNK_CONTRACT_CANCELLED))
+			continue
+		data["contracts"] += list(contract.to_ui_data(living_user, FALSE))
+	return data
+
+/datum/controller/subsystem/economy/proc/cyberpunk_contract_phone_ui_act(action, list/params, mob/user)
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!living_user)
+		return FALSE
+	var/datum/cyberpunk_contract/contract = get_cyberpunk_contract(params["id"])
+	if(!contract)
+		return FALSE
+	switch(action)
+		if("accept")
+			if(contract.accept(living_user))
+				to_chat(living_user, span_notice("Contract #[contract.id] accepted."))
+			else
+				to_chat(living_user, span_warning("Unable to accept contract #[contract.id]."))
+			return TRUE
+		if("refuse")
+			if(contract.refuse_offer(living_user))
+				to_chat(living_user, span_notice("Contract #[contract.id] refused."))
+			else
+				to_chat(living_user, span_warning("Unable to refuse contract #[contract.id]."))
+			return TRUE
+		if("check")
+			if(contract.check_nearby_target(living_user))
+				to_chat(living_user, span_notice("Contract #[contract.id] progress updated."))
+			else
+				to_chat(living_user, span_warning("No matching contract target nearby."))
+			return TRUE
+		if("disclose")
+			if(contract.disclose_evidence(living_user))
+				to_chat(living_user, span_notice("Contract #[contract.id] evidence disclosed."))
+			return TRUE
+	return FALSE

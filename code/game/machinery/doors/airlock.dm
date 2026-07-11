@@ -2369,6 +2369,24 @@
 	normal_integrity = 400 // reverse engieneerd: 400 * 1.5 (sec lvl 6) = 600 = original
 	security_level = 6
 
+/obj/machinery/door/airlock/vault/cyberpunk_council
+	name = "гермоврата"
+	desc = "A reinforced city council hermetic gate for emergency shelters and sealed storage."
+	normal_integrity = 1800
+	explosion_block = 4
+	damage_deflection = 80
+	resistance_flags = FIRE_PROOF | ACID_PROOF
+	var/list/cyberpunk_access_keys = list("government:all", "city:council")
+
+/obj/machinery/door/airlock/vault/cyberpunk_council/allowed(mob/living/user)
+	if(!density)
+		return TRUE
+	if(istype(user))
+		for(var/access_key in cyberpunk_access_keys)
+			if(user.has_cyberpunk_crypto_access(access_key))
+				return TRUE
+	return ..()
+
 
 // Hatch Airlocks
 

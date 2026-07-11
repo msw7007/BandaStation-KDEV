@@ -237,14 +237,78 @@ multiple modular subtrees with behaviors
 /datum/ai_controller/proc/cyberpunk_has_capability(capability)
 	return !!(blackboard[BB_CP_AI_CAPABILITIES] & capability)
 
+/datum/ai_controller/proc/cyberpunk_is_delivery_task(task_type)
+	return task_type in list(CP_AI_TASK_DELIVERY, CP_AI_TASK_CONTRACT, CP_AI_TASK_CARGO, CP_AI_TASK_GUARD)
+
+/datum/ai_controller/proc/cyberpunk_cargo_type_text(atom/cargo)
+	if(!cargo)
+		return null
+	return "[cargo.type]"
+
+/datum/ai_controller/proc/cyberpunk_cargo_amount(atom/cargo)
+	if(!cargo)
+		return 0
+	return 1
+
+/datum/ai_controller/proc/cyberpunk_task_success_condition(task_type)
+	if(cyberpunk_is_delivery_task(task_type))
+		return "cargo delivered to receiver"
+	if(task_type == CP_AI_TASK_REPAIR)
+		return "target repaired"
+	if(task_type == CP_AI_TASK_PATROL)
+		return "route completed"
+	if(task_type == CP_AI_TASK_EMERGENCY_RESPONSE)
+		return "emergency response completed"
+	if(task_type == CP_AI_TASK_FLEE)
+		return "threat escaped"
+	return "task timer completed"
+
+/datum/ai_controller/proc/cyberpunk_task_failure_condition(task_type)
+	if(cyberpunk_is_delivery_task(task_type))
+		return "cargo, source, receiver, route, or carrier lost"
+	if(task_type == CP_AI_TASK_REPAIR)
+		return "repair target missing or unreachable"
+	if(task_type == CP_AI_TASK_PATROL)
+		return "patrol route unavailable"
+	if(task_type == CP_AI_TASK_EMERGENCY_RESPONSE)
+		return "emergency target missing or route unavailable"
+	if(task_type == CP_AI_TASK_FLEE)
+		return "escape route unavailable"
+	return "target missing, route unavailable, or task timed out"
+
+/datum/ai_controller/proc/cyberpunk_role_task_weight(task_type)
+	var/role = blackboard[BB_CP_AI_ROLE_PROFILE]
+	switch(role)
+		if(CP_AI_ROLE_WORKER)
+			if(task_type in list(CP_AI_TASK_WORK, CP_AI_TASK_REPAIR, CP_AI_TASK_CARGO, CP_AI_TASK_DELIVERY))
+				return 20
+		if(CP_AI_ROLE_CONTRACTOR)
+			if(task_type in list(CP_AI_TASK_CONTRACT, CP_AI_TASK_DELIVERY, CP_AI_TASK_CARGO))
+				return 25
+		if(CP_AI_ROLE_POLICE, CP_AI_ROLE_CORP_SECURITY)
+			if(task_type in list(CP_AI_TASK_GUARD, CP_AI_TASK_PATROL, CP_AI_TASK_FLEE, CP_AI_TASK_EMERGENCY_RESPONSE))
+				return 20
+		if(CP_AI_ROLE_CORPORATE, CP_AI_ROLE_SERVICE)
+			if(task_type in list(CP_AI_TASK_WORK, CP_AI_TASK_DELIVERY))
+				return 10
+		if(CP_AI_ROLE_BANDIT, CP_AI_ROLE_ANTAG)
+			if(task_type in list(CP_AI_TASK_GUARD, CP_AI_TASK_FLEE))
+				return 10
+	return 0
+
 /// Assigns a compact city task through the blackboard. Use subtrees/behaviors to execute it.
 /datum/ai_controller/proc/cyberpunk_assign_city_task(task_type, atom/source, atom/target, atom/cargo, contract_id, duration = 30 SECONDS, atom/return_point)
 	cyberpunk_clear_city_task()
 	clear_blackboard_key(BB_CP_CITY_TASK_RESULT)
 	clear_blackboard_key(BB_CP_CITY_TASK_FAILURE_REASON)
+	if(!source && cargo && cyberpunk_is_delivery_task(task_type))
+		source = cargo
 	set_blackboard_key(BB_CP_CITY_TASK, task_type)
 	set_blackboard_key(BB_CP_CITY_TASK_STATE, source ? CP_AI_TASK_ROUTE_TO_SOURCE : (target ? CP_AI_TASK_ROUTE_TO_TARGET : CP_AI_TASK_WORKING))
 	set_blackboard_key(BB_CP_CITY_TASK_FINISH_AT, world.time + duration)
+	set_blackboard_key(BB_CP_CITY_TASK_SUCCESS_CONDITION, cyberpunk_task_success_condition(task_type))
+	set_blackboard_key(BB_CP_CITY_TASK_FAILURE_CONDITION, cyberpunk_task_failure_condition(task_type))
+	set_blackboard_key(BB_CP_CITY_TASK_EXPECTED_RESULT, cyberpunk_task_success_condition(task_type))
 	if(source)
 		set_blackboard_key(BB_CP_CARGO_SOURCE, source)
 		set_blackboard_key(BB_CP_ROUTE_SOURCE, source)
@@ -253,6 +317,8 @@ multiple modular subtrees with behaviors
 		set_blackboard_key(BB_CP_ROUTE_TARGET, target)
 	if(cargo)
 		set_blackboard_key(BB_CP_CARGO, cargo)
+		set_blackboard_key(BB_CP_CARGO_TYPE, cyberpunk_cargo_type_text(cargo))
+		set_blackboard_key(BB_CP_CARGO_AMOUNT, cyberpunk_cargo_amount(cargo))
 		set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_WAITING)
 	if(contract_id)
 		set_blackboard_key(BB_CP_CONTRACT_ID, contract_id)
@@ -267,6 +333,7 @@ multiple modular subtrees with behaviors
 		set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, current_turf.z)
 	if(target_turf)
 		set_blackboard_key(BB_CP_ROUTE_TARGET_Z, target_turf.z)
+	set_blackboard_key(BB_CP_ROUTE_Z_METHOD, CP_AI_ROUTE_Z_METHOD_NONE)
 	reset_ai_status()
 
 /// Clears volatile task/route state while preserving last result/debug fields.
@@ -275,9 +342,14 @@ multiple modular subtrees with behaviors
 		BB_CP_CITY_TASK,
 		BB_CP_CITY_TASK_STATE,
 		BB_CP_CITY_TASK_FINISH_AT,
+		BB_CP_CITY_TASK_SUCCESS_CONDITION,
+		BB_CP_CITY_TASK_FAILURE_CONDITION,
+		BB_CP_CITY_TASK_EXPECTED_RESULT,
 		BB_CP_CONTRACT_ID,
 		BB_CP_CONTRACT_REF,
 		BB_CP_CARGO,
+		BB_CP_CARGO_TYPE,
+		BB_CP_CARGO_AMOUNT,
 		BB_CP_CARGO_SOURCE,
 		BB_CP_CARGO_RECEIVER,
 		BB_CP_CARGO_STATUS,
@@ -287,10 +359,16 @@ multiple modular subtrees with behaviors
 		BB_CP_ROUTE_PHASE,
 		BB_CP_ROUTE_TARGET_Z,
 		BB_CP_ROUTE_Z_TRANSITION,
+		BB_CP_ROUTE_Z_METHOD,
 		BB_CP_ROUTE_VISIBLE,
+		BB_CP_ROUTE_OBSERVATION_PROXY,
+		BB_CP_GOAP_PLAN,
+		BB_CP_GOAP_CURRENT_ACTION,
+		BB_CP_GOAP_PLAN_SIGNATURE,
 		BB_CP_PHANTOM_FINISH_AT,
 		BB_CP_PHANTOM_NEXT_TICK,
 		BB_CP_PHANTOM_ACCUMULATED_SECONDS,
+		BB_CP_PHANTOM_RISK_RESULT,
 	)
 	for(var/blackboard_key as anything in city_task_blackboard_keys)
 		clear_blackboard_key(blackboard_key)
@@ -298,15 +376,30 @@ multiple modular subtrees with behaviors
 
 /// Marks the current city task as complete.
 /datum/ai_controller/proc/cyberpunk_complete_city_task(result = "completed")
+	cyberpunk_record_contract_task_result(TRUE, result)
 	set_blackboard_key(BB_CP_CITY_TASK_RESULT, result)
 	cyberpunk_clear_city_task()
 	reset_ai_status()
 
 /// Marks the current city task as failed.
 /datum/ai_controller/proc/cyberpunk_fail_city_task(reason = "failed")
+	cyberpunk_record_contract_task_result(FALSE, reason)
 	set_blackboard_key(BB_CP_CITY_TASK_FAILURE_REASON, reason)
 	cyberpunk_clear_city_task()
 	reset_ai_status()
+
+/datum/ai_controller/proc/cyberpunk_record_contract_task_result(succeeded, reason)
+	var/datum/cyberpunk_contract/contract = blackboard[BB_CP_CONTRACT_REF]
+	if(!contract && blackboard[BB_CP_CONTRACT_ID])
+		contract = SSeconomy?.get_cyberpunk_contract(blackboard[BB_CP_CONTRACT_ID])
+	if(!contract)
+		return FALSE
+	var/mob/living/living_pawn = pawn
+	if(succeeded)
+		if(istype(living_pawn))
+			contract.check_nearby_target(living_pawn)
+		return contract.complete("AI task: [reason]")
+	return contract.fail("AI task: [reason]")
 
 /// TRUE when the controller should keep logical city-task processing while physically idle.
 /datum/ai_controller/proc/cyberpunk_should_process_phantom()
@@ -328,6 +421,15 @@ multiple modular subtrees with behaviors
 /datum/ai_controller/proc/cyberpunk_phantom_tick_interval()
 	return blackboard[BB_CP_PHANTOM_PROFILE] == CP_AI_PHANTOM_PROFILE_HEAVY ? 5 SECONDS : 15 SECONDS
 
+/datum/ai_controller/proc/cyberpunk_phantom_failure_chance()
+	var/ai_level = max(1, blackboard[BB_CP_AI_LEVEL] || 1)
+	var/base_chance = blackboard[BB_CP_PHANTOM_PROFILE] == CP_AI_PHANTOM_PROFILE_HEAVY ? 8 : 15
+	return max(0, base_chance - (ai_level * 3))
+
+/datum/ai_controller/proc/cyberpunk_set_observation_proxy(reason)
+	set_blackboard_key(BB_CP_ROUTE_OBSERVATION_PROXY, reason || "observable")
+	set_blackboard_key(BB_CP_ROUTE_VISIBLE, TRUE)
+
 /// Returns TRUE if players, cameras, or direct cross-Z exposure can observe this pawn/phantom route.
 /datum/ai_controller/proc/cyberpunk_is_observable()
 	var/list/turfs_to_check = cyberpunk_observation_turfs()
@@ -336,8 +438,10 @@ multiple modular subtrees with behaviors
 			continue
 		for(var/mob/living/viewer as anything in SSmobs.clients_by_zlevel[checking_turf.z])
 			if(viewer.client && get_dist(viewer, checking_turf) <= interesting_dist && can_see(viewer, checking_turf, interesting_dist))
+				cyberpunk_set_observation_proxy(viewer.z == checking_turf.z ? "client line of sight" : "client cross-z line of sight")
 				return TRUE
 		if(SScameras?.is_visible_by_cameras(checking_turf))
+			cyberpunk_set_observation_proxy("camera observation")
 			return TRUE
 	return FALSE
 
@@ -364,6 +468,12 @@ multiple modular subtrees with behaviors
 		var/turf/route_turf = get_turf(route_atom)
 		if(route_turf)
 			turfs_to_check |= route_turf
+			var/turf/route_above = get_step_multiz(route_turf, UP)
+			var/turf/route_below = get_step_multiz(route_turf, DOWN)
+			if(route_above)
+				turfs_to_check |= route_above
+			if(route_below)
+				turfs_to_check |= route_below
 	return turfs_to_check
 
 /// Finds a nearby vertical transition that can move toward target_z.
@@ -417,10 +527,23 @@ multiple modular subtrees with behaviors
 	var/atom/transition = cyberpunk_find_z_transition(target_turf.z)
 	if(!transition)
 		var/atom/movable/movable_pawn = pawn
-		if(cyberpunk_has_capability(CP_AI_CAP_FLY) && istype(movable_pawn) && movable_pawn.zMove(target_turf.z > current_turf.z ? UP : DOWN, z_move_flags = ZMOVE_FLIGHT_FLAGS))
+		var/direction = target_turf.z > current_turf.z ? UP : DOWN
+		if(cyberpunk_has_capability(CP_AI_CAP_FLY) && istype(movable_pawn) && movable_pawn.zMove(direction, z_move_flags = ZMOVE_FLIGHT_FLAGS))
+			set_blackboard_key(BB_CP_ROUTE_Z_METHOD, CP_AI_ROUTE_Z_METHOD_FLY)
+			set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, target_turf.z)
+			return FALSE
+		if((cyberpunk_has_capability(CP_AI_CAP_Z_MOVE) || cyberpunk_has_capability(CP_AI_CAP_CLIMB)) && istype(movable_pawn) && movable_pawn.zMove(direction))
+			set_blackboard_key(BB_CP_ROUTE_Z_METHOD, cyberpunk_has_capability(CP_AI_CAP_CLIMB) ? CP_AI_ROUTE_Z_METHOD_CLIMB : CP_AI_ROUTE_Z_METHOD_FLY)
+			set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, target_turf.z)
 			return FALSE
 		cyberpunk_fail_city_task("no z transition")
 		return TRUE
+	if(istype(transition, /obj/structure/ladder))
+		set_blackboard_key(BB_CP_ROUTE_Z_METHOD, CP_AI_ROUTE_Z_METHOD_LADDER)
+	else if(istype(transition, /obj/structure/stairs))
+		set_blackboard_key(BB_CP_ROUTE_Z_METHOD, CP_AI_ROUTE_Z_METHOD_STAIRS)
+	else
+		set_blackboard_key(BB_CP_ROUTE_Z_METHOD, CP_AI_ROUTE_Z_METHOD_CLIMB)
 	set_blackboard_key(BB_CP_ROUTE_Z_TRANSITION, transition)
 	set_blackboard_key(BB_CP_ROUTE_TARGET_Z, target_turf.z)
 	set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_Z_TRANSITION)
@@ -442,7 +565,10 @@ multiple modular subtrees with behaviors
 		set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, current_turf.z)
 	var/mob/living/living_pawn = pawn
 	if(istype(living_pawn))
-		set_blackboard_key(BB_CP_PHANTOM_HEALTH_STATE, living_pawn.stat == DEAD ? "dead" : "[round(living_pawn.health)]")
+		set_blackboard_key(BB_CP_PHANTOM_HEALTH_VALUE, round(living_pawn.health))
+		set_blackboard_key(BB_CP_PHANTOM_HEALTH_STATE, living_pawn.stat == DEAD ? "dead" : "[round(living_pawn.health)]/[living_pawn.maxHealth]")
+		if(living_pawn.health < living_pawn.maxHealth)
+			set_blackboard_key(BB_CP_PHANTOM_HEALTH_DEGRADE_AT, world.time + max(30 SECONDS, (blackboard[BB_CP_AI_LEVEL] || 1) * 30 SECONDS))
 	set_blackboard_key(BB_CP_PHANTOM_NEXT_TICK, world.time + cyberpunk_phantom_tick_interval())
 	set_blackboard_key(BB_CP_PHANTOM_ACCUMULATED_SECONDS, 0)
 	return TRUE
@@ -451,10 +577,71 @@ multiple modular subtrees with behaviors
 /datum/ai_controller/proc/cyberpunk_materialize_phantom(reason = "observable")
 	if(blackboard[BB_CP_PHANTOM_STATE] == CP_AI_PHANTOM_INACTIVE)
 		return FALSE
+	var/mob/living/living_pawn = pawn
+	var/turf/approx_turf = blackboard[BB_CP_PHANTOM_APPROX_TURF]
+	if(istype(living_pawn) && approx_turf && !QDELETED(living_pawn) && isturf(living_pawn.loc))
+		living_pawn.forceMove(approx_turf)
+	cyberpunk_materialize_phantom_cargo()
 	set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_INACTIVE)
-	set_blackboard_key(BB_CP_ROUTE_VISIBLE, TRUE)
+	cyberpunk_set_observation_proxy(reason)
 	if(reason)
 		set_blackboard_key(BB_CP_CITY_TASK_RESULT, "materialized: [reason]")
+	return TRUE
+
+/datum/ai_controller/proc/cyberpunk_materialize_phantom_cargo()
+	if(blackboard[BB_CP_CARGO_STATUS] != CP_AI_CARGO_CARRIED)
+		return FALSE
+	var/mob/living/living_pawn = pawn
+	if(!istype(living_pawn))
+		return FALSE
+	var/atom/cargo = blackboard[BB_CP_CARGO]
+	if(QDELETED(cargo))
+		set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_LOST)
+		return FALSE
+	var/turf/pawn_turf = get_turf(living_pawn)
+	var/obj/item/cargo_item = cargo
+	if(istype(cargo_item))
+		if(living_pawn.is_holding(cargo_item))
+			return TRUE
+		if(pawn_turf)
+			cargo_item.forceMove(pawn_turf)
+		if(cyberpunk_has_capability(CP_AI_CAP_HANDS) && !living_pawn.get_active_held_item())
+			return living_pawn.put_in_hands(cargo_item)
+		return TRUE
+	var/mob/living/cargo_mob = cargo
+	if(istype(cargo_mob))
+		if(pawn_turf)
+			cargo_mob.forceMove(pawn_turf)
+		if(cyberpunk_has_capability(CP_AI_CAP_HANDS))
+			living_pawn.start_pulling(cargo_mob, supress_message = TRUE)
+		return TRUE
+	return FALSE
+
+/datum/ai_controller/proc/cyberpunk_process_phantom_health()
+	var/mob/living/living_pawn = pawn
+	if(!istype(living_pawn))
+		return TRUE
+	if(living_pawn.stat == DEAD)
+		set_blackboard_key(BB_CP_PHANTOM_HEALTH_STATE, "dead")
+		return FALSE
+	if(!blackboard[BB_CP_PHANTOM_HEALTH_DEGRADE_AT] || world.time < blackboard[BB_CP_PHANTOM_HEALTH_DEGRADE_AT])
+		return TRUE
+	var/ai_level = max(1, blackboard[BB_CP_AI_LEVEL] || 1)
+	var/health_value = blackboard[BB_CP_PHANTOM_HEALTH_VALUE]
+	if(isnull(health_value))
+		health_value = living_pawn.health
+	if(health_value >= living_pawn.maxHealth)
+		clear_blackboard_key(BB_CP_PHANTOM_HEALTH_DEGRADE_AT)
+		set_blackboard_key(BB_CP_PHANTOM_HEALTH_STATE, "[round(health_value)]/[living_pawn.maxHealth]")
+		return TRUE
+	health_value -= max(1, round(living_pawn.maxHealth / max(6, ai_level * 4)))
+	set_blackboard_key(BB_CP_PHANTOM_HEALTH_VALUE, health_value)
+	set_blackboard_key(BB_CP_PHANTOM_HEALTH_STATE, health_value <= 0 ? "dead" : "[round(health_value)]/[living_pawn.maxHealth]")
+	set_blackboard_key(BB_CP_PHANTOM_HEALTH_DEGRADE_AT, world.time + max(30 SECONDS, ai_level * 30 SECONDS))
+	if(health_value <= 0)
+		living_pawn.death()
+		cyberpunk_fail_city_task("phantom health collapsed")
+		return FALSE
 	return TRUE
 
 /// Processes one phantom task tick. This intentionally stays in the tg idle behavior path.
@@ -462,6 +649,8 @@ multiple modular subtrees with behaviors
 	if(!cyberpunk_enter_phantom())
 		cyberpunk_materialize_phantom()
 		return FALSE
+	if(!cyberpunk_process_phantom_health())
+		return TRUE
 
 	var/accumulated_seconds = (blackboard[BB_CP_PHANTOM_ACCUMULATED_SECONDS] || 0) + seconds_per_tick
 	var/next_tick = blackboard[BB_CP_PHANTOM_NEXT_TICK]
@@ -472,6 +661,12 @@ multiple modular subtrees with behaviors
 	set_blackboard_key(BB_CP_PHANTOM_NEXT_TICK, world.time + cyberpunk_phantom_tick_interval())
 	set_blackboard_key(BB_CP_PHANTOM_ACCUMULATED_SECONDS, 0)
 	set_blackboard_key(BB_CP_PHANTOM_LAST_TICK, world.time)
+	var/failure_chance = cyberpunk_phantom_failure_chance()
+	if(failure_chance && prob(failure_chance))
+		set_blackboard_key(BB_CP_PHANTOM_RISK_RESULT, "failed route risk ([failure_chance]%)")
+		cyberpunk_fail_city_task("phantom route risk")
+		return TRUE
+	set_blackboard_key(BB_CP_PHANTOM_RISK_RESULT, failure_chance ? "passed route risk ([failure_chance]%)" : "no route risk")
 	var/task_state = blackboard[BB_CP_CITY_TASK_STATE]
 	switch(task_state)
 		if(CP_AI_TASK_ROUTE_TO_SOURCE)
@@ -570,6 +765,9 @@ multiple modular subtrees with behaviors
 	if (!(locate(/mob/living) in target_list))
 		return
 
+	addtimer(CALLBACK(src, PROC_REF(cyberpunk_materialize_after_client_enter)), 0)
+
+/datum/ai_controller/proc/cyberpunk_materialize_after_client_enter()
 	if(ai_status == AI_STATUS_IDLE)
 		cyberpunk_materialize_phantom("client entered interest range")
 		set_ai_status(AI_STATUS_ON)

@@ -34,3 +34,20 @@ export enum Category {
   Midround,
   Latejoin,
 }
+
+export const CYBERPUNK_ANTAGONIST_KEYS = new Set([
+  'cyberpunkbandit',
+  'cyberpunkcorporatespy',
+  'cyberpunkanarchist',
+  'cyberpunkbennshifter',
+  'cyberpunkbennprototype',
+  'cyberpunkbennevolutionary',
+  'cyberpunkwildiskin',
+  'cyberpunkrogueai',
+  'cyberpunkcombatsynthetic',
+  'cyberpunkstarlightswarm',
+  'cyberpunktransformer',
+  'cyberpunkbroker',
+  'cyberpunkliberationarmy',
+  'cyberpunkdatacult',
+]);

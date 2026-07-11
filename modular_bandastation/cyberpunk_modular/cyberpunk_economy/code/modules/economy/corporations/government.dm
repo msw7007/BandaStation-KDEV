@@ -1,5 +1,15 @@
 //CYBERPUNK CORPORATIONS - government monitoring helpers.
 
+/obj/item/cyberpunk_council_emergency_chip
+	name = "council emergency chip"
+	desc = "A personal council authorization chip for activating city emergency mode."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "skillchip"
+	w_class = WEIGHT_CLASS_TINY
+	var/registered_council_key
+	var/registered_council_name
+	var/spent = FALSE
+
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_tax_monitor_ui()
 	var/list/businesses = list()
 	for(var/business_id in SScyberpunk_property.cyberpunk_businesses)
@@ -59,27 +69,30 @@
 	)
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_council_ui()
-	var/yes_votes = 0
-	var/no_votes = 0
 	var/list/votes = list()
-	for(var/voter_key in cyberpunk_government_emergency_votes)
-		var/list/vote_record = cyberpunk_government_emergency_votes[voter_key]
+	for(var/voter_key in cyberpunk_government_emergency_chips)
+		var/list/vote_record = cyberpunk_government_emergency_chips[voter_key]
 		if(!islist(vote_record))
 			continue
-		var/vote_value = !!vote_record["vote"]
-		if(vote_value)
-			yes_votes++
-		else
-			no_votes++
 		votes += list(vote_record.Copy())
 	return list(
 		"emergencyActive" = cyberpunk_government_emergency_active,
 		"directive" = cyberpunk_government_directive,
-		"yesVotes" = yes_votes,
-		"noVotes" = no_votes,
-		"requiredVotes" = 4,
+		"yesVotes" = length(votes),
+		"noVotes" = 0,
+		"requiredVotes" = get_cyberpunk_government_emergency_required_chips(),
 		"votes" = votes,
 	)
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_council_seats()
+	return 4
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_emergency_required_chips()
+	var/total_seats = get_cyberpunk_government_council_seats()
+	var/required = 1
+	while((required / total_seats) <= 0.75)
+		required++
+	return min(total_seats, required)
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_voter_key(mob/user)
 	var/mob/living/living_user = user
@@ -98,35 +111,43 @@
 	if(living_user.has_cyberpunk_crypto_access("city:council"))
 		return "[living_user.real_name || living_user.name] / council"
 	for(var/corporation_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
-		if(living_user.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id)))
+		if(living_user.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id, "head")))
 			var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(corporation_id)
 			return "[living_user.real_name || living_user.name] / [corporation?.name || corporation_id]"
 	return living_user.real_name || living_user.name
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/cast_cyberpunk_government_emergency_vote(mob/user, vote)
-	var/mob/living/living_user = user
-	if(!istype(living_user))
+	return FALSE
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/insert_cyberpunk_government_emergency_chip(mob/living/user, obj/item/cyberpunk_council_emergency_chip/chip, obj/machinery/source_terminal)
+	if(!istype(user) || !istype(chip))
 		return FALSE
-	if(!living_user.has_cyberpunk_crypto_access("city:council") && !living_user.has_cyberpunk_crypto_access("government:all") && !living_user.has_cyberpunk_crypto_access("corp:heads"))
-		var/has_corporate_vote = FALSE
-		for(var/corporation_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
-			if(living_user.has_cyberpunk_crypto_access(cyberpunk_corporation_access_id(corporation_id)))
-				has_corporate_vote = TRUE
-				break
-		if(!has_corporate_vote)
-			return FALSE
+	if(!user.has_cyberpunk_crypto_access("city:council"))
+		to_chat(user, span_warning("Only council members can authorize emergency mode."))
+		return FALSE
+	if(chip.spent)
+		to_chat(user, span_warning("[chip] has already been used."))
+		return FALSE
 	var/voter_key = get_cyberpunk_government_voter_key(user)
 	if(!voter_key)
 		return FALSE
-	var/vote_value = !!text2num("[vote]")
-	cyberpunk_government_emergency_votes[voter_key] = list(
-		"name" = get_cyberpunk_government_voter_label(user),
-		"vote" = vote_value,
+	if(cyberpunk_government_emergency_chips[voter_key])
+		to_chat(user, span_warning("Your council authorization is already registered."))
+		return FALSE
+	chip.registered_council_key = voter_key
+	chip.registered_council_name = get_cyberpunk_government_voter_label(user)
+	chip.spent = TRUE
+	cyberpunk_government_emergency_chips[voter_key] = list(
+		"name" = chip.registered_council_name,
+		"vote" = TRUE,
 		"at" = round_timestamp(),
+		"terminal" = source_terminal ? "[get_area_name(source_terminal, TRUE)]" : "unknown terminal",
 	)
-	var/list/council = get_cyberpunk_government_council_ui()
-	if(!cyberpunk_government_emergency_active && council["yesVotes"] >= council["requiredVotes"])
-		start_cyberpunk_government_emergency(user?.name || "council vote")
+	var/inserted_chips = length(cyberpunk_government_emergency_chips)
+	var/required_chips = get_cyberpunk_government_emergency_required_chips()
+	to_chat(user, span_notice("Emergency authorization registered: [inserted_chips]/[required_chips]."))
+	if(!cyberpunk_government_emergency_active && inserted_chips >= required_chips)
+		start_cyberpunk_government_emergency(user?.name || "council chip")
 	return TRUE
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/start_cyberpunk_government_emergency(actor = "council")
@@ -144,8 +165,39 @@
 		return FALSE
 	cyberpunk_government_emergency_active = FALSE
 	cyberpunk_government_emergency_votes.Cut()
+	cyberpunk_government_emergency_chips.Cut()
 	var/datum/cyberpunk_corporation/government = get_cyberpunk_corporation(CYBERPUNK_CORP_GOVERNMENT)
 	government?.add_history("emergency mode ended by [actor]")
+	return TRUE
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/dispatch_cyberpunk_government_police(atom/target, mob/living/user, label_override)
+	var/turf/target_turf = get_turf(target)
+	if(!target_turf)
+		return FALSE
+	var/area/target_area = get_area(target_turf)
+	var/dispatch_label = label_override || "[target_area?.name || "Unknown area"] ([target_turf.x], [target_turf.y], [target_turf.z])"
+	var/player_count = 0
+	for(var/mob/living/officer as anything in GLOB.player_list)
+		if(!officer?.has_cyberpunk_crypto_access("city:police"))
+			continue
+		officer.cyberpunk_show_police_dispatch("DISPATCH: [dispatch_label]")
+		player_count++
+	var/npc_count = 0
+	for(var/mob/living/carbon/human/cyberpunk_npc/security/security_npc as anything in GLOB.mob_living_list)
+		if(!security_npc.ai_controller)
+			continue
+		if(cyberpunk_order_city_ai(security_npc, CP_AI_TASK_EMERGENCY_RESPONSE, user || target, target_turf, null))
+			npc_count++
+	cyberpunk_government_dispatch_history += list(list(
+		"at" = round_timestamp(),
+		"actor" = user?.name || "council terminal",
+		"target" = dispatch_label,
+		"players" = player_count,
+		"npcs" = npc_count,
+	))
+	var/datum/cyberpunk_corporation/government = get_cyberpunk_corporation(CYBERPUNK_CORP_GOVERNMENT)
+	government?.add_history("[user?.name || "council terminal"] dispatched police to [dispatch_label] ([player_count] players, [npc_count] NPCs)")
+	to_chat(user, span_notice("Police dispatched to [dispatch_label]: [player_count] officers notified, [npc_count] NPC police routed."))
 	return TRUE
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/set_cyberpunk_government_directive(text, actor = "government")

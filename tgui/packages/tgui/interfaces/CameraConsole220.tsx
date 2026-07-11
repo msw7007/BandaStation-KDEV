@@ -21,9 +21,17 @@ type Data = {
   activeCamera: Camera & { status: BooleanLike };
   cameras: Camera[];
   can_spy: BooleanLike;
+  councilEmergency?: CouncilEmergency;
   mapRef: string;
   network: string[];
   mapData: MapData;
+};
+
+type CouncilEmergency = {
+  active: BooleanLike;
+  inserted: number;
+  required: number;
+  lastDispatch?: string;
 };
 
 type Camera = {
@@ -231,7 +239,7 @@ export const CameraMapSelector = (props) => {
 
 const CameraControls = (props: { searchText: string }) => {
   const { act, data } = useBackend<Data>();
-  const { activeCamera, can_spy, mapRef } = data;
+  const { activeCamera, can_spy, councilEmergency, mapRef } = data;
   const { searchText } = props;
 
   const cameras = selectCameras(data.cameras, searchText);
@@ -282,6 +290,73 @@ const CameraControls = (props: { searchText: string }) => {
             </Stack.Item>
           </Stack>
         </Stack.Item>
+        {!!councilEmergency && (
+          <Stack.Item>
+            <Section title="COUNCIL EMERGENCY">
+              <Stack vertical>
+                <Stack.Item>
+                  <NoticeBox danger={!councilEmergency.active}>
+                    Chips: {councilEmergency.inserted} /{' '}
+                    {councilEmergency.required}. Status:{' '}
+                    {councilEmergency.active ? 'ACTIVE' : 'LOCKED'}
+                  </NoticeBox>
+                </Stack.Item>
+                {!!councilEmergency.lastDispatch && (
+                  <Stack.Item color="label">
+                    Last dispatch: {councilEmergency.lastDispatch}
+                  </Stack.Item>
+                )}
+                <Stack.Item>
+                  <Stack>
+                    <Stack.Item grow>
+                      <Button
+                        fluid
+                        icon="microchip"
+                        onClick={() => act('council_insert_chip')}
+                      >
+                        Insert chip
+                      </Button>
+                    </Stack.Item>
+                    <Stack.Item grow>
+                      <Button
+                        fluid
+                        icon="video"
+                        disabled={!councilEmergency.active || !activeCamera}
+                        onClick={() => act('council_dispatch_camera')}
+                      >
+                        Camera
+                      </Button>
+                    </Stack.Item>
+                  </Stack>
+                </Stack.Item>
+                <Stack.Item>
+                  <Stack>
+                    <Stack.Item grow>
+                      <Button
+                        fluid
+                        icon="map-location-dot"
+                        disabled={!councilEmergency.active}
+                        onClick={() => act('council_dispatch_area')}
+                      >
+                        Area
+                      </Button>
+                    </Stack.Item>
+                    <Stack.Item grow>
+                      <Button
+                        fluid
+                        icon="crosshairs"
+                        disabled={!councilEmergency.active}
+                        onClick={() => act('council_dispatch_visible')}
+                      >
+                        Visible
+                      </Button>
+                    </Stack.Item>
+                  </Stack>
+                </Stack.Item>
+              </Stack>
+            </Section>
+          </Stack.Item>
+        )}
         <Stack.Item grow>
           <ByondUi
             height="100%"

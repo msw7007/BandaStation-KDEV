@@ -4,7 +4,11 @@ import { useBackend } from 'tgui/backend';
 import { Button, Divider, Section, Stack, Tooltip } from 'tgui-core/components';
 import { classes } from 'tgui-core/react';
 
-import { type Antagonist, Category } from '../antagonists/base';
+import {
+  type Antagonist,
+  Category,
+  CYBERPUNK_ANTAGONIST_KEYS,
+} from '../antagonists/base';
 import type { PreferencesMenuData } from '../types';
 
 const requireAntag = require.context(
@@ -29,6 +33,9 @@ for (const antagKey of requireAntag.keys()) {
   }>(antagKey).default;
 
   if (!antag) {
+    continue;
+  }
+  if (!CYBERPUNK_ANTAGONIST_KEYS.has(antag.key)) {
     continue;
   }
 
@@ -181,17 +188,17 @@ export function AntagsPage() {
     <Stack.Item className="PreferencesMenu__Antags">
       <AntagSelection
         name="Начало раунда"
-        antagonists={antagsByCategory.get(Category.Roundstart)!}
+        antagonists={antagsByCategory.get(Category.Roundstart) || []}
       />
 
       <AntagSelection
         name="Во время раунда"
-        antagonists={antagsByCategory.get(Category.Midround)!}
+        antagonists={antagsByCategory.get(Category.Midround) || []}
       />
 
       <AntagSelection
         name="Позднее прибытие"
-        antagonists={antagsByCategory.get(Category.Latejoin)!}
+        antagonists={antagsByCategory.get(Category.Latejoin) || []}
       />
     </Stack.Item>
   );

@@ -22,7 +22,17 @@ type CityAIRecord = {
   capabilities: number;
   task: string;
   state: string;
+  successCondition: string;
+  failureCondition: string;
+  cargoType: string;
+  cargoAmount: number;
+  goapAction: string;
+  goapPlan: string;
   phantom: string;
+  phantomHealth: string;
+  phantomRisk: string;
+  zMethod: string;
+  proxy: string;
   location: string;
   target: string;
   threat: string;
@@ -31,6 +41,12 @@ type CityAIRecord = {
 
 type Data = {
   ai: CityAIRecord[];
+  trafficNodes: number;
+  trafficLights: number;
+  trafficVehicles: number;
+  cityVendorsEnabled: BooleanLike;
+  vendorCount: number;
+  openVendors: number;
   safeZone: BooleanLike;
   userLocation: string;
 };
@@ -47,7 +63,17 @@ const orderButtons = [
 
 export const CyberpunkCityAI = () => {
   const { act, data } = useBackend<Data>();
-  const { ai = [], safeZone, userLocation } = data;
+  const {
+    ai = [],
+    trafficNodes = 0,
+    trafficLights = 0,
+    trafficVehicles = 0,
+    cityVendorsEnabled,
+    vendorCount = 0,
+    openVendors = 0,
+    safeZone,
+    userLocation,
+  } = data;
   const [selected, setSelected] = useState('auto');
   const selectedAI = ai.find((entry) => entry.ref === selected);
 
@@ -57,9 +83,23 @@ export const CyberpunkCityAI = () => {
         <Section
           title="AI Debug Command"
           buttons={
-            <Button icon="sync" onClick={() => act('refresh')}>
-              Refresh
-            </Button>
+            <Stack>
+              <Stack.Item>
+                <Button
+                  icon="store"
+                  selected={cityVendorsEnabled}
+                  color={cityVendorsEnabled ? 'good' : 'bad'}
+                  onClick={() => act('toggle_vendors')}
+                >
+                  Vendors {cityVendorsEnabled ? 'On' : 'Off'}
+                </Button>
+              </Stack.Item>
+              <Stack.Item>
+                <Button icon="sync" onClick={() => act('refresh')}>
+                  Refresh
+                </Button>
+              </Stack.Item>
+            </Stack>
           }
         >
           <Stack>
@@ -75,6 +115,13 @@ export const CyberpunkCityAI = () => {
                   {selectedAI
                     ? `${selectedAI.name} / ${selectedAI.role}`
                     : 'Auto dispatch'}
+                </LabeledList.Item>
+                <LabeledList.Item label="Traffic">
+                  {trafficNodes} nodes / {trafficLights} lights /{' '}
+                  {trafficVehicles} cars
+                </LabeledList.Item>
+                <LabeledList.Item label="Vendors">
+                  {openVendors} open / {vendorCount} total
                 </LabeledList.Item>
               </LabeledList>
             </Stack.Item>
@@ -117,7 +164,12 @@ export const CyberpunkCityAI = () => {
               <Table.Cell>Role</Table.Cell>
               <Table.Cell>Task</Table.Cell>
               <Table.Cell>State</Table.Cell>
+              <Table.Cell>Conditions</Table.Cell>
+              <Table.Cell>Cargo</Table.Cell>
+              <Table.Cell>GOAP</Table.Cell>
+              <Table.Cell>Plan</Table.Cell>
               <Table.Cell>Phantom</Table.Cell>
+              <Table.Cell>Profile</Table.Cell>
               <Table.Cell>HP</Table.Cell>
               <Table.Cell>Location</Table.Cell>
               <Table.Cell>Target</Table.Cell>
@@ -142,7 +194,20 @@ export const CyberpunkCityAI = () => {
                 <Table.Cell>{entry.role}</Table.Cell>
                 <Table.Cell>{entry.task}</Table.Cell>
                 <Table.Cell>{entry.state}</Table.Cell>
+                <Table.Cell>
+                  {entry.successCondition} / {entry.failureCondition}
+                </Table.Cell>
+                <Table.Cell>
+                  {entry.cargoType}
+                  {entry.cargoAmount ? ` x${entry.cargoAmount}` : ''}
+                </Table.Cell>
+                <Table.Cell>{entry.goapAction}</Table.Cell>
+                <Table.Cell>{entry.goapPlan}</Table.Cell>
                 <Table.Cell>{entry.phantom}</Table.Cell>
+                <Table.Cell>
+                  {entry.phantomHealth} / {entry.phantomRisk} / {entry.zMethod} /{' '}
+                  {entry.proxy}
+                </Table.Cell>
                 <Table.Cell color={entry.health <= 20 ? 'bad' : 'good'}>
                   {entry.health}%
                 </Table.Cell>

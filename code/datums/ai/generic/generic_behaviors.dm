@@ -335,6 +335,32 @@
 // Cyberpunk city task behaviors. They intentionally use tg AI controller
 // blackboard/movement and do not introduce a separate AI core.
 
+/proc/cyberpunk_city_cardinal_dir_to(atom/source, atom/target)
+	var/direction = get_dir(source, target)
+	if(direction & NORTH)
+		return NORTH
+	if(direction & SOUTH)
+		return SOUTH
+	if(direction & EAST)
+		return EAST
+	if(direction & WEST)
+		return WEST
+	return 0
+
+/proc/cyberpunk_city_find_climb_obstacle(mob/living/living_pawn, atom/target)
+	if(!istype(living_pawn) || QDELETED(target))
+		return null
+	var/direction = cyberpunk_city_cardinal_dir_to(living_pawn, target)
+	if(!direction)
+		return null
+	var/turf/next_turf = get_step(living_pawn, direction)
+	if(!next_turf || next_turf.density)
+		return null
+	for(var/atom/movable/obstacle as anything in next_turf)
+		if(obstacle.density && !(obstacle.flags_1 & ON_BORDER_1) && HAS_TRAIT(obstacle, TRAIT_CLIMBABLE))
+			return obstacle
+	return null
+
 /datum/ai_behavior/cyberpunk_set_task_state
 
 /datum/ai_behavior/cyberpunk_set_task_state/perform(seconds_per_tick, datum/ai_controller/controller, new_state)
@@ -352,6 +378,26 @@
 /datum/ai_behavior/cyberpunk_fail_task/perform(seconds_per_tick, datum/ai_controller/controller, reason = "failed")
 	controller.cyberpunk_fail_city_task(reason)
 	return AI_BEHAVIOR_INSTANT | AI_BEHAVIOR_SUCCEEDED
+
+/datum/ai_behavior/cyberpunk_climb_obstacle
+	action_cooldown = 1 SECONDS
+
+/datum/ai_behavior/cyberpunk_climb_obstacle/perform(seconds_per_tick, datum/ai_controller/controller, target_key)
+	var/mob/living/living_pawn = controller.pawn
+	if(!istype(living_pawn) || !isturf(living_pawn.loc))
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+
+	var/atom/target = controller.blackboard[target_key]
+	var/atom/movable/obstacle = cyberpunk_city_find_climb_obstacle(living_pawn, target)
+	if(!obstacle)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+
+	var/direction = cyberpunk_city_cardinal_dir_to(living_pawn, target)
+	var/original_density = obstacle.density
+	obstacle.set_density(FALSE)
+	var/succeeded = step(living_pawn, direction)
+	obstacle.set_density(original_density)
+	return AI_BEHAVIOR_DELAY | (succeeded ? AI_BEHAVIOR_SUCCEEDED : AI_BEHAVIOR_FAILED)
 
 /datum/ai_behavior/cyberpunk_pickup_cargo
 	action_cooldown = 1 SECONDS

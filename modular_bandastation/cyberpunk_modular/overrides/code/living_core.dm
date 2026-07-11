@@ -929,6 +929,9 @@
 			cyberpunk_npc_profile.services += service
 	return cyberpunk_npc_profile
 
+/mob/living/proc/cyberpunk_vendor_is_open()
+	return TRUE
+
 /// Minimal test setup for temporary city NPCs until map roles bind real profiles.
 /mob/living/proc/cyberpunk_setup_default_npc_vendor()
 	var/list/dialog = list(
@@ -1054,6 +1057,11 @@
 	var/cyberpunk_vendor_profile = "local"
 	var/list/cyberpunk_vendor_categories
 	var/list/cyberpunk_vendor_services
+	var/cyberpunk_vendor_active = TRUE
+	var/cyberpunk_vendor_night_cycle = FALSE
+	var/turf/cyberpunk_vendor_stall_turf
+	var/turf/cyberpunk_vendor_home_turf
+	var/cyberpunk_vendor_last_restock_day = 0
 	var/cyberpunk_ambient_phrase_key = "bystander"
 	var/cyberpunk_ambient_speech_interval = 10 SECONDS
 	var/cyberpunk_next_ambient_speech = 0
@@ -1138,7 +1146,7 @@
 		new /datum/cyberpunk_npc_dialog_option("work", "Ask about work", "Contracts are cleaner than favors. Favors always come back with interest."),
 	)
 	var/list/services = list()
-	if(cyberpunk_stationary_npc)
+	if(cyberpunk_stationary_npc || istype(src, /mob/living/carbon/human/cyberpunk_npc/vendor))
 		var/list/service_pool = list(
 			"healing" = /datum/cyberpunk_npc_service/healing,
 			"repair" = /datum/cyberpunk_npc_service/repair,
@@ -1156,6 +1164,20 @@
 				services += new service_type
 	cyberpunk_setup_npc_profile("Need something?", cyberpunk_vendor_profile, "independent", dialog, cyberpunk_city_shop_items(cyberpunk_vendor_categories), services)
 
+/mob/living/carbon/human/cyberpunk_npc/cyberpunk_vendor_is_open()
+	return TRUE
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_vendor_restock(day = 0)
+	if(day && cyberpunk_vendor_last_restock_day == day)
+		return FALSE
+	cyberpunk_vendor_last_restock_day = day
+	cyberpunk_setup_city_npc_profile()
+	return TRUE
+
+/mob/living/carbon/human/cyberpunk_npc/proc/cyberpunk_set_vendor_open(open)
+	cyberpunk_vendor_active = !!open
+	return TRUE
+
 /proc/cyberpunk_city_shop_items(list/categories)
 	var/list/items = list(
 		new /datum/cyberpunk_npc_shop_item("food_bread", "Ready food", "Cheap ready meal.", /obj/item/food/bread/plain, "food", 35, 10, 8),
@@ -1170,6 +1192,9 @@
 		new /datum/cyberpunk_npc_shop_item("pen", "Pen", "Disposable writing tool.", /obj/item/pen, "misc", 10, 2, 12),
 		new /datum/cyberpunk_npc_shop_item("flashlight", "Flashlight", "Small utility light.", /obj/item/flashlight, "misc", 45, 10, 6),
 		new /datum/cyberpunk_npc_shop_item("parts", "Machine parts", "Generic stock part.", /obj/item/stock_parts/scanning_module, "parts", 120, 25, 4),
+		new /datum/cyberpunk_npc_shop_item("medkit", "First-aid kit", "Basic medical supplies.", /obj/item/storage/medkit/regular, "supplies", 240, 40, 2),
+		new /datum/cyberpunk_npc_shop_item("toolbox", "Toolbox", "Common repair tools.", /obj/item/storage/toolbox/mechanical, "supplies", 180, 25, 3),
+		new /datum/cyberpunk_npc_shop_item("cable_coil", "Cable coil", "Basic infrastructure supply.", /obj/item/stack/cable_coil, "supplies", 50, 8, 8),
 	)
 	if(!length(categories))
 		return items
@@ -1184,9 +1209,25 @@
 /mob/living/carbon/human/cyberpunk_npc/vendor
 	real_name = "street vendor"
 	name = "street vendor"
-	ai_controller = null
-	cyberpunk_stationary_npc = TRUE
 	cyberpunk_vendor_profile = "street vendor"
+	cyberpunk_vendor_night_cycle = TRUE
+	cyberpunk_ambient_phrase_key = "vendor"
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/cyberpunk_vendor_is_open()
+	return cyberpunk_vendor_active && !stat && !QDELETED(src)
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/cyberpunk_set_vendor_open(open)
+	cyberpunk_vendor_active = !!open
+	return TRUE
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/attack_hand(mob/user, list/modifiers)
+	if(!cyberpunk_vendor_is_open())
+		to_chat(user, span_notice("[src] is closed right now."))
+		return TRUE
+	var/mob/living/living_user = user
+	if(istype(living_user) && !living_user.combat_mode && !LAZYACCESS(modifiers, RIGHT_CLICK))
+		return cyberpunk_open_npc_dialog(living_user)
+	return ..()
 
 /mob/living/carbon/human/cyberpunk_npc/vendor/food
 	real_name = "food vendor"
@@ -1210,7 +1251,7 @@
 	real_name = "gear vendor"
 	name = "gear vendor"
 	cyberpunk_vendor_profile = "gear vendor"
-	cyberpunk_vendor_categories = list("equipment", "toys")
+	cyberpunk_vendor_categories = list("equipment", "toys", "supplies")
 
 /mob/living/carbon/human/cyberpunk_npc/vendor/misc
 	real_name = "city goods vendor"
@@ -1254,7 +1295,13 @@
 	real_name = "parts vendor"
 	name = "parts vendor"
 	cyberpunk_vendor_profile = "parts vendor"
-	cyberpunk_vendor_categories = list("parts")
+	cyberpunk_vendor_categories = list("parts", "supplies")
+
+/mob/living/carbon/human/cyberpunk_npc/vendor/supplies
+	real_name = "supply vendor"
+	name = "supply vendor"
+	cyberpunk_vendor_profile = "supply vendor"
+	cyberpunk_vendor_categories = list("supplies", "misc")
 
 /mob/living/carbon/human/cyberpunk_npc/bystander
 	real_name = "bystander"
@@ -1291,6 +1338,7 @@
 	icon_state = "generic_event"
 	color = "#00d9ff"
 	var/trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor
+	var/home_range = 18
 
 /obj/effect/landmark/cyberpunk_npc_trader/Initialize(mapload)
 	. = ..()
@@ -1302,6 +1350,9 @@
 		return INITIALIZE_HINT_QDEL
 	var/mob/living/carbon/human/cyberpunk_npc/trader = new trader_type(spawn_turf)
 	trader.setDir(dir)
+	trader.cyberpunk_vendor_stall_turf = spawn_turf
+	trader.cyberpunk_vendor_home_turf = SScyberpunk_city_ai?.nearest_vendor_home(src, home_range) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, null, 0, INFINITY) || spawn_turf
+	trader.cyberpunk_set_vendor_open(FALSE)
 	return INITIALIZE_HINT_QDEL
 
 /obj/effect/landmark/cyberpunk_npc_trader/food
@@ -1327,6 +1378,24 @@
 /obj/effect/landmark/cyberpunk_npc_trader/clothing
 	name = "cyberpunk clothing trader"
 	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/clothing
+
+/obj/effect/landmark/cyberpunk_npc_trader/supplies
+	name = "cyberpunk supply trader"
+	trader_type = /mob/living/carbon/human/cyberpunk_npc/vendor/supplies
+
+/obj/effect/landmark/cyberpunk_npc_trader_home
+	name = "cyberpunk trader home"
+	icon_state = "generic_event"
+	color = "#8f8fff"
+	invisibility = INVISIBILITY_ABSTRACT
+
+/obj/effect/landmark/cyberpunk_npc_trader_home/Initialize(mapload)
+	. = ..()
+	SScyberpunk_city_ai?.vendor_home_points += src
+
+/obj/effect/landmark/cyberpunk_npc_trader_home/Destroy()
+	SScyberpunk_city_ai?.vendor_home_points -= src
+	return ..()
 
 /datum/cyberpunk_npc_profile
 	var/mob/living/owner
@@ -1437,6 +1506,9 @@
 	return 0
 
 /datum/cyberpunk_npc_profile/proc/buy_item(mob/living/user, item_id)
+	if(owner && !owner.cyberpunk_vendor_is_open())
+		last_message = "Closed right now."
+		return FALSE
 	var/datum/cyberpunk_npc_shop_item/item = get_shop_item(item_id)
 	if(!item)
 		return FALSE
@@ -1445,6 +1517,9 @@
 	return TRUE
 
 /datum/cyberpunk_npc_profile/proc/sell_item(mob/living/user, item_ref)
+	if(owner && !owner.cyberpunk_vendor_is_open())
+		last_message = "Closed right now."
+		return FALSE
 	var/obj/item/sold_item = locate(item_ref)
 	if(!sold_item || !(sold_item in user.held_items))
 		last_message = "Hold the item you want to sell."
@@ -1463,6 +1538,9 @@
 	return TRUE
 
 /datum/cyberpunk_npc_profile/proc/use_service(mob/living/user, service_id)
+	if(owner && !owner.cyberpunk_vendor_is_open())
+		last_message = "Closed right now."
+		return FALSE
 	var/datum/cyberpunk_npc_service/service = get_service(service_id)
 	if(!service)
 		return FALSE

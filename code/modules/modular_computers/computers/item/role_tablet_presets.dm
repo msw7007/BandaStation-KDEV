@@ -136,6 +136,15 @@
 		/datum/computer_file/program/robocontrol,
 	)
 
+/obj/item/modular_computer/pda/cyberpunk_mercenary
+	name = "contractor phone"
+	greyscale_config = /datum/greyscale_config/tablet/stripe_double
+	greyscale_colors = "#2b2f38#111111#ffb347"
+	inserted_item = /obj/item/pen
+	starting_programs = list(
+		/datum/computer_file/program/cyberpunk_contract_phone,
+	)
+
 /obj/item/modular_computer/pda/detective
 	name = "detective PDA"
 	greyscale_colors = "#805A2F#990202"
