@@ -1007,6 +1007,151 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 
 	return null
 
+/proc/cyberpunk_dungeon_theme_name(theme)
+	switch(theme)
+		if("metro")
+			return "abandoned metro"
+		if("corporate")
+			return "corporate blacksite"
+		if("wasteland")
+			return "wasteland bunker"
+	return "underground cave"
+
+/proc/cyberpunk_dungeon_threat_name(theme, boss = FALSE)
+	switch(theme)
+		if("metro")
+			return boss ? "metro alpha predator" : "metro tunnel threat"
+		if("corporate")
+			return boss ? "blacksite security chief" : "blacksite security remnant"
+		if("wasteland")
+			return boss ? "wasteland apex mutant" : "wasteland scavenger beast"
+	return boss ? "dungeon boss" : "dungeon threat"
+
+/proc/cyberpunk_dungeon_style_registry()
+	var/static/list/styles
+	if(styles)
+		return styles
+	styles = list(
+		"cave" = list(
+			"id" = "cave",
+			"name" = "Underground Cave",
+			"description" = "Natural underground routes and resource pockets.",
+			"entrance_type" = /obj/structure/cyberpunk_dungeon_entrance,
+			"theme" = "cave",
+			"difficulty" = 1,
+			"chunk_templates" = list(
+				"_maps/templates/cyberpunk_dungeons/cave_start_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_chamber_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_loot_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_boss_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_exit_16.dmm",
+			),
+			"room_templates" = list(),
+			"threat_types" = list(
+				/mob/living/basic/mining/watcher,
+				/mob/living/basic/mining/goliath,
+				/mob/living/basic/mining/legion,
+			),
+			"loot_types" = list(
+				/obj/item/stack/ore/iron,
+				/obj/item/stack/ore/silver,
+				/obj/item/stack/ore/titanium,
+				/obj/item/stack/ore/gold,
+			),
+		),
+		"metro" = list(
+			"id" = "metro",
+			"name" = "Abandoned Metro",
+			"description" = "Old tunnels, cable salvage, broken city infrastructure.",
+			"entrance_type" = /obj/structure/cyberpunk_dungeon_entrance/metro,
+			"theme" = "metro",
+			"difficulty" = 2,
+			"chunk_templates" = list(
+				"_maps/templates/cyberpunk_dungeons/cave_start_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_chamber_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_loot_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_boss_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_exit_16.dmm",
+			),
+			"room_templates" = list(),
+			"threat_types" = list(
+				/mob/living/basic/mining/watcher,
+				/mob/living/basic/mining/legion,
+				/mob/living/basic/mining/goliath,
+			),
+			"loot_types" = list(
+				/obj/item/stack/sheet/iron,
+				/obj/item/stack/cable_coil,
+				/obj/item/stack/sheet/glass,
+				/obj/item/stack/ore/silver,
+			),
+		),
+		"corporate" = list(
+			"id" = "corporate",
+			"name" = "Corporate Blacksite",
+			"description" = "Sealed installations, plasteel, glass, high-value ore.",
+			"entrance_type" = /obj/structure/cyberpunk_dungeon_entrance/corporate,
+			"theme" = "corporate",
+			"difficulty" = 3,
+			"chunk_templates" = list(
+				"_maps/templates/cyberpunk_dungeons/cave_start_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_chamber_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_loot_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_boss_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_exit_16.dmm",
+			),
+			"room_templates" = list(),
+			"threat_types" = list(
+				/mob/living/basic/mining/watcher,
+				/mob/living/basic/mining/goliath,
+			),
+			"loot_types" = list(
+				/obj/item/stack/sheet/plasteel,
+				/obj/item/stack/sheet/glass,
+				/obj/item/stack/ore/gold,
+				/obj/item/stack/ore/titanium,
+			),
+		),
+		"wasteland" = list(
+			"id" = "wasteland",
+			"name" = "Wasteland Bunker",
+			"description" = "Edge-city bunkers, heavy beasts, mixed salvage.",
+			"entrance_type" = /obj/structure/cyberpunk_dungeon_entrance/wasteland,
+			"theme" = "wasteland",
+			"difficulty" = 2,
+			"chunk_templates" = list(
+				"_maps/templates/cyberpunk_dungeons/cave_start_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_chamber_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_loot_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_boss_16.dmm",
+				"_maps/templates/cyberpunk_dungeons/cave_exit_16.dmm",
+			),
+			"room_templates" = list(),
+			"threat_types" = list(
+				/mob/living/basic/mining/goliath,
+				/mob/living/basic/mining/legion,
+				/mob/living/basic/mining/watcher,
+			),
+			"loot_types" = list(
+				/obj/item/stack/ore/iron,
+				/obj/item/stack/sheet/iron,
+				/obj/item/stack/ore/titanium,
+				/obj/item/stack/ore/gold,
+			),
+		),
+	)
+	return styles
+
+/proc/cyberpunk_dungeon_style_record(style_id)
+	var/list/styles = cyberpunk_dungeon_style_registry()
+	return styles[style_id]
+
+/proc/cyberpunk_dungeon_style_path_rows(list/paths)
+	var/list/rows = list()
+	for(var/path in paths)
+		rows += "[path]"
+	return rows
+
 /datum/cyberpunk_dungeon_instance
 	var/instance_id
 	var/theme = "cave"
@@ -1071,7 +1216,7 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 		user.balloon_alert(user, "no entry")
 		return FALSE
 	user.forceMove(start_turf)
-	to_chat(user, span_notice("You descend into an unstable underground route."))
+	to_chat(user, span_notice("You descend into [cyberpunk_dungeon_theme_name(theme)]."))
 	return TRUE
 
 /datum/cyberpunk_dungeon_instance/proc/leave(mob/living/user)
@@ -1121,7 +1266,8 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 		start_turf = locate(origin_x + 7, origin_y + ((round((height_chunks + 1) / 2) - 1) * chunk_size) + 7, z_value)
 	if(!exit_turf)
 		exit_turf = locate(origin_x + ((width_chunks - 1) * chunk_size) + 7, origin_y + ((round((height_chunks + 1) / 2) - 1) * chunk_size) + 7, z_value)
-	log_game("Cyberpunk dungeon [instance_id] generated [length(plan)] chunks on z[z_value].")
+	log_game("Cyberpunk dungeon [instance_id] generated [length(plan)] [theme] chunks on z[z_value].")
+	SScyberpunk_round?.record_cyberpunk_round_event("dungeon_generated", "poi", "city", SScyberpunk_round.cyberpunk_round_chaos, "Generated [theme] dungeon [instance_id] with [length(plan)] chunks.", "executed")
 	return TRUE
 
 /datum/cyberpunk_dungeon_instance/proc/build_plan()
@@ -1282,16 +1428,33 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 		/mob/living/basic/mining/goliath = 2,
 		/mob/living/basic/mining/legion = 1,
 	)
+	if(theme == "metro")
+		enemies = list(
+			/mob/living/basic/mining/watcher = 3,
+			/mob/living/basic/mining/legion = 3,
+			/mob/living/basic/mining/goliath = 1,
+		)
+	else if(theme == "corporate")
+		enemies = list(
+			/mob/living/basic/mining/watcher = 5,
+			/mob/living/basic/mining/goliath = 1,
+		)
+	else if(theme == "wasteland")
+		enemies = list(
+			/mob/living/basic/mining/goliath = 4,
+			/mob/living/basic/mining/legion = 2,
+			/mob/living/basic/mining/watcher = 1,
+		)
 	var/enemy_type = pick_weight(enemies)
 	var/mob/living/enemy = new enemy_type(spawn_turf)
-	enemy.name = "dungeon threat"
+	enemy.name = cyberpunk_dungeon_threat_name(theme)
 	generated_atoms += enemy
 	return enemy
 
 /datum/cyberpunk_dungeon_instance/proc/spawn_boss(turf/spawn_turf)
 	var/boss_type = difficulty >= 3 ? /mob/living/basic/mining/goliath/ancient : /mob/living/basic/mining/goliath
 	var/mob/living/boss = new boss_type(spawn_turf)
-	boss.name = "dungeon boss"
+	boss.name = cyberpunk_dungeon_threat_name(theme, TRUE)
 	generated_atoms += boss
 	return boss
 
@@ -1302,8 +1465,30 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 		/obj/item/stack/ore/titanium = 2,
 		/obj/item/stack/ore/gold = 1,
 	)
+	if(theme == "metro")
+		loot = list(
+			/obj/item/stack/sheet/iron = 4,
+			/obj/item/stack/cable_coil = 3,
+			/obj/item/stack/sheet/glass = 2,
+			/obj/item/stack/ore/silver = 1,
+		)
+	else if(theme == "corporate")
+		loot = list(
+			/obj/item/stack/sheet/plasteel = 3,
+			/obj/item/stack/sheet/glass = 2,
+			/obj/item/stack/ore/gold = 2,
+			/obj/item/stack/ore/titanium = 2,
+		)
+	else if(theme == "wasteland")
+		loot = list(
+			/obj/item/stack/ore/iron = 4,
+			/obj/item/stack/sheet/iron = 3,
+			/obj/item/stack/ore/titanium = 2,
+			/obj/item/stack/ore/gold = 1,
+		)
 	var/loot_type = pick_weight(loot)
 	var/obj/item/spawned_loot = new loot_type(spawn_turf)
+	spawned_loot.name = "[theme] salvage"
 	generated_atoms += spawned_loot
 	return spawned_loot
 
@@ -1320,6 +1505,29 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	var/height_chunks = CYBERPUNK_DUNGEON_DEFAULT_HEIGHT
 	var/datum/cyberpunk_dungeon_instance/instance
 
+/obj/structure/cyberpunk_dungeon_entrance/metro
+	name = "abandoned metro entrance"
+	desc = "A route into old tunnels below the city."
+	theme = "metro"
+	difficulty = 2
+
+/obj/structure/cyberpunk_dungeon_entrance/corporate
+	name = "sealed blacksite entrance"
+	desc = "A corporate service route into a sealed underground installation."
+	theme = "corporate"
+	difficulty = 3
+
+/obj/structure/cyberpunk_dungeon_entrance/wasteland
+	name = "wasteland bunker entrance"
+	desc = "A half-buried route into the badlands infrastructure under the city edge."
+	theme = "wasteland"
+	difficulty = 2
+
+/obj/structure/cyberpunk_dungeon_entrance/Initialize(mapload)
+	. = ..()
+	desc = "[desc] Ghosts may track it as a city point of interest."
+	SSpoints_of_interest?.make_point_of_interest(src)
+
 /obj/structure/cyberpunk_dungeon_entrance/attack_hand(mob/living/user, list/modifiers)
 	. = ..()
 	if(.)
@@ -1334,6 +1542,7 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	return instance.enter(user)
 
 /obj/structure/cyberpunk_dungeon_entrance/Destroy(force)
+	SSpoints_of_interest?.remove_point_of_interest(src)
 	instance = null
 	return ..()
 

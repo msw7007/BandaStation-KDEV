@@ -821,6 +821,12 @@ SUBSYSTEM_DEF(ticker)
 		to_chat(world, span_boldannounce("Администратор задержал окончание раунда."))
 		return
 
+	if(SScyberpunk_round?.cyberpunk_round_started_at)
+		delay = max(delay, SScyberpunk_round.cyberpunk_round_end_credits_duration)
+		if(!round_end_sound)
+			round_end_sound = choose_round_end_song()
+		SScyberpunk_round.start_cyberpunk_end_credits(delay, round_end_sound)
+
 	to_chat(world, span_boldannounce("Перезагрузка мира через [DisplayTimeText(delay)]. [reason]"))
 
 	var/statspage = CONFIG_GET(string/roundstatsurl)

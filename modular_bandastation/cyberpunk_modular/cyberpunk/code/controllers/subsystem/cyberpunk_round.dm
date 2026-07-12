@@ -16,6 +16,10 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_round_main_flow_delay = 15 MINUTES
 	/// In-game day where late-round escalation starts.
 	var/cyberpunk_round_escalation_day = 6
+	/// City pressure that can start escalation before the configured escalation day.
+	var/cyberpunk_round_escalation_chaos_threshold = 72
+	/// Human-readable reason for the current escalation state.
+	var/cyberpunk_round_escalation_reason = "none"
 	/// Extra in-game days granted when players vote to continue.
 	var/cyberpunk_round_extension_days = 2
 	/// Maximum number of automatic player-voted extensions.
@@ -70,6 +74,10 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/cyberpunk_round_catastrophic_evac_requested = FALSE
 	/// Whether final summary has already been handed to blackbox feedback this round.
 	var/cyberpunk_round_summary_recorded = FALSE
+	/// Whether the end credits browser/music sequence has already been started.
+	var/cyberpunk_round_end_credits_started = FALSE
+	/// Minimum reboot delay used by CP13 end credits.
+	var/cyberpunk_round_end_credits_duration = 3 MINUTES
 	/// Whether previous summary JSON has been loaded for start reports.
 	var/cyberpunk_round_previous_summary_loaded = FALSE
 	/// Last generated round summary.
@@ -118,6 +126,12 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/list/cyberpunk_storyteller_event_packages = list()
 	/// Concrete SSdynamic midround package registry.
 	var/list/cyberpunk_storyteller_dynamic_packages = list()
+	/// CP13-native package registry for city actions that do not need the legacy event or dynamic backends.
+	var/list/cyberpunk_storyteller_native_packages = list()
+	/// Whether optional storyteller config overrides were already read from data/cyberpunk_storyteller_config.json.
+	var/cyberpunk_storyteller_config_loaded = FALSE
+	/// Package ids that the CP13 storyteller must not auto-select.
+	var/list/cyberpunk_storyteller_disabled_package_ids = list("wizard", "space_dragon", "revenant", "nightmare")
 	/// Deferred SSevents requests waiting for storyteller planning.
 	var/cyberpunk_storyteller_event_request_pressure = 0
 	/// Deferred SSdynamic requests waiting for storyteller planning.
@@ -172,6 +186,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_phase_name = SScyberpunk_round.cyberpunk_round_phase_name
 	cyberpunk_round_ingame_minutes = SScyberpunk_round.cyberpunk_round_ingame_minutes
 	cyberpunk_round_stage = SScyberpunk_round.cyberpunk_round_stage
+	cyberpunk_round_escalation_day = SScyberpunk_round.cyberpunk_round_escalation_day
+	cyberpunk_round_escalation_chaos_threshold = SScyberpunk_round.cyberpunk_round_escalation_chaos_threshold
+	cyberpunk_round_escalation_reason = SScyberpunk_round.cyberpunk_round_escalation_reason
 	cyberpunk_round_chaos = SScyberpunk_round.cyberpunk_round_chaos
 	cyberpunk_round_expected_chaos = SScyberpunk_round.cyberpunk_round_expected_chaos
 	cyberpunk_round_chaos_tolerance = SScyberpunk_round.cyberpunk_round_chaos_tolerance
@@ -180,6 +197,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_round_start_report_announced = SScyberpunk_round.cyberpunk_round_start_report_announced
 	cyberpunk_round_catastrophic_evac_requested = SScyberpunk_round.cyberpunk_round_catastrophic_evac_requested
 	cyberpunk_round_summary_recorded = SScyberpunk_round.cyberpunk_round_summary_recorded
+	cyberpunk_round_end_credits_started = SScyberpunk_round.cyberpunk_round_end_credits_started
+	cyberpunk_round_end_credits_duration = SScyberpunk_round.cyberpunk_round_end_credits_duration
 	cyberpunk_round_previous_summary_loaded = SScyberpunk_round.cyberpunk_round_previous_summary_loaded
 	cyberpunk_round_last_summary = SScyberpunk_round.cyberpunk_round_last_summary
 	cyberpunk_round_previous_summary = SScyberpunk_round.cyberpunk_round_previous_summary
@@ -206,6 +225,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_storyteller_profile_options = SScyberpunk_round.cyberpunk_storyteller_profile_options
 	cyberpunk_storyteller_event_packages = SScyberpunk_round.cyberpunk_storyteller_event_packages
 	cyberpunk_storyteller_dynamic_packages = SScyberpunk_round.cyberpunk_storyteller_dynamic_packages
+	cyberpunk_storyteller_native_packages = SScyberpunk_round.cyberpunk_storyteller_native_packages
+	cyberpunk_storyteller_config_loaded = SScyberpunk_round.cyberpunk_storyteller_config_loaded
+	cyberpunk_storyteller_disabled_package_ids = SScyberpunk_round.cyberpunk_storyteller_disabled_package_ids
 	cyberpunk_storyteller_event_request_pressure = SScyberpunk_round.cyberpunk_storyteller_event_request_pressure
 	cyberpunk_storyteller_dynamic_request_pressure = SScyberpunk_round.cyberpunk_storyteller_dynamic_request_pressure
 	cyberpunk_storyteller_deferred_package_ids = SScyberpunk_round.cyberpunk_storyteller_deferred_package_ids
@@ -238,6 +260,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	if(!cyberpunk_round_started_at)
 		start_cyberpunk_round_clock()
 	update_cyberpunk_round_clock()
+	cyberpunk_round_prune_active_events()
 	if(world.time >= cyberpunk_daylight_defer_until)
 		update_cyberpunk_daylight()
 	if(world.time < cyberpunk_round_heavy_metrics_defer_until)
@@ -286,6 +309,24 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_storyteller_rebuild_round_plan()
 	record_cyberpunk_round_event("round_clock_started", "city", "city", 0, "Cyberpunk round clock started.", "completed")
 	addtimer(CALLBACK(src, PROC_REF(cyberpunk_round_send_start_report)), 45 SECONDS)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_prune_active_events()
+	if(!length(cyberpunk_round_active_events))
+		return
+	var/list/remaining_events = list()
+	for(var/list/active_event as anything in cyberpunk_round_active_events)
+		if(!islist(active_event))
+			continue
+		var/expires_at = active_event["expires_at"]
+		if(expires_at && world.time >= expires_at)
+			active_event["status"] = "completed"
+			var/atom/poi_marker = active_event["poi_marker"]
+			if(poi_marker)
+				qdel(poi_marker)
+			record_cyberpunk_round_event(active_event["name"] || "City event completed", active_event["category"] || active_event["action"] || "city", active_event["district"] || "city", cyberpunk_round_chaos, "Active city event expired.", "completed", null)
+			continue
+		remaining_events += list(active_event)
+	cyberpunk_round_active_events = remaining_events
 
 /datum/controller/subsystem/cyberpunk_round/proc/set_cyberpunk_round_fast_day_mode(enabled)
 	cyberpunk_round_fast_day_enabled = !!enabled
@@ -339,8 +380,86 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			build_cyberpunk_storyteller_dynamic_package("wizard", "Midround Wizard", /datum/dynamic_ruleset/midround/from_ghosts/wizard, "dynamic_heavy", 20, list("escalation", "city"), 30, 60 MINUTES, null, "city", "long", 45 MINUTES),
 			build_cyberpunk_storyteller_dynamic_package("space_dragon", "Space Dragon", /datum/dynamic_ruleset/midround/from_ghosts/space_dragon, "dynamic_heavy", 20, list("escalation"), 34, 60 MINUTES, null, "external", "long", 50 MINUTES),
 		)
+	if(!length(cyberpunk_storyteller_native_packages))
+		cyberpunk_storyteller_native_packages = list(
+			build_cyberpunk_storyteller_native_package("npc_patrol", "District NPC Patrol Order", "npc_group_order", 35, list("city", "security"), 5, 15 MINUTES, null, "district", "temporary", 12 MINUTES),
+			build_cyberpunk_storyteller_native_package("npc_emergency_response", "District Emergency Response", "npc_emergency_response", 45, list("city", "security", "escalation"), 9, 20 MINUTES, null, "district", "temporary", 12 MINUTES),
+			build_cyberpunk_storyteller_native_package("npc_repair_crew", "District Repair Crew", "npc_repair_order", 40, list("city", "recovery", "economy"), -3, 0, null, "district", "temporary", 15 MINUTES),
+			build_cyberpunk_storyteller_native_package("npc_vendor_shift", "Street Vendor Shift", "npc_vendor_shift", 30, list("city", "social", "economy"), -1, 0, null, "district", "temporary", 20 MINUTES),
+			build_cyberpunk_storyteller_native_package("poi_scan", "Corporate Point of Interest", "point_of_interest", 40, list("corporate", "city"), 2, 10 MINUTES, null, "district", "instant", 10 MINUTES),
+			build_cyberpunk_storyteller_native_package("market_supply_shift", "World Supply Shift", "resource_market_shift", 35, list("economy", "contracts"), 3, 0, null, "city", "temporary", 18 MINUTES),
+			build_cyberpunk_storyteller_native_package("guest_hook", "Guest Role Hook", "guest_role_offer", 25, list("social", "city"), 4, 20 MINUTES, null, "city", "temporary", 20 MINUTES),
+		)
+	load_cyberpunk_storyteller_config_overrides()
 	if(!length(cyberpunk_storyteller_curve))
 		cyberpunk_storyteller_curve = cyberpunk_storyteller_build_curve()
+
+/datum/controller/subsystem/cyberpunk_round/proc/load_cyberpunk_storyteller_config_overrides()
+	if(cyberpunk_storyteller_config_loaded)
+		return
+	cyberpunk_storyteller_config_loaded = TRUE
+	var/config_path = "data/cyberpunk_storyteller_config.json"
+	if(!fexists(config_path))
+		return
+	var/raw_config = file2text(config_path)
+	if(!length(raw_config))
+		return
+	var/list/config = safe_json_decode(raw_config)
+	if(!islist(config))
+		return
+	var/profile_id = config["profile"]
+	if(profile_id && cyberpunk_storyteller_profile_options[profile_id])
+		cyberpunk_storyteller_profile = profile_id
+	if(!isnull(config["escalation_day"]))
+		cyberpunk_round_escalation_day = clamp(round(config["escalation_day"]), 1, 30)
+	if(!isnull(config["escalation_chaos_threshold"]))
+		cyberpunk_round_escalation_chaos_threshold = clamp(round(config["escalation_chaos_threshold"]), 0, 100)
+	if(islist(config["disabled_packages"]))
+		cyberpunk_storyteller_disabled_package_ids = config["disabled_packages"].Copy()
+	var/list/profile_overrides = config["profiles"]
+	if(!islist(profile_overrides))
+		return
+	for(var/override_id in profile_overrides)
+		var/list/override = profile_overrides[override_id]
+		var/list/profile = cyberpunk_storyteller_profile_options[override_id]
+		if(!islist(override) || !islist(profile))
+			continue
+		for(var/profile_key in list("event_weight", "dynamic_light_weight", "dynamic_heavy_weight", "recovery_weight", "gap_multiplier", "max_chaos", "combat_weight", "economy_weight", "network_weight", "corporate_weight", "escalation_speed"))
+			if(isnull(override[profile_key]))
+				continue
+			profile[profile_key] = override[profile_key]
+
+/datum/controller/subsystem/cyberpunk_round/proc/save_cyberpunk_storyteller_config()
+	ensure_cyberpunk_storyteller_config()
+	var/list/profile_payload = list()
+	for(var/profile_id in cyberpunk_storyteller_profile_options)
+		var/list/profile = cyberpunk_storyteller_profile_options[profile_id]
+		if(!islist(profile))
+			continue
+		profile_payload[profile_id] = list(
+			"event_weight" = profile["event_weight"],
+			"dynamic_light_weight" = profile["dynamic_light_weight"],
+			"dynamic_heavy_weight" = profile["dynamic_heavy_weight"],
+			"recovery_weight" = profile["recovery_weight"],
+			"gap_multiplier" = profile["gap_multiplier"],
+			"max_chaos" = profile["max_chaos"],
+			"combat_weight" = profile["combat_weight"],
+			"economy_weight" = profile["economy_weight"],
+			"network_weight" = profile["network_weight"],
+			"corporate_weight" = profile["corporate_weight"],
+			"escalation_speed" = profile["escalation_speed"],
+		)
+	var/list/config = list(
+		"profile" = cyberpunk_storyteller_profile,
+		"escalation_day" = cyberpunk_round_escalation_day,
+		"escalation_chaos_threshold" = cyberpunk_round_escalation_chaos_threshold,
+		"disabled_packages" = cyberpunk_storyteller_disabled_package_ids.Copy(),
+		"profiles" = profile_payload,
+	)
+	var/config_path = "data/cyberpunk_storyteller_config.json"
+	fdel(config_path)
+	WRITE_FILE(file(config_path), json_encode(config, JSON_PRETTY_PRINT))
+	return TRUE
 
 /datum/controller/subsystem/cyberpunk_round/proc/build_cyberpunk_storyteller_profile(id, name, event_weight, dynamic_light_weight, dynamic_heavy_weight, recovery_weight, gap_multiplier, max_chaos, combat_weight, economy_weight, network_weight, corporate_weight, escalation_speed)
 	return list(
@@ -453,6 +572,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"duration" = duration,
 		"cooldown" = cooldown,
 		"conditions" = conditions || list(),
+		"category" = cyberpunk_storyteller_package_category(tags, "event"),
 	)
 
 /datum/controller/subsystem/cyberpunk_round/proc/build_cyberpunk_storyteller_dynamic_package(id, name, ruleset_path, executor, weight, list/tags, chaos = 15, min_time = 15 MINUTES, max_time = null, scale = "external", duration = "temporary", cooldown = 20 MINUTES, list/conditions = null)
@@ -472,7 +592,47 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"duration" = duration,
 		"cooldown" = cooldown,
 		"conditions" = conditions || list(),
+		"category" = cyberpunk_storyteller_package_category(tags, executor),
 	)
+
+/datum/controller/subsystem/cyberpunk_round/proc/build_cyberpunk_storyteller_native_package(id, name, action, weight, list/tags, chaos = 5, min_time = 0, max_time = null, scale = "city", duration = "instant", cooldown = 10 MINUTES, list/conditions = null)
+	return list(
+		"id" = id,
+		"name" = name,
+		"kind" = "native",
+		"source" = "CP13",
+		"action" = action,
+		"executor" = "native",
+		"weight" = weight,
+		"tags" = tags || list(),
+		"chaos" = chaos,
+		"min_time" = min_time,
+		"max_time" = max_time,
+		"scale" = scale,
+		"duration" = duration,
+		"cooldown" = cooldown,
+		"conditions" = conditions || list(),
+		"category" = cyberpunk_storyteller_package_category(tags, "native"),
+	)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_package_category(list/tags, executor)
+	if("recovery" in tags)
+		return "restorative"
+	if("economy" in tags || "contracts" in tags)
+		return "economic"
+	if("network" in tags)
+		return "network"
+	if("corporate" in tags)
+		return "corporate"
+	if("wasteland" in tags)
+		return "wasteland"
+	if("criminal" in tags)
+		return "criminal"
+	if("social" in tags)
+		return "social"
+	if(executor == "dynamic_heavy" || executor == "dynamic_light" || "security" in tags || "escalation" in tags)
+		return "combat_pve"
+	return "city"
 
 /datum/cyberpunk_story_event_condition
 	/// Stable condition id for UI/debug output.
@@ -551,12 +711,13 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/list/profile = cyberpunk_storyteller_profile_options[cyberpunk_storyteller_profile] || cyberpunk_storyteller_profile_options["balanced"]
 	var/escalation_speed = profile ? (profile["escalation_speed"] || 1) : 1
 	var/max_chaos = profile ? (profile["max_chaos"] || 85) : 85
+	var/escalation_start = clamp((cyberpunk_round_escalation_day - 1) * cyberpunk_round_real_day, cyberpunk_round_main_flow_delay, cyberpunk_round_real_duration)
 	return list(
 		build_cyberpunk_storyteller_curve_point(0, 5, 8, FALSE),
 		build_cyberpunk_storyteller_curve_point(cyberpunk_round_main_flow_delay, 12, 10, FALSE),
-		build_cyberpunk_storyteller_curve_point(60 MINUTES, round(26 * escalation_speed), 12, FALSE),
-		build_cyberpunk_storyteller_curve_point(120 MINUTES, round(42 * escalation_speed), 14, FALSE),
-		build_cyberpunk_storyteller_curve_point((cyberpunk_round_escalation_day - 1) * cyberpunk_round_real_day, min(round(58 * escalation_speed), max_chaos), 16, TRUE),
+		build_cyberpunk_storyteller_curve_point(round(escalation_start * 0.35), round(26 * escalation_speed), 12, FALSE),
+		build_cyberpunk_storyteller_curve_point(round(escalation_start * 0.7), round(42 * escalation_speed), 14, FALSE),
+		build_cyberpunk_storyteller_curve_point(escalation_start, min(round(58 * escalation_speed), max_chaos), 16, TRUE),
 		build_cyberpunk_storyteller_curve_point(cyberpunk_round_real_duration, min(max_chaos, 75), 18, TRUE),
 	)
 
@@ -714,6 +875,113 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		record_cyberpunk_round_event("round_summary", "endround", "city", cyberpunk_round_chaos, "Round summary recorded: [reason].", "completed")
 	return summary
 
+/datum/controller/subsystem/cyberpunk_round/proc/start_cyberpunk_end_credits(delay, round_end_music)
+	if(cyberpunk_round_end_credits_started)
+		return
+	cyberpunk_round_end_credits_started = TRUE
+	var/list/snapshot = cyberpunk_round_last_snapshot
+	if(!length(snapshot))
+		snapshot = build_cyberpunk_round_snapshot()
+	record_cyberpunk_round_summary("end_credits", snapshot)
+	var/credits_duration = max(delay, cyberpunk_round_end_credits_duration)
+	var/credits_html = cyberpunk_round_end_credits_html(snapshot, credits_duration)
+	for(var/client/viewer as anything in GLOB.clients)
+		if(!viewer)
+			continue
+		var/pref_volume = viewer.prefs?.read_preference(/datum/preference/numeric/volume/sound_lobby_volume) || 50
+		if(round_end_music && pref_volume > 0)
+			SEND_SOUND(viewer, sound(round_end_music, repeat = 0, wait = 0, volume = pref_volume, channel = CHANNEL_LOBBYMUSIC))
+		viewer << browse(credits_html, "window=cyberpunk_end_credits;size=900x700;can_close=1;can_resize=1")
+	record_cyberpunk_round_event("end_credits", "endround", "city", cyberpunk_round_chaos, "CP13 end credits started for [DisplayTimeText(credits_duration)].", "executed")
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_player_credit_name(mob/player_mob)
+	var/base_name = player_mob?.real_name || player_mob?.name || "Unknown"
+	var/datum/job/player_job = player_mob?.mind?.assigned_role
+	if(player_job?.title)
+		return "[html_encode(base_name)] - [html_encode(job_title_ru(player_job.title))]"
+	return html_encode(base_name)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_end_credits_html(list/snapshot, credits_duration)
+	var/list/deceased = list()
+	var/list/survivors = list()
+	for(var/client/player_client as anything in GLOB.clients)
+		var/mob/player_mob = player_client?.mob
+		if(!player_mob || isnewplayer(player_mob))
+			continue
+		var/credit_name = cyberpunk_round_player_credit_name(player_mob)
+		if(!credit_name)
+			continue
+		if(!isliving(player_mob) || player_mob.stat == DEAD)
+			deceased += credit_name
+		else
+			survivors += credit_name
+	sortTim(deceased, GLOBAL_PROC_REF(cmp_text_asc))
+	sortTim(survivors, GLOBAL_PROC_REF(cmp_text_asc))
+	if(!length(deceased))
+		deceased += "Никто не был внесен в мемориал."
+	if(!length(survivors))
+		survivors += "Город не подтвердил выживших."
+
+	var/executed_events = 0
+	var/blocked_events = 0
+	var/deferred_events = 0
+	var/completed_events = 0
+	for(var/list/event_record as anything in cyberpunk_round_event_history)
+		switch(event_record["status"])
+			if("executed")
+				executed_events++
+			if("blocked")
+				blocked_events++
+			if("deferred")
+				deferred_events++
+			if("completed")
+				completed_events++
+
+	var/list/stats = list(
+		"Индекс хаоса: [snapshot["chaos"] || cyberpunk_round_chaos] / план [snapshot["expected_chaos"] || cyberpunk_round_expected_chaos]",
+		"День и время: [html_encode(snapshot["clock"] || cyberpunk_round_clock_text())]",
+		"Живые: [snapshot["living_players"] || 0]",
+		"Погибшие: [snapshot["dead_players"] || 0]",
+		"В критическом состоянии: [snapshot["critical_players"] || 0]",
+		"Накопленный урон по игрокам: [snapshot["total_player_damage"] || 0]",
+		"Сломано машин: [snapshot["broken_machines"] || 0]",
+		"Обесточено машин: [snapshot["unpowered_machines"] || 0]",
+		"Повреждено объектов: [snapshot["damaged_objects"] || 0]",
+		"Закрыто контрактов: [snapshot["completed_contracts"] || 0]",
+		"Провалено контрактов: [snapshot["failed_contracts"] || 0]",
+		"Storyteller: выполнено [executed_events], завершено [completed_events], отложено [deferred_events], заблокировано [blocked_events]",
+	)
+	var/list/deceased_lines = list()
+	for(var/dead_name in deceased)
+		deceased_lines += "<li>[dead_name]</li>"
+	var/list/survivor_lines = list()
+	for(var/survivor_name in survivors)
+		survivor_lines += "<li>[survivor_name]</li>"
+	var/list/stat_lines = list()
+	for(var/stat_line in stats)
+		stat_lines += "<li>[html_encode(stat_line)]</li>"
+
+	var/animation_seconds = max(round(credits_duration / (1 SECONDS)), 60)
+	var/list/html = list()
+	html += "<!doctype html><html><head><meta charset='utf-8'><style>"
+	html += "html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030406;color:#e7e4d9;font-family:Verdana,Arial,sans-serif;}"
+	html += "body{background:radial-gradient(circle at 50% 15%,#1d2328 0,#08090b 45%,#000 100%);}"
+	html += ".shade{position:fixed;inset:0;background:linear-gradient(180deg,#000 0%,transparent 18%,transparent 82%,#000 100%);z-index:2;pointer-events:none;}"
+	html += ".credits{position:absolute;width:82%;left:9%;top:100%;text-align:center;animation:roll [animation_seconds]s linear forwards;}"
+	html += "@keyframes roll{from{transform:translateY(0);}to{transform:translateY(calc(-100% - 110vh));}}"
+	html += "h1{font-size:38px;font-weight:700;margin:0 0 40px;letter-spacing:0;color:#f2f0e6;}"
+	html += "h2{font-size:28px;font-weight:700;margin:80px 0 24px;color:#d9bd73;}"
+	html += "ul{list-style:none;margin:0;padding:0;}li{font-size:20px;line-height:1.55;margin:8px 0;color:#dedbd0;}"
+	html += ".small{font-size:16px;color:#a8a49a;margin-top:80px;}.city{color:#8fb6c7;}"
+	html += "</style></head><body><div class='shade'></div><main class='credits'>"
+	html += "<h1>Bright City<br><span class='city'>round credits</span></h1>"
+	html += "<h2>В память об:</h2><ul>[deceased_lines.Join()]</ul>"
+	html += "<h2>Выжившие:</h2><ul>[survivor_lines.Join()]</ul>"
+	html += "<h2>Итоги города:</h2><ul>[stat_lines.Join()]</ul>"
+	html += "<p class='small'>Перезагрузка мира через [DisplayTimeText(credits_duration)].</p>"
+	html += "</main></body></html>"
+	return html.Join()
+
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_process_endround()
 	if(!SSticker || !SSticker.IsRoundInProgress())
 		return
@@ -803,12 +1071,19 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		cyberpunk_round_phase_name = "Evening"
 	if(elapsed < cyberpunk_round_main_flow_delay)
 		cyberpunk_round_stage = "start"
+		cyberpunk_round_escalation_reason = "round start"
 	else if(elapsed >= cyberpunk_round_real_duration)
 		cyberpunk_round_stage = "finish"
+		cyberpunk_round_escalation_reason = "round duration"
 	else if(cyberpunk_round_day >= cyberpunk_round_escalation_day)
 		cyberpunk_round_stage = "escalation"
+		cyberpunk_round_escalation_reason = "day [cyberpunk_round_day] >= configured day [cyberpunk_round_escalation_day]"
+	else if(cyberpunk_round_chaos >= cyberpunk_round_escalation_chaos_threshold)
+		cyberpunk_round_stage = "escalation"
+		cyberpunk_round_escalation_reason = "chaos [cyberpunk_round_chaos] >= threshold [cyberpunk_round_escalation_chaos_threshold]"
 	else
 		cyberpunk_round_stage = "main"
+		cyberpunk_round_escalation_reason = "below escalation"
 	var/list/curve_point = cyberpunk_storyteller_curve_state(elapsed)
 	cyberpunk_round_expected_chaos = curve_point["expected_chaos"]
 	cyberpunk_round_chaos_tolerance = curve_point["tolerance"]
@@ -1499,6 +1774,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"violence_damage" = station_area.cyberpunk_round_damage_taken,
 		"critical_events" = station_area.cyberpunk_round_critical_events,
 		"last_violence_age" = station_area.cyberpunk_round_last_violence_at ? max(world.time - station_area.cyberpunk_round_last_violence_at, 0) : null,
+		"phase_modifier" = cyberpunk_round_phase_district_modifier(station_area),
 		"danger" = 0,
 		"pressure" = 0,
 	)
@@ -1533,9 +1809,34 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	district["violence_score"] = max((station_area.cyberpunk_round_violence_score || 0) - violence_decay, 0)
 	var/turf_count = max(district["turfs"] || 0, 1)
 	var/infrastructure_pressure = round(((district["open_space_turfs"] || 0) / turf_count) * 60) + ((district["broken_machines"] || 0) * 3) + ((district["unpowered_machines"] || 0) * 2) + ((district["apc_offline"] || 0) * 8) + ((district["apc_low_charge"] || 0) * 4) + min((district["damaged_objects"] || 0), 25)
-	district["pressure"] = min(100, infrastructure_pressure + round((district["violence_score"] || 0) * 1.5) + (district["base_danger"] || 0))
+	district["pressure"] = min(100, infrastructure_pressure + round((district["violence_score"] || 0) * 1.5) + (district["base_danger"] || 0) + (district["phase_modifier"] || 0))
 	district["danger"] = min(100, round((district["pressure"] || 0) * 0.65) + round((district["violence_score"] || 0) * 2) + (district["base_danger"] || 0))
 	return district
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_phase_district_modifier(area/station_area)
+	if(!station_area)
+		return 0
+	switch(cyberpunk_round_phase)
+		if("night")
+			if(station_area.cyberpunk_district_kind in list("slums", "wasteland", "underground", "warehouse", "road", "canals"))
+				return 8
+			if(station_area.cyberpunk_district_kind in list("security", "police", "government", "safe"))
+				return -4
+			return 3
+		if("morning")
+			if(station_area.cyberpunk_district_kind in list("business", "corporate", "government", "service"))
+				return 2
+			return -1
+		if("day")
+			if(station_area.cyberpunk_district_kind in list("corporate", "business", "government", "industry"))
+				return 4
+			if(station_area.cyberpunk_district_kind in list("slums", "wasteland", "underground"))
+				return -2
+		if("evening")
+			if(station_area.cyberpunk_district_kind in list("slums", "business", "road", "metro", "warehouse"))
+				return 5
+			return 1
+	return 0
 
 /datum/controller/subsystem/cyberpunk_round/proc/record_cyberpunk_district_violence(atom/location, level = 1, reason = "violence", damage_amount = 0)
 	var/area/current_area = get_area(location)
@@ -1669,6 +1970,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_add_package_candidates(list/candidates, event_name, event_type, executor, details, priority, theme = null, faction = null, district = "city", arc_id = null, arc_step = null)
 	var/added = FALSE
 	for(var/list/package as anything in cyberpunk_storyteller_packages_for_executor(executor))
+		if(!cyberpunk_storyteller_package_enabled(package))
+			continue
 		if(!cyberpunk_storyteller_package_matches_theme(package, theme || event_type))
 			continue
 		var/list/candidate = build_cyberpunk_storyteller_candidate(event_name, event_type, executor, details, priority, theme, faction, district, arc_id, arc_step, package)
@@ -1680,11 +1983,18 @@ SUBSYSTEM_DEF(cyberpunk_round)
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_packages_for_executor(executor)
 	var/list/packages = list()
 	if(executor == "event")
-		return cyberpunk_storyteller_event_packages.Copy()
+		return cyberpunk_storyteller_event_packages.Copy() + cyberpunk_storyteller_native_packages.Copy()
+	if(executor == "native")
+		return cyberpunk_storyteller_native_packages.Copy()
 	for(var/list/package as anything in cyberpunk_storyteller_dynamic_packages)
 		if(package["executor"] == executor)
 			packages += list(package)
 	return packages
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_package_enabled(list/package)
+	if(!package)
+		return FALSE
+	return !(package["id"] in cyberpunk_storyteller_disabled_package_ids)
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_find_package(package_id)
 	ensure_cyberpunk_storyteller_config()
@@ -1694,6 +2004,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	for(var/list/package as anything in cyberpunk_storyteller_dynamic_packages)
 		if(package["id"] == package_id)
 			return package
+	for(var/list/package as anything in cyberpunk_storyteller_native_packages)
+		if(package["id"] == package_id)
+			return package
 	return null
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_package_executor(list/package)
@@ -1701,6 +2014,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		return null
 	if(package["kind"] == "event")
 		return "event"
+	if(package["kind"] == "native")
+		return "native"
 	return package["executor"]
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_package_matches_theme(list/package, theme)
@@ -1721,6 +2036,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"reason" = "missing package",
 	)
 	if(!package)
+		return result
+	if(!cyberpunk_storyteller_package_enabled(package))
+		result["reason"] = "disabled by CP13 storyteller config"
 		return result
 	var/elapsed = cyberpunk_round_elapsed()
 	if(elapsed < (package["min_time"] || 0))
@@ -1765,6 +2083,10 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			if(!can_select)
 				result["reason"] = "ruleset can_be_selected() rejected current state"
 				return result
+		if("native")
+			if(!package["action"])
+				result["reason"] = "missing native CP13 action"
+				return result
 		else
 			result["reason"] = "unknown package kind"
 			return result
@@ -1780,6 +2102,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	var/package_chaos = package ? package["chaos"] : null
 	var/package_scale = package ? package["scale"] : null
 	var/package_duration = package ? package["duration"] : null
+	var/package_category = package ? package["category"] : cyberpunk_storyteller_package_category(list(theme || event_type), executor)
+	var/package_phase_multiplier = package ? cyberpunk_storyteller_phase_package_multiplier(package) : 1
 	return list(
 		"name" = event_name,
 		"type" = event_type,
@@ -1795,6 +2119,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"package_chaos" = package_chaos,
 		"package_scale" = package_scale,
 		"package_duration" = package_duration,
+		"package_category" = package_category,
+		"package_phase_multiplier" = package_phase_multiplier,
 		"package_conditions" = cyberpunk_storyteller_package_condition_descriptions(package),
 		"arc_id" = arc_id,
 		"arc_step" = arc_step,
@@ -1948,6 +2274,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			score *= profile ? (profile["dynamic_heavy_weight"] || 1) : 1
 	if(package)
 		score *= cyberpunk_storyteller_profile_tag_multiplier(profile, package)
+		score *= cyberpunk_storyteller_phase_package_multiplier(package)
 	if(theme == "recovery")
 		score *= profile ? (profile["recovery_weight"] || 1) : 1
 	if(cyberpunk_storyteller_last_executed_at)
@@ -1968,6 +2295,32 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	else if(cyberpunk_round_chaos > cyberpunk_round_expected_chaos + 10 && theme == "recovery")
 		score *= 1.4
 	return max(round(score), 1)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_phase_package_multiplier(list/package)
+	if(!package)
+		return 1
+	var/list/tags = package["tags"]
+	var/category = package["category"]
+	switch(cyberpunk_round_phase)
+		if("night")
+			if(("security" in tags) || ("criminal" in tags) || category == "combat_pve")
+				return 1.3
+			if(("economy" in tags) || ("corporate" in tags))
+				return 0.85
+		if("morning")
+			if(("economy" in tags) || ("contracts" in tags) || category == "economic")
+				return 1.25
+			if(category == "combat_pve")
+				return 0.9
+		if("day")
+			if(("corporate" in tags) || ("network" in tags) || category == "corporate")
+				return 1.25
+			if(("criminal" in tags) || category == "combat_pve")
+				return 0.95
+		if("evening")
+			if(("social" in tags) || ("contracts" in tags) || ("security" in tags))
+				return 1.2
+	return 1
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_profile_tag_multiplier(list/profile, list/package)
 	if(!profile || !package)
@@ -2090,6 +2443,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 				if(ispath(ruleset_path, /datum/dynamic_ruleset/midround))
 					success = SSdynamic.force_run_midround(ruleset_path, null, FALSE)
 					cyberpunk_storyteller_dynamic_request_pressure = max(cyberpunk_storyteller_dynamic_request_pressure - 1, 0)
+			if("native")
+				success = cyberpunk_storyteller_execute_native_package(candidate, package)
 	var/status = success ? "executed" : "blocked"
 	if(success)
 		cyberpunk_storyteller_last_executed_at = world.time
@@ -2100,6 +2455,149 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	cyberpunk_storyteller_update_arc_after_execution(candidate, success)
 	record_cyberpunk_round_event(candidate["name"], candidate["type"], candidate["district"] || "city", cyberpunk_round_chaos, candidate["details"], status, candidate)
 	return success
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_execute_native_package(list/candidate, list/package)
+	if(!candidate || !package)
+		return FALSE
+	var/action = package["action"]
+	var/district = candidate["district"] || cyberpunk_storyteller_hot_district(cyberpunk_round_last_snapshot)
+	var/list/native_event = list(
+		"id" = "native_[length(cyberpunk_round_active_events) + 1]_[world.time]",
+		"action" = action,
+		"name" = package["name"],
+		"category" = package["category"],
+		"district" = district,
+		"started_at" = world.time,
+		"expires_at" = world.time + (package["cooldown"] || 10 MINUTES),
+		"status" = "active",
+	)
+	switch(action)
+		if("npc_group_order")
+			var/turf/patrol_turf = cyberpunk_round_turf_for_district(district) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district)
+			if(!patrol_turf)
+				return FALSE
+			var/datum/cyberpunk_ai_task_request/request = new /datum/cyberpunk_ai_task_request(CP_AI_TASK_PATROL, patrol_turf, patrol_turf, null, null, 90 SECONDS, patrol_turf, 0)
+			request.priority = cyberpunk_round_phase == "night" ? 90 : 55
+			var/dispatched = request.dispatch()
+			native_event["order"] = "city AI patrol dispatched to [district]"
+			native_event["target"] = "[patrol_turf.x],[patrol_turf.y],[patrol_turf.z]"
+			native_event["dispatched"] = dispatched
+			qdel(request)
+			if(!dispatched)
+				return FALSE
+			cyberpunk_round_active_events += list(native_event)
+			return TRUE
+		if("npc_emergency_response")
+			var/turf/response_turf = cyberpunk_round_turf_for_district(district) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district)
+			if(!response_turf)
+				return FALSE
+			var/datum/cyberpunk_ai_task_request/response_request = new /datum/cyberpunk_ai_task_request(CP_AI_TASK_EMERGENCY_RESPONSE, response_turf, response_turf, null, null, 90 SECONDS, response_turf, CP_AI_CAP_COMBAT)
+			response_request.priority = 110
+			var/response_dispatched = response_request.dispatch()
+			native_event["order"] = "combat-capable city AI emergency response dispatched to [district]"
+			native_event["target"] = "[response_turf.x],[response_turf.y],[response_turf.z]"
+			native_event["dispatched"] = response_dispatched
+			qdel(response_request)
+			if(!response_dispatched)
+				return FALSE
+			cyberpunk_round_active_events += list(native_event)
+			return TRUE
+		if("npc_repair_order")
+			var/atom/repair_target = cyberpunk_round_repair_target_for_district(district)
+			if(!repair_target)
+				return FALSE
+			var/datum/cyberpunk_ai_task_request/repair_request = new /datum/cyberpunk_ai_task_request(CP_AI_TASK_REPAIR, repair_target, repair_target, null, null, 2 MINUTES, repair_target, CP_AI_CAP_REPAIR)
+			repair_request.priority = cyberpunk_round_phase == "morning" ? 75 : 55
+			var/repair_dispatched = repair_request.dispatch()
+			native_event["order"] = "repair-capable city AI dispatched to damaged target in [district]"
+			native_event["target"] = "[repair_target]"
+			native_event["dispatched"] = repair_dispatched
+			qdel(repair_request)
+			if(!repair_dispatched)
+				return FALSE
+			cyberpunk_round_active_events += list(native_event)
+			return TRUE
+		if("npc_vendor_shift")
+			if(!SScyberpunk_city_ai)
+				return FALSE
+			SScyberpunk_city_ai.city_vendors_enabled = TRUE
+			native_event["order"] = "city vendor shift enabled"
+			native_event["vendor_shift"] = TRUE
+			cyberpunk_round_active_events += list(native_event)
+			return TRUE
+		if("point_of_interest")
+			native_event["poi"] = cyberpunk_round_report_place(cyberpunk_round_last_snapshot, district)
+			native_event["corporate_payload"] = "district scan package prepared for corporate terminals"
+			var/turf/poi_turf = cyberpunk_round_turf_for_district(district)
+			if(poi_turf)
+				var/obj/effect/landmark/poi_marker = new(poi_turf)
+				poi_marker.name = "corporate point of interest"
+				poi_marker.desc = "A temporary storyteller point of interest for city operators and observers."
+				SSpoints_of_interest?.make_point_of_interest(poi_marker)
+				native_event["poi_marker"] = poi_marker
+				var/datum/cyberpunk_ai_task_request/poi_request = new /datum/cyberpunk_ai_task_request(CP_AI_TASK_PATROL, poi_turf, poi_turf, null, null, 45 SECONDS, poi_turf, CP_AI_CAP_USE_TERMINAL)
+				poi_request.priority = cyberpunk_round_phase == "day" ? 70 : 45
+				native_event["ai_probe"] = poi_request.dispatch()
+				qdel(poi_request)
+			cyberpunk_round_active_events += list(native_event)
+			return TRUE
+		if("resource_market_shift")
+			if(SSeconomy)
+				SSeconomy.pack_price_modifier = clamp((SSeconomy.pack_price_modifier || 1) + 0.05, 0.5, 2)
+				SSeconomy.bounty_modifier = clamp((SSeconomy.bounty_modifier || 1) + 0.05, 0.5, 2)
+			native_event["market_shift"] = "world supply and bounty modifiers nudged"
+			cyberpunk_round_active_events += list(native_event)
+			return TRUE
+		if("guest_role_offer")
+			native_event["guest_role"] = "guest role hook staged for admin/story follow-up"
+			cyberpunk_round_active_events += list(native_event)
+			notify_ghosts("A city guest-role opportunity is being prepared in [district].", source = null, header = "City Opportunity")
+			return TRUE
+	return FALSE
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_turf_for_district(district_id)
+	if(!district_id || district_id == "city")
+		return null
+	for(var/area/current_area as anything in GLOB.areas)
+		if(!istype(current_area, /area/cyberpunk/city))
+			continue
+		var/current_id = current_area.cyberpunk_district_id || "[current_area.type]"
+		if(current_id != district_id)
+			continue
+		var/list/turfs = current_area.get_turfs_from_all_zlevels()
+		while(length(turfs))
+			var/turf/candidate = pick(turfs)
+			turfs -= candidate
+			if(candidate && !candidate.density && !is_space_or_openspace(candidate))
+				return candidate
+	return null
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_area_for_district(district_id)
+	if(!district_id || district_id == "city")
+		return null
+	for(var/area/current_area as anything in GLOB.areas)
+		if(!istype(current_area, /area/cyberpunk/city))
+			continue
+		var/current_id = current_area.cyberpunk_district_id || "[current_area.type]"
+		if(current_id == district_id)
+			return current_area
+	return null
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_repair_target_for_district(district_id)
+	var/area/target_area = cyberpunk_round_area_for_district(district_id)
+	if(!target_area)
+		return null
+	for(var/turf/current_turf as anything in target_area.get_turfs_from_all_zlevels())
+		CHECK_TICK
+		for(var/obj/machinery/machine in current_turf)
+			if(machine.uses_integrity && machine.max_integrity > 0 && machine.get_integrity() < machine.max_integrity)
+				return machine
+			if(machine.machine_stat & (BROKEN|NOPOWER))
+				return machine
+		for(var/obj/structure/structure in current_turf)
+			if(structure.uses_integrity && structure.max_integrity > 0 && structure.get_integrity() < structure.max_integrity)
+				return structure
+	return null
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_record_memory(list/candidate)
 	var/theme = candidate["theme"] || candidate["type"]
@@ -2168,6 +2666,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"id" = length(cyberpunk_round_event_history) + 1,
 		"time" = world.time,
 		"clock" = cyberpunk_round_clock_text(),
+		"phase" = cyberpunk_round_phase,
 		"name" = event_name,
 		"type" = event_type,
 		"theme" = candidate ? (candidate["theme"] || event_type) : event_type,
@@ -2180,17 +2679,17 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"package_chaos" = candidate ? candidate["package_chaos"] : null,
 		"package_scale" = candidate ? candidate["package_scale"] : null,
 		"package_duration" = candidate ? candidate["package_duration"] : null,
+		"package_category" = candidate ? candidate["package_category"] : null,
+		"package_phase_multiplier" = candidate ? candidate["package_phase_multiplier"] : null,
 		"arc_id" = candidate ? candidate["arc_id"] : null,
 		"arc_step" = candidate ? candidate["arc_step"] : null,
 		"score" = candidate ? candidate["score"] : null,
 		"chaos" = chaos_value,
 		"status" = status,
+		"completed" = (status == "completed" || status == "executed"),
 		"details" = details,
 	)
 	cyberpunk_round_event_history += list(record)
-	var/excess = length(cyberpunk_round_event_history) - 80
-	if(excess > 0)
-		cyberpunk_round_event_history.Cut(1, excess + 1)
 	return record
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_memory_rows(list/memory)
@@ -2237,7 +2736,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_package_rows(list/snapshot)
 	ensure_cyberpunk_storyteller_config()
 	var/list/rows = list()
-	for(var/list/package as anything in cyberpunk_storyteller_event_packages + cyberpunk_storyteller_dynamic_packages)
+	for(var/list/package as anything in cyberpunk_storyteller_event_packages + cyberpunk_storyteller_dynamic_packages + cyberpunk_storyteller_native_packages)
 		var/executor = cyberpunk_storyteller_package_executor(package)
 		var/theme = length(package["tags"]) ? package["tags"][1] : package["kind"]
 		var/list/candidate = build_cyberpunk_storyteller_candidate("package_preview_[package["id"]]", theme, executor, "Package readiness preview.", package["weight"] || 0, theme, package["scale"] || "city", cyberpunk_storyteller_hot_district(snapshot), null, null, package)
@@ -2251,11 +2750,14 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			"kind" = package["kind"],
 			"source" = package["source"],
 			"executor" = executor,
+			"category" = package["category"],
+			"action" = package["action"],
 			"event_name" = package["event_name"],
 			"ruleset_path" = "[package["ruleset_path"]]",
 			"weight" = package["weight"],
 			"tags" = package["tags"],
 			"chaos" = package["chaos"],
+			"phase_multiplier" = cyberpunk_storyteller_phase_package_multiplier(package),
 			"min_time" = package["min_time"],
 			"max_time" = package["max_time"],
 			"scale" = package["scale"],
@@ -2267,6 +2769,88 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			"queued" = (package["id"] in cyberpunk_storyteller_deferred_package_ids),
 		))
 	return rows
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_analysis_data(list/snapshot)
+	var/list/recent_by_status = list()
+	var/list/recent_by_category = list()
+	var/list/recent_by_phase = list()
+	var/recent_window = 30 MINUTES
+	var/recent_total = 0
+	for(var/list/record as anything in cyberpunk_round_event_history)
+		if(!islist(record))
+			continue
+		var/record_age = world.time - (record["world_time"] || 0)
+		if(record_age > recent_window)
+			continue
+		recent_total++
+		var/status = record["status"] || "unknown"
+		var/category = record["package_category"] || record["type"] || "city"
+		var/phase = record["phase"] || "unknown"
+		recent_by_status[status] = (recent_by_status[status] || 0) + 1
+		recent_by_category[category] = (recent_by_category[category] || 0) + 1
+		recent_by_phase[phase] = (recent_by_phase[phase] || 0) + 1
+	var/list/top_district = null
+	var/list/districts = islist(snapshot) ? snapshot["districts"] : null
+	if(length(districts))
+		top_district = districts[1]
+	var/chaos_delta = cyberpunk_round_chaos - cyberpunk_round_expected_chaos
+	var/recommendation = "hold"
+	if(chaos_delta >= cyberpunk_round_chaos_tolerance)
+		recommendation = "recovery"
+	else if(cyberpunk_round_stage == "escalation")
+		recommendation = "escalation"
+	else if(chaos_delta <= -cyberpunk_round_chaos_tolerance)
+		recommendation = "pressure"
+	return list(
+		"recent_total" = recent_total,
+		"recent_by_status" = recent_by_status,
+		"recent_by_category" = recent_by_category,
+		"recent_by_phase" = recent_by_phase,
+		"chaos_delta" = chaos_delta,
+		"recommendation" = recommendation,
+		"escalation_reason" = cyberpunk_round_escalation_reason,
+		"top_district" = top_district,
+		"active_events" = cyberpunk_round_active_events.Copy(),
+	)
+
+/datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_dungeon_style_rows()
+	var/list/rows = list()
+	var/list/styles = cyberpunk_dungeon_style_registry()
+	for(var/style_id in styles)
+		var/list/style = styles[style_id]
+		if(!islist(style))
+			continue
+		rows += list(list(
+			"id" = style["id"] || style_id,
+			"name" = style["name"] || style_id,
+			"description" = style["description"] || "",
+			"theme" = style["theme"] || style_id,
+			"difficulty" = style["difficulty"] || 1,
+			"entrance_type" = "[style["entrance_type"]]",
+			"chunk_templates" = (style["chunk_templates"] || list()).Copy(),
+			"room_templates" = (style["room_templates"] || list()).Copy(),
+			"threat_types" = cyberpunk_dungeon_style_path_rows(style["threat_types"] || list()),
+			"loot_types" = cyberpunk_dungeon_style_path_rows(style["loot_types"] || list()),
+		))
+	return rows
+
+/datum/controller/subsystem/cyberpunk_round/proc/spawn_cyberpunk_dungeon_entrance(style_id, mob/user)
+	if(!user?.client?.holder)
+		return FALSE
+	var/list/style = cyberpunk_dungeon_style_record(style_id)
+	if(!islist(style))
+		return FALSE
+	var/entrance_type = style["entrance_type"]
+	if(!ispath(entrance_type, /obj/structure/cyberpunk_dungeon_entrance))
+		return FALSE
+	var/turf/spawn_turf = get_turf(user)
+	if(!spawn_turf)
+		return FALSE
+	var/obj/structure/cyberpunk_dungeon_entrance/entrance = new entrance_type(spawn_turf)
+	message_admins("[ADMIN_LOOKUPFLW(user)] spawned CP13 dungeon entrance [style["name"] || style_id] at [AREACOORD(spawn_turf)].")
+	log_admin("[key_name(user)] spawned CP13 dungeon entrance [style["id"] || style_id] ([entrance_type]) at [AREACOORD(spawn_turf)].")
+	record_cyberpunk_round_event("dungeon_entrance_spawned", "admin", "city", cyberpunk_round_chaos, "Admin [key_name(user)] spawned [entrance.name] for style [style["id"] || style_id].", "completed")
+	return TRUE
 
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_payload_tab_for(mob/user)
 	var/tab = user?.ckey ? cyberpunk_round_ui_payload_tabs[user.ckey] : null
@@ -2291,6 +2875,9 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		"payload_tab" = payload_tab,
 		"clock" = cyberpunk_round_clock_text(),
 		"stage" = cyberpunk_round_stage,
+		"escalation_day" = cyberpunk_round_escalation_day,
+		"escalation_chaos_threshold" = cyberpunk_round_escalation_chaos_threshold,
+		"escalation_reason" = cyberpunk_round_escalation_reason,
 		"end_state" = cyberpunk_round_end_state,
 		"phase" = cyberpunk_round_phase_name,
 		"phase_id" = cyberpunk_round_phase,
@@ -2349,6 +2936,11 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		if("payloads")
 			data["packages"] = cyberpunk_storyteller_package_rows(cyberpunk_round_last_snapshot)
 			data["deferred_packages"] = cyberpunk_storyteller_deferred_package_ids.Copy()
+		if("analysis")
+			data["analysis"] = cyberpunk_storyteller_analysis_data(cyberpunk_round_last_snapshot)
+			data["storyteller_curve"] = cyberpunk_storyteller_curve.Copy()
+		if("poi")
+			data["poi_styles"] = cyberpunk_dungeon_style_rows()
 		if("history")
 			data["history"] = cyberpunk_round_event_history.Copy()
 	return data
@@ -2395,6 +2987,39 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			cyberpunk_storyteller_rebuild_round_plan()
 			cyberpunk_round_storyteller_candidates = build_cyberpunk_storyteller_candidates(cyberpunk_round_last_snapshot || build_cyberpunk_round_snapshot(FALSE))
 			return TRUE
+		if("set_profile_number")
+			ensure_cyberpunk_storyteller_config()
+			var/profile_id = params["profile"]
+			var/profile_key = params["key"]
+			var/list/profile = cyberpunk_storyteller_profile_options[profile_id]
+			if(!islist(profile) || !(profile_key in list("event_weight", "dynamic_light_weight", "dynamic_heavy_weight", "recovery_weight", "gap_multiplier", "max_chaos", "combat_weight", "economy_weight", "network_weight", "corporate_weight", "escalation_speed")))
+				return FALSE
+			var/value = text2num(params["value"])
+			if(isnull(value))
+				return FALSE
+			if(profile_key == "max_chaos")
+				value = clamp(round(value), 0, 100)
+			else
+				value = clamp(value, 0, 5)
+			profile[profile_key] = value
+			cyberpunk_storyteller_curve = cyberpunk_storyteller_build_curve()
+			cyberpunk_storyteller_rebuild_round_plan()
+			return TRUE
+		if("set_escalation_day")
+			cyberpunk_round_escalation_day = clamp(round(text2num(params["value"])), 1, 30)
+			cyberpunk_storyteller_curve = cyberpunk_storyteller_build_curve()
+			cyberpunk_storyteller_rebuild_round_plan()
+			update_cyberpunk_round_clock()
+			return TRUE
+		if("set_escalation_threshold")
+			cyberpunk_round_escalation_chaos_threshold = clamp(round(text2num(params["value"])), 0, 100)
+			update_cyberpunk_round_clock()
+			return TRUE
+		if("save_storyteller_config")
+			if(save_cyberpunk_storyteller_config())
+				record_cyberpunk_round_event("storyteller_config_saved", "admin", "city", cyberpunk_round_chaos, "Storyteller config saved by [key_name(user)].", "completed")
+				return TRUE
+			return FALSE
 		if("toggle_daylight")
 			cyberpunk_daylight_enabled = !cyberpunk_daylight_enabled
 			if(!cyberpunk_daylight_enabled)
@@ -2409,11 +3034,13 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			return TRUE
 		if("set_payload_tab")
 			var/tab = params["tab"]
-			if(!(tab in list("snapshot", "story", "payloads", "history")))
+			if(!(tab in list("snapshot", "story", "payloads", "analysis", "poi", "history")))
 				return FALSE
 			if(user.ckey)
 				cyberpunk_round_ui_payload_tabs[user.ckey] = tab
 			return TRUE
+		if("spawn_dungeon_entrance")
+			return spawn_cyberpunk_dungeon_entrance(params["style_id"], user)
 		if("execute_candidate")
 			var/index = text2num(params["index"])
 			if(index < 1 || index > length(cyberpunk_round_storyteller_candidates))

@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   LabeledList,
+  NumberInput,
   Section,
   Stack,
   Table,
@@ -142,6 +143,8 @@ type Candidate = {
   package_chaos?: number;
   package_scale?: string;
   package_duration?: string;
+  package_category?: string;
+  package_phase_multiplier?: number;
   package_conditions?: ConditionRecord[];
   priority: number;
   score: number;
@@ -157,11 +160,14 @@ type PackageRecord = {
   kind: string;
   source: string;
   executor: string;
+  category?: string;
+  action?: string;
   event_name?: string;
   ruleset_path?: string;
   weight: number;
   tags: string[];
   chaos: number;
+  phase_multiplier?: number;
   min_time: number;
   max_time?: number;
   scale: string;
@@ -206,6 +212,11 @@ type StoryProfile = {
   recovery_weight: number;
   gap_multiplier: number;
   max_chaos: number;
+  combat_weight: number;
+  economy_weight: number;
+  network_weight: number;
+  corporate_weight: number;
+  escalation_speed: number;
 };
 
 type RoundPlanPoint = {
@@ -242,6 +253,8 @@ type HistoryRecord = {
   package_name?: string;
   package_source?: string;
   package_chaos?: number;
+  package_category?: string;
+  package_phase_multiplier?: number;
   arc_id?: number;
   arc_step?: number;
   score?: number;
@@ -250,11 +263,39 @@ type HistoryRecord = {
   details: string;
 };
 
+type StoryAnalysis = {
+  recent_total: number;
+  recent_by_status: Record<string, number>;
+  recent_by_category: Record<string, number>;
+  recent_by_phase: Record<string, number>;
+  chaos_delta: number;
+  recommendation: string;
+  escalation_reason: string;
+  top_district?: DistrictRecord;
+  active_events: Record<string, unknown>[];
+};
+
+type PoiStyleRecord = {
+  id: string;
+  name: string;
+  description: string;
+  theme: string;
+  difficulty: number;
+  entrance_type: string;
+  chunk_templates: string[];
+  room_templates: string[];
+  threat_types: string[];
+  loot_types: string[];
+};
+
 type Data = {
   can_admin: BooleanLike;
   payload_tab: string;
   clock: string;
   stage: string;
+  escalation_day: number;
+  escalation_chaos_threshold: number;
+  escalation_reason: string;
   end_state: string;
   phase: string;
   phase_id: string;
@@ -290,8 +331,11 @@ type Data = {
   packages?: PackageRecord[];
   active_arcs?: StoryArc[];
   round_plan?: RoundPlanPoint[];
+  storyteller_curve?: RoundPlanPoint[];
   round_summary: RoundSummary;
   memory?: StoryMemory;
+  analysis?: StoryAnalysis;
+  poi_styles?: PoiStyleRecord[];
   history?: HistoryRecord[];
 };
 
@@ -309,7 +353,19 @@ const statusColor = (status: string) => {
 };
 
 const packageBackend = (pack: PackageRecord) =>
-  pack.kind === 'event' ? pack.event_name || 'event' : pack.ruleset_path || 'ruleset';
+  pack.kind === 'event'
+    ? pack.event_name || 'event'
+    : pack.kind === 'native'
+      ? pack.action || 'native'
+      : pack.ruleset_path || 'ruleset';
+
+const countPairs = (counts?: Record<string, number>) =>
+  Object.entries(counts || {})
+    .map(([key, value]) => `${key}: ${value}`)
+    .join(', ') || 'none';
+
+const shortList = (values?: string[]) =>
+  values?.length ? values.join(', ') : 'planned';
 
 export const CyberpunkRound = () => {
   const { act, data } = useBackend<Data>();
@@ -333,6 +389,10 @@ export const CyberpunkRound = () => {
               <LabeledList>
                 <LabeledList.Item label="Clock">{data.clock}</LabeledList.Item>
                 <LabeledList.Item label="Stage">{data.stage}</LabeledList.Item>
+                <LabeledList.Item label="Escalation">
+                  day {data.escalation_day}, chaos {data.escalation_chaos_threshold}
+                  <Box color="label">{data.escalation_reason}</Box>
+                </LabeledList.Item>
                 <LabeledList.Item label="Phase">{data.phase}</LabeledList.Item>
                 <LabeledList.Item label="Chaos">
                   {data.chaos}/{data.expected_chaos} +/- {data.chaos_tolerance}
@@ -393,6 +453,31 @@ export const CyberpunkRound = () => {
               <Button fluid disabled={!canAdmin} onClick={() => act('pulse')}>
                 Force storyteller pulse
               </Button>
+              <Button fluid disabled={!canAdmin} onClick={() => act('save_storyteller_config')}>
+                Save storyteller config
+              </Button>
+              <LabeledList mt={1}>
+                <LabeledList.Item label="Esc day">
+                  <NumberInput
+                    value={data.escalation_day || 1}
+                    minValue={1}
+                    maxValue={30}
+                    step={1}
+                    disabled={!canAdmin}
+                    onChange={(value) => act('set_escalation_day', { value })}
+                  />
+                </LabeledList.Item>
+                <LabeledList.Item label="Esc chaos">
+                  <NumberInput
+                    value={data.escalation_chaos_threshold || 0}
+                    minValue={0}
+                    maxValue={100}
+                    step={1}
+                    disabled={!canAdmin}
+                    onChange={(value) => act('set_escalation_threshold', { value })}
+                  />
+                </LabeledList.Item>
+              </LabeledList>
             </Stack.Item>
           </Stack>
           {!!profiles.length && (
@@ -422,6 +507,12 @@ export const CyberpunkRound = () => {
           <Tabs.Tab selected={tab === 'payloads'} onClick={() => setTab('payloads')}>
             Payloads
           </Tabs.Tab>
+          <Tabs.Tab selected={tab === 'analysis'} onClick={() => setTab('analysis')}>
+            Analysis
+          </Tabs.Tab>
+          <Tabs.Tab selected={tab === 'poi'} onClick={() => setTab('poi')}>
+            POI/Dungeons
+          </Tabs.Tab>
           <Tabs.Tab selected={tab === 'history'} onClick={() => setTab('history')}>
             History
           </Tabs.Tab>
@@ -436,6 +527,8 @@ export const CyberpunkRound = () => {
             activeArcs={data.active_arcs || []}
             roundPlan={data.round_plan || []}
             memory={data.memory || ({} as StoryMemory)}
+            currentProfile={currentProfile}
+            profileId={data.storyteller_profile}
           />
         )}
         {tab === 'payloads' && (
@@ -449,6 +542,19 @@ export const CyberpunkRound = () => {
           <HistoryTab
             history={(data.history || []).slice().reverse()}
             summary={data.round_summary || {}}
+          />
+        )}
+        {tab === 'analysis' && (
+          <AnalysisTab
+            analysis={data.analysis || ({} as StoryAnalysis)}
+            curve={data.storyteller_curve || []}
+          />
+        )}
+        {tab === 'poi' && (
+          <PoiTab
+            act={act}
+            canAdmin={canAdmin}
+            styles={data.poi_styles || []}
           />
         )}
       </Window.Content>
@@ -638,6 +744,8 @@ const StoryTab = ({
   activeArcs,
   roundPlan,
   memory,
+  currentProfile,
+  profileId,
 }: {
   act: (action: string, params?: Record<string, unknown>) => void;
   canAdmin: boolean;
@@ -645,8 +753,50 @@ const StoryTab = ({
   activeArcs: StoryArc[];
   roundPlan: RoundPlanPoint[];
   memory: StoryMemory;
+  currentProfile?: StoryProfile;
+  profileId: string;
 }) => (
   <>
+    {!!currentProfile && (
+      <Section title="Storyteller Profile">
+        <Table>
+          <Table.Row header>
+            <Table.Cell>Weight</Table.Cell>
+            <Table.Cell collapsing>Value</Table.Cell>
+          </Table.Row>
+          {[
+            ['event_weight', 'Events', 0, 5, 0.05],
+            ['dynamic_light_weight', 'Light dynamic', 0, 5, 0.05],
+            ['dynamic_heavy_weight', 'Heavy dynamic', 0, 5, 0.05],
+            ['recovery_weight', 'Recovery', 0, 5, 0.05],
+            ['gap_multiplier', 'Gap multiplier', 0, 5, 0.05],
+            ['max_chaos', 'Max chaos', 0, 100, 1],
+            ['combat_weight', 'Combat tags', 0, 5, 0.05],
+            ['economy_weight', 'Economy tags', 0, 5, 0.05],
+            ['network_weight', 'Network tags', 0, 5, 0.05],
+            ['corporate_weight', 'Corporate tags', 0, 5, 0.05],
+            ['escalation_speed', 'Escalation speed', 0, 5, 0.05],
+          ].map(([key, label, min, max, step]) => (
+            <Table.Row key={String(key)}>
+              <Table.Cell>{label}</Table.Cell>
+              <Table.Cell collapsing>
+                <NumberInput
+                  value={currentProfile[String(key) as keyof StoryProfile] as number}
+                  minValue={min as number}
+                  maxValue={max as number}
+                  step={step as number}
+                  disabled={!canAdmin}
+                  onChange={(value) =>
+                    act('set_profile_number', { profile: profileId, key: String(key), value })
+                  }
+                />
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table>
+      </Section>
+    )}
+
     <Section title="Story Plan">
       {!roundPlan.length ? (
         <Box color="label">No curve points.</Box>
@@ -743,7 +893,8 @@ const StoryTab = ({
                 {!!candidate.package_name && (
                   <Box color="label">
                     {candidate.package_source} / chaos{' '}
-                    {candidate.package_chaos || 0}
+                    {candidate.package_chaos || 0} / phase x
+                    {candidate.package_phase_multiplier || 1}
                   </Box>
                 )}
               </Table.Cell>
@@ -800,7 +951,8 @@ const PayloadTab = ({
               </Box>
               <Box color="label">
                 chaos {pack.chaos || 0}, weight {pack.weight || 0},{' '}
-                {pack.scale || 'city'} / {pack.duration || 'instant'}
+                {pack.scale || 'city'} / {pack.duration || 'instant'} / phase x
+                {pack.phase_multiplier || 1}
               </Box>
               {!!pack.conditions?.length && (
                 <Box color="label">
@@ -845,6 +997,128 @@ const PayloadTab = ({
                 onClick={() => act('execute_package', { package_id: pack.id })}
               >
                 Now
+              </Button>
+            </Table.Cell>
+          </Table.Row>
+        ))}
+      </Table>
+    )}
+  </Section>
+);
+
+const AnalysisTab = ({
+  analysis,
+  curve,
+}: {
+  analysis: StoryAnalysis;
+  curve: RoundPlanPoint[];
+}) => (
+  <>
+    <Section title="Storyteller Analysis">
+      <LabeledList>
+        <LabeledList.Item label="Recommendation">
+          {analysis.recommendation || 'hold'}
+        </LabeledList.Item>
+        <LabeledList.Item label="Chaos delta">
+          {analysis.chaos_delta || 0}
+        </LabeledList.Item>
+        <LabeledList.Item label="Escalation">
+          {analysis.escalation_reason || 'none'}
+        </LabeledList.Item>
+        <LabeledList.Item label="Recent records">
+          {analysis.recent_total || 0}
+        </LabeledList.Item>
+        <LabeledList.Item label="By status">
+          {countPairs(analysis.recent_by_status)}
+        </LabeledList.Item>
+        <LabeledList.Item label="By category">
+          {countPairs(analysis.recent_by_category)}
+        </LabeledList.Item>
+        <LabeledList.Item label="By phase">
+          {countPairs(analysis.recent_by_phase)}
+        </LabeledList.Item>
+        <LabeledList.Item label="Top district">
+          {analysis.top_district?.name || analysis.top_district?.id || 'none'}
+        </LabeledList.Item>
+        <LabeledList.Item label="Active events">
+          {analysis.active_events?.length || 0}
+        </LabeledList.Item>
+      </LabeledList>
+    </Section>
+
+    <Section title="Admin Curve">
+      {!curve.length ? (
+        <Box color="label">No curve points.</Box>
+      ) : (
+        <Table>
+          <Table.Row header>
+            <Table.Cell collapsing>Time</Table.Cell>
+            <Table.Cell collapsing>Chaos</Table.Cell>
+            <Table.Cell collapsing>Window</Table.Cell>
+            <Table.Cell collapsing>Force</Table.Cell>
+          </Table.Row>
+          {curve.map((point, index) => (
+            <Table.Row key={`${point.time}-${index}`}>
+              <Table.Cell collapsing>{ticksToSeconds(point.time)}</Table.Cell>
+              <Table.Cell collapsing>{point.expected_chaos}</Table.Cell>
+              <Table.Cell collapsing>+/- {point.tolerance}</Table.Cell>
+              <Table.Cell collapsing color={point.force_chaos ? 'good' : 'label'}>
+                {point.force_chaos ? 'yes' : 'no'}
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table>
+      )}
+    </Section>
+  </>
+);
+
+const PoiTab = ({
+  act,
+  canAdmin,
+  styles,
+}: {
+  act: (action: string, params?: Record<string, unknown>) => void;
+  canAdmin: boolean;
+  styles: PoiStyleRecord[];
+}) => (
+  <Section title="POI And Dungeon Style Registry">
+    {!styles.length ? (
+      <Box color="label">No styles loaded.</Box>
+    ) : (
+      <Table>
+        <Table.Row header>
+          <Table.Cell>Style</Table.Cell>
+          <Table.Cell>Object links</Table.Cell>
+          <Table.Cell>Content</Table.Cell>
+          <Table.Cell collapsing />
+        </Table.Row>
+        {styles.map((style) => (
+          <Table.Row key={style.id}>
+            <Table.Cell>
+              <Box bold>{style.name}</Box>
+              <Box color="label">
+                {style.id} / {style.theme} / difficulty {style.difficulty}
+              </Box>
+              <Box color="label">{style.description}</Box>
+            </Table.Cell>
+            <Table.Cell>
+              <Box>{style.entrance_type}</Box>
+              <Box color="label">chunks: {shortList(style.chunk_templates)}</Box>
+              <Box color="label">POI rooms: {shortList(style.room_templates)}</Box>
+            </Table.Cell>
+            <Table.Cell>
+              <Box color="label">threats: {shortList(style.threat_types)}</Box>
+              <Box color="label">loot: {shortList(style.loot_types)}</Box>
+            </Table.Cell>
+            <Table.Cell collapsing>
+              <Button
+                disabled={!canAdmin}
+                onClick={() =>
+                  act('spawn_dungeon_entrance', { style_id: style.id })
+                }
+              >
+                Spawn entrance
               </Button>
             </Table.Cell>
           </Table.Row>
@@ -911,6 +1185,12 @@ const HistoryTab = ({
                 <Box>{record.package_name || '-'}</Box>
                 {!!record.package_source && (
                   <Box color="label">{record.package_source}</Box>
+                )}
+                {!!record.package_phase_multiplier && (
+                  <Box color="label">
+                    {record.package_category || 'package'} / phase x
+                    {record.package_phase_multiplier}
+                  </Box>
                 )}
               </Table.Cell>
               <Table.Cell collapsing color={statusColor(record.status)}>
