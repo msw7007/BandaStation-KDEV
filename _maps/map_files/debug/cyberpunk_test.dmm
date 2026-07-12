@@ -1,8 +1,4 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
-"ab" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "ad" = (
 /obj/structure/cable,
 /obj/machinery/power/apc/auto_name/directional/south,
@@ -279,39 +275,6 @@
 /obj/machinery/suit_storage_unit/captain,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
-"zA" = (
-/obj/machinery/door/airlock/glass{
-	name = "Benn basic access";
-	req_access = list("corp:benn:basic")
-	},
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/corporate)
-"zB" = (
-/obj/machinery/door/airlock/glass{
-	name = "Ryaznov basic access";
-	req_access = list("corp:ryaznov:basic")
-	},
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/corporate)
-"zC" = (
-/obj/machinery/door/airlock/glass{
-	name = "Starlight basic access";
-	req_access = list("corp:starlight:basic")
-	},
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/corporate)
-"zE" = (
-/obj/machinery/modular_computer/preset/corporate_terminal/benn,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/corporate)
-"zF" = (
-/obj/machinery/modular_computer/preset/corporate_terminal/ryaznov,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/corporate)
-"zG" = (
-/obj/machinery/modular_computer/preset/corporate_terminal/starlight,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/corporate)
 "fa" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/small,
@@ -878,18 +841,6 @@
 "mA" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
-"ZZ" = (
-/obj/machinery/computer/business_terminal{
-	name = "test business terminal"
-	},
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/business/lot_01)
-"ZY" = (
-/obj/machinery/computer/business_terminal/medium{
-	name = "test medium business terminal"
-	},
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/business/lot_01)
 "mJ" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
@@ -1054,10 +1005,6 @@
 /obj/structure/cable,
 /turf/open/floor/iron,
 /area/station/cargo/miningoffice)
-"oj" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "ok" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/corporate)
@@ -1269,48 +1216,6 @@
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
 /area/cyberpunk/city/district/district_01)
-"AA" = (
-/obj/machinery/cyberpunk_traffic_light,
-/obj/effect/cyberpunk_traffic_node,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_01)
-"AB" = (
-/obj/machinery/cyberpunk_traffic_light,
-/obj/effect/cyberpunk_traffic_node,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_04)
-"AC" = (
-/obj/effect/cyberpunk_traffic_node/vehicle,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/road)
-"AD" = (
-/mob/living/carbon/human/cyberpunk_npc/bystander,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_01)
-"AF" = (
-/mob/living/carbon/human/cyberpunk_npc/runner,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_01)
-"AG" = (
-/mob/living/carbon/human/cyberpunk_npc/worker,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_04)
-"AH" = (
-/mob/living/carbon/human/cyberpunk_npc/security,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/security)
-"AI" = (
-/obj/effect/landmark/cyberpunk_npc_trader_home,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_01)
-"AK" = (
-/obj/effect/landmark/cyberpunk_npc_trader_home,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_04)
-"AL" = (
-/obj/effect/landmark/cyberpunk_npc_trader/supplies,
-/turf/open/floor/asphalt/lavaland,
-/area/cyberpunk/city/district/district_04)
 "qY" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
@@ -1431,14 +1336,6 @@
 /area/cyberpunk/city/civic/city_hall)
 "tQ" = (
 /obj/machinery/light/directional/south,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/civic/city_hall)
-"ZQ" = (
-/obj/machinery/door/airlock/vault/cyberpunk_council,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/civic/city_hall)
-"ZP" = (
-/obj/machinery/computer/cyberpunk_council_lockdown,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/city_hall)
 "tZ" = (
@@ -1758,11 +1655,44 @@
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"zA" = (
+/obj/machinery/door/airlock/glass{
+	name = "Benn basic access";
+	req_access = list("corp:benn:basic")
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zB" = (
+/obj/machinery/door/airlock/glass{
+	name = "Ryaznov basic access";
+	req_access = list("corp:ryaznov:basic")
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zC" = (
+/obj/machinery/door/airlock/glass{
+	name = "Starlight basic access";
+	req_access = list("corp:starlight:basic")
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
 "zD" = (
 /obj/machinery/light/directional/south,
 /obj/machinery/dna_scannernew,
 /turf/open/floor/iron/white,
 /area/station/science/research)
+"zE" = (
+/obj/machinery/modular_computer/preset/corporate_terminal/benn,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zF" = (
+/obj/machinery/modular_computer/preset/corporate_terminal/ryaznov,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
+"zG" = (
+/obj/machinery/modular_computer/preset/corporate_terminal/starlight,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/corporate)
 "zN" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_core,
@@ -1825,6 +1755,24 @@
 /obj/machinery/light/directional/west,
 /turf/open/floor/carpet,
 /area/station/service/bar)
+"AA" = (
+/obj/machinery/cyberpunk_traffic_light,
+/obj/effect/cyberpunk_traffic_node,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
+"AB" = (
+/obj/machinery/cyberpunk_traffic_light,
+/obj/effect/cyberpunk_traffic_node,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
+"AC" = (
+/obj/effect/cyberpunk_traffic_node/vehicle,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/road)
+"AD" = (
+/mob/living/carbon/human/cyberpunk_npc/bystander,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
 "AE" = (
 /obj/structure/table/bronze,
 /obj/effect/spawner/random/food_or_drink/booze,
@@ -1832,6 +1780,22 @@
 /obj/effect/spawner/random/food_or_drink/booze,
 /turf/open/floor/iron/dark/small,
 /area/station/service/bar)
+"AF" = (
+/mob/living/carbon/human/cyberpunk_npc/runner,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
+"AG" = (
+/mob/living/carbon/human/cyberpunk_npc/worker,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
+"AH" = (
+/mob/living/carbon/human/cyberpunk_npc/security,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/security)
+"AI" = (
+/obj/effect/landmark/cyberpunk_npc_trader_home,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_01)
 "AJ" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -1840,6 +1804,14 @@
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
+"AK" = (
+/obj/effect/landmark/cyberpunk_npc_trader_home,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
+"AL" = (
+/obj/effect/landmark/cyberpunk_npc_trader/supplies,
+/turf/open/floor/asphalt/lavaland,
+/area/cyberpunk/city/district/district_04)
 "AU" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -1949,9 +1921,14 @@
 /turf/open/floor/wood,
 /area/station/security/brig)
 "BC" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
+/obj/machinery/door/airlock/research{
+	autoclose = 0;
+	frequency = 1449;
+	id_tag = "xeno_airlock_interior";
+	name = "Xenobiology Lab Internal Airlock"
+	},
+/turf/open/floor/iron/white,
+/area/station/command/bridge)
 "BD" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/white,
@@ -2054,10 +2031,6 @@
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/government)
-"DF" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "DG" = (
 /obj/machinery/door/airlock/research{
 	autoclose = 0;
@@ -2140,10 +2113,6 @@
 "ES" = (
 /turf/open/openspace,
 /area/station/commons/dorms)
-"EW" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "EZ" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -2522,10 +2491,6 @@
 /obj/item/clothing/under/misc/assistantformal,
 /turf/open/floor/iron,
 /area/station/commons/dorms)
-"Ld" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "Lk" = (
 /obj/machinery/chem_master,
 /obj/effect/turf_decal/tile/purple/fourcorners,
@@ -2888,10 +2853,6 @@
 /obj/effect/landmark/cyberpunk_npc_trader/food,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/public_service/general_store)
-"Qx" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "QI" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/structure/fence,
@@ -2960,10 +2921,6 @@
 /obj/item/book/manual/wiki/grenades,
 /turf/open/floor/iron/white,
 /area/station/medical/medbay)
-"RH" = (
-/obj/vehicle/sealed/car/cyberpunk/standard_car,
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/infrastructure/parking)
 "RM" = (
 /obj/machinery/computer/camera_advanced/xenobio{
 	dir = 8
@@ -3367,6 +3324,14 @@
 "Zu" = (
 /turf/open/openspace,
 /area/station/command/bridge)
+"ZP" = (
+/obj/machinery/computer/cyberpunk_council_lockdown,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/civic/city_hall)
+"ZQ" = (
+/obj/machinery/door/airlock/vault/cyberpunk_council,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/civic/city_hall)
 "ZV" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/iron/white,
@@ -3375,6 +3340,18 @@
 /obj/machinery/smartfridge/food,
 /turf/closed/wall,
 /area/station/service/bar)
+"ZY" = (
+/obj/machinery/computer/business_terminal/medium{
+	name = "test medium business terminal"
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/business/lot_01)
+"ZZ" = (
+/obj/machinery/computer/business_terminal{
+	name = "test business terminal"
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/business/lot_01)
 
 (1,1,1) = {"
 jF
@@ -8195,7 +8172,7 @@ cK
 Fd
 MI
 Fd
-sA
+GR
 GR
 GR
 xX
@@ -8257,7 +8234,7 @@ cK
 Fd
 MI
 Fd
-sA
+GR
 GR
 GR
 GR
@@ -8318,8 +8295,8 @@ cK
 cK
 Fd
 MI
-sg
-sA
+Fd
+GR
 GR
 GR
 GR
@@ -8381,7 +8358,7 @@ cK
 Fd
 MI
 Fd
-sA
+GR
 GR
 GR
 GR
@@ -8443,7 +8420,7 @@ cK
 Fd
 MI
 Fd
-sA
+GR
 GR
 GR
 GR
@@ -8477,7 +8454,7 @@ ok
 Pz
 ok
 ok
-AY
+ok
 AI
 MI
 qQ
@@ -8505,7 +8482,7 @@ cK
 Fd
 MI
 Fd
-sA
+GR
 GR
 GR
 GR
@@ -8539,7 +8516,7 @@ ok
 ok
 ok
 ok
-AY
+ok
 AD
 MI
 qQ
@@ -8567,7 +8544,7 @@ cK
 Fd
 MI
 Fd
-sA
+GR
 GR
 GR
 dm
@@ -8601,7 +8578,7 @@ ok
 ok
 ok
 ok
-AY
+ok
 AF
 MI
 qQ
@@ -8663,7 +8640,7 @@ ok
 ok
 ok
 ok
-AY
+ok
 AA
 MI
 qQ
@@ -8725,7 +8702,7 @@ ok
 ok
 ok
 ok
-AY
+ok
 qQ
 AC
 MI
@@ -8787,7 +8764,7 @@ ok
 ok
 ok
 ok
-AY
+ok
 qQ
 MI
 AA
@@ -8849,7 +8826,7 @@ ok
 YV
 ok
 ok
-AY
+ok
 qQ
 MI
 qQ
@@ -8941,10 +8918,10 @@ MI
 FQ
 Sy
 Ji
-BC
+tI
 Sy
 Ji
-Qx
+tI
 Sy
 Ji
 tI
@@ -9127,13 +9104,13 @@ MI
 FQ
 Sy
 Ji
-Ld
+tI
 Sy
 Ji
-EW
+tI
 Sy
 Ji
-oj
+tI
 Sy
 Ji
 Sy
@@ -9251,13 +9228,13 @@ MI
 FQ
 Sy
 Ji
-RH
+tI
 Sy
 Ji
 Sy
 Sy
 Ji
-ab
+tI
 Sy
 Ji
 Sy
@@ -9503,7 +9480,7 @@ Sy
 Sy
 Ji
 Sy
-DF
+tI
 Ji
 Sy
 Sy
@@ -9857,12 +9834,12 @@ vI
 vI
 vI
 Mf
-Mf
-Mf
-Mf
-Mf
-Mf
-Mf
+LJ
+LJ
+LJ
+LJ
+LJ
+LJ
 Mf
 NK
 NK
@@ -16563,7 +16540,7 @@ bg
 bg
 bg
 bg
-zb
+BC
 ss
 XG
 XG
@@ -16625,7 +16602,7 @@ bg
 bg
 bg
 bg
-zb
+BC
 ss
 XG
 XG
