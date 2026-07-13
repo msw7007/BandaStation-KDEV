@@ -758,7 +758,10 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/count_corporate_specialists(corporation_id)
 	var/count = 0
-	for(var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist as anything in GLOB.mob_living_list)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/corporate_specialist))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist = candidate
 		if(QDELETED(specialist) || specialist.stat == DEAD)
 			continue
 		if(specialist.cyberpunk_corporation_id == corporation_id)
@@ -801,7 +804,10 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	return best_terminal
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/process_corporate_specialist_work(list/active_players)
-	for(var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist as anything in GLOB.mob_living_list)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/corporate_specialist))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist = candidate
 		if(QDELETED(specialist) || !specialist.cyberpunk_corporation_id || !can_roam(specialist))
 			continue
 		var/obj/machinery/computer/corporate_data_terminal/terminal = find_corporate_data_terminal(specialist.cyberpunk_corporation_id, specialist)
@@ -870,7 +876,10 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 /datum/controller/subsystem/cyberpunk_city_ai/proc/find_nearby_corporate_security(atom/origin)
 	var/mob/living/carbon/human/cyberpunk_npc/security/best_security
 	var/best_distance = INFINITY
-	for(var/mob/living/carbon/human/cyberpunk_npc/security/security as anything in GLOB.mob_living_list)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/security))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/security/security = candidate
 		if(QDELETED(security) || security.stat == DEAD || !security.ai_controller || security.ai_controller.blackboard_key_exists(BB_CP_CITY_TASK))
 			continue
 		var/distance = get_dist(origin, security)
@@ -972,15 +981,21 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	return city_vendors_enabled && phase != "night"
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/close_city_vendors()
-	for(var/mob/living/carbon/human/cyberpunk_npc/vendor/vendor as anything in GLOB.mob_living_list)
-		if(istype(vendor) && !QDELETED(vendor))
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/vendor))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/vendor/vendor = candidate
+		if(!QDELETED(vendor))
 			vendor.cyberpunk_set_vendor_open(FALSE)
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/process_city_vendors(list/active_players)
 	var/should_open = city_vendors_should_open()
 	var/current_day = SScyberpunk_round?.cyberpunk_round_day || 1
-	for(var/mob/living/carbon/human/cyberpunk_npc/vendor/vendor as anything in GLOB.mob_living_list)
-		if(!istype(vendor) || QDELETED(vendor) || !vendor.cyberpunk_vendor_night_cycle)
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/vendor))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/vendor/vendor = candidate
+		if(QDELETED(vendor) || !vendor.cyberpunk_vendor_night_cycle)
 			continue
 		vendor.cyberpunk_vendor_restock(current_day)
 		ensure_vendor_points(vendor)
@@ -1090,8 +1105,11 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	data["cityVendorsEnabled"] = SScyberpunk_city_ai?.city_vendors_enabled
 	var/vendor_count = 0
 	var/open_vendors = 0
-	for(var/mob/living/carbon/human/cyberpunk_npc/vendor/vendor as anything in GLOB.mob_living_list)
-		if(!istype(vendor) || QDELETED(vendor))
+	for(var/mob/living/candidate as anything in GLOB.mob_living_list)
+		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/vendor))
+			continue
+		var/mob/living/carbon/human/cyberpunk_npc/vendor/vendor = candidate
+		if(QDELETED(vendor))
 			continue
 		vendor_count++
 		if(vendor.cyberpunk_vendor_active)

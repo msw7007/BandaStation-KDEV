@@ -3312,6 +3312,20 @@
 /obj/structure/fence,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
+"Za" = (
+/obj/effect/turf_decal/sand/plating/volcanic,
+/obj/docking_port/stationary{
+	dir = 4;
+	dheight = 10;
+	dwidth = 2;
+	height = 22;
+	name = "city arrivals metro dock";
+	roundstart_template = /datum/map_template/shuttle/arrival/cyberpunk;
+	shuttle_id = "arrival_stationary";
+	width = 5
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/metro)
 "Zn" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/textured,
@@ -3352,19 +3366,6 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
-"cpA" = (
-/obj/docking_port/stationary{
-	dir = 4;
-	dheight = 10;
-	dwidth = 2;
-	height = 11;
-	name = "city arrivals metro dock";
-	roundstart_template = /datum/map_template/shuttle/arrival/cyberpunk;
-	shuttle_id = "arrival_stationary";
-	width = 5
-	},
-/turf/open/floor/iron/dark/textured,
-/area/cyberpunk/city/metro)
 
 (1,1,1) = {"
 jF
@@ -5652,7 +5653,7 @@ ea
 ea
 ea
 ea
-ea
+Za
 ea
 ea
 ea
