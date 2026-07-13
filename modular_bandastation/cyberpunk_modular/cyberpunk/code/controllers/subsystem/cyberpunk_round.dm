@@ -415,7 +415,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	if(!isnull(config["escalation_chaos_threshold"]))
 		cyberpunk_round_escalation_chaos_threshold = clamp(round(config["escalation_chaos_threshold"]), 0, 100)
 	if(islist(config["disabled_packages"]))
-		cyberpunk_storyteller_disabled_package_ids = config["disabled_packages"].Copy()
+		var/list/disabled_packages = config["disabled_packages"]
+		cyberpunk_storyteller_disabled_package_ids = disabled_packages.Copy()
 	var/list/profile_overrides = config["profiles"]
 	if(!islist(profile_overrides))
 		return
@@ -618,7 +619,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_storyteller_package_category(list/tags, executor)
 	if("recovery" in tags)
 		return "restorative"
-	if("economy" in tags || "contracts" in tags)
+	if(("economy" in tags) || ("contracts" in tags))
 		return "economic"
 	if("network" in tags)
 		return "network"
@@ -630,7 +631,7 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		return "criminal"
 	if("social" in tags)
 		return "social"
-	if(executor == "dynamic_heavy" || executor == "dynamic_light" || "security" in tags || "escalation" in tags)
+	if(executor == "dynamic_heavy" || executor == "dynamic_light" || ("security" in tags) || ("escalation" in tags))
 		return "combat_pve"
 	return "city"
 
@@ -2820,6 +2821,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 		var/list/style = styles[style_id]
 		if(!islist(style))
 			continue
+		var/list/chunk_templates = islist(style["chunk_templates"]) ? style["chunk_templates"] : list()
+		var/list/room_templates = islist(style["room_templates"]) ? style["room_templates"] : list()
 		rows += list(list(
 			"id" = style["id"] || style_id,
 			"name" = style["name"] || style_id,
@@ -2827,8 +2830,8 @@ SUBSYSTEM_DEF(cyberpunk_round)
 			"theme" = style["theme"] || style_id,
 			"difficulty" = style["difficulty"] || 1,
 			"entrance_type" = "[style["entrance_type"]]",
-			"chunk_templates" = (style["chunk_templates"] || list()).Copy(),
-			"room_templates" = (style["room_templates"] || list()).Copy(),
+			"chunk_templates" = chunk_templates.Copy(),
+			"room_templates" = room_templates.Copy(),
 			"threat_types" = cyberpunk_dungeon_style_path_rows(style["threat_types"] || list()),
 			"loot_types" = cyberpunk_dungeon_style_path_rows(style["loot_types"] || list()),
 		))
