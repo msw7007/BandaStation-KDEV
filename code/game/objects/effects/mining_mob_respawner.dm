@@ -50,7 +50,7 @@
 	src.valid_mobs = valid_mobs
 
 	if (istype(initial_spawn, /obj/effect/spawner/random))
-		RegisterSignal(get_turf(src), COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON, PROC_REF(get_spawned_mob))
+		RegisterSignal(get_turf(src), COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON, PROC_REF(get_spawned_mob), override = TRUE)
 	else
 		register_spawn(src, initial_spawn)
 
@@ -84,7 +84,7 @@
 
 	var/turf/spawn_turf = pick(valid_locations)
 	// Bit roundabout but it's the only way of intercepting mob spawners
-	RegisterSignal(spawn_turf, COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON, PROC_REF(get_spawned_mob))
+	RegisterSignal(spawn_turf, COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON, PROC_REF(get_spawned_mob), override = TRUE)
 	new spawn_path(spawn_turf)
 
 /// Intercept the next mob spawned on the turf, because we might have spawned an object which spawns a mob instead

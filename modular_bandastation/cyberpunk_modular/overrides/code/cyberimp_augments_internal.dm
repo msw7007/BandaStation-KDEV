@@ -21,8 +21,8 @@
 		bodypart_aug = new(src)
 
 /obj/item/organ/cyberimp/Destroy()
+	. = ..()
 	QDEL_NULL(bodypart_aug)
-	return ..()
 
 /obj/item/organ/cyberimp/get_overlay_state()
 	return aug_overlay
@@ -57,9 +57,13 @@
 
 /datum/bodypart_overlay/augment/icon_render_key(obj/item/bodypart/limb)
 	. = ..()
+	if(!implant)
+		return
 	. += implant.get_overlay_state()
 
 /datum/bodypart_overlay/augment/get_overlay(layer, obj/item/bodypart/limb)
+	if(!implant)
+		return list()
 	var/list/imageset = implant.get_overlay(layer, limb)
 	if(blocks_emissive == EMISSIVE_BLOCK_NONE || !limb)
 		return imageset

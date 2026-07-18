@@ -133,6 +133,12 @@
 
 /obj/structure/stairs/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change) //Look this should never happen but...
 	. = ..()
+	if(!get_turf(src))
+		if(directly_above)
+			UnregisterSignal(directly_above, COMSIG_TURF_MULTIZ_NEW)
+			directly_above = null
+		clear_minimap_blips()
+		return
 	if(force_open_above)
 		build_signal_listener()
 	update_surrounding()
@@ -343,7 +349,12 @@
 /obj/structure/stairs/proc/build_signal_listener()
 	if(directly_above)
 		UnregisterSignal(directly_above, COMSIG_TURF_MULTIZ_NEW)
+		directly_above = null
+	if(!get_turf(src))
+		return
 	var/turf/open/openspace/T = get_step_multiz(src, UP)
+	if(!T)
+		return
 	RegisterSignal(T, COMSIG_TURF_MULTIZ_NEW, PROC_REF(on_multiz_new))
 	directly_above = T
 

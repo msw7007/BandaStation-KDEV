@@ -3,49 +3,49 @@
 /obj/structure/cable,
 /obj/machinery/power/apc/auto_name/directional/south,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "ae" = (
 /mob/living/basic/slime,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "ak" = (
 /obj/structure/table/greyscale,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "ar" = (
 /obj/structure/sign/warning/cold_temp,
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "au" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "ax" = (
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "ay" = (
 /obj/machinery/door/airlock/engineering,
 /turf/open/floor/iron,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "aO" = (
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "aQ" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_blade,
 /obj/item/cyberpunk_item_module/melee_blade/t2,
 /obj/item/cyberpunk_item_module/melee_blade/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "aS" = (
 /obj/structure/table/glass,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "aU" = (
 /turf/open/openspace,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "aZ" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
@@ -55,7 +55,7 @@
 /area/cyberpunk/city/metro)
 "bg" = (
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "bj" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
@@ -68,35 +68,35 @@
 	},
 /obj/machinery/light/cold/directional/east,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "br" = (
 /obj/machinery/door/airlock/engineering,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "bt" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "bE" = (
 /obj/machinery/light/directional/west,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "bL" = (
 /obj/structure/window/reinforced/spawner/directional/north,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "bN" = (
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "bR" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/textured,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "bT" = (
 /obj/structure/table/optable,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "bU" = (
 /obj/structure/table/reinforced,
 /obj/item/stack/sheet/iron/fifty,
@@ -106,19 +106,19 @@
 /obj/item/circuitboard/mecha/ripley/main,
 /obj/item/circuitboard/mecha/ripley/peripherals,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "bY" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "ca" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "cr" = (
 /obj/machinery/computer/dna_console,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "cv" = (
 /obj/structure/table,
 /obj/machinery/button/door{
@@ -131,7 +131,7 @@
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "cw" = (
 /obj/structure/table/glass,
 /obj/machinery/reagentgrinder{
@@ -140,7 +140,7 @@
 	},
 /obj/effect/turf_decal/tile/purple/fourcorners,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "cC" = (
 /obj/effect/turf_decal/delivery,
 /obj/machinery/door/poddoor/preopen{
@@ -152,18 +152,18 @@
 	req_access = list("xenobiology")
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "cH" = (
 /obj/machinery/light/directional/east,
 /obj/machinery/vending/medical/syndicate/cybersun,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "cK" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/public_service/general_store)
 "cM" = (
 /turf/closed/wall,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "cU" = (
 /obj/effect/landmark/cyberpunk_npc_trader/designer,
 /turf/open/floor/iron/dark/textured,
@@ -172,7 +172,7 @@
 /obj/structure/window/reinforced/spawner/directional/south,
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "cW" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
@@ -181,15 +181,15 @@
 "cX" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "cZ" = (
 /obj/structure/cable,
 /turf/closed/wall,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "de" = (
 /obj/machinery/vending/wardrobe/medi_wardrobe,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "df" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/door/airlock/maintenance{
@@ -210,14 +210,14 @@
 	all_products_free = 1
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "dx" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/pistol_barrel,
 /obj/item/cyberpunk_item_module/pistol_barrel/t2,
 /obj/item/cyberpunk_item_module/pistol_barrel/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "dJ" = (
 /obj/structure/closet/crate,
 /obj/item/gun/ballistic/automatic/proto/cyberpunk,
@@ -230,11 +230,11 @@
 /obj/item/gun/ballistic/shotgun/cyberpunk,
 /obj/item/gun/ballistic/shotgun/cyberpunk/room_clearer,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "dK" = (
 /obj/machinery/door/airlock/engineering,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "dO" = (
 /turf/closed/wall,
 /area/cyberpunk/city/civic/city_hall)
@@ -242,7 +242,7 @@
 /obj/structure/cable,
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "ea" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/iron/dark/textured,
@@ -250,15 +250,15 @@
 "et" = (
 /obj/machinery/dna_scannernew,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "ev" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "ew" = (
 /turf/open/openspace,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "eB" = (
 /obj/structure/stairs/cyberpunk_auto/west,
 /turf/open/floor/iron/dark/textured,
@@ -266,7 +266,7 @@
 "eD" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "eF" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/textured,
@@ -274,21 +274,21 @@
 "eM" = (
 /obj/machinery/suit_storage_unit/captain,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "fa" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "fd" = (
 /obj/machinery/door/airlock/glass{
 	name = "Arrival Lounge"
 	},
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "fg" = (
 /obj/machinery/jukebox/disco/indestructible,
 /turf/open/floor/mineral/abductor,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "fi" = (
 /obj/machinery/door/airlock/maintenance{
 	name = "Warehouse Maintenance"
@@ -322,13 +322,13 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "fu" = (
 /obj/machinery/modular_computer/preset/cargochat/cargo{
 	dir = 8
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "fz" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
@@ -336,32 +336,97 @@
 "fF" = (
 /obj/machinery/door/airlock/mining,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "fT" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/public_service/general_store)
 "fW" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
-/obj/effect/landmark/start,
+/obj/effect/landmark/start{
+	name = "City Worker"
+	},
+/obj/effect/landmark/start{
+	name = "Council Member"
+	},
+/obj/effect/landmark/start{
+	name = "Government Officer"
+	},
+/obj/effect/landmark/start{
+	name = "Police Officer"
+	},
+/obj/effect/landmark/start{
+	name = "Corporate Intern"
+	},
+/obj/effect/landmark/start{
+	name = "Benn Intern"
+	},
+/obj/effect/landmark/start{
+	name = "Ryaznov Intern"
+	},
+/obj/effect/landmark/start{
+	name = "Starlight Intern"
+	},
+/obj/effect/landmark/start{
+	name = "Corporate Agent"
+	},
+/obj/effect/landmark/start{
+	name = "Benn Agent"
+	},
+/obj/effect/landmark/start{
+	name = "Ryaznov Agent"
+	},
+/obj/effect/landmark/start{
+	name = "Starlight Agent"
+	},
+/obj/effect/landmark/start{
+	name = "Benn Ripper Specialist"
+	},
+/obj/effect/landmark/start{
+	name = "Ryaznov Engineering Specialist"
+	},
+/obj/effect/landmark/start{
+	name = "Starlight Logistics Specialist"
+	},
+/obj/effect/landmark/start{
+	name = "Corporate Representative"
+	},
+/obj/effect/landmark/start{
+	name = "Benn Representative"
+	},
+/obj/effect/landmark/start{
+	name = "Ryaznov Representative"
+	},
+/obj/effect/landmark/start{
+	name = "Starlight Representative"
+	},
+/obj/effect/landmark/start{
+	name = "Mercenary"
+	},
+/obj/effect/landmark/start{
+	name = "Netrunner"
+	},
+/obj/effect/landmark/start{
+	name = "Criminal Contractor"
+	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/metro)
 "fZ" = (
 /obj/machinery/light/directional/west,
 /mob/living/carbon/human,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "gk" = (
 /obj/structure/cable,
 /obj/machinery/power/apc/auto_name/directional/north,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "gl" = (
 /obj/effect/turf_decal/siding/dark_blue{
 	dir = 4
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "gp" = (
 /obj/structure/table,
 /obj/item/gun/magic/wand/resurrection/debug,
@@ -373,15 +438,15 @@
 	pixel_y = -4
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "gr" = (
 /turf/open/openspace,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "gx" = (
 /obj/structure/table/bronze,
 /obj/machinery/microwave,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "gy" = (
 /obj/machinery/door/airlock/research{
 	glass = 1;
@@ -390,37 +455,37 @@
 	},
 /obj/structure/plasticflaps/kitchen,
 /turf/open/floor/iron,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "gF" = (
 /obj/machinery/rnd/production/techfab/department/cargo,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "gM" = (
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "gO" = (
 /obj/structure/cable,
 /obj/structure/stairs/cyberpunk_auto/north,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "gT" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/speed_trigger,
 /obj/item/cyberpunk_item_module/speed_trigger/t2,
 /obj/item/cyberpunk_item_module/speed_trigger/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "hf" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "hh" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "hm" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
@@ -435,17 +500,17 @@
 "hF" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "hK" = (
 /obj/effect/turf_decal/siding/dark_blue{
 	dir = 6
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "hM" = (
 /obj/structure/table/reinforced/plastitaniumglass,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "hN" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
@@ -453,23 +518,23 @@
 "hT" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "ii" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_head,
 /obj/item/cyberpunk_item_module/melee_head/t2,
 /obj/item/cyberpunk_item_module/melee_head/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "iq" = (
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "ir" = (
 /obj/machinery/light/directional/west,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "is" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/security)
@@ -477,7 +542,7 @@
 /obj/machinery/light/directional/north,
 /obj/machinery/vending/medical/syndicate/cybersun,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "ix" = (
 /obj/structure/table,
 /obj/item/circular_saw,
@@ -486,15 +551,15 @@
 	},
 /obj/effect/turf_decal/tile/purple/half/contrasted,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "iB" = (
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "iD" = (
 /obj/structure/closet/secure_closet/chemical,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "iK" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/landmark/cyberpunk_metro_stop{
@@ -506,7 +571,7 @@
 "iR" = (
 /obj/effect/turf_decal/tile/brown/fourcorners,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "iV" = (
 /obj/machinery/vending/cyberpunk_corporate/starlight,
 /turf/open/floor/iron/dark/textured,
@@ -522,7 +587,7 @@
 	pixel_y = -6
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "jh" = (
 /obj/structure/stairs/cyberpunk_auto/south,
 /turf/open/floor/iron/stairs{
@@ -535,7 +600,7 @@
 	dir = 10
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "jx" = (
 /obj/effect/landmark/cyberpunk_npc_trader/stylist,
 /turf/open/floor/iron/dark/textured,
@@ -546,18 +611,18 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "jz" = (
 /obj/structure/cable,
 /turf/closed/wall,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "jA" = (
 /obj/machinery/camera/directional/east{
 	c_tag = "Xenobiology Lab - Euthanasia Chamber";
 	network = list("ss13","rd","xeno")
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "jF" = (
 /turf/closed/wall,
 /area/cyberpunk/city/metro)
@@ -574,13 +639,13 @@
 /obj/item/cyberpunk_item_module/armor_plate/t2,
 /obj/item/cyberpunk_item_module/armor_plate/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "jL" = (
 /obj/machinery/door/airlock/research{
 	name = "Genetics Lab"
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "jN" = (
 /obj/structure/fluff/beach_umbrella,
 /turf/open/floor/iron/dark/textured,
@@ -601,7 +666,7 @@
 "kb" = (
 /obj/machinery/door/airlock/wood/glass,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "kc" = (
 /obj/machinery/vending/cyberpunk_corporate,
 /turf/open/floor/iron/dark/textured,
@@ -609,17 +674,17 @@
 "kf" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "kg" = (
 /obj/effect/turf_decal/siding/dark_blue{
 	dir = 1
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "kl" = (
 /obj/machinery/door/airlock/mining,
 /turf/open/floor/iron,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "kn" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/blast_padding,
@@ -635,7 +700,7 @@
 /obj/item/cyberpunk_item_module/reactive_hardener/t2,
 /obj/item/cyberpunk_item_module/reactive_hardener/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "kr" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/ballistic_weave,
@@ -651,7 +716,7 @@
 /obj/item/cyberpunk_item_module/precision_receiver/t2,
 /obj/item/cyberpunk_item_module/precision_receiver/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "kw" = (
 /obj/structure/closet/crate,
 /obj/item/clothing/shoes/cyberpunk,
@@ -663,11 +728,11 @@
 /obj/item/clothing/shoes/cyberpunk/sealed,
 /obj/item/clothing/shoes/cyberpunk/wood,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "kA" = (
 /mob/living/carbon/human,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "kB" = (
 /obj/structure/table/reinforced,
 /obj/machinery/door/firedoor,
@@ -677,7 +742,7 @@
 	},
 /obj/effect/turf_decal/tile/yellow/fourcorners,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "kG" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -686,7 +751,7 @@
 /obj/structure/cable,
 /obj/machinery/power/apc/auto_name/directional/south,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "kR" = (
 /obj/structure/table,
 /obj/item/weldingtool/experimental,
@@ -694,7 +759,7 @@
 /obj/item/storage/belt/utility/full/powertools,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "kS" = (
 /obj/structure/table/reinforced,
 /obj/item/bodypart/arm/right/robot{
@@ -729,7 +794,7 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "kW" = (
 /turf/open/openspace,
 /area/cyberpunk/city/civic/city_hall)
@@ -737,18 +802,18 @@
 /obj/machinery/light/directional/south,
 /obj/structure/cable,
 /turf/closed/wall,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "lc" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "li" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "lk" = (
 /obj/effect/turf_decal/delivery,
 /obj/machinery/door/poddoor/preopen{
@@ -760,7 +825,7 @@
 	req_access = list("xenobiology")
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "ll" = (
 /turf/closed/wall,
 /area/cyberpunk/city/business/lot_01)
@@ -770,7 +835,7 @@
 /obj/item/cyberpunk_item_module/melee_knife_element/t2,
 /obj/item/cyberpunk_item_module/melee_knife_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "lq" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
@@ -779,38 +844,37 @@
 "lr" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "ls" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "ly" = (
 /obj/effect/turf_decal/siding/dark_blue{
 	dir = 8
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "lB" = (
 /obj/structure/cable,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "lL" = (
 /obj/machinery/reagentgrinder,
 /obj/machinery/light/directional/west,
 /obj/structure/table/glass,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "lT" = (
 /obj/item/pillow/random,
 /obj/structure/bed/double,
 /obj/effect/spawner/random/bedsheet/double,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "lW" = (
-/obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "lZ" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/east,
@@ -821,18 +885,18 @@
 /obj/item/gun/ballistic/rocketlauncher/cyberpunk,
 /obj/item/gun/ballistic/rocketlauncher/cyberpunk/punchline,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "mb" = (
 /turf/open/floor/iron/white,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "mf" = (
 /obj/machinery/deepfryer,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "mj" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "mk" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/east,
@@ -849,7 +913,7 @@
 /obj/machinery/light/directional/south,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "mR" = (
 /obj/structure/closet/crate,
 /obj/item/clothing/gloves/cyberpunk,
@@ -862,31 +926,31 @@
 /obj/item/clothing/gloves/cyberpunk/tech,
 /obj/item/clothing/gloves/cyberpunk/wood,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "mX" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/medfoam_injector,
 /obj/item/cyberpunk_item_module/medfoam_injector/t2,
 /obj/item/cyberpunk_item_module/medfoam_injector/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "na" = (
 /turf/closed/wall,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "nj" = (
 /obj/item/wrench,
 /obj/item/plant_analyzer,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "nk" = (
 /obj/machinery/light/directional/south,
 /obj/machinery/vending/wardrobe/robo_wardrobe,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "nm" = (
 /obj/structure/dresser,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "nr" = (
 /turf/open/indestructible/white,
 /area/cyberpunk/city/metro)
@@ -897,11 +961,11 @@
 /obj/item/mmi,
 /obj/structure/table,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "nF" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "nG" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/laser_emitter,
@@ -911,7 +975,7 @@
 /obj/item/cyberpunk_item_module/lmg_barrel/t2,
 /obj/item/cyberpunk_item_module/lmg_barrel/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "nO" = (
 /obj/item/shovel/spade{
 	pixel_y = 4;
@@ -922,7 +986,7 @@
 	pixel_x = -6
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "nX" = (
 /obj/item/assembly/timer{
 	pixel_x = -3;
@@ -962,13 +1026,13 @@
 	pixel_y = 5
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "oe" = (
 /obj/machinery/light/directional/north,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "oi" = (
 /obj/structure/table/reinforced,
 /obj/item/bodypart/arm/right/robot{
@@ -1004,7 +1068,7 @@
 /obj/machinery/light/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "ok" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/corporate)
@@ -1018,7 +1082,7 @@
 "ov" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "oL" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -1032,16 +1096,16 @@
 	color = "#3d3e42";
 	dir = 4
 	},
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "pd" = (
 /obj/effect/spawner/structure/window,
 /turf/open/floor/plating,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "ph" = (
 /obj/item/reagent_containers/cup/watering_can/advanced,
 /obj/item/storage/bag/plants,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "pi" = (
 /obj/structure/table/reinforced,
 /obj/item/stack/sheet/plasteel{
@@ -1053,7 +1117,7 @@
 	},
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "pk" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
@@ -1074,7 +1138,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "pC" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/smg_barrel,
@@ -1087,11 +1151,11 @@
 /obj/item/cyberpunk_item_module/sniper_chamber/t2,
 /obj/item/cyberpunk_item_module/sniper_chamber/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "pD" = (
 /obj/machinery/atmospherics/pipe/smart/manifold4w/cyan/visible,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "pE" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -1099,7 +1163,7 @@
 "pF" = (
 /obj/machinery/vending/wardrobe/cargo_wardrobe,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "pN" = (
 /obj/structure/table,
 /obj/item/storage/box/monkeycubes{
@@ -1115,7 +1179,7 @@
 	},
 /obj/effect/turf_decal/tile/neutral/fourcorners,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "pS" = (
 /obj/machinery/light/directional/west{
 	dir = 1
@@ -1126,7 +1190,7 @@
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/window/reinforced/spawner/directional/north,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "pZ" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
@@ -1149,23 +1213,23 @@
 /obj/structure/cable,
 /obj/machinery/light/directional/west,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "qj" = (
 /turf/closed/wall,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "qk" = (
 /obj/structure/table,
 /obj/item/storage/belt/utility/full,
 /obj/item/borg/upgrade/rename,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "qm" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_staff_element,
 /obj/item/cyberpunk_item_module/melee_staff_element/t2,
 /obj/item/cyberpunk_item_module/melee_staff_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "qr" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/west,
@@ -1177,7 +1241,7 @@
 	},
 /obj/effect/landmark/start/chemist,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "qB" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
@@ -1204,14 +1268,14 @@
 	pixel_y = 12
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "qI" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_spear_element,
 /obj/item/cyberpunk_item_module/melee_spear_element/t2,
 /obj/item/cyberpunk_item_module/melee_spear_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "qQ" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
@@ -1223,15 +1287,15 @@
 "rk" = (
 /obj/machinery/vending/syndichem,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "rl" = (
 /obj/machinery/monkey_recycler,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "ro" = (
 /obj/structure/cable,
 /turf/closed/wall,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "ry" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/structure/fence{
@@ -1241,11 +1305,11 @@
 /area/cyberpunk/city/infrastructure/parking)
 "rK" = (
 /turf/closed/wall,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "rR" = (
 /obj/machinery/shower/directional/east,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "rZ" = (
 /obj/machinery/vending/cyberpunk_corporate/benn,
 /turf/open/floor/iron/dark/textured,
@@ -1258,17 +1322,17 @@
 "sh" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "so" = (
 /obj/structure/table/reinforced/plastitaniumglass,
 /obj/effect/spawner/random/food_or_drink/dinner,
 /obj/effect/spawner/random/food_or_drink/dinner,
 /turf/open/floor/light/colour_cycle/dancefloor_b,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "ss" = (
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "su" = (
 /obj/structure/fluff/beach_towel,
 /turf/open/indestructible/white,
@@ -1276,7 +1340,7 @@
 "sx" = (
 /obj/machinery/door/airlock/service,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "sz" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
@@ -1288,25 +1352,25 @@
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "sX" = (
 /turf/open/floor/iron/dark/textured,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "tg" = (
 /obj/machinery/door/airlock/service,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "tj" = (
 /mob/living/carbon/human,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "tn" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_rapier_element,
 /obj/item/cyberpunk_item_module/melee_rapier_element/t2,
 /obj/item/cyberpunk_item_module/melee_rapier_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "tp" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/east,
@@ -1320,7 +1384,7 @@
 "tw" = (
 /obj/effect/spawner/structure/window/reinforced,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "tF" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/west,
@@ -1353,12 +1417,11 @@
 /obj/item/clothing/glasses/cyberpunk/plasteel,
 /obj/item/clothing/glasses/cyberpunk/threat,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "us" = (
-/obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "uw" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/south,
@@ -1372,7 +1435,7 @@
 /obj/item/knife/cyberpunk/rapier,
 /obj/item/knife/cyberpunk/razor,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "uP" = (
 /obj/structure/closet/crate,
 /obj/item/clothing/mask/cyberpunk,
@@ -1384,7 +1447,7 @@
 /obj/item/clothing/mask/cyberpunk/street,
 /obj/item/clothing/mask/cyberpunk/wood,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "uR" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
@@ -1405,7 +1468,7 @@
 /obj/item/cyberpunk_item_module/sensor_bus/t2,
 /obj/item/cyberpunk_item_module/sensor_bus/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "vd" = (
 /obj/machinery/vending/cigarette/beach,
 /turf/open/floor/iron/dark/textured,
@@ -1425,7 +1488,7 @@
 	pixel_y = 10
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "vz" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
@@ -1433,11 +1496,11 @@
 "vB" = (
 /obj/machinery/rnd/production/circuit_imprinter/department/science,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "vC" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "vE" = (
 /obj/machinery/door/airlock/maintenance{
 	name = "Warehouse Maintenance"
@@ -1450,11 +1513,11 @@
 "vL" = (
 /obj/structure/cable,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "vS" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "vU" = (
 /obj/structure/table/bronze,
 /obj/machinery/chem_dispenser/drinks/fullupgrade{
@@ -1462,22 +1525,22 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "vV" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "vW" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "wd" = (
 /obj/machinery/chem_master,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "wj" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/north,
@@ -1488,13 +1551,13 @@
 	dir = 9
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "ww" = (
 /obj/machinery/computer/operating{
 	dir = 1
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "wB" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/textured,
@@ -1512,7 +1575,7 @@
 /obj/item/stock_parts/power_store/cell/high,
 /obj/machinery/cell_charger,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "xb" = (
 /obj/effect/landmark/cyberpunk_npc_trader/toys,
 /turf/open/floor/iron/dark/textured,
@@ -1533,18 +1596,18 @@
 	},
 /obj/structure/table/reinforced,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "xp" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_twohand_sword_element,
 /obj/item/cyberpunk_item_module/melee_twohand_sword_element/t2,
 /obj/item/cyberpunk_item_module/melee_twohand_sword_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "xq" = (
 /obj/structure/sink/directional/south,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "xv" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/south,
@@ -1561,7 +1624,7 @@
 /obj/item/gun/energy/laser/cyberpunk/plasma,
 /obj/item/gun/energy/laser/cyberpunk/radiant,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "xG" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -1577,7 +1640,7 @@
 	locked = 0
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "xX" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -1586,11 +1649,11 @@
 /obj/machinery/griddle,
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "yt" = (
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "yz" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/reflex_sight,
@@ -1603,14 +1666,14 @@
 /obj/item/cyberpunk_item_module/tactical_light/t2,
 /obj/item/cyberpunk_item_module/tactical_light/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "yF" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "yL" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/textured,
@@ -1623,21 +1686,21 @@
 "yV" = (
 /obj/effect/spawner/structure/window,
 /turf/open/floor/plating,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "yZ" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "zb" = (
 /turf/closed/wall,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "zg" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "zn" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
@@ -1650,11 +1713,11 @@
 	color = "#3d3e42";
 	dir = 4
 	},
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "zw" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "zA" = (
 /obj/machinery/door/airlock/glass{
 	name = "Benn basic access";
@@ -1680,7 +1743,7 @@
 /obj/machinery/light/directional/south,
 /obj/machinery/dna_scannernew,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "zE" = (
 /obj/machinery/modular_computer/preset/corporate_terminal/benn,
 /turf/open/floor/iron/dark/textured,
@@ -1699,10 +1762,10 @@
 /obj/item/cyberpunk_item_module/melee_core/t2,
 /obj/item/cyberpunk_item_module/melee_core/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "zV" = (
 /turf/closed/indestructible/wood,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Aa" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/iron/dark/textured,
@@ -1718,7 +1781,7 @@
 	pixel_y = -4
 	},
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Ac" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
@@ -1745,7 +1808,7 @@
 /obj/item/clothing/neck/cyberpunk/ryaznov_guard,
 /obj/item/clothing/neck/cyberpunk/sealed,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Az" = (
 /obj/structure/table/bronze,
 /obj/machinery/chem_dispenser/drinks/beer/fullupgrade{
@@ -1754,7 +1817,7 @@
 /obj/structure/cable,
 /obj/machinery/light/directional/west,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "AA" = (
 /obj/machinery/cyberpunk_traffic_light,
 /obj/effect/cyberpunk_traffic_node,
@@ -1779,7 +1842,7 @@
 /obj/effect/spawner/random/food_or_drink/booze,
 /obj/effect/spawner/random/food_or_drink/booze,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "AF" = (
 /mob/living/carbon/human/cyberpunk_npc/runner,
 /turf/open/floor/asphalt/lavaland,
@@ -1818,7 +1881,7 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "AX" = (
 /turf/closed/wall,
 /area/cyberpunk/city/public_service/general_store)
@@ -1844,7 +1907,7 @@
 	pixel_y = -4
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Bg" = (
 /obj/structure/closet/crate,
 /obj/item/clothing/suit/armor/cyberpunk,
@@ -1871,13 +1934,13 @@
 /obj/item/clothing/suit/armor/vest/cyberpunk/street_guard,
 /obj/item/clothing/suit/armor/vest/cyberpunk/wood,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Bl" = (
 /obj/machinery/computer/dna_console{
 	dir = 1
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Bo" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/west,
@@ -1892,11 +1955,11 @@
 /obj/item/knife/cyberpunk/spear,
 /obj/item/knife/cyberpunk/staff,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Br" = (
 /obj/machinery/chem_heater/withbuffer,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Bs" = (
 /obj/structure/closet/crate,
 /obj/item/clothing/gloves/bracer/cyberpunk,
@@ -1907,11 +1970,11 @@
 /obj/item/clothing/gloves/bracer/cyberpunk/plasteel,
 /obj/item/clothing/gloves/bracer/cyberpunk/wood,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Bx" = (
 /obj/machinery/door/airlock/service,
 /turf/open/floor/iron,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "BB" = (
 /obj/structure/closet/crate,
 /obj/item/gun/ballistic/automatic/ar/cyberpunk,
@@ -1919,7 +1982,7 @@
 /obj/item/gun/ballistic/automatic/l6_saw/cyberpunk,
 /obj/item/gun/ballistic/automatic/l6_saw/cyberpunk/suppressor,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "BC" = (
 /obj/machinery/door/airlock/research{
 	autoclose = 0;
@@ -1928,11 +1991,11 @@
 	name = "Xenobiology Lab Internal Airlock"
 	},
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "BD" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "BE" = (
 /obj/machinery/power/smes/magical,
 /turf/open/floor/iron/dark/textured,
@@ -1942,13 +2005,13 @@
 	locked = 0
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "BP" = (
 /obj/machinery/modular_computer/preset/civilian{
 	dir = 1
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "BY" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/contract_office)
@@ -1962,7 +2025,7 @@
 /obj/item/knife/cyberpunk/energy,
 /obj/item/knife/cyberpunk/energy_blade,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Cq" = (
 /obj/item/storage/medkit/regular{
 	pixel_x = 3;
@@ -1979,7 +2042,7 @@
 	},
 /obj/structure/table/reinforced,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Cr" = (
 /obj/machinery/computer/operating{
 	dir = 8
@@ -1988,7 +2051,7 @@
 	dir = 4
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Cu" = (
 /obj/machinery/camera/directional/east{
 	c_tag = "Xenobiology Lab - Pen #5";
@@ -1996,11 +2059,11 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "CN" = (
 /obj/effect/turf_decal/siding/dark_blue,
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "CX" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -2013,7 +2076,7 @@
 /area/cyberpunk/city/infrastructure/parking)
 "Df" = (
 /turf/open/floor/light/colour_cycle/dancefloor_b,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Dp" = (
 /obj/machinery/light/directional/south,
 /turf/open/openspace,
@@ -2026,7 +2089,7 @@
 /obj/machinery/door/airlock/service,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "DD" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
@@ -2039,21 +2102,21 @@
 	name = "Xenobiology Lab Internal Airlock"
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "DN" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_club_element,
 /obj/item/cyberpunk_item_module/melee_club_element/t2,
 /obj/item/cyberpunk_item_module/melee_club_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "DU" = (
 /obj/item/robot_suit,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "DV" = (
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "DW" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
@@ -2077,20 +2140,20 @@
 /obj/item/cyberpunk_item_module/weight_reducer/t2,
 /obj/item/cyberpunk_item_module/weight_reducer/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Eb" = (
 /obj/structure/table/reinforced/plastitaniumglass,
 /obj/effect/spawner/random/food_or_drink/dinner,
 /obj/effect/spawner/random/food_or_drink/dinner,
 /turf/open/floor/light/colour_cycle/dancefloor_a,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Ej" = (
 /obj/machinery/door/window/left/directional/west{
 	name = "Maximum Security Test Chamber";
 	req_access = list("xenobiology")
 	},
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Ey" = (
 /obj/effect/landmark/cyberpunk_npc_trader,
 /turf/open/floor/iron/dark/textured,
@@ -2102,30 +2165,30 @@
 /obj/structure/cable,
 /obj/machinery/light/directional/west,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "EC" = (
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "EJ" = (
 /turf/closed/wall,
 /area/cyberpunk/city/government)
 "ES" = (
 /turf/open/openspace,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "EZ" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "Fb" = (
 /obj/structure/cable,
 /obj/machinery/door/airlock/service,
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "Fd" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
@@ -2138,7 +2201,7 @@
 /obj/item/gun/ballistic/automatic/pistol/cyberpunk,
 /obj/item/gun/ballistic/automatic/ar/cyberpunk,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Fm" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/iron/white,
@@ -2148,11 +2211,11 @@
 /obj/effect/spawner/random/food_or_drink/dinner,
 /obj/effect/spawner/random/food_or_drink/dinner,
 /turf/open/floor/mineral/abductor,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Fw" = (
 /obj/machinery/processor/slime,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Fy" = (
 /obj/structure/table/glass,
 /obj/item/grenade/chem_grenade,
@@ -2169,25 +2232,25 @@
 /obj/effect/mapping_helpers/requests_console/supplies,
 /obj/effect/mapping_helpers/requests_console/ore_update,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "FF" = (
 /obj/machinery/vending/dinnerware,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "FH" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "FK" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "FL" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/window/reinforced/spawner/directional/north,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "FO" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
@@ -2213,7 +2276,7 @@
 /obj/machinery/light/cold/directional/south,
 /obj/structure/bed/medical,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Go" = (
 /obj/machinery/chem_dispenser,
 /obj/machinery/button/door/directional/north{
@@ -2223,14 +2286,14 @@
 	req_access = list("medical")
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Gz" = (
 /obj/structure/chair/office/light{
 	dir = 1
 	},
 /obj/effect/landmark/start/chemist,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "GQ" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -2244,7 +2307,7 @@
 /obj/item/gun/energy/laser/cyberpunk/plasma,
 /obj/item/gun/energy/laser/cyberpunk/radiant,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Hf" = (
 /obj/item/retractor,
 /obj/item/hemostat{
@@ -2253,21 +2316,21 @@
 /obj/structure/table,
 /obj/effect/turf_decal/tile/purple/anticorner/contrasted,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Hm" = (
 /obj/structure/chair/comfy/black{
 	dir = 4
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Hn" = (
 /obj/structure/sign/departments/chemistry/pharmacy,
 /turf/closed/wall,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Hp" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "Hw" = (
 /obj/structure/table,
 /obj/item/debug/omnitool{
@@ -2279,7 +2342,7 @@
 	pixel_y = -6
 	},
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "HB" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/dark/textured,
@@ -2307,7 +2370,7 @@
 /area/cyberpunk/city/metro)
 "Ic" = (
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Ih" = (
 /obj/item/storage/medkit/regular{
 	pixel_x = 3;
@@ -2324,7 +2387,7 @@
 	},
 /obj/structure/table/reinforced,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "In" = (
 /obj/machinery/atmospherics/components/unary/thermomachine/freezer/on{
 	dir = 8;
@@ -2334,27 +2397,27 @@
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/window/reinforced/spawner/directional/south,
 /turf/open/floor/iron,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "IB" = (
 /obj/structure/tank_dispenser,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "IC" = (
 /turf/closed/wall,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "ID" = (
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "IK" = (
 /obj/machinery/vending/hydroseeds{
 	all_products_free = 1
 	},
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "IP" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron/dark/textured,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "IS" = (
 /turf/open/floor/iron/dark/small,
 /area/space)
@@ -2367,7 +2430,7 @@
 	drop_direction = 4
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Ji" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron/dark/textured,
@@ -2377,7 +2440,7 @@
 /obj/effect/turf_decal/tile/yellow/fourcorners,
 /obj/machinery/door/firedoor,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Jn" = (
 /obj/effect/landmark/cyberpunk_npc_trader/clothing,
 /turf/open/floor/iron/dark/textured,
@@ -2385,15 +2448,15 @@
 "Jv" = (
 /obj/machinery/light/directional/west,
 /turf/open/openspace,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Jw" = (
 /obj/machinery/rnd/production/techfab/department/medical,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Jx" = (
 /obj/structure/closet/crate,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "JC" = (
 /obj/structure/table/reinforced,
 /obj/item/defibrillator/loaded{
@@ -2407,18 +2470,18 @@
 	pixel_y = -4
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "JO" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/closed/wall,
 /area/cyberpunk/city/metro)
 "JP" = (
 /turf/open/floor/light/colour_cycle/dancefloor_a,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "JQ" = (
 /obj/machinery/chem_dispenser,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "JY" = (
 /obj/structure/closet/crate,
 /obj/item/clothing/head/helmet/cyberpunk,
@@ -2430,11 +2493,11 @@
 /obj/item/clothing/head/helmet/cyberpunk/plasteel,
 /obj/item/clothing/head/helmet/cyberpunk/wood,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Kd" = (
 /obj/machinery/light/small/directional/north,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Kf" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
@@ -2442,7 +2505,7 @@
 "Kg" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Ki" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/textured,
@@ -2462,12 +2525,12 @@
 /obj/structure/cable,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "KF" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "KG" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/effect/turf_decal/sand/plating/volcanic,
@@ -2479,24 +2542,24 @@
 /obj/item/cyberpunk_item_module/melee_twohand_hammer_element/t2,
 /obj/item/cyberpunk_item_module/melee_twohand_hammer_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "KN" = (
 /obj/machinery/light/directional/north,
 /obj/structure/cable,
 /turf/closed/wall,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "KY" = (
 /obj/effect/spawner/random/structure/closet_private,
 /obj/item/clothing/under/suit/tan,
 /obj/item/clothing/under/misc/assistantformal,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "Lk" = (
 /obj/machinery/chem_master,
 /obj/effect/turf_decal/tile/purple/fourcorners,
 /obj/machinery/light/small/directional/north,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Lp" = (
 /obj/structure/table,
 /obj/machinery/button/door{
@@ -2508,32 +2571,32 @@
 /obj/structure/window/reinforced/spawner/directional/north,
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "LF" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "LJ" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/police)
 "LP" = (
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "LV" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "LX" = (
 /obj/machinery/atmospherics/components/unary/passive_vent{
 	dir = 4;
 	name = "killroom vent"
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "LZ" = (
 /obj/effect/turf_decal/tile/yellow/fourcorners,
 /turf/closed/wall,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Ma" = (
 /obj/item/storage/medkit/regular{
 	pixel_x = 3;
@@ -2550,11 +2613,11 @@
 	},
 /obj/structure/table/reinforced,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Md" = (
 /obj/structure/window/spawner/directional/south,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Mf" = (
 /turf/closed/wall,
 /area/cyberpunk/city/civic/police)
@@ -2589,15 +2652,15 @@
 /obj/item/reagent_containers/syringe/epinephrine,
 /obj/effect/turf_decal/tile/yellow/fourcorners,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Mr" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "MB" = (
 /obj/structure/window/spawner/directional/west,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "MI" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /turf/open/floor/asphalt/lavaland,
@@ -2605,14 +2668,14 @@
 "MP" = (
 /obj/effect/spawner/random/structure/crate,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "MS" = (
 /obj/machinery/mecha_part_fabricator{
 	drop_direction = 4
 	},
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "MX" = (
 /obj/structure/table,
 /obj/item/clothing/gloves/latex,
@@ -2624,11 +2687,11 @@
 	pixel_y = -1
 	},
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Nd" = (
 /obj/machinery/seed_extractor,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Ng" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/civic/city_hall)
@@ -2640,19 +2703,19 @@
 /obj/structure/window/reinforced/spawner/directional/south,
 /obj/structure/window/reinforced/spawner/directional/east,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Nu" = (
 /obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "NF" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_spike,
 /obj/item/cyberpunk_item_module/melee_spike/t2,
 /obj/item/cyberpunk_item_module/melee_spike/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "NG" = (
 /obj/machinery/light/directional/west,
 /obj/structure/closet/crate,
@@ -2663,11 +2726,11 @@
 /obj/item/knife/cyberpunk/twohand_hammer,
 /obj/item/knife/cyberpunk/twohand_sword,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "NI" = (
 /obj/structure/fireaxecabinet/mechremoval/directional/east,
 /turf/closed/wall,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "NK" = (
 /turf/closed/wall,
 /area/cyberpunk/city/security)
@@ -2703,7 +2766,7 @@
 /obj/item/gun/ballistic/revolver/cyberpunk/polymer,
 /obj/item/gun/ballistic/revolver/cyberpunk/sentinel,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Oh" = (
 /obj/structure/table,
 /turf/open/floor/iron/dark/textured,
@@ -2713,22 +2776,22 @@
 	dir = 5
 	},
 /turf/open/floor/bluespace,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Om" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "On" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "Or" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/melee_axe_element,
 /obj/item/cyberpunk_item_module/melee_axe_element/t2,
 /obj/item/cyberpunk_item_module/melee_axe_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Ov" = (
 /obj/structure/rack,
 /obj/machinery/light/directional/west,
@@ -2744,12 +2807,12 @@
 /obj/item/toy/crayon/spraycan/roboticist,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Ox" = (
 /obj/effect/turf_decal/tile/brown/fourcorners,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Oz" = (
 /obj/machinery/door/airlock/maintenance{
 	name = "Warehouse Maintenance"
@@ -2759,28 +2822,28 @@
 "OB" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "OH" = (
 /obj/structure/stairs/cyberpunk_auto/north,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "OV" = (
 /obj/machinery/vending/subtype_vendor,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "OW" = (
 /obj/structure/chair/office/light{
 	dir = 8
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Pa" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Pb" = (
 /turf/closed/wall,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Pk" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/balancer,
@@ -2790,16 +2853,16 @@
 /obj/item/cyberpunk_item_module/chemseal_lining/t2,
 /obj/item/cyberpunk_item_module/chemseal_lining/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Pl" = (
 /obj/structure/cable,
 /turf/closed/wall,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Pp" = (
 /obj/machinery/light/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Pw" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/shock_coating,
@@ -2809,42 +2872,42 @@
 /obj/item/cyberpunk_item_module/thermal_coating/t2,
 /obj/item/cyberpunk_item_module/thermal_coating/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Pz" = (
 /obj/machinery/light/directional/west,
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/corporate)
 "PB" = (
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "PE" = (
 /obj/machinery/door/airlock/command,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "PR" = (
 /obj/effect/landmark/start/medical_doctor,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "PU" = (
 /obj/machinery/chem_heater/withbuffer,
 /obj/effect/turf_decal/tile/purple/fourcorners,
 /obj/machinery/light/small/directional/south,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Qf" = (
 /obj/structure/sink/directional/west,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Qn" = (
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Qr" = (
 /obj/structure/table,
 /obj/item/screwdriver/power,
 /obj/item/crowbar/power,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Qu" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/textured,
@@ -2864,7 +2927,7 @@
 /area/cyberpunk/city/metro)
 "QZ" = (
 /turf/open/floor/carpet/lone,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Re" = (
 /obj/structure/table/bronze,
 /obj/item/reagent_containers/cup/glass/shaker{
@@ -2881,7 +2944,7 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Rh" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -2892,22 +2955,21 @@
 "Ro" = (
 /obj/machinery/light/directional/south,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Rs" = (
 /obj/structure/cable,
-/obj/machinery/power/apc/auto_name/directional/south,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "RA" = (
 /obj/machinery/chem_mass_spec,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "RC" = (
 /obj/machinery/door/airlock/medical/glass{
 	name = "Pharmacy"
 	},
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "RF" = (
 /obj/structure/table/glass,
 /obj/machinery/camera/directional/west{
@@ -2920,32 +2982,31 @@
 	},
 /obj/item/book/manual/wiki/grenades,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "RM" = (
 /obj/machinery/computer/camera_advanced/xenobio{
 	dir = 8
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Sc" = (
 /obj/structure/stairs/cyberpunk_auto/north,
 /turf/open/openspace,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Sk" = (
 /obj/machinery/light/directional/north,
 /obj/machinery/suit_storage_unit/captain,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Sr" = (
 /obj/machinery/chem_master,
 /obj/machinery/light/small/directional/east,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "St" = (
-/obj/machinery/power/apc/auto_name/directional/north,
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "Sy" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/infrastructure/parking)
@@ -2962,7 +3023,7 @@
 "SL" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "Te" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -2986,7 +3047,7 @@
 "TK" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron,
-/area/station/commons/dorms)
+/area/cyberpunk/city/housing/apartment)
 "TY" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/lmg_feed_223,
@@ -2996,7 +3057,7 @@
 /obj/item/cyberpunk_item_module/long_barrel/t2,
 /obj/item/cyberpunk_item_module/long_barrel/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Uv" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/revolver_barrel,
@@ -3024,7 +3085,7 @@
 /obj/item/cyberpunk_item_module/sniper_barrel/t2,
 /obj/item/cyberpunk_item_module/sniper_barrel/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Uz" = (
 /obj/structure/rack,
 /obj/machinery/light/directional/west,
@@ -3039,14 +3100,14 @@
 /obj/item/clothing/glasses/welding,
 /obj/item/toy/crayon/spraycan/roboticist,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "UJ" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/mobility_servo,
 /obj/item/cyberpunk_item_module/mobility_servo/t2,
 /obj/item/cyberpunk_item_module/mobility_servo/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "UW" = (
 /obj/structure/table,
 /obj/item/flashlight{
@@ -3055,11 +3116,11 @@
 /obj/item/storage/toolbox/syndicate,
 /obj/item/stock_parts/power_store/cell/infinite,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "VJ" = (
 /obj/machinery/vending/dinnerware,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "VN" = (
 /obj/structure/closet/crate,
 /obj/item/cyberpunk_item_module/assault_barrel,
@@ -3072,25 +3133,25 @@
 /obj/item/cyberpunk_item_module/cylinder_50/t2,
 /obj/item/cyberpunk_item_module/cylinder_50/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "VU" = (
 /obj/machinery/atmospherics/components/unary/passive_vent{
 	dir = 1;
 	name = "killroom vent"
 	},
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "VV" = (
 /obj/structure/cable,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "VY" = (
 /obj/machinery/vending/security,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Wg" = (
 /turf/open/openspace,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "Wh" = (
 /obj/structure/table/reinforced,
 /obj/item/storage/box/syringes{
@@ -3100,7 +3161,7 @@
 /obj/item/gun/syringe,
 /obj/item/gun/syringe,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Wi" = (
 /obj/item/toy/beach_ball/branded,
 /turf/open/indestructible/white,
@@ -3111,7 +3172,7 @@
 /obj/item/cyberpunk_item_module/melee_twohand_axe_element/t2,
 /obj/item/cyberpunk_item_module/melee_twohand_axe_element/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Wq" = (
 /obj/structure/table,
 /obj/item/surgical_drapes,
@@ -3122,7 +3183,7 @@
 /obj/effect/turf_decal/tile/purple/half/contrasted,
 /obj/structure/window/spawner/directional/west,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Ws" = (
 /turf/closed/wall,
 /area/space)
@@ -3133,19 +3194,19 @@
 "WG" = (
 /obj/machinery/autolathe,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "WW" = (
 /turf/open/openspace,
 /area/cyberpunk/city/corporate)
 "WY" = (
 /turf/open/floor/mineral/abductor,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Xd" = (
 /obj/machinery/light/directional/west,
 /obj/structure/table/glass,
 /obj/effect/spawner/surgery_tray/full,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Xp" = (
 /obj/machinery/vending/boozeomat,
 /obj/item/reagent_containers/cup/glass/bottle/champagne{
@@ -3165,30 +3226,30 @@
 	},
 /obj/structure/cable,
 /turf/open/floor/carpet,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Xr" = (
 /obj/machinery/hydroponics/constructable/fullupgrade,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Xu" = (
 /obj/machinery/power/terminal{
 	dir = 1
 	},
 /obj/structure/cable,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Xx" = (
 /obj/machinery/oven/range,
 /obj/machinery/light/blacklight/directional/north,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "XD" = (
 /obj/machinery/door/airlock/command,
 /turf/open/floor/wood,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "XG" = (
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "XI" = (
 /obj/machinery/camera{
 	c_tag = "Xenobiology Lab - Pen #2";
@@ -3198,13 +3259,13 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "XJ" = (
 /turf/open/openspace,
 /area/space)
 "XK" = (
 /turf/open/floor/iron/white,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "XL" = (
 /obj/effect/turf_decal/sand/plating/volcanic,
 /obj/machinery/light/directional/east,
@@ -3214,7 +3275,7 @@
 /obj/machinery/light/directional/north,
 /obj/structure/tank_dispenser,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "XX" = (
 /obj/structure/closet/crate,
 /obj/item/gun/ballistic/rifle/boltaction/cyberpunk,
@@ -3227,11 +3288,11 @@
 /obj/item/gun/ballistic/rifle/cyberpunk/plasteel,
 /obj/item/gun/ballistic/rifle/cyberpunk/polymer,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Ya" = (
 /obj/structure/cable,
 /turf/open/floor/iron/dark/small,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "Yb" = (
 /obj/machinery/power/terminal{
 	dir = 1
@@ -3251,7 +3312,7 @@
 /obj/item/cyberpunk_item_module/plasma_emitter/t2,
 /obj/item/cyberpunk_item_module/plasma_emitter/t3,
 /turf/open/floor/wood,
-/area/station/security/brig)
+/area/cyberpunk/city/civic/police)
 "Yj" = (
 /obj/structure/rack,
 /obj/item/storage/box/gloves{
@@ -3266,41 +3327,41 @@
 /obj/item/tank/internals/anesthetic,
 /obj/item/clothing/mask/breath/muzzle,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "Ym" = (
 /obj/machinery/power/smes/super/full,
 /turf/open/floor/iron/dark/small,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "Yu" = (
 /obj/machinery/iv_drip,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Yx" = (
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/government)
 "YH" = (
 /obj/machinery/sleeper/syndie/fullupgrade,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "YL" = (
 /obj/machinery/door/airlock/command,
 /turf/open/floor/iron/white,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "YM" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "YP" = (
 /obj/machinery/door/window/left/directional/south{
 	name = "Containment Pen #2";
 	req_access = list("xenobiology")
 	},
 /turf/open/floor/engine,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "YU" = (
 /obj/effect/turf_decal/tile/brown/opposingcorners,
 /turf/open/floor/iron,
-/area/station/cargo/miningoffice)
+/area/cyberpunk/city/industry/loading_dock)
 "YV" = (
 /obj/machinery/light/directional/east,
 /turf/open/floor/iron/dark/textured,
@@ -3326,6 +3387,20 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/metro)
+"Zb" = (
+/obj/docking_port/stationary{
+	dir = 4;
+	dheight = 2;
+	dwidth = 0;
+	height = 8;
+	hidden = TRUE;
+	name = "backup emergency shuttle dock";
+	roundstart_template = /datum/map_template/shuttle/emergency/backup;
+	shuttle_id = "backup";
+	width = 8
+	},
+/turf/open/floor/iron/white,
+/area/space)
 "Zn" = (
 /obj/machinery/light/directional/north,
 /turf/open/floor/iron/dark/textured,
@@ -3334,10 +3409,10 @@
 /obj/machinery/chem_heater/withbuffer,
 /obj/machinery/light/small/directional/south,
 /turf/open/floor/iron/white,
-/area/station/medical/medbay)
+/area/cyberpunk/city/public_service/clinic)
 "Zu" = (
 /turf/open/openspace,
-/area/station/command/bridge)
+/area/cyberpunk/city/government)
 "ZP" = (
 /obj/machinery/computer/cyberpunk_council_lockdown,
 /turf/open/floor/iron/dark/textured,
@@ -3349,11 +3424,11 @@
 "ZV" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /turf/open/floor/iron/white,
-/area/station/science/research)
+/area/cyberpunk/city/corporate/starlight)
 "ZX" = (
 /obj/machinery/smartfridge/food,
 /turf/closed/wall,
-/area/station/service/bar)
+/area/cyberpunk/city/business/club)
 "ZY" = (
 /obj/machinery/computer/business_terminal/medium{
 	name = "test medium business terminal"
@@ -17337,7 +17412,7 @@ gM
 gM
 gM
 XK
-hD
+Zb
 hD
 hD
 bg
