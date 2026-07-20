@@ -200,9 +200,6 @@
 /area/station/service/business/small
 	name = "\improper Legacy Small Business Lot"
 
-/area/station/service/business/medium
-	name = "\improper Legacy Medium Business Lot"
-
 /*
 * Abandoned Rooms
 */

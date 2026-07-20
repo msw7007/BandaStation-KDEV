@@ -367,7 +367,10 @@ function SpeciesPickerModal(props: {
   const currentSpecies = props.species[props.currentSpeciesKey];
 
   return (
-    <Modal className="CharacterSetup__speciesModal" width="760px">
+    <Modal
+      className="CharacterSetup__speciesModal"
+      width="min(1120px, calc(100vw - 3rem))"
+    >
       <div className="CharacterSetup__speciesModalHeader">
         <b>Выбор вида / типа тела</b>
         <Button icon="xmark" onClick={props.onClose} />

@@ -3430,9 +3430,6 @@
 /turf/closed/wall,
 /area/cyberpunk/city/business/club)
 "ZY" = (
-/obj/machinery/computer/business_terminal/medium{
-	name = "test medium business terminal"
-	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/business/lot_01)
 "ZZ" = (

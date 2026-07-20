@@ -49,10 +49,6 @@
 	var/size_class = "small"
 	cyberpunk_public_access = TRUE
 
-/obj/machinery/computer/business_terminal/medium
-	name = "medium business terminal"
-	size_class = "medium"
-
 /obj/machinery/computer/business_terminal/Destroy()
 	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(business_id)
 	if(business?.terminal == src)

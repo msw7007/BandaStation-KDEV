@@ -821,6 +821,51 @@
 		setDir(REVERSE_DIR(vertical_anchor_dir))
 	return TRUE
 
+/mob/living/proc/is_swimmable_depth_turf(turf/check_turf)
+	var/turf/open/water/water_turf = check_turf
+	return istype(water_turf) && water_turf.is_swimming_tile
+
+/mob/living/proc/try_water_depth_z_move(direction)
+	if(direction != UP && direction != DOWN)
+		return FALSE
+	if(body_position != STANDING_UP || buckled || incapacitated)
+		return FALSE
+	var/turf/current_turf = get_turf(src)
+	if(!is_swimmable_depth_turf(current_turf))
+		return FALSE
+	var/turf/target_turf = get_step_multiz(current_turf, direction)
+	if(!is_swimmable_depth_turf(target_turf))
+		return FALSE
+	if(target_turf.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+		return FALSE
+	balloon_alert(src, direction == UP ? "surfacing..." : "diving...")
+	if(!do_after(src, 1 SECONDS, target_turf, hidden = TRUE))
+		return TRUE
+	current_turf = get_turf(src)
+	if(!is_swimmable_depth_turf(current_turf))
+		return TRUE
+	target_turf = get_step_multiz(current_turf, direction)
+	if(!is_swimmable_depth_turf(target_turf) || target_turf.is_blocked_turf(exclude_mobs = TRUE, source_atom = src))
+		return TRUE
+	zMove(null, target_turf, ZMOVE_CHECK_PULLS)
+	return TRUE
+
+/mob/living/proc/try_vertical_climb_input(direction)
+	if(direction != UP && direction != DOWN)
+		return FALSE
+	if(vertical_state == VERTICAL_STATE_HANGING || vertical_state == VERTICAL_STATE_CLIMBING)
+		return try_vertical_anchor_move(direction)
+	if(body_position != STANDING_UP || buckled || incapacitated)
+		return FALSE
+	var/turf/anchor_turf = find_vertical_anchor()
+	if(!anchor_turf)
+		return FALSE
+	if(!start_vertical_climbing(VERTICAL_HANG_TIME, anchor_turf))
+		return FALSE
+	setDir(REVERSE_DIR(vertical_anchor_dir))
+	try_vertical_anchor_move(direction)
+	return TRUE
+
 /mob/living/proc/try_delay_vertical_fall(turf/fall_from, levels = 1, force = FALSE, falling_from_move = FALSE)
 	if(vertical_state == VERTICAL_STATE_HANGING || vertical_state == VERTICAL_STATE_CLIMBING)
 		set_currently_z_moving(FALSE, TRUE)

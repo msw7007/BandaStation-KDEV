@@ -85,6 +85,9 @@
 	if(mob.buckled) //if we're buckled to something, tell it we moved.
 		return mob.buckled.relaymove(mob, direct)
 
+	if(L.vertical_state == VERTICAL_STATE_HANGING || L.vertical_state == VERTICAL_STATE_CLIMBING)
+		return L.try_vertical_anchor_move(direct)
+
 	if(!(L.mobility_flags & MOBILITY_MOVE))
 		return FALSE
 
@@ -585,6 +588,12 @@
 	if(current_ladder)
 		current_ladder.use(src, TRUE)
 		return
+	if(isliving(src))
+		var/mob/living/living_mob = src
+		if(living_mob.try_water_depth_z_move(UP))
+			return
+		if(living_mob.try_vertical_climb_input(UP))
+			return
 
 	if(!can_z_move(UP, current_turf, null, ZMOVE_CAN_FLY_CHECKS|ZMOVE_FEEDBACK))
 		return
@@ -609,6 +618,12 @@
 	if(current_ladder)
 		current_ladder.use(src, FALSE)
 		return
+	if(isliving(src))
+		var/mob/living/living_mob = src
+		if(living_mob.try_water_depth_z_move(DOWN))
+			return
+		if(living_mob.try_vertical_climb_input(DOWN))
+			return
 
 	if(!can_z_move(DOWN, current_turf, null, ZMOVE_CAN_FLY_CHECKS|ZMOVE_FEEDBACK))
 		return
