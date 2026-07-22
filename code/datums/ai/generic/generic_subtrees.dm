@@ -414,11 +414,13 @@
 	if(!istype(living_pawn) || living_pawn.stat == DEAD)
 		return
 	var/atom/threat = controller.blackboard[BB_CP_THREAT_TARGET]
-	if(QDELETED(threat))
+	var/mob/living/checked_threat = threat
+	if(QDELETED(threat) || (istype(checked_threat) && checked_threat.stat == DEAD))
 		controller.clear_blackboard_key(BB_CP_THREAT_TARGET)
 		controller.clear_blackboard_key(BB_CP_THREAT_LEVEL)
 		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
 		controller.clear_blackboard_key(BB_BASIC_MOB_FLEE_TARGET)
+		controller.clear_blackboard_key(BB_TEMPORARILY_IGNORE_FACTION)
 		return
 	if(living_pawn.maxHealth > 0 && living_pawn.health <= living_pawn.maxHealth * 0.2)
 		controller.clear_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET)
@@ -434,3 +436,6 @@
 			controller.cyberpunk_assign_city_task(CP_AI_TASK_GUARD, threat_mob, security_turf, threat_mob, null, 2 MINUTES, security_turf)
 			return SUBTREE_RETURN_FINISH_PLANNING
 	controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, threat)
+	// City NPCs and their targets usually share the default neutral faction, so without this
+	// the basic targeting strategy treats the threat as an ally and the melee attack never fires.
+	controller.set_blackboard_key(BB_TEMPORARILY_IGNORE_FACTION, TRUE)

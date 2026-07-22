@@ -510,6 +510,10 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/max_traffic_lights = 12
 	var/max_traffic_vehicles = 4
 	var/traffic_interest_range = 24
+	/// City NPCs must arrive off-screen: minimum spawn distance from any active player (widescreen view radius is ~10).
+	var/npc_spawn_min_distance = 14
+	/// Upper bound keeps arrivals within the player's district instead of piling everyone into one ring around them.
+	var/npc_spawn_max_distance = 30
 	var/traffic_network_ready = FALSE
 	var/list/traffic_nodes = list()
 	var/list/traffic_lights = list()
@@ -679,7 +683,9 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc))
 			continue
 		var/mob/living/carbon/human/cyberpunk_npc/npc = candidate
-		if(istype(npc, typepath) && npc.stat != DEAD)
+		// Dead city NPCs keep holding their population slot until the body is actually cleaned up,
+		// otherwise every kill triggers an instant replacement spawn on the next subsystem fire.
+		if(istype(npc, typepath))
 			count++
 	return count
 
@@ -687,7 +693,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/current_count = count_city_npcs(/mob/living/carbon/human/cyberpunk_npc/bystander)
 	if(current_count >= max_bystanders)
 		return
-	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, 6, 18)
+	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, npc_spawn_min_distance, npc_spawn_max_distance)
 	if(!spawn_turf)
 		return
 	new /mob/living/carbon/human/cyberpunk_npc/bystander(spawn_turf)
@@ -696,7 +702,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/current_count = count_city_npcs(/mob/living/carbon/human/cyberpunk_npc/runner)
 	if(current_count >= max_runners)
 		return
-	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, 8, 20)
+	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, npc_spawn_min_distance, npc_spawn_max_distance)
 	if(spawn_turf)
 		new /mob/living/carbon/human/cyberpunk_npc/runner(spawn_turf)
 
@@ -704,7 +710,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/current_count = count_city_npcs(/mob/living/carbon/human/cyberpunk_npc/worker)
 	if(current_count >= max_workers)
 		return
-	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, 8, 20)
+	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, npc_spawn_min_distance, npc_spawn_max_distance)
 	if(spawn_turf)
 		new /mob/living/carbon/human/cyberpunk_npc/worker(spawn_turf)
 
@@ -749,7 +755,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 			continue
 		if(!find_corporate_data_terminal(corporation_id))
 			continue
-		var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(corporate_area_type(corporation_id), active_players, 0, INFINITY) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, 8, 20)
+		var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(corporate_area_type(corporation_id), active_players, 0, INFINITY) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, npc_spawn_min_distance, npc_spawn_max_distance)
 		if(!spawn_turf)
 			continue
 		var/specialist_type = corporate_specialist_type(corporation_id)
@@ -762,8 +768,9 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		if(!istype(candidate, /mob/living/carbon/human/cyberpunk_npc/corporate_specialist))
 			continue
 		var/mob/living/carbon/human/cyberpunk_npc/corporate_specialist/specialist = candidate
-		if(QDELETED(specialist) || specialist.stat == DEAD)
+		if(QDELETED(specialist))
 			continue
+		// Dead specialists hold their slot until cleanup, same as count_city_npcs(), to avoid instant respawn on kill.
 		if(specialist.cyberpunk_corporation_id == corporation_id)
 			count++
 	return count
