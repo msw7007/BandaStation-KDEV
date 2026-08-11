@@ -263,3 +263,11 @@
 	color = null
 	plane = WALL_PLANE
 	layer = BELOW_CLOSED_TURF_LAYER
+
+// MARK: Window frames
+/obj/structure/platform/iron
+	icon = 'modular_bandastation/aesthetics/windows/icons/window_frame_iron.dmi'
+	frame_icon = null
+	icon_state = "window-0"
+	base_icon_state = "window"
+	canSmoothWith = SMOOTH_GROUP_PLATFORMS_MATERIAL + SMOOTH_GROUP_GIRDER + SMOOTH_GROUP_WALLS

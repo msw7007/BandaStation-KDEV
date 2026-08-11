@@ -2886,9 +2886,9 @@
 //CYBERPUNK BUILD - rebuild and delete before release
 /obj/vehicle/sealed/car/cyberpunk
 	name = "Starlight Vehicle Platform"
-	desc = "A temporary Starlight test platform using a clown car body shell."
-	icon = 'icons/obj/cyberpunk_vehicle_debug.dmi'
-	icon_state = "debug_car"
+	desc = "A Starlight test platform using a city vehicle body shell."
+	icon = 'modular_bandastation/cyberpunk_modular/cyberpunk/icons/vehicles/car.dmi'
+	icon_state = "car_test"
 	max_integrity = 220
 	max_occupants = 4
 	max_drivers = 1

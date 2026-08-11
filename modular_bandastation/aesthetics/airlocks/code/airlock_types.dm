@@ -222,6 +222,62 @@
 	opacity = FALSE
 	glass = TRUE
 
+// MARK: Cyberpunk city doors
+/obj/machinery/door/cyberpunk
+	name = "city door"
+	desc = "A city door."
+	icon = 'modular_bandastation/aesthetics/doors/icons/cyberpunk/32x48doors.dmi'
+	icon_state = "basic_door"
+	base_icon_state = "basic_door"
+	autoclose = TRUE
+	can_be_glass = FALSE
+	has_access_panel = FALSE
+
+/obj/machinery/door/cyberpunk/update_icon_state()
+	icon_state = base_icon_state
+
+/obj/machinery/door/cyberpunk/update_overlays()
+	return list()
+
+/obj/machinery/door/cyberpunk/animation_length(animation)
+	return 0.3 SECONDS
+
+/obj/machinery/door/cyberpunk/animation_segment_delay(animation)
+	switch(animation)
+		if(DOOR_OPENING_PASSABLE)
+			return 0.2 SECONDS
+		if(DOOR_OPENING_FINISHED)
+			return 0.3 SECONDS
+		if(DOOR_CLOSING_UNPASSABLE)
+			return 0.1 SECONDS
+		if(DOOR_CLOSING_FINISHED)
+			return 0.3 SECONDS
+	return 0.1 SECONDS
+
+/obj/machinery/door/cyberpunk/internal
+	name = "internal city door"
+	icon_state = "inner_door"
+	base_icon_state = "inner_door"
+
+/obj/machinery/door/cyberpunk/glass
+	name = "windowed city door"
+	icon_state = "basic_door"
+	base_icon_state = "basic_door"
+	opacity = FALSE
+	glass = TRUE
+
+/obj/machinery/door/cyberpunk/restricted
+	name = "restricted city door"
+	icon_state = "sector_door"
+	base_icon_state = "sector_door"
+
+/obj/machinery/door/cyberpunk/heavy
+	name = "heavy city door"
+	icon_state = "heavy_door"
+	base_icon_state = "heavy_door"
+	max_integrity = 450
+	damage_deflection = 20
+
 // Fake doors
 /turf/closed/indestructible/fakedoor
 
