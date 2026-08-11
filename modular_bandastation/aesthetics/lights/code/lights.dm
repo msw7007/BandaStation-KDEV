@@ -48,9 +48,11 @@
 	fitting = "lantern bulb"
 
 /obj/machinery/light/cyberpunk_lantern/update_icon_state()
+	. = ..()
 	icon_state = "[base_state]_[on && status == LIGHT_OK ? "on" : "off"]"
 
 /obj/machinery/light/cyberpunk_lantern/update_overlays()
+	. = ..()
 	return list()
 
 /obj/machinery/light/cyberpunk_lantern/off

@@ -234,9 +234,11 @@
 	has_access_panel = FALSE
 
 /obj/machinery/door/cyberpunk/update_icon_state()
+	. = ..()
 	icon_state = base_icon_state
 
 /obj/machinery/door/cyberpunk/update_overlays()
+	. = ..()
 	return list()
 
 /obj/machinery/door/cyberpunk/animation_length(animation)
