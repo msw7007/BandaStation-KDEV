@@ -605,6 +605,47 @@
 /obj/item/proc/is_cyberpunk_combat_weapon()
 	return force > 0 || istype(src, /obj/item/gun)
 
+/proc/cyberpunk_precision_general_miss_chance(accuracy)
+	if(accuracy > 10)
+		return 0
+	return clamp(round(90 - ((accuracy - 1) * 80 / 9)), 10, 90)
+
+/proc/cyberpunk_precision_zone_miss_chance(accuracy)
+	if(accuracy >= ATTRIBUTE_MAXIMUM)
+		return 0
+	if(accuracy <= 10)
+		return clamp(round(80 - ((accuracy - 1) * 50 / 9)), 30, 80)
+	return clamp(round(30 - ((accuracy - 10) * 25 / 9)), 5, 30)
+
+/mob/living/proc/get_cyberpunk_melee_precision_accuracy(obj/item/weapon, unarmed = FALSE)
+	var/accuracy = get_attribute_value(ATTRIBUTE_PERCEPTION)
+	if(weapon)
+		var/weapon_skill = weapon.get_cyberpunk_weapon_skill()
+		if(weapon_skill)
+			accuracy += round(get_character_skill_level(weapon_skill) / 2)
+		accuracy += get_character_skill_level(SKILL_PRECISE_WEAPON)
+	else if(unarmed)
+		accuracy += get_character_skill_level(SKILL_PRECISE_UNARMED)
+	return clamp(round(accuracy), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
+
+/mob/living/proc/resolve_cyberpunk_precise_attack_zone(mob/living/target, desired_zone, accuracy, list/blacklisted_parts)
+	if(!target)
+		return null
+	accuracy = clamp(round(accuracy), ATTRIBUTE_MINIMUM, ATTRIBUTE_MAXIMUM)
+	desired_zone ||= BODY_ZONE_CHEST
+	var/base_zone = check_zone(desired_zone)
+	if(accuracy >= ATTRIBUTE_MAXIMUM)
+		if(!prob(95))
+			return null
+		return desired_zone
+	if(prob(cyberpunk_precision_general_miss_chance(accuracy)))
+		return null
+	if(desired_zone != base_zone && prob(cyberpunk_precision_zone_miss_chance(accuracy)))
+		return target.get_random_valid_zone(base_zone, 100, blacklisted_parts)
+	if(length(blacklisted_parts) && (base_zone in blacklisted_parts))
+		return target.get_random_valid_zone(base_zone, 100, blacklisted_parts)
+	return desired_zone
+
 /mob/living/proc/get_cyberpunk_heavy_weapon_move_bonus()
 	if(!mind || !combat_mode)
 		return 0

@@ -400,16 +400,18 @@
 
 /mob/living/attacked_by(obj/item/attacking_item, mob/living/user, list/modifiers, list/attack_modifiers)
 
-	var/targeting = check_zone(user.zone_selected)
+	var/targeting = user.zone_selected
 	if(user != src)
-		var/zone_hit_chance = 80
-		if(body_position == LYING_DOWN)
-			zone_hit_chance += 10
-		targeting = get_random_valid_zone(targeting, zone_hit_chance)
+		targeting = user.resolve_cyberpunk_precise_attack_zone(src, user.zone_selected, user.get_cyberpunk_melee_precision_accuracy(attacking_item))
+	if(!targeting)
+		user.visible_message(span_danger("[capitalize(user.declent_ru(NOMINATIVE))] misses [declent_ru(ACCUSATIVE)] with [attacking_item.declent_ru(INSTRUMENTAL)]!"), span_warning("You miss [declent_ru(ACCUSATIVE)] with [attacking_item.declent_ru(INSTRUMENTAL)]!"), null, COMBAT_MESSAGE_RANGE)
+		log_combat(user, src, "missed", attacking_item)
+		return ATTACK_FAILED
+	var/targeting_body_zone = check_zone(targeting)
 	var/targeting_human_readable = parse_zone_with_bodypart(targeting, declent = ACCUSATIVE)
 
 	if(!LAZYACCESS(attack_modifiers, SILENCE_DEFAULT_MESSAGES))
-		send_item_attack_message(attacking_item, user, targeting_human_readable, targeting, modifiers)
+		send_item_attack_message(attacking_item, user, targeting_human_readable, targeting_body_zone, modifiers)
 
 	var/combat_intent = LAZYACCESS(modifiers, "cyberpunk_combat_intent")
 	var/charged_intent = LAZYACCESS(modifiers, "cyberpunk_charged_intent")
@@ -493,7 +495,7 @@
 				sharpness = attacking_item.get_cyberpunk_damage_sharpness(damage_key),
 				attack_direction = get_dir(user, src),
 				attacking_item = attacking_item,
-				precise_zone = user.zone_selected,
+				precise_zone = targeting,
 				brute_type = attacking_item.get_cyberpunk_damage_brute_type(damage_key),
 				burn_type = attacking_item.get_cyberpunk_damage_burn_type(damage_key),
 			)
@@ -502,7 +504,7 @@
 				apply_cyberpunk_heavy_weapon_armor_effects(
 					user,
 					attacking_item,
-					targeting,
+					targeting_body_zone,
 					partial_armor_flag,
 					effective_armour_penetration,
 					partial_damage_type,
@@ -521,13 +523,13 @@
 			sharpness = attacking_item.get_sharpness(),
 			attack_direction = get_dir(user, src),
 			attacking_item = attacking_item,
-			precise_zone = user.zone_selected,
+			precise_zone = targeting,
 		)
 		if(damage_done > 0)
-			apply_cyberpunk_heavy_weapon_armor_effects(user, attacking_item, targeting, MELEE, effective_armour_penetration, attacking_item.damtype, attacking_item.get_sharpness())
+			apply_cyberpunk_heavy_weapon_armor_effects(user, attacking_item, targeting_body_zone, MELEE, effective_armour_penetration, attacking_item.damtype, attacking_item.get_sharpness())
 	//CYBERPUNK BUILD - rebuild and delete before release
 
-	attack_effects(damage_done, targeting, armor_block, attacking_item, user)
+	attack_effects(damage_done, targeting_body_zone, armor_block, attacking_item, user)
 	if(weakness_critical && damage_done > 0)
 		user.apply_cyberpunk_weakness_critical_effects(src)
 	if(damage_done > 0 && user != src)

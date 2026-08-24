@@ -918,8 +918,9 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			user.adjust_disgust(2)
 
 	// Select a zone to hit, blacklisting the part we're attacking with if we're attacking ourselves.
-	var/hit_zone = target.get_random_valid_zone(user.zone_selected, blacklisted_parts = (user == target ? list(attacking_bodypart.body_zone) : null))
-	var/obj/item/bodypart/affecting = target.get_bodypart(hit_zone)
+	var/list/blacklisted_parts = (user == target ? list(attacking_bodypart.body_zone) : null)
+	var/hit_zone = user.resolve_cyberpunk_precise_attack_zone(target, user.zone_selected, user.get_cyberpunk_melee_precision_accuracy(null, TRUE), blacklisted_parts)
+	var/obj/item/bodypart/affecting = hit_zone ? target.get_bodypart(check_zone(hit_zone)) : null
 
 	var/miss_chance = 100//calculate the odds that a punch misses entirely. considers stamina and brute damage of the puncher. punches miss by default to prevent weird cases
 	if(lower_unarmed_damage)
@@ -1001,9 +1002,9 @@ GLOBAL_LIST_EMPTY(features_by_species)
 			target.force_say()
 		log_combat(user, target, grappled ? "grapple punched" : "kicked")
 		final_armor_block -= limb_accuracy
-		damage_done = target.apply_damage(damage, attack_type, affecting, final_armor_block, attack_direction = attack_direction, sharpness = limb_sharpness)
+		damage_done = target.apply_damage(damage, attack_type, affecting, final_armor_block, attack_direction = attack_direction, sharpness = limb_sharpness, precise_zone = hit_zone)
 	else // Normal attacks do not gain the benefit of armor penetration.
-		damage_done = target.apply_damage(damage, attack_type, affecting, armor_block, attack_direction = attack_direction, sharpness = limb_sharpness)
+		damage_done = target.apply_damage(damage, attack_type, affecting, armor_block, attack_direction = attack_direction, sharpness = limb_sharpness, precise_zone = hit_zone)
 		if(damage >= 9)
 			target.force_say()
 		log_combat(user, target, "punched")
@@ -1016,7 +1017,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	if(damage_done > 0)
 		target.cyberpunk_report_violence_by(user)
 	user.apply_cyberpunk_power_unarmed_effects(target)
-	user.apply_cyberpunk_unarmed_zone_effect(target, user.zone_selected)
+	user.apply_cyberpunk_unarmed_zone_effect(target, hit_zone)
 
 	if(user != target && biting && (target.mob_biotypes & MOB_ORGANIC)) //Good for you. You probably just ate someone alive.
 		var/datum/reagents/tasty_meal = new()
