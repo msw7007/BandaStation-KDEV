@@ -170,6 +170,7 @@ type Corporation = {
   taxDebt: number;
   taxPaid: number;
   serviceAutoEnabled: BooleanLike;
+  serviceChip: BooleanLike;
   agentPool: number;
   agentsAvailable: number;
   employees: {
@@ -191,6 +192,13 @@ type Corporation = {
   serviceDelivery: BooleanLike;
   services: CorporateService[];
   serviceRequests: CorporateServiceRequest[];
+  cargoTracking: {
+    ref: string;
+    name: string;
+    status: string;
+    position: string;
+    canClear: BooleanLike;
+  }[];
   contracts: CorporateContract[];
   vendors: CorporateVendor[];
   profitRecords: CorporateProfitRecord[];
@@ -479,7 +487,7 @@ function StateTab(props: { corporation: Corporation }) {
 }
 
 function GovernmentStateTab(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
   const monitor = corporation.taxMonitor;
   const transferOptions = getTransferOptions(monitor);
@@ -847,13 +855,50 @@ function CorporateCreditsDragField(props: {
 }
 
 function ServicesTab(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
   const services = corporation.services || [];
   const enabledServices = services.filter((service) => service.enabled);
 
   return (
     <div className="CorporateInterface__tabGrid">
+      {!!corporation.cargoTracking?.length && (
+        <div className="StyleGuide__blockShell CorporateInterface__wide">
+          <div className="StyleGuide__blockTitle">My cargo</div>
+          <Table>
+            <Table.Row header>
+              <Table.Cell>Item</Table.Cell>
+              <Table.Cell>Status</Table.Cell>
+              <Table.Cell>X, Y, Z</Table.Cell>
+              <Table.Cell />
+            </Table.Row>
+            {corporation.cargoTracking.map((shipment) => (
+              <Table.Row key={shipment.ref}>
+                <Table.Cell>{shipment.name}</Table.Cell>
+                <Table.Cell>{shipment.status}</Table.Cell>
+                <Table.Cell>{shipment.position}</Table.Cell>
+                <Table.Cell>
+                  {!!shipment.canClear && (
+                    <button
+                      type="button"
+                      title="Stop tracking"
+                      className="StyleGuide__cutButton"
+                      onClick={() =>
+                        act('clear_cargo_tracking', {
+                          corporation_id: corporation.id,
+                          shipment_ref: shipment.ref,
+                        })
+                      }
+                    >
+                      <Icon name="xmark" />
+                    </button>
+                  )}
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table>
+        </div>
+      )}
       <div className="StyleGuide__blockShell CorporateInterface__wide">
         <div className="StyleGuide__blockTitle">Tax enforcement</div>
         <div className="CorporateInterface__actions">
@@ -927,6 +972,18 @@ function ServicesTab(props: { corporation: Corporation }) {
             <span>Subscribe</span>
           </button>
         </div>
+        {!!corporation.serviceChip && (
+          <button
+            type="button"
+            className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+            onClick={() =>
+              act('use_service_chip', { corporation_id: corporation.id })
+            }
+          >
+            <Icon name="microchip" />
+            <span>Сервисный чип</span>
+          </button>
+        )}
         <div className="CorporateInterface__subTitle">Каталог</div>
         {!services.length ? (
           <div className="StyleGuide__placeholder">
@@ -1069,7 +1126,7 @@ function ResearchTab(props: {
   setDataType: (value: string) => void;
   setAmount: (value: string) => void;
 }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation, dataType, amount, setDataType, setAmount } = props;
   const amountNumber = Number(amount) || 0;
   const [technologyView, setTechnologyView] = useState('available');
@@ -1176,7 +1233,7 @@ function CorporateTechnologyWeb(props: {
   activeView: string;
   setActiveView: (value: string) => void;
 }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation, activeView, setActiveView } = props;
   const technologies = corporation.technologies || [];
   const technologyById = Object.fromEntries(
@@ -1324,7 +1381,7 @@ function CorporateTechnologyNode(props: {
 }
 
 function ForeignTechnologyPanel(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
 
   return (
@@ -1381,7 +1438,7 @@ function ForeignTechnologyPanel(props: { corporation: Corporation }) {
 }
 
 function EdictsTab(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
 
   return (
@@ -1423,7 +1480,7 @@ function EdictsTab(props: { corporation: Corporation }) {
 }
 
 function ContractsTab(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
 
   return (
@@ -1493,7 +1550,7 @@ function ContractsTab(props: { corporation: Corporation }) {
 }
 
 function GovernmentTaxesTab(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
   const monitor = corporation.taxMonitor;
 
@@ -1720,7 +1777,7 @@ function ProfitPanel(props: { corporation: Corporation }) {
 }
 
 function EmployeesPanel(props: { corporation: Corporation }) {
-  const { act } = useBackend<Data>();
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
   const employees = corporation.employees || [];
   const [wages, setWages] = useState<Record<string, string>>({});
@@ -1839,6 +1896,7 @@ function EmployeesPanel(props: { corporation: Corporation }) {
 }
 
 function GovernmentTaxMonitorPanel(props: { corporation: Corporation }) {
+  const { act } = useBackend<CorporateInterfaceData>();
   const { corporation } = props;
 
   return (

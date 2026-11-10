@@ -143,7 +143,7 @@
 	playsound(get_turf(src), 'sound/items/weapons/flash.ogg', 25, TRUE)
 	teleporting = TRUE
 
-	addtimer(CALLBACK(src, PROC_REF(teleport_contents), user, target_pad), teleport_speed)
+	addtimer(CALLBACK(src, PROC_REF(teleport_contents), user, target_pad), teleport_speed / cyberpunk_property_edict_multiplier(src, "starlight", "starlight_phase_tuning"))
 
 /obj/machinery/quantumpad/proc/teleport_contents(mob/user, obj/machinery/quantumpad/target_pad)
 	teleporting = FALSE

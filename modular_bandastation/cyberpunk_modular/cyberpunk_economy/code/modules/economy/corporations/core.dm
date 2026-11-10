@@ -161,6 +161,11 @@
 			employee["wage"] = max(0, round(wage))
 		employee["accountId"] = account?.account_id || employee["accountId"]
 		employee["lastSeen"] = round_timestamp()
+	if(id != CYBERPUNK_CORP_GOVERNMENT && !user.get_cyberpunk_service_chip(id))
+		var/obj/item/implant/cyberpunk_service/chip = new
+		chip.corporation_id = id
+		if(!chip.implant(user, null, silent = TRUE))
+			qdel(chip)
 	return TRUE
 
 /datum/cyberpunk_corporation/proc/find_employee_account(employee_key)
@@ -628,6 +633,14 @@
 		if(level < edict_level || active_edicts["[edict_level]"])
 			return FALSE
 		active_edicts["[edict_level]"] = edict_id
+		for(var/vendor_key in vendor_registry)
+			var/datum/weakref/vendor_ref = vendor_registry[vendor_key]
+			var/obj/machinery/vending/vendor = vendor_ref?.resolve()
+			if(!vendor)
+				continue
+			vendor.sync_cyberpunk_energy_stock()
+			vendor.cyberpunk_next_sale_rotation = min(vendor.cyberpunk_next_sale_rotation, world.time + vendor.get_cyberpunk_corporate_supply_interval())
+			vendor.update_static_data_for_all_viewers()
 		var/edict_name = edict["name"]
 		add_history("activated level [edict_level] edict: [edict_name]")
 		return TRUE
@@ -741,12 +754,12 @@
 			if(service_id == "salvage")
 				return has_edict("ryaznov_salvage_program") || has_edict("ryaznov_blueprint_archive")
 			if(service_id == "fortify")
-				return has_edict("ryaznov_mass_repair") || has_edict("ryaznov_blueprint_tuning")
+				return has_edict("ryaznov_blueprint_tuning")
 			if(service_id == "power")
 				return has_edict("ryaznov_power_tuning") || has_edict("ryaznov_field_support")
 		if(CYBERPUNK_CORP_STARLIGHT)
 			if(service_id == "delivery")
-				return has_edict("starlight_log_help") || has_edict("starlight_cargo_tracking") || has_edict("starlight_trade_subscription")
+				return has_edict("starlight_trade_analysis") || has_edict("starlight_log_help") || has_edict("starlight_cargo_tracking") || has_edict("starlight_trade_subscription")
 			if(service_id == "return")
 				return has_edict("starlight_return_program")
 			if(service_id == "transport")
@@ -769,9 +782,9 @@
 			services += cyberpunk_service_ui_entry("fortify", "Field fortify", "Broad nearby integrity patch.", "shield", can_request_service("fortify"))
 			services += cyberpunk_service_ui_entry("power", "Power tune", "Nearby machinery wear and power tuning.", "bolt", can_request_service("power"))
 		if(CYBERPUNK_CORP_STARLIGHT)
-			services += cyberpunk_service_ui_entry("delivery", "Delivery pack", "Courier pack to hands or turf.", "box", can_request_service("delivery"))
+			services += cyberpunk_service_ui_entry("delivery", "Cargo delivery", "Deliver your held cargo to coordinates or your active beacon.", "box", can_request_service("delivery"))
 			services += cyberpunk_service_ui_entry("return", "Return program", "Sell a held non-Starlight item back into logistics.", "rotate-left", can_request_service("return"))
-			services += cyberpunk_service_ui_entry("transport", "Transport ping", "Short tactical relocation request.", "location-arrow", can_request_service("transport"))
+			services += cyberpunk_service_ui_entry("transport", "Passenger transport", "Request an AVI ride to coordinates or your active beacon.", "location-arrow", can_request_service("transport"))
 			services += cyberpunk_service_ui_entry("influence", "Influence pulse", "Mood and market telemetry pulse.", "bullhorn", can_request_service("influence"))
 	return services
 
@@ -787,6 +800,14 @@
 /datum/cyberpunk_corporation/proc/request_service(mob/living/user, service_id)
 	if(!can_request_service(service_id) || !user)
 		return FALSE
+	if(id == CYBERPUNK_CORP_STARLIGHT && service_id in list("delivery", "transport"))
+		return request_starlight_route_service(user, service_id)
+	if(id == CYBERPUNK_CORP_STARLIGHT && service_id == "return" && !cyberpunk_starlight_return_eligible(user.get_active_held_item()))
+		to_chat(user, span_warning("The return program only accepts non-Starlight, non-contract items."))
+		return FALSE
+	if((id == CYBERPUNK_CORP_BENN && service_id == "medical") || (id == CYBERPUNK_CORP_RYAZNOV && service_id == "technical"))
+		if(request_daily_observation_drone(user))
+			return TRUE
 	var/cost = get_service_cost(service_id, user)
 	var/datum/bank_account/user_account = user.get_bank_account()
 	if(cost && (!user_account || !user_account.adjust_money(-cost, "[name] service: [service_id]")))
@@ -844,6 +865,7 @@
 		return null
 	update_agent_pool()
 	var/datum/bank_account/account = ensure_account()
+	var/mob/living/living_user = isliving(user) ? user : null
 	var/list/data_records = list()
 	for(var/data_type in research_data)
 		data_records += list(list("type" = data_type, "amount" = research_data[data_type]))
@@ -884,6 +906,7 @@
 		"taxDebt" = tax_debt,
 		"taxPaid" = tax_paid,
 		"serviceAutoEnabled" = service_auto_enabled,
+		"serviceChip" = !isnull(living_user?.get_cyberpunk_service_chip(id)),
 		"agentPool" = agent_pool,
 		"agentsAvailable" = agents_available,
 		"employees" = get_employee_records_ui(),
@@ -898,6 +921,7 @@
 		"serviceDelivery" = can_request_service("delivery"),
 		"services" = is_government ? list() : get_available_services_ui(),
 		"serviceRequests" = is_government ? list() : SScyberpunk_corporations.get_cyberpunk_corporate_service_requests_ui(id),
+		"cargoTracking" = get_starlight_tracking_ui(living_user),
 		"contracts" = SScyberpunk_corporations.get_cyberpunk_corporate_contracts_ui(id),
 		"vendors" = get_cyberpunk_corporate_vendors_ui(),
 		"profitRecords" = get_profit_records_ui(),

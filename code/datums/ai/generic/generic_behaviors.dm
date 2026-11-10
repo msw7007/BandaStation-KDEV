@@ -403,43 +403,9 @@
 	action_cooldown = 1 SECONDS
 
 /datum/ai_behavior/cyberpunk_pickup_cargo/perform(seconds_per_tick, datum/ai_controller/controller)
-	var/mob/living/living_pawn = controller.pawn
-	if(!istype(living_pawn))
-		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-
-	var/atom/cargo = controller.blackboard[BB_CP_CARGO]
-	if(QDELETED(cargo))
+	if(!controller.cyberpunk_pickup_city_cargo())
 		controller.set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_LOST)
-		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-
-	var/obj/item/cargo_item = cargo
-	if(istype(cargo_item))
-		if(living_pawn.is_holding(cargo_item))
-			controller.set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_CARRIED)
-			controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
-		if(!cargo_item.IsReachableBy(living_pawn))
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-		if(!controller.cyberpunk_has_capability(CP_AI_CAP_HANDS))
-			controller.set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_CARRIED)
-			controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
-		if(living_pawn.get_active_held_item())
-			living_pawn.dropItemToGround(living_pawn.get_active_held_item())
-		if(!living_pawn.put_in_hands(cargo_item))
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-	else if(isliving(cargo))
-		var/mob/living/cargo_mob = cargo
-		if(living_pawn.pulling == cargo_mob)
-			controller.set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_CARRIED)
-			controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
-		if(!controller.cyberpunk_has_capability(CP_AI_CAP_HANDS) || !cargo_mob.Adjacent(living_pawn))
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-		living_pawn.start_pulling(cargo_mob, supress_message = TRUE)
-		if(living_pawn.pulling != cargo_mob)
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-	else if(!controller.cyberpunk_has_capability(CP_AI_CAP_CARGO_SLOT))
+		controller.cyberpunk_fail_city_task("cargo unavailable at pickup")
 		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 
 	controller.set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_CARRIED)
@@ -463,29 +429,18 @@
 	var/atom/cargo = controller.blackboard[BB_CP_CARGO]
 	var/obj/item/cargo_item = cargo
 	var/contract_id = controller.blackboard[BB_CP_CONTRACT_ID]
+	if(!controller.cyberpunk_has_city_cargo())
+		controller.cyberpunk_fail_city_task("cargo lost before unloading")
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+	if(!controller.cyberpunk_city_adjacent(receiver))
+		controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+	if(!controller.cyberpunk_deliver_city_cargo())
+		controller.cyberpunk_fail_city_task("local cargo handoff failed")
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 	if(istype(cargo_item))
-		if(contract_id)
-			cargo_item.cyberpunk_contract_id = contract_id
-		var/mob/living/receiver_mob = receiver
-		if(istype(receiver_mob) && living_pawn.is_holding(cargo_item) && receiver_mob.Adjacent(living_pawn))
-			receiver_mob.put_in_hands(cargo_item)
-		else if(living_pawn.is_holding(cargo_item))
-			living_pawn.dropItemToGround(cargo_item)
-			cargo_item.forceMove(get_turf(receiver))
-		else if(get_turf(cargo_item) != get_turf(receiver))
-			cargo_item.forceMove(get_turf(receiver))
 		SSeconomy?.record_cyberpunk_contract_item_in_hands(living_pawn, cargo_item)
-		if(istype(receiver_mob))
-			SSeconomy?.record_cyberpunk_contract_item_in_hands(receiver_mob, cargo_item)
-		cyberpunk_notify_ai_cargo_delivered(cargo_item, living_pawn)
-	else if(isliving(cargo))
-		var/mob/living/cargo_mob = cargo
-		if(living_pawn.pulling == cargo_mob)
-			living_pawn.stop_pulling()
-		var/turf/receiver_turf = get_turf(receiver)
-		if(receiver_turf && get_dist(cargo_mob, receiver_turf) > 1)
-			cargo_mob.forceMove(receiver_turf)
-		cyberpunk_notify_ai_cargo_delivered(cargo_mob, living_pawn)
+	cyberpunk_notify_ai_cargo_delivered(cargo, living_pawn)
 
 	var/datum/cyberpunk_contract/contract = controller.blackboard[BB_CP_CONTRACT_REF]
 	if(!contract && contract_id)
@@ -518,55 +473,69 @@
 		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
 
 	var/atom/transition = controller.blackboard[BB_CP_ROUTE_Z_TRANSITION]
-	if(QDELETED(transition))
-		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-
-	var/obj/structure/ladder/ladder = transition
-	if(istype(ladder))
-		ladder.travel(living_pawn, target_z > living_pawn.z)
-	else
-		var/direction = target_z > living_pawn.z ? UP : DOWN
-		if(!living_pawn.zMove(direction, z_move_flags = ZMOVE_FLIGHT_FLAGS))
-			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
-
-	if(living_pawn.z == target_z)
-		controller.clear_blackboard_key(BB_CP_ROUTE_Z_TRANSITION)
-		controller.set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, living_pawn.z)
+	var/list/edge = controller.blackboard[BB_CP_ROUTE_Z_EDGE]
+	if(!edge || QDELETED(transition) || get_turf(living_pawn) != edge["entry"])
 		controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, next_state)
-		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
-	return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
+	var/succeeded = cyberpunk_travel_z_edge(living_pawn, edge)
+	if(!succeeded)
+		controller.set_blackboard_key_assoc_lazylist(BB_CP_ROUTE_Z_REJECTED, cyberpunk_service_z_edge_key(edge), TRUE)
+	controller.clear_blackboard_key(BB_CP_ROUTE_Z_TRANSITION)
+	controller.clear_blackboard_key(BB_CP_ROUTE_Z_EDGE)
+	controller.set_blackboard_key(BB_CP_ROUTE_CURRENT_Z, living_pawn.z)
+	controller.set_blackboard_key(BB_CP_CITY_TASK_STATE, next_state)
+	return AI_BEHAVIOR_DELAY | (succeeded ? AI_BEHAVIOR_SUCCEEDED : AI_BEHAVIOR_FAILED)
 
 /datum/ai_behavior/cyberpunk_work_task
 	action_cooldown = 1 SECONDS
 
 /datum/ai_behavior/cyberpunk_work_task/perform(seconds_per_tick, datum/ai_controller/controller)
-	var/mob/living/living_pawn = controller.pawn
-	if(controller.blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_REPAIR)
-		var/atom/repair_target = controller.blackboard[BB_CP_ROUTE_TARGET]
+	return controller.cyberpunk_work_city_task(max(1, seconds_per_tick))
+
+/datum/ai_controller/proc/cyberpunk_work_city_task(elapsed_seconds)
+	var/mob/living/living_pawn = pawn
+	var/atom/target = blackboard[BB_CP_ROUTE_TARGET]
+	if(target && !cyberpunk_city_adjacent(target))
+		set_blackboard_key(BB_CP_CITY_TASK_STATE, CP_AI_TASK_ROUTE_TO_TARGET)
+		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
+	if(phantom_body)
+		phantom_body.forceMove(cyberpunk_city_turf())
+	if(!blackboard[BB_CP_CITY_WORK_STARTED])
+		set_blackboard_key(BB_CP_CITY_WORK_STARTED, TRUE)
+		set_blackboard_key(BB_CP_CITY_TASK_FINISH_AT, world.time + (blackboard[BB_CP_CITY_TASK_DURATION] || (30 SECONDS)))
+		return AI_BEHAVIOR_DELAY
+	if(blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_REPAIR)
+		var/atom/repair_target = target
 		if(!repair_target?.uses_integrity)
-			controller.cyberpunk_fail_city_task("repair target invalid")
+			cyberpunk_fail_city_task("repair target invalid")
 			return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 		if(repair_target.get_integrity() < repair_target.max_integrity)
-			repair_target.repair_damage(max(5, round(repair_target.max_integrity * 0.05)))
+			repair_target.repair_damage(max(5, round(repair_target.max_integrity * 0.05)) * max(1, elapsed_seconds))
 			if(repair_target.get_integrity() < repair_target.max_integrity)
+				if(world.time >= blackboard[BB_CP_CITY_TASK_FINISH_AT])
+					cyberpunk_fail_city_task("repair timed out")
+					return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_FAILED
 				return AI_BEHAVIOR_DELAY
-		controller.cyberpunk_complete_city_task("repair completed")
+		cyberpunk_complete_city_task("repair completed")
 		return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
 
-	var/finish_at = controller.blackboard[BB_CP_CITY_TASK_FINISH_AT]
+	var/finish_at = blackboard[BB_CP_CITY_TASK_FINISH_AT]
+	var/obj/machinery/computer/corporate_data_terminal/data_terminal = target
+	var/work_seconds = max(0, elapsed_seconds - max(0, world.time - finish_at) / (1 SECONDS))
+	if(work_seconds > 0 && istype(living_pawn) && istype(data_terminal) && blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_WORK)
+		data_terminal.record_ai_theory_tick(living_pawn, work_seconds)
 	if(finish_at && world.time < finish_at)
-		var/atom/target = controller.blackboard[BB_CP_ROUTE_TARGET]
-		var/obj/machinery/computer/corporate_data_terminal/data_terminal = target
-		if(istype(living_pawn) && istype(data_terminal) && controller.blackboard[BB_CP_CITY_TASK] == CP_AI_TASK_WORK)
-			data_terminal.record_ai_theory_tick(living_pawn)
-		if(target && !istype(data_terminal) && controller.cyberpunk_has_capability(CP_AI_CAP_USE_TERMINAL))
-			controller.ai_interact(target, combat_mode = FALSE)
+		if(target && !istype(data_terminal) && cyberpunk_has_capability(CP_AI_CAP_USE_TERMINAL))
+			if(phantom_body)
+				cyberpunk_materialize_phantom("work requires physical interaction")
+			else
+				ai_interact(target, combat_mode = FALSE)
 		return AI_BEHAVIOR_DELAY
 
-	var/datum/cyberpunk_contract/contract = controller.blackboard[BB_CP_CONTRACT_REF]
+	var/datum/cyberpunk_contract/contract = blackboard[BB_CP_CONTRACT_REF]
 	if(contract && istype(living_pawn))
 		contract.check_nearby_target(living_pawn)
-	controller.cyberpunk_complete_city_task("work finished")
+	cyberpunk_complete_city_task("work finished")
 	return AI_BEHAVIOR_DELAY | AI_BEHAVIOR_SUCCEEDED
 
 //song behaviors

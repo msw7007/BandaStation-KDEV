@@ -113,6 +113,10 @@
 #define BB_CP_ROUTE_TARGET_Z "BB_cp_route_target_z"
 /// Z transition target/method.
 #define BB_CP_ROUTE_Z_TRANSITION "BB_cp_route_z_transition"
+#define BB_CP_ROUTE_Z_EDGE "BB_cp_route_z_edge"
+#define BB_CP_CITY_WORK_STARTED "BB_cp_city_work_started"
+#define BB_CP_CITY_TASK_DURATION "BB_cp_city_task_duration"
+#define BB_CP_ROUTE_Z_REJECTED "BB_cp_route_z_rejected"
 /// Z transition method selected for the current route.
 #define BB_CP_ROUTE_Z_METHOD "BB_cp_route_z_method"
 /// Profiling visibility hint.
@@ -128,6 +132,10 @@
 #define BB_CP_PHANTOM_STARTED_AT "BB_cp_phantom_started_at"
 /// Phantom task finish time.
 #define BB_CP_PHANTOM_FINISH_AT "BB_cp_phantom_finish_at"
+#define BB_CP_PHANTOM_PATH "BB_cp_phantom_path"
+#define BB_CP_PHANTOM_PATH_PENDING "BB_cp_phantom_path_pending"
+#define BB_CP_PHANTOM_Z_EDGE "BB_cp_phantom_z_edge"
+#define BB_CP_PHANTOM_Z_REJECTED "BB_cp_phantom_z_rejected"
 /// Last phantom processing tick.
 #define BB_CP_PHANTOM_LAST_TICK "BB_cp_phantom_last_tick"
 /// Approximate turf while profiled.

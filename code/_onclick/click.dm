@@ -92,7 +92,8 @@
 			modifiers[ALT_CLICK] = null
 			modifiers["cyberpunk_combat_intent"] = is_secondary_alt_attack ? "stab" : living_user.cyberpunk_combat_intent
 			modifiers["cyberpunk_defense_break"] = is_secondary_alt_attack ? "parry" : "dodge"
-			to_chat(living_user, span_notice(is_secondary_alt_attack ? "Вы готовите хитрый удар, чтобы обойти парирование." : "Вы готовите быстрый удар, чтобы обойти уклонение."))
+			var/defense_break_notice = is_secondary_alt_attack ? "Вы готовите хитрый удар, чтобы обойти парирование." : "Вы готовите быстрый удар, чтобы обойти уклонение."
+			to_chat(living_user, span_notice(defense_break_notice))
 		if(living_user.combat_mode && !LAZYACCESS(modifiers, SHIFT_CLICK) && !LAZYACCESS(modifiers, CTRL_CLICK) && !LAZYACCESS(modifiers, MIDDLE_CLICK) && !LAZYACCESS(modifiers, ALT_CLICK))
 			modifiers["cyberpunk_combat_intent"] = LAZYACCESS(modifiers, RIGHT_CLICK) ? "stab" : living_user.cyberpunk_combat_intent
 			if(LAZYACCESS(modifiers, "cyberpunk_charged_intent") == "kick" && isliving(A) && Adjacent(A))

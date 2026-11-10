@@ -2,7 +2,7 @@
 	icon = null
 	icon_state = null
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	screen_loc = "TOP,LEFT"
+	screen_loc = "TOP,CENTER"
 	maptext_height = 480
 	maptext_width = 480
 	maptext = ""
@@ -17,5 +17,3 @@
 	if(!hud || !hud.mymob.canon_client?.view_size) //Might not have been initialized by now
 		return
 	maptext_width = view_to_pixels(hud.mymob.canon_client.view_size.getView())[1]
-
-

@@ -33,7 +33,7 @@
 		return FALSE
 	body_ref = WEAKREF(new_body)
 	session = new_session
-	appearance = new_body.appearance
+	appearance = cyberspace_body_appearance(new_body)
 	alpha = get_mode_alpha(new_session?.mode)
 	color = get_mode_color(new_session?.mode)
 	name = new_body.get_cyberspace_avatar_name(new_session?.mode || CYBERSPACE_MODE_AVATAR)
@@ -58,6 +58,16 @@
 		avatar_shell = new(get_turf(src), src)
 	avatar_shell.sync_from_avatar(src)
 	return TRUE
+
+/proc/cyberspace_body_appearance(mob/living/body)
+	var/mutable_appearance/projection = new(body.appearance)
+	if(ishuman(body))
+		var/mob/living/carbon/human/human_body = body
+		projection.overlays = list()
+		projection.underlays = list()
+		for(var/body_layer in list(BODYPARTS_LAYER, HAIR_LAYER, EYES_LAYER, MUTATIONS_LAYER))
+			projection.overlays += human_body.overlays_standing[body_layer]
+	return projection
 
 /obj/effect/cyberspace_avatar_shell
 	name = "cyberspace avatar"
@@ -388,8 +398,7 @@
 /datum/cyberspace_session/proc/can_avatar_move_to(turf/destination)
 	if(mode != CYBERSPACE_MODE_AVATAR || !avatar || !destination)
 		return TRUE
-	if(get_connected_node())
-		return TRUE
+	// Connected nodes extend the safe origins; they do not remove the distance limit.
 	if(!length(get_safe_origin_turfs()))
 		return TRUE
 	var/current_distance = get_nearest_safe_origin_distance(avatar)
@@ -628,6 +637,7 @@
 		return FALSE
 	connected_node_ref = WEAKREF(node)
 	add_connection_origin(get_turf(visual_anchor || avatar))
+	avatar_distance_grace_ticks = 0
 	to_chat(body, span_notice("Your avatar anchors to [visual_anchor || "the node"]."))
 	return TRUE
 

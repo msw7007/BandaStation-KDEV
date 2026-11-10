@@ -28,9 +28,6 @@
 
 
 /datum/cyberpunk_contract_condition/build/check_nearby(datum/cyberpunk_contract/contract, mob/living/user)
-	for(var/atom/target in view(1, user))
-		if(record_atom(contract, user, target))
-			return TRUE
 	return FALSE
 
 
@@ -54,12 +51,5 @@
 	return FALSE
 
 /datum/cyberpunk_contract/proc/check_nearby_build_target(mob/living/user)
-	for(var/atom/target in view(1, user))
-		if(!matches_target(target))
-			continue
-		add_history("[user.real_name || user.name] verified construction of [target]")
-		if(!creator_confirm_required)
-			return complete("construction target present")
-		return TRUE
 	return FALSE
 

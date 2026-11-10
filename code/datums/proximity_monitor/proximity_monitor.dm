@@ -9,6 +9,7 @@
 	var/ignore_if_not_on_turf
 	///The signals of the connect range component, needed to monitor the turfs in range.
 	var/static/list/loc_connections = list(
+		COMSIG_TURF_AI_OBSERVABLE = PROC_REF(on_ai_observation),
 		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
 		COMSIG_ATOM_EXITED = PROC_REF(on_uncrossed),
 		COMSIG_ATOM_AFTER_SUCCESSFUL_INITIALIZED_ON = PROC_REF(on_initialized),
@@ -88,3 +89,7 @@
 	SIGNAL_HANDLER
 	if(location != host)
 		hasprox_receiver?.HasProximity(created)
+
+/datum/proximity_monitor/proc/on_ai_observation(turf/location, atom/pawn)
+	SIGNAL_HANDLER
+	return hasprox_receiver && host != pawn

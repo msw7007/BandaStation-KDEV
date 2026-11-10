@@ -45,6 +45,8 @@ type Category = {
 };
 
 type VendingData = {
+  cargoTracking?: boolean;
+  corporateChip?: { name: string; price: number };
   all_products_free: boolean;
   ad: string;
   department: string;
@@ -62,7 +64,7 @@ type VendingData = {
 };
 
 export const Vending = () => {
-  const { data } = useBackend<VendingData>();
+  const { act, data } = useBackend<VendingData>();
 
   const {
     all_products_free,
@@ -111,6 +113,28 @@ export const Vending = () => {
     <Window width={431} height={635}>
       <Window.Content>
         <Stack fill vertical>
+          {!!data.cargoTracking && (
+            <Stack.Item>
+              <Button
+                icon="location-dot"
+                fluid
+                onClick={() => act('attach_cargo_tracker')}
+              >
+                Attach cargo tracker
+              </Button>
+            </Stack.Item>
+          )}
+          {data.corporateChip && (
+            <Stack.Item>
+              <Button
+                icon="microchip"
+                fluid
+                onClick={() => act('buy_corporate_chip')}
+              >
+                {data.corporateChip.name}: {data.corporateChip.price}
+              </Button>
+            </Stack.Item>
+          )}
           {!all_products_free && (
             <Stack.Item>
               <UserDetails />

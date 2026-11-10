@@ -1,5 +1,8 @@
 // Cyberpunk carbon life overrides kept outside core to reduce upstream merge conflicts.
 
+/mob/living/carbon
+	COOLDOWN_DECLARE(cyberpunk_pain_collapse_cd)
+
 /mob/living/carbon/Life(seconds_per_tick = SSMOBS_DT)
 	if(HAS_TRAIT(src, TRAIT_NO_TRANSFORM))
 		return
@@ -54,7 +57,7 @@
 ///////////////
 
 // Start of a breath chain, calls [carbon/proc/breathe()]
-/mob/living/carbon/handle_breathing(seconds_per_tick)
+/mob/living/carbon/proc/get_cyberpunk_breath_tick_interval()
 	var/next_breath = 4
 	var/obj/item/organ/lungs/L = get_organ_slot(ORGAN_SLOT_LUNGS)
 	var/obj/item/organ/heart/H = get_organ_slot(ORGAN_SLOT_HEART)
@@ -64,6 +67,10 @@
 	if(H)
 		if(H.damage > H.high_threshold)
 			next_breath--
+	return next_breath
+
+/mob/living/carbon/handle_breathing(seconds_per_tick)
+	var/next_breath = get_cyberpunk_breath_tick_interval()
 
 	if((SSmobs.times_fired % next_breath) == 0 || failed_last_breath)
 		breathe(seconds_per_tick) //Breathe per 4 ticks if healthy, down to 2 if our lungs or heart are damaged, unless suffocating
@@ -113,7 +120,7 @@
 
 	// LIGHTWEIGHT ATMOS: external turf breathing uses Area oxygen only.
 	// Internals, tanks and object-contained atmos keep the old gas mixture path.
-	if(isturf(loc) && !internal && !external)
+	if((isturf(loc) || istype(loc, /obj/effect/cyberpunk_phantom_body)) && !internal && !external)
 		if(!lungs)
 			failed_last_breath = TRUE
 			adjust_oxy_loss(CARBON_NO_LUNGS_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)

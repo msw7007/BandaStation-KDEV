@@ -43,16 +43,18 @@
 	if(destination_kind == "coordinates")
 		return matches_location(deliverable)
 	if(destination_kind == "terminal")
-		for(var/atom/nearby in view(1, deliverable))
-			if(!destination_text || findtext(lowertext(nearby.name), lowertext(destination_text)) || findtext(lowertext("[nearby.type]"), lowertext(destination_text)))
+		for(var/obj/machinery/vending/nearby in view(1, deliverable))
+			if(nearby.has_contract_terminal_module() && terminal_matches(nearby))
 				return TRUE
 		return FALSE
 	var/mob/living/recipient
-	if(destination_kind == "recipient" && destination_text)
+	if(destination_kind == "recipient")
 		recipient = SSeconomy.find_cyberpunk_contract_person(destination_text)
-	if(!recipient)
+	else
 		recipient = holder && contract.user_character_key(holder) == contract.creator_character_key ? holder : contract.find_creator_mob()
-	return recipient && get_dist(get_turf(recipient), get_turf(deliverable)) <= 1
+	var/turf/recipient_turf = get_turf(recipient)
+	var/turf/cargo_turf = get_turf(deliverable)
+	return recipient_turf && cargo_turf && recipient_turf.z == cargo_turf.z && get_dist(recipient_turf, cargo_turf) <= 1
 
 
 /datum/cyberpunk_contract_condition/delivery/proc/get_ai_destination(datum/cyberpunk_contract/contract, obj/machinery/vending/source_terminal)
@@ -69,13 +71,15 @@
 			if(terminal_matches(vendor))
 				return vendor
 		return null
-	if(destination_kind == "recipient" && destination_text)
+	if(destination_kind == "recipient")
 		return SSeconomy.find_cyberpunk_contract_person(destination_text)
 	return contract?.find_creator_mob()
 
 
 /datum/cyberpunk_contract_condition/delivery/record_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item)
-	if(!contract || !item || item.cyberpunk_contract_id != contract.id)
+	if(!contract || contract.status != CYBERPUNK_CONTRACT_ACCEPTED || !item || item.cyberpunk_contract_id != contract.id || !(item in contract.delivery_items))
+		return FALSE
+	if(!matches_type(item) || !item_meets_quality(item) || get_item_amount(item) < required_amount)
 		return FALSE
 	if(!item_at_destination(contract, item, user))
 		return FALSE
@@ -126,14 +130,14 @@
 	var/obj/item/held = user.get_active_held_item()
 	if(!held)
 		return FALSE
-	if(held.cyberpunk_contract_id != id && target_text && !findtext(lowertext(held.name), lowertext(target_text)) && !findtext(lowertext("[held.type]"), lowertext(target_text)))
-		return FALSE
 	if(contract_type == CYBERPUNK_CONTRACT_DELIVERY)
 		if(try_record_item_condition(CYBERPUNK_CONTRACT_DELIVERY, user, held))
 			return TRUE
 		return record_delivery_contact(held, user)
 	if(try_record_item_condition(CYBERPUNK_CONTRACT_MINING, user, held))
 		return TRUE
+	if(length(completion_conditions) || (target_text && !findtext(lowertext(held.name), lowertext(target_text)) && !findtext(lowertext("[held.type]"), lowertext(target_text))))
+		return FALSE
 	var/submitted_name = held.name
 	var/amount = 1
 	if(isstack(held))
@@ -153,17 +157,26 @@
 	if(!can_act_as_contractor(user) || !(contract_type in list(CYBERPUNK_CONTRACT_DELIVERY, CYBERPUNK_CONTRACT_MINING, CYBERPUNK_CONTRACT_GUARD)))
 		return FALSE
 	var/obj/item/held = user.get_active_held_item()
-	if(!held)
+	if(!held || (held.cyberpunk_contract_id && held.cyberpunk_contract_id != id))
 		return FALSE
-	held.cyberpunk_contract_id = id
-	add_history("[user.real_name || user.name] marked [held.name] as contract cargo")
 	if(contract_type == CYBERPUNK_CONTRACT_GUARD)
 		for(var/datum/cyberpunk_contract_condition/guard/condition as anything in completion_conditions)
-			condition.protected_ref = REF(held)
-			condition.guard_kind = "cargo"
+			if(condition.guard_kind == "cargo" && condition.protected_ref == REF(held))
+				held.cyberpunk_contract_id = id
+				return TRUE
+		return FALSE
+	if(contract_type == CYBERPUNK_CONTRACT_DELIVERY && !(held in delivery_items))
+		return FALSE
+	if(contract_type == CYBERPUNK_CONTRACT_MINING)
+		var/valid_resource = FALSE
+		for(var/datum/cyberpunk_contract_condition/mining/condition as anything in completion_conditions)
+			if(condition.matches_target_text(held) && condition.matches_type(held) && condition.item_meets_quality(held))
+				valid_resource = TRUE
+		if(!valid_resource)
+			return FALSE
 		return TRUE
-	track_delivery_item(held)
-	try_record_item_condition(contract_type, user, held) || record_delivery_contact(held, user)
+	held.cyberpunk_contract_id = id
+	add_history("[user.real_name || user.name] marked [held.name] as contract cargo")
 	return TRUE
 
 
@@ -185,7 +198,13 @@
 /datum/cyberpunk_contract/proc/clear_delivery_tracking()
 	for(var/obj/item/item as anything in delivery_items)
 		UnregisterSignal(item, list(COMSIG_MOVABLE_MOVED, COMSIG_QDELETING))
+		if(item.cyberpunk_contract_id == id)
+			item.cyberpunk_contract_id = 0
 	delivery_items.Cut()
+	for(var/datum/cyberpunk_contract_condition/guard/condition as anything in completion_conditions)
+		var/obj/item/guarded_item = locate(condition.protected_ref)
+		if(istype(guarded_item) && guarded_item.cyberpunk_contract_id == id)
+			guarded_item.cyberpunk_contract_id = 0
 	if(tracked_creator)
 		UnregisterSignal(tracked_creator, COMSIG_MOVABLE_MOVED)
 		tracked_creator = null
@@ -196,10 +215,13 @@
 		return FALSE
 	if(try_record_item_condition(CYBERPUNK_CONTRACT_DELIVERY, holder, item))
 		return TRUE
+	if(length(completion_conditions))
+		return FALSE
 	var/mob/living/creator = holder && user_character_key(holder) == creator_character_key ? holder : find_creator_mob()
 	if(!creator)
 		return FALSE
-	if(get_dist(get_turf(creator), get_turf(item)) > 1)
+	var/turf/item_turf = get_turf(item)
+	if(!(item in delivery_items) || creator.z != item_turf?.z || get_dist(get_turf(creator), item_turf) > 1)
 		return FALSE
 	delivered_amount = max(delivered_amount, required_amount)
 	add_history("[item.name] reached creator [creator.real_name || creator.name]")

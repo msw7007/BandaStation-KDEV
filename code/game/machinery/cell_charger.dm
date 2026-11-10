@@ -9,6 +9,10 @@
 	var/obj/item/stock_parts/power_store/cell/charging = null
 	var/charge_rate = 0.25 * STANDARD_CELL_RATE
 
+/obj/machinery/cell_charger/Initialize(mapload)
+	. = ..()
+	register_cyberpunk_service_source()
+
 /obj/machinery/cell_charger/update_overlays()
 	. = ..()
 
@@ -27,6 +31,8 @@
 
 /obj/machinery/cell_charger/examine(mob/user)
 	. = ..()
+	if(has_cyberpunk_energy_shop())
+		. += span_notice("Right-click to open the energy supply shop.")
 	. += "There's [charging ? "\a [charging]" : "no cell"] in the charger."
 	if(charging)
 		. += "Current charge: [round(charging.percent(), 1)]%."
@@ -139,7 +145,7 @@
 	if(!charging || charging.percent() >= 100 || !anchored || !is_operational)
 		return
 
-	var/main_draw = charge_rate * seconds_per_tick
+	var/main_draw = charge_rate * seconds_per_tick * get_cyberpunk_corporate_charging_multiplier()
 	if(!main_draw)
 		return
 

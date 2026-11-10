@@ -40,8 +40,8 @@
 	var/restocked = 0
 	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
 		var/stock_multiplier = get_cyberpunk_machine_vending_stock_multiplier()
-		stock_multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(get_cyberspace_manufacturer(src), list("benn_supply_cert", "ryaznov_supply_cert", "starlight_supply_cert"), 1, 1.15)
-		var/target_maximum = max(1, round(record.max_amount * stock_multiplier))
+		stock_multiplier *= get_cyberpunk_corporate_stock_multiplier()
+		var/target_maximum = max(1, CEILING(record.max_amount * stock_multiplier, 1))
 		var/target_amount = cyberpunk_business_minimum_stock > 0 ? min(cyberpunk_business_minimum_stock, target_maximum) : target_maximum
 		var/needed = target_amount - record.amount
 		if(needed <= 0)

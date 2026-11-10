@@ -35,7 +35,7 @@
 		if(!cloud.effect || cloud.amount <= 0)
 			continue
 		if(istype(cloud.effect, /datum/gas_effect/freeze))
-			heat = max(T20C, heat - cloud.amount * seconds_per_tick)
+			heat = max(T20C, heat - cloud.amount * seconds_per_tick * cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_RYAZNOV, "ryaznov_power_tuning"))
 
 /obj/machinery/power/cyberpunk_generator/kinetic/attack_hand(mob/user, list/modifiers)
 	return ..()

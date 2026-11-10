@@ -113,3 +113,36 @@
 	TEST_ASSERT(dummy.can_have_blood(), "Removing TRAIT_NOBLOOD didn't make the mob have blood again.")
 	TEST_ASSERT(CAN_HAVE_BLOOD(dummy), "Caching of blood volume status is screwed up after the removal of TRAIT_NOBLOOD.")
 	TEST_ASSERT_EQUAL(dummy.get_blood_volume(), dummy.default_blood_volume, "Blood volume wasn't fixed after the removal of TRAIT_NOBLOOD.")
+
+/datum/unit_test/cyberpunk_phantom_chemistry/Run()
+	var/mob/living/carbon/human/body = allocate(/mob/living/carbon/human/consistent)
+	var/datum/ai_controller/controller = allocate(/datum/ai_controller/basic_controller/simple/cyberpunk_city, body)
+	body.reagents.add_reagent(/datum/reagent/medicine/omnizine, 10)
+	var/datum/reagent/medicine/omnizine/medicine = body.reagents.has_reagent(/datum/reagent/medicine/omnizine)
+	TEST_ASSERT(controller.cyberpunk_can_suspend_body(), "An NPC with active chemistry must support compact medical processing.")
+	controller.set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_WAITING)
+	controller.set_blackboard_key(BB_CP_PHANTOM_APPROX_TURF, get_turf(body))
+	controller.phantom_body = new(get_turf(body))
+	body.forceMove(controller.phantom_body)
+	var/starting_cycles = medicine.current_cycle
+	controller.phantom_medical_at = world.time - 6 SECONDS
+	TEST_ASSERT(controller.cyberpunk_process_phantom_health(force = TRUE), "Compact chemistry processing failed.")
+	TEST_ASSERT_EQUAL(medicine.current_cycle - starting_cycles, 3, "Six seconds must preserve three native reagent cycles.")
+	TEST_ASSERT(body.reagents.total_volume < 10, "A suspended NPC's liver did not metabolize its medicine.")
+	var/volume_after_tick = body.reagents.total_volume
+	controller.cyberpunk_materialize_phantom("unit test")
+	TEST_ASSERT_EQUAL(body.reagents.total_volume, volume_after_tick, "Materialization metabolized the same time twice.")
+	TEST_ASSERT(isturf(body.loc), "Materialization did not restore the body to a turf.")
+	TEST_ASSERT_NULL(controller.phantom_body, "Materialization leaked the suspended body context.")
+
+/datum/unit_test/cyberpunk_phantom_nonhuman/Run()
+	var/mob/living/carbon/human/species/monkey/monkey = allocate(/mob/living/carbon/human/species/monkey)
+	var/datum/ai_controller/monkey_controller = allocate(/datum/ai_controller/basic_controller/simple/cyberpunk_city, monkey)
+	TEST_ASSERT(monkey_controller.cyberpunk_can_suspend_body(), "Nonhuman carbon NPCs must support compact medicine.")
+	var/mob/living/basic/pet/dog/dog = allocate(/mob/living/basic/pet/dog)
+	var/datum/ai_controller/dog_controller = allocate(/datum/ai_controller/basic_controller/simple/cyberpunk_city, dog)
+	dog.adjust_brute_loss(1)
+	TEST_ASSERT(dog_controller.cyberpunk_can_suspend_body(), "An injured basic NPC must support compact medicine.")
+	dog.bodytemperature = 600
+	TEST_ASSERT(dog_controller.cyberpunk_phantom_medical_step(dog, SSMOBS_DT), "Basic NPC physiology processing failed.")
+	TEST_ASSERT(dog.get_fire_loss() > 0, "Compact medicine skipped the basic NPC's native temperature damage signal.")

@@ -39,9 +39,11 @@
 
 /datum/preference_middleware/loadout/proc/action_set_loadout_preview_override(list/params, mob/user)
 	PRIVATE_PROC(TRUE)
-	if(!isnull(preferences.character_preview_view))
-		preferences.character_preview_view.preview_job_override = null
 	if(!params["enabled"])
+		if(deep_compare_list(preferences.loadout_preview_override, list()) && isnull(preferences.character_preview_view?.preview_job_override))
+			return FALSE
+		if(!isnull(preferences.character_preview_view))
+			preferences.character_preview_view.preview_job_override = null
 		preferences.loadout_preview_override = list()
 		preferences.character_preview_view?.update_body()
 		return TRUE
@@ -58,6 +60,10 @@
 			continue
 		preview_loadout[path_to_use] = islist(item_details) ? LAZYLISTDUPLICATE(item_details) : list()
 
+	if(deep_compare_list(preferences.loadout_preview_override, preview_loadout) && isnull(preferences.character_preview_view?.preview_job_override))
+		return FALSE
+	if(!isnull(preferences.character_preview_view))
+		preferences.character_preview_view.preview_job_override = null
 	preferences.loadout_preview_override = preview_loadout
 	preferences.character_preview_view?.update_body()
 	return TRUE
@@ -73,7 +79,7 @@
 	if(!islist(item_details))
 		return TRUE
 
-	var/slot = params["slot"]
+	var/slot = cyberpunk_normalize_loadout_equip_slot(params["slot"])
 	if(isnull(slot) || slot == "")
 		item_details -= INFO_EQUIP_SLOT
 	else

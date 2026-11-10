@@ -99,3 +99,13 @@
 		if(cyberpunk_corporation_has_edict(corporation_id, edict_id))
 			return active_multiplier
 	return default_multiplier
+
+/proc/cyberpunk_property_edict_multiplier(atom/location, corporation_id, edict_id, active_multiplier = 1.1)
+	if(!location || !SScyberpunk_corporations.cyberpunk_corporation_has_edict(corporation_id, edict_id))
+		return 1
+	if(corporation_id == CYBERPUNK_CORP_STARLIGHT && ismovable(location))
+		if(recursive_loc_check(location, /obj/vehicle/sealed/car/cyberpunk) || recursive_loc_check(location, /obj/vehicle/ridden/cyberpunk/avi))
+			return active_multiplier
+	var/area/territory = get_area(location)
+	var/owner_id = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(cyberpunk_corporate_area_id(location) || territory?.cyberpunk_world_owner)
+	return owner_id == corporation_id ? active_multiplier : 1

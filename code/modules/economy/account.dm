@@ -167,12 +167,13 @@
 /datum/bank_account/proc/pay_debt(amount, is_payment = TRUE)
 	var/amount_to_pay = min(amount, account_debt)
 	if(is_payment)
-		if(!adjust_money(-amount, "Прочее: Оплата долга"))
+		if(!adjust_money(-amount_to_pay, "Прочее: Оплата долга"))
 			return 0
 	else
-		add_log_to_history(-amount, "Прочее: Взыскание долгов")
+		add_log_to_history(-amount_to_pay, "Прочее: Взыскание долгов")
 	log_econ("[amount_to_pay][MONEY_NAME] were removed from [account_holder]'s bank account to pay a debt of [account_debt]")
 	account_debt -= amount_to_pay
+	settle_cyberpunk_contract_debts(amount_to_pay, account_debt + amount_to_pay)
 	SEND_SIGNAL(src, COMSIG_BANK_ACCOUNT_DEBT_PAID)
 	return amount_to_pay
 

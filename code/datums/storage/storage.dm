@@ -72,6 +72,8 @@
 	var/cyberpunk_allow_rotation = TRUE
 	/// Cyberpunk 13 hand-to-storage insertion delay. Zero keeps special storages instant.
 	var/cyberpunk_insert_delay = 2 SECONDS
+	/// Hand extraction delay; automated transfers continue to use attempt_remove directly.
+	var/cyberpunk_remove_delay = 2 SECONDS
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 	/// Whether the storage is currently locked (inaccessible). See [code/__DEFINES/storage.dm]
@@ -898,6 +900,13 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
  * * silent - if TRUE, we won't play any exit sounds
  */
 /datum/storage/proc/remove_single(mob/removing, obj/item/thing, atom/remove_to_loc, silent = FALSE)
+	if(isliving(removing) && cyberpunk_remove_delay > 0)
+		if(locked || QDELETED(thing) || thing.loc != real_location || !length(removing.get_empty_held_indexes()) || !removing.can_perform_action(parent, ALLOW_RESTING | FORBID_TELEKINESIS_REACH))
+			return FALSE
+		if(!do_after(removing, cyberpunk_remove_delay, target = parent))
+			return FALSE
+		if(QDELETED(src) || locked || QDELETED(thing) || thing.loc != real_location || !length(removing.get_empty_held_indexes()) || !removing.can_perform_action(parent, ALLOW_RESTING | FORBID_TELEKINESIS_REACH))
+			return FALSE
 	return attempt_remove(thing, remove_to_loc, silent)
 
 /**

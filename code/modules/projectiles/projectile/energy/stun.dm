@@ -70,6 +70,7 @@
 /// Status effect tracking being tased by someone!
 /datum/status_effect/tased
 	id = "being_tased"
+	var/implant_restart_attempted = FALSE
 	status_type = STATUS_EFFECT_MULTIPLE
 	alert_type = null
 	tick_interval = 0.25 SECONDS
@@ -219,6 +220,9 @@
 	if(!do_tase_with(taser, seconds_between_ticks))
 		end_tase()
 		return
+	if(!implant_restart_attempted && stamina_per_second > 0)
+		implant_restart_attempted = TRUE
+		owner.retune_implants_from_electricity(stamina_per_second * seconds_between_ticks)
 
 	owner.adjust_stutter_up_to(10 SECONDS, 20 SECONDS)
 	owner.adjust_jitter_up_to(20 SECONDS, 30 SECONDS)

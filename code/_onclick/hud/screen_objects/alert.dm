@@ -1195,7 +1195,7 @@
 	if(index > 5)
 		return ""
 
-	return "EAST-1:28,CENTER+[6 - index]:[29 - (index * 2)]"
+	return "EAST-[index]:28,NORTH:5"
 
 // Re-render all alerts - also called in /datum/hud/show_hud() because it's needed there
 /datum/hud/proc/reorganize_alerts(mob/viewmob)

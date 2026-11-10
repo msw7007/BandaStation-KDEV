@@ -222,7 +222,6 @@
 	var/atom/cargo = controller.blackboard[BB_CP_CARGO]
 	var/atom/return_point = controller.blackboard[BB_CP_ROUTE_RETURN_POINT]
 	var/finish_at = controller.blackboard[BB_CP_CITY_TASK_FINISH_AT]
-	var/mob/living/living_pawn = controller.pawn
 
 	state["task_exists"] = TRUE
 	state["delivery_task"] = is_delivery_task(task)
@@ -235,23 +234,18 @@
 	state["cargo_exists"] = cargo && !QDELETED(cargo)
 	state["return_exists"] = !!return_point && !QDELETED(return_point)
 	state["no_return"] = !return_point || QDELETED(return_point)
-	state["at_source"] = source && !QDELETED(source) && get_dist(controller.pawn, source) <= 1
-	state["at_target"] = target && !QDELETED(target) && get_dist(controller.pawn, target) <= 1
-	state["at_return"] = return_point && !QDELETED(return_point) && get_dist(controller.pawn, return_point) <= 1
-	state["has_cargo"] = controller.blackboard[BB_CP_CARGO_STATUS] == CP_AI_CARGO_CARRIED
+	state["at_source"] = source && !QDELETED(source) && controller.cyberpunk_city_adjacent(source)
+	state["at_target"] = target && !QDELETED(target) && controller.cyberpunk_city_adjacent(target)
+	state["at_return"] = return_point && !QDELETED(return_point) && controller.cyberpunk_city_adjacent(return_point)
+	state["has_cargo"] = controller.cyberpunk_has_city_cargo()
 	state["delivered"] = controller.blackboard[BB_CP_CARGO_STATUS] == CP_AI_CARGO_DELIVERED
 	state["cargo_lost"] = controller.blackboard[BB_CP_CARGO_STATUS] == CP_AI_CARGO_LOST
-	state["timed_out"] = finish_at && world.time >= finish_at
+	if(controller.blackboard[BB_CP_CARGO_STATUS] == CP_AI_CARGO_CARRIED && !state["has_cargo"])
+		state["cargo_lost"] = TRUE
+	state["timed_out"] = finish_at && world.time >= finish_at && task_state != CP_AI_TASK_WORKING
 	state["worked"] = FALSE
 	state["complete"] = FALSE
 	state["failed"] = FALSE
-
-	var/obj/item/cargo_item = cargo
-	if(istype(living_pawn) && istype(cargo_item) && living_pawn.is_holding(cargo_item))
-		state["has_cargo"] = TRUE
-	var/mob/living/cargo_mob = cargo
-	if(istype(living_pawn) && istype(cargo_mob) && living_pawn.pulling == cargo_mob)
-		state["has_cargo"] = TRUE
 
 	state["traffic_clear"] = TRUE
 	cyberpunk_goap_extend_traffic_world_state(controller, state)
@@ -352,10 +346,10 @@
 			var/atom/transition = controller.blackboard[BB_CP_ROUTE_Z_TRANSITION]
 			if(QDELETED(transition))
 				controller.queue_behavior(/datum/ai_behavior/cyberpunk_fail_task, "z transition missing")
-			else if(get_dist(controller.pawn, transition) <= 1)
+			else if(get_turf(controller.pawn) == get_turf(transition))
 				controller.queue_behavior(/datum/ai_behavior/cyberpunk_set_task_state, CP_AI_TASK_USE_Z_TRANSITION)
 			else
-				controller.queue_behavior(/datum/ai_behavior/travel_towards/adjacent, BB_CP_ROUTE_Z_TRANSITION)
+				controller.queue_behavior(/datum/ai_behavior/travel_towards, BB_CP_ROUTE_Z_TRANSITION)
 
 		if("use_z_transition")
 			controller.queue_behavior(/datum/ai_behavior/cyberpunk_use_z_transition)
@@ -368,7 +362,11 @@
 
 		if("return_to_point")
 			var/atom/return_point = controller.blackboard[BB_CP_ROUTE_RETURN_POINT]
-			if(QDELETED(return_point) || get_dist(controller.pawn, return_point) <= 1)
+			var/turf/return_turf = get_turf(return_point)
+			var/turf/current_turf = get_turf(controller.pawn)
+			if(return_turf && current_turf && return_turf.z != current_turf.z && controller.cyberpunk_prepare_z_transition(CP_AI_TASK_RETURNING))
+				return
+			if(QDELETED(return_point) || controller.cyberpunk_city_adjacent(return_point))
 				controller.queue_behavior(/datum/ai_behavior/cyberpunk_complete_task, "returned")
 			else if(cyberpunk_city_find_climb_obstacle(controller.pawn, return_point))
 				controller.queue_behavior(/datum/ai_behavior/cyberpunk_climb_obstacle, BB_CP_ROUTE_RETURN_POINT)

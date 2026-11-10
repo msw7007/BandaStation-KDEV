@@ -107,6 +107,9 @@
 /obj/machinery/vending/ui_data(mob/user)
 	maybe_rotate_cyberpunk_sale_stock()
 	. = list()
+	.["corporateChip"] = get_cyberpunk_service_chip_offer()
+	var/datum/cyberpunk_corporation/supply_corporation = get_cyberpunk_supply_corporation()
+	.["cargoTracking"] = supply_corporation?.has_edict("starlight_log_observation") && supply_corporation.is_subscribed(user)
 
 	var/obj/item/card/id/card_used
 	var/held_cash = 0
@@ -146,6 +149,10 @@
 		return
 
 	switch(action)
+		if("attach_cargo_tracker")
+			return attach_starlight_tracking(ui.user)
+		if("buy_corporate_chip")
+			return buy_cyberpunk_service_chip(ui.user)
 		if("vend")
 			. = vend(params, ui.user)
 		if("select_colors")

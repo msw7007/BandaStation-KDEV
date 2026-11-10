@@ -220,6 +220,7 @@
 
 /obj/machinery/computer/corporate_terminal/Initialize(mapload)
 	. = ..()
+	register_cyberpunk_service_source()
 	var/access_id = corporation_id == "government" ? cyberpunk_corporation_access_id(corporation_id) : cyberpunk_corporation_access_id(corporation_id, "head")
 	if(access_id)
 		add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key(access_id))
@@ -356,14 +357,17 @@
 	var/collected_data_type = data_type || corporation.get_primary_data_type()
 	return SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation.id, collected_data_type, 1, 0, "Research correction by [user.real_name || user.name]")
 
-/obj/machinery/computer/corporate_data_terminal/proc/record_ai_theory_tick(mob/living/worker)
-	if(!worker?.Adjacent(src) || world.time < next_ai_theory_at)
+/obj/machinery/computer/corporate_data_terminal/proc/record_ai_theory_tick(mob/living/worker, elapsed_seconds = 1)
+	var/nearby = worker?.ai_controller?.phantom_body ? worker.ai_controller.cyberpunk_city_adjacent(src) : worker?.Adjacent(src)
+	if(!nearby || !is_operational || world.time < next_ai_theory_at)
 		return FALSE
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
 	if(!corporation)
 		return FALSE
 	var/collected_data_type = data_type || corporation.get_primary_data_type()
-	if(!SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation.id, collected_data_type, 1, 0, "AI theory work by [worker.real_name || worker.name]"))
+	var/available_ticks = max(1, FLOOR((world.time - max(0, next_ai_theory_at - (1 SECONDS))) / (1 SECONDS), 1))
+	var/theory_ticks = clamp(FLOOR(elapsed_seconds, 1), 1, available_ticks)
+	if(!SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation.id, collected_data_type, theory_ticks, 0, "AI theory work by [worker.real_name || worker.name]"))
 		return FALSE
 	next_ai_theory_at = world.time + 1 SECONDS
 	return TRUE

@@ -6,7 +6,7 @@
 		list("id" = "ryaznov_supply_cert", "name" = "Supply Certification", "level" = 1, "description" = "Ryaznov vending and service terminals use larger industrial stocks."),
 		list("id" = "ryaznov_industrial_analysis", "name" = "Industrial Analysis", "level" = 2, "description" = "Ryaznov terminals can report structural, machine, and power state."),
 		list("id" = "ryaznov_route_registry", "name" = "Infrastructure Registry", "level" = 2, "description" = "Serviced machines and structures produce infrastructure research data."),
-		list("id" = "ryaznov_mass_repair", "name" = "Mass Repair", "level" = 2, "description" = "Field repair kits and stations receive broader support hooks."),
+		list("id" = "ryaznov_energy_supply", "name" = "Energy Supply", "level" = 2, "description" = "Ryaznov vendors stock cells and charging supplies; chargers on Ryaznov property work faster."),
 		list("id" = "ryaznov_tech_tracking", "name" = "Tech Tracking", "level" = 3, "description" = "Ryaznov infrastructure can track damaged structures and machines."),
 		list("id" = "ryaznov_salvage_program", "name" = "Salvage Program", "level" = 3, "description" = "Machine recycling and heavy wreck analysis yield research data."),
 		list("id" = "ryaznov_overload_loop", "name" = "Overload Loop", "level" = 3, "description" = "Ryaznov offensive demons can add heat, impact, or shield pressure."),

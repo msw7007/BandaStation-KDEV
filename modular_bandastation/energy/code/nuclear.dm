@@ -34,7 +34,7 @@
 			continue
 		cooling += 24 * depth * rating
 		coolant_rods[i] = max(0, rod_integrity - (0.035 * depth * seconds_per_tick / max(rating, 1)))
-	heat += ((65 * reaction_rate) - cooling) * seconds_per_tick
+	heat += ((65 * reaction_rate) - cooling * cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_RYAZNOV, "ryaznov_power_tuning")) * seconds_per_tick
 	heat = max(T20C, heat)
 	fuel_units = max(0, fuel_units - 0.02 * reaction_rate * seconds_per_tick)
 	if(heat > critical_heat)

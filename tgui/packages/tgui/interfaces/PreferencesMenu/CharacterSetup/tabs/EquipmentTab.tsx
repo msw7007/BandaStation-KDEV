@@ -61,10 +61,7 @@ const slotFlagBySlot: Record<string, number> = {
   tights: 1 << 21,
   shoulder_l: 1 << 22,
   shoulder_r: 1 << 23,
-  finger: 1 << 24,
-  bracers: 1 << 25,
   pants: 1 << 26,
-  chest: 1 << 27,
 };
 
 const groupedSlotFlags: Record<string, number> = {
@@ -75,7 +72,6 @@ const groupedSlotFlags: Record<string, number> = {
     slotFlagBySlot.uniform |
     slotFlagBySlot.suit |
     slotFlagBySlot.pants |
-    slotFlagBySlot.chest |
     slotFlagBySlot.undershirt |
     slotFlagBySlot.underwear |
     slotFlagBySlot.tights,
@@ -105,6 +101,19 @@ function findLoadoutItem(items: CatalogItem[], path: typePath) {
   return items.find((item) => item.path === path);
 }
 
+function normalizeLoadoutSlot(slot: unknown) {
+  if (typeof slot !== 'string' || !slot.length) {
+    return undefined;
+  }
+  if (slot === 'finger' || slot === 'bracers') {
+    return 'gloves';
+  }
+  if (slot === 'chest') {
+    return 'suit';
+  }
+  return slot;
+}
+
 function getLoadoutAmount(
   loadoutList: LoadoutManagerData['character_preferences']['misc']['loadout_list'],
   path: typePath,
@@ -125,8 +134,7 @@ function getLoadoutEquipSlot(
   if (!itemData || Array.isArray(itemData)) {
     return undefined;
   }
-  const slot = itemData.equip_slot;
-  return typeof slot === 'string' && slot.length ? slot : undefined;
+  return normalizeLoadoutSlot(itemData.equip_slot);
 }
 
 function formatAreaRecord(record: CyberpunkPersistentAreaRecord) {
@@ -176,11 +184,12 @@ function wardrobeDesignMatchesSlot(
   design: CyberpunkVisualDesign,
   slot: string | null,
 ) {
-  if (!slot) {
+  const normalizedSlot = normalizeLoadoutSlot(slot);
+  if (!normalizedSlot) {
     return true;
   }
   const text = `${design.kind || ''} ${design.base || ''} ${design.type_path || ''} ${design.name || ''}`.toLowerCase();
-  switch (slot) {
+  switch (normalizedSlot) {
     case 'uniform':
       return /under|uniform|jumpsuit|костюм|униформ/.test(text);
     case 'suit':
@@ -190,7 +199,7 @@ function wardrobeDesignMatchesSlot(
     case 'shoes':
       return /shoe|boot|сапог|ботин/.test(text);
     case 'gloves':
-      return /glove|перчат/.test(text);
+      return /glove|перчат|ring|finger|кольц|палец|bracer|bracelet|нарукав|браслет/.test(text);
     case 'head':
       return /head|hat|helmet|cap|голов|шлем/.test(text);
     case 'mask':
@@ -207,8 +216,6 @@ function wardrobeDesignMatchesSlot(
       return /undershirt|верхнее белье/.test(text);
     case 'tights':
       return /sock|tights|нос|колгот/.test(text);
-    case 'chest':
-      return /chest|badge|pin|груд/.test(text);
     default:
       return false;
   }
@@ -273,16 +280,17 @@ function itemMatchesCategory(item: CatalogItem, category: string) {
 }
 
 function itemMatchesSlot(item: CatalogItem, slot: string | null) {
-  if (!slot) {
+  const normalizedSlot = normalizeLoadoutSlot(slot);
+  if (!normalizedSlot) {
     return true;
   }
   const slotFlags = Number(item.slot_flags || 0);
-  const desiredSlotFlags = slotFlagBySlot[slot] || groupedSlotFlags[slot] || 0;
+  const desiredSlotFlags = slotFlagBySlot[normalizedSlot] || groupedSlotFlags[normalizedSlot] || 0;
   if (slotFlags && desiredSlotFlags) {
     return Boolean(slotFlags & desiredSlotFlags);
   }
   const text = `${item.category} ${item.group} ${item.name}`.toLowerCase();
-  switch (slot) {
+  switch (normalizedSlot) {
     case 'bag':
       return true;
     case 'hands':
@@ -313,17 +321,11 @@ function itemMatchesSlot(item: CatalogItem, slot: string | null) {
     case 'glasses':
       return /glasses|очки/.test(text);
     case 'gloves':
-      return /glove|перчат/.test(text);
-    case 'finger':
-      return /ring|finger|кольц|палец/.test(text);
-    case 'bracers':
-      return /bracer|bracelet|нарукав|браслет/.test(text);
+      return /glove|перчат|ring|finger|кольц|палец|bracer|bracelet|нарукав|браслет/.test(text);
     case 'shoes':
       return /shoe|boot|сапог|ботин/.test(text);
     case 'ears':
       return /ear|уши|headset|headphone/.test(text);
-    case 'chest':
-      return /chest|груд|badge|pin|brooch/.test(text);
     default:
       return true;
   }
@@ -386,7 +388,6 @@ export function EquipmentTab() {
   const [selectedCategory, setSelectedCategory] = useState(allCategory);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [equippedLoadoutSlots, setEquippedLoadoutSlots] = useState<Record<string, string>>({});
   const [equippedWardrobeSlots, setEquippedWardrobeSlots] = useState<Record<string, string>>({});
   const catalog = flattenLoadoutCatalog(serverData) || [];
   const catalogCategories = useMemo(
@@ -397,6 +398,22 @@ export function EquipmentTab() {
     [serverData],
   );
   const loadoutList = data.character_preferences.misc.loadout_list || {};
+  const equippedLoadoutSlots = useMemo(() => {
+    const slots: Record<string, string> = {};
+    for (const path of Object.keys(loadoutList)) {
+      const slot = getLoadoutEquipSlot(loadoutList, path);
+      if (slot) {
+        slots[path] = slot;
+      }
+    }
+    return slots;
+  }, [loadoutList]);
+  // Server updates recreate objects even when the preview contents are unchanged.
+  const previewLoadout = JSON.stringify(
+    Object.keys(equippedLoadoutSlots)
+      .filter((path) => equippedLoadoutSlots[path] !== 'bag')
+      .map((path) => [path, loadoutList[path]]),
+  );
   const persistent = data.character_setup?.persistent;
   const wardrobeDesigns = persistent?.wardrobe || [];
   const availableWardrobeDesigns = wardrobeDesigns.filter(
@@ -459,24 +476,12 @@ export function EquipmentTab() {
       : 0;
 
   useEffect(() => {
-    const nextSlots: Record<string, string> = {};
-    Object.keys(loadoutList).forEach((path) => {
-      const slot = getLoadoutEquipSlot(loadoutList, path);
-      if (slot) {
-        nextSlots[path] = slot;
-      }
-    });
-    setEquippedLoadoutSlots(nextSlots);
-  }, [loadoutList]);
-
-  useEffect(() => {
+    const entries: [typePath, unknown][] = JSON.parse(previewLoadout);
     act('set_loadout_preview_override', {
       enabled: true,
-      paths: Object.entries(equippedLoadoutSlots)
-        .filter(([, slot]) => slot !== 'bag')
-        .map(([path]) => path),
+      paths: entries.map(([path]) => path),
     });
-  }, [act, equippedLoadoutSlots]);
+  }, [act, previewLoadout]);
 
   const renderSelectedLoadout = (
     compact = false,
@@ -840,21 +845,12 @@ export function EquipmentTab() {
                           path: item.path,
                           slot: selectedSlot,
                         });
-                        setEquippedLoadoutSlots((current) => ({
-                          ...current,
-                          [item.path]: selectedSlot,
-                        }));
                       }}
                       onContextMenu={() => {
                         setSelectedPath(null);
                         act('set_loadout_slot', {
                           path: item.path,
                           slot: null,
-                        });
-                        setEquippedLoadoutSlots((current) => {
-                          const next = { ...current };
-                          delete next[item.path];
-                          return next;
                         });
                       }}
                       onAction={undefined}

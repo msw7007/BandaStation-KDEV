@@ -101,10 +101,18 @@
 /mob/living/carbon/human/proc/cyberpunk_equip_loadout_item_to_named_slot(item_path, equip_slot)
 	if(!ispath(item_path, /obj/item))
 		return FALSE
+	equip_slot = cyberpunk_normalize_loadout_equip_slot(equip_slot)
 	var/obj/item/new_item = new item_path(get_turf(src))
 	var/slot_id = cyberpunk_loadout_named_slot_to_item_slot(equip_slot)
 	if(slot_id)
 		var/obj/item/existing_item = get_item_by_slot(slot_id)
+		if(slot_id == ITEM_SLOT_GLOVES && istype(new_item, /obj/item/clothing/accessory/gloves_accessory) && istype(existing_item, /obj/item/clothing/gloves))
+			var/obj/item/clothing/gloves/worn_gloves = existing_item
+			var/obj/item/clothing/accessory/gloves_accessory/gloves_accessory = new_item
+			if(gloves_accessory.can_attach_accessory(worn_gloves, src) && gloves_accessory.try_attach(worn_gloves, src))
+				gloves_accessory.attach(worn_gloves)
+				worn_gloves.update_appearance()
+				return TRUE
 		if(existing_item)
 			doUnEquip(existing_item, TRUE, get_turf(src), FALSE, invdrop = FALSE, silent = TRUE)
 			qdel(existing_item)
@@ -122,7 +130,18 @@
 	new_item.forceMove(get_turf(src))
 	return FALSE
 
+/proc/cyberpunk_normalize_loadout_equip_slot(equip_slot)
+	if(isnull(equip_slot))
+		return null
+	switch("[equip_slot]")
+		if("finger", "bracers")
+			return "gloves"
+		if("chest")
+			return "suit"
+	return "[equip_slot]"
+
 /proc/cyberpunk_loadout_named_slot_to_item_slot(equip_slot)
+	equip_slot = cyberpunk_normalize_loadout_equip_slot(equip_slot)
 	switch("[equip_slot]")
 		if("head")
 			return ITEM_SLOT_HEAD
@@ -142,6 +161,8 @@
 			return ITEM_SLOT_FEET
 		if("gloves")
 			return ITEM_SLOT_GLOVES
+		if("belt")
+			return ITEM_SLOT_BELT
 		if("pocket_l")
 			return ITEM_SLOT_LPOCKET
 		if("pocket_r")
@@ -150,14 +171,8 @@
 			return ITEM_SLOT_SHOULDER_LEFT
 		if("shoulder_r")
 			return ITEM_SLOT_SHOULDER_RIGHT
-		if("finger")
-			return ITEM_SLOT_FINGER
-		if("bracers")
-			return ITEM_SLOT_BRACERS
 		if("pants")
 			return ITEM_SLOT_PANTS
-		if("chest")
-			return ITEM_SLOT_CHEST
 		if("undershirt")
 			return ITEM_SLOT_UNDERSHIRT
 		if("underwear")
@@ -179,7 +194,9 @@
 		var/equip_slot = item_details[INFO_EQUIP_SLOT]
 		if(isnull(equip_slot) || equip_slot == "")
 			continue
-		preview_loadout[item_path] = LAZYLISTDUPLICATE(item_details)
+		var/list/preview_details = LAZYLISTDUPLICATE(item_details)
+		preview_details[INFO_EQUIP_SLOT] = cyberpunk_normalize_loadout_equip_slot(equip_slot)
+		preview_loadout[item_path] = preview_details
 	return preview_loadout
 
 /// Returns the selected amount for a loadout entry.

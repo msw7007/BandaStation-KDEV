@@ -490,7 +490,7 @@
 	node = source_node
 	if(target_body)
 		body_ref = WEAKREF(target_body)
-		appearance = target_body.appearance
+		appearance = cyberspace_body_appearance(target_body)
 		layer = ABOVE_MOB_LAYER
 		plane = GAME_PLANE
 		alpha = CYBERSPACE_IMPRINT_ALPHA

@@ -97,3 +97,67 @@
 	desc = "Маленькое серебряное колечко, размером, чтобы надеть на палец."
 	icon_state = "ringsilver"
 	worn_icon_state = "sring"
+
+// MARK: cyberpunk bracers
+/obj/item/clothing/accessory/gloves_accessory/bracer
+	name = "modular bracers"
+	desc = "Cyberpunk modular arm bracers. Their final protection depends on material and installed modules."
+	icon = 'icons/obj/clothing/gloves.dmi'
+	worn_icon = 'icons/mob/clothing/hands.dmi'
+	icon_state = "bracers"
+	worn_icon_state = "bracers"
+	icon_state_is_worn = FALSE
+	minimize_when_attached = FALSE
+	attachment_slot = HANDS
+	body_parts_covered = ARMS
+	cold_protection = ARMS
+	min_cold_protection_temperature = GLOVES_MIN_TEMP_PROTECT
+	max_heat_protection_temperature = GLOVES_MAX_TEMP_PROTECT
+	resistance_flags = FIRE_PROOF | LAVA_PROOF
+	armor_type = /datum/armor/none
+	inhand_icon_state = null
+	strip_delay = 4 SECONDS
+	equip_delay_other = 2 SECONDS
+	w_class = WEIGHT_CLASS_SMALL
+	cyberpunk_equipment_form = "bracers"
+	cyberpunk_equipment_material = "fabric"
+	cyberpunk_base_price = 90
+	cyberpunk_rarity = "common"
+	cyberpunk_active_wear = 1
+	cyberpunk_spoil_behavior = "broken"
+	max_integrity = 110
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/Initialize(mapload)
+	. = ..()
+	setup_cyberpunk_equipment("bracers", cyberpunk_equipment_material, list("plate" = 1, "utility" = 1, "mobility" = 1))
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/wood
+	name = "laminated wood modular bracers"
+	cyberpunk_equipment_material = "wood"
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/ceramic
+	name = "ceramic modular bracers"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/plasteel
+	name = "plasteel modular bracers"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/composite
+	name = "smart composite modular bracers"
+	cyberpunk_equipment_material = "composite"
+	cyberpunk_rarity = "uncommon"
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/guard
+	name = "guard modular bracers"
+	cyberpunk_equipment_material = "ceramic"
+	cyberpunk_rarity = "uncommon"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate, /datum/cyberpunk_item_module/trauma_mesh, /datum/cyberpunk_item_module/sensor_bus)
+
+/obj/item/clothing/accessory/gloves_accessory/bracer/bulwark
+	name = "bulwark modular bracers"
+	cyberpunk_equipment_material = "plasteel"
+	cyberpunk_rarity = "rare"
+	cyberpunk_initial_module_types = list(/datum/cyberpunk_item_module/armor_plate/t2, /datum/cyberpunk_item_module/impact_gel, /datum/cyberpunk_item_module/reactive_hardener)

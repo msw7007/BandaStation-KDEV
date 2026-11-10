@@ -516,19 +516,19 @@
 		pain = max(target_pain, pain - 1 * seconds_per_tick)
 	else if(pain < target_pain)
 		pain = min(target_pain, pain + 1 * seconds_per_tick)
-	if(!COOLDOWN_FINISHED(src, pain_collapse_cd))
-		return FALSE
 	var/total_pain = owner.get_total_pain()
-	if(total_pain >= 100)
-		COOLDOWN_START(src, pain_collapse_cd, PAIN_CHECK_INTERVAL)
+	if(total_pain >= 100 && COOLDOWN_FINISHED(owner, cyberpunk_pain_collapse_cd))
+		COOLDOWN_START(owner, cyberpunk_pain_collapse_cd, PAIN_CHECK_INTERVAL)
 		if(prob(max(total_pain - 150, 0)))
 			owner.apply_cyberpunk_pain_collapse()
-		if(can_be_disabled && pain > max_damage && prob(max(pain - max_damage, 0)))
+		if(total_pain > 300 && prob(max(total_pain - 300, 0)))
+			owner.set_heartattack(TRUE)
+	if(can_be_disabled && pain > max_damage && COOLDOWN_FINISHED(src, pain_collapse_cd))
+		COOLDOWN_START(src, pain_collapse_cd, PAIN_CHECK_INTERVAL)
+		if(prob(max(pain - max_damage, 0)))
 			temporary_pain_disabled = TRUE
 			set_disabled(TRUE)
 			addtimer(CALLBACK(src, PROC_REF(clear_temporary_pain_disabled)), 5 SECONDS)
-		if(total_pain > 300 && prob(max(total_pain - 300, 0)))
-			owner.set_heartattack(TRUE)
 	return FALSE
 
 /obj/item/bodypart/proc/clear_temporary_pain_disabled()

@@ -319,6 +319,7 @@
 
 		new_computer.RefreshParts()
 		new_computer.on_construction(user)
+		SSeconomy.record_cyberpunk_contract_construction(user, new_computer)
 
 	qdel(src)
 	return TRUE

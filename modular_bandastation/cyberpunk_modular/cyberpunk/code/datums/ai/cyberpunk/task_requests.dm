@@ -131,7 +131,7 @@
 	qdel(request)
 	return succeeded
 
-/proc/cyberpunk_request_avi_delivery(atom/pickup, atom/dropoff, list/cargo_atoms)
+/proc/cyberpunk_request_avi_delivery(atom/pickup, atom/dropoff, list/cargo_atoms, mob/living/customer = null)
 	var/turf/pickup_turf = get_turf(pickup)
 	var/turf/dropoff_turf = get_turf(dropoff)
 	if(!pickup_turf || !dropoff_turf || !length(cargo_atoms))
@@ -140,6 +140,14 @@
 	if(!avi.start_cyberpunk_avi_delivery(pickup_turf, dropoff_turf, cargo_atoms))
 		qdel(avi)
 		return FALSE
+	if(customer && length(cargo_atoms) == 1)
+		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
+		if(corporation?.has_edict("starlight_log_observation"))
+			var/datum/cyberpunk_starlight_shipment/shipment = corporation.register_starlight_tracking(customer, cargo_atoms[1])
+			if(shipment)
+				shipment.status = "in transit"
+				shipment.destination = dropoff_turf
+				avi.avi_shipment_ref = WEAKREF(shipment)
 	return TRUE
 
 /proc/cyberpunk_request_mule_delivery(atom/pickup, atom/dropoff, list/cargo_atoms)
@@ -162,15 +170,19 @@
 		return FALSE
 	transport = lowertext("[transport]")
 	var/cost = cyberpunk_starlight_delivery_cost(transport, cargo_atoms)
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
+	var/datum/bank_account/customer_account = customer?.get_bank_account()
 	if(customer)
-		var/datum/bank_account/customer_account = customer.get_bank_account()
 		if(!customer_account || !customer_account.adjust_money(-cost, "Starlight [transport] delivery"))
 			to_chat(customer, span_warning("Unable to pay Starlight delivery fee ([cost][MONEY_SYMBOL])."))
 			return FALSE
-	var/succeeded = transport == "mule" ? cyberpunk_request_mule_delivery(pickup, dropoff, cargo_atoms) : cyberpunk_request_avi_delivery(pickup, dropoff, cargo_atoms)
+	if(!corporation?.service_auto_enabled || !corporation.dispatch_agent("courier route", 5 MINUTES))
+		customer_account?.adjust_money(cost, "Starlight delivery unavailable refund")
+		return FALSE
+	var/succeeded = transport == "mule" ? cyberpunk_request_mule_delivery(pickup, dropoff, cargo_atoms) : cyberpunk_request_avi_delivery(pickup, dropoff, cargo_atoms, customer)
 	if(!succeeded)
 		if(customer)
-			customer.get_bank_account()?.adjust_money(cost, "Starlight delivery refund")
+			customer_account?.adjust_money(cost, "Starlight delivery refund")
 		return FALSE
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity("starlight", "route", max(1, length(cargo_atoms)), cost, "manual [transport] delivery")
 	return TRUE
@@ -1272,12 +1284,27 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		handled = TRUE
 	return handled
 
+GLOBAL_LIST_EMPTY(cyberpunk_starlight_beacons)
+
 /obj/item/cyberpunk_delivery_beacon
 	name = "Starlight delivery beacon"
 	desc = "A compact route beacon for paid Starlight cargo delivery."
 	icon = 'icons/obj/machines/beacon.dmi'
 	icon_state = "beacon"
 	w_class = WEIGHT_CLASS_SMALL
+	cyberpunk_manufacturer = "Starlight"
+	cyberpunk_base_price = 125
+	cyberpunk_rarity = "uncommon"
+	var/owner_key
+	var/active = FALSE
+
+/obj/item/cyberpunk_delivery_beacon/Initialize(mapload)
+	. = ..()
+	GLOB.cyberpunk_starlight_beacons += src
+
+/obj/item/cyberpunk_delivery_beacon/Destroy(force)
+	GLOB.cyberpunk_starlight_beacons -= src
+	return ..()
 
 /obj/item/cyberpunk_delivery_beacon/attack_self(mob/user)
 	. = ..()
@@ -1287,6 +1314,22 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 
 /obj/item/cyberpunk_delivery_beacon/proc/open_cyberpunk_delivery_menu(mob/living/living_user)
 	if(!istype(living_user))
+		return
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
+	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(living_user, living_user.get_bank_account())
+	if(!corporation || (!corporation.is_subscribed(living_user) && !corporation.has_edict("starlight_trade_analysis")) || !character_key || (owner_key && owner_key != character_key))
+		return
+	owner_key = character_key
+	active = !active
+	if(active)
+		for(var/obj/item/cyberpunk_delivery_beacon/other as anything in GLOB.cyberpunk_starlight_beacons)
+			if(other != src && other.owner_key == owner_key)
+				other.active = FALSE
+	living_user.balloon_alert(living_user, active ? "beacon activated" : "beacon deactivated")
+	return
+
+/obj/item/cyberpunk_delivery_beacon/proc/open_cyberpunk_debug_delivery_menu(mob/living/living_user)
+	if(!living_user?.client?.holder)
 		return
 	var/transport = tgui_input_list(living_user, "Transport type.", "Starlight Delivery", list("AVI", "Mule"))
 	if(!transport)

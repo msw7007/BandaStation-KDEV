@@ -26,6 +26,7 @@
 	. = ..()
 	if(controller.cyberpunk_should_process_phantom())
 		return controller.cyberpunk_process_phantom(seconds_per_tick)
+	controller.cyberpunk_materialize_phantom("physical processing resumed")
 
 	var/mob/living/living_pawn = controller.pawn
 	if(!istype(living_pawn) || LAZYLEN(living_pawn.do_afters))

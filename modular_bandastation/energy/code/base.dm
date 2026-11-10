@@ -50,6 +50,9 @@
 /obj/machinery/power/cyberpunk_generator/proc/get_power_gen()
 	return max(0, base_power_gen * power_output * get_condition_multiplier() * get_cyberpunk_machine_generator_output_multiplier())
 
+/obj/machinery/power/cyberpunk_generator/proc/get_effective_power_gen()
+	return get_power_gen() * cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_RYAZNOV, "ryaznov_power_tuning")
+
 /obj/machinery/power/cyberpunk_generator/proc/get_condition_multiplier()
 	var/heat_factor = heat > max_safe_heat ? clamp(1 - ((heat - max_safe_heat) / max(max_safe_heat, 1)), 0.25, 1) : 1
 	var/wear_factor = clamp(1 - (wear / max(max_wear * 1.5, 1)), 0.25, 1)
@@ -59,7 +62,7 @@
 	return TRUE
 
 /obj/machinery/power/cyberpunk_generator/proc/idle_cooling(seconds_per_tick)
-	heat = max(T20C, heat - 3 * seconds_per_tick)
+	heat = max(T20C, heat - 3 * seconds_per_tick * cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_RYAZNOV, "ryaznov_power_tuning"))
 
 /obj/machinery/power/cyberpunk_generator/process(seconds_per_tick)
 	seconds_per_tick ||= 1
@@ -71,7 +74,7 @@
 	if(!can_generate() || !process_generator(seconds_per_tick))
 		set_active(FALSE)
 		return
-	var/generated = get_power_gen()
+	var/generated = get_effective_power_gen()
 	if(generated > 0)
 		add_avail(power_to_energy(generated))
 	if(heat > critical_heat)
@@ -110,7 +113,7 @@
 	data["anchored"] = anchored
 	data["connected"] = !isnull(powernet)
 	data["can_generate"] = can_generate()
-	data["output"] = display_power(get_power_gen(), convert = FALSE)
+	data["output"] = display_power(get_effective_power_gen(), convert = FALSE)
 	data["base_output"] = display_power(base_power_gen, convert = FALSE)
 	data["power_output"] = round(power_output, 0.01)
 	data["heat"] = round(heat - T0C, 0.1)
@@ -179,6 +182,6 @@
 /obj/machinery/power/cyberpunk_generator/examine(mob/user)
 	. = ..()
 	if(in_range(user, src) || isobserver(user))
-		. += span_notice("Output: <b>[display_power(get_power_gen(), convert = FALSE)]</b>.")
+		. += span_notice("Output: <b>[display_power(get_effective_power_gen(), convert = FALSE)]</b>.")
 		. += span_notice("Heat: [round(heat - T0C)]C. Wear: [round(wear)]/[max_wear].")
 		. += span_notice("It is [active ? "running" : "idle"].")

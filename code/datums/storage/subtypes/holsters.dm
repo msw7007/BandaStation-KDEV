@@ -1,5 +1,6 @@
 ///Holster
 /datum/storage/holster
+	cyberpunk_remove_delay = 1 SECONDS
 	max_slots = 1
 	max_total_storage = 16
 	open_sound = 'sound/items/handling/holster_open.ogg'

@@ -229,11 +229,13 @@
 	return living_user.get_corporate_synergy_multiplier(get_cyberspace_manufacturer(src))
 
 /obj/machinery/rnd/production/proc/get_cyberpunk_fabrication_edict_multiplier()
-	var/manufacturer = get_cyberspace_manufacturer(src)
+	var/area/location = get_area(src)
+	var/territory = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(cyberpunk_corporate_area_id(src) || location?.cyberpunk_world_owner)
 	var/multiplier = 1
-	multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_gene_combo", "benn_chem_tuning"), 1, 1.08)
-	multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("ryaznov_blueprint_tuning", "ryaznov_power_tuning"), 1, 1.08)
-	multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("starlight_mass_production", "starlight_phase_tuning"), 1, 1.08)
+	if(territory == CYBERPUNK_CORP_RYAZNOV)
+		multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier("Ryaznov", list("ryaznov_blueprint_tuning"), 1, 1.08)
+	if(territory == CYBERPUNK_CORP_STARLIGHT)
+		multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier("Starlight", list("starlight_mass_production"), 1, 1.08)
 	return multiplier
 
 /obj/machinery/rnd/production/ui_assets(mob/user)
@@ -494,7 +496,9 @@
 		created.pixel_x = created.base_pixel_x + rand(-6, 6)
 		created.pixel_y = created.base_pixel_y + rand(-6, 6)
 		SScyberpunk_corporations.record_cyberpunk_manufacturer_activity(manufacturer, "production", 1, 0, "fabricated [design.name]")
-		if(!is_stack && SScyberpunk_corporations.cyberpunk_manufacturer_has_edict(manufacturer, "starlight_mass_production") && prob(10))
+		var/area/location = get_area(src)
+		var/territory = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(cyberpunk_corporate_area_id(src) || location?.cyberpunk_world_owner)
+		if(!is_stack && territory == CYBERPUNK_CORP_STARLIGHT && SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_mass_production") && prob(10))
 			var/atom/movable/bonus_created = design.create_result(target, design_materials)
 			design.apply_cyberpunk_material(bonus_created, cyberpunk_material_choice)
 			if(isitem(bonus_created))

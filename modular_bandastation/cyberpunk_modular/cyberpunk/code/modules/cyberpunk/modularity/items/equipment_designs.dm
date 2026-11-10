@@ -317,7 +317,7 @@
 	name = "Modular Bracers Shell"
 	id = "cyberpunk_bracers_shell"
 	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer
 	cyberpunk_material_options = list("fabric", "wood", "ceramic", "plasteel", "composite")
 
 /datum/design/cyberpunk_modular_equipment/boots
@@ -424,31 +424,31 @@
 /datum/design/cyberpunk_modular_equipment/bracers_fabric
 	name = "Modular Bracers - Ballistic Fabric"
 	id = "cyberpunk_bracers_fabric"
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer
 
 /datum/design/cyberpunk_modular_equipment/bracers_wood
 	name = "Modular Bracers - Laminated Wood"
 	id = "cyberpunk_bracers_wood"
 	materials = list(/datum/material/wood = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/wood
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer/wood
 
 /datum/design/cyberpunk_modular_equipment/bracers_ceramic
 	name = "Modular Bracers - Ceramic"
 	id = "cyberpunk_bracers_ceramic"
 	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/ceramic
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer/ceramic
 
 /datum/design/cyberpunk_modular_equipment/bracers_plasteel
 	name = "Modular Bracers - Plasteel"
 	id = "cyberpunk_bracers_plasteel"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 4, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/plasteel
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer/plasteel
 
 /datum/design/cyberpunk_modular_equipment/bracers_composite
 	name = "Modular Bracers - Smart Composite"
 	id = "cyberpunk_bracers_composite"
 	materials = list(/datum/material/plastic = SMALL_MATERIAL_AMOUNT * 2, /datum/material/glass = SMALL_MATERIAL_AMOUNT * 2, /datum/material/titanium = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/composite
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer/composite
 
 /datum/design/cyberpunk_modular_equipment/boots_fabric
 	name = "Modular Boots - Ballistic Fabric"
@@ -770,13 +770,13 @@
 	name = "Preset - Guard Bracers"
 	id = "cyberpunk_preset_guard_bracers"
 	materials = list(/datum/material/glass = SMALL_MATERIAL_AMOUNT * 3, /datum/material/iron = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/guard
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer/guard
 
 /datum/design/cyberpunk_modular_equipment/preset_bulwark_bracers
 	name = "Preset - Bulwark Bracers"
 	id = "cyberpunk_preset_bulwark_bracers"
 	materials = list(/datum/material/iron = SMALL_MATERIAL_AMOUNT * 5, /datum/material/titanium = SMALL_MATERIAL_AMOUNT * 2, /datum/material/plastic = SMALL_MATERIAL_AMOUNT)
-	build_path = /obj/item/clothing/gloves/bracer/cyberpunk/bulwark
+	build_path = /obj/item/clothing/accessory/gloves_accessory/bracer/bulwark
 
 /datum/design/cyberpunk_modular_equipment/preset_sealed_mask
 	name = "Preset - Sealed Mask"

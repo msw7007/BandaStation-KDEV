@@ -539,7 +539,8 @@
 	if(prepare_bonus > 0)
 		effective_cast_time *= max(0, 1 - (prepare_bonus / 100))
 	effective_cast_time *= caster?.cyberdemon_consume_next_prepare_multiplier() || 1
-	effective_cast_time /= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_tuning", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.1)
+	if(effect == CYBER_DEMON_EFFECT_MOVEMENT && SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(manufacturer) == CYBERPUNK_CORP_STARLIGHT)
+		effective_cast_time /= cyberpunk_property_edict_multiplier(caster, CYBERPUNK_CORP_STARLIGHT, "starlight_phase_tuning")
 	var/instant_chance = caster?.mind?.get_character_perk_effectiveness(SKILL_ENHANCED_CODE, 5) || 0
 	if(instant_chance > 0 && prob(instant_chance))
 		return 0
@@ -553,7 +554,6 @@
 		effective_cooldown *= 0.5
 	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
 	effective_cooldown /= synergy
-	effective_cooldown /= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_tuning", "ryaznov_power_tuning", "starlight_phase_tuning"), 1, 1.05)
 	return max(0, round(effective_cooldown))
 
 /datum/cyberspace_demon/proc/get_effective_activation_delay(mob/living/caster)

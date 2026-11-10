@@ -40,15 +40,14 @@
 	return TRUE
 
 /mob/living/carbon/human/proc/apply_genetic_tumor(dormant_time = GENETIC_TUMOR_DORMANT_TIME)
-	var/obj/item/organ/current_slot = get_organ_slot(ORGAN_SLOT_ZOMBIE)
-	var/obj/item/organ/genetic_tumor/tumor = current_slot
+	var/obj/item/organ/brain/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(!brain)
+		return FALSE
+	var/datum/brain_trauma/special/genetic_tumor/tumor = locate() in brain.traumas
 	if(tumor)
 		tumor.reset_dormancy(dormant_time)
 		return TRUE
-	if(current_slot)
-		return FALSE
-	tumor = new()
-	return tumor.Insert(src)
+	return !!gain_trauma(/datum/brain_trauma/special/genetic_tumor, TRAUMA_RESILIENCE_BASIC, dormant_time)
 
 //gets name from ID or ID inside PDA or PDA itself
 //Useful when player do something with computers

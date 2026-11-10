@@ -38,6 +38,14 @@
 			covering_part += equipped
 	return covering_part
 
+/mob/living/carbon/human/proc/get_worn_bracers()
+	if(wear_bracers)
+		return wear_bracers
+	var/obj/item/clothing/gloves/worn_gloves = gloves
+	if(!istype(worn_gloves))
+		return null
+	return locate(/obj/item/clothing/accessory/gloves_accessory/bracer) in worn_gloves.attached_accessories
+
 /mob/living/carbon/human/projectile_hit(obj/projectile/hitting_projectile, def_zone, piercing_hit, blocked)
 	if(hitting_projectile.firer == src && hitting_projectile.original == src) //can't block or reflect when shooting yourself
 		return ..()
@@ -113,7 +121,6 @@
 		if(worn_thing.hit_reaction(src, hit_by, attack_text, final_block_chance, damage, attack_type, damage_type))
 			cyberpunk_parry_until = 0
 			consume_cyberpunk_inspiration_guard("parry")
-			spend_stamina(STAMINA_COST_PARRY, "parry")
 			reward_character_check_experience(SKILL_CONCENTRATION, max(1, damage), FALSE, 1)
 			if(attack_type == UNARMED_ATTACK && isliving(hit_by))
 				var/mob/living/unarmed_attacker = hit_by
@@ -131,7 +138,7 @@
 
 	if(active_parry && attack_type != PROJECTILE_ATTACK)
 		var/bare_parry_chance = clamp(round((15 + get_character_skill_level(SKILL_CONCENTRATION) * 3 + get_cyberpunk_skill_perk_bonus(SKILL_CONCENTRATION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
-		if(prob(bare_parry_chance) && spend_stamina(STAMINA_COST_PARRY, "parry"))
+		if(prob(bare_parry_chance))
 			cyberpunk_parry_until = 0
 			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] parries [attack_text]!"), span_notice("You parry [attack_text]."))
 			reward_character_check_experience(SKILL_CONCENTRATION, max(1, damage), FALSE, 1)
@@ -140,11 +147,12 @@
 				var/mob/living/unarmed_attacker = hit_by
 				var/parry_wear = unarmed_attacker.get_cyberpunk_power_unarmed_parry_wear_damage()
 				if(parry_wear > 0)
-					if(wear_bracers && wear_bracers.get_integrity() > 0)
-						if(!should_preserve_cyberpunk_parry_guard(wear_bracers))
-							wear_bracers.take_damage(parry_wear, BRUTE, MELEE, FALSE)
-							to_chat(unarmed_attacker, span_warning("Your blocked strike strains [wear_bracers]."))
-							to_chat(src, span_warning("[unarmed_attacker]'s forceful strike wears down [wear_bracers]."))
+					var/obj/item/parry_bracers = get_worn_bracers()
+					if(parry_bracers && parry_bracers.get_integrity() > 0)
+						if(!should_preserve_cyberpunk_parry_guard(parry_bracers))
+							parry_bracers.take_damage(parry_wear, BRUTE, MELEE, FALSE)
+							to_chat(unarmed_attacker, span_warning("Your blocked strike strains [parry_bracers]."))
+							to_chat(src, span_warning("[unarmed_attacker]'s forceful strike wears down [parry_bracers]."))
 					else
 						var/body_damage = round(parry_wear * 0.5 * get_cyberpunk_bare_parry_damage_multiplier())
 						if(body_damage > 0)

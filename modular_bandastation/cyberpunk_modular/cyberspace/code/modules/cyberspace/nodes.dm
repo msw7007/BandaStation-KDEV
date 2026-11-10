@@ -404,7 +404,10 @@
 	if(!do_after(user, connection_time, target = visual_anchor, timed_action_flags = IGNORE_USER_LOC_CHANGE|IGNORE_TARGET_LOC_CHANGE|IGNORE_HELD_ITEM, hidden = TRUE))
 		to_chat(user, span_warning("Connection attempt interrupted."))
 		return FALSE
-	session.connect_to_node(src, visual_anchor)
+	if(QDELETED(session) || user.cyberspace_session != session || !cyberspace_node_requires_adjacent(user, visual_anchor))
+		return FALSE
+	if(!session.connect_to_node(src, visual_anchor))
+		return FALSE
 	roll_connection_alarm(user, visual_anchor, stealth)
 	return TRUE
 

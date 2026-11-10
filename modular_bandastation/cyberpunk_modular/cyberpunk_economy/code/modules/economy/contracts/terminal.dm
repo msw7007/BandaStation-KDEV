@@ -104,9 +104,9 @@
 /datum/cyberpunk_contract_condition/delivery/proc/can_record_terminal_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item, obj/machinery/vending/terminal)
 	if(!contract || !user || !item || !terminal_matches(terminal))
 		return FALSE
-	if(item.cyberpunk_contract_id && item.cyberpunk_contract_id != contract.id)
+	if(contract.status != CYBERPUNK_CONTRACT_ACCEPTED || !contract.can_act_as_contractor(user) || item.cyberpunk_contract_id != contract.id || !(item in contract.delivery_items))
 		return FALSE
-	if(item.cyberpunk_contract_id != contract.id && !matches_target_text(item))
+	if(!matches_type(item) || !item_meets_quality(item) || get_item_amount(item) < required_amount)
 		return FALSE
 	return TRUE
 

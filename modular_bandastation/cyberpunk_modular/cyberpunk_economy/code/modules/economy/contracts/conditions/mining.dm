@@ -16,7 +16,7 @@
 /datum/cyberpunk_contract_condition/mining/record_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item)
 	if(!contract || !user || !item)
 		return FALSE
-	if(!matches_target_text(item) && item.cyberpunk_contract_id != contract.id)
+	if(contract.status != CYBERPUNK_CONTRACT_ACCEPTED || !contract.can_act_as_contractor(user) || !matches_target_text(item) || !matches_type(item))
 		return FALSE
 	if(!item_meets_quality(item))
 		return FALSE

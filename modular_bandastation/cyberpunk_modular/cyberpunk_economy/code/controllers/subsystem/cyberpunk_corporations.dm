@@ -58,3 +58,4 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	for(var/corporation_id in cyberpunk_corporations)
 		var/datum/cyberpunk_corporation/corporation = cyberpunk_corporations[corporation_id]
 		corporation?.process_payroll()
+		corporation?.process_service_observation()

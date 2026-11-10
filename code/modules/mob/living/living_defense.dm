@@ -129,8 +129,8 @@
 		if(proj.is_hostile_projectile())
 			apply_projectile_effects(proj, def_zone, blocked)
 		return .
-	if(proj.is_hostile_projectile() && can_dodge() && get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 5) > 0 && prob(get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)))
-		spend_stamina(STAMINA_COST_DODGE, "dodge")
+	if(proj.is_hostile_projectile() && has_active_cyberpunk_dodge() && can_dodge() && get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 5) > 0 && prob(get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)))
+		cyberpunk_dodge_until = 0
 		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [proj.declent_ru(ACCUSATIVE)]!"), span_notice("You dodge [proj.declent_ru(ACCUSATIVE)]."))
 		reward_character_check_experience(SKILL_EVASION, max(1, proj.damage), FALSE, 1)
 		handle_cyberpunk_successful_dodge(proj.firer, proj.declent_ru(ACCUSATIVE), incoming_damage = proj.damage)
@@ -948,7 +948,7 @@
 			return FAILED_BLOCK
 	if(has_active_cyberpunk_dodge() && can_dodge())
 		var/dodge_chance = clamp(round((20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
-		if(prob(dodge_chance) && spend_stamina(STAMINA_COST_DODGE, "dodge"))
+		if(prob(dodge_chance))
 			cyberpunk_dodge_until = 0
 			visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] dodges [attack_text]!"), span_notice("You dodge [attack_text]."))
 			reward_character_check_experience(SKILL_EVASION, max(1, damage), FALSE, 1)
@@ -1029,6 +1029,8 @@
 		visible_message(span_warning("[capitalize(declent_ru(NOMINATIVE))] vanishes after dodging [attack_text]!"), span_notice("You vanish after dodging [attack_text]."))
 
 /mob/living/proc/try_cyberpunk_successful_dodge_move(atom/hit_by)
+	if(get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 5) > 0)
+		return FALSE
 	if(!isturf(loc) || buckled)
 		return FALSE
 

@@ -899,24 +899,8 @@
 /mob/living/proc/get_cyberpunk_active_defense_effect_strength(manufacturer_id)
 	if(!manufacturer_id)
 		return 0
-	var/list/slots_to_check = list(
-		ITEM_SLOT_HEAD,
-		ITEM_SLOT_EYES,
-		ITEM_SLOT_MASK,
-		ITEM_SLOT_NECK,
-		ITEM_SLOT_OCLOTHING,
-		ITEM_SLOT_ICLOTHING,
-		ITEM_SLOT_GLOVES,
-		ITEM_SLOT_BRACERS,
-		ITEM_SLOT_FEET,
-		ITEM_SLOT_PANTS,
-		ITEM_SLOT_CHEST,
-	)
 	var/best_strength = 0
-	for(var/slot_id in slots_to_check)
-		var/obj/item/equipped = get_item_by_slot(slot_id)
-		if(!equipped)
-			continue
+	for(var/obj/item/equipped as anything in get_equipped_items(INCLUDE_ACCESSORIES|INCLUDE_ABSTRACT))
 		best_strength = max(best_strength, equipped.get_cyberpunk_base_effect_strength(src, manufacturer_id))
 	return best_strength
 

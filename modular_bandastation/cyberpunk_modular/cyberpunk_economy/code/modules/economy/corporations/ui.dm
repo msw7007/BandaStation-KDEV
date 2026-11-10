@@ -73,6 +73,14 @@
 		if(istype(living_manager))
 			corporation.register_employee(living_manager, corporation.id == CYBERPUNK_CORP_GOVERNMENT ? "council operator" : "corporate operator")
 	switch(action)
+		if("clear_cargo_tracking")
+			return corporation.clear_starlight_tracking(user, params["shipment_ref"])
+		if("use_service_chip")
+			var/mob/living/living_user = user
+			if(!istype(living_user))
+				return FALSE
+			var/obj/item/implant/cyberpunk_service/chip = living_user.get_cyberpunk_service_chip(corporation.id)
+			return chip?.activate()
 		if("select")
 			return TRUE
 		if("subscribe")

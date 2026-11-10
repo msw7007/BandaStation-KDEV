@@ -69,6 +69,7 @@
 	build_inventory(products, product_records, product_categories, start_empty, FALSE, cyberpunk_sale_source)
 	build_inventory(contraband, hidden_records, list(list("name" = "Contraband", "icon" = "mask", "products" = contraband)), start_empty, TRUE, cyberpunk_hidden_sale_source)
 	build_inventory(premium, coin_records, list(list("name" = "Premium", "icon" = "coins", "products" = premium)), start_empty, TRUE, cyberpunk_sale_source)
+	cyberpunk_energy_stock_added = FALSE
 	rotate_cyberpunk_sale_stock(TRUE)
 
 /obj/machinery/vending/proc/should_use_cyberpunk_sale_rotation()
@@ -86,13 +87,15 @@
 		return FALSE
 	if(!force && world.time < cyberpunk_next_sale_rotation)
 		return FALSE
-	cyberpunk_next_sale_rotation = world.time + cyberpunk_sale_rotation_interval
+	sync_cyberpunk_energy_stock()
+	cyberpunk_next_sale_rotation = world.time + get_cyberpunk_corporate_supply_interval()
 	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
 		if(!record.cyberpunk_sale_entry)
 			record.cyberpunk_sale_available = TRUE
 			continue
 		var/returned_count = LAZYLEN(record.returned_products)
 		var/rotated_amount = record.cyberpunk_sale_entry.get_rotated_stock_amount(record.cyberpunk_base_amount || record.max_amount)
+		rotated_amount = CEILING(rotated_amount * get_cyberpunk_corporate_stock_multiplier(), 1)
 		record.cyberpunk_sale_available = rotated_amount > 0 || returned_count > 0
 		record.amount = rotated_amount + returned_count
 	return TRUE
@@ -243,6 +246,9 @@
 
 	if(greyscale_colors)
 		vended_item.set_greyscale(colors=greyscale_colors)
+	if(isliving(user) && route_cyberpunk_starlight_purchase(user, vended_item))
+		SSblackbox.record_feedback("nested tally", "vending_machine_usage", 1, list("[type]", "[item_record.product_path]"))
+		return
 	if(IsReachableBy(user) && user.put_in_hands(vended_item))
 		to_chat(user, span_notice("You take [item_record.name] out of the slot."))
 		vended_item.do_pickup_animation(user, src)
@@ -276,6 +282,8 @@
 		item_record.amount--
 
 	on_dispense(vended_item, dispense_returned)
+	if(!dispense_returned)
+		apply_cyberpunk_corporate_supply_quality(vended_item)
 	use_energy(active_power_usage)
 
 	SEND_SIGNAL(src, COMSIG_VENDING_DISPENSED, vended_item)

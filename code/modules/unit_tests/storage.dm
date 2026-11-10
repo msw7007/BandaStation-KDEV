@@ -23,6 +23,14 @@
 
 /datum/unit_test/common_item_inserting
 
+/datum/unit_test/cyberpunk_storage_delays/Run()
+	var/obj/item/storage/backpack/bag = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)
+	var/obj/item/clothing/shoes/jackboots/boots = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)
+	var/datum/storage/holster/holster = allocate(__IMPLIED_TYPE__, bag)
+	TEST_ASSERT_EQUAL(bag.atom_storage.cyberpunk_remove_delay, 2 SECONDS, "Normal storage takes two seconds.")
+	TEST_ASSERT_EQUAL(boots.atom_storage.cyberpunk_remove_delay, 1 SECONDS, "Boot quickdraw takes one second.")
+	TEST_ASSERT_EQUAL(holster.cyberpunk_remove_delay, 1 SECONDS, "Holster quickdraw takes one second.")
+
 /datum/unit_test/common_item_inserting/Run()
 	var/obj/item/storage/backpack/bag = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)
 	var/mob/living/carbon/human/consistent/dummy = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)

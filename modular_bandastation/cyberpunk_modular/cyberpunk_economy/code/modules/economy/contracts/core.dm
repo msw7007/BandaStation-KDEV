@@ -21,6 +21,9 @@
 	var/payment = 0
 	var/deposit = 0
 	var/penalty = 0
+	var/penalty_outstanding = 0
+	var/penalty_creditor_account_id
+	var/penalty_assessed = FALSE
 	var/escrow_payment = 0
 	var/escrow_deposit = 0
 	var/legal = TRUE
@@ -61,20 +64,21 @@
 	return null
 
 
-/datum/cyberpunk_contract/proc/add_security_incident(character_name, incident_name, details, fine = 0)
+/datum/cyberpunk_contract/proc/add_security_incident(character_name, incident_name, details, fine = 0, civil_breach = FALSE)
 	var/datum/record/crew/record = find_security_record(character_name)
 	if(!record)
 		add_history("security incident could not be filed for [character_name]: no crew record")
 		return FALSE
-	if(fine > 0)
+	if(fine > 0 && !civil_breach)
 		var/datum/crime/citation/new_citation = new(name = incident_name, details = details, author = "Contract Registry", fine = fine)
 		record.citations += new_citation
 		SSblackbox.ReportCitation(REF(new_citation), "contract_registry", "Contract Registry", record.name, incident_name, details, fine)
 	else
 		var/datum/crime/new_crime = new(name = incident_name, details = details, author = "Contract Registry")
 		record.crimes += new_crime
-		record.wanted_status = WANTED_SUSPECT
-		update_matching_security_huds(record.name)
+		if(!civil_breach)
+			record.wanted_status = WANTED_SUSPECT
+			update_matching_security_huds(record.name)
 		SSblackbox.ReportCitation(REF(new_crime), "contract_registry", "Contract Registry", record.name, incident_name, details)
 	add_history("security incident filed for [record.name]: [incident_name]")
 	return TRUE
@@ -83,7 +87,48 @@
 /datum/cyberpunk_contract/proc/apply_legal_breach(actor_name, incident_name, details, fine = 0)
 	if(!legal || !actor_name)
 		return FALSE
-	return add_security_incident(actor_name, incident_name, details, fine)
+	// The contractual penalty is collected separately; do not also issue a payable police fine.
+	return add_security_incident(actor_name, incident_name, "[details] Penalty: [fine]; outstanding: [penalty_outstanding].", fine, civil_breach = TRUE)
+
+
+/datum/bank_account/var/list/cyberpunk_contract_debts
+
+/datum/cyberpunk_contract/proc/charge_penalty(datum/bank_account/debtor, datum/bank_account/creditor, reason)
+	if(penalty_assessed)
+		return
+	penalty_assessed = TRUE
+	penalty_creditor_account_id = creditor?.account_id
+	penalty_outstanding = penalty
+	var/paid = min(penalty, max(0, debtor?.account_balance || 0))
+	if(paid > 0 && creditor && debtor.adjust_money(-paid, reason))
+		creditor.adjust_money(paid, reason)
+		penalty_outstanding -= paid
+	if(penalty_outstanding > 0 && debtor)
+		debtor.account_debt += penalty_outstanding
+		LAZYSET(debtor.cyberpunk_contract_debts, src, penalty_outstanding)
+		debtor.add_log_to_history(-penalty_outstanding, "[reason]; debt")
+	add_history("penalty [penalty]: paid [penalty - penalty_outstanding], debt [penalty_outstanding]")
+
+/// Called by the existing bank debt collection, not a polling loop.
+/datum/bank_account/proc/settle_cyberpunk_contract_debts(amount, previous_debt)
+	if(!length(cyberpunk_contract_debts) || amount <= 0)
+		return
+	var/contract_debt = 0
+	for(var/datum/cyberpunk_contract/contract as anything in cyberpunk_contract_debts)
+		contract_debt += cyberpunk_contract_debts[contract]
+	var/remaining = max(0, amount - max(0, previous_debt - contract_debt))
+	for(var/datum/cyberpunk_contract/contract as anything in cyberpunk_contract_debts.Copy())
+		var/collected = min(remaining, cyberpunk_contract_debts[contract])
+		if(collected <= 0)
+			break
+		var/datum/bank_account/creditor = SSeconomy.bank_accounts_by_id["[contract.penalty_creditor_account_id]"]
+		contract.penalty_outstanding -= collected
+		cyberpunk_contract_debts[contract] -= collected
+		remaining -= collected
+		contract.add_history("penalty debt paid [collected]; outstanding [contract.penalty_outstanding]")
+		if(cyberpunk_contract_debts[contract] <= 0)
+			cyberpunk_contract_debts -= contract
+		creditor?.adjust_money(collected, "Contract #[contract.id] penalty debt collected")
 
 
 /datum/cyberpunk_contract/proc/disclose_evidence(mob/living/user)
@@ -162,7 +207,7 @@
 
 
 /datum/cyberpunk_contract/proc/can_act_as_contractor(mob/living/user)
-	return user_character_key(user) == contractor_character_key
+	return user && status == CYBERPUNK_CONTRACT_ACCEPTED && user_character_key(user) == contractor_character_key
 
 
 /datum/cyberpunk_contract/proc/can_accept(mob/living/user)
@@ -299,8 +344,8 @@
 	if(escrow_deposit > 0)
 		contractor_account?.adjust_money(escrow_deposit, "Contract deposit returned: [title]")
 		escrow_deposit = 0
-	if(status == CYBERPUNK_CONTRACT_ACCEPTED && penalty > 0 && creator_account?.adjust_money(-penalty, "Contract cancellation penalty: [title]"))
-		contractor_account?.adjust_money(penalty, "Contract cancellation penalty: [title]")
+	if(status == CYBERPUNK_CONTRACT_ACCEPTED && penalty > 0)
+		charge_penalty(creator_account, contractor_account, "Contract cancellation penalty: [title]")
 		apply_legal_breach(creator_name, "Contract cancellation breach", "Cancelled accepted legal contract #[id]: [title].", penalty)
 	status = CYBERPUNK_CONTRACT_CANCELLED
 	add_history("cancelled by [user.real_name || user.name]")
@@ -326,8 +371,8 @@
 	if(escrow_deposit > 0)
 		creator_account?.adjust_money(escrow_deposit, "Contract failed deposit: [title]")
 		escrow_deposit = 0
-	if(penalty > 0 && contractor_account?.adjust_money(-penalty, "Contract failure penalty: [title]"))
-		creator_account?.adjust_money(penalty, "Contract failure penalty: [title]")
+	if(status == CYBERPUNK_CONTRACT_ACCEPTED && penalty > 0)
+		charge_penalty(contractor_account, creator_account, "Contract failure penalty: [title]")
 		apply_legal_breach(contractor_name, "Contract failure breach", "Failed legal contract #[id]: [title]. Reason: [reason].", penalty)
 	status = CYBERPUNK_CONTRACT_FAILED
 	add_history("failed: [reason]")
@@ -375,7 +420,7 @@
 
 
 /datum/cyberpunk_contract/proc/find_creator_mob()
-	for(var/mob/living/person as anything in GLOB.player_list)
+	for(var/mob/living/person as anything in GLOB.mob_living_list)
 		if(user_character_key(person) == creator_character_key)
 			return person
 	return null
@@ -421,6 +466,7 @@
 		"payment" = payment,
 		"deposit" = deposit,
 		"penalty" = penalty,
+		"penaltyOutstanding" = penalty_outstanding,
 		"legal" = legal,
 		"public" = public_contract,
 		"taxPaid" = tax_paid,

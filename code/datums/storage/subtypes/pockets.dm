@@ -78,6 +78,7 @@
 
 ///Shoe pockets
 /datum/storage/pockets/shoes
+	cyberpunk_remove_delay = 1 SECONDS
 	max_slots = 2
 	attack_hand_interact = FALSE
 	quickdraw = TRUE

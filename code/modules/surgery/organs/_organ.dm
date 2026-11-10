@@ -50,8 +50,11 @@
 	var/chromity_active_overheat_floor = 0
 	/// Cyberpunk implant behavior flags. Plain organs keep this empty.
 	var/implant_flags = NONE
-	/// Until this world.time, implant effects are disabled by overheat, EMP or shock.
+	/// Until this world.time, implant effects are temporarily disabled by overheat or shock.
 	var/implant_disabled_until = 0
+	/// Nonzero while EMP-disabled; passing this deadline permits a reboot roll, not automatic recovery.
+	var/implant_emp_reboot_at = 0
+	var/implant_emp_reboot_timer
 	/// Last reason the implant was disabled, used by scanners and diagnostics.
 	var/implant_disable_reason = null
 
@@ -128,6 +131,8 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	START_PROCESSING(SSobj, src)
 
 /obj/item/organ/Destroy()
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_timer = null
 	if(bodypart_owner && !owner && !QDELETED(bodypart_owner))
 		bodypart_remove(bodypart_owner)
 	else if(owner && QDESTROYING(owner))
@@ -232,7 +237,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	return !!(implant_flags & IMPLANT_EXTERNAL)
 
 /obj/item/organ/proc/is_implant_disabled()
-	return (organ_flags & ORGAN_EMP) || (world.time < implant_disabled_until)
+	return !!implant_emp_reboot_at || (organ_flags & ORGAN_EMP) || (world.time < implant_disabled_until)
 
 /obj/item/organ/proc/is_implant_broken()
 	return (organ_flags & ORGAN_FAILING) || damage >= maxHealth
@@ -249,13 +254,41 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 /obj/item/organ/proc/disable_implant(duration = IMPLANT_OVERHEAT_SHUTDOWN_TIME, reason = "disabled")
 	if(!is_implant())
 		return FALSE
+	if(reason == "EMP")
+		implant_disable_reason = reason
+		schedule_implant_emp_reboot()
+		return TRUE
 	implant_disabled_until = max(implant_disabled_until, world.time + duration)
 	implant_disable_reason = reason
+	return TRUE
+
+/obj/item/organ/proc/schedule_implant_emp_reboot()
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_at = world.time + IMPLANT_EMP_REBOOT_INTERVAL
+	implant_emp_reboot_timer = addtimer(CALLBACK(src, PROC_REF(attempt_implant_emp_reboot)), IMPLANT_EMP_REBOOT_INTERVAL, TIMER_STOPPABLE)
+
+/obj/item/organ/proc/attempt_implant_emp_reboot()
+	if(!implant_emp_reboot_at || world.time < implant_emp_reboot_at)
+		return FALSE
+	if(!prob(IMPLANT_EMP_REBOOT_CHANCE))
+		schedule_implant_emp_reboot()
+		return FALSE
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_timer = null
+	implant_emp_reboot_at = 0
+	organ_flags &= ~ORGAN_EMP
+	if(implant_disable_reason == "EMP")
+		implant_disable_reason = null
+	if(owner)
+		to_chat(owner, span_notice("[capitalize(name)] restarts after the EMP."))
 	return TRUE
 
 /obj/item/organ/proc/retune_implant()
 	if(!is_implant())
 		return FALSE
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_timer = null
+	implant_emp_reboot_at = 0
 	organ_flags &= ~ORGAN_EMP
 	implant_disabled_until = 0
 	implant_disable_reason = null
@@ -503,7 +536,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(. & EMP_PROTECT_SELF)
 		return
 	if(is_implant())
-		disable_implant(IMPLANT_EMP_DISABLE_TIME, "EMP")
+		disable_implant(reason = "EMP")
 
 ///Adjusts an organ's damage by the amount "damage_amount", up to a maximum amount, which is by default max damage. Returns the net change in organ damage.
 /obj/item/organ/proc/apply_organ_damage(damage_amount, maximum = maxHealth, required_organ_flag = NONE) //use for damaging effects

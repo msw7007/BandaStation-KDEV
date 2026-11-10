@@ -65,6 +65,64 @@
 #undef TEST_ORGAN_INSERT_MESSAGE
 #undef TEST_ORGAN_REMOVE_MESSAGE
 
+/datum/unit_test/cyberpunk_implant_emp_reboot/Run()
+	TEST_ASSERT_EQUAL(IMPLANT_EMP_REBOOT_INTERVAL, 1 MINUTES, "EMP reboot attempts must be one minute apart.")
+	TEST_ASSERT_EQUAL(IMPLANT_EMP_REBOOT_CHANCE, 1, "Each EMP reboot attempt must have a one percent chance.")
+	var/obj/item/organ/cyberimp/brain/neural_interface/organ = allocate(__IMPLIED_TYPE__)
+	var/obj/item/implant/implant = allocate(__IMPLIED_TYPE__)
+	organ.disable_implant(reason = "EMP")
+	implant.disable_implant(reason = "EMP")
+	var/organ_timer = organ.implant_emp_reboot_timer
+	var/implant_timer = implant.implant_emp_reboot_timer
+	TEST_ASSERT_EQUAL(organ.implant_emp_reboot_at, world.time + 1 MINUTES, "The first organ reboot must wait a full minute.")
+	TEST_ASSERT_EQUAL(implant.implant_emp_reboot_at, world.time + 1 MINUTES, "The first legacy implant reboot must wait a full minute.")
+	TEST_ASSERT(!organ.attempt_implant_emp_reboot(), "An early organ check must not roll for a reboot.")
+	TEST_ASSERT(!implant.attempt_implant_emp_reboot(), "An early legacy implant check must not roll for a reboot.")
+	TEST_ASSERT_EQUAL(organ.implant_emp_reboot_timer, organ_timer, "Early polling must not replace the organ timer.")
+	TEST_ASSERT_EQUAL(implant.implant_emp_reboot_timer, implant_timer, "Early polling must not replace the legacy implant timer.")
+	organ.implant_disabled_until = world.time - 1
+	implant.implant_disabled_until = world.time - 1
+	TEST_ASSERT(organ.is_implant_disabled(), "An elapsed temporary timer must not clear organ EMP shutdown.")
+	TEST_ASSERT(implant.is_implant_disabled(), "An elapsed temporary timer must not clear legacy EMP shutdown.")
+	organ.apply_organ_damage(10)
+	organ.disable_implant(10 MINUTES, "overheat")
+	var/temporary_deadline = organ.implant_disabled_until
+	organ.implant_emp_reboot_at = world.time - 1
+	var/restarted = organ.attempt_implant_emp_reboot()
+	if(restarted)
+		TEST_ASSERT_EQUAL(organ.implant_emp_reboot_at, 0, "A successful roll must clear EMP shutdown.")
+		TEST_ASSERT_NULL(organ.implant_emp_reboot_timer, "A successful roll must stop future attempts.")
+	else
+		TEST_ASSERT_EQUAL(organ.implant_emp_reboot_at, world.time + 1 MINUTES, "A failed roll must schedule another minute, not restore the organ.")
+		TEST_ASSERT(organ.implant_emp_reboot_timer, "A failed roll must keep a pending reboot timer.")
+	TEST_ASSERT_EQUAL(organ.damage, 10, "A reboot must not repair physical damage.")
+	TEST_ASSERT_EQUAL(organ.implant_disabled_until, temporary_deadline, "A reboot must not clear unrelated temporary shutdown.")
+	var/datum/surgery_operation/organ/repair/implant/retune/operation = allocate(__IMPLIED_TYPE__)
+	TEST_ASSERT(operation.state_check(organ), "A disabled implant must offer surgical retuning.")
+	operation.on_success(organ)
+	TEST_ASSERT(!organ.is_implant_disabled(), "Successful surgery must immediately retune the organ.")
+	TEST_ASSERT_NULL(organ.implant_emp_reboot_timer, "Surgery must cancel the pending reboot.")
+	TEST_ASSERT_EQUAL(organ.damage, 10, "Retuning must not repair physical damage.")
+	implant.retune_implant()
+	TEST_ASSERT(!implant.is_implant_disabled(), "Manual retuning must immediately restart a legacy implant.")
+	TEST_ASSERT_NULL(implant.implant_emp_reboot_timer, "Retuning must cancel the legacy implant timer.")
+	TEST_ASSERT(!organ.attempt_implant_emp_reboot() && !implant.attempt_implant_emp_reboot(), "Stale callbacks must not schedule attempts after retuning.")
+
+/datum/unit_test/cyberpunk_implant_electric_retune/Run()
+	var/mob/living/carbon/human/consistent/patient = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)
+	var/obj/item/organ/cyberimp/brain/neural_interface/organ = allocate(__IMPLIED_TYPE__)
+	TEST_ASSERT(organ.Insert(patient), "A neural implant must be insertable for the electric restart test.")
+	var/obj/item/implant/implant = allocate(__IMPLIED_TYPE__)
+	implant.requires_neural_interface = TRUE
+	TEST_ASSERT(implant.implant(patient, silent = TRUE), "A legacy implant must be insertable for the electric restart test.")
+	organ.disable_implant(reason = "EMP")
+	implant.disable_implant(reason = "EMP")
+	TEST_ASSERT(!patient.retune_implants_from_electricity(0), "An absent electrical pulse must not restart implants.")
+	TEST_ASSERT(patient.retune_implants_from_electricity(30), "A real electrical pulse must retune EMP-disabled implants.")
+	TEST_ASSERT(!organ.is_implant_disabled() && !implant.is_implant_disabled(), "Electricity must immediately clear both kinds of EMP shutdown.")
+	TEST_ASSERT_NULL(organ.implant_emp_reboot_timer, "Electricity must cancel the organ reboot timer.")
+	TEST_ASSERT_NULL(implant.implant_emp_reboot_timer, "Electricity must cancel the legacy reboot timer.")
+
 /// Tests organ damage cap.
 /// Organ damage should never bypass the cap.
 /// Every internal organ is tested.

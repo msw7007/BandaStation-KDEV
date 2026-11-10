@@ -461,6 +461,7 @@
 		new_machine.set_anchored(anchored)
 		//Inform machine that its finished & cleanup
 		new_machine.on_construction(user)
+		SSeconomy.record_cyberpunk_contract_construction(user, new_machine)
 		components = null
 	qdel(src)
 	return TRUE

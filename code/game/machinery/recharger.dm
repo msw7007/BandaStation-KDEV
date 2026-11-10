@@ -21,6 +21,10 @@
 		/obj/item/gun/ballistic/automatic/battle_rifle,
 	))
 
+/obj/machinery/recharger/Initialize(mapload)
+	. = ..()
+	register_cyberpunk_service_source()
+
 /obj/machinery/recharger/RefreshParts()
 	. = ..()
 	recharge_coeff = 1
@@ -30,6 +34,8 @@
 
 /obj/machinery/recharger/examine(mob/user)
 	. = ..()
+	if(has_cyberpunk_energy_shop())
+		. += span_notice("Right-click to open the energy supply shop.")
 	if(!in_range(user, src) && !issilicon(user) && !isobserver(user))
 		. += span_warning("Вы слишком далеко, чтобы рассмотреть содержимое и дисплей [declent_ru(GENITIVE)]!")
 		return
@@ -153,7 +159,7 @@
 	var/obj/item/stock_parts/power_store/charging_cell = charging.get_cell()
 	if(charging_cell)
 		if(charging_cell.charge < charging_cell.maxcharge)
-			charge_cell(charging_cell.chargerate * recharge_coeff * seconds_per_tick, charging_cell)
+			charge_cell(charging_cell.chargerate * recharge_coeff * seconds_per_tick * get_cyberpunk_corporate_charging_multiplier(), charging_cell)
 			if(charging_cell.charge >= charging_cell.maxcharge) //Inserted thing is at max charge/ammo, notify those around us
 				playsound(src, 'sound/machines/ping.ogg', 30, TRUE)
 				say("[capitalize(charging.declent_ru(NOMINATIVE))] заряжен[genderize_ru(charging.gender, "", "а", "о", "ы")]!")

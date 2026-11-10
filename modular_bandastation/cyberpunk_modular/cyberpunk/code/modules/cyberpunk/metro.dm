@@ -1168,6 +1168,9 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	var/turf/exit_turf
 	var/list/generated_atoms = list()
 	var/list/dungeon_landmarks = list()
+	var/datum/turf_reservation/reservation
+	var/closing = FALSE
+	var/completed = FALSE
 
 /datum/cyberpunk_dungeon_instance/New(obj/structure/cyberpunk_dungeon_entrance/entry, new_theme, new_difficulty, new_width_chunks, new_height_chunks)
 	. = ..()
@@ -1187,6 +1190,10 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 
 /datum/cyberpunk_dungeon_instance/Destroy(force)
 	GLOB.cyberpunk_dungeon_instances -= src
+	var/obj/structure/cyberpunk_dungeon_entrance/entry = entry_ref?.resolve()
+	if(entry?.instance == src)
+		entry.instance = null
+	QDEL_NULL(reservation)
 	entry_ref = null
 	return_turf = null
 	start_turf = null
@@ -1194,6 +1201,34 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	generated_atoms = null
 	dungeon_landmarks = null
 	return ..()
+
+/datum/cyberpunk_dungeon_instance/proc/begin_collapse(reason = "entrance destroyed")
+	if(closing)
+		return
+	closing = TRUE
+	var/obj/structure/cyberpunk_dungeon_entrance/entry = entry_ref?.resolve()
+	if(entry)
+		entry.closed = TRUE
+		SSpoints_of_interest?.remove_point_of_interest(entry)
+	for(var/mob/living/person as anything in GLOB.mob_living_list)
+		if(person.z == z_value)
+			to_chat(person, span_warning("This route is collapsing. Return to the exit within two minutes."))
+	SScyberpunk_round?.record_cyberpunk_round_event("dungeon_closed", "poi", "city", SScyberpunk_round.cyberpunk_round_chaos, "[instance_id]: [reason]", "completed")
+	addtimer(CALLBACK(src, PROC_REF(finish_collapse)), 2 MINUTES)
+
+/datum/cyberpunk_dungeon_instance/proc/finish_collapse()
+	if(z_value)
+		for(var/mob/living/person as anything in GLOB.mob_living_list)
+			var/datum/ai_controller/controller = person.ai_controller
+			var/turf/phantom_turf = controller?.blackboard[BB_CP_PHANTOM_APPROX_TURF]
+			if(person.z == z_value || (isnull(person.loc) && phantom_turf?.z == z_value))
+				if(!return_turf)
+					return
+				controller?.cyberpunk_materialize_phantom("dungeon closing")
+				if(person.buckled)
+					person.buckled.unbuckle_mob(person, force = TRUE)
+				person.forceMove(return_turf)
+	qdel(src)
 
 /datum/cyberpunk_dungeon_instance/proc/ensure_generated()
 	if(generated)
@@ -1204,10 +1239,17 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	var/result = generate()
 	generating = FALSE
 	generated = result
+	if(!result)
+		QDEL_NULL(reservation)
+		z_value = null
+		start_turf = null
+		exit_turf = null
+		generated_atoms.Cut()
+		dungeon_landmarks.Cut()
 	return result
 
 /datum/cyberpunk_dungeon_instance/proc/enter(mob/living/user)
-	if(!istype(user))
+	if(!istype(user) || closing)
 		return FALSE
 	if(!ensure_generated())
 		user.balloon_alert(user, "dungeon failed")
@@ -1239,19 +1281,21 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 		stack_trace("Cyberpunk dungeon [instance_id] is too large for world bounds: [total_width]x[total_height].")
 		return FALSE
 
-	var/datum/space_level/level = SSmapping.add_new_zlevel("Cyberpunk Dungeon [instance_id]", list(ZTRAIT_RESERVED = TRUE), contain_turfs = TRUE)
-	if(!level)
+	// A whole-level reservation preserves isolated dungeons and lets mapping recycle their space.
+	reservation = SSmapping.request_turf_block_reservation(world.maxx - 4, world.maxy - 4)
+	if(!reservation)
 		stack_trace("Cyberpunk dungeon [instance_id] failed to create a z-level.")
 		return FALSE
-	z_value = level.z_value
+	var/turf/origin = reservation.bottom_left_turfs[1]
+	z_value = origin.z
 
 	var/list/plan = build_plan()
 	if(!length(plan))
 		stack_trace("Cyberpunk dungeon [instance_id] generated an empty plan.")
 		return FALSE
 
-	var/origin_x = 3
-	var/origin_y = 3
+	var/origin_x = origin.x
+	var/origin_y = origin.y
 	for(var/key as anything in plan)
 		var/list/cell = plan[key]
 		var/datum/cyberpunk_dungeon_chunk/chunk = cyberpunk_dungeon_pick_chunk(theme, cell["exits"], cell["role"], cell["depth"])
@@ -1266,6 +1310,9 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 		start_turf = locate(origin_x + 7, origin_y + ((round((height_chunks + 1) / 2) - 1) * chunk_size) + 7, z_value)
 	if(!exit_turf)
 		exit_turf = locate(origin_x + ((width_chunks - 1) * chunk_size) + 7, origin_y + ((round((height_chunks + 1) / 2) - 1) * chunk_size) + 7, z_value)
+	var/obj/structure/closet/crate/cyberpunk_dungeon_reward/reward = new(exit_turf)
+	reward.instance_ref = WEAKREF(src)
+	generated_atoms += reward
 	log_game("Cyberpunk dungeon [instance_id] generated [length(plan)] [theme] chunks on z[z_value].")
 	SScyberpunk_round?.record_cyberpunk_round_event("dungeon_generated", "poi", "city", SScyberpunk_round.cyberpunk_round_chaos, "Generated [theme] dungeon [instance_id] with [length(plan)] chunks.", "executed")
 	return TRUE
@@ -1504,6 +1551,7 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	var/width_chunks = CYBERPUNK_DUNGEON_DEFAULT_WIDTH
 	var/height_chunks = CYBERPUNK_DUNGEON_DEFAULT_HEIGHT
 	var/datum/cyberpunk_dungeon_instance/instance
+	var/closed = FALSE
 
 /obj/structure/cyberpunk_dungeon_entrance/metro
 	name = "abandoned metro entrance"
@@ -1537,14 +1585,41 @@ GLOBAL_LIST_EMPTY(cyberpunk_dungeon_instances)
 	enter_dungeon(user)
 
 /obj/structure/cyberpunk_dungeon_entrance/proc/enter_dungeon(mob/living/user)
+	if(closed)
+		return FALSE
 	if(!instance || QDELETED(instance))
 		instance = new /datum/cyberpunk_dungeon_instance(src, theme, difficulty, width_chunks, height_chunks)
 	return instance.enter(user)
 
 /obj/structure/cyberpunk_dungeon_entrance/Destroy(force)
 	SSpoints_of_interest?.remove_point_of_interest(src)
+	instance?.begin_collapse()
 	instance = null
 	return ..()
+
+/obj/structure/closet/crate/cyberpunk_dungeon_reward
+	name = "sealed salvage cache"
+	desc = "The final cache of this underground route. Opening it completes the expedition."
+	var/datum/weakref/instance_ref
+	var/rewards_generated = FALSE
+
+/obj/structure/closet/crate/cyberpunk_dungeon_reward/before_open(mob/living/user, force)
+	if(!..())
+		return FALSE
+	var/datum/cyberpunk_dungeon_instance/instance = instance_ref?.resolve()
+	if(!rewards_generated && instance)
+		rewards_generated = TRUE
+		for(var/index in 1 to (2 + instance.difficulty))
+			var/obj/item/reward = instance.spawn_loot(get_turf(src))
+			reward.forceMove(src)
+	return TRUE
+
+/obj/structure/closet/crate/cyberpunk_dungeon_reward/after_open(mob/living/user, force)
+	. = ..()
+	var/datum/cyberpunk_dungeon_instance/instance = instance_ref?.resolve()
+	if(instance && !instance.completed)
+		instance.completed = TRUE
+		instance.begin_collapse("final cache opened")
 
 /obj/structure/cyberpunk_dungeon_exit
 	name = "unstable return route"

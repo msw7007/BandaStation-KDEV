@@ -159,13 +159,12 @@
 /datum/cyberpunk_contract_condition/proc/get_item_rarity(obj/item/item)
 	if(!item)
 		return 0
-	if("rarity" in item.vars)
-		return item.vars["rarity"] || 0
-	if("resource_rarity" in item.vars)
-		return item.vars["resource_rarity"] || 0
-	if("cyberpunk_rarity" in item.vars)
-		return item.vars["cyberpunk_rarity"] || 0
-	return 0
+	if(isnum(item.vars["rarity"]))
+		return item.vars["rarity"]
+	if(isnum(item.vars["resource_rarity"]))
+		return item.vars["resource_rarity"]
+	var/list/rarities = list("trash" = 0, "common" = 1, "uncommon" = 2, "rare" = 3, "epic" = 4, "legendary" = 5)
+	return rarities[item.cyberpunk_rarity] || 0
 
 
 /datum/cyberpunk_contract_condition/proc/item_meets_quality(obj/item/item)

@@ -336,6 +336,10 @@
 
 	//Catalyst modifier
 	delta_t *= speed_mod
+	var/atom/reaction_container = holder.my_atom
+	var/obj/machinery/chem_machine = ismachinery(reaction_container) ? reaction_container : reaction_container?.loc
+	if(istype(chem_machine, /obj/machinery/chem_heater) || istype(chem_machine, /obj/machinery/chem_master) || istype(chem_machine, /obj/machinery/chem_dispenser) || istype(chem_machine, /obj/machinery/plumbing))
+		delta_t /= chem_machine.get_cyberpunk_machine_chem_speed_multiplier()
 
 	//set purity equal to pH offset
 	purity = delta_ph

@@ -72,7 +72,10 @@
 	add_fingerprint(user)
 
 /obj/item/clothing/suit/armor/reactive/hit_reaction(owner, hitby, attack_text, final_block_chance, damage, attack_type, damage_type = BRUTE)
-	if(!active || !prob(hit_reaction_chance))
+	var/reaction_chance = hit_reaction_chance
+	if((istype(src, /obj/item/clothing/suit/armor/reactive/teleport) || istype(src, /obj/item/clothing/suit/armor/reactive/stealth)) && SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(src)) == "starlight")
+		reaction_chance *= cyberpunk_property_edict_multiplier(src, "starlight", "starlight_phase_tuning")
+	if(!active || !prob(min(100, reaction_chance)))
 		return FALSE
 	if(world.time < reactivearmor_cooldown)
 		cooldown_activation(owner)

@@ -9,6 +9,9 @@
 	var/last_verified_at = 0
 	var/partial_payment_enabled = FALSE
 	var/guard_kind = "target"
+	var/datum/weakref/contract_ref
+	var/datum/weakref/guarded_area_ref
+	var/list/guarded_objects = list()
 
 
 /datum/cyberpunk_contract_condition/guard/configure_from_contract(datum/cyberpunk_contract/contract, list/params)
@@ -42,19 +45,43 @@
 
 /datum/cyberpunk_contract_condition/guard/on_accept(datum/cyberpunk_contract/contract, mob/living/user)
 	guard_started_at = world.time
+	contract_ref = WEAKREF(contract)
+	if(guard_kind == "area")
+		for(var/area/candidate as anything in GLOB.areas)
+			if(target_area_text && lowertext(candidate.name) == lowertext(target_area_text))
+				guarded_area_ref = WEAKREF(candidate)
+				for(var/turf/tile as anything in candidate.get_turfs_from_all_zlevels())
+					for(var/obj/structure/structure in tile)
+						guarded_objects += WEAKREF(structure)
+					for(var/obj/machinery/machine in tile)
+						guarded_objects += WEAKREF(machine)
+				break
 	var/atom/target = find_protected_target()
 	if(target)
+		protected_ref = REF(target)
 		var/area/target_area = get_area(target)
 		protected_start_area = target_area?.name
 		contract.add_history("guard target registered: [target] in [protected_start_area || "unknown area"]")
+	monitor_guard()
+
+/datum/cyberpunk_contract_condition/guard/proc/monitor_guard()
+	var/datum/cyberpunk_contract/contract = contract_ref?.resolve()
+	if(contract?.status != CYBERPUNK_CONTRACT_ACCEPTED)
+		return
+	if(!target_safe())
+		var/elapsed = max(0, world.time - guard_started_at)
+		var/total = max(1, contract.due_time - guard_started_at)
+		contract.fail("guard target lost", partial_payment_enabled ? clamp(elapsed / total, 0, 1) : 0)
+		return
+	last_verified_at = world.time
+	addtimer(CALLBACK(src, PROC_REF(monitor_guard)), 2 SECONDS)
 
 
 /datum/cyberpunk_contract_condition/guard/proc/find_protected_target()
 	if(protected_ref)
 		var/atom/by_ref = locate(protected_ref)
-		if(by_ref)
-			return by_ref
-	for(var/mob/living/person as anything in GLOB.player_list)
+		return by_ref
+	for(var/mob/living/person as anything in GLOB.mob_living_list)
 		if(target_text && findtext(lowertext(person.real_name || person.name), lowertext(target_text)))
 			return person
 	if(guard_kind == "cargo")
@@ -69,7 +96,15 @@
 
 /datum/cyberpunk_contract_condition/guard/proc/target_safe()
 	if(guard_kind == "area")
-		return !!target_area_text
+		var/area/guarded_area = guarded_area_ref?.resolve()
+		if(!guarded_area || !length(guarded_area.get_turfs_from_all_zlevels()))
+			return FALSE
+		var/intact = 0
+		for(var/datum/weakref/object_ref as anything in guarded_objects)
+			var/atom/object = object_ref.resolve()
+			if(object && get_area(object) == guarded_area && (!object.uses_integrity || object.get_integrity_percentage() > 0))
+				intact++
+		return !length(guarded_objects) || intact * 100 >= length(guarded_objects) * required_percent
 	var/atom/target = find_protected_target()
 	if(!target || QDELETED(target))
 		return FALSE
@@ -78,7 +113,7 @@
 	if(isliving(target))
 		var/mob/living/living_target = target
 		return living_target.stat != DEAD && living_target.health > HEALTH_THRESHOLD_CRIT
-	if(target.max_integrity > 0 && target.get_integrity_percentage() <= 0)
+	if(target.uses_integrity && target.get_integrity_percentage() <= 0)
 		return FALSE
 	return TRUE
 

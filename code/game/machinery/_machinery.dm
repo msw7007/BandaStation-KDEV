@@ -1620,7 +1620,7 @@
 	var/chem_multiplier = 1
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		chem_multiplier *= module.chem_speed_multiplier
-	return max(0.1, chem_multiplier)
+	return max(0.1, chem_multiplier / cyberpunk_property_edict_multiplier(src, "benn", "benn_chem_tuning"))
 
 /obj/machinery/proc/get_cyberpunk_machine_chem_cost_multiplier()
 	var/chem_multiplier = 1

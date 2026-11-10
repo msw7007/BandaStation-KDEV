@@ -58,6 +58,7 @@ type Contract = {
   payment: number;
   deposit: number;
   penalty: number;
+  penaltyOutstanding?: number;
   taxPaid: number;
   legal: BooleanLike;
   public: BooleanLike;
@@ -120,7 +121,7 @@ type Data = {
   reservableItems?: ReservableItem[];
 };
 
-const contractTypes = [
+const contractTypes: [string, string][] = [
   ['delivery', 'Доставка'],
   ['repair', 'Ремонт'],
   ['build', 'Стройка'],
@@ -130,32 +131,32 @@ const contractTypes = [
   ['elimination', 'Устранение'],
 ];
 
-const destinationKinds = [
+const destinationKinds: [string, string][] = [
   ['creator', 'Создатель'],
   ['recipient', 'Получатель'],
   ['terminal', 'Терминал'],
   ['coordinates', 'Координаты'],
 ];
 
-const deliveryTargetKinds = [
+const deliveryTargetKinds: [string, string][] = [
   ['item', 'Предмет'],
   ['object', 'Объект'],
   ['mob', 'Кукла/цель'],
   ['cargo', 'Груз'],
 ];
 
-const repairModes = [
+const repairModes: [string, string][] = [
   ['integrity', 'Прочность'],
   ['functional', 'Функциональность'],
 ];
 
-const guardKinds = [
+const guardKinds: [string, string][] = [
   ['target', 'Цель'],
   ['area', 'Зона'],
   ['cargo', 'Груз'],
 ];
 
-const sabotageModes = [
+const sabotageModes: [string, string][] = [
   ['damage', 'Повредить'],
   ['disabled', 'Отключить'],
   ['unpowered', 'Обесточить'],
@@ -165,7 +166,7 @@ const sabotageModes = [
   ['destroyed', 'Уничтожить'],
 ];
 
-const eliminationModes = [
+const eliminationModes: [string, string][] = [
   ['critical', 'Крит'],
   ['dead', 'Смерть'],
   ['incapacitated', 'Выведен из строя'],
@@ -581,6 +582,13 @@ const ContractDetails = (props: { contract: Contract; collapsed?: boolean }) => 
           value={moneyText(contract.penalty)}
           tone={contract.penalty > 0 ? 'bad' : 'base'}
         />
+        {!!contract.penaltyOutstanding && (
+          <ContractCell
+            label="Долг по штрафу"
+            value={moneyText(contract.penaltyOutstanding)}
+            tone="bad"
+          />
+        )}
         <ContractCell
           label="Налог"
           value={moneyText(contract.taxPaid)}

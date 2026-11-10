@@ -476,7 +476,7 @@
 
 /mob/living/proc/retune_implants_from_electricity(power = 0)
 	var/retuned = FALSE
-	if(!iscarbon(src))
+	if(power <= 0 || !iscarbon(src))
 		return retuned
 	var/mob/living/carbon/carbon_owner = src
 	for(var/obj/item/organ/organ as anything in carbon_owner.organs)
@@ -486,7 +486,7 @@
 			continue
 		retuned |= organ.retune_implant()
 	for(var/obj/item/implant/implant as anything in carbon_owner.implants)
-		if(implant.implant_disable_reason != "EMP")
+		if(!implant.implant_emp_reboot_at && implant.implant_disable_reason != "EMP")
 			continue
 		retuned |= implant.retune_implant()
 	if(retuned)

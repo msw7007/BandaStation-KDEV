@@ -37,6 +37,18 @@ SUBSYSTEM_DEF(mobs)
 		var/mob/living/processing_mob = currentrun[currentrun.len]
 		currentrun.len--
 		if(processing_mob)
+			var/datum/ai_controller/controller = processing_mob.ai_controller
+			if(controller?.blackboard[BB_CP_PHANTOM_ENABLED] && controller.blackboard[BB_CP_PHANTOM_STATE] != CP_AI_PHANTOM_INACTIVE)
+				controller.cyberpunk_process_phantom_health()
+				if(QDELETED(processing_mob))
+					if(MC_TICK_CHECK)
+						return
+					continue
+				if(controller.cyberpunk_can_suspend_body())
+					if(MC_TICK_CHECK)
+						return
+					continue
+				controller.cyberpunk_materialize_phantom("body needs processing")
 			processing_mob.Life(seconds_per_tick)
 		else
 			GLOB.mob_living_list.Remove(processing_mob)

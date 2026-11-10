@@ -108,6 +108,7 @@
 	icon_full = "template_small"
 	screen_loc = ui_id
 	slot_id = ITEM_SLOT_ID
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY
 
 /datum/inventory_slot/human/mask
 	name = "mask"
@@ -199,3 +200,4 @@
 	icon_full = "template_small"
 	screen_loc = ui_belt
 	slot_id = ITEM_SLOT_BELT
+	screen_group = HUD_GROUP_TOGGLEABLE_INVENTORY

@@ -43,7 +43,7 @@
 	if(elimination_mode == "removed")
 		return target.stat == DEAD || !target.mind || target.mind.current != target
 	if(elimination_mode == "incapacitated")
-		return target.stat == DEAD || target.health <= HEALTH_THRESHOLD_CRIT
+		return target.stat >= UNCONSCIOUS || target.incapacitated
 	return target.stat == DEAD || target.health <= HEALTH_THRESHOLD_CRIT
 
 
@@ -63,7 +63,7 @@
 
 
 /datum/cyberpunk_contract_condition/elimination/check_nearby(datum/cyberpunk_contract/contract, mob/living/user)
-	for(var/mob/living/target in GLOB.player_list)
+	for(var/mob/living/target as anything in GLOB.mob_living_list)
 		if(record_atom(contract, user, target))
 			return TRUE
 	return FALSE
@@ -98,7 +98,7 @@
 	return FALSE
 
 /datum/cyberpunk_contract/proc/check_nearby_elimination_target(mob/living/user)
-	for(var/mob/living/target in GLOB.player_list)
+	for(var/mob/living/target as anything in GLOB.mob_living_list)
 		if(target_text && !findtext(lowertext(target.real_name || target.name), lowertext(target_text)))
 			continue
 		for(var/datum/cyberpunk_contract_condition/elimination/condition as anything in completion_conditions)

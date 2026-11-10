@@ -216,31 +216,31 @@
 #define ui_xenobiodisplay "WEST:6,CENTER:-4"
 
 //Lower center, persistent menu
-#define ui_sstore1 "CENTER-5:10,SOUTH:5"
-#define ui_id "CENTER-4:12,SOUTH:5"
-#define ui_belt "CENTER-3:14,SOUTH:5"
-#define ui_back "CENTER-2:14,SOUTH:5"
-#define ui_storage1 "CENTER+1:18,SOUTH:5"
-#define ui_storage2 "CENTER+2:20,SOUTH:5"
+#define ui_sstore1 "CENTER-3:12,SOUTH:5"
+#define ui_id "WEST+3:12,SOUTH+3:11"
+#define ui_belt "WEST+1:8,SOUTH+1:7"
+#define ui_back "CENTER+2:20,SOUTH:5"
+#define ui_storage1 "CENTER-2:14,SOUTH:5"
+#define ui_storage2 "CENTER+1:18,SOUTH:5"
 #define ui_combo "CENTER+4:24,SOUTH+1:7" //combo meter for martial arts
 
 //Lower right, persistent menu
-#define ui_below_throw "EAST-1:28,SOUTH+1:7"
-#define ui_drop_throw "EAST-1:28,SOUTH+1:24"
-#define ui_above_throw "EAST-1:28,SOUTH+1:41"
-#define ui_above_movement "EAST-2:26,SOUTH+1:7"
-#define ui_above_movement_top "EAST-2:26, SOUTH+1:24"
-#define ui_above_intent "EAST-3:24, SOUTH+1:7"
-#define ui_movi "EAST-2:26,SOUTH:5"
-#define ui_acti "EAST-3:24,SOUTH:5"
-#define ui_floor_change "BOTTOM+1:8,RIGHT-1:28"
+#define ui_below_throw "WEST+1:8,SOUTH+1:21"
+#define ui_drop_throw "CENTER-2:16,SOUTH+1:5"
+#define ui_above_throw "CENTER-2:16,SOUTH+2:5"
+#define ui_above_movement "CENTER+4:24,SOUTH+1:5"
+#define ui_above_movement_top "CENTER+2:20,SOUTH+1:5"
+#define ui_above_intent "CENTER-1:16,SOUTH+1:5"
+#define ui_movi "WEST+1:8,SOUTH:5"
+#define ui_acti "CENTER-1:16,SOUTH+1:5"
+#define ui_floor_change "WEST+2:10,SOUTH:5"
 #define ui_zonesel "EAST-1:28,SOUTH:5"
 #define ui_acti_alt "EAST-1:28,SOUTH:5" //alternative intent switcher for when the interface is hidden (F12)
-#define ui_crafting "EAST-4:22,SOUTH:5"
-#define ui_building "EAST-4:22,SOUTH:21"
-#define ui_language_menu "EAST-4:6,SOUTH:21"
-#define ui_navigate_menu "EAST-4:6,SOUTH:5"
-#define ui_memories_menu "EAST-4:6,SOUTH:5"
+#define ui_crafting "EAST:0,SOUTH+4:5"
+#define ui_building "EAST:0,SOUTH:5"
+#define ui_language_menu "EAST:0,SOUTH+5:5"
+#define ui_navigate_menu "EAST:0,SOUTH+1:5"
+#define ui_memories_menu "EAST:0,SOUTH+2:5"
 
 //basic mob-unique ui
 #define ui_basic_combat_toggle "EAST-1:28,SOUTH:6"
@@ -248,52 +248,52 @@
 #define ui_basic_memories_menu "BOTTOM+1:26,RIGHT-1:12"
 
 //Upper left (action buttons)
-#define ui_action_palette "WEST+0:23,NORTH-1:5"
-#define ui_action_palette_offset(north_offset) ("WEST+0:23,NORTH-[1+north_offset]:5")
+#define ui_action_palette "EAST:0,SOUTH+3:5"
+#define ui_action_palette_offset(north_offset) ("EAST:0,SOUTH+[3+north_offset]:5")
 
-#define ui_palette_scroll "WEST+1:8,NORTH-6:28"
-#define ui_palette_scroll_offset(north_offset) ("WEST+1:8,NORTH-[6+north_offset]:28")
+#define ui_palette_scroll "EAST-1:16,SOUTH+3:5"
+#define ui_palette_scroll_offset(north_offset) ("EAST-1:16,SOUTH+[3+north_offset]:5")
 
 //Middle right (status indicators)
-#define ui_healthdoll "EAST-1:28,CENTER-2:17"
-#define ui_health "EAST-1:28,CENTER-1:19"
-#define ui_internal "EAST-1:28,CENTER+1:21"
-#define ui_mood "EAST-1:28,CENTER:21"
-#define ui_hunger "EAST-1:2,CENTER:21"
-#define ui_spacesuit "EAST-1:28,CENTER-4:14"
-#define ui_stamina "EAST-1:28,CENTER-3:14"
+#define ui_healthdoll "EAST-1:12,SOUTH:21"
+#define ui_health "EAST-1:12,SOUTH:5"
+#define ui_internal "EAST-1:12,SOUTH+4:5"
+#define ui_mood "EAST:0,SOUTH+6:5"
+#define ui_hunger "EAST-1:12,SOUTH+1:5"
+#define ui_spacesuit "EAST-1:12,SOUTH+5:5"
+#define ui_stamina "EAST-1:12,SOUTH+3:5"
 
 //Pop-up inventory
 #define ui_shoes "WEST+1:8,SOUTH:5"
-#define ui_iclothing "WEST:6,SOUTH+1:7"
-#define ui_oclothing "WEST+1:8,SOUTH+1:7"
-#define ui_gloves "WEST+2:10,SOUTH+1:7"
-#define ui_glasses "WEST:6,SOUTH+3:11"
-#define ui_mask "WEST+1:8,SOUTH+2:9"
-#define ui_ears "WEST+2:10,SOUTH+2:9"
-#define ui_neck "WEST:6,SOUTH+2:9"
-#define ui_head "WEST+1:8,SOUTH+3:11"
-#define ui_undershirt "WEST+3:12,SOUTH+1:7"
-#define ui_underwear "WEST+3:12,SOUTH+2:9"
-#define ui_tights "WEST+3:12,SOUTH+3:11"
-#define ui_shoulder_l "WEST+4:14,SOUTH+1:7"
-#define ui_shoulder_r "WEST+4:14,SOUTH+2:9"
-#define ui_finger "WEST+4:14,SOUTH+3:11"
-#define ui_bracers "WEST+5:16,SOUTH+1:7"
-#define ui_pants "WEST+5:16,SOUTH+2:9"
-#define ui_chest "WEST+5:16,SOUTH+3:11"
+#define ui_iclothing "WEST+1:8,SOUTH+2:9"
+#define ui_oclothing "WEST+1:8,SOUTH+3:11"
+#define ui_gloves "WEST:6,SOUTH+1:7"
+#define ui_glasses "WEST:6,SOUTH+4:13"
+#define ui_mask "WEST:6,SOUTH+3:11"
+#define ui_ears "WEST+2:10,SOUTH+4:13"
+#define ui_neck "WEST+2:10,SOUTH+3:11"
+#define ui_head "WEST+1:8,SOUTH+4:13"
+#define ui_undershirt "WEST+3:12,SOUTH+2:9"
+#define ui_underwear "WEST+3:12,SOUTH+1:7"
+#define ui_tights "WEST+3:12,SOUTH:5"
+#define ui_shoulder_l "WEST:6,SOUTH+2:9"
+#define ui_shoulder_r "WEST+2:10,SOUTH+2:9"
+#define ui_finger "WEST+2:10,SOUTH+1:7"
+#define ui_bracers "WEST+3:12,SOUTH+4:13"
+#define ui_pants "WEST:6,SOUTH:5"
+#define ui_chest "WEST+2:10,SOUTH:5"
 
 //Generic living
 #define ui_living_pull "EAST-1:28,CENTER-3:15"
 #define ui_living_healthdoll "EAST-1:28,CENTER-1:15"
 
 //Humans
-#define ui_human_floor_changer "EAST-4:22,SOUTH:5"
-#define ui_human_crafting "EAST-3:24,SOUTH+1:7"
-#define ui_human_navigate "EAST-3:7,SOUTH+1:7"
-#define ui_human_language "EAST-3:7,SOUTH+1:24"
-#define ui_human_area "EAST-3:24,SOUTH+1:24"
-#define ui_human_memories_menu "EAST-4:22,SOUTH+1:7"
+#define ui_human_floor_changer "WEST+2:10,SOUTH:5"
+#define ui_human_crafting "EAST:0,SOUTH+4:5"
+#define ui_human_navigate "EAST:0,SOUTH+1:5"
+#define ui_human_language "EAST:0,SOUTH+5:5"
+#define ui_human_area "EAST:0,SOUTH:5"
+#define ui_human_memories_menu "EAST:0,SOUTH+2:5"
 
 //Drones
 #define ui_drone_drop "CENTER+1:18,SOUTH:5"

@@ -5,5 +5,7 @@
 #define COMSIG_AI_CONTROLLER_UNPOSSESSED_PAWN "ai_controller_unpossessed_pawn"
 ///sent from ai controllers when they pick behaviors: (list/datum/ai_behavior/old_behaviors, list/datum/ai_behavior/new_behaviors)
 #define COMSIG_AI_CONTROLLER_PICKED_BEHAVIORS "ai_controller_picked_behaviors"
+/// A turf query for sensors/fields that require a physical AI pawn: (atom/pawn).
+#define COMSIG_TURF_AI_OBSERVABLE "turf_ai_observable"
 ///sent from ai controllers when a behavior is inserted into the queue: (list/new_arguments)
 #define AI_CONTROLLER_BEHAVIOR_QUEUED(type) "ai_controller_behavior_queued_[type]"

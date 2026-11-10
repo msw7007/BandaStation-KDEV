@@ -218,8 +218,8 @@
 		if(scan_depth >= HEALTHSCAN_DEPTH_ADVANCED)
 			render_list += "<hr><span class='info ml-1'><b>Organs</b></span><br>"
 			for(var/obj/item/organ/organ as anything in carbon_target.organs)
-				var/organ_health = organ.maxHealth ? round(((organ.maxHealth - organ.damage) / organ.maxHealth) * 100, 0.1) : 0
-				var/organ_line = "[capitalize(organ.name)]: [organ_health]% integrity, efficiency [round(organ.get_efficiency() * 100, 0.1)]%"
+				var/organ_state = organ.damage >= organ.maxHealth ? "nonfunctional" : (organ.damage >= organ.high_threshold ? "severely damaged" : (organ.damage > 0 ? "damaged" : "intact"))
+				var/organ_line = "[capitalize(organ.name)]: [organ_state]"
 				if(scan_depth >= HEALTHSCAN_DEPTH_BIOSCANNER)
 					organ_line += ", pain [round(organ.pain, 0.1)], damage [round(organ.damage, 0.1)]/[organ.maxHealth]"
 				if(organ.organ_flags & ORGAN_FAILING)
@@ -752,7 +752,7 @@
 		render_list += "<span class='alert ml-1'><b>ВНИМАНИЕ: Физическ[LAZYLEN(wounded_part.wounds) > 1? "ие травмы обнаружены" : "ая травма обнаружена"]  в [wounded_part.declent_ru(PREPOSITIONAL)]</b>"
 		for(var/limb_wound in wounded_part.wounds)
 			var/datum/wound/current_wound = limb_wound
-			render_list += "<div class='ml-2'>[simple_scan ? current_wound.get_simple_scanner_description() : current_wound.get_scanner_description()]</div><br>"
+			render_list += "<div class='ml-2'>[current_wound.name] ([current_wound.severity_text()]). [current_wound.desc]</div><br>"
 			if (scanner.give_wound_treatment_bonus)
 				ADD_TRAIT(current_wound, TRAIT_WOUND_SCANNED, ANALYZER_TRAIT)
 				if(!advised)

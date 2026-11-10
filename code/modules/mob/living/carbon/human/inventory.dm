@@ -13,6 +13,9 @@
 	if((include_flags & INCLUDE_ACCESSORIES) && w_uniform)
 		var/obj/item/clothing/under/worn_under = w_uniform
 		items += worn_under.attached_accessories
+	if((include_flags & (INCLUDE_ACCESSORIES|INCLUDE_ABSTRACT)) && gloves)
+		var/obj/item/clothing/gloves/worn_gloves = gloves
+		items += worn_gloves.attached_accessories
 	return items
 
 /mob/living/carbon/human/can_equip(obj/item/equip_target, slot, disable_warning = FALSE, bypass_equip_delay_self = FALSE, ignore_equipped = FALSE, indirect_action = FALSE)
@@ -149,10 +152,7 @@
 		wear_tights,
 		wear_shoulder_l,
 		wear_shoulder_r,
-		wear_finger,
-		wear_bracers,
 		wear_pants,
-		wear_chest,
 		belt,
 		wear_id,
 		l_store,
@@ -183,6 +183,9 @@
 	var/obj/item/clothing/under/under = w_uniform
 	if(istype(under) && length(under.attached_accessories) && (under in visible_items))
 		visible_items += under.attached_accessories
+	var/obj/item/clothing/gloves/worn_gloves = gloves
+	if(istype(worn_gloves) && length(worn_gloves.attached_accessories) && (worn_gloves in visible_items))
+		visible_items += worn_gloves.attached_accessories
 	return visible_items
 
 //This is an UNSAFE proc. Use mob_can_equip() before calling this one! Or rather use equip_to_slot_if_possible() or advanced_equip_to_slot_if_possible()

@@ -143,7 +143,7 @@
 	if(cell.maxcharge == cell.charge)
 		return
 	use_energy(active_power_usage * seconds_per_tick) //Additional power cost before charging the cell.
-	charge_cell(recharge_amount * seconds_per_tick, cell) //This also costs power.
+	charge_cell(recharge_amount * seconds_per_tick / get_cyberpunk_machine_chem_speed_multiplier(), cell) //This also costs power.
 
 
 /obj/machinery/chem_dispenser/proc/display_beaker()

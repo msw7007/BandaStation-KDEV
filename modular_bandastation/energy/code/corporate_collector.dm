@@ -121,7 +121,7 @@
 /obj/machinery/power/cyberpunk_generator/corporate_collector/process_generator(seconds_per_tick)
 	if(!customer_account_id)
 		return FALSE
-	var/energy = power_to_energy(get_power_gen())
+	var/energy = power_to_energy(get_effective_power_gen())
 	var/datum/cyberpunk_corporation/provider = SScyberpunk_corporations.get_cyberpunk_corporation(provider_corporation_id)
 	if(!provider || provider.cyberpunk_energy_reserve < energy)
 		return FALSE
@@ -155,7 +155,7 @@
 		"reserve_kj" = round((provider?.cyberpunk_energy_reserve || 0) / (1 KILO JOULES)),
 		"reserve_limit_kj" = round((provider?.cyberpunk_energy_reserve_limit || 0) / (1 KILO JOULES)),
 		"customer_account_id" = customer_account_id,
-		"estimated_price" = provider ? round(provider.get_cyberpunk_energy_price(power_to_energy(get_power_gen())), 0.01) : 0,
+		"estimated_price" = provider ? round(provider.get_cyberpunk_energy_price(power_to_energy(get_effective_power_gen())), 0.01) : 0,
 	)
 
 /obj/machinery/power/cyberpunk_generator/corporate_collector/handle_cyberpunk_power_ui_act(action, list/params, mob/user)

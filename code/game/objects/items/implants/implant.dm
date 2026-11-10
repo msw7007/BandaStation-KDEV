@@ -27,6 +27,9 @@
 	var/requires_neural_interface = FALSE
 	///world.time until this implant is disabled
 	var/implant_disabled_until = 0
+	/// Nonzero until an EMP reboot succeeds or the implant is manually retuned.
+	var/implant_emp_reboot_at = 0
+	var/implant_emp_reboot_timer
 	///why this implant is disabled, if any
 	var/implant_disable_reason = null
 
@@ -44,7 +47,7 @@
 /obj/item/implant/proc/can_activate_implant()
 	if(!imp_in)
 		return FALSE
-	if(world.time < implant_disabled_until)
+	if(is_implant_disabled())
 		to_chat(imp_in, span_warning("[capitalize(src)] does not respond."))
 		return FALSE
 	if(requires_neural_interface && !imp_in.has_neural_implant())
@@ -52,14 +55,44 @@
 		return FALSE
 	return TRUE
 
-/obj/item/implant/proc/disable_implant(duration = IMPLANT_EMP_DISABLE_TIME, reason = "disabled")
+/obj/item/implant/proc/is_implant_disabled()
+	return !!implant_emp_reboot_at || world.time < implant_disabled_until
+
+/obj/item/implant/proc/disable_implant(duration = 1 MINUTES, reason = "disabled")
+	if(reason == "EMP")
+		implant_disable_reason = reason
+		schedule_implant_emp_reboot()
+		return TRUE
 	implant_disabled_until = max(implant_disabled_until, world.time + duration)
 	implant_disable_reason = reason
 	return TRUE
 
-/obj/item/implant/proc/retune_implant()
-	if(!implant_disabled_until && !implant_disable_reason)
+/obj/item/implant/proc/schedule_implant_emp_reboot()
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_at = world.time + IMPLANT_EMP_REBOOT_INTERVAL
+	implant_emp_reboot_timer = addtimer(CALLBACK(src, PROC_REF(attempt_implant_emp_reboot)), IMPLANT_EMP_REBOOT_INTERVAL, TIMER_STOPPABLE)
+
+/obj/item/implant/proc/attempt_implant_emp_reboot()
+	if(!implant_emp_reboot_at || world.time < implant_emp_reboot_at)
 		return FALSE
+	if(!prob(IMPLANT_EMP_REBOOT_CHANCE))
+		schedule_implant_emp_reboot()
+		return FALSE
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_timer = null
+	implant_emp_reboot_at = 0
+	if(implant_disable_reason == "EMP")
+		implant_disable_reason = null
+	if(imp_in)
+		to_chat(imp_in, span_notice("[capitalize(name)] restarts after the EMP."))
+	return TRUE
+
+/obj/item/implant/proc/retune_implant()
+	if(!implant_emp_reboot_at && !implant_disabled_until && !implant_disable_reason)
+		return FALSE
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_timer = null
+	implant_emp_reboot_at = 0
 	implant_disabled_until = 0
 	implant_disable_reason = null
 	return TRUE
@@ -69,7 +102,7 @@
 	if(. & EMP_PROTECT_SELF)
 		return
 	if(requires_neural_interface)
-		disable_implant(IMPLANT_EMP_DISABLE_TIME, "EMP")
+		disable_implant(reason = "EMP")
 
 /obj/item/implant/ui_action_click()
 	INVOKE_ASYNC(src, PROC_REF(activate), "action_button")
@@ -179,6 +212,8 @@
 	return TRUE
 
 /obj/item/implant/Destroy(force)
+	deltimer(implant_emp_reboot_timer)
+	implant_emp_reboot_timer = null
 	if(imp_in)
 		removed(imp_in, silent = TRUE, special = TRUE)
 	return ..()

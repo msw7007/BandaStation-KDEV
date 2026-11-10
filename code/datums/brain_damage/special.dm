@@ -12,39 +12,45 @@
 	gain_text = span_warning("Something inside your brain begins to grow in the wrong direction.")
 	lose_text = span_notice("The pressure of the genetic tumor recedes.")
 	random_gain = FALSE
-	resilience = TRAUMA_RESILIENCE_MAGIC
+	resilience = TRAUMA_RESILIENCE_BASIC
 	var/growth = 0
-	var/dormant_until = 0
-	var/next_severity_shift = 0
+	var/dormant_remaining = 0
+	var/severity_elapsed = 0
 	var/severity_stage = 1
 
 /datum/brain_trauma/special/genetic_tumor/New(dormant_time = GENETIC_TUMOR_DORMANT_TIME)
 	. = ..()
-	dormant_until = world.time + dormant_time
-	next_severity_shift = world.time + GENETIC_TUMOR_SEVERITY_INTERVAL
+	reset_dormancy(dormant_time)
 
 /datum/brain_trauma/special/genetic_tumor/proc/reset_dormancy(dormant_time = GENETIC_TUMOR_DORMANT_TIME)
 	growth = 0
-	dormant_until = world.time + dormant_time
-	next_severity_shift = world.time + GENETIC_TUMOR_SEVERITY_INTERVAL
+	dormant_remaining = max(0, dormant_time)
+	severity_elapsed = 0
 
 /datum/brain_trauma/special/genetic_tumor/on_life(seconds_per_tick)
 	if(!owner || owner.stat == DEAD)
 		return
 	if(istype(owner.loc, /mob/living/basic/visceroid))
 		return
-	if(world.time < dormant_until)
-		return
-	if(world.time >= next_severity_shift)
-		severity_stage = min(severity_stage + 1, 3)
-		next_severity_shift = world.time + GENETIC_TUMOR_SEVERITY_INTERVAL
+	var/elapsed = max(0, seconds_per_tick) * (1 SECONDS)
+	severity_elapsed += elapsed
+	if(severity_elapsed >= GENETIC_TUMOR_SEVERITY_INTERVAL)
+		var/shifts = FLOOR(severity_elapsed / GENETIC_TUMOR_SEVERITY_INTERVAL, 1)
+		severity_elapsed %= GENETIC_TUMOR_SEVERITY_INTERVAL
+		severity_stage = (severity_stage - 1 + shifts) % 3 + 1
+		update_severity_resilience()
 		to_chat(owner, span_warning("The genetic tumor shifts inside your skull."))
-	growth += (HUMANOIDITY_DEFAULT / (GENETIC_TUMOR_GROWTH_TIME / (1 SECONDS))) * seconds_per_tick
+	var/active_elapsed = max(0, elapsed - dormant_remaining)
+	dormant_remaining = max(0, dormant_remaining - elapsed)
+	growth += HUMANOIDITY_DEFAULT * active_elapsed / GENETIC_TUMOR_GROWTH_TIME
 	if(growth < HUMANOIDITY_DEFAULT)
 		return
 	if(ishuman(owner))
 		var/mob/living/carbon/human/human_owner = owner
 		human_owner.cy_check_humanoidity_collapse(force = TRUE)
+
+/datum/brain_trauma/special/genetic_tumor/proc/update_severity_resilience()
+	resilience = severity_stage == 1 ? TRAUMA_RESILIENCE_BASIC : (severity_stage == 2 ? TRAUMA_RESILIENCE_SURGERY : TRAUMA_RESILIENCE_LOBOTOMY)
 
 /datum/brain_trauma/special/godwoken
 	name = "Синдром пробужденного Бога"

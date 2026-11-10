@@ -54,7 +54,7 @@
 	var/character_key = ckey(character_name)
 	if(!character_key)
 		return null
-	for(var/mob/living/person as anything in GLOB.player_list)
+	for(var/mob/living/person as anything in GLOB.mob_living_list)
 		if(get_cyberpunk_contract_character_key(person, person.get_bank_account()) == character_key)
 			return person
 	return null
@@ -84,7 +84,7 @@
 	var/funding_business_id = text2num(params["funding_business_id"])
 	if(funding_business_id)
 		funding_business = SScyberpunk_property.get_cyberpunk_business(funding_business_id)
-		if(!funding_business?.has_access(creator, CYBERPUNK_BUSINESS_ACCESS_CONTRACTS))
+		if(!funding_business?.legal || !funding_business.has_access(creator, CYBERPUNK_BUSINESS_ACCESS_CONTRACTS))
 			return null
 		creator_account = funding_business.get_account()
 		if(!creator_account)
@@ -122,6 +122,15 @@
 	if(!(delivery_target_kind in list("item", "object", "mob", "cargo")))
 		delivery_target_kind = "item"
 	params["delivery_target_kind"] = delivery_target_kind
+	if(is_delivery)
+		if(params["destination_kind"] == "recipient" && !length(trim(params["destination"] || "")))
+			return null
+		if(params["destination_kind"] == "coordinates")
+			var/target_x = round(text2num(params["target_x"]))
+			var/target_y = round(text2num(params["target_y"]))
+			var/target_z = round(text2num(params["target_z"]))
+			if(target_x < 1 || target_x > world.maxx || target_y < 1 || target_y > world.maxy || target_z < 1 || target_z > world.maxz)
+				return null
 
 	var/title = reject_bad_text(params["title"], max_length = 48, ascii_only = FALSE)
 	var/target = reject_bad_text(params["target"], max_length = 64, ascii_only = FALSE)
@@ -144,7 +153,7 @@
 			return null
 		if(!(reserved_item in creator.get_all_gear()))
 			return null
-		if(reserved_item.item_flags & ABSTRACT)
+		if((reserved_item.item_flags & ABSTRACT) || reserved_item.cyberpunk_contract_id)
 			return null
 		if(!target)
 			target = reserved_item.name
@@ -201,6 +210,12 @@
 		params["minimum_quality"] = 0
 		params["minimum_rarity"] = 0
 	contract.setup_default_condition(params)
+	if(reserved_item)
+		for(var/datum/cyberpunk_contract_condition/delivery/condition as anything in contract.completion_conditions)
+			if(!condition.matches_type(reserved_item) || !condition.item_meets_quality(reserved_item) || condition.get_item_amount(reserved_item) < condition.required_amount)
+				creator_account.adjust_money(payment, "Invalid contract cargo refund")
+				qdel(contract)
+				return null
 	contract.add_history("created by [contract.creator_name]; [payment][MONEY_SYMBOL] reserved from [funding_business ? "business" : "personal"] budget")
 	if(assigned_contractor)
 		contract.add_history("assigned contractor: [assigned_contractor]")

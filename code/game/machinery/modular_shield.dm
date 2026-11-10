@@ -379,7 +379,7 @@
 		update_icon_state()
 
 /obj/machinery/modular_shield_generator/process(seconds_per_tick)
-	stored_strength = min((stored_strength + (current_regeneration * seconds_per_tick)),max_strength)
+	stored_strength = min((stored_strength + (current_regeneration * seconds_per_tick * cyberpunk_property_edict_multiplier(src, "ryaznov", "ryaznov_power_tuning"))),max_strength)
 	if(stored_strength == max_strength)
 		if (recovering)
 			recovering = FALSE
