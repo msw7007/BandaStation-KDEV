@@ -1,0 +1,154 @@
+{
+  "style_sources": [
+    "tgui/packages/tgui/styles/interfaces/CyberpunkPanel.scss:.StyleGuide",
+    "tgui/packages/tgui-panel/styles/themes/cyberpunk.scss"
+  ],
+  "method": "image_gen silhouettes; alpha/palette cleanup; nearest-neighbor native fitting; CSS-derived native pixel frames; stock hand glyphs",
+  "palette": {
+    "glyph": "#8dafb9",
+    "accent": "#be485b",
+    "panel": "#0c0c14",
+    "idle_border": "#6f2836",
+    "active_border": "#5bbdcd"
+  },
+  "sources": {
+    "area_create.png": "7e0beefb24c63289b842e60c637b7efef9089ac567a12bfc05e745886de4b776",
+    "craft.png": "7d8709a403c69bb86dd017b7bc567d1cbc87b7495fa764f9779b861b6b1e15bb",
+    "emote.png": "304c6a013ad05341c78e7e9373444b7de46698063955e6461821ce3f0a0f1e35",
+    "language.png": "c9044036aef9c0ec0ddbedf957e42d6e7850c7f959b0f7233bf41a39fc00e94a",
+    "native_drop.png": "52785dec808e77f90c2b27e82e24aa0c20506349297c1defa4528131c73d5e19",
+    "native_equipment.png": "a9f75527db1da9555747150c298f9e39b81ca345f935aace86b3c6a55ed06505",
+    "native_memories.png": "50e0cfe9ece850e2ed62f02573e518136aca49bcb091e931cd081b309fe2619d",
+    "native_swap.png": "1390e9ffaec94846a24b5bf5e8dcfea61a0cae451a1c853b0c1fc0638b36e589",
+    "native_throw.png": "0bd772d83032e07fb4b5d4206c588613f31d86d54b9d068017d5232de14a1c35",
+    "native_walk.png": "580c8e80fe35d3a5be9ac9bbe3f4da0763425d617de3a6fc95b1bdcab7e7e373",
+    "navigate.png": "d39fe88f0dd517a3149b6b8da0339706646b376d0fa6c698f26aa2fbab0dfd91",
+    "resist.png": "3fbeaabf07986ecca7cdf7cd6a90c003c409471f601089202f133e4614f82795",
+    "rest.png": "583163f9d1db1cb1e58b73887508309bda8f6deecfffe650667cc9de8083410b",
+    "run.png": "5a7dc7867eae487e64d7fe3ab816f9d2c4aa073b195f45f87f20116141af5e65",
+    "underwear.png": "f842c6e91e4b31f39496d5900a2e76529298912123f9984c49118d32a295d658"
+  },
+  "dmi": {
+    "floor_16x32.dmi": {
+      "width": 16,
+      "height": 32,
+      "states": [
+        "floor_change_v"
+      ]
+    },
+    "frames_16x16.dmi": {
+      "width": 16,
+      "height": 16,
+      "states": [
+        "idle",
+        "hover",
+        "active",
+        "combat",
+        "disabled",
+        "outline",
+        "grid"
+      ]
+    },
+    "frames_16x32.dmi": {
+      "width": 16,
+      "height": 32,
+      "states": [
+        "idle",
+        "hover",
+        "active",
+        "combat",
+        "disabled",
+        "outline",
+        "grid",
+        "buff",
+        "debuff",
+        "split"
+      ]
+    },
+    "frames_32x16.dmi": {
+      "width": 32,
+      "height": 16,
+      "states": [
+        "idle",
+        "hover",
+        "active",
+        "combat",
+        "disabled",
+        "outline",
+        "grid"
+      ]
+    },
+    "frames_32x32.dmi": {
+      "width": 32,
+      "height": 32,
+      "states": [
+        "idle",
+        "hover",
+        "active",
+        "combat",
+        "disabled",
+        "outline",
+        "grid",
+        "reserved",
+        "scroll_up",
+        "scroll_down"
+      ]
+    },
+    "glyphs_16x16.dmi": {
+      "width": 16,
+      "height": 16,
+      "states": [
+        "language",
+        "craft",
+        "navigate",
+        "area_create",
+        "emote",
+        "resist",
+        "swap",
+        "throw",
+        "drop",
+        "memories",
+        "sleep",
+        "throw_combat",
+        "act_throw",
+        "act_throw_on",
+        "act_resist_on",
+        "act_sleep_flick",
+        "arrow_up",
+        "arrow_down"
+      ]
+    },
+    "glyphs_32x32.dmi": {
+      "width": 32,
+      "height": 32,
+      "states": [
+        "equipment",
+        "underwear",
+        "accessories",
+        "memories"
+      ]
+    },
+    "hands_32x32.dmi": {
+      "width": 32,
+      "height": 32,
+      "states": [
+        "hand_l",
+        "lhandactive",
+        "hand_r",
+        "rhandactive"
+      ]
+    },
+    "movement_32x16.dmi": {
+      "width": 32,
+      "height": 16,
+      "states": [
+        "walk_human",
+        "run_human",
+        "rest_human",
+        "walk_anthro",
+        "run_anthro",
+        "rest_anthro"
+      ]
+    }
+  }
+}
