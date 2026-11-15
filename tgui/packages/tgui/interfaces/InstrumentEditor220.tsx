@@ -1,7 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { BooleanLike } from 'tgui-core/react';
 import { useBackend } from '../backend';
 import { Window } from '../layouts';
-import type { BooleanLike } from 'tgui-core/react';
+import { type CueDocument, CueEditor } from './InstrumentEditor220/CueEditor';
+import { MidiEditor } from './InstrumentEditor220/MidiEditor';
+import type { MusicDocument } from './InstrumentEditor220/midi';
+import type {
+  MusicUploadStatus,
+  PlayAction,
+} from './InstrumentEditor220/upload';
+import { useMusicUpload } from './InstrumentEditor220/useMusicUpload';
 import '../styles/interfaces/CyberpunkPanel.scss';
 import {
   Box,
@@ -27,7 +35,19 @@ type LoadedFileTrack = {
 };
 
 type Data = {
+  music_upload?: MusicUploadStatus | null;
+  sequence_document: MusicDocument;
+  cue_document: CueDocument;
+  midi_channels: number[];
+  sequence_length: number;
+  playback_seconds: number;
+  auto_sing: BooleanLike;
+  singing_tts: BooleanLike;
+  group_mode: string;
+  group_leading: BooleanLike;
+  midi_shared: BooleanLike;
   using_instrument: string;
+  using_instrument_id: string | null;
 
   note_shift_min: number;
   note_shift_max: number;
@@ -77,42 +97,178 @@ type Data = {
 };
 
 export function InstrumentEditor220() {
+  const { act, data } = useBackend<Data>();
   const [showHelp, setShowHelp] = useState(false);
-  const [tab, setTab] = useState<'main' | 'library'>('main');
+  const applyMidi = useRef<((action?: PlayAction) => boolean) | null>(null);
+  const applyOgg = useRef<((action?: PlayAction) => boolean) | null>(null);
+  const transfer = useMusicUpload(act, data.music_upload);
+  const [tab, setTab] = useState<'main' | 'midi' | 'library'>(() =>
+    data.playback_mode === 'file'
+      ? 'library'
+      : data.playback_mode === 'sequence'
+        ? 'midi'
+        : 'main',
+  );
+  const mode = tab === 'main' ? 'midi' : tab === 'midi' ? 'sequence' : 'file';
+  const selectTab = (next: typeof tab) => {
+    if (transfer.busy) return;
+    setTab(next);
+    setShowHelp(false);
+    act('select_music_mode', {
+      mode: next === 'main' ? 'midi' : next === 'midi' ? 'sequence' : 'file',
+    });
+  };
+  const playbackControls = (
+    <TopBar
+      showHelp={showHelp}
+      setShowHelp={setShowHelp}
+      mode={mode}
+      uploading={transfer.busy}
+      onPlay={(action) => {
+        if (transfer.busy) return;
+        if (!data.playing && !data.group_leading && !data.midi_start_pending) {
+          if (mode === 'sequence' && !data.midi_shared) {
+            applyMidi.current?.(action);
+            return;
+          }
+          if (mode === 'file') {
+            applyOgg.current?.(action);
+            return;
+          }
+        }
+        act(action, { mode });
+      }}
+    />
+  );
   return (
-    <Window width={560} height={460}>
+    <Window width={960} height={820}>
       <Window.Content scrollable className="CyberpunkPanel">
-        <TopBar showHelp={showHelp} setShowHelp={setShowHelp} />
         <Tabs>
           <Tabs.Tab
             icon="music"
             selected={tab === 'main'}
-            onClick={() => setTab('main')}
+            onClick={() => selectTab('main')}
           >
-            Instrument
+            Notes
+          </Tabs.Tab>
+          <Tabs.Tab
+            icon="keyboard"
+            selected={tab === 'midi'}
+            onClick={() => selectTab('midi')}
+          >
+            MIDI
           </Tabs.Tab>
           <Tabs.Tab
             icon="compact-disc"
             selected={tab === 'library'}
-            onClick={() => setTab('library')}
+            onClick={() => selectTab('library')}
           >
-            Library
+            OGG
           </Tabs.Tab>
         </Tabs>
-        {showHelp && <HelpInline />}
+        {playbackControls}
+        {showHelp && tab === 'main' && <HelpInline />}
+        {transfer.busy && (
+          <Section>
+            Uploading music: {transfer.progress}{' '}
+            <Button
+              icon="times"
+              tooltip="Cancel upload"
+              onClick={transfer.cancel}
+            />
+          </Section>
+        )}
+        {!!transfer.error && <Box color="bad">{transfer.error}</Box>}
         {tab === 'main' && (
           <>
             <MainPanel />
             <MusicEditor />
           </>
         )}
-        {tab === 'library' && <LibraryPanel />}
+        {tab === 'midi' && (
+          <MidiEditor
+            commitRef={applyMidi}
+            document={data.sequence_document}
+            instruments={data.possible_instruments}
+            defaultInstrument={data.using_instrument_id}
+            disabled={
+              !!data.playing ||
+              !!data.group_leading ||
+              !!data.midi_shared ||
+              transfer.busy
+            }
+            channels={data.midi_channels}
+            position={
+              data.playback_mode === 'sequence' ? data.playback_seconds : 0
+            }
+            act={act}
+            upload={(document, action) =>
+              transfer.upload('sequence', document, action)
+            }
+            playing={!!data.playing && data.playback_mode === 'sequence'}
+          />
+        )}
+        {tab === 'library' && (
+          <>
+            <LibraryPanel />
+            <CueEditor
+              commitRef={applyOgg}
+              document={data.cue_document}
+              disabled={!!data.playing || !!data.group_leading || transfer.busy}
+              length={data.file_track_length_seconds}
+              autoSing={!!data.auto_sing}
+              tts={!!data.singing_tts}
+              act={act}
+              upload={(document, action) =>
+                transfer.upload('cues', document, action)
+              }
+            />
+          </>
+        )}
+        {tab === 'midi' && (
+          <Section>
+            <Stack align="center" wrap>
+              <Stack.Item grow>
+                <Dropdown
+                  fluid
+                  selected={data.using_instrument}
+                  options={data.possible_instruments.map((i) => i.name)}
+                  disabled={
+                    !data.can_switch_instrument ||
+                    !!data.playing ||
+                    transfer.busy
+                  }
+                  onSelected={(name) =>
+                    act('change_instrument', {
+                      new_instrument: data.possible_instruments.find(
+                        (i) => i.name === name,
+                      )?.id,
+                    })
+                  }
+                />
+              </Stack.Item>
+              <Stack.Item>
+                Volume{' '}
+                <NumberInput
+                  width="5em"
+                  minValue={0}
+                  maxValue={100}
+                  value={data.volume}
+                  onChange={(amount) => act('set_volume', { amount })}
+                />
+              </Stack.Item>
+            </Stack>
+          </Section>
+        )}
       </Window.Content>
     </Window>
   );
-};
+}
 
 type TopBarProps = {
+  onPlay: (action: PlayAction) => void;
+  uploading: boolean;
+  mode: string;
   showHelp: boolean;
   setShowHelp: (v: boolean) => void;
 };
@@ -120,19 +276,26 @@ type TopBarProps = {
 function TopBar(props: TopBarProps) {
   const { act, data } = useBackend<Data>();
   const {
-    playing,
     instrument_ready,
     repeat,
     max_repeats,
     auto_repeat,
-    midi_start_pending,
     group_prepare_pending,
     group_prepare_seconds,
     lines,
     file_track_name,
-    file_track_length,
   } = data;
-  const { showHelp, setShowHelp } = props;
+  const { showHelp, setShowHelp, mode, onPlay, uploading } = props;
+  const playing = !!data.playing && data.playback_mode === mode;
+  const midi_start_pending =
+    !!data.midi_start_pending && data.playback_mode === mode;
+  const ready =
+    mode === 'file'
+      ? !!file_track_name
+      : !!instrument_ready &&
+        (mode === 'sequence'
+          ? data.sequence_document.notes.length > 0
+          : lines.length > 0);
 
   return (
     <Section>
@@ -141,20 +304,80 @@ function TopBar(props: TopBarProps) {
           <Stack align="center">
             <Stack.Item>
               <Button
-                icon={playing || midi_start_pending ? 'stop' : group_prepare_pending ? 'clock' : 'play'}
-                color={playing || midi_start_pending ? 'average' : group_prepare_pending ? 'yellow' : 'good'}
-                onClick={() => act('play_music')}
+                icon={
+                  playing || midi_start_pending
+                    ? 'stop'
+                    : group_prepare_pending
+                      ? 'clock'
+                      : 'play'
+                }
+                color={
+                  playing || midi_start_pending
+                    ? 'average'
+                    : group_prepare_pending
+                      ? 'yellow'
+                      : 'good'
+                }
+                disabled={uploading}
+                onClick={() => onPlay('play_music')}
               >
-                {playing || midi_start_pending ? 'Stop' : group_prepare_pending ? 'Prepare' : 'Start'}
+                {data.group_leading
+                  ? 'Cancel'
+                  : playing || midi_start_pending
+                    ? 'Stop'
+                    : group_prepare_pending
+                      ? 'Prepare'
+                      : 'Start'}
               </Button>
+            </Stack.Item>
+            <Stack.Item>
+              <Button
+                icon="play"
+                tooltip="Solo playback"
+                disabled={
+                  !!playing ||
+                  !!group_prepare_pending ||
+                  !!data.group_leading ||
+                  uploading
+                }
+                onClick={() => onPlay('start_solo')}
+              />
+            </Stack.Item>
+            {!!group_prepare_pending && !data.group_leading && (
+              <Stack.Item>
+                <Button
+                  icon="times"
+                  tooltip="Leave group"
+                  onClick={() => act('leave_group')}
+                />
+              </Stack.Item>
+            )}
+            <Stack.Item>
+              <Button.Checkbox
+                checked={data.group_mode === 'unison'}
+                tooltip="Off: detailed synchronization of separate parts"
+                onClick={() =>
+                  act('set_group_mode', {
+                    mode: data.group_mode === 'unison' ? 'parts' : 'unison',
+                  })
+                }
+              >
+                Unison
+              </Button.Checkbox>
             </Stack.Item>
             <Stack.Item ml={1}>
               <Icon
-                name={instrument_ready ? 'check-circle' : 'exclamation-triangle'}
-                color={instrument_ready ? 'good' : 'bad'}
+                name={ready ? 'check-circle' : 'circle'}
+                color={ready ? 'good' : 'average'}
                 mr={0.5}
               />
-              {instrument_ready ? 'Ready' : 'Definition Error'}
+              {ready
+                ? 'Ready'
+                : mode === 'file'
+                  ? 'No OGG'
+                  : mode === 'sequence'
+                    ? 'No MIDI'
+                    : 'No notes'}
             </Stack.Item>
           </Stack>
         </Stack.Item>
@@ -166,7 +389,9 @@ function TopBar(props: TopBarProps) {
                 icon={auto_repeat ? 'repeat' : 'rotate-right'}
                 color={auto_repeat ? 'good' : 'default'}
                 selected={!!auto_repeat}
-                onClick={() => act('set_auto_repeat', { enabled: !auto_repeat })}
+                onClick={() =>
+                  act('set_auto_repeat', { enabled: !auto_repeat })
+                }
               >
                 {auto_repeat ? 'Loop ON' : 'Loop'}
               </Button>
@@ -182,33 +407,31 @@ function TopBar(props: TopBarProps) {
                 onChange={(v) => act('set_repeat_amount', { amount: v })}
               />
             </Stack.Item>
-            <Stack.Item ml={1}>
-              <Button icon="question" onClick={() => setShowHelp(!showHelp)}>
-                Help
-              </Button>
-            </Stack.Item>
+            {mode === 'midi' && (
+              <Stack.Item ml={1}>
+                <Button icon="question" onClick={() => setShowHelp(!showHelp)}>
+                  Help
+                </Button>
+              </Stack.Item>
+            )}
           </Stack>
         </Stack.Item>
       </Stack>
 
-      {lines.length === 0 && !file_track_name && (
+      {mode === 'midi' && lines.length === 0 && (
         <Box mt={1} color="average">
           Load or type a song below to enable playback.
         </Box>
       )}
-      {!!file_track_name && (
-        <Box mt={1} className="CyberpunkPanel__Muted">
-          Loaded file: {file_track_name} ({file_track_length})
-        </Box>
-      )}
       {!!group_prepare_pending && (
         <Box mt={1} color="average">
-          Group invite pending: choose a track and press Prepare ({group_prepare_seconds}s).
+          Group invite pending: choose a track and press Prepare (
+          {group_prepare_seconds}s).
         </Box>
       )}
     </Section>
   );
-};
+}
 
 const HelpInline = () => {
   const { data } = useBackend<Data>();
@@ -220,11 +443,13 @@ const HelpInline = () => {
         <b>Help</b>
       </Box>
       <Box>
-        Lines are a series of chords separated by commas (,), each chord has notes
-        separated by hyphens (-).<br />
+        Lines are a series of chords separated by commas (,), each chord has
+        notes separated by hyphens (-).
+        <br />
         Notes default to natural in octave 3; accidentals/octaves persist:
         <i> C,C4,C,C3</i> → <i>C3,C4,C4,C3</i>.<br />
-        Chords: <i>A-C#,Cn-E,E-G#,Gn-B</i>; pause with empty chord: <i>C,E,,C,G</i>.<br />
+        Chords: <i>A-C#,Cn-E,E-G#,Gn-B</i>; pause with empty chord:{' '}
+        <i>C,E,,C,G</i>.<br />
         Change chord length via <i>/x</i>: <i>C,G/2,E/4</i>. Example:
         <i> E-E4/4,F#/2,G#/8,B/8,E3-E4/4</i>.<br />
         Max line length: {max_line_chars}. Max lines: {max_lines}.
@@ -267,8 +492,10 @@ const LibraryPanel = () => {
     let value: number | undefined;
     if (typeof args[1] === 'number') value = args[1];
     else if (typeof args[0] === 'number') value = args[0];
-    else if (args[0]?.target?.value != null) value = Number(args[0].target.value);
-    else if (args[0]?.currentTarget?.value != null) value = Number(args[0].currentTarget.value);
+    else if (args[0]?.target?.value != null)
+      value = Number(args[0].target.value);
+    else if (args[0]?.currentTarget?.value != null)
+      value = Number(args[0].currentTarget.value);
     if (typeof value === 'number' && !Number.isNaN(value)) {
       act('set_volume', {
         amount: Math.max(min_volume, Math.min(max_volume, Math.round(value))),
@@ -308,25 +535,39 @@ const LibraryPanel = () => {
               </Box>
             ) : (
               loaded_file_tracks.map((track) => (
-                <Button
-                  key={track.name}
-                  fluid
-                  mb={0.5}
-                  mt={0.5}
-                  selected={!!track.selected}
-                  onClick={() => act('select_loaded_file_track', { track: track.name })}
-                >
-                  <Box
-                    title={track.name}
-                    style={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {track.name}
-                  </Box>
-                </Button>
+                <Stack key={track.name} align="center">
+                  <Stack.Item grow>
+                    <Button
+                      fluid
+                      mb={0.5}
+                      mt={0.5}
+                      selected={!!track.selected}
+                      onClick={() =>
+                        act('select_loaded_file_track', { track: track.name })
+                      }
+                    >
+                      <Box
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {track.name}
+                      </Box>
+                    </Button>
+                  </Stack.Item>
+                  <Stack.Item>
+                    <Button
+                      icon="trash"
+                      tooltip="Remove OGG"
+                      disabled={!!playing}
+                      onClick={() =>
+                        act('remove_file_track', { track: track.name })
+                      }
+                    />
+                  </Stack.Item>
+                </Stack>
               ))
             )}
             <Box mt={1} className="CyberpunkPanel__Muted">
@@ -357,9 +598,7 @@ const LibraryPanel = () => {
                 </Stack>
               </>
             ) : (
-              <Box className="CyberpunkPanel__Muted">
-                No OGG loaded.
-              </Box>
+              <Box className="CyberpunkPanel__Muted">No OGG loaded.</Box>
             )}
 
             <Stack align="center" mt={1.5}>
@@ -375,7 +614,10 @@ const LibraryPanel = () => {
                   onDrag={handleVolume}
                 />
                 <Box mt={0.3}>
-                  Volume <Box as="span" color="label">({volVal}%)</Box>
+                  Volume{' '}
+                  <Box as="span" color="label">
+                    ({volVal}%)
+                  </Box>
                 </Box>
               </Stack.Item>
             </Stack>
@@ -437,15 +679,17 @@ const LeftColumn = () => {
       </Box>
 
       <Stack align="center" mt={1}>
-        <Stack.Item className="CyberpunkPanel__Muted">
-          MIDI delay:
-        </Stack.Item>
+        <Stack.Item className="CyberpunkPanel__Muted">MIDI delay:</Stack.Item>
         <Stack.Item grow>
           <Input
             width="100%"
             value={`${midi_start_delay_ticks}`}
-            onBlur={(value) => act('set_midi_start_delay', { amount: Number(value) })}
-            onEnter={(value) => act('set_midi_start_delay', { amount: Number(value) })}
+            onBlur={(value) =>
+              act('set_midi_start_delay', { amount: Number(value) })
+            }
+            onEnter={(value) =>
+              act('set_midi_start_delay', { amount: Number(value) })
+            }
           />
         </Stack.Item>
         <Stack.Item>ticks</Stack.Item>
@@ -457,7 +701,8 @@ const LeftColumn = () => {
 const RightKnobs = () => {
   const { act, data } = useBackend<Data>();
   const {
-    volume, max_volume,
+    volume,
+    max_volume,
     volume_dropoff_threshold,
     note_shift,
     sustain_mode_duration,
@@ -471,7 +716,8 @@ const RightKnobs = () => {
   const SUSTAIN_MIN = 0;
   const SUSTAIN_MAX = 5;
 
-  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+  const clamp = (v: number, a: number, b: number) =>
+    Math.max(a, Math.min(b, v));
   const r0 = (v: number) => Math.round(v);
   const r1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -495,8 +741,10 @@ const RightKnobs = () => {
 
       if (typeof args[1] === 'number') value = args[1];
       else if (typeof args[0] === 'number') value = args[0];
-      else if (args[0]?.target?.value != null) value = Number(args[0].target.value);
-      else if (args[0]?.currentTarget?.value != null) value = Number(args[0].currentTarget.value);
+      else if (args[0]?.target?.value != null)
+        value = Number(args[0].target.value);
+      else if (args[0]?.currentTarget?.value != null)
+        value = Number(args[0].currentTarget.value);
 
       if (typeof value === 'number' && !Number.isNaN(value)) cb(value);
     };
@@ -513,11 +761,18 @@ const RightKnobs = () => {
             step={1}
             stepPixelSize={6}
             // поддержим и onChange, и onDrag — что бы ни ожидал Knob
-            onChange={asKnobHandler((v) => act('set_volume', { amount: clamp(r0(v), 0, max_volume) }))}
-            onDrag={asKnobHandler((v) => act('set_volume', { amount: clamp(r0(v), 0, max_volume) }))}
+            onChange={asKnobHandler((v) =>
+              act('set_volume', { amount: clamp(r0(v), 0, max_volume) }),
+            )}
+            onDrag={asKnobHandler((v) =>
+              act('set_volume', { amount: clamp(r0(v), 0, max_volume) }),
+            )}
           />
           <Box mt={0.3}>
-            Volume <Box as="span" color="label">({volLabel})</Box>
+            Volume{' '}
+            <Box as="span" color="label">
+              ({volLabel})
+            </Box>
           </Box>
         </Stack.Item>
 
@@ -529,11 +784,18 @@ const RightKnobs = () => {
             maxValue={DROP_MAX}
             step={1}
             stepPixelSize={6}
-            onChange={asKnobHandler((v) => act('set_dropoff_volume', { amount: r0(v) }))}
-            onDrag={asKnobHandler((v) => act('set_dropoff_volume', { amount: r0(v) }))}
+            onChange={asKnobHandler((v) =>
+              act('set_dropoff_volume', { amount: r0(v) }),
+            )}
+            onDrag={asKnobHandler((v) =>
+              act('set_dropoff_volume', { amount: r0(v) }),
+            )}
           />
           <Box mt={0.3}>
-            Dropoff <Box as="span" color="label">({dropLabel})</Box>
+            Dropoff{' '}
+            <Box as="span" color="label">
+              ({dropLabel})
+            </Box>
           </Box>
         </Stack.Item>
       </Stack>
@@ -547,11 +809,18 @@ const RightKnobs = () => {
             maxValue={PITCH_MAX}
             step={1}
             stepPixelSize={6}
-            onChange={asKnobHandler((v) => act('set_note_shift', { amount: r0(v) }))}
-            onDrag={asKnobHandler((v) => act('set_note_shift', { amount: r0(v) }))}
+            onChange={asKnobHandler((v) =>
+              act('set_note_shift', { amount: r0(v) }),
+            )}
+            onDrag={asKnobHandler((v) =>
+              act('set_note_shift', { amount: r0(v) }),
+            )}
           />
           <Box mt={0.3}>
-            Pitch <Box as="span" color="label">({pitchLabel})</Box>
+            Pitch{' '}
+            <Box as="span" color="label">
+              ({pitchLabel})
+            </Box>
           </Box>
         </Stack.Item>
 
@@ -563,11 +832,18 @@ const RightKnobs = () => {
             maxValue={SUSTAIN_MAX}
             step={0.1}
             stepPixelSize={5}
-            onChange={asKnobHandler((v) => act('edit_sustain_mode', { amount: r1(v) }))}
-            onDrag={asKnobHandler((v) => act('edit_sustain_mode', { amount: r1(v) }))}
+            onChange={asKnobHandler((v) =>
+              act('edit_sustain_mode', { amount: r1(v) }),
+            )}
+            onDrag={asKnobHandler((v) =>
+              act('edit_sustain_mode', { amount: r1(v) }),
+            )}
           />
           <Box mt={0.3}>
-            Sustain <Box as="span" color="label">({sustainLabel})</Box>
+            Sustain{' '}
+            <Box as="span" color="label">
+              ({sustainLabel})
+            </Box>
           </Box>
         </Stack.Item>
       </Stack>
@@ -584,7 +860,9 @@ const MusicEditor = () => {
       <Section>
         <Stack align="center">
           <Stack.Item>
-            <Button onClick={() => act('start_new_song')}>Start a New Song</Button>
+            <Button onClick={() => act('start_new_song')}>
+              Start a New Song
+            </Button>
           </Stack.Item>
           <Stack.Item ml={1}>
             <Button onClick={() => act('import_song')}>Import a Song</Button>
@@ -592,8 +870,20 @@ const MusicEditor = () => {
           <Stack.Item grow />
           <Stack.Item>
             Tempo:
-            <Button ml={1} onClick={() => act('tempo_big_step', { tempo_change: 'decrease_speed' })}>--</Button>
-            <Button ml={0.5} onClick={() => act('tempo', { tempo_change: 'decrease_speed' })}>-</Button>
+            <Button
+              ml={1}
+              onClick={() =>
+                act('tempo_big_step', { tempo_change: 'decrease_speed' })
+              }
+            >
+              --
+            </Button>
+            <Button
+              ml={0.5}
+              onClick={() => act('tempo', { tempo_change: 'decrease_speed' })}
+            >
+              -
+            </Button>
             <NumberInput
               ml={0.5}
               step={1}
@@ -602,8 +892,20 @@ const MusicEditor = () => {
               value={bpm}
               onChange={(v) => act('set_bpm_slider', { amount: v })}
             />
-            <Button ml={0.5} onClick={() => act('tempo', { tempo_change: 'increase_speed' })}>+</Button>
-            <Button ml={0.5} onClick={() => act('tempo_big_step', { tempo_change: 'increase_speed' })}>++</Button>
+            <Button
+              ml={0.5}
+              onClick={() => act('tempo', { tempo_change: 'increase_speed' })}
+            >
+              +
+            </Button>
+            <Button
+              ml={0.5}
+              onClick={() =>
+                act('tempo_big_step', { tempo_change: 'increase_speed' })
+              }
+            >
+              ++
+            </Button>
           </Stack.Item>
         </Stack>
 
@@ -613,10 +915,23 @@ const MusicEditor = () => {
               <Stack align="center">
                 <Stack.Item>Line {index}:</Stack.Item>
                 <Stack.Item ml={1}>
-                  <Button onClick={() => act('modify_line', { line_editing: line.line_count })}>Edit</Button>
+                  <Button
+                    onClick={() =>
+                      act('modify_line', { line_editing: line.line_count })
+                    }
+                  >
+                    Edit
+                  </Button>
                 </Stack.Item>
                 <Stack.Item ml={1}>
-                  <Button color="bad" onClick={() => act('delete_line', { line_deleted: line.line_count })}>X</Button>
+                  <Button
+                    color="bad"
+                    onClick={() =>
+                      act('delete_line', { line_deleted: line.line_count })
+                    }
+                  >
+                    X
+                  </Button>
                 </Stack.Item>
                 <Stack.Item grow ml={1}>
                   <Box opacity={0.9}>{line.line_text}</Box>
@@ -627,7 +942,9 @@ const MusicEditor = () => {
         </Box>
 
         <Box mt={1}>
-          <Button icon="plus" onClick={() => act('add_new_line')}>Add Line</Button>
+          <Button icon="plus" onClick={() => act('add_new_line')}>
+            Add Line
+          </Button>
         </Box>
       </Section>
     </Collapsible>

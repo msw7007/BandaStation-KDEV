@@ -32,6 +32,12 @@
 		frying.AddElement(/datum/element/quality_food_ingredient, quality_bonus)
 
 /datum/song/playkey_legacy(note, acc as text, oct, atom/player)
+	if(cached_legacy_ext == "mid" && using_instrument.pcm_samples)
+		if(world.time >= last_hearcheck + MUSICIAN_HEARCHECK_MINDELAY)
+			do_hearcheck()
+		pulse_cyberpunk_music_perks(player)
+		play_sequence_note(list("key" = note_offset_lookup[note] + oct * 12 + (accent_lookup[acc] || 0) + 12, "velocity" = 127, "channel" = 0), 0.5)
+		return
 	// handle accidental -> B<>C of E<>F
 	if(acc == "b" && (note == 3 || note == 6)) // C or F
 		if(note == 3)
@@ -61,7 +67,6 @@
 	if(!fexists(soundfile))
 		return
 	// and play
-	var/turf/source = get_turf(parent)
 	if((world.time - MUSICIAN_HEARCHECK_MINDELAY) > last_hearcheck)
 		do_hearcheck()
 	var/sound/music_played = sound(soundfile)
@@ -71,7 +76,7 @@
 		var/listener_volume = get_listener_volume_multiplier(M)
 		if(!listener_volume)
 			continue
-		M.playsound_local(source, null, get_output_volume(volume * using_instrument.volume_multiplier) * listener_volume, sound_to_use = music_played, pressure_affected = FALSE, max_distance = instrument_range, falloff_distance = get_sound_falloff_distance(), falloff_exponent = INSTRUMENT_FALLOFF_EXPONENT)
+		M.playsound_local(nearest_music_source(M), null, get_output_volume(volume * using_instrument.volume_multiplier) * listener_volume, sound_to_use = music_played, pressure_affected = FALSE, max_distance = instrument_range, falloff_distance = get_sound_falloff_distance(), falloff_exponent = INSTRUMENT_FALLOFF_EXPONENT)
 		// Could do environment and echo later but not for now
 
 /datum/song/playkey_synth(key, atom/player)
@@ -79,6 +84,8 @@
 	if((world.time - MUSICIAN_HEARCHECK_MINDELAY) > last_hearcheck)
 		do_hearcheck()
 	pulse_cyberpunk_music_perks(player)
+	if(!length(hearing_mobs))
+		return FALSE
 	var/datum/instrument_key/K = using_instrument.samples[num2text(key)] //See how easy it is to make a number text?
 	var/channel = pop_channel()
 	if(isnull(channel))
@@ -96,13 +103,15 @@
 		var/listener_volume = get_listener_volume_multiplier(M)
 		if(!listener_volume)
 			continue
-		M.playsound_local(get_turf(parent), null, volume * listener_volume, FALSE, K.frequency, INSTRUMENT_FALLOFF_EXPONENT, channel, FALSE, copy, instrument_range, get_sound_falloff_distance())
+		M.playsound_local(nearest_music_source(M), null, volume * listener_volume, FALSE, K.frequency, INSTRUMENT_FALLOFF_EXPONENT, channel, FALSE, copy, instrument_range, get_sound_falloff_distance())
 		// Could do environment and echo later but not for now
 
 /datum/song/process_decay(wait_ds)
 	var/linear_dropoff = cached_linear_dropoff * wait_ds
 	var/exponential_dropoff = cached_exponential_dropoff ** wait_ds
 	for(var/channel in channels_playing)
+		if(voice_ends[channel])
+			continue
 		if(full_sustain_held_note && (channel == last_channel_played))
 			continue
 		var/current_volume = channels_playing[channel]
@@ -123,7 +132,8 @@
 		else
 			for(var/i in hearing_mobs)
 				var/mob/M = i
-				M.set_sound_channel_volume(channelnumber, (current_volume * 0.01) * get_output_volume(volume * using_instrument.volume_multiplier) * get_listener_volume_multiplier(M))
+				update_music_voice_listener(M, channelnumber, (current_volume * 0.01) * get_output_volume(volume * using_instrument.volume_multiplier))
+	trim_idle_channels()
 
 /datum/tgui_say/handle_entry(type, payload)
 	if(!islist(payload))

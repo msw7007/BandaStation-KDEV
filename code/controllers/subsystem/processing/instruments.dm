@@ -50,7 +50,7 @@ PROCESSING_SUBSYSTEM_DEF(instruments)
 	return instrument_data["[id_or_path]"]
 
 /datum/controller/subsystem/processing/instruments/proc/reserve_instrument_channel(datum/instrument/I)
-	if(current_instrument_channels > max_instrument_channels)
+	if(current_instrument_channels >= max_instrument_channels || SSsounds.channel_reserve_high <= SSsounds.random_channels_min)
 		return
 	. = SSsounds.reserve_sound_channel_for_datum(I)
 	if(!isnull(.))

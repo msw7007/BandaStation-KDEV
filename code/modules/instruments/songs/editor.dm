@@ -43,8 +43,8 @@
 	data["playback_mode"] = playback_mode
 	data["file_track_name"] = file_track_name
 	data["file_track_length"] = file_track_length ? DisplayTimeText(file_track_length) : null
-	data["file_track_length_seconds"] = max(1, round(file_track_length / (1 SECONDS)))
-	data["can_load_file_tracks"] = (user?.mind?.get_skill_level(SKILL_MUSIC) >= 2)
+	data["file_track_length_seconds"] = max(0, file_track_length / (1 SECONDS))
+	data["can_load_file_tracks"] = TRUE
 	data["preset_file_tracks"] = list()
 	data["loaded_file_tracks"] = list()
 	for(var/list/track as anything in loaded_file_tracks)
@@ -83,7 +83,7 @@
 	data["min_bpm"] = min_bpm
 	data["max_bpm"] = get_max_bpm()
 	// BANDASTATION ADDITION END - BPM unlock
-	return data
+	return music_ui_static_data(data)
 
 /datum/song/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
@@ -151,13 +151,11 @@
 			set_playback_mode("midi")
 			return TRUE
 		if("import_file_song")
-			if(user.mind?.get_skill_level(SKILL_MUSIC) < 2)
-				to_chat(user, span_warning("You need Music skill 2 or higher to load external OGG files."))
-				return TRUE
 			var/new_file = input(user, "Select an OGG file to play through this instrument.", name) as sound|null
 			if(!new_file || !in_range(parent, user))
 				return TRUE
 			set_file_track(new_file, user)
+			update_static_data_for_all_viewers()
 			return TRUE
 		if("clear_file_song")
 			clear_file_track()
@@ -168,6 +166,7 @@
 		if("select_loaded_file_track")
 			if(select_loaded_file_track(params["track"]) && params["play"])
 				INVOKE_ASYNC(src, PROC_REF(start_playing), user)
+			update_static_data_for_all_viewers()
 			return TRUE
 		if("set_file_track_length")
 			var/length_seconds = text2num(params["seconds"])

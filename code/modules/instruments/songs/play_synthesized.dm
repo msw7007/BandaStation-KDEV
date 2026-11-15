@@ -79,6 +79,8 @@
 	if(clear_channels)
 		channels_playing.len = 0
 		channels_idle.len = 0
+		voice_ends.Cut()
+		voice_levels.Cut()
 		SSinstruments.current_instrument_channels -= using_sound_channels
 		using_sound_channels = 0
 		SSsounds.free_datum_channels(src)
@@ -99,10 +101,33 @@
 		channels_idle.Cut(1,2)
 		return
 	if(using_sound_channels >= max_sound_channels)
-		return
+		return steal_oldest_note()
 	. = SSinstruments.reserve_instrument_channel(src)
 	if(!isnull(.))
 		using_sound_channels++
+	else
+		. = steal_oldest_note()
+
+/// Only our own voices may be replaced when the shared pool is full.
+/datum/song/proc/steal_oldest_note()
+	if(!length(channels_playing))
+		return null
+	var/channel = channels_playing[1]
+	for(var/mob/listener as anything in hearing_mobs)
+		listener.stop_sound_channel(text2num(channel))
+	channels_playing -= channel
+	voice_ends -= channel
+	voice_levels -= channel
+	return text2num(channel)
+
+/// Keep a small warm cache, not the peak polyphony of an entire performance.
+/datum/song/proc/trim_idle_channels()
+	while(length(channels_idle) > 4)
+		var/channel = channels_idle[1]
+		channels_idle.Cut(1, 2)
+		SSsounds.free_sound_channel(text2num(channel))
+		using_sound_channels--
+		SSinstruments.current_instrument_channels--
 
 /**
  * Decays our channels and updates their volumes to mobs who can hear us.

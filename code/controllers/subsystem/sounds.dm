@@ -156,7 +156,8 @@ SUBSYSTEM_DEF(sounds)
 	LAZYINITLIST(using_channels_by_datum[D])
 	using_channels_by_datum[D] += .
 
-	RegisterSignal(D, COMSIG_QDELETING, PROC_REF(tracked_datum_deleted))
+	if(length(using_channels_by_datum[D]) == 1)
+		RegisterSignal(D, COMSIG_QDELETING, PROC_REF(tracked_datum_deleted))
 
 /**
  * Reserves a channel and updates the datastructure. Private proc.

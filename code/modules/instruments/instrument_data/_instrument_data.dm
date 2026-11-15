@@ -75,6 +75,7 @@
 		S.set_instrument(null)
 	real_samples = null
 	samples = null
+	pcm_samples = null
 	songs_using = null
 	return ..()
 

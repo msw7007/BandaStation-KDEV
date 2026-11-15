@@ -1,3 +1,7 @@
 #include "_music.dm"
 
 #include "code/song.dm"
+#include "code/sequence.dm"
+#include "code/file_playback.dm"
+#include "code/editor.dm"
+#include "code/legacy_samples.dm"

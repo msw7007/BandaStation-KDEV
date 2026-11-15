@@ -30,7 +30,7 @@
 	var/mob/user = music_player
 	if(user.incapacitated)
 		return FALSE
-	if(!Adjacent(user))
+	if(!(src in user.held_items) && (!isturf(loc) || loc != get_turf(user)))
 		return FALSE
 	return TRUE
 

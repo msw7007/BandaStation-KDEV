@@ -140,11 +140,12 @@
 
 	/// Currently linked jukebox.
 	var/obj/machinery/jukebox/linked_jukebox
+	var/datum/song/linked_song
 	/// Whether this receiver currently exposes its shell as an active speaker.
 	var/playing = FALSE
 
 /obj/item/circuit_component/concert_listener/populate_ports()
-	jukebox_target = add_input_port("Target Jukebox", PORT_TYPE_ATOM, order = 1)
+	jukebox_target = add_input_port("Target Jukebox / Instrument", PORT_TYPE_ATOM, order = 1)
 	link_input = add_input_port("Link", PORT_TYPE_SIGNAL, order = 2, trigger = PROC_REF(link_to_target))
 	unlink_input = add_input_port("Unlink", PORT_TYPE_SIGNAL, order = 3, trigger = PROC_REF(unlink))
 	is_playing = add_output_port("Is Playing", PORT_TYPE_BOOLEAN)
@@ -155,11 +156,17 @@
 	. = ..()
 	if(linked_jukebox)
 		. += create_ui_notice("Linked to: [linked_jukebox.name]", "green", "music")
+	else if(linked_song)
+		. += create_ui_notice("Linked to instrument: [linked_song.parent.name]", "green", "music")
 	else
 		. += create_ui_notice("No jukebox linked.", "orange", "music")
 
 /obj/item/circuit_component/concert_listener/register_shell(atom/movable/shell)
 	. = ..()
+	if(linked_song)
+		linked_song.music_sources |= shell
+		if(linked_song.playing)
+			play_track()
 	if(!linked_jukebox)
 		return
 	linked_jukebox.music_player?.register_music_source(shell)
@@ -167,6 +174,7 @@
 		play_track()
 
 /obj/item/circuit_component/concert_listener/unregister_shell(atom/movable/shell)
+	linked_song?.music_sources.Remove(shell)
 	if(linked_jukebox)
 		linked_jukebox.music_player?.unregister_music_source(shell)
 	stop_playback()
@@ -177,6 +185,25 @@
 	return ..()
 
 /obj/item/circuit_component/concert_listener/proc/link_to_target()
+	var/obj/item/instrument/instrument = jukebox_target.value
+	var/obj/structure/musician/piano = jukebox_target.value
+	var/datum/song/target_song
+	if(istype(instrument))
+		target_song = instrument.song
+	else if(istype(piano))
+		target_song = piano.song
+	if(target_song && length(target_song.music_sources) < 16)
+		unlink()
+		linked_song = target_song
+		RegisterSignal(linked_song.parent, COMSIG_INSTRUMENT_START, PROC_REF(on_song_start))
+		RegisterSignal(linked_song.parent, COMSIG_INSTRUMENT_END, PROC_REF(on_song_end))
+		RegisterSignal(linked_song.parent, COMSIG_QDELETING, PROC_REF(on_jukebox_deleted))
+		if(parent?.shell)
+			linked_song.music_sources |= parent.shell
+		if(linked_song.playing)
+			play_track()
+		update_parent()
+		return
 	var/obj/machinery/jukebox/target_jukebox = jukebox_target.value
 	if(!istype(target_jukebox) || QDELETED(target_jukebox) || !target_jukebox.music_player)
 		return
@@ -199,6 +226,14 @@
 		SStgui.update_uis(parent)
 
 /obj/item/circuit_component/concert_listener/proc/unlink()
+	if(linked_song)
+		if(parent?.shell)
+			linked_song.music_sources -= parent.shell
+		if(linked_song.parent)
+			UnregisterSignal(linked_song.parent, list(COMSIG_INSTRUMENT_START, COMSIG_INSTRUMENT_END, COMSIG_QDELETING))
+		linked_song = null
+		stop_playback()
+		update_parent(TRUE)
 	if(!linked_jukebox)
 		return
 	if(parent?.shell)
@@ -231,7 +266,7 @@
 	var/obj/structure/concertspeaker/speaker = shell
 	if(!istype(speaker))
 		return
-	speaker.set_concert_state(playing && speaker.anchored, !unreg && !isnull(linked_jukebox))
+	speaker.set_concert_state(playing && speaker.anchored, !unreg && (linked_jukebox || linked_song))
 
 /obj/item/circuit_component/concert_listener/proc/on_song_start(datum/source, datum/track/starting_song)
 	SIGNAL_HANDLER

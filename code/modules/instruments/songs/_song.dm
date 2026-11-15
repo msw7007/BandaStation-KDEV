@@ -73,10 +73,8 @@
 	  * Format: list of chord lists, with chordlists having (key1, key2, key3, tempodiv)
 	  */
 	var/list/compiled_chords
-	/// Current section of a long chord we're on, so we don't need to make a billion chords, one for every unit ticklag.
-	var/elapsed_delay
-	/// Amount of delay to wait before playing the next chord
-	var/delay_by
+	/// Absolute world.time deadline of the next text-note chord, in deciseconds.
+	var/next_chord_time = 0
 	/// Current chord we're on.
 	var/current_chord
 	/// Channel as text = current volume percentage but it's 0 to 100 instead of 0 to 1.
@@ -94,7 +92,7 @@
 	/// If this is enabled, some things won't be strictly cleared when they usually are (liked compiled_chords on play stop)
 	var/debug_mode = FALSE
 	/// Max sound channels to occupy
-	var/max_sound_channels = CHANNELS_PER_INSTRUMENT
+	var/max_sound_channels = 32
 	/// Current channels, so we can save a length() call.
 	var/using_sound_channels = 0
 	/// Last channel to play. text.
@@ -143,8 +141,6 @@
 	var/bpm = 120
 	/// minimal BPM
 	var/min_bpm = 1
-	/// summaraized delay
-	var/delay_residual = 0.0
 	// BANDASTATION ADDITION - END
 
 
@@ -169,6 +165,7 @@
 
 /datum/song/Destroy()
 	stop_playing()
+	cleanup_music_uploads()
 	SSinstruments.on_song_del(src)
 	lines = null
 	if(using_instrument)
@@ -186,12 +183,14 @@
 	last_hearcheck = world.time
 	var/list/old = hearing_mobs.Copy()
 	hearing_mobs.len = 0
-	var/turf/source = get_turf(parent)
-	for(var/mob/M in get_hearers_in_view(instrument_range, source))
-		hearing_mobs[M] = get_dist(M, source)
+	for(var/atom/source as anything in get_instrument_sources())
+		for(var/mob/M in get_hearers_in_view(instrument_range, get_turf(source)))
+			hearing_mobs[M] = get_dist(M, source)
 	var/list/exited = old - hearing_mobs
 	for(var/i in exited)
 		terminate_sound_mob(i)
+	if(playback_mode != "file")
+		refresh_music_spatial()
 
 /**
  * Sets our instrument, caching anything necessary for faster accessing. Accepts an ID, typepath, or instantiated instrument datum.
@@ -230,6 +229,10 @@
 /datum/song/proc/start_playing(atom/user)
 	if(playing)
 		return
+	if(istype(parent, /obj/item/instrument))
+		var/obj/item/instrument/instrument = parent
+		if(!instrument.can_play(user))
+			return
 	if(midi_start_timer)
 		return
 	if(!using_instrument?.ready())
@@ -238,6 +241,9 @@
 		return
 	if(playback_mode == "file")
 		start_file_playing(user)
+		return
+	if(playback_mode == "sequence")
+		start_sequence(user)
 		return
 	if(midi_start_delay_ticks > 0 && !ignore_midi_start_delay)
 		midi_start_timer = addtimer(CALLBACK(src, PROC_REF(delayed_midi_start), user), midi_start_delay_ticks * SSinstruments.wait, TIMER_STOPPABLE)
@@ -254,9 +260,7 @@
 	do_hearcheck()
 	SEND_SIGNAL(parent, COMSIG_INSTRUMENT_START, src, user)
 	SEND_SIGNAL(user, COMSIG_ATOM_STARTING_INSTRUMENT, src)
-	elapsed_delay = 0
-	delay_by = 0
-	delay_residual = 0.0 // BANDASTATION ADDITION - BPM unlock
+	next_chord_time = world.time
 	current_chord = 1
 	music_player = user
 	last_process_time = world.time
@@ -291,6 +295,7 @@
 	ignore_play_checks = FALSE // BANDASTATION ADDITION - New Musical Sync
 
 	cancel_delayed_midi_start()
+	cancel_performance_prepare()
 	if(!playing)
 		return
 	playing = FALSE
@@ -303,6 +308,17 @@
 	music_player = null
 	file_track_finish_time = 0
 	last_process_time = 0
+	next_chord_time = 0
+	voice_ends.Cut()
+	voice_levels.Cut()
+	listener_spatial.Cut()
+	for(var/datum/song/follower as anything in sequence_followers.Copy())
+		if(!QDELETED(follower) && follower.sequence_master == src)
+			follower.stop_playing()
+	sequence_followers.Cut()
+	sequence_master = null
+	file_listeners.Cut()
+	finish_performance()
 	ignore_midi_start_delay = FALSE
 
 	// BANDASTATION ADDITION START - New Musical Sync
@@ -325,47 +341,34 @@
 		if(should_stop_playing(music_player) == STOP_PLAYING)
 			stop_playing(FALSE)
 			return
-		var/list/chord = compiled_chords[current_chord]
-		elapsed_delay++
-		if(elapsed_delay < delay_by)
-			return
-		play_chord(chord)
-		elapsed_delay = 0
-		delay_by = tempodiv_to_delay(chord[length(chord)])
-		current_chord++
-		if(current_chord <= length(compiled_chords))
-			return
-		if(!repeat && !auto_repeat)
-			stop_playing(TRUE)
-			return
-		if(!auto_repeat)
-			repeat--
-		current_chord = 1
-		SEND_SIGNAL(parent, COMSIG_INSTRUMENT_REPEAT, TRUE)
+		// Keep overdue deadlines instead of discarding time after the catch-up budget.
+		var/budget = 4
+		while(playing && world.time >= next_chord_time && budget-- > 0)
+			if(current_chord > length(compiled_chords))
+				if(!repeat && !auto_repeat)
+					stop_playing(TRUE)
+					return
+				if(!auto_repeat)
+					repeat--
+				current_chord = 1
+				SEND_SIGNAL(parent, COMSIG_INSTRUMENT_REPEAT, TRUE)
+			var/list/chord = compiled_chords[current_chord]
+			play_chord(chord)
+			next_chord_time += tempodiv_to_delay(chord[length(chord)])
+			current_chord++
+		return
 
 	return PROCESS_KILL
 
 	// BANDASTATION ADDITION END- New Musical Sync
 
 /**
- * Converts a tempodiv to ticks to elapse before playing the next chord, taking into account our tempo.
+ * Converts a tempodiv to an exact duration in deciseconds, without tick rounding.
  */
 /datum/song/proc/tempodiv_to_delay(tempodiv)
-	if(!tempodiv)
+	if(!isnum(tempodiv) || tempodiv <= 0)
 		tempodiv = 1 // no division by 0. some song converters tend to use 0 for when it wants to have no div, for whatever reason.
-	// BANDASTATION EDIT START - BPM unlock
-	var/ds_per_beat = (60 SECONDS) / bpm
-	var/ds_per_div  = ds_per_beat / tempodiv
-	var/exact_ticks = ds_per_div / world.tick_lag
-
-	var/with_res = exact_ticks + delay_residual
-	var/ticks = floor(with_res)
-	if(ticks < 1)
-		ticks = 1
-	delay_residual = with_res - ticks
-
-	return ticks
-	// BANDASTATION EDIT END - BPM unlock
+	return (60 SECONDS) / bpm / tempodiv
 
 /**
  * Compiles chords.
@@ -428,7 +431,6 @@
 	tempo = sanitize_tempo((60 SECONDS) / bpm, TRUE)
 
 	SEND_SIGNAL(parent, COMSIG_INSTRUMENT_TEMPO_CHANGE, src)
-	delay_residual = 0.0
 	// BANDASTATION EDIT END - BPM unlock
 
 /datum/song/proc/get_max_bpm()
@@ -438,18 +440,15 @@
 /datum/song/process(wait)
 	if(!playing)
 		return PROCESS_KILL
-	if(playing && playback_mode != "file")
-		var/elapsed = last_process_time ? max(world.tick_lag, world.time - last_process_time) : world.tick_lag
-		last_process_time = world.time
-		var/steps = clamp(round(elapsed / world.tick_lag), 1, 4)
-		for(var/i in 1 to steps)
-			if(!playing)
-				break
-			process_song(world.tick_lag)
-			process_decay(world.tick_lag)
+	if(playback_mode == "sequence")
+		process_sequence()
 		return
+	var/elapsed = max(0, world.time - last_process_time)
 	last_process_time = world.time
-	process_song(world.tick_lag)
+	if(playback_mode != "file")
+		process_sequence_voices()
+		process_decay(elapsed)
+	process_song(elapsed)
 
 /**
  * Updates our cached linear/exponential falloff stuff, saving calculations down the line.
@@ -471,6 +470,8 @@
 	update_sustain()
 	if(playing && playback_mode == "file")
 		update_file_playback_volume()
+	else if(playing)
+		refresh_music_spatial()
 
 /// Returns the actual sound volume sent to clients. UI stays 0-100, output has headroom for quiet tracks.
 /datum/song/proc/get_output_volume(base_volume = volume)
@@ -487,7 +488,7 @@
 	return min(INSTRUMENT_FALLOFF_DISTANCE, instrument_range - 1)
 
 /datum/song/proc/set_playback_mode(new_mode)
-	if(!(new_mode in list("midi", "file")))
+	if(!(new_mode in list("midi", "sequence", "file")))
 		return
 	if(playing)
 		stop_playing()
@@ -544,7 +545,7 @@
 			track["length"] = file_track_length
 			break
 	if(playing && playback_mode == "file")
-		file_track_finish_time = world.time + file_track_length
+		file_track_finish_time = playback_started_at + file_track_length
 	return TRUE
 
 /datum/song/proc/set_auto_repeat(new_auto_repeat)
@@ -563,6 +564,10 @@
 	file_track = null
 	file_track_name = null
 	file_track_length = 0
+	file_track_hash = null
+	cue_spacing = 5
+	song_cues = list()
+	next_cue = 1
 	if(playback_mode == "file")
 		playback_mode = "midi"
 
@@ -682,7 +687,12 @@
 
 /datum/song/handheld/find_available_player()
 	var/obj/item/instrument/instrument = parent
-	var/mob/living/player = get(parent, /mob/living)
+	var/mob/living/player = instrument.loc
+	if(isturf(instrument.loc))
+		for(var/mob/living/nearby in instrument.loc)
+			if(nearby.client && instrument.can_play(nearby))
+				return nearby
+		return null
 	if(instrument.can_play(player))
 		return player
 	return null

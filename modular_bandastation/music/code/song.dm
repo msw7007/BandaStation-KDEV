@@ -17,6 +17,13 @@
 	var/list/group_start_candidates
 	var/atom/group_start_player
 	var/last_cyberpunk_music_perk_pulse = 0
+	var/group_generation = 0
+	var/group_prepare_timer
+	var/list/performance_members = list()
+	var/list/performance_restore
+	var/performance_cycle_length = 0
+	var/mob/group_reserved_player
+	var/datum/song/performance_leader
 
 /datum/song/proc/start_without_prompt(atom/player)
 	start_playing(player)
@@ -28,11 +35,7 @@
 /datum/song/handheld/find_group_player()
 	if(!istype(parent, /obj/item/instrument))
 		return null
-	var/obj/item/instrument/instrument = parent
-	var/mob/living/player = instrument.loc
-	if(!istype(player) || !(instrument in player.held_items))
-		return null
-	return instrument.can_play(player) ? player : null
+	return find_available_player()
 
 /datum/song/stationary/find_group_player()
 	return find_available_player()
@@ -43,7 +46,7 @@
 	if(!leader_turf)
 		return candidates
 	for(var/datum/song/S as anything in SSinstruments.songs)
-		if(S == src || S.playing || S.group_start_leader)
+		if(S == src || S.playing || S.group_start_leader || S.group_start_candidates || S.midi_start_timer)
 			continue
 		var/mob/candidate_player = S.find_group_player()
 		if(!candidate_player || candidate_player.incapacitated || !candidate_player.client)
@@ -54,6 +57,8 @@
 		if(get_dist(candidate_turf, leader_turf) > GROUP_PERFORMANCE_RADIUS)
 			continue
 		candidates[S] = candidate_player
+		if(length(candidates) >= 15)
+			break
 	return candidates
 
 /datum/song/proc/try_start_group_performance(mob/user)
@@ -62,8 +67,11 @@
 		return TRUE
 	if(cancel_delayed_midi_start())
 		return TRUE
-	if(group_start_leader)
+	if(group_start_leader && group_start_leader != src)
 		prepare_group_performance(user)
+		return TRUE
+	if(group_start_candidates)
+		cancel_performance_prepare()
 		return TRUE
 	if(!istype(user))
 		start_without_prompt(user)
@@ -75,22 +83,28 @@
 	group_start_candidates = list()
 	group_start_deadline = world.time + GROUP_PERFORMANCE_TIMEOUT
 	group_start_player = user
+	group_reserved_player = user
+	var/generation = ++group_generation
 	for(var/datum/song/candidate as anything in candidates)
 		group_start_candidates[candidate] = GROUP_PERFORMANCE_PENDING
-		INVOKE_ASYNC(src, PROC_REF(prompt_group_candidate), candidate, candidates[candidate])
+		candidate.group_start_leader = src
+		candidate.group_start_deadline = group_start_deadline
+		candidate.group_reserved_player = candidates[candidate]
+		INVOKE_ASYNC(src, PROC_REF(prompt_group_candidate), candidate, candidates[candidate], generation)
 	to_chat(user, span_notice("You invite nearby musicians to join. Performance starts when they prepare or after [DisplayTimeText(GROUP_PERFORMANCE_TIMEOUT)]."))
-	addtimer(CALLBACK(src, PROC_REF(finalize_group_performance)), GROUP_PERFORMANCE_TIMEOUT, TIMER_UNIQUE)
+	group_prepare_timer = addtimer(CALLBACK(src, PROC_REF(finalize_group_performance), generation), GROUP_PERFORMANCE_TIMEOUT, TIMER_STOPPABLE)
 	return TRUE
 
-/datum/song/proc/prompt_group_candidate(datum/song/candidate, mob/player)
+/datum/song/proc/prompt_group_candidate(datum/song/candidate, mob/player, generation)
 	if(!istype(candidate) || !istype(player))
 		return
 	var/mob/leader = group_start_player
 	var/answer = tgui_alert(player, "[leader ? leader : parent] is starting a group performance. Join?", "Group Performance", list("Yes", "No"))
-	if(!group_start_candidates || world.time > group_start_deadline || !(candidate in group_start_candidates))
+	if(QDELETED(candidate) || generation != group_generation || !group_start_candidates || world.time > group_start_deadline || !(candidate in group_start_candidates) || candidate.group_start_leader != src)
 		return
 	if(answer != "Yes")
 		group_start_candidates[candidate] = GROUP_PERFORMANCE_SKIPPED
+		candidate.clear_group_prepare()
 		check_group_performance_ready()
 		return
 	group_start_candidates[candidate] = GROUP_PERFORMANCE_ACCEPTED
@@ -98,6 +112,7 @@
 	candidate.group_start_deadline = group_start_deadline
 	to_chat(player, span_notice("Choose your track and press Prepare within [DisplayTimeText(max(0, group_start_deadline - world.time))]."))
 	candidate.ui_interact(player)
+	candidate.update_static_data_for_all_viewers()
 	check_group_performance_ready()
 
 /datum/song/proc/prepare_group_performance(mob/user)
@@ -105,6 +120,11 @@
 		clear_group_prepare()
 		return FALSE
 	var/datum/song/leader = group_start_leader
+	if(find_group_player() != user || !valid_group_member(leader))
+		return FALSE
+	if(leader.playback_mode == "file" && playback_mode != "file")
+		to_chat(user, span_warning("Select an OGG track before preparing this performance."))
+		return FALSE
 	if(!leader.group_start_candidates || !(src in leader.group_start_candidates))
 		clear_group_prepare()
 		return FALSE
@@ -123,25 +143,144 @@
 	finalize_group_performance()
 	return TRUE
 
-/datum/song/proc/finalize_group_performance()
-	if(!group_start_candidates)
+/datum/song/proc/finalize_group_performance(generation)
+	if(!group_start_candidates || (!isnull(generation) && generation != group_generation))
 		return
+	if(group_prepare_timer)
+		deltimer(group_prepare_timer)
+		group_prepare_timer = null
 	var/list/ready_songs = list(src)
 	for(var/datum/song/candidate as anything in group_start_candidates)
-		if(group_start_candidates[candidate] == GROUP_PERFORMANCE_READY)
+		if(!QDELETED(candidate) && group_start_candidates[candidate] == GROUP_PERFORMANCE_READY && candidate.valid_group_member(src))
 			ready_songs += candidate
-		candidate.clear_group_prepare()
+		if(!QDELETED(candidate))
+			candidate.clear_group_prepare(candidate in ready_songs)
 	group_start_candidates = null
 	group_start_deadline = 0
-	var/atom/player = group_start_player
 	group_start_player = null
+	var/generation_token = ++group_generation
 	for(var/datum/song/S as anything in ready_songs)
-		var/atom/start_player = (S == src) ? player : S.find_group_player()
-		S.start_without_prompt(start_player || S.parent)
+		S.group_start_leader = src
+		S.group_start_deadline = world.time + 2 SECONDS
+		if(S.playback_mode == "file" && S.file_track)
+			for(var/mob/listener in get_hearers_in_view(S.instrument_range, get_turf(S.parent)))
+				listener << browse_rsc(S.file_track)
+	group_prepare_timer = addtimer(CALLBACK(src, PROC_REF(start_prepared_group), ready_songs, generation_token), 2 SECONDS, TIMER_STOPPABLE)
+	group_start_candidates = list()
+	for(var/datum/song/S as anything in ready_songs)
+		if(S != src)
+			group_start_candidates[S] = GROUP_PERFORMANCE_READY
 
-/datum/song/proc/clear_group_prepare()
+/datum/song/proc/valid_group_member(datum/song/leader)
+	var/mob/player = find_group_player()
+	var/turf/here = get_turf(parent)
+	var/turf/there = get_turf(leader?.parent)
+	return player?.client && (!group_reserved_player || player == group_reserved_player) && !player.incapacitated && here && there && here.z == there.z && get_dist(here, there) <= GROUP_PERFORMANCE_RADIUS
+
+/datum/song/proc/start_prepared_group(list/songs, generation)
+	group_prepare_timer = null
+	if(generation != group_generation || !valid_group_member(src))
+		cancel_performance_prepare()
+		return
+	group_start_candidates = null
+	clear_group_prepare()
+	var/list/started = list()
+	var/cycle_length = playback_mode == "file" ? file_track_length : sequence_length SECONDS
+	for(var/datum/song/member as anything in songs)
+		if(!QDELETED(member) && member.playback_mode == "file")
+			cycle_length = max(cycle_length, member.file_track_length)
+	for(var/datum/song/member as anything in songs)
+		if(QDELETED(member) || !member.valid_group_member(src))
+			continue
+		if(member != src && member.group_start_leader != src)
+			continue
+		member.clear_group_prepare()
+		if(member != src)
+			member.performance_restore = list("mode" = member.playback_mode, "lines" = member.lines, "bpm" = member.bpm, "channels" = member.midi_channels.Copy(), "repeat" = member.repeat, "loop" = member.auto_repeat, "file" = member.file_track, "name" = member.file_track_name, "length" = member.file_track_length, "hash" = member.file_track_hash, "cues" = member.song_cues)
+			member.repeat = repeat
+			member.performance_restore["spacing"] = member.cue_spacing
+			member.auto_repeat = auto_repeat
+			if(group_mode == "unison" && playback_mode == "midi")
+				member.set_playback_mode("midi")
+				member.lines = lines.Copy()
+				member.set_bpm(bpm)
+			if(group_mode == "unison" && playback_mode == "file")
+				member.set_playback_mode("file")
+				member.file_track = file_track
+				member.file_track_name = file_track_name
+				member.file_track_length = file_track_length
+				member.file_track_hash = file_track_hash
+				member.song_cues = song_cues
+				member.cue_spacing = cue_spacing
+		member.performance_cycle_length = cycle_length
+		if(playback_mode == "sequence" && member != src)
+			member.set_playback_mode("sequence")
+			member.sequence_master = src
+			if(group_mode == "unison")
+				member.midi_channels = midi_channels.Copy()
+		member.ignore_midi_start_delay = TRUE
+		member.start_without_prompt(member.find_group_player())
+		if(member.playing)
+			started += member
+			member.update_static_data_for_all_viewers()
+		else
+			member.finish_performance()
+	for(var/datum/song/member as anything in started)
+		if(member != src)
+			performance_members |= member
+			member.performance_leader = src
+		if(member != src && member.sequence_master == src)
+			sequence_followers |= member
+
+/datum/song/proc/finish_performance()
+	sequence_master = null
+	if(performance_leader && !QDELETED(performance_leader))
+		performance_leader.performance_members -= src
+		performance_leader.sequence_followers -= src
+	performance_leader = null
+	for(var/datum/song/member as anything in performance_members.Copy())
+		if(!QDELETED(member))
+			member.stop_playing()
+	performance_members.Cut()
+	performance_cycle_length = 0
+	if(!performance_restore)
+		return
+	playback_mode = performance_restore["mode"]
+	lines = performance_restore["lines"]
+	set_bpm(performance_restore["bpm"])
+	midi_channels = performance_restore["channels"]
+	repeat = performance_restore["repeat"]
+	auto_repeat = performance_restore["loop"]
+	file_track = performance_restore["file"]
+	file_track_name = performance_restore["name"]
+	file_track_length = performance_restore["length"]
+	file_track_hash = performance_restore["hash"]
+	song_cues = performance_restore["cues"]
+	cue_spacing = performance_restore["spacing"] || 5
+	performance_restore = null
+	update_static_data_for_all_viewers()
+
+/datum/song/proc/cancel_performance_prepare()
+	group_generation++
+	if(group_prepare_timer)
+		deltimer(group_prepare_timer)
+		group_prepare_timer = null
+	if(group_start_candidates)
+		for(var/datum/song/member as anything in group_start_candidates)
+			if(!QDELETED(member) && member.group_start_leader == src)
+				member.clear_group_prepare()
+		group_start_candidates = null
+	if(group_start_leader && group_start_leader != src && !QDELETED(group_start_leader))
+		if(group_start_leader.group_start_candidates)
+			group_start_leader.group_start_candidates[src] = GROUP_PERFORMANCE_SKIPPED
+	group_start_player = null
+	clear_group_prepare()
+
+/datum/song/proc/clear_group_prepare(preserve_player = FALSE)
 	group_start_leader = null
 	group_start_deadline = 0
+	if(!preserve_player)
+		group_reserved_player = null
 
 /datum/song/proc/pulse_cyberpunk_music_perks(atom/player)
 	if(world.time < last_cyberpunk_music_perk_pulse + CYBERPUNK_MUSIC_PERK_PULSE_INTERVAL)
@@ -213,15 +352,13 @@
 	var/list/data = ..()
 	data["group_prepare_pending"] = !!group_start_leader && world.time <= group_start_deadline
 	data["group_prepare_seconds"] = data["group_prepare_pending"] ? max(0, round((group_start_deadline - world.time) / (1 SECONDS))) : 0
-	return data
+	return music_ui_data(data)
 
 /datum/song/ui_act(action, list/params)
-	switch(action)
-		if("play_music")
-			var/mob/user = usr
-			if(!istype(user))
-				return FALSE
-			return try_start_group_performance(user)
+	if(handle_music_action(action, params, usr))
+		return TRUE
+	if(action in list("play_music", "start_solo", "select_music_mode"))
+		return TRUE
 
 	return ..()
 
