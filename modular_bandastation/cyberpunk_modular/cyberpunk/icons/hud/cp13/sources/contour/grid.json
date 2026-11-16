@@ -1,0 +1,120 @@
+{
+  "swap": {
+    "source": "swap.png",
+    "canvas": [
+      16,
+      16
+    ],
+    "width": 11,
+    "height": 9,
+    "dx": 0,
+    "dy": 0,
+    "threshold": 48
+  },
+  "throw": {
+    "source": "throw.png",
+    "canvas": [
+      16,
+      16
+    ],
+    "width": 11,
+    "height": 10,
+    "dx": -0.5,
+    "dy": 0,
+    "threshold": 56
+  },
+  "drop": {
+    "source": "drop.png",
+    "canvas": [
+      16,
+      16
+    ],
+    "width": 10,
+    "height": 11,
+    "dx": -0.5,
+    "dy": 0.5,
+    "threshold": 48
+  },
+  "sleep": {
+    "source": "sleep.png",
+    "canvas": [
+      16,
+      16
+    ],
+    "width": 9,
+    "height": 11,
+    "dx": -0.5,
+    "dy": -0.5,
+    "threshold": 40
+  },
+  "walk": {
+    "source": "palette/walk.png",
+    "canvas": [
+      32,
+      16
+    ],
+    "size": [
+      10,
+      14
+    ],
+    "render": "palette",
+    "boundary_ink": 0,
+    "ink_palette": "tg",
+    "tone_bias": 30
+  },
+  "equipment": {
+    "source": "palette/equipment.png",
+    "canvas": [
+      32,
+      32
+    ],
+    "size": [
+      26,
+      26
+    ],
+    "render": "palette",
+    "ink_palette": "tg",
+    "tone_bias": 30
+  },
+  "underwear": {
+    "source": "palette/underwear.png",
+    "canvas": [
+      32,
+      32
+    ],
+    "size": [
+      20,
+      26
+    ],
+    "render": "palette",
+    "ink_palette": "tg",
+    "tone_bias": 30
+  },
+  "accessories": {
+    "source": "palette/accessories.png",
+    "canvas": [
+      32,
+      32
+    ],
+    "size": [
+      23,
+      26
+    ],
+    "render": "palette",
+    "ink_palette": "tg",
+    "tone_bias": 30
+  },
+  "hand": {
+    "source": "palette/hand_tg.png",
+    "canvas": [
+      32,
+      32
+    ],
+    "size": [
+      25,
+      27
+    ],
+    "render": "palette",
+    "ink_palette": "hand"
+  }
+}

@@ -12,7 +12,18 @@ from tools.dmi import Dmi
 
 
 class HudAssetTests(unittest.TestCase):
-    def test_dmi_states_match_native_pngs(self):
+    def test_each_glyph_uses_at_most_five_opaque_colors(self):
+        for group in ("glyphs_16x16", "glyphs_32x32", "hands_32x32", "movement_32x16", "floor_16x32", "inventory_32x32"):
+            for state in Dmi.from_file(OUTPUT / f"{group}.dmi").states:
+                if state.name.endswith("handactive"):
+                    continue  # Frame transparency is independent of glyph artwork.
+                with self.subTest(group=group, state=state.name):
+                    pixels = np.asarray(state.get_frame().convert("RGBA"))
+                    self.assertTrue(set(np.unique(pixels[:, :, 3])) <= {0, 255})
+                    visible = pixels[pixels[:, :, 3] != 0]
+                    self.assertLessEqual(len({tuple(pixel) for pixel in visible}), 5)
+
+    def test_dmi_states_match_manifest(self):
         manifest = json.loads((OUTPUT / "manifest.json").read_text())
         for name, info in manifest["dmi"].items():
             dmi = Dmi.from_file(OUTPUT / name)
@@ -20,10 +31,13 @@ class HudAssetTests(unittest.TestCase):
             self.assertEqual([s.name for s in dmi.states], info["states"])
             for state in dmi.states:
                 with self.subTest(dmi=name, state=state.name):
-                    png = Image.open(OUTPUT / "native" / name.removesuffix(".dmi") / f"{state.name}.png").convert("RGBA")
+                    image = state.get_frame().convert("RGBA")
                     self.assertEqual((state.dirs, state.framecount), (1, 1))
-                    self.assertEqual(state.get_frame().tobytes(), png.tobytes())
-                    self.assertIsNotNone(png.getbbox())
+                    self.assertEqual(hashlib.sha256(image.tobytes()).hexdigest(), info["rgba_sha256"][state.name])
+                    if name == "inventory_32x32.dmi" and state.name == "occupied":
+                        self.assertIsNone(image.getbbox())
+                    else:
+                        self.assertIsNotNone(image.getbbox())
 
     def test_source_hashes(self):
         manifest = json.loads((OUTPUT / "manifest.json").read_text())

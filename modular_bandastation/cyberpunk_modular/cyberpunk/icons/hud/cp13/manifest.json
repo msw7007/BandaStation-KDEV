@@ -3,30 +3,52 @@
     "tgui/packages/tgui/styles/interfaces/CyberpunkPanel.scss:.StyleGuide",
     "tgui/packages/tgui-panel/styles/themes/cyberpunk.scss"
   ],
-  "method": "image_gen silhouettes; alpha/palette cleanup; nearest-neighbor native fitting; CSS-derived native pixel frames; stock hand glyphs",
+  "method": "TG Midnight filled sprite construction: original inventory pixels darkened, original TG small controls, shaded five-ink cyberpunk hands/equipment and relief pixel lettering; no wireframe replacement; CSS-derived frames",
+  "max_colors_per_glyph": 5,
+  "glyph_palette": [
+    "#1c3540",
+    "#42616e",
+    "#6d909c",
+    "#9bbfc9",
+    "#be485b"
+  ],
+  "hand_palette": [
+    "#0d1217",
+    "#10171d",
+    "#141d24",
+    "#18232b",
+    "#18232b"
+  ],
+  "slot_palette": [
+    "#0d1217",
+    "#10171d",
+    "#141d24",
+    "#18232b",
+    "#1c2932"
+  ],
   "palette": {
-    "glyph": "#8dafb9",
     "accent": "#be485b",
-    "panel": "#0c0c14",
-    "idle_border": "#6f2836",
-    "active_border": "#5bbdcd"
+    "panel": "#07090e",
+    "idle_border": "#3d1e29",
+    "active_border": "#376975"
   },
   "sources": {
-    "area_create.png": "7e0beefb24c63289b842e60c637b7efef9089ac567a12bfc05e745886de4b776",
-    "craft.png": "7d8709a403c69bb86dd017b7bc567d1cbc87b7495fa764f9779b861b6b1e15bb",
-    "emote.png": "304c6a013ad05341c78e7e9373444b7de46698063955e6461821ce3f0a0f1e35",
-    "language.png": "c9044036aef9c0ec0ddbedf957e42d6e7850c7f959b0f7233bf41a39fc00e94a",
-    "native_drop.png": "52785dec808e77f90c2b27e82e24aa0c20506349297c1defa4528131c73d5e19",
-    "native_equipment.png": "a9f75527db1da9555747150c298f9e39b81ca345f935aace86b3c6a55ed06505",
-    "native_memories.png": "50e0cfe9ece850e2ed62f02573e518136aca49bcb091e931cd081b309fe2619d",
-    "native_swap.png": "1390e9ffaec94846a24b5bf5e8dcfea61a0cae451a1c853b0c1fc0638b36e589",
-    "native_throw.png": "0bd772d83032e07fb4b5d4206c588613f31d86d54b9d068017d5232de14a1c35",
-    "native_walk.png": "580c8e80fe35d3a5be9ac9bbe3f4da0763425d617de3a6fc95b1bdcab7e7e373",
-    "navigate.png": "d39fe88f0dd517a3149b6b8da0339706646b376d0fa6c698f26aa2fbab0dfd91",
-    "resist.png": "3fbeaabf07986ecca7cdf7cd6a90c003c409471f601089202f133e4614f82795",
-    "rest.png": "583163f9d1db1cb1e58b73887508309bda8f6deecfffe650667cc9de8083410b",
-    "run.png": "5a7dc7867eae487e64d7fe3ab816f9d2c4aa073b195f45f87f20116141af5e65",
-    "underwear.png": "f842c6e91e4b31f39496d5900a2e76529298912123f9984c49118d32a295d658"
+    "contour/drop.png": "4666b74bebc856a07eae9d27ae7172ddd739e88b5dd8c79975cb8cd4b0466518",
+    "contour/generation.json": "6d327ef6527f5b3ac9f7d8856741e4d4ab62882286ef62b9ecdd4e0d3ebe05b7",
+    "contour/grid.json": "e880f0e84fa3771b973b96774f46dc17854aa475c7bfc0ba8a8f45853d0ddd4c",
+    "contour/inventory_base.dmi": "c408bda514623c3ef49a0586a3b67d94aa44dc85df58089c7e2228b68e7f9ef7",
+    "contour/lettering.json": "3e52d51ed998331728078cdfb78cec75d733adb2af9341f718e6d51686c8a845",
+    "contour/palette/accessories.png": "779e622c96b771cb26425d66c0a4c0fa59cbf9dcf25b3e83f8787d154a24ae2b",
+    "contour/palette/equipment.png": "3e7e3765af39cbe8fa6ec744eabcc3e1161ad968ccfbb9e36c29349ce48e527f",
+    "contour/palette/generation.json": "18b915a4fbaaff5cd623d81e201c100b2882b04f4cced4f43a7d028150870a1b",
+    "contour/palette/hand_tg.png": "88fd7855925c34a1c6292a790500a48728ea3c29bc295eb374dc7a6fb56b5e48",
+    "contour/palette/hand_tg_generation.json": "5bf883a56d94f618850516bf5994079c9fd2cde982def3b5ba7c3cb501adb507",
+    "contour/palette/underwear.png": "161d2e7eaa8bb71c5e8571cd82acc3eed4698f0edb351470a1a6c0aab382a8e1",
+    "contour/palette/walk.png": "a87ea7efebff8b8a07906ebf1f19172e76931b3026b32e55c79489af15c3c112",
+    "contour/sleep.png": "c15bbe0a12476885d82b958969816a2a47c4d242d3a4e74ab1d6dd10ab7b31b7",
+    "contour/swap.png": "6b06856fa4d81af8f509f2b288cc8f90a1433c93a229c040d1004c0323b8e458",
+    "contour/tg/handcuff.png": "6030813b4f23ac4430a3a5072e62aa79b4056d8045c59d08eeb195feccd1989a",
+    "contour/throw.png": "876620c4471355faa65b54bc08774cfb976b2946dd1c373645694ceedf73eb24"
   },
   "dmi": {
     "floor_16x32.dmi": {
@@ -34,7 +56,10 @@
       "height": 32,
       "states": [
         "floor_change_v"
-      ]
+      ],
+      "rgba_sha256": {
+        "floor_change_v": "1244b305330ead14e4e0feca0c7673b72f5a57854a2746ba38ee434bceb2f1f9"
+      }
     },
     "frames_16x16.dmi": {
       "width": 16,
@@ -47,7 +72,16 @@
         "disabled",
         "outline",
         "grid"
-      ]
+      ],
+      "rgba_sha256": {
+        "idle": "26fb026c5b73b201062c5641e4d6410aaaf3191cbf22d62dfc3a6b22bd46dc0a",
+        "hover": "66ab214dfe5df2c129f9777f873a43cee4b864e3f5c99a23d83f269c7bcb1828",
+        "active": "0ef87e0db1f306ae28ac1bc608ebd99480e52bf7e33fcd447c28482b60f1ced6",
+        "combat": "ecdff51ac93d63ae19dcafa29b6284590d9eeda22886e595077292916e6a5b59",
+        "disabled": "b5755a25a378d3e6a3e5006d1f693d0eff48bc144de67f4aaefd6ef445833b20",
+        "outline": "26fb026c5b73b201062c5641e4d6410aaaf3191cbf22d62dfc3a6b22bd46dc0a",
+        "grid": "26fb026c5b73b201062c5641e4d6410aaaf3191cbf22d62dfc3a6b22bd46dc0a"
+      }
     },
     "frames_16x32.dmi": {
       "width": 16,
@@ -63,7 +97,67 @@
         "buff",
         "debuff",
         "split"
-      ]
+      ],
+      "rgba_sha256": {
+        "idle": "f2f41133a6886d28c9bb646878535ec7955ce73eac399defbaf8dea5671f42fc",
+        "hover": "c96295825a759bef03dcd475c39bfc21bbcc38a4e29e571cf3723c1f7d50585e",
+        "active": "9a97c8605189712afcd1305aba1dfa0a1f8c5e64fa216c93bf6aa6bdbf188250",
+        "combat": "ad7149bda72d130330aedad629b147c7fbc3579d85b43ee1fc22ae16c6febeaa",
+        "disabled": "5d61754667e3d828f99cbaff34069c1c41a543716fb6b04ebe8d9cb92841be08",
+        "outline": "f2f41133a6886d28c9bb646878535ec7955ce73eac399defbaf8dea5671f42fc",
+        "grid": "f2f41133a6886d28c9bb646878535ec7955ce73eac399defbaf8dea5671f42fc",
+        "buff": "c96295825a759bef03dcd475c39bfc21bbcc38a4e29e571cf3723c1f7d50585e",
+        "debuff": "ad7149bda72d130330aedad629b147c7fbc3579d85b43ee1fc22ae16c6febeaa",
+        "split": "5a65d03bf1aa1f88bb6671b31e966969a5f819498634d809614fd1de184792a7"
+      }
+    },
+    "frames_24x16.dmi": {
+      "width": 24,
+      "height": 16,
+      "states": [
+        "idle",
+        "hover",
+        "active",
+        "combat",
+        "disabled",
+        "outline",
+        "grid"
+      ],
+      "rgba_sha256": {
+        "idle": "585d24fa76c7fe0b419809e7e858b8b41e7512455a5ab36f38eaa7c96368901a",
+        "hover": "1b372aeeb842f6479def444b69cd6ebaf875cd3353a5a16038144b8b65a2feb5",
+        "active": "31e7cea62dc082fd526323987eb3f7e9acc6d634ac9a2565d8bdaa43e815bb4c",
+        "combat": "b765dd1996b929bab5ea51b827a6c931c702d9fd69c10521e2c87377d19eeaa5",
+        "disabled": "f4a29f3b947598bba1ebbdc5cf7102006b57010a40c7e4cca66febd72faf9ded",
+        "outline": "585d24fa76c7fe0b419809e7e858b8b41e7512455a5ab36f38eaa7c96368901a",
+        "grid": "585d24fa76c7fe0b419809e7e858b8b41e7512455a5ab36f38eaa7c96368901a"
+      }
+    },
+    "frames_24x32.dmi": {
+      "width": 24,
+      "height": 32,
+      "states": [
+        "idle",
+        "hover",
+        "active",
+        "combat",
+        "disabled",
+        "outline",
+        "grid",
+        "buff",
+        "debuff"
+      ],
+      "rgba_sha256": {
+        "idle": "bc92fa66a9a8bf800efa0582dd742573149692ea80d4ed58904036bb39278847",
+        "hover": "4eb8c85ea02cc2c59ec7711abb2f27ac385b99cbfccb754846250872ff8727a0",
+        "active": "7bbdfcad6a8e20a9dcf8b46377b37d38ae40d46c3486efe79ffeae89781fe972",
+        "combat": "f36539aaa9201a262799f908cd8fe1cdba9a8ab932a39e6bd4601cdd5ff35136",
+        "disabled": "03d8d4827921e5d12591f6e6c8f5d01130c8c87135cae6abd6fa504378e7d736",
+        "outline": "bc92fa66a9a8bf800efa0582dd742573149692ea80d4ed58904036bb39278847",
+        "grid": "bc92fa66a9a8bf800efa0582dd742573149692ea80d4ed58904036bb39278847",
+        "buff": "4eb8c85ea02cc2c59ec7711abb2f27ac385b99cbfccb754846250872ff8727a0",
+        "debuff": "f36539aaa9201a262799f908cd8fe1cdba9a8ab932a39e6bd4601cdd5ff35136"
+      }
     },
     "frames_32x16.dmi": {
       "width": 32,
@@ -76,7 +170,16 @@
         "disabled",
         "outline",
         "grid"
-      ]
+      ],
+      "rgba_sha256": {
+        "idle": "3c310f718bfa2f88f8928345473c15dfddeb5244265257f9eae5f8a94f32625c",
+        "hover": "a86621a2a68d735491b9787b3142008296dd447bf14c2102f2c3966fe4889167",
+        "active": "bde276eea2336c6ab32c3a53cdc62be66240c297bcf561861f73e311477323ac",
+        "combat": "cacd14dd550fbdfe5cbdffe2b10cdb1c703b8c4896fa8e65fb8f564a86a141d4",
+        "disabled": "4b137ec1890c4969d2d79b836fa28c247054ec6da141717719429a055cc92f34",
+        "outline": "3c310f718bfa2f88f8928345473c15dfddeb5244265257f9eae5f8a94f32625c",
+        "grid": "3c310f718bfa2f88f8928345473c15dfddeb5244265257f9eae5f8a94f32625c"
+      }
     },
     "frames_32x32.dmi": {
       "width": 32,
@@ -92,7 +195,19 @@
         "reserved",
         "scroll_up",
         "scroll_down"
-      ]
+      ],
+      "rgba_sha256": {
+        "idle": "5f4c5b520ae682de9251fef4dd49849c01097b8c4f07c036009388c1bee08e3b",
+        "hover": "babccb4b99d5542e8c73eddf63fe03cab0425e67f3297a093ba502bf9fb08944",
+        "active": "b8f100f0c98c003d81e9d40f2202fdec09fbbb4d80a14089e7557c088c882d4b",
+        "combat": "3c2e32e042e636a08b5078e3964397afc1beccb71f299f8793ebce4341826376",
+        "disabled": "a38e1caa6b13b154cfd3a3f025f09ca439aea1ee9bbfb22cea1387562ec28417",
+        "outline": "5f4c5b520ae682de9251fef4dd49849c01097b8c4f07c036009388c1bee08e3b",
+        "grid": "5f4c5b520ae682de9251fef4dd49849c01097b8c4f07c036009388c1bee08e3b",
+        "reserved": "babccb4b99d5542e8c73eddf63fe03cab0425e67f3297a093ba502bf9fb08944",
+        "scroll_up": "f3a8e16fefc39b332a1e00e21ac55f10ef5025c625829d98bc4b632e6405a7be",
+        "scroll_down": "053177aabd4255ba6dea3e1962fa6a48941ff5e143b4d33c6f964b70c4cdf447"
+      }
     },
     "glyphs_16x16.dmi": {
       "width": 16,
@@ -116,7 +231,27 @@
         "act_sleep_flick",
         "arrow_up",
         "arrow_down"
-      ]
+      ],
+      "rgba_sha256": {
+        "language": "842650418870ff151daff6b4ef7dceacb243aed217961a94ddcb876e5ad504a4",
+        "craft": "56de8cf1ba331d1cbd5e9432bc5b7b90e29f413a48766eaf1e2b0352270b47c9",
+        "navigate": "add88f9558379620e808bcd8fe08bc5f25a209858655892c9720ab7a9382e4ba",
+        "area_create": "61fc806174fb319250c3821c179dbe1490b36dff0df87e215425db0bb9c1737d",
+        "emote": "d463741a0633524b6c2f8900309419fcf8cef3329ed0c388eebfdab6826203d7",
+        "resist": "bdadc736851fabd315382929d1152c7b56cd8ac33ee1227788c865e7792f2b14",
+        "swap": "16e1575ac6d8fb79779481065fddc872706670c29920eece6cdb160110d1c6bc",
+        "throw": "5e6f784f4af3b264b1c12cf740fcb334cb8b73fd4fc91c2682af19b39e644fd4",
+        "drop": "30a44874a7c78fcd0952ad34eb67e63867a8d7a5ad3e6364f04d16d39ddea014",
+        "memories": "db88528cee1b3baaef65606ca767a6b0def65cbc5d2a0c93d6ae847976170fc8",
+        "sleep": "b3b898e8e0c1c3f8e4d2326942f0c12fc7b0f9bd216421de4382e47a5ffecaf5",
+        "throw_combat": "6cc57b732437494a38521e07ae553447d6e668947ef8b45218e2a317b96d2a59",
+        "act_throw": "5e6f784f4af3b264b1c12cf740fcb334cb8b73fd4fc91c2682af19b39e644fd4",
+        "act_throw_on": "6cc57b732437494a38521e07ae553447d6e668947ef8b45218e2a317b96d2a59",
+        "act_resist_on": "093ee6ae4f9ecb07cf53f1c5106f86ee0c47fb9a23df3034a75d07b0096f33f3",
+        "act_sleep_flick": "98110699ec7f105923cc9c0996989a63b40e594c1d884107f468bd9640a8aa71",
+        "arrow_up": "3b9ed62f5c6b1c936c0652c2db530911f03ee39508ce5a1486d6f37f7250daf2",
+        "arrow_down": "02527acf4c32e94691e14cb03a79f3f8df3665ff740a7fdef6250b77c000c929"
+      }
     },
     "glyphs_32x32.dmi": {
       "width": 32,
@@ -126,7 +261,13 @@
         "underwear",
         "accessories",
         "memories"
-      ]
+      ],
+      "rgba_sha256": {
+        "equipment": "019e0552f98a6c57cda117100f233be492467cbd1fb719d9442347381d26fea3",
+        "underwear": "02f44def0d32022666b5bbe9570836d12ec107f694391549c45372d8241079ac",
+        "accessories": "862781384c084f71d6030fa2fb0e54a1cb5cab358110003e307d71a8413593a1",
+        "memories": "78dba07eb3f8287f3bc7580e1ef0415f3b487a2be7acb3e2df14f6d905a2417d"
+      }
     },
     "hands_32x32.dmi": {
       "width": 32,
@@ -136,7 +277,63 @@
         "lhandactive",
         "hand_r",
         "rhandactive"
-      ]
+      ],
+      "rgba_sha256": {
+        "hand_l": "d99e676800b7e1edacb0dceb5c3fcf5e24d781f468880e559da2d1dcfc9b8336",
+        "lhandactive": "981110dc9bf9718db7169e5fa7e984e236fd831cbcb8c17274477f8f7b47323a",
+        "hand_r": "2407e8a9a1fdb4e85b18a4fb3fb56738598d44c249c64916ae75d7e9e4ef0ed8",
+        "rhandactive": "981110dc9bf9718db7169e5fa7e984e236fd831cbcb8c17274477f8f7b47323a"
+      }
+    },
+    "inventory_32x32.dmi": {
+      "width": 32,
+      "height": 32,
+      "states": [
+        "uniform",
+        "suit",
+        "back",
+        "id",
+        "belt",
+        "mask",
+        "glasses",
+        "ears",
+        "head",
+        "suit_storage",
+        "pocket",
+        "gloves",
+        "shoes",
+        "neck",
+        "pants",
+        "undershirt",
+        "underwear",
+        "tights",
+        "shoulder_left",
+        "shoulder_right",
+        "occupied"
+      ],
+      "rgba_sha256": {
+        "uniform": "5e7c88581632f628592df2cdc36659c2c0379d0b0b098e11f16edfe245af169b",
+        "suit": "1d55e4e3245a7b92d78183d0e2b9a73f1362127c8a7e5c31915df341de71e862",
+        "back": "29bd48a21e5ce41867b1fc9f76c29b1b45619c6ad59ed7a214a6fb2fe05888f9",
+        "id": "f032d0a406b83edf7da492394c53b90ff04419a9291d43332c054e3beae2ce0a",
+        "belt": "ace2a388171daeb1c8474321b2c653947bf9170823e84d7c052aa417d096dd1c",
+        "mask": "c47db2ec77c56ba0ae24132030beffe468965c3adc03eae2b66833e378edc674",
+        "glasses": "b458e81d563831476bd5fdfab13e656f9d59dba1d751c795a0be31089449ee9b",
+        "ears": "1b1e65ee50eb3fde0390d87ca7bb7027202d4c3193dbde1b63072898c3b80141",
+        "head": "fa5ae2bf25279dfd55b9e555a1c4336e515a7c778c2d8144b2c618581f9e2a91",
+        "suit_storage": "562b666a851560cbe0bf47baa106d4f8c7aed44907a4d5d6c433e8b46ce84a46",
+        "pocket": "a8d2821bbe9556f815d96be44fb7fdb95a085ff75dcc04756a8316d12a0d5189",
+        "gloves": "271d189c018b8f0086322285633720f3da047ef51ad2ecb6b2687d392c073ba3",
+        "shoes": "f1113bc8869070c6858e65b433e47f4f936d7ef87b4159c0d4ede3f912fa1cda",
+        "neck": "9d7fb9e78573344e4d356aad90c6a8315aea7e10050cdb56d6b5deb3c680e55b",
+        "pants": "eb55f20a1cfa5ae76aaf67ba0ab596568aaa78c6a1603611384208f8737016bb",
+        "undershirt": "6d23d4a5e44a74bba442903bf670129842b2872b2764866422d1a7986182aee5",
+        "underwear": "d693b49d54c07e2e8094cf4d037904d312a42051a9a30de16ba29258e2bb0ef0",
+        "tights": "6632482385947201d5b186735257f54512fc9b73cc20ad7ff62575fa761c9e00",
+        "shoulder_left": "287d276b33c441e34bcd808bf152e414402bb495cfeb022c9e5b4f14a4ff5cc2",
+        "shoulder_right": "5fac43ba70dd61593df7e291ca68693623e457e01d9e03406bfc2cf5680a6bd9",
+        "occupied": "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7"
+      }
     },
     "movement_32x16.dmi": {
       "width": 32,
@@ -147,8 +344,20 @@
         "rest_human",
         "walk_anthro",
         "run_anthro",
-        "rest_anthro"
-      ]
+        "rest_anthro",
+        "fight",
+        "fight_active"
+      ],
+      "rgba_sha256": {
+        "walk_human": "b8181b02f36467e685eccf34d7442d57c0640c790081bf54a8d722902bfe7c28",
+        "run_human": "bf277bf6cd3ac4a2cf38d314cc87ffa0820a9b403caf9a11fb72aa4bc10126a0",
+        "rest_human": "77d9ef76cdf1c8d05658b826213296d058c41e39b9c23ec702cebfb8109549ce",
+        "walk_anthro": "b8181b02f36467e685eccf34d7442d57c0640c790081bf54a8d722902bfe7c28",
+        "run_anthro": "bf277bf6cd3ac4a2cf38d314cc87ffa0820a9b403caf9a11fb72aa4bc10126a0",
+        "rest_anthro": "77d9ef76cdf1c8d05658b826213296d058c41e39b9c23ec702cebfb8109549ce",
+        "fight": "9cf25ae087363e979d4fa9f3f55cf74bc762b48954da1abdb0ef3c15f14bd2dd",
+        "fight_active": "29ea828afb2d5bc4346e488699f92b91d25e822e0bc6744afc77d2c5f015ec93"
+      }
     }
   }
 }

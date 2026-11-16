@@ -2,9 +2,11 @@
 	icon = null
 	icon_state = null
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	screen_loc = "TOP,CENTER"
+	// The text field spans the view. Anchor its left edge, not its midpoint.
+	screen_loc = "WEST,NORTH"
+	maptext_x = 8
 	maptext_height = 480
-	maptext_width = 480
+	maptext_width = 464
 	maptext = ""
 	layer = SCREENTIP_LAYER //Added to make screentips appear above action buttons (and other /atom/movable/screen objects)
 
@@ -12,8 +14,9 @@
 	. = ..()
 	update_view()
 
-/atom/movable/screen/screentip/proc/update_view(datum/source)
+/atom/movable/screen/screentip/proc/update_view(datum/source, view)
 	SIGNAL_HANDLER
-	if(!hud || !hud.mymob.canon_client?.view_size) //Might not have been initialized by now
+	view ||= hud?.mymob.canon_client?.view_size?.getView()
+	if(!view) //Might not have been initialized by now
 		return
-	maptext_width = view_to_pixels(hud.mymob.canon_client.view_size.getView())[1]
+	maptext_width = max(1, view_to_pixels(view)[1] - 2 * maptext_x)

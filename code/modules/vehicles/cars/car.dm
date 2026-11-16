@@ -3045,10 +3045,14 @@
 	var/max_tile_steps_per_tick = 1
 	var/pixel_animation_time = 0.2 SECONDS
 	var/cy_smooth_camera_follow = TRUE
-	var/cy_collision_center_offset_x = 16
-	var/cy_collision_center_offset_y = 16
-	var/cy_collision_half_width = 8
-	var/cy_collision_half_height = 8
+	// car_test is a 48x64 canvas; its opaque body occupies x=6..42, y=1..63.
+	// Use the same pivot as the visual transform, including during turns.
+	var/cy_collision_center_offset_x = 24
+	var/cy_collision_center_offset_y = 32
+	var/cy_collision_half_width = 18
+	var/cy_collision_half_height = 31
+	/// Internal turf registration must not reset the continuous world position.
+	var/cy_applying_pixel_position = FALSE
 	var/cy_drift_amount = 0
 	var/cy_visual_fixed_dir = NORTH
 	var/cy_visual_current_rotation = 0
@@ -3197,6 +3201,12 @@
 	. = ..()
 	LAZYREMOVE(cyberpunk_exposed_passengers, M)
 	cy_reset_occupant_camera(M)
+
+/obj/vehicle/sealed/car/cyberpunk/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
+	. = ..()
+	if(!cy_applying_pixel_position && isturf(loc))
+		cy_world_px = (x - 1) * ICON_SIZE_X + pixel_x
+		cy_world_py = (y - 1) * ICON_SIZE_Y + pixel_y
 
 /obj/vehicle/sealed/car/cyberpunk/relaymove(mob/living/user, direction)
 	if(!is_driver(user) || !canmove)
@@ -3376,7 +3386,10 @@
 		cy_velocity_y = 0
 
 	current_speed = cy_get_speed()
+	var/old_rotation = cy_visual_current_rotation
 	update_vehicle_visual_rotation(seconds_per_tick)
+	var/target_rotation = cy_visual_current_rotation
+	cy_visual_current_rotation = old_rotation
 	if(current_speed > 0)
 		movement_x = cy_velocity_x / current_speed
 		movement_y = cy_velocity_y / current_speed
@@ -3393,25 +3406,26 @@
 		last_drift_visual = drift_active
 		update_appearance(UPDATE_OVERLAYS)
 
-	if(current_speed <= 0.01 || !isturf(loc))
+	if(!isturf(loc))
+		current_speed = 0
+		return
+	if(current_speed <= 0.01 && abs(closer_angle_difference(old_rotation, target_rotation)) <= 0.01)
 		current_speed = 0
 		return
 
-	var/next_px = cy_world_px + cy_velocity_x * seconds_per_tick
-	var/next_py = cy_world_py + cy_velocity_y * seconds_per_tick
-	var/move_x = next_px - cy_world_px
-	var/move_y = next_py - cy_world_py
-	if(cy_can_occupy_pixel_position(next_px, next_py))
-		cy_world_px = next_px
-		cy_world_py = next_py
-	else
-		cy_on_pixel_collision(cy_velocity_to_dir())
-		return
+	var/old_px = cy_world_px
+	var/old_py = cy_world_py
+	var/atom/collided = cy_move_pixels(cy_velocity_x * seconds_per_tick, cy_velocity_y * seconds_per_tick, target_rotation)
+	var/move_x = cy_world_px - old_px
+	var/move_y = cy_world_py - old_py
 
 	consume_vehicle_fuel((abs(move_x) + abs(move_y)) * base_fuel_use * fuel_multiplier * get_vehicle_stat_multiplier("fuel"))
-	reward_driver_movement_experience(driver)
-	handle_vehicle_movement_visuals()
+	if(move_x || move_y)
+		reward_driver_movement_experience(driver)
+		handle_vehicle_movement_visuals()
 	cy_apply_world_pixel_position()
+	if(collided)
+		cy_on_pixel_collision(collided, cy_velocity_to_dir())
 
 /obj/vehicle/sealed/car/cyberpunk/proc/handle_vehicle_movement_visuals()
 	if(current_speed < 16 || world.time < last_skid_time + 4)
@@ -3556,7 +3570,9 @@
 		var/old_pixel_x = pixel_x
 		var/old_pixel_y = pixel_y
 		var/move_dir = get_dir(src, new_turf)
+		cy_applying_pixel_position = TRUE
 		forceMove(new_turf)
+		cy_applying_pixel_position = FALSE
 		did_register_to_new_turf = TRUE
 
 		var/tile_shift_x = (x - old_x) * tile
@@ -3633,46 +3649,150 @@
 		return
 	animate(occupant.client, pixel_x = 0, pixel_y = 0, time = 1, flags = ANIMATION_END_NOW)
 
-/obj/vehicle/sealed/car/cyberpunk/proc/cy_can_occupy_pixel_position(test_px, test_py)
-	var/collision_center_x = test_px + cy_collision_center_offset_x
-	var/collision_center_y = test_py + cy_collision_center_offset_y
-	if(cy_pixel_point_blocked(collision_center_x, collision_center_y))
+/// Sweep both translation and rotation. A blocked step retains the last safe pose.
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_move_pixels(move_x, move_y, target_rotation)
+	var/start_px = cy_world_px
+	var/start_py = cy_world_py
+	var/start_rotation = cy_visual_current_rotation
+	var/rotation_delta = closer_angle_difference(start_rotation, target_rotation)
+	// At most four pixels of travel or five degrees of rotation per collision check.
+	var/steps = max(1, CEILING(max(sqrt(move_x * move_x + move_y * move_y) / 4, abs(rotation_delta) / 5), 1))
+	// Bound work even if an admin or a modifier supplies an extreme velocity.
+	var/processed_steps = min(steps, 32)
+	var/list/obstacles = cy_collect_collision_obstacles(move_x * processed_steps / steps, move_y * processed_steps / steps)
+	for(var/step_index in 1 to processed_steps)
+		var/fraction = step_index / steps
+		var/next_px = start_px + move_x * fraction
+		var/next_py = start_py + move_y * fraction
+		var/next_rotation = SIMPLIFY_DEGREES(start_rotation + rotation_delta * fraction)
+		var/atom/collided = cy_find_pixel_collision(next_px, next_py, next_rotation, obstacles)
+		if(collided)
+			return collided
+		cy_world_px = next_px
+		cy_world_py = next_py
+		cy_visual_current_rotation = next_rotation
+	return null
+
+/// Gather nearby obstacles once per sweep, not once per corner or substep.
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_collect_collision_obstacles(move_x = 0, move_y = 0)
+	var/center_x = cy_world_px + cy_collision_center_offset_x
+	var/center_y = cy_world_py + cy_collision_center_offset_y
+	var/radius = sqrt(cy_collision_half_width ** 2 + cy_collision_half_height ** 2)
+	var/min_x = FLOOR((min(center_x, center_x + move_x) - radius) / ICON_SIZE_X, 1) + 1
+	var/max_x = FLOOR((max(center_x, center_x + move_x) + radius) / ICON_SIZE_X, 1) + 1
+	var/min_y = FLOOR((min(center_y, center_y + move_y) - radius) / ICON_SIZE_Y, 1) + 1
+	var/max_y = FLOOR((max(center_y, center_y + move_y) + radius) / ICON_SIZE_Y, 1) + 1
+	// Another car's origin can be outside the tiles covered by its rotated body.
+	var/turf/bottom_left = locate(clamp(min_x - 3, 1, world.maxx), clamp(min_y - 3, 1, world.maxy), z)
+	var/turf/top_right = locate(clamp(max_x + 3, 1, world.maxx), clamp(max_y + 3, 1, world.maxy), z)
+	var/list/obstacles = list()
+	for(var/turf/check_turf as anything in block(bottom_left, top_right))
+		if(check_turf.density && check_turf.x >= min_x && check_turf.x <= max_x && check_turf.y >= min_y && check_turf.y <= max_y)
+			obstacles += check_turf
+		for(var/atom/movable/obstacle as anything in check_turf)
+			if(obstacle == src || !obstacle.density || istype(obstacle, /obj/machinery/camera))
+				continue
+			obstacles += obstacle
+	return obstacles
+
+/// Returns the actual obstacle, so impact effects use the contacted object.
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_find_pixel_collision(test_px, test_py, rotation, list/obstacles)
+	var/rotation_cos = cos(rotation)
+	var/rotation_sin = sin(rotation)
+	var/extent_x = abs(rotation_cos) * cy_collision_half_width + abs(rotation_sin) * cy_collision_half_height
+	var/extent_y = abs(rotation_sin) * cy_collision_half_width + abs(rotation_cos) * cy_collision_half_height
+	var/center_x = test_px + cy_collision_center_offset_x
+	var/center_y = test_py + cy_collision_center_offset_y
+	if(center_x - extent_x < 0 || center_y - extent_y < 0 || center_x + extent_x > world.maxx * ICON_SIZE_X || center_y + extent_y > world.maxy * ICON_SIZE_Y)
+		return get_turf(src)
+	for(var/atom/obstacle as anything in obstacles)
+		if(QDELETED(obstacle) || !obstacle.density || obstacle.z != z)
+			continue
+		if(istype(obstacle, /obj/vehicle/sealed/car/cyberpunk))
+			var/obj/vehicle/sealed/car/cyberpunk/other_car = obstacle
+			if(cy_overlaps_rectangle(center_x, center_y, rotation_cos, rotation_sin, other_car.cy_world_px + other_car.cy_collision_center_offset_x, other_car.cy_world_py + other_car.cy_collision_center_offset_y, other_car.cy_collision_half_width, other_car.cy_collision_half_height, cos(other_car.cy_visual_current_rotation), sin(other_car.cy_visual_current_rotation)) && !obstacle.CanPass(src, get_dir(obstacle, src)))
+				return obstacle
+			continue
+		var/obstacle_x = (obstacle.x - 1) * ICON_SIZE_X
+		var/obstacle_y = (obstacle.y - 1) * ICON_SIZE_Y
+		var/half_width = ICON_SIZE_X / 2
+		var/half_height = ICON_SIZE_Y / 2
+		if(ismovable(obstacle))
+			var/atom/movable/movable_obstacle = obstacle
+			obstacle_x += movable_obstacle.bound_x
+			obstacle_y += movable_obstacle.bound_y
+			half_width = movable_obstacle.bound_width / 2
+			half_height = movable_obstacle.bound_height / 2
+		if(cy_overlaps_rectangle(center_x, center_y, rotation_cos, rotation_sin, obstacle_x + half_width, obstacle_y + half_height, half_width, half_height) && !obstacle.CanPass(src, get_dir(obstacle, src)))
+			return obstacle
+	return null
+
+/// Separating-axis test for the car's rotated body and a second rectangle.
+/// Positive visual rotations in BYOND are clockwise: local X is (cos, -sin).
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_overlaps_rectangle(center_x, center_y, rotation_cos, rotation_sin, other_x, other_y, other_half_width, other_half_height, other_cos = 1, other_sin = 0)
+	var/delta_x = other_x - center_x
+	var/delta_y = other_y - center_y
+	var/alignment = abs(rotation_cos * other_cos + rotation_sin * other_sin)
+	var/cross_alignment = abs(rotation_sin * other_cos - rotation_cos * other_sin)
+	// Touching edges are allowed; a small tolerance avoids cardinal-angle jitter.
+	if(abs(delta_x * rotation_cos - delta_y * rotation_sin) >= cy_collision_half_width + other_half_width * alignment + other_half_height * cross_alignment - 0.001)
 		return FALSE
-	if(cy_pixel_point_blocked(collision_center_x + cy_collision_half_width, collision_center_y + cy_collision_half_height))
+	if(abs(delta_x * rotation_sin + delta_y * rotation_cos) >= cy_collision_half_height + other_half_width * cross_alignment + other_half_height * alignment - 0.001)
 		return FALSE
-	if(cy_pixel_point_blocked(collision_center_x + cy_collision_half_width, collision_center_y - cy_collision_half_height))
+	if(abs(delta_x * other_cos - delta_y * other_sin) >= other_half_width + cy_collision_half_width * alignment + cy_collision_half_height * cross_alignment - 0.001)
 		return FALSE
-	if(cy_pixel_point_blocked(collision_center_x - cy_collision_half_width, collision_center_y + cy_collision_half_height))
-		return FALSE
-	if(cy_pixel_point_blocked(collision_center_x - cy_collision_half_width, collision_center_y - cy_collision_half_height))
+	if(abs(delta_x * other_sin + delta_y * other_cos) >= other_half_height + cy_collision_half_width * cross_alignment + cy_collision_half_height * alignment - 0.001)
 		return FALSE
 	return TRUE
 
-/obj/vehicle/sealed/car/cyberpunk/proc/cy_pixel_point_blocked(test_px, test_py)
-	var/tile = 32
-	var/check_x = FLOOR(test_px / tile, 1) + 1
-	var/check_y = FLOOR(test_py / tile, 1) + 1
-	var/turf/check_turf = locate(check_x, check_y, z)
-	if(!check_turf || check_turf.density)
-		return TRUE
-
-	for(var/atom/movable/movable_content as anything in check_turf)
-		if(movable_content == src)
-			continue
-		if(movable_content.loc == src)
-			continue
-		if(istype(movable_content, /obj/machinery/camera))
-			continue
-		if(movable_content.density)
-			return TRUE
-	return FALSE
-
-/obj/vehicle/sealed/car/cyberpunk/proc/cy_on_pixel_collision(direction)
+/obj/vehicle/sealed/car/cyberpunk/proc/cy_on_pixel_collision(atom/collided, direction)
 	var/speed = cy_get_speed()
 	if(speed < 1)
 		return
 	current_speed = speed
-	handle_vehicle_collision(get_step(src, direction) || get_turf(src), direction, speed)
+	handle_vehicle_collision(collided, direction, speed)
+
+#ifdef UNIT_TESTS
+/datum/unit_test/cyberpunk_car_collision/Run()
+	var/turf/start = locate(run_loc_floor_bottom_left.x + 3, run_loc_floor_bottom_left.y + 3, run_loc_floor_bottom_left.z)
+	var/obj/vehicle/sealed/car/cyberpunk/car = allocate(/obj/vehicle/sealed/car/cyberpunk, start)
+	STOP_PROCESSING(SSfastprocess, car)
+	car.cy_visual_current_rotation = 0
+	var/start_px = car.cy_world_px
+	var/start_py = car.cy_world_py
+	var/obj/structure/closet/crate/obstacle = allocate(/obj/structure/closet/crate, locate(start.x, start.y + 2, start.z))
+	if(car.cy_find_pixel_collision(start_px, start_py, 0, list(obstacle)))
+		return Fail("The unrotated car must fit just below an obstacle at its bumper", __FILE__, __LINE__)
+	if(car.cy_find_pixel_collision(start_px, start_py + 4, 0, list(obstacle)) != obstacle)
+		return Fail("The front bumper must collide before the old 16x16 origin box reaches the obstacle", __FILE__, __LINE__)
+	if(car.cy_find_pixel_collision(start_px, start_py + 100, 0, list(obstacle)))
+		return Fail("The sweep endpoint should be clear for the tunnelling regression", __FILE__, __LINE__)
+	if(car.cy_move_pixels(0, 100, 0) != obstacle || car.cy_world_py > start_py + 1)
+		return Fail("Fast movement must stop at the first obstacle and return that exact object", __FILE__, __LINE__)
+	obstacle.forceMove(locate(start.x - 1, start.y, start.z))
+	if(car.cy_find_pixel_collision(start_px, start_py, 0, list(obstacle)))
+		return Fail("An obstacle beside the upright body must not block clear space", __FILE__, __LINE__)
+	if(car.cy_find_pixel_collision(start_px, start_py, 90, list(obstacle)) != obstacle)
+		return Fail("The collision rectangle must rotate with the car", __FILE__, __LINE__)
+	if(car.cy_move_pixels(0, 0, 90) != obstacle || car.cy_visual_current_rotation >= 90)
+		return Fail("Turning in place must retain the last pose that clears the obstacle", __FILE__, __LINE__)
+	if(!car.cy_overlaps_rectangle(0, 0, cos(45), sin(45), 20, 20, 1, 1) || car.cy_overlaps_rectangle(0, 0, cos(45), sin(45), -20, 20, 1, 1))
+		return Fail("Collision rotation must follow BYOND's clockwise visual transform", __FILE__, __LINE__)
+	if(car.cy_overlaps_rectangle(0, 0, cos(45), sin(45), 30, 30, 1, 1))
+		return Fail("Empty corners of a rotated body's axis-aligned bounds must remain passable", __FILE__, __LINE__)
+	qdel(obstacle)
+	car.cy_visual_current_rotation = 0
+	var/obj/vehicle/sealed/car/cyberpunk/other_car = allocate(/obj/vehicle/sealed/car/cyberpunk, locate(start.x + 2, start.y, start.z))
+	STOP_PROCESSING(SSfastprocess, other_car)
+	other_car.cy_world_px = start_px + 44
+	other_car.cy_visual_current_rotation = 90
+	other_car.cy_apply_world_pixel_position()
+	if(car.cy_find_pixel_collision(start_px, start_py, 0, car.cy_collect_collision_obstacles()) != other_car)
+		return Fail("Car-to-car impacts must use both bodies, including pixel offsets and rotation", __FILE__, __LINE__)
+	car.forceMove(locate(start.x, start.y - 1, start.z))
+	if(car.cy_world_py != (car.y - 1) * ICON_SIZE_Y + car.pixel_y)
+		return Fail("External relocation must synchronize the car's collision position", __FILE__, __LINE__)
+#endif
 
 /obj/vehicle/sealed/car/cyberpunk/proc/cy_set_forward_from_dir(direction)
 	switch(direction)
@@ -3842,6 +3962,10 @@
 /obj/vehicle/sealed/car/cyberpunk/proc/get_living_vehicle_collision_target(atom/collided)
 	if(isliving(collided))
 		return collided
+	// Pixel collisions already supply the exact obstacle. Do not hit a bystander
+	// merely because they share a tile with a car, crate, or other solid object.
+	if(!isturf(collided))
+		return null
 	var/turf/collision_turf = get_turf(collided)
 	if(!collision_turf)
 		return null

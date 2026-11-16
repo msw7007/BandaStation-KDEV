@@ -1,10 +1,9 @@
-"""Build native CP13 HUD states from generated art and the TGUI StyleGuide."""
+"""Build native CP13 HUD states from project art, pixel lettering and TGUI frames."""
 
 import argparse
 import hashlib
 import json
 from pathlib import Path
-import shutil
 import sys
 
 import numpy as np
@@ -15,20 +14,21 @@ sys.path.insert(0, str(ROOT))
 from tools.dmi import Dmi
 
 OUTPUT = Path(__file__).resolve().parents[1] / "icons/hud/cp13"
-GLYPH = (141, 175, 185, 255)
+REVIEW_OUTPUT = ROOT / "build/cp13-hud"
+GLYPH = (155, 191, 201, 255)
 ACCENT = (190, 72, 91, 255)
-SOURCES = {
-    "language": "exec-422bfd5c-67cf-40b1-bb3b-63c681ce27df.png",
-    "craft": "exec-2bf2f41f-a913-47f0-8e37-232106480fac.png",
-    "navigate": "exec-fdf7a834-221d-47b0-b449-935539bd8419.png",
-    "area_create": "exec-19c0f08a-0ad0-4985-a436-3a6ca1fd015d.png",
-    "emote": "exec-8c9a4d7e-e990-4875-8031-9fd1abd44e39.png",
-    "resist": "exec-ae2f416e-2602-424b-98de-c513165e33a7.png",
-    "run": "exec-b8dd09d0-8564-467a-bf74-87b3e22d5068.png",
-    "rest": "exec-379b1517-b0cb-43f3-bb47-28e1ae62dbff.png",
-    "underwear": "exec-b8354aee-983c-4291-9e7a-b3e048504bf7.png",
-}
-NATIVE = {"equipment": 32, "memories": 32, "swap": 16, "walk": 16, "throw": 16, "drop": 16}
+UTILITY = (118, 151, 163, 255)
+SLOT_PALETTE = ((13,18,23,255), (16,23,29,255), (20,29,36,255), (24,35,43,255), (28,41,50,255))
+TG_PALETTE = ((23,34,43,255), (44,62,77,255), (68,90,108,255), (95,121,140,255), (129,152,170,255))
+COMBAT_PALETTE = ((36,15,24,255),(65,26,38,255),(109,43,58,255),(156,62,79,255),(190,84,100,255))
+HAND_PALETTE = (*SLOT_PALETTE[:4], SLOT_PALETTE[3])  # Pockets do not use the fifth highlight.
+GLYPH_PALETTE = (
+    (28, 53, 64, 255),    # quiet surface
+    (66, 97, 110, 255),   # broad structural planes
+    (109, 144, 156, 255), # secondary divisions
+    GLYPH,               # one-pixel silhouette boundary
+    ACCENT,              # active/combat states only
+)
 
 
 def write_dmi(output, name, size, frames):
@@ -45,19 +45,68 @@ def write_dmi(output, name, size, frames):
         assert state.get_frame().tobytes() == frames[state.name].tobytes(), state.name
 
 
-def flatten(image):
-    """Remove generated fringe/shading; retain the source silhouette and holes."""
-    pixels = np.array(image.convert("RGBA"), dtype=np.int16)
+def contour_glyph(source_dir, settings):
+    """Fit the selected generated contour without losing thin native-pixel strokes."""
+    if settings.get("render") == "palette":
+        return palette_glyph(source_dir, settings)
+    pixels = np.asarray(Image.open(source_dir / settings["source"]).convert("RGBA"), dtype=np.int16)
     r, g, b, a = (pixels[:, :, i] for i in range(4))
-    cyan = (a >= 224) & (r >= 35) & (g >= 50) & (b >= 50) & (g-r >= 8) & (b-r >= 10)
-    red = (a >= 224) & (r >= 65) & (r-g >= 28) & (r-b >= 20)
-    result = np.zeros(pixels.shape, dtype=np.uint8)
-    result[cyan] = GLYPH
-    result[red] = ACCENT
-    image = Image.fromarray(result)
-    if not image.getbbox():
-        raise ValueError("Source does not contain a usable silhouette")
-    return image.crop(image.getbbox())
+    cyan = (a >= 200) & (r >= 60) & (g-r >= 8) & (b-r >= 8) & (g-r < 100)
+    coverage = Image.fromarray((cyan * 255).astype(np.uint8))
+    if not coverage.getbbox():
+        raise ValueError(f"No usable cyan contour in {settings['source']}")
+    coverage = coverage.crop(coverage.getbbox())
+    canvas = tuple(settings["canvas"])
+    width, height = settings["width"], settings["height"]
+    sx, sy = coverage.width/width, coverage.height/height
+    padx, pady = int(canvas[0]*sx), int(canvas[1]*sy)
+    padded = Image.new("L", (coverage.width+2*padx, coverage.height+2*pady))
+    padded.paste(coverage, (padx, pady))
+    box = (padx-((canvas[0]-width)/2+settings["dx"])*sx,
+           pady-((canvas[1]-height)/2+settings["dy"])*sy)
+    box += (box[0]+canvas[0]*sx, box[1]+canvas[1]*sy)
+    sampled = np.asarray(padded.resize(canvas, Image.Resampling.BOX, box=box))
+    mask = sampled >= settings["threshold"]
+    if not mask.any() or mask[0].any() or mask[-1].any() or mask[:, 0].any() or mask[:, -1].any():
+        raise ValueError(f"Contour must leave a transparent margin: {settings['source']}")
+    result = np.zeros((canvas[1], canvas[0], 4), dtype=np.uint8)
+    result[mask] = UTILITY if canvas == (16,16) else GLYPH
+    return Image.fromarray(result)
+
+
+def palette_glyph(source_dir, settings):
+    """Reduce sparse source planes to exact inks and an opaque native-pixel edge."""
+    pixels = np.asarray(Image.open(source_dir / settings["source"]).convert("RGBA"), dtype=np.int16)
+    r, g, b, a = (pixels[:, :, i] for i in range(4))
+    cyan = (a >= 224) & (r >= 12) & (g-r >= 4) & (b-r >= 8) & (g-r < 110)
+    body = cyan
+    bbox = Image.fromarray(body.astype(np.uint8)*255).getbbox()
+    if not bbox:
+        raise ValueError(f"No usable artwork in {settings['source']}")
+    canvas, size = tuple(settings["canvas"]), tuple(settings["size"])
+    if any(content <= 0 or content > cell-2 for content, cell in zip(size, canvas)):
+        raise ValueError(f"Artwork must leave a transparent margin: {settings['source']}")
+
+    def sample(values):
+        image = Image.fromarray(values.astype(np.uint8)).crop(bbox).resize(size, Image.Resampling.BOX)
+        return np.asarray(image, dtype=float)
+
+    coverage = sample(body*255)/255
+    occupied = coverage >= settings.get("coverage_threshold", .45)
+    tone = sample(np.where(body, g, 0))/np.maximum(coverage, 1/255) + settings.get("tone_bias", 0)
+    # Quantize after reduction: never leave blended colors, alpha fringes or dither.
+    tg_material = settings.get("ink_palette") in ("tg", "hand")
+    ink = np.digitize(tone, (39, 70, 104, 137) if tg_material else (73, 113))
+    padded = np.pad(occupied, 1)
+    interior = (padded[1:-1, :-2] & padded[1:-1, 2:]
+                & padded[:-2, 1:-1] & padded[2:, 1:-1])
+    ink[occupied & ~interior] = settings.get("boundary_ink", 0 if tg_material else 3)
+    rgba = np.zeros((size[1], size[0], 4), dtype=np.uint8)
+    palette = HAND_PALETTE if settings.get("ink_palette") == "hand" else TG_PALETTE if tg_material else GLYPH_PALETTE
+    rgba[occupied] = np.asarray(palette, dtype=np.uint8)[ink[occupied]]
+    result = Image.new("RGBA", canvas)
+    result.alpha_composite(Image.fromarray(rgba), ((canvas[0]-size[0])//2, (canvas[1]-size[1])//2))
+    return result
 
 
 def fit(image, size, bounds=None):
@@ -90,8 +139,87 @@ def vertical_arrow():
     rows.update({y: range(7,9) for y in range(7,13)})
     for y, xs in rows.items():
         for x in xs:
-            image.putpixel((x,y), GLYPH)
+            image.putpixel((x,y), TG_PALETTE[4 if y <= 4 else 3 if y <= 6 else 2])
     return image
+
+
+def wordmark(text, lettering, color=GLYPH):
+    """Native square lettering with the same shadow and lit face as TG sprites."""
+    letters = [lettering["letters"][character] for character in text]
+    spacing = lettering["spacing"]
+    width = sum(len(rows[0]) for rows in letters) + spacing*(len(letters)-1)
+    height = len(letters[0])
+    if width > 30 or height > 14:
+        raise ValueError(f"Wordmark must leave a transparent margin: {text}")
+    mask = Image.new("L", (32,16))
+    x, top = (32-width)//2, (16-height)//2
+    for rows in letters:
+        if len(rows) != height or any(len(row) != len(rows[0]) for row in rows):
+            raise ValueError(f"Inconsistent lettering grid: {text}")
+        for y, row in enumerate(rows):
+            for dx, pixel in enumerate(row):
+                if pixel == "1":
+                    mask.putpixel((x+dx, top+y), 255)
+        x += len(rows[0]) + spacing
+    inks = TG_PALETTE if color != ACCENT else COMBAT_PALETTE
+    return relief(mask, inks)
+
+
+def relief(mask, inks=TG_PALETTE):
+    """Give a native filled pixel mask a dark lower edge and an upper lit face."""
+    occupied = np.asarray(mask) > 0
+    above = np.zeros_like(occupied)
+    above[1:] = occupied[:-1]
+    image = np.zeros((*occupied.shape,4), dtype=np.uint8)
+    shadow = np.zeros_like(occupied)
+    shadow[1:,1:] = occupied[:-1,:-1]
+    image[shadow] = inks[0]
+    image[occupied] = inks[2]
+    image[occupied & ~above] = inks[4]
+    return Image.fromarray(image)
+
+
+def tg_extract(image, palette=TG_PALETTE, include_shadows=False):
+    """Keep TG glyph pixels and their tonal ordering; discard the stock frame."""
+    p = np.asarray(image.convert("RGBA"), dtype=np.int16)
+    r,g,b,a = (p[:,:,i] for i in range(4))
+    mask = (a > 0) & (g-r >= 8) & (b-r >= 16)
+    if include_shadows:
+        mask |= (a == 255)
+    tones = np.digitize(g, (85,99,114,145))
+    out = np.zeros(p.shape, dtype=np.uint8)
+    out[mask] = np.asarray(palette, dtype=np.uint8)[tones[mask]]
+    return Image.fromarray(out)
+
+
+def center_native(image, canvas):
+    image = image.crop(image.getbbox())
+    if image.width > canvas[0]-2 or image.height > canvas[1]-2:
+        return fit(image, canvas, (canvas[0]-2,canvas[1]-2))
+    out = Image.new("RGBA", canvas)
+    out.paste(image, ((canvas[0]-image.width)//2,(canvas[1]-image.height)//2))
+    return out
+
+
+def tg_item(image, canvas, palette=TG_PALETTE):
+    """Recolour an original filled TG item sprite without tracing its outline."""
+    image = center_native(image.convert("RGBA"), canvas)
+    p = np.asarray(image,dtype=np.int16)
+    values = p[:,:,:3].mean(axis=2)
+    visible = p[:,:,3] >= 128
+    low,high = np.percentile(values[visible], (5,95))
+    tones = np.clip(((values-low)/max(1,high-low)*4).round(),0,4).astype(int)
+    out = np.zeros(p.shape,dtype=np.uint8)
+    out[visible] = np.asarray(palette,dtype=np.uint8)[tones[visible]]
+    return Image.fromarray(out)
+
+
+def combat_tint(image):
+    pixels = np.array(image)
+    visible = pixels[:,:,3] > 0
+    tones = np.digitize(pixels[:,:,1], (48,76,106,137))
+    pixels[visible] = np.asarray(COMBAT_PALETTE,dtype=np.uint8)[tones[visible]]
+    return Image.fromarray(pixels)
 
 
 def frame(size, state, outline_only=False):
@@ -99,11 +227,11 @@ def frame(size, state, outline_only=False):
     w, h = size
     cut = 2 if min(size) == 16 else 3
     palette = {
-        "idle": ((12,12,20,208), (111,40,54,200)),
-        "hover": ((6,24,31,228), (74,160,180,255)),
-        "active": ((5,29,37,236), (91,189,205,255)),
-        "combat": ((37,7,13,232), (195,64,84,255)),
-        "disabled": ((5,8,13,200), (35,49,56,220)),
+        "idle": ((7,9,14,235), (61,30,41,210)),
+        "hover": ((6,14,19,236), (42,77,88,235)),
+        "active": ((5,16,21,240), (55,105,117,255)),
+        "combat": ((24,8,13,238), (116,40,55,255)),
+        "disabled": ((5,7,11,225), (25,31,37,190)),
     }
     fill, border = palette[state]
     image = Image.new("RGBA", size)
@@ -118,80 +246,106 @@ def compose(frame_image, glyph):
     return image
 
 
+def inventory_glyphs(source_dir):
+    """Keep familiar inventory silhouettes, independently of frames and items."""
+    source = Dmi.from_file(source_dir / "inventory_base.dmi")
+    states = {s.name: s.get_frame().convert("RGBA") for s in source.states}
+    glyphs = {}
+    for name in ("uniform", "suit", "back", "id", "belt", "mask", "glasses", "ears", "head", "suit_storage", "pocket", "gloves", "shoes", "neck"):
+        glyphs[name] = tg_extract(states[name], SLOT_PALETTE)
+
+    # Native CP13-only slots have no corresponding core HUD silhouette.
+    shapes = {
+        "pants": [(9,5),(22,5),(24,27),(17,27),(16,16),(14,27),(7,27)],
+        "undershirt": [(10,5),(13,5),(13,10),(18,10),(18,5),(21,5),(23,14),(21,18),(22,27),(9,27),(10,18),(8,14)],
+        "underwear": [(7,9),(24,9),(23,16),(19,22),(12,22),(8,16)],
+        "tights": [(10,4),(21,4),(22,24),(26,25),(26,28),(19,28),(16,14),(14,27),(6,27),(6,24),(10,23)],
+        "shoulder_left": [(5,11),(9,7),(21,7),(26,12),(24,21),(17,23),(8,20)],
+    }
+    for name, points in shapes.items():
+        mask = Image.new("L", (32,32))
+        ImageDraw.Draw(mask).polygon(points, fill=255)
+        image = relief(mask, SLOT_PALETTE)
+        draw = ImageDraw.Draw(image)
+        # Broad shaded material and dark seams, like TG's filled slot sprites.
+        interior = np.array(image)
+        occupied = np.asarray(mask) > 0
+        rows, cols = np.indices(occupied.shape)
+        interior[occupied & (cols < 14) & (rows > 9)] = SLOT_PALETTE[1]
+        image = Image.fromarray(interior)
+        draw = ImageDraw.Draw(image)
+        if name in ("pants", "underwear", "tights"):
+            draw.line((10 if name != "underwear" else 8, 9 if name != "tights" else 8, 21 if name != "underwear" else 23, 9 if name != "tights" else 8), fill=SLOT_PALETTE[1])
+        if name == "shoulder_left":
+            draw.line([(9,12),(20,12),(23,15)], fill=SLOT_PALETTE[1])
+        glyphs[name] = image
+    glyphs["shoulder_right"] = glyphs["shoulder_left"].transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    glyphs["occupied"] = Image.new("RGBA", (32,32))
+    return glyphs
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--generated", type=Path)
-    parser.add_argument("--trial", type=Path)
-    parser.add_argument("--preview", action="store_true", help="Also write the optional reference catalogue")
+    parser.add_argument("--preview", action="store_true", help="Write a reference catalogue under build/cp13-hud")
+    parser.add_argument("--export-pngs", action="store_true", help="Export individual states under build/cp13-hud/native")
     args = parser.parse_args()
-    source_dir = OUTPUT / "sources"
-    source_dir.mkdir(parents=True, exist_ok=True)
-    if args.generated:
-        for key, name in SOURCES.items():
-            shutil.copy2(args.generated / name, source_dir / f"{key}.png")
-    if args.trial:
-        for key, size in NATIVE.items():
-            shutil.copy2(args.trial / f"{key}_{size}x{size}.png", source_dir / f"native_{key}.png")
-
-    glyphs = {}
-    for key in ("language", "craft", "navigate", "area_create", "emote", "resist"):
-        glyphs[key] = fit(flatten(Image.open(source_dir / f"{key}.png")), (16,16), (12,12))
-    # Preserve a full native-pixel gutter between the generated floor tiles.
-    for coordinate in range(16):
-        glyphs["area_create"].putpixel((7, coordinate), (0,0,0,0))
-        glyphs["area_create"].putpixel((coordinate, 7), (0,0,0,0))
-    for key in ("swap", "throw", "drop"):
-        glyphs[key] = Image.open(source_dir / f"native_{key}.png").convert("RGBA")
-        p = np.array(glyphs[key])
-        p[(p[:,:,3] > 0) & (p[:,:,1] > p[:,:,0])] = GLYPH
-        p[(p[:,:,3] > 0) & (p[:,:,0] > p[:,:,1])] = ACCENT
-        glyphs[key] = Image.fromarray(p)
-    glyphs["memories"] = fit(flatten(Image.open(source_dir / "native_memories.png")), (16,16), (14,14))
-    # A one-pixel spine keeps the two pages distinct after nearest fitting.
-    for y in range(4,11):
-        glyphs["memories"].putpixel((7,y), (0,0,0,0))
-    glyphs["sleep"] = fit(flatten(Image.open(source_dir / "rest.png")), (16,16), (12,6))
-    glyphs["throw_combat"] = glyphs["throw"].copy()
-    p = np.array(glyphs["throw_combat"])
-    p[p[:,:,3] > 0] = ACCENT
-    glyphs["throw_combat"] = Image.fromarray(p)
+    source_dir = OUTPUT / "sources" / "contour"
+    settings = json.loads((source_dir / "grid.json").read_text(encoding="utf-8"))
+    contours = {name: contour_glyph(source_dir, spec) for name, spec in settings.items()}
+    glyphs = dict.fromkeys((
+        "language", "craft", "navigate", "area_create", "emote", "resist",
+        "swap", "throw", "drop", "memories", "sleep",
+    ))
+    glyphs.update({name: contours[name] for name in ("swap", "throw", "drop", "sleep")})
+    tg_states = {s.name:s.get_frame() for s in Dmi.from_file(source_dir / "inventory_base.dmi").states}
+    for name, state in (("language","talk_wheel"),("craft","craft"),("navigate","navigate"),("area_create","area_edit"),("memories","memories")):
+        glyphs[name] = center_native(tg_extract(tg_states[state], include_shadows=True), (16,16))
+    for name in ("swap","throw","drop","sleep"):
+        glyphs[name] = relief(glyphs[name].getchannel("A"))
+    glyphs["resist"] = tg_item(Image.open(source_dir / "tg/handcuff.png"), (16,16))
+    # A filled expression tile retains the familiar face instead of a wire icon.
+    face = Image.new("L", (16,16))
+    ImageDraw.Draw(face).polygon([(5,3),(10,3),(12,5),(12,10),(10,12),(5,12),(3,10),(3,5)], fill=255)
+    glyphs["emote"] = relief(face)
+    face_draw = ImageDraw.Draw(glyphs["emote"])
+    face_draw.line((5,6,6,6), fill=TG_PALETTE[0])
+    face_draw.line((9,6,10,6), fill=TG_PALETTE[0])
+    face_draw.line([(5,9),(6,10),(9,10),(10,9)], fill=TG_PALETTE[0])
+    glyphs["throw_combat"] = combat_tint(glyphs["throw"])
     glyphs["act_throw"] = glyphs["throw"].copy()
     glyphs["act_throw_on"] = glyphs["throw_combat"].copy()
     for alias, original in (("act_resist_on", "resist"), ("act_sleep_flick", "sleep")):
-        pixels = np.array(glyphs[original])
-        pixels[pixels[:,:,3] > 0] = ACCENT
-        glyphs[alias] = Image.fromarray(pixels)
+        glyphs[alias] = combat_tint(glyphs[original])
     glyphs = {name: clean_pixels(image) for name, image in glyphs.items()}
     glyphs["arrow_up"] = vertical_arrow()
     glyphs["arrow_down"] = glyphs["arrow_up"].transpose(Image.Transpose.FLIP_TOP_BOTTOM)
     write_dmi(OUTPUT, "glyphs_16x16", (16,16), glyphs)
 
-    large = {
-        "equipment": fit(flatten(Image.open(source_dir / "native_equipment.png")), (32,32), (22,24)),
-        "underwear": fit(flatten(Image.open(source_dir / "underwear.png")), (32,32), (18,22)),
-        "accessories": fit(flatten(Image.open(source_dir / "area_create.png")), (32,32), (18,18)),
-        "memories": fit(flatten(Image.open(source_dir / "native_memories.png")), (32,32), (24,24)),
-    }
+    large = {name: contours[name] for name in ("equipment", "underwear", "accessories")}
+    large["memories"] = center_native(tg_extract(tg_states["memories"], include_shadows=True), (32,32))
     write_dmi(OUTPUT, "glyphs_32x32", (32,32), large)
 
+    inventory = inventory_glyphs(source_dir)
+    write_dmi(OUTPUT, "inventory_32x32", (32,32), inventory)
+
     movement = {}
-    poses = {
-        "walk": fit(flatten(Image.open(source_dir / "native_walk.png")), (32,16), (14,12)),
-        "run": fit(flatten(Image.open(source_dir / "run.png")), (32,16), (22,12)),
-        "rest": fit(flatten(Image.open(source_dir / "rest.png")), (32,16), (24,9)),
-    }
+    lettering = json.loads((source_dir / "lettering.json").read_text(encoding="utf-8"))
+    poses = {"walk": contours["walk"], "run": wordmark("RUN", lettering), "rest": wordmark("REST", lettering)}
     for body in ("human", "anthro"):
         for pose, image in poses.items():
             movement[f"{pose}_{body}"] = image.copy()
+    movement["fight"] = wordmark("FIGHT", lettering, ACCENT)
+    movement["fight_active"] = wordmark("FIGHT", lettering)
     write_dmi(OUTPUT, "movement_32x16", (32,16), movement)
 
     frames = {}
-    for size in ((16,16), (32,16), (32,32), (16,32)):
+    for size in ((16,16), (32,16), (32,32), (16,32), (24,16), (24,32)):
         states = {key: frame(size, key) for key in ("idle", "hover", "active", "combat", "disabled")}
         states.update({"outline": states["idle"].copy(), "grid": states["idle"].copy()})
-        if size == (16,32):
+        if size in ((16,32), (24,32)):
             states["buff"] = states["hover"].copy()
             states["debuff"] = states["combat"].copy()
+        if size == (16,32):
             states["split"] = Image.new("RGBA", size)
             states["split"].alpha_composite(frame((16,16), "idle"), (0,0))
             states["split"].alpha_composite(frame((16,16), "idle"), (0,16))
@@ -210,28 +364,28 @@ def main():
     frames[(32,32)]["scroll_down"] = compose(frame((32,32), "idle"), fit(down.crop(down.getbbox()), (32,32), (10,14)))
     write_dmi(OUTPUT, "frames_32x32", (32,32), frames[(32,32)])
 
-    stock = Dmi.from_file(ROOT / "icons/hud/screen_midnight.dmi")
     hands = {}
     for side in ("l", "r"):
-        original = next(s.get_frame() for s in stock.states if s.name == f"hand_{side}")
-        hands[f"hand_{side}"] = fit(flatten(original), (32,32), (18,18))
+        hands[f"hand_{side}"] = contours["hand"].transpose(Image.Transpose.FLIP_LEFT_RIGHT) if side == "l" else contours["hand"].copy()
         hands[f"{side}handactive"] = frame((32,32), "active", outline_only=True)
     write_dmi(OUTPUT, "hands_32x32", (32,32), hands)
 
     all_sets = {"glyphs_16x16": glyphs, "glyphs_32x32": large, "movement_32x16": movement, "hands_32x32": hands, "floor_16x32": {"floor_change_v": floor}}
+    all_sets["inventory_32x32"] = inventory
     all_sets.update({f"frames_{size[0]}x{size[1]}": states for size, states in frames.items()})
-    native_dir = OUTPUT / "native"
-    native_dir.mkdir(exist_ok=True)
     entries = []
     for group, states in all_sets.items():
-        group_dir = native_dir / group
-        group_dir.mkdir(exist_ok=True)
+        if args.export_pngs:
+            group_dir = REVIEW_OUTPUT / "native" / group
+            group_dir.mkdir(parents=True, exist_ok=True)
         for state, image in states.items():
-            image.save(group_dir / f"{state}.png")
+            if args.export_pngs:
+                image.save(group_dir / f"{state}.png")
             if not group.startswith("frames_"):
                 entries.append((state, image))
     entries.extend((f"frame_{w}x{h}_{state}", states[state]) for (w,h), states in frames.items() for state in ("idle", "hover", "active"))
     if args.preview:
+        REVIEW_OUTPUT.mkdir(parents=True, exist_ok=True)
         font = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 14)
         preview = Image.new("RGB", (960, ((len(entries)+5)//6)*148+50), "#05080d")
         draw = ImageDraw.Draw(preview)
@@ -241,18 +395,26 @@ def main():
             draw.text((x,y), name, font=font, fill="#91b8c2")
             draw.text((x,y+19), f"{image.width}x{image.height}", font=font, fill="#78909a")
             preview.paste(image.resize((image.width*3, image.height*3), Image.Resampling.NEAREST), (x+24,y+40), image.resize((image.width*3,image.height*3), Image.Resampling.NEAREST))
-        preview.save(OUTPUT / "catalogue.png")
+        preview.save(REVIEW_OUTPUT / "catalogue.png")
     manifest = {
         "style_sources": ["tgui/packages/tgui/styles/interfaces/CyberpunkPanel.scss:.StyleGuide", "tgui/packages/tgui-panel/styles/themes/cyberpunk.scss"],
-        "method": "image_gen silhouettes; alpha/palette cleanup; nearest-neighbor native fitting; CSS-derived native pixel frames; stock hand glyphs",
-        "palette": {"glyph": "#8dafb9", "accent": "#be485b", "panel": "#0c0c14", "idle_border": "#6f2836", "active_border": "#5bbdcd"},
-        "sources": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(source_dir.glob("*.png"))},
+        "method": "TG Midnight filled sprite construction: original inventory pixels darkened, original TG small controls, shaded five-ink cyberpunk hands/equipment and relief pixel lettering; no wireframe replacement; CSS-derived frames",
+        "max_colors_per_glyph": 5,
+        "glyph_palette": ["#%02x%02x%02x" % color[:3] for color in GLYPH_PALETTE],
+        "hand_palette": ["#%02x%02x%02x" % color[:3] for color in HAND_PALETTE],
+        "slot_palette": ["#%02x%02x%02x" % color[:3] for color in SLOT_PALETTE],
+        "palette": {"accent": "#be485b", "panel": "#07090e", "idle_border": "#3d1e29", "active_border": "#376975"},
+        "sources": {p.relative_to(OUTPUT / "sources").as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(source_dir.rglob("*")) if p.is_file()},
         "dmi": {},
     }
     for path in sorted(OUTPUT.glob("*.dmi")):
         dmi = Dmi.from_file(path)
-        manifest["dmi"][path.name] = {"width": dmi.width, "height": dmi.height, "states": [s.name for s in dmi.states]}
-    (OUTPUT / "manifest.json").write_text(json.dumps(manifest, indent=2)+"\n", encoding="utf-8")
+        manifest["dmi"][path.name] = {
+            "width": dmi.width, "height": dmi.height,
+            "states": [s.name for s in dmi.states],
+            "rgba_sha256": {s.name: hashlib.sha256(s.get_frame().tobytes()).hexdigest() for s in dmi.states},
+        }
+    (OUTPUT / "manifest.json").write_text(json.dumps(manifest, indent=2)+"\n", encoding="utf-8", newline="\n")
     print(f"Built and RGBA-roundtrip-verified {len(manifest['dmi'])} DMI files")
     for name, info in manifest["dmi"].items():
         print(f"{name}: {info['width']}x{info['height']}, {len(info['states'])} states")
