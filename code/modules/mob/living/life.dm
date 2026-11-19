@@ -1436,20 +1436,28 @@
 	var/selected_action = action || cyberpunk_last_defensive_action || "parry"
 	switch(selected_action)
 		if("dodge")
+			if(!COOLDOWN_FINISHED(src, cyberpunk_dodge_cooldown))
+				balloon_alert(src, "dodge recovering")
+				return FALSE
 			if(!can_dodge() || !spend_stamina(STAMINA_COST_DODGE, "dodge"))
 				balloon_alert(src, "too tired")
 				return FALSE
 			cyberpunk_last_defensive_action = "dodge"
 			cyberpunk_dodge_until = world.time + 2.4 SECONDS
+			COOLDOWN_START(src, cyberpunk_dodge_cooldown, 6 SECONDS)
 			visible_message(span_notice("[src] prepares to dodge."), span_notice("You prepare to dodge."))
 			reward_character_check_experience(SKILL_EVASION, 1, FALSE, 1)
 			return TRUE
 		if("parry")
+			if(!COOLDOWN_FINISHED(src, cyberpunk_parry_cooldown))
+				balloon_alert(src, "parry recovering")
+				return FALSE
 			if(!can_parry() || !spend_stamina(STAMINA_COST_PARRY, "parry"))
 				balloon_alert(src, "too tired")
 				return FALSE
 			cyberpunk_last_defensive_action = "parry"
 			cyberpunk_parry_until = world.time + 3 SECONDS
+			COOLDOWN_START(src, cyberpunk_parry_cooldown, 5 SECONDS)
 			visible_message(span_notice("[src] raises a guard."), span_notice("You prepare to parry."))
 			reward_character_check_experience(SKILL_CONCENTRATION, 1, FALSE, 1)
 			return TRUE

@@ -78,6 +78,86 @@
 		return TRUE
 	return cyberpunk_business_terminal_ui_act(action, params, ui.user, src, business_id)
 
+/obj/machinery/computer/business_terminal/cyberpunk_test
+	var/test_bench_prepared = FALSE
+
+/obj/machinery/computer/business_terminal/cyberpunk_test/ui_data(mob/user)
+	var/list/data = ..()
+	data["testBench"] = SSmapping.current_map?.map_name == "Cyberpunk Test"
+	if(data["testBench"])
+		var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(business_id)
+		var/mob/living/customer = user
+		data["business"] = istype(customer) && business?.terminal == src && business.can_view(customer) ? business.to_ui_data(customer, TRUE) : null
+	return data
+
+/obj/machinery/computer/business_terminal/cyberpunk_test/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(SSmapping.current_map?.map_name == "Cyberpunk Test" && (action in list("create", "select")))
+		return FALSE
+	. = ..()
+	if(. || action != "prepare_test_bench")
+		return
+	var/mob/living/carbon/user = ui.user
+	if(!istype(user) || !Adjacent(user) || !is_operational || SSmapping.current_map?.map_name != "Cyberpunk Test")
+		return FALSE
+	return prepare_test_bench(user)
+
+/obj/machinery/computer/business_terminal/cyberpunk_test/proc/prepare_test_bench(mob/living/carbon/user)
+	var/area/premises = get_area(src)
+	if(!istype(premises, /area/cyberpunk/city/business/lot_10/test_shop) && !istype(premises, /area/cyberpunk/city/business/lot_09/test_warehouse))
+		return FALSE
+	var/datum/bank_account/personal_account = user.get_bank_account()
+	if(!personal_account || !user.has_living_brain())
+		to_chat(user, span_warning("Для стенда нужен живой персонаж с банковским счётом на ID."))
+		return TRUE
+	var/datum/cyberpunk_business/business
+	for(var/key in SScyberpunk_property.cyberpunk_businesses)
+		var/datum/cyberpunk_business/candidate = SScyberpunk_property.cyberpunk_businesses[key]
+		if(candidate?.get_business_area() == premises)
+			business = candidate
+			break
+	if(business && !business.is_owner(user))
+		to_chat(user, span_warning("У этого стенда уже есть владелец."))
+		return TRUE
+	if(!user.has_neural_implant() && !user.get_organ_slot(ORGAN_SLOT_NEURAL_IMPLANT))
+		var/obj/item/organ/cyberimp/brain/neural_interface/implant = new(get_turf(src))
+		if(!implant.Insert(user, special = TRUE))
+			qdel(implant)
+	if(!user.has_neural_implant())
+		to_chat(user, span_warning("Тестовый бизнес требует исправного нейроинтерфейса."))
+		return TRUE
+	if(!business)
+		business = SScyberpunk_property.create_cyberpunk_business(user, src, list("name" = premises.name, "legal" = "1", "registered_to" = "city"))
+	if(!business)
+		to_chat(user, span_warning("Не удалось зарегистрировать тестовый бизнес."))
+		return TRUE
+	business_id = business.id
+	business.warehouse_enabled = TRUE
+	business.validate_premises(user)
+	var/obj/structure/cyberpunk_business_unload_zone/zone = business.get_unload_zone()
+	if(!zone)
+		for(var/turf/loading_tile as anything in business.get_business_turfs())
+			var/obj/structure/cyberpunk_business_unload_zone/marker = locate() in loading_tile
+			if(marker && !marker.business_id)
+				marker.bind_business(business)
+				business.warehouse_unload_zone_ref = REF(marker)
+				business.warehouse_unload_zone = "[loading_tile.x],[loading_tile.y],[loading_tile.z]"
+				break
+	if(!business.validate_warehouse(user))
+		to_chat(user, span_warning("Площадка 3×3 не прошла проверку."))
+		return TRUE
+	if(!business.link_nearby_vendors(user))
+		to_chat(user, span_warning("В помещении не найден складской автомат."))
+		return TRUE
+	if(!test_bench_prepared)
+		test_bench_prepared = TRUE
+		if(personal_account.account_balance < 500)
+			personal_account.adjust_money(500 - personal_account.account_balance, "Cyberpunk Test starting credits")
+		var/datum/bank_account/business_account = business.get_account()
+		if(business_account && business_account.account_balance < 500)
+			business_account.adjust_money(500 - business_account.account_balance, "Cyberpunk Test working capital")
+	to_chat(user, span_notice("Стенд готов: площадка разгрузки и автомат привязаны. Образцы рядом с терминалом."))
+	return TRUE
+
 /mob/living/verb/create_cyberpunk_business_terminal()
 	set name = "Create Business Terminal"
 	set desc = "Temporarily create a business terminal for testing."
@@ -116,9 +196,12 @@
 	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(requested_business_id)
 	switch(action)
 		if("create")
+			if(!terminal)
+				to_chat(living_user, span_warning("Для регистрации открой стационарный бизнес-терминал в помещении."))
+				return TRUE
 			var/datum/cyberpunk_business/new_business = SScyberpunk_property.create_cyberpunk_business(living_user, terminal, params)
 			if(!new_business)
-				to_chat(living_user, span_warning("Business creation failed. Legal businesses require a business area; off-ledger businesses require a functional terminal area. A neural interface is always required."))
+				to_chat(living_user, span_warning("Регистрация не удалась. Проверь нейроинтерфейс и назначение помещения. В одном помещении может быть только один легальный бизнес."))
 			else
 				to_chat(living_user, span_notice("Business #[new_business.id] created and linked to your neural interface."))
 			return TRUE
@@ -152,6 +235,14 @@
 			else
 				to_chat(living_user, span_warning("Unable to update warehouse settings."))
 			return TRUE
+		if("set_trade_price")
+			return business?.set_trade_price(living_user, params["item"], text2num(params["price"]))
+		if("set_buyer_adjustment")
+			if(business?.set_buyer_adjustment(living_user, params["buyer"], text2num(params["adjustment"])))
+				to_chat(living_user, span_notice("Buyer adjustment saved."))
+			else
+				to_chat(living_user, span_warning("Select a corporation, civilian, or a valid business ID."))
+			return TRUE
 		if("validate_premises")
 			if(business?.validate_premises(living_user))
 				to_chat(living_user, span_notice("Business premises validated."))
@@ -184,15 +275,15 @@
 			return TRUE
 		if("absorb_warehouse_items")
 			if(business?.absorb_unload_zone_items(living_user))
-				to_chat(living_user, span_notice("Unload zone items absorbed into warehouse stock."))
+				to_chat(living_user, span_notice("Предметы с пола площадки приняты на склад."))
 			else
-				to_chat(living_user, span_warning("No valid physical items were found around the unload zone."))
+				to_chat(living_user, span_warning("На полу площадки 3×3 нет подходящих предметов или склад ещё не настроен."))
 			return TRUE
 		if("withdraw_warehouse_item")
 			if(business?.withdraw_warehouse_item(living_user, params["item"], text2num(params["amount"])))
-				to_chat(living_user, span_notice("Warehouse item withdrawn at the unload zone."))
+				to_chat(living_user, span_notice("Предмет выдан на белый квадрат."))
 			else
-				to_chat(living_user, span_warning("Unable to withdraw that warehouse item."))
+				to_chat(living_user, span_warning("Подойди к белому квадрату и проверь остаток на складе."))
 			return TRUE
 		if("add_employee")
 			if(business?.add_employee(living_user, params["name"], text2num(params["wage"])))
@@ -250,9 +341,9 @@
 			return TRUE
 		if("restock_vendors")
 			if(business?.restock_linked_vendors(living_user))
-				to_chat(living_user, span_notice("Linked vendors restocked from warehouse."))
+				to_chat(living_user, span_notice("Товар со склада загружен в автомат."))
 			else
-				to_chat(living_user, span_warning("No linked vendors could be restocked."))
+				to_chat(living_user, span_warning("В автомате нет свободных мест для товаров, которые есть на складе."))
 			return TRUE
 	return FALSE
 

@@ -38,7 +38,7 @@
 		var/list/static_record = list(
 			path = SANITIZED_PATH(record.product_path),
 			name = record.name,
-			price = get_cyberpunk_business_vending_price(record.price),
+			price = get_cyberpunk_business_vending_price(record.price, record.name),
 			ref = REF(record),
 			colorable = record.colorable,
 		)

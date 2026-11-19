@@ -31,6 +31,7 @@
 
 /obj/item/plant_analyzer/Destroy()
 	STOP_PROCESSING(SSobj, src)
+	QDEL_LIST(cyberpunk_gene_sample)
 	return ..()
 
 /obj/item/plant_analyzer/add_item_context(
@@ -78,6 +79,14 @@
 		return ITEM_INTERACT_BLOCKING
 
 	shown_tab = PLANT_ANALYZER_STAT_TAB
+	var/obj/item/source_item = interacting_with
+	var/obj/item/seeds/source_seed
+	if(istype(source_item, /obj/item/seeds))
+		source_seed = source_item
+	else if(istype(source_item))
+		source_seed = source_item.get_plant_seed()
+	if(source_seed && user.can_read(src) && !user.is_blind())
+		cyberpunk_capture_gene_sample(source_seed, user)
 	return analyze(user, interacting_with)
 
 /// Same as above, but with right click. Right-clicking scans for chemicals.
@@ -159,6 +168,11 @@
 /obj/item/plant_analyzer/ui_static_data(mob/user)
 	var/list/data = list()
 	data["cycle_seconds"] = HYDROTRAY_CYCLE_DELAY / 10
+	data["stat_limits"] = list(
+		"production" = MAX_PLANT_PRODUCTION,
+		"lifespan" = MAX_PLANT_LIFESPAN,
+		"weed_rate" = MAX_PLANT_WEEDRATE,
+	)
 	data["trait_db"] = list()
 	for(var/datum/plant_gene/trait as anything in GLOB.plant_traits)
 		var/trait_data = list(list(
@@ -291,6 +305,7 @@
 		"product_icon" = seed.product?.icon,
 		"product_icon_state" = seed.product?.icon_state,
 		"potency" = seed.potency,
+		"mutation_potential" = seed.cyberpunk_mutation_potential,
 		"yield" = seed.yield,
 		"instability" = seed.instability,
 		"maturation" = seed.maturation,

@@ -25,6 +25,7 @@ type Apartment = {
   savedAt?: string;
   loadedThisRound: BooleanLike;
   canSaveLoad: BooleanLike;
+  canRestore: BooleanLike;
   history?: string[];
 };
 
@@ -34,6 +35,8 @@ type Data = {
   hasNeural: BooleanLike;
   apartments: Apartment[];
   apartment?: Apartment;
+  testReceiver?: BooleanLike;
+  testLoaded?: BooleanLike;
 };
 
 export const NtosApartmentTerminal = () => {
@@ -46,10 +49,34 @@ export const NtosApartmentTerminal = () => {
     apartment,
   } = data;
 
+  if (data.testReceiver) {
+    return (
+      <NtosWindow width={450} height={270}>
+        <NtosWindow.Content>
+          <Section title="Квартира Б · восстановление">
+            <Box mb={1}>
+              Загрузит полы и обстановку квартиры А, которые этот персонаж
+              сохранил в предыдущем раунде.
+            </Box>
+            <Button.Confirm
+              icon="upload"
+              confirmContent="Заменить обстановку квартиры Б"
+              disabled={!hasNeural || !!data.testLoaded}
+              tooltip={hasNeural ? 'Можно загрузить один раз за раунд.' : 'Подготовь стенд в мастерской на Z1, чтобы получить нейроинтерфейс.'}
+              onClick={() => act('restore_test_apartment')}
+            >
+              {data.testLoaded ? 'Снимок загружен' : 'Восстановить снимок квартиры А'}
+            </Button.Confirm>
+          </Section>
+        </NtosWindow.Content>
+      </NtosWindow>
+    );
+  }
+
   return (
     <NtosWindow width={700} height={620}>
       <NtosWindow.Content scrollable className="CyberpunkPanel">
-        <Section title="Apartment terminal">
+        <Section title="Терминал квартиры">
           <LabeledList>
             <LabeledList.Item label="ID account">
               {accountName || 'No ID account'}
@@ -99,12 +126,12 @@ const ApartmentCreation = (props: { disabled: boolean }) => {
   const [name, setName] = useState('');
 
   return (
-    <Collapsible title="Bind apartment">
+    <Collapsible title="Привязать квартиру">
       <Stack vertical>
         <Stack.Item>
           <Input
             fluid
-            placeholder="Apartment name"
+            placeholder="Название квартиры"
             value={name}
             onChange={setName}
           />
@@ -116,7 +143,7 @@ const ApartmentCreation = (props: { disabled: boolean }) => {
             disabled={props.disabled}
             onClick={() => act('create', { name })}
           >
-            Bind current area to neural interface
+            Привязать эту квартиру
           </Button>
         </Stack.Item>
       </Stack>
@@ -143,12 +170,16 @@ const ApartmentPanel = (props: { apartment: Apartment }) => {
             {apartment.savedAt || 'never'}
           </LabeledList.Item>
           <LabeledList.Item label="Round load">
-            {apartment.loadedThisRound ? 'already used' : 'available'}
+            {apartment.loadedThisRound
+              ? 'already used'
+              : apartment.canRestore
+                ? 'available'
+                : 'requires a snapshot from an earlier round'}
           </LabeledList.Item>
         </LabeledList>
       </Section>
 
-      <Section title="Persistence">
+      <Section title="Сохранение обстановки">
         <Stack>
           <Stack.Item grow>
             <Button
@@ -157,7 +188,7 @@ const ApartmentPanel = (props: { apartment: Apartment }) => {
               disabled={!apartment.canSaveLoad}
               onClick={() => act('save', { id: apartment.id })}
             >
-              Save apartment snapshot
+              Сохранить снимок квартиры
             </Button>
           </Stack.Item>
           <Stack.Item grow>
@@ -165,14 +196,10 @@ const ApartmentPanel = (props: { apartment: Apartment }) => {
               fluid
               icon="upload"
               color="bad"
-              disabled={
-                !apartment.canSaveLoad ||
-                apartment.loadedThisRound ||
-                apartment.savedObjects <= 0
-              }
+              disabled={!apartment.canRestore}
               onClick={() => act('load', { id: apartment.id })}
             >
-              Overwrite area from snapshot
+              Восстановить эту квартиру из снимка
             </Button.Confirm>
           </Stack.Item>
         </Stack>

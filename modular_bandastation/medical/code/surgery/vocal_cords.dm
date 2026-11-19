@@ -48,7 +48,7 @@
 		span_notice("[capitalize(surgeon.declent_ru(NOMINATIVE))] завершает операцию на голосовых связках [patient.declent_ru(GENITIVE)]."),
 	)
 
-	patient.change_tts_seed(surgeon, TTS_OVERRIDE_GENDER)
+	INVOKE_ASYNC(patient, TYPE_PROC_REF(/atom, change_tts_seed), surgeon, TTS_OVERRIDE_GENDER)
 	return ..()
 
 /datum/surgery_operation/limb/tune_vocal_cords/on_failure(atom/movable/operating_on, mob/living/surgeon, tool, list/operation_args)

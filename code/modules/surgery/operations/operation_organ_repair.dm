@@ -110,7 +110,7 @@
 
 /datum/surgery_operation/organ/repair/implant/configure_ice/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	var/obj/item/organ/cyberimp/brain/neural_interface/interface = organ
-	interface.open_ice_configuration(surgeon)
+	INVOKE_ASYNC(interface, TYPE_PROC_REF(/obj/item/organ/cyberimp/brain/neural_interface, open_ice_configuration), surgeon)
 
 /datum/surgery_operation/organ/repair/nerve_severing
 	name = "Nerve severing"

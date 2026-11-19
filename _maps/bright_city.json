@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "map_name": "Bright City",
+  "map_path": "map_files/Bright City",
+  "map_file": [
+    "BrightCity.dmm",
+    "GovernmentShip.dmm"
+  ],
+  "planetary": 1,
+  "space_ruin_levels": 0,
+  "height_autosetup": false,
+  "traits": [
+    {
+      "Linkage": null,
+      "Station": true,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/openspace",
+      "No Parallax": true,
+      "Up": true
+    },
+    {
+      "Linkage": null,
+      "Station": true,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/openspace",
+      "No Parallax": true,
+      "Down": true,
+      "Up": true
+    },
+    {
+      "Linkage": null,
+      "Station": true,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/openspace",
+      "No Parallax": true,
+      "Down": true,
+      "Up": true
+    },
+    {
+      "Linkage": null,
+      "Station": true,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/openspace",
+      "No Parallax": true,
+      "Down": true,
+      "Up": true
+    },
+    {
+      "Linkage": null,
+      "Station": true,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/openspace",
+      "No Parallax": true,
+      "Down": true,
+      "Up": true
+    },
+    {
+      "Linkage": null,
+      "Station": true,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/openspace",
+      "No Parallax": true,
+      "Down": true
+    },
+    {
+      "Linkage": null,
+      "Station": false,
+      "Gravity": 1,
+      "Baseturf": "/turf/open/space/basic",
+      "No Parallax": true
+    }
+  ],
+  "shuttles": {
+    "cargo": "cargo_delta"
+  },
+  "bonus_weakpoints": -3
+}

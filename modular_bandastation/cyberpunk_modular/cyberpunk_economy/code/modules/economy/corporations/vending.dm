@@ -205,7 +205,8 @@
 		account.adjust_money(offer["price"], "Corporate service chip refund")
 		qdel(chip)
 		return FALSE
-	SScyberpunk_corporations.get_cyberpunk_corporation(cyberpunk_corporate_vendor_id).add_funds(offer["price"], "service chip sale")
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(cyberpunk_corporate_vendor_id)
+	corporation?.add_funds(offer["price"], "service chip sale")
 	to_chat(user, span_notice("The service chip is implanted and linked to your neural interface."))
 	return TRUE
 
@@ -280,7 +281,7 @@
 	if(guardians)
 		var/mob/living/attacker = world.time <= last_attack_at + 10 SECONDS ? last_attacker_ref?.resolve() : null
 		var/mob/living/basic/cyberpunk_corporate_agent/guardian/drone = new(get_turf(imp_in), corporation_id, "guardian", imp_in.real_name)
-		drone.faction = list("corporate_guardian_[corporation_id]")
+		drone.set_faction(list("corporate_guardian_[corporation_id]"))
 		if(attacker && attacker != imp_in && attacker.z == imp_in.z && get_dist(attacker, imp_in) <= 7)
 			drone.ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, attacker)
 		if(corporation_id == CYBERPUNK_CORP_RYAZNOV)
@@ -450,6 +451,17 @@
 		else
 			qdel(module)
 	set_cyberpunk_corporate_vendor(preloaded_corporate_manufacturer)
+	if(cyberpunk_fixed_supply)
+		rotate_cyberpunk_sale_stock(TRUE)
+
+/obj/machinery/vending/cyberpunk_corporate/ui_data(mob/user)
+	. = ..()
+	if(cyberpunk_fixed_supply && SSmapping.current_map?.map_name == "Cyberpunk Test")
+		.["corporateSupply"] = list(
+			"active" = has_cyberpunk_supply_certification(),
+			"interval" = DisplayTimeText(get_cyberpunk_corporate_supply_interval()),
+			"next" = DisplayTimeText(max(0, cyberpunk_next_sale_rotation - world.time)),
+		)
 
 /obj/machinery/vending/cyberpunk_corporate/benn
 	name = "Benn corporate vending machine"
@@ -468,6 +480,24 @@
 	preloaded_corporation_id = CYBERPUNK_CORP_STARLIGHT
 	preloaded_corporate_manufacturer = "Starlight"
 	preloaded_module_type = /datum/cyberpunk_machine_module/corporate_vending_bus/starlight
+
+/obj/machinery/vending/cyberpunk_corporate/benn/cyberpunk_test
+	icon_state = "med"
+	cyberpunk_fixed_supply = TRUE
+	payment_department = NO_FREEBIES
+	products = list(/obj/item/reagent_containers/hypospray/medipen/salbutamol/benn = 4)
+
+/obj/machinery/vending/cyberpunk_corporate/ryaznov/cyberpunk_test
+	icon_state = "engi"
+	cyberpunk_fixed_supply = TRUE
+	payment_department = NO_FREEBIES
+	products = list(/obj/item/stock_parts/power_store/cell = 4, /obj/item/stack/cable_coil = 4)
+
+/obj/machinery/vending/cyberpunk_corporate/starlight/cyberpunk_test
+	icon_state = "tool"
+	cyberpunk_fixed_supply = TRUE
+	payment_department = NO_FREEBIES
+	products = list(/obj/item/flashlight/starlight_beacon = 4)
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/register_cyberpunk_corporate_vendor(obj/machinery/vending/vendor, corporation_id, mob/living/user = null)
 	if(!vendor)

@@ -245,8 +245,16 @@
 /area/cyberpunk/city/business/lot_09
 	name = "Бизнес-зона 09"
 
+/area/cyberpunk/city/business/lot_09/test_warehouse
+	name = "Старлайт — склад поставщика"
+	requires_power = TRUE
+
 /area/cyberpunk/city/business/lot_10
 	name = "Бизнес-зона 10"
+
+/area/cyberpunk/city/business/lot_10/test_shop
+	name = "Рынок — торговая мастерская"
+	requires_power = TRUE
 
 /area/cyberpunk/city/business/lot_11
 	name = "Бизнес-зона 11"
@@ -298,8 +306,16 @@
 /area/cyberpunk/city/housing/apartment/unit_01
 	name = "Квартира 01"
 
+/area/cyberpunk/city/housing/apartment/unit_01/test_apartment
+	name = "Квартира для сохранения"
+	requires_power = TRUE
+
 /area/cyberpunk/city/housing/apartment/unit_02
 	name = "Квартира 02"
+
+/area/cyberpunk/city/housing/apartment/unit_02/test_receiver
+	name = "Квартира Б — приём сохранения"
+	requires_power = FALSE
 
 /area/cyberpunk/city/housing/apartment/unit_03
 	name = "Квартира 03"

@@ -303,7 +303,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/item/chair/stool/bar/dark, 0)
 	name = "folding fuel generator kit"
 	desc = "A packed gasoline generator. Feed it fuel, anchor it, and connect it to a cable node."
 	icon = 'icons/obj/machines/engine/other.dmi'
-	icon_state = "portgen0"
+	icon_state = "portgen0_0"
 	deployed_type = /obj/machinery/power/cyberpunk_generator/gasoline/foldable
 
 /obj/machinery/power/cyberpunk_generator/gasoline/foldable

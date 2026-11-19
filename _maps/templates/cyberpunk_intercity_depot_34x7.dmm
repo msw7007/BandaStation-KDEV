@@ -1,0 +1,326 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aa" = (
+/turf/closed/indestructible/iron,
+/area/cyberpunk/city/infrastructure/transit_hub)
+"ab" = (
+/turf/open/floor/tram/cyberpunk_intercity,
+/area/cyberpunk/city/infrastructure/transit_hub)
+"ac" = (
+/obj/structure/fluff/tram_rail{
+	dir = 1
+	},
+/turf/open/floor/tram/cyberpunk_intercity,
+/area/cyberpunk/city/infrastructure/transit_hub)
+"ad" = (
+/obj/structure/fluff/tram_rail{
+	dir = 2
+	},
+/turf/open/floor/tram/cyberpunk_intercity,
+/area/cyberpunk/city/infrastructure/transit_hub)
+
+(1,1,1) = {"
+aa
+aa
+aa
+aa
+aa
+aa
+aa
+"}
+(2,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(3,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(4,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(5,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(6,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(7,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(8,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(9,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(10,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(11,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(12,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(13,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(14,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(15,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(16,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(17,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(18,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(19,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(20,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(21,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(22,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(23,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(24,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(25,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(26,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(27,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(28,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(29,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(30,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(31,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(32,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(33,1,1) = {"
+aa
+ab
+ad
+ab
+ac
+ab
+aa
+"}
+(34,1,1) = {"
+aa
+aa
+aa
+aa
+aa
+aa
+aa
+"}

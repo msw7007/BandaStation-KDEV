@@ -7,7 +7,7 @@ GLOBAL_LIST_EMPTY(cyberpunk_metro_doors)
 
 #define CYBERPUNK_METRO_TRAIN_TEMPLATE "_maps/templates/cyberpunk_metro_train_32x5.dmm"
 #define CYBERPUNK_METRO_EXTERIOR_CARS 3
-#define CYBERPUNK_METRO_MOVE_STEP_DELAY (0.2 SECONDS)
+#define CYBERPUNK_METRO_MOVE_STEP_DELAY (0.1 SECONDS)
 
 SUBSYSTEM_DEF(cyberpunk_metro)
 	name = "Cyberpunk Metro"
@@ -54,6 +54,8 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		var/list/stops = cyberpunk_metro_route_stops(route_id)
 		if(length(stops) < 2)
 			stack_trace("Cyberpunk metro route '[route_id]' needs at least two stop landmarks.")
+			continue
+		if(!length(cyberpunk_metro_route_path(route_id)))
 			continue
 		var/list/route_data = routes[route_id]
 		var/train_count = max(1, route_data["train_count"])
@@ -180,12 +182,10 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		var/atom/end_point = control_points[1]
 		if(index < length(control_points))
 			end_point = control_points[index + 1]
-		var/list/segment = cyberpunk_metro_path_between(start_point, end_point)
+		var/list/segment = cyberpunk_metro_path_between(start_point, end_point, route_id)
 		if(!length(segment))
-			stack_trace("Cyberpunk metro route '[route_id]' has no connected metro-area path between [start_point] and [end_point].")
-			if(route_path[length(route_path)] != end_point)
-				route_path += end_point
-			continue
+			stack_trace("Cyberpunk metro route '[route_id]' has no connected rail path between [start_point] and [end_point].")
+			return null
 		if(length(segment) < 2)
 			continue
 		for(var/segment_index in 2 to length(segment))
@@ -210,10 +210,10 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		cyberpunk_metro_insert_route_landmark(route_points, route_point)
 	return route_points
 
-/proc/cyberpunk_metro_path_between(atom/start_point, atom/end_point)
+/proc/cyberpunk_metro_path_between(atom/start_point, atom/end_point, route_id = "main")
 	var/turf/start_turf = get_turf(start_point)
 	var/turf/end_turf = get_turf(end_point)
-	if(!start_turf || !end_turf || start_turf.z != end_turf.z)
+	if(!cyberpunk_metro_rail_at(start_turf, route_id) || !cyberpunk_metro_rail_at(end_turf, route_id) || start_turf.z != end_turf.z)
 		return null
 	if(start_turf == end_turf)
 		return list(start_turf)
@@ -228,7 +228,7 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 			break
 		for(var/direction in GLOB.cardinals)
 			var/turf/next_turf = get_step(current_turf, direction)
-			if(!cyberpunk_metro_can_route_through(next_turf, start_turf, end_turf))
+			if(!cyberpunk_metro_can_step(current_turf, next_turf, route_id))
 				continue
 			if(visited[next_turf])
 				continue
@@ -251,14 +251,38 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		index--
 	return path
 
-/proc/cyberpunk_metro_can_route_through(turf/check_turf, turf/start_turf, turf/end_turf)
-	if(!check_turf)
+/// Explicit rail edges are authoritative; a metro area alone is never a track.
+/obj/structure/fluff/tram_rail/cyberpunk
+	name = "metro rail"
+	var/route_id = "main"
+	/// Cardinal exits; corners need two perpendicular exits.
+	var/rail_connections = NORTH | SOUTH
+
+/obj/structure/fluff/tram_rail/cyberpunk/Initialize(mapload)
+	. = ..()
+	cyberpunk_metro_invalidate_route_path(route_id)
+
+/obj/structure/fluff/tram_rail/cyberpunk/Destroy(force)
+	cyberpunk_metro_invalidate_route_path(route_id)
+	return ..()
+
+/proc/cyberpunk_metro_rail_at(turf/track_turf, route_id)
+	if(!isopenturf(track_turf))
+		return null
+	for(var/obj/structure/fluff/tram_rail/cyberpunk/rail in track_turf)
+		if(!QDELETED(rail) && rail.route_id == route_id)
+			return rail
+	return null
+
+/proc/cyberpunk_metro_can_step(turf/origin_turf, turf/destination_turf, route_id)
+	if(!origin_turf || !destination_turf || origin_turf.z != destination_turf.z || get_dist(origin_turf, destination_turf) != 1)
 		return FALSE
-	if(check_turf == start_turf || check_turf == end_turf)
-		return TRUE
-	if(!isopenturf(check_turf))
+	var/direction = get_dir(origin_turf, destination_turf)
+	if(!(direction in GLOB.cardinals))
 		return FALSE
-	return istype(get_area(check_turf), /area/cyberpunk/city/metro)
+	var/obj/structure/fluff/tram_rail/cyberpunk/from_rail = cyberpunk_metro_rail_at(origin_turf, route_id)
+	var/obj/structure/fluff/tram_rail/cyberpunk/to_rail = cyberpunk_metro_rail_at(destination_turf, route_id)
+	return from_rail && to_rail && (from_rail.rail_connections & direction) && (to_rail.rail_connections & REVERSE_DIR(direction))
 
 /proc/cyberpunk_metro_invalidate_route_path(route_id)
 	if(!route_id)
@@ -473,7 +497,8 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	if(!length(stops))
 		return
 	if(!current_stop || QDELETED(current_stop))
-		arrive_at(stops[1])
+		if(!length(travel_history))
+			arrive_at(stops[1])
 		return
 	if(state == "docked")
 		if(world.time < next_departure_at)
@@ -510,7 +535,7 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	if(!stop || QDELETED(stop))
 		return FALSE
 	if(!length(new_route_path))
-		new_route_path = cyberpunk_metro_route_stops(route_id)
+		return FALSE
 	if(length(new_route_path) < 2)
 		return FALSE
 	route_path = new_route_path.Copy()
@@ -541,7 +566,7 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	if(!stop || QDELETED(stop))
 		return
 	var/turf/origin = get_turf(stop)
-	if(!origin)
+	if(!origin || get_turf(src) != origin || !cyberpunk_metro_rail_at(origin, route_id))
 		return
 	current_stop = stop
 	target_stop = null
@@ -558,7 +583,8 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		var/turf/next_turf = get_turf(next_point)
 		new_movement_dir = get_cardinal_step_dir(origin, next_turf) || movement_dir
 	movement_dir = new_movement_dir
-	rebuild_travel_history(origin, movement_dir)
+	if(!length(travel_history))
+		rebuild_travel_history(origin)
 	var/list/segments = cyberpunk_metro_train_segments(route_id, train_id)
 	for(var/obj/structure/cyberpunk_metro_train/segment as anything in segments)
 		segment.current_stop = stop
@@ -577,16 +603,27 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	visible_message(span_notice("[capitalize(src.name)] arrives at [stop.stop_id]."))
 	open_interior_doors()
 
-/obj/structure/cyberpunk_metro_train/proc/rebuild_travel_history(turf/origin, head_dir)
+/obj/structure/cyberpunk_metro_train/proc/rebuild_travel_history(turf/origin)
 	travel_history = list()
-	if(!origin)
+	if(!origin || !route_path_index || !length(route_path))
 		return
+	var/history_index = route_path_index
 	var/turf/history_turf = origin
-	var/tail_dir = head_dir ? REVERSE_DIR(head_dir) : SOUTH
 	for(var/index in 2 to CYBERPUNK_METRO_EXTERIOR_CARS)
-		var/turf/next_history_turf = get_step(history_turf || origin, tail_dir)
-		history_turf = next_history_turf || origin
-		travel_history += history_turf
+		history_index--
+		if(history_index < 1)
+			history_index = length(route_path)
+		var/turf/previous_turf = get_turf(route_path[history_index])
+		// The cyclic route may end with the first stop a second time.
+		if(previous_turf == history_turf)
+			history_index--
+			if(history_index < 1)
+				history_index = length(route_path)
+			previous_turf = get_turf(route_path[history_index])
+		if(!cyberpunk_metro_can_step(previous_turf, history_turf, route_id))
+			return
+		travel_history += previous_turf
+		history_turf = previous_turf
 
 /obj/structure/cyberpunk_metro_train/proc/process_train_movement()
 	if(!target_stop || QDELETED(target_stop))
@@ -595,7 +632,7 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		return
 	if(!length(route_path) || !target_route_index)
 		if(!prepare_route_to(target_stop, cyberpunk_metro_route_path(route_id)))
-			arrive_at(target_stop)
+			next_move_at = world.time + 1 SECONDS
 			return
 	var/turf/current_turf = get_turf(src)
 	var/atom/target_point = route_path[target_route_index]
@@ -610,17 +647,16 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		return
 	var/step_dir = get_cardinal_step_dir(current_turf, target_turf)
 	if(!step_dir)
-		if(target_point == target_stop)
-			arrive_at(target_stop)
-		else
-			advance_route_point()
+		next_move_at = world.time + 1 SECONDS
 		return
 	var/turf/next_turf = get_step(current_turf, step_dir)
-	if(!next_turf)
-		arrive_at(target_stop)
+	if(next_turf != target_turf || !cyberpunk_metro_can_step(current_turf, next_turf, route_id))
+		next_move_at = world.time + 1 SECONDS
 		return
 	movement_dir = step_dir
-	move_consist_to(next_turf, step_dir)
+	if(!move_consist_to(next_turf, step_dir))
+		next_move_at = world.time + 1 SECONDS
+		return
 	next_move_at = world.time + move_step_delay
 	if(get_turf(src) == target_turf)
 		if(target_point == target_stop)
@@ -638,13 +674,13 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	return NONE
 
 /obj/structure/cyberpunk_metro_train/proc/move_consist_to(turf/origin, step_dir)
-	if(!origin)
-		return
 	var/turf/old_origin = get_turf(src)
-	if(old_origin)
-		travel_history.Insert(1, old_origin)
-		if(length(travel_history) > CYBERPUNK_METRO_EXTERIOR_CARS + 2)
-			travel_history.Cut(CYBERPUNK_METRO_EXTERIOR_CARS + 3)
+	if(!cyberpunk_metro_can_step(old_origin, origin, route_id))
+		return FALSE
+	var/list/new_history = travel_history.Copy()
+	new_history.Insert(1, old_origin)
+	if(length(new_history) > CYBERPUNK_METRO_EXTERIOR_CARS + 2)
+		new_history.Cut(CYBERPUNK_METRO_EXTERIOR_CARS + 3)
 	var/list/segments_to_move = list()
 	var/list/segment_dirs = list()
 	var/list/segments = cyberpunk_metro_train_segments(route_id, train_id)
@@ -652,20 +688,23 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		var/turf/segment_turf = origin
 		if(segment.segment_order > 1)
 			var/history_index = segment.segment_order - 1
-			if(length(travel_history) >= history_index)
-				segment_turf = travel_history[history_index]
+			if(length(new_history) >= history_index)
+				segment_turf = new_history[history_index]
 			else
 				segment_turf = get_turf(segment)
 		if(!segment_turf)
 			continue
 		var/turf/current_segment_turf = get_turf(segment)
+		if(!cyberpunk_metro_can_step(current_segment_turf, segment_turf, route_id))
+			return FALSE
 		var/segment_dir = get_cardinal_step_dir(current_segment_turf, segment_turf) || step_dir
 		segments_to_move[segment] = segment_turf
 		segment_dirs[segment] = segment_dir
-		segment.clear_metro_path(segment_turf, segment_dir)
+	travel_history = new_history
 	for(var/obj/structure/cyberpunk_metro_train/segment as anything in segments_to_move)
 		var/turf/segment_turf = segments_to_move[segment]
 		var/segment_dir = segment_dirs[segment]
+		segment.clear_metro_path(segment_turf, segment_dir)
 		segment.current_stop = current_stop
 		segment.target_stop = target_stop
 		segment.state = state
@@ -679,6 +718,7 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		segment.dir = segment_dir
 		segment.set_glide_size(DELAY_TO_GLIDE_SIZE(segment.move_step_delay))
 		segment.forceMove(segment_turf)
+	return TRUE
 
 /obj/structure/cyberpunk_metro_train/proc/clear_metro_path(turf/target_turf, step_dir)
 	if(!target_turf)
@@ -692,7 +732,7 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 		visible_message(span_danger("[capitalize(src.name)] drills through [hit_mineral]!"))
 		hit_mineral.gets_drilled()
 	for(var/obj/structure/victim_structure in target_turf)
-		if(QDELING(victim_structure) || istype(victim_structure, /obj/structure/cyberpunk_metro_train))
+		if(QDELING(victim_structure) || istype(victim_structure, /obj/structure/cyberpunk_metro_train) || istype(victim_structure, /obj/structure/fluff/tram_rail))
 			continue
 		if(!victim_structure.density && victim_structure.layer <= LOW_OBJ_LAYER)
 			continue
@@ -855,6 +895,363 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 	opened = new_open
 	density = !opened
 	icon_state = opened ? "open" : "closed"
+
+/// The arrivals train uses the same moving-platform engine as the tram.
+/// Its cabin is a converted copy of cyberpunk_metro_train_32x5.dmm.
+/turf/open/floor/tram/cyberpunk_intercity
+	name = "intercity railway guideway"
+
+/obj/effect/landmark/cyberpunk_intercity_platform
+	name = "intercity platform anchor (southwest corner)"
+	var/platform_id = "city"
+
+/obj/structure/transport/linear/tram/cyberpunk_intercity
+	name = "intercity train chassis"
+	transport_id = "cyberpunk_intercity"
+	transport_controller_type = /datum/transport_controller/linear/cyberpunk_intercity
+	/// The 32x5 chassis is baked once after its modules merge, before emissive overlays are added.
+	var/chassis_icon_composed = FALSE
+
+/obj/structure/transport/linear/tram/cyberpunk_intercity/update_overlays()
+	// The parent merge leaves one subfloor overlay per additional tile. Flatten
+	// those static sprites before ..() adds an emissive blocker: 159 + 1 exceeds
+	// MAX_ATOM_OVERLAYS. Keep unrelated overlays and the physical platform intact.
+	if(!chassis_icon_composed && (width > 1 || height > 1))
+		var/icon/chassis_icon = icon(icon, icon_state, dir, 1)
+		chassis_icon.Crop(1, 1, bound_width, bound_height)
+		var/list/chassis_overlays = list()
+		for(var/mutable_appearance/tile_appearance as anything in overlays)
+			if(tile_appearance.icon != initial(icon) || tile_appearance.plane != plane || findtext(tile_appearance.icon_state, "subfloor") != 1)
+				continue
+			var/icon/tile_icon = icon(tile_appearance.icon, tile_appearance.icon_state, tile_appearance.dir || dir, 1)
+			chassis_icon.Blend(tile_icon, ICON_OVERLAY, tile_appearance.pixel_x + 1, tile_appearance.pixel_y + 1)
+			chassis_overlays += tile_appearance
+		cut_overlay(chassis_overlays)
+		icon = chassis_icon
+		icon_state = ""
+		chassis_icon_composed = TRUE
+	return ..()
+
+/obj/structure/transport/linear/tram/cyberpunk_intercity/register_collision(points = 1)
+	SSblackbox.record_feedback("amount", "cyberpunk_intercity_collision", points)
+
+
+/datum/transport_controller/linear/cyberpunk_intercity
+	var/datum/weakref/arrival_ref
+	var/turf/target_turf
+	var/moving = FALSE
+	// A six-tile final approach must remain visible on the compact map.
+	var/move_delay = 0.3 SECONDS
+	var/next_move_at = 0
+	var/datum/looping_sound/tram/rail_sound
+	var/datum/turf_reservation/depot_reservation
+
+/datum/transport_controller/linear/cyberpunk_intercity/Destroy()
+	STOP_PROCESSING(SStransport, src)
+	QDEL_NULL(rail_sound)
+	QDEL_NULL(depot_reservation)
+	arrival_ref = null
+	target_turf = null
+	return ..()
+
+/datum/transport_controller/linear/cyberpunk_intercity/proc/start_trip(turf/destination)
+	if(moving || !length(transport_modules) || !z_sorted)
+		return FALSE
+	var/obj/structure/transport/linear/train = transport_modules[1]
+	if(!destination || train.z != destination.z || train.y != destination.y || train.x == destination.x)
+		return FALSE
+	target_turf = destination
+	moving = TRUE
+	for(var/obj/structure/transport/linear/tram/module as anything in transport_modules)
+		module.verify_transport_contents()
+		module.internal_movement_delay = move_delay
+		module.glide_size_override = DELAY_TO_GLIDE_SIZE(move_delay)
+		module.set_travelling(TRUE)
+	next_move_at = world.time + move_delay
+	SStransport.can_fire = TRUE
+	rail_sound?.start()
+	START_PROCESSING(SStransport, src)
+	return TRUE
+
+/datum/transport_controller/linear/cyberpunk_intercity/process(seconds_per_tick)
+	if(!moving || !length(transport_modules) || !target_turf)
+		return PROCESS_KILL
+	if(world.time < next_move_at)
+		return
+	var/obj/structure/transport/linear/train = transport_modules[1]
+	if(get_turf(train) == target_turf)
+		finish_trip()
+		return PROCESS_KILL
+	if(train.z != target_turf.z || train.y != target_turf.y)
+		finish_trip(FALSE)
+		return PROCESS_KILL
+	var/direction = train.x < target_turf.x ? EAST : WEST
+	// Check the entire entering edge before the tram engine can smash anything.
+	for(var/obj/structure/transport/linear/module as anything in transport_modules)
+		for(var/turf/occupied as anything in module.locs)
+			var/turf/next_turf = get_step(occupied, direction)
+			if(!istype(next_turf, /turf/open/floor/tram/cyberpunk_intercity))
+				finish_trip(FALSE)
+				return PROCESS_KILL
+	var/old_x = train.x
+	move_transport_horizontally(direction)
+	if(train.x != old_x + (direction == EAST ? 1 : -1))
+		finish_trip(FALSE)
+		return PROCESS_KILL
+	next_move_at = world.time + move_delay
+
+/// Transfers one assembled cabin between the off-map departure bay and its final approach.
+/// The city approach itself still uses tram movement, one rail tile at a time.
+/datum/transport_controller/linear/cyberpunk_intercity/proc/transfer_train(turf/destination)
+	if(moving || !z_sorted || length(transport_modules) != 1 || !destination)
+		return FALSE
+	var/obj/structure/transport/linear/module = transport_modules[1]
+	module.verify_transport_contents()
+	var/list/atom/movable/riders = module.transport_contents.Copy()
+	var/list/target_positions = list()
+	var/offset_x = destination.x - module.x
+	var/offset_y = destination.y - module.y
+	for(var/turf/occupied as anything in module.locs)
+		var/turf/target = locate(occupied.x + offset_x, occupied.y + offset_y, destination.z)
+		if(!istype(target, /turf/open/floor/tram/cyberpunk_intercity))
+			return FALSE
+		for(var/atom/movable/obstacle in target)
+			if(obstacle != module && !(obstacle in riders) && (isliving(obstacle) || obstacle.density))
+				return FALSE
+	for(var/atom/movable/rider as anything in riders)
+		target_positions[rider] = locate(rider.x + offset_x, rider.y + offset_y, destination.z)
+	// Snapshot before moving chairs: they can move their buckled occupants too.
+	module.unset_movement_registrations()
+	module.forceMove(destination)
+	if(get_turf(module) != destination)
+		module.set_movement_registrations()
+		return FALSE
+	for(var/atom/movable/rider as anything in riders)
+		if(!QDELETED(rider) && rider.loc != target_positions[rider])
+			rider.forceMove(target_positions[rider])
+	module.set_movement_registrations()
+	module.verify_transport_contents()
+	target_turf = null
+	return TRUE
+
+/datum/transport_controller/linear/cyberpunk_intercity/proc/finish_trip(success = TRUE)
+	moving = FALSE
+	rail_sound?.stop()
+	for(var/obj/structure/transport/linear/tram/module as anything in transport_modules)
+		module.set_travelling(FALSE)
+	var/obj/docking_port/mobile/arrivals/cyberpunk_intercity/arrival = arrival_ref?.resolve()
+	arrival?.train_stopped(success)
+
+/// Adapter for latejoin and announcements. Physical movement belongs to SStransport.
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity
+	name = "intercity arrivals train"
+	invisibility = INVISIBILITY_MAXIMUM // Must travel with the tram's contents.
+	dir = NORTH
+	width = 32
+	height = 5
+	mode = SHUTTLE_CALL
+	var/datum/transport_controller/linear/cyberpunk_intercity/train_controller
+	var/turf/city_platform
+	var/turf/approach_platform
+	var/turf/depot_platform
+	var/list/train_doors = list()
+	var/departure_at = 0
+	var/departing = FALSE
+	var/old_require_undocked
+	var/configured_latejoin = FALSE
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/LateInitialize()
+	var/obj/structure/transport/linear/tram/cyberpunk_intercity/chassis = locate() in loc
+	train_controller = chassis?.transport_controller_datum
+	if(!istype(train_controller))
+		stack_trace("Intercity arrival port has no matching tram chassis.")
+		return
+	train_controller.arrival_ref = WEAKREF(src)
+	train_controller.rail_sound = new(src)
+	for(var/obj/effect/landmark/cyberpunk_intercity_platform/platform in world)
+		if(platform.z != z)
+			continue
+		if(platform.platform_id == "city")
+			city_platform = get_turf(platform)
+		else if(platform.platform_id == "approach")
+			approach_platform = get_turf(platform)
+	if(!city_platform || !approach_platform || city_platform.y != approach_platform.y || get_turf(chassis) != approach_platform)
+		stack_trace("Intercity train needs aligned city/approach anchors and must be mapped at the approach.")
+		return
+	var/list/seats = list()
+	for(var/obj/structure/transport/linear/module as anything in train_controller.transport_modules)
+		for(var/atom/movable/rider as anything in module.transport_contents)
+			if(istype(rider, /obj/structure/chair))
+				seats |= rider
+			else if(istype(rider, /obj/machinery/door/airlock/shuttle/cyberpunk_intercity))
+				train_doors |= rider
+			else if(istype(rider, /obj/machinery/requests_console))
+				console = rider
+	if(!length(seats) || !length(train_doors))
+		stack_trace("Intercity train has no passenger seats or platform doors.")
+		return
+	SSjob.latejoin_trackers = seats
+	old_require_undocked = CONFIG_GET(flag/arrivals_shuttle_require_undocked)
+	CONFIG_SET(flag/arrivals_shuttle_require_undocked, TRUE)
+	configured_latejoin = TRUE
+	if(!registered)
+		register()
+	// Let the tram's LateInitialize merge all 160 chassis tiles first.
+	addtimer(CALLBACK(src, PROC_REF(setup_remote_depot)), 1 TICKS)
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/proc/setup_remote_depot()
+	if(QDELETED(train_controller) || depot_platform)
+		return
+	if(!train_controller.z_sorted)
+		addtimer(CALLBACK(src, PROC_REF(setup_remote_depot)), 1 TICKS)
+		return
+	var/datum/map_template/template = new("_maps/templates/cyberpunk_intercity_depot_34x7.dmm", "Intercity departure bay")
+	var/datum/turf_reservation/reservation = SSmapping.request_turf_block_reservation(template.width, template.height, 1)
+	if(!reservation || !length(reservation.bottom_left_turfs))
+		QDEL_NULL(reservation)
+		qdel(template)
+		stack_trace("Could not reserve the intercity departure bay.")
+		return
+	var/turf/load_turf = reservation.bottom_left_turfs[1]
+	if(!template.load(load_turf))
+		qdel(reservation)
+		qdel(template)
+		stack_trace("Could not load the intercity departure bay.")
+		return
+	var/turf/remote_platform = locate(load_turf.x + 1, load_turf.y + 1, load_turf.z)
+	qdel(template)
+	if(!train_controller.transfer_train(remote_platform))
+		qdel(reservation)
+		stack_trace("Could not transfer the intercity train to its departure bay.")
+		return
+	train_controller.depot_reservation = reservation
+	depot_platform = remote_platform
+	mode = SHUTTLE_CALL
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/Destroy(force)
+	if(!force)
+		return ..()
+	if(configured_latejoin)
+		CONFIG_SET(flag/arrivals_shuttle_require_undocked, old_require_undocked)
+	if(!QDELETED(train_controller))
+		train_controller.arrival_ref = null
+	train_controller = null
+	train_doors = null
+	city_platform = null
+	approach_platform = null
+	depot_platform = null
+	return ..()
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/proc/at_platform(turf/platform)
+	if(!platform || QDELETED(train_controller) || train_controller.moving || !length(train_controller.transport_modules))
+		return FALSE
+	return get_turf(train_controller.transport_modules[1]) == platform
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/PersonCheck()
+	if(QDELETED(train_controller))
+		return FALSE
+	for(var/obj/structure/transport/linear/module as anything in train_controller.transport_modules)
+		for(var/turf/cabin_turf as anything in module.locs)
+			for(var/mob/player in cabin_turf)
+				if(player.client && player.stat != DEAD)
+					return TRUE
+	return FALSE
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/check()
+	if(QDELETED(train_controller) || train_controller.moving || damaged || !depot_platform)
+		return
+	if(at_platform(approach_platform))
+		if(mode == SHUTTLE_IGNITING)
+			train_stopped(TRUE)
+		else
+			begin_train_trip(city_platform)
+		return
+	if(at_platform(depot_platform))
+		mode = SHUTTLE_CALL
+		if(PersonCheck())
+			if(!departure_at)
+				departure_at = world.time + 5 SECONDS
+			if(world.time >= departure_at)
+				begin_train_trip(city_platform)
+	else if(at_platform(city_platform) && world.time >= departure_at)
+		if(force_depart || !PersonCheck())
+			begin_train_trip(depot_platform)
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/proc/begin_train_trip(turf/destination)
+	// Doors can take time to close or be obstructed; never move until every door is shut.
+	departing = TRUE
+	var/doors_ready = TRUE
+	for(var/obj/machinery/door/airlock/shuttle/cyberpunk_intercity/door as anything in train_doors)
+		if(QDELETED(door))
+			damaged = TRUE
+			return FALSE
+		if(door.operating || !door.density)
+			doors_ready = FALSE
+			if(!door.operating)
+				INVOKE_ASYNC(door, TYPE_PROC_REF(/obj/machinery/door, close))
+	if(!doors_ready)
+		return FALSE
+	mode = destination == city_platform ? SHUTTLE_CALL : SHUTTLE_IGNITING
+	var/turf/rail_destination = approach_platform
+	if(destination == city_platform)
+		if(at_platform(depot_platform) && !train_controller.transfer_train(approach_platform))
+			return FALSE
+		rail_destination = city_platform
+	if(!train_controller.start_trip(rail_destination))
+		return FALSE
+	departure_at = 0
+	console?.say("Двери закрываются. Поезд отправляется.")
+	return TRUE
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/proc/train_stopped(success)
+	if(!success)
+		damaged = TRUE
+		console?.say("Поезд остановлен: проверьте непрерывность путей.")
+		return
+	if(mode == SHUTTLE_IGNITING && at_platform(approach_platform))
+		if(!train_controller.transfer_train(depot_platform))
+			return
+	force_depart = FALSE
+	departing = FALSE
+	departure_at = 0
+	if(at_platform(city_platform))
+		mode = SHUTTLE_IDLE
+		departure_at = world.time + 15 SECONDS
+		console?.say("Брайт Сити. Конечная. Выход на городской перрон.")
+		for(var/obj/machinery/door/airlock/shuttle/cyberpunk_intercity/door as anything in train_doors)
+			INVOKE_ASYNC(door, TYPE_PROC_REF(/obj/machinery/door, open))
+		for(var/datum/callback/announcement as anything in queued_announces)
+			announcement.Invoke()
+		LAZYCLEARLIST(queued_announces)
+	else
+		mode = SHUTTLE_CALL
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/Launch(pickingup)
+	if(pickingup)
+		force_depart = TRUE
+	if(at_platform(city_platform))
+		departure_at = min(departure_at, world.time)
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/RequireUndocked(mob/user)
+	if(at_platform(depot_platform))
+		return
+	Launch(TRUE)
+	to_chat(user, span_notice("Ожидаем междугородний поезд на станции отправления..."))
+	while(!QDELETED(src) && !at_platform(depot_platform))
+		stoplag()
+
+/obj/docking_port/mobile/arrivals/cyberpunk_intercity/check_effects()
+	return // No hyperspace ripples on a physical railway.
+
+/obj/machinery/door/airlock/shuttle/cyberpunk_intercity
+	name = "intercity platform door"
+	autoclose = FALSE
+
+/obj/machinery/door/airlock/shuttle/cyberpunk_intercity/open(forced = DEFAULT_DOOR_CHECKS)
+	var/obj/docking_port/mobile/arrivals/cyberpunk_intercity/train = SSshuttle.arrivals
+	if(!istype(train) || train.departing || !train.at_platform(train.city_platform) || train.mode != SHUTTLE_IDLE)
+		return FALSE
+	return ..()
 
 #undef CYBERPUNK_METRO_TRAIN_TEMPLATE
 #undef CYBERPUNK_METRO_EXTERIOR_CARS

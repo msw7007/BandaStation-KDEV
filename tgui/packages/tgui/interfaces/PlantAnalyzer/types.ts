@@ -12,6 +12,11 @@ export type PlantAnalyzerData = {
   tray_data: TrayData | null;
   // Static
   cycle_seconds: number;
+  stat_limits: {
+    production: number;
+    lifespan: number;
+    weed_rate: number;
+  };
   trait_db: TraitData[];
   active_tab: PlantAnalyzerTabs;
 };
@@ -55,6 +60,7 @@ export type SeedData = {
   mutatelist: string[];
   name: string;
   potency: number;
+  mutation_potential: number;
   product_icon_state: string;
   product_icon: string;
   product: string;

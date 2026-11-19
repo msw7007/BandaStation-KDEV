@@ -328,8 +328,11 @@
 	if(current_disguise)
 		return_look()
 		return
+	INVOKE_ASYNC(src, PROC_REF(choose_disguise), activator)
+
+/obj/item/mod/module/chameleon/proc/choose_disguise(mob/activator)
 	var/picked_name = tgui_input_list(activator, "Select look to change into", "Chameleon Settings", possible_disguises)
-	if(!possible_disguises[picked_name] || mod.active || mod.activating)
+	if(QDELETED(src) || QDELETED(mod) || QDELETED(activator) || current_disguise || !possible_disguises[picked_name] || mod.active || mod.activating)
 		return
 	current_disguise = possible_disguises[picked_name]
 	update_look()

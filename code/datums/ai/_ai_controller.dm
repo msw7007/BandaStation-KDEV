@@ -755,8 +755,12 @@ multiple modular subtrees with behaviors
 		if(cargo_item.loc != living_pawn)
 			set_blackboard_key(BB_CP_CARGO_STATUS, CP_AI_CARGO_LOST)
 			return FALSE
-		if(cyberpunk_has_capability(CP_AI_CAP_HANDS) && living_pawn.put_in_hands(cargo_item))
-			return TRUE
+		if(cyberpunk_has_capability(CP_AI_CAP_HANDS))
+			// Keep the tracked cargo atom intact and avoid the blocking stack-merge path during teardown.
+			var/hand = living_pawn.get_empty_held_index_for_side(LEFT_HANDS) || living_pawn.get_empty_held_index_for_side(RIGHT_HANDS)
+			if(hand && living_pawn.put_in_hand(cargo_item, hand))
+				SSeconomy.record_cyberpunk_contract_item_in_hands(living_pawn, cargo_item)
+				return TRUE
 		if(cyberpunk_has_capability(CP_AI_CAP_CARGO_SLOT))
 			return TRUE
 		if(pawn_turf)

@@ -73,7 +73,7 @@
 	rotate_cyberpunk_sale_stock(TRUE)
 
 /obj/machinery/vending/proc/should_use_cyberpunk_sale_rotation()
-	return cyberpunk_sale_rotation_enabled && !istype(src, /obj/machinery/vending/custom)
+	return cyberpunk_sale_rotation_enabled && !cyberpunk_business_id && !istype(src, /obj/machinery/vending/custom)
 
 /obj/machinery/vending/proc/maybe_rotate_cyberpunk_sale_stock()
 	if(!should_use_cyberpunk_sale_rotation())
@@ -94,7 +94,8 @@
 			record.cyberpunk_sale_available = TRUE
 			continue
 		var/returned_count = LAZYLEN(record.returned_products)
-		var/rotated_amount = record.cyberpunk_sale_entry.get_rotated_stock_amount(record.cyberpunk_base_amount || record.max_amount)
+		var/base_amount = record.cyberpunk_base_amount || record.max_amount
+		var/rotated_amount = cyberpunk_fixed_supply ? base_amount : record.cyberpunk_sale_entry.get_rotated_stock_amount(base_amount)
 		rotated_amount = CEILING(rotated_amount * get_cyberpunk_corporate_stock_multiplier(), 1)
 		record.cyberpunk_sale_available = rotated_amount > 0 || returned_count > 0
 		record.amount = rotated_amount + returned_count
@@ -103,6 +104,7 @@
 //Better would be to make constructable child
 /obj/machinery/vending/RefreshParts()
 	SHOULD_CALL_PARENT(FALSE)
+	eject_cyberpunk_warehouse_stock()
 
 	//compress all product categories into an linear list
 	if(product_categories)
@@ -133,9 +135,9 @@
 
 	//to initialize product category & cargo ordered canisters for the 1st time
 	if(!canister.products)
-		canister.products = products.Copy()
-		canister.contraband = contraband.Copy()
-		canister.premium = premium.Copy()
+		canister.products = products?.Copy() || list()
+		canister.contraband = contraband?.Copy() || list()
+		canister.premium = premium?.Copy() || list()
 
 	var/list/datum/data/vending_product/record_list
 	var/list/canister_list
@@ -156,7 +158,7 @@
 
 		for(var/datum/data/vending_product/record as anything in record_list)
 			var/diff = min(record.max_amount - record.amount, canister_list[record.product_path] || 0)
-			if (diff)
+			if (diff > 0)
 				canister_list[record.product_path] -= diff
 				if(!canister_list[record.product_path])
 					canister_list -= record.product_path
@@ -192,7 +194,7 @@
 		speak("Sold out of [item_record.name].")
 		flick(icon_deny, src)
 		return
-	var/price_to_use = get_cyberpunk_business_vending_price(item_record.price)
+	var/price_to_use = get_cyberpunk_business_vending_price(item_record.price, item_record.name)
 	if(item_record in hidden_records)
 		if(!extended_inventory)
 			return
@@ -272,17 +274,24 @@
 		playsound(src, 'sound/machines/machine_vend.ogg', 50, TRUE, extrarange = -3)
 
 	var/obj/item/vended_item = null
+	var/from_warehouse = FALSE
 	if(dispense_returned)
 		vended_item = LAZYACCESS(item_record.returned_products, LAZYLEN(item_record.returned_products)) //first in, last out
 		vended_item.forceMove(spawn_location)
 	else if(item_record.amount)
-		vended_item = new item_record.product_path(spawn_location)
+		from_warehouse = length(item_record.cyberpunk_warehouse_items) > 0
+		if(from_warehouse)
+			vended_item = dispense_cyberpunk_warehouse_item(item_record, spawn_location)
+			if(!vended_item)
+				return null
+		else
+			vended_item = new item_record.product_path(spawn_location)
 		if(vended_item.type in contraband)
 			ADD_TRAIT(vended_item, TRAIT_CONTRABAND, INNATE_TRAIT)
 		item_record.amount--
 
 	on_dispense(vended_item, dispense_returned)
-	if(!dispense_returned)
+	if(!dispense_returned && !from_warehouse)
 		apply_cyberpunk_corporate_supply_quality(vended_item)
 	use_energy(active_power_usage)
 

@@ -533,6 +533,10 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	var/city_vendors_enabled = TRUE
 	var/list/vendor_home_points = list()
 
+/mob/living/carbon/human/cyberpunk_npc
+	/// Staff hired to cover a vacancy, independent of the ambient population.
+	var/cyberpunk_vacancy_role
+
 /datum/controller/subsystem/cyberpunk_city_ai/fire(resumed)
 	var/list/active_players = list()
 	for(var/mob/living/player as anything in GLOB.player_list)
@@ -547,7 +551,7 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 	maintain_bystanders(active_players)
 	maintain_runners(active_players)
 	maintain_workers(active_players)
-	maintain_security()
+	maintain_security(active_players)
 	maintain_corporate_specialists(active_players)
 	process_city_vendors(active_players)
 	process_city_needs(active_players)
@@ -749,30 +753,89 @@ SUBSYSTEM_DEF(cyberpunk_city_ai)
 		return candidate
 	return null
 
-/datum/controller/subsystem/cyberpunk_city_ai/proc/maintain_security()
+/obj/effect/landmark/cyberpunk_test_vacancy
+	var/role_key
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/test_vacancy_spawn(role_key)
+	if(SSmapping.current_map?.map_name != "Cyberpunk Test")
+		return null
+	for(var/obj/effect/landmark/cyberpunk_test_vacancy/point in GLOB.landmarks_list)
+		if(point.role_key == role_key)
+			return get_turf(point)
+	return null
+
+/obj/structure/sign/departments/security/cyberpunk_test_vacancies/examine(mob/user)
+	. = ..()
+	for(var/role_key in list("officer", "specialist:benn", "specialist:ryaznov", "specialist:starlight"))
+		var/mob/living/carbon/human/cyberpunk_npc/cover = SScyberpunk_city_ai.find_vacancy_cover(role_key)
+		var/location = cover ? get_area_name(cover) : "замещающего NPC нет"
+		. += span_notice("[role_key]: [cover?.name || "—"] — [location]")
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/maintain_security(list/active_players)
+	var/has_officer = has_player_in_role(active_players, "officer")
+	var/mob/living/carbon/human/cyberpunk_npc/cover = find_vacancy_cover("officer")
+	if(has_officer && cover && cover.stat != DEAD)
+		retire_vacancy_cover(cover)
+		cover = null
 	var/current_count = count_city_npcs(/mob/living/carbon/human/cyberpunk_npc/security)
-	if(current_count >= max_security)
+	var/target = max(0, max_security - (has_officer ? 1 : 0))
+	if(current_count >= target)
 		return
-	var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/security)
+	var/turf/test_spawn = !has_officer && !cover ? test_vacancy_spawn("officer") : null
+	var/turf/spawn_turf = test_spawn || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/security)
 	if(!spawn_turf)
 		return
 	var/mob/living/carbon/human/cyberpunk_npc/security/security_npc = new(spawn_turf)
+	if(!has_officer && !cover)
+		security_npc.cyberpunk_vacancy_role = "officer"
+	if(test_spawn)
+		security_npc.cyberpunk_stationary_npc = TRUE
+		return
 	var/turf/patrol_turf = cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district)
 	if(patrol_turf)
 		cyberpunk_order_city_ai(security_npc, CP_AI_TASK_PATROL, spawn_turf, patrol_turf, null)
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/maintain_corporate_specialists(list/active_players)
 	for(var/corporation_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+		var/cover_key = "specialist:[corporation_id]"
+		if(has_player_in_role(active_players, "specialist", corporation_id))
+			var/mob/living/carbon/human/cyberpunk_npc/cover = find_vacancy_cover(cover_key)
+			if(cover && cover.stat != DEAD)
+				retire_vacancy_cover(cover)
+			continue
 		if(count_corporate_specialists(corporation_id) >= max_corporate_specialists_per_corp)
 			continue
 		if(!find_corporate_data_terminal(corporation_id))
 			continue
-		var/turf/spawn_turf = cyberpunk_random_turf_in_area_type(corporate_area_type(corporation_id), active_players, 0, INFINITY) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, npc_spawn_min_distance, npc_spawn_max_distance)
+		var/turf/spawn_turf = test_vacancy_spawn(cover_key) || cyberpunk_random_turf_in_area_type(corporate_area_type(corporation_id), active_players, 0, INFINITY) || cyberpunk_random_turf_in_area_type(/area/cyberpunk/city/district, active_players, npc_spawn_min_distance, npc_spawn_max_distance)
 		if(!spawn_turf)
 			continue
 		var/specialist_type = corporate_specialist_type(corporation_id)
 		if(specialist_type)
-			new specialist_type(spawn_turf)
+			var/mob/living/carbon/human/cyberpunk_npc/cover = new specialist_type(spawn_turf)
+			cover.cyberpunk_vacancy_role = cover_key
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/has_player_in_role(list/active_players, role_class, corporation_id)
+	for(var/mob/living/player in active_players)
+		var/datum/job/job = player.mind?.assigned_role
+		var/player_role = job?.get_cyberpunk_role_class()
+		if(!corporation_id && player_role == role_class)
+			return TRUE
+		if(corporation_id && findtext(player_role, "specialist-", 1, 12) == 1 && job.get_cyberpunk_corporation_id() == corporation_id)
+			return TRUE
+	return FALSE
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/find_vacancy_cover(role_key)
+	for(var/mob/living/carbon/human/cyberpunk_npc/npc in GLOB.mob_living_list)
+		if(!QDELETED(npc) && !npc.client && npc.cyberpunk_vacancy_role == role_key)
+			return npc
+	return null
+
+/datum/controller/subsystem/cyberpunk_city_ai/proc/retire_vacancy_cover(mob/living/carbon/human/cyberpunk_npc/npc)
+	var/atom/movable/cargo = npc.ai_controller?.blackboard[BB_CP_CARGO]
+	if(cargo?.loc == npc)
+		cargo.forceMove(get_turf(npc))
+	qdel(npc)
 
 /datum/controller/subsystem/cyberpunk_city_ai/proc/count_corporate_specialists(corporation_id)
 	var/count = 0

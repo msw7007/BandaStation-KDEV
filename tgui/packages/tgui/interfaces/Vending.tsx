@@ -47,6 +47,7 @@ type Category = {
 type VendingData = {
   cargoTracking?: boolean;
   corporateChip?: { name: string; price: number };
+  corporateSupply?: { active: boolean; interval: string; next: string };
   all_products_free: boolean;
   ad: string;
   department: string;
@@ -113,6 +114,17 @@ export const Vending = () => {
     <Window width={431} height={635}>
       <Window.Content>
         <Stack fill vertical>
+          {data.corporateSupply && (
+            <Stack.Item>
+              <Section title="Поставки корпорации">
+                <div>
+                  Сертификация {data.corporateSupply.active ? 'действует' : 'не действует'}
+                </div>
+                <div>Интервал · {data.corporateSupply.interval}</div>
+                <div>Следующая поставка через {data.corporateSupply.next}</div>
+              </Section>
+            </Stack.Item>
+          )}
           {!!data.cargoTracking && (
             <Stack.Item>
               <Button

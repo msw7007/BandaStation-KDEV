@@ -49,11 +49,13 @@
 	return entries
 
 /datum/controller/subsystem/cyberpunk_property/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label)
-	item_label = reject_bad_text(item_label, max_length = 48, ascii_only = FALSE)
+	item_label = reject_bad_text(item_label, max_length = 64, ascii_only = FALSE)
 	if(!requester || !item_label)
 		return null
 	amount = max(1, round(amount))
 	var/source_key = lowertext("[source_label]")
+	if(source_key == "external supplier")
+		return null
 	var/datum/cyberpunk_business/best_supplier
 	var/best_price = INFINITY
 	for(var/business_id in cyberpunk_businesses)
@@ -64,12 +66,12 @@
 			continue
 		if(length(supplier.warehouse_sell_links) && !supplier.allows_warehouse_partner(requester, FALSE))
 			continue
-		if(source_key && source_key != "external supplier" && source_key != "auto")
+		if(source_key && source_key != "auto")
 			if(source_key != lowertext("[supplier.id]") && source_key != lowertext(supplier.name))
 				continue
 		if(supplier.get_sellable_stock_amount(item_label) < amount)
 			continue
-		var/unit_price = supplier.get_stock_price(item_label)
+		var/unit_price = supplier.get_stock_price(item_label, requester)
 		if(unit_price < best_price)
 			best_price = unit_price
 			best_supplier = supplier
@@ -118,19 +120,21 @@
 /datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
 	if(!business)
 		return null
-	item_label = reject_bad_text(item_label, max_length = 48, ascii_only = FALSE)
+	item_label = reject_bad_text(item_label, max_length = 64, ascii_only = FALSE)
 	if(!item_label)
 		return null
 	amount = clamp(round(amount), 1, 1000)
 	var/datum/cyberpunk_business/supplier = find_cyberpunk_business_supplier(business, item_label, amount, source_label)
-	var/unit_cost = supplier ? supplier.get_stock_price(item_label) : CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST
+	var/source_key = lowertext(source_label || "auto")
+	if(!supplier && !(source_key in list("auto", "external supplier")))
+		return null
+	var/unit_cost = supplier ? supplier.get_stock_price(item_label, business) : CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST
 	var/total_cost = max(0, round(unit_cost * amount))
 	if(total_cost && !business.charge(total_cost, "Business delivery #[next_cyberpunk_business_delivery_id]: [amount]x [item_label]"))
 		return null
+	var/list/stock_packet
 	if(supplier)
-		var/supplied = supplier.consume_stock(item_label, amount)
-		if(supplied < amount)
-			return null
+		stock_packet = supplier.take_stock(item_label, amount)
 		supplier.record_income(total_cost, "Business supply sale to [business.name]: [amount]x [item_label]")
 	var/datum/cyberpunk_business_delivery/delivery = new
 	delivery.id = next_cyberpunk_business_delivery_id++
@@ -138,6 +142,7 @@
 	delivery.source_business_id = supplier?.id || 0
 	delivery.item_label = item_label
 	delivery.amount = amount
+	delivery.stock_packet = stock_packet
 	delivery.source_label = supplier ? supplier.name : (reject_bad_text(source_label, max_length = 48, ascii_only = FALSE) || "external supplier")
 	delivery.destination_label = reject_bad_text(destination_label, max_length = 48, ascii_only = FALSE) || "business warehouse"
 	delivery.cost = total_cost

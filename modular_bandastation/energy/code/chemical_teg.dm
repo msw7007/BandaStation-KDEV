@@ -84,7 +84,7 @@
 /obj/machinery/power/cyberpunk_generator/gasoline
 	name = "gasoline generator"
 	desc = "A compact fuel-fed generator. Feed it welding fuel or equivalent gasoline blend and connect it to a cable node."
-	icon_state = "portgen0"
+	icon_state = "portgen0_0"
 	base_icon_state = "portgen0"
 	base_power_gen = 6 KILO WATTS
 	corp_manufacturer = CYBERPUNK_CORP_RYAZNOV
@@ -92,6 +92,10 @@
 	var/fuel_units = 0
 	var/max_fuel_units = 250
 	var/fuel_burn_rate = 1
+
+/obj/machinery/power/cyberpunk_generator/gasoline/update_icon_state()
+	. = ..()
+	icon_state = "[base_icon_state]_[active ? 1 : 0]"
 
 /obj/machinery/power/cyberpunk_generator/gasoline/get_power_gen()
 	if(fuel_units <= 0)

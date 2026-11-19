@@ -425,6 +425,7 @@
 	var/list/saved_snapshot = list()
 	var/saved_at = 0
 	var/loaded_this_round = FALSE
+	var/saved_this_round = FALSE
 	var/list/history = list()
 
 /datum/cyberpunk_apartment/proc/user_key(mob/living/user)
@@ -515,13 +516,14 @@
 	if(!apartment_area)
 		return FALSE
 	saved_snapshot = cyberpunk_persistent_area_capture(apartment_area, terminal)
+	saved_this_round = TRUE
 	saved_at = world.time
 	user.cyberpunk_store_persistent_area_record(/datum/preference/cyberpunk_apartment_records, to_persistent_record())
 	add_history("[user.real_name || user.name] saved [length(saved_snapshot["movables"])] object(s) and [length(saved_snapshot["turfs"])] turf(s)")
 	return TRUE
 
 /datum/cyberpunk_apartment/proc/load_apartment(mob/living/user)
-	if(!can_save_load(user) || !terminal || loaded_this_round || !length(saved_snapshot))
+	if(!can_save_load(user) || !terminal || loaded_this_round || saved_this_round || !length(saved_snapshot))
 		return FALSE
 	var/area/apartment_area = get_apartment_area()
 	if(!apartment_area)
@@ -542,6 +544,7 @@
 		"savedObjects" = islist(saved_snapshot) && islist(saved_snapshot["movables"]) ? length(saved_snapshot["movables"]) : 0,
 		"savedAt" = saved_at ? DisplayTimeText(world.time - saved_at) : null,
 		"loadedThisRound" = loaded_this_round,
+		"canRestore" = can_save_load(user) && !loaded_this_round && !saved_this_round && length(saved_snapshot) > 0,
 		"canSaveLoad" = can_save_load(user),
 		"history" = include_history ? history : null,
 	)

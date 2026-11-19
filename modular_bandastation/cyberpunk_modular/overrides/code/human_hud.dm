@@ -117,7 +117,7 @@
 		QDEL_NULL(cp13_frame)
 		return
 	var/state = cp13_frame_state
-	if(cp13_frame_hovered && state in list("idle", "outline", "grid"))
+	if(cp13_frame_hovered && (state in list("idle", "outline", "grid")))
 		state = "hover"
 	if(isnull(icon))
 		QDEL_NULL(cp13_frame)

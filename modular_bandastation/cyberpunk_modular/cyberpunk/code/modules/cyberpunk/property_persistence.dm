@@ -77,6 +77,7 @@
 				"name" = record.name,
 				"amount" = record.amount,
 				"max_amount" = record.max_amount,
+				"warehouse_items" = record.cyberpunk_warehouse_items?.Copy(),
 			))
 	var/list/entry = list(
 		"type" = "[thing.type]",
@@ -116,6 +117,31 @@
 	var/list/reagent_records = cyberpunk_persistent_capture_reagents(thing)
 	if(length(reagent_records))
 		entry["reagents"] = reagent_records
+	var/obj/item/item = thing
+	if(istype(item))
+		entry["item_quality"] = item.cyberpunk_quality
+		entry["item_manufacturer"] = item.get_cyberpunk_manufacturer()
+		entry["resource_quality"] = item.resource_quality
+		entry["weapon_assembled"] = item.cyberpunk_weapon_assembled
+		var/obj/item/stack/stack = item
+		var/units = istype(stack) ? stack.get_amount() : 1
+		if(istype(stack))
+			entry["stack_amount"] = units
+		var/list/materials = list()
+		for(var/datum/material/material as anything in item.custom_materials)
+			materials["[material.type]"] = item.custom_materials[material] / max(units, 1)
+		entry["item_materials"] = materials
+		var/list/modules = list()
+		for(var/datum/cyberpunk_item_module/module as anything in item.cyberpunk_modules)
+			modules += list(list("type" = "[module.type]", "quality" = module.quality, "manufacturer" = module.manufacturer, "tier" = module.module_tier, "variant" = module.module_variant))
+		entry["item_modules"] = modules
+		var/obj/item/cyberpunk_item_module/module_item = item
+		if(istype(module_item))
+			entry["module_tier"] = module_item.module_tier
+			entry["module_variant"] = module_item.module_variant
+		var/obj/item/seeds/seed = item
+		if(istype(seed))
+			entry["plant_genetics"] = seed.cyberpunk_capture_genetics()
 	var/obj/item/clothing/clothing = thing
 	if(istype(clothing) && islist(clothing.cyberpunk_custom_design_data))
 		entry["clothing_design"] = clothing.cyberpunk_custom_design_data.Copy()
@@ -156,11 +182,18 @@
 	if(!ispath(movable_path, /atom/movable))
 		return null
 	var/turf/target_turf = isturf(location) ? location : get_turf(location)
-	if(!target_turf || get_area(target_turf) != target_area)
+	if(!target_turf || (target_area && get_area(target_turf) != target_area))
 		return null
-	var/atom/movable/restored_atom = new movable_path(location)
-	if(restored_atom == active_terminal)
+	var/atom/movable/restored_atom
+	if(ispath(movable_path, /obj/item/stack) && isnum(entry["stack_amount"]))
+		restored_atom = new movable_path(location, max(1, round(entry["stack_amount"])), FALSE)
+	else
+		restored_atom = new movable_path(location)
+	if(QDELETED(restored_atom) || restored_atom == active_terminal)
 		return null
+	var/obj/item/restored_item = restored_atom
+	if(istype(restored_item) && isnum(entry["item_quality"]))
+		cyberpunk_persistent_restore_item(restored_item, entry)
 	restored_atom.name = entry["name"] || restored_atom.name
 	restored_atom.desc = entry["desc"] || restored_atom.desc
 	restored_atom.dir = entry["dir"] || SOUTH
@@ -224,9 +257,13 @@
 	if(istype(restored_vendor) && islist(entry["cyberpunk_vending_stock"]))
 		for(var/list/stock_entry as anything in entry["cyberpunk_vending_stock"])
 			for(var/datum/data/vending_product/record as anything in restored_vendor.product_records + restored_vendor.coin_records + restored_vendor.hidden_records)
-				if("[record.product_path]" != "[stock_entry["path"]]" && record.name != stock_entry["name"])
+				if(stock_entry["path"] ? "[record.product_path]" != stock_entry["path"] : record.name != stock_entry["name"])
 					continue
-				record.amount = clamp(round(stock_entry["amount"] || record.amount), 0, max(record.max_amount, round(stock_entry["max_amount"] || record.max_amount)))
+				if(isnum(stock_entry["amount"]))
+					record.amount = max(0, round(stock_entry["amount"]))
+				var/list/saved_warehouse_items = stock_entry["warehouse_items"]
+				if(islist(saved_warehouse_items))
+					record.cyberpunk_warehouse_items = saved_warehouse_items.Copy()
 				break
 	if(islist(entry["contents"]))
 		for(var/list/content_entry as anything in entry["contents"])
@@ -234,6 +271,48 @@
 	if(istype(vehicle) && islist(vehicle_record))
 		vehicle.cyberpunk_after_persistent_restore(vehicle_record)
 	return restored_atom
+
+/proc/cyberpunk_persistent_restore_item(obj/item/item, list/entry)
+	item.cyberpunk_quality = clamp(round(entry["item_quality"]), 1, 200)
+	item.set_cyberpunk_manufacturer(entry["item_manufacturer"])
+	item.set_resource_quality(entry["resource_quality"])
+	var/list/materials = list()
+	for(var/material_text in entry["item_materials"])
+		var/material_path = text2path(material_text)
+		var/quantity = entry["item_materials"][material_text]
+		if(ispath(material_path, /datum/material) && isnum(quantity) && quantity > 0)
+			materials[material_path] = quantity
+	var/obj/item/stack/stack = item
+	item.set_custom_materials(materials, istype(stack) ? stack.get_amount() : 1)
+	var/obj/item/cyberpunk_item_module/module_item = item
+	if(istype(module_item))
+		module_item.module_tier = entry["module_tier"] || module_item.module_tier
+		module_item.module_variant = entry["module_variant"] || module_item.module_variant
+	var/obj/item/seeds/seed = item
+	if(istype(seed) && islist(entry["plant_genetics"]))
+		seed.cyberpunk_restore_genetics(entry["plant_genetics"])
+	if(!islist(entry["item_modules"]))
+		return
+	for(var/datum/cyberpunk_item_module/installed as anything in item.cyberpunk_modules?.Copy())
+		item.remove_cyberpunk_module(installed)
+	item.cyberpunk_weapon_assembled = FALSE
+	for(var/list/module_entry as anything in entry["item_modules"])
+		var/module_path = text2path(module_entry["type"])
+		if(!ispath(module_path, /datum/cyberpunk_item_module))
+			continue
+		var/datum/cyberpunk_item_module/module = new module_path
+		module.quality = module_entry["quality"]
+		module.manufacturer = module_entry["manufacturer"]
+		module.module_tier = module_entry["tier"]
+		module.module_variant = module_entry["variant"]
+		module.apply_cyberpunk_module_variant()
+		if(!item.install_cyberpunk_module(module, null))
+			qdel(module)
+	item.cyberpunk_weapon_assembled = !!entry["weapon_assembled"]
+	if(item.cyberpunk_weapon_form)
+		item.recalculate_cyberpunk_weapon_stats()
+	else if(item.cyberpunk_equipment_form)
+		item.recalculate_cyberpunk_equipment_stats()
 
 /proc/cyberpunk_persistent_area_capture(area/target_area, obj/machinery/active_terminal)
 	var/list/snapshot = list(
@@ -353,6 +432,10 @@
 	return null
 
 /datum/controller/subsystem/cyberpunk_property/proc/autosave_persistent_properties()
+	for(var/delivery_id in cyberpunk_business_deliveries)
+		var/datum/cyberpunk_business_delivery/delivery = cyberpunk_business_deliveries[delivery_id]
+		if(delivery?.status == "enroute")
+			delivery.complete_delivery()
 	var/saved = 0
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/business = cyberpunk_businesses[business_id]

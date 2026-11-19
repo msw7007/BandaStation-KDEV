@@ -367,12 +367,8 @@
 				continue
 			var/datum/bank_account/account = business.get_account()
 			var/amount = min(business.tax_debt, max(0, round(account?.account_balance || 0)))
-			if(amount <= 0 || !account.adjust_money(-amount, "Government business tax collection: [actor]"))
+			if(!business.settle_tax_debt(amount, actor))
 				continue
-			SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(amount, "Collected business tax: [business.name]")
-			business.tax_debt -= amount
-			business.tax_paid += amount
-			business.add_history("[actor] collected tax debt [amount][MONEY_SYMBOL]")
 			collected_total += amount
 			collected_count++
 	if(collected_total)

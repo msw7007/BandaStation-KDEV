@@ -800,7 +800,7 @@
 /datum/cyberpunk_corporation/proc/request_service(mob/living/user, service_id)
 	if(!can_request_service(service_id) || !user)
 		return FALSE
-	if(id == CYBERPUNK_CORP_STARLIGHT && service_id in list("delivery", "transport"))
+	if(id == CYBERPUNK_CORP_STARLIGHT && (service_id in list("delivery", "transport")))
 		return request_starlight_route_service(user, service_id)
 	if(id == CYBERPUNK_CORP_STARLIGHT && service_id == "return" && !cyberpunk_starlight_return_eligible(user.get_active_held_item()))
 		to_chat(user, span_warning("The return program only accepts non-Starlight, non-contract items."))

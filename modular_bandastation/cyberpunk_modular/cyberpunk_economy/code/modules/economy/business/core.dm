@@ -39,6 +39,10 @@
 	var/list/pending_employees = list()
 	var/list/warehouse_stock = list()
 	var/list/warehouse_item_types = list()
+	/// Serialized physical lots, kept separately from legacy fungible stock.
+	var/list/warehouse_items = list()
+	var/list/warehouse_prices = list()
+	var/list/warehouse_buyer_adjustments = list()
 	var/warehouse_enabled = FALSE
 	var/warehouse_auto_restock = FALSE
 	var/warehouse_surplus_percent = 0
@@ -59,6 +63,7 @@
 	var/list/saved_snapshot = list()
 	var/saved_at = 0
 	var/loaded_this_round = FALSE
+	var/saved_this_round = FALSE
 	var/last_payroll_at = 0
 	var/list/history = list()
 
@@ -143,6 +148,9 @@
 			"access_id" = get_access_id(),
 			"warehouse_stock" = warehouse_stock.Copy(),
 			"warehouse_item_types" = warehouse_item_types.Copy(),
+			"warehouse_items" = warehouse_items.Copy(),
+			"warehouse_prices" = warehouse_prices.Copy(),
+			"warehouse_buyer_adjustments" = warehouse_buyer_adjustments.Copy(),
 			"warehouse_enabled" = warehouse_enabled,
 			"warehouse_auto_restock" = warehouse_auto_restock,
 			"warehouse_surplus_percent" = warehouse_surplus_percent,
@@ -175,6 +183,15 @@
 		var/list/persistent_item_types = meta["warehouse_item_types"]
 		if(islist(persistent_item_types))
 			warehouse_item_types = persistent_item_types.Copy()
+		var/list/persistent_items = meta["warehouse_items"]
+		if(islist(persistent_items))
+			warehouse_items = persistent_items.Copy()
+		var/list/persistent_prices = meta["warehouse_prices"]
+		if(islist(persistent_prices))
+			warehouse_prices = persistent_prices.Copy()
+		var/list/persistent_buyer_adjustments = meta["warehouse_buyer_adjustments"]
+		if(islist(persistent_buyer_adjustments))
+			warehouse_buyer_adjustments = persistent_buyer_adjustments.Copy()
 		warehouse_enabled = !!meta["warehouse_enabled"]
 		warehouse_auto_restock = !!meta["warehouse_auto_restock"]
 		warehouse_surplus_percent = clamp(round(meta["warehouse_surplus_percent"] || 0), 0, 100)
@@ -269,15 +286,89 @@
 	return TRUE
 
 /datum/cyberpunk_business/proc/consume_stock(item_label, amount)
-	amount = max(0, round(amount))
+	var/list/packet = take_stock(item_label, amount)
+	return packet?["amount"] || 0
+
+/// Legacy and external supply can refill a standard vend, without consuming any physical lots.
+/datum/cyberpunk_business/proc/consume_fungible_stock(item_label, amount, expected_type)
 	var/stock_key = get_stock_key(item_label)
-	if(!stock_key || !amount)
+	if(!stock_key || amount <= 0)
 		return 0
-	var/taken = min(warehouse_stock[stock_key] || 0, amount)
+	var/stored_type = warehouse_item_types[stock_key]
+	if(stored_type && stored_type != "[expected_type]")
+		return 0
+	var/fungible = warehouse_stock[stock_key]
+	for(var/list/lot as anything in warehouse_items[stock_key])
+		fungible -= lot["stack_amount"] || 1
+	var/taken = clamp(fungible, 0, amount)
 	warehouse_stock[stock_key] -= taken
 	if(warehouse_stock[stock_key] <= 0)
 		warehouse_stock -= stock_key
 	return taken
+
+/datum/cyberpunk_business/proc/take_stock(item_label, amount, required_type, allow_abstract = TRUE)
+	amount = max(0, round(amount))
+	var/stock_key = get_stock_key(item_label)
+	if(!stock_key || !amount)
+		return null
+	var/list/lots = warehouse_items[stock_key]
+	var/list/taken_items = list()
+	var/list/remaining_items = list()
+	var/physical_stock = 0
+	var/taken = 0
+	for(var/list/lot as anything in lots)
+		var/units = lot["stack_amount"] || 1
+		physical_stock += units
+		if(taken >= amount || (required_type && lot["type"] != "[required_type]"))
+			remaining_items += list(lot)
+			continue
+		var/count = min(amount - taken, units)
+		var/list/selected = lot.Copy()
+		if(lot["stack_amount"])
+			selected["stack_amount"] = count
+			if(count < units)
+				var/list/remainder = lot.Copy()
+				remainder["stack_amount"] = units - count
+				remaining_items += list(remainder)
+		taken_items += list(selected)
+		taken += count
+	var/legacy_type = warehouse_item_types[stock_key]
+	if(allow_abstract && (!required_type || legacy_type == "[required_type]"))
+		taken += min(max(0, warehouse_stock[stock_key] - physical_stock), amount - taken)
+	if(!taken)
+		return null
+	warehouse_stock[stock_key] -= taken
+	if(warehouse_stock[stock_key] <= 0)
+		warehouse_stock -= stock_key
+	if(length(remaining_items))
+		warehouse_items[stock_key] = remaining_items
+	else
+		warehouse_items -= stock_key
+	return list("amount" = taken, "items" = taken_items, "legacy_type" = legacy_type)
+
+/datum/cyberpunk_business/proc/receive_stock(item_label, list/packet)
+	var/amount = add_stock(item_label, packet["amount"])
+	if(!amount)
+		return 0
+	var/stock_key = get_stock_key(item_label)
+	var/list/incoming = packet["items"]
+	if(length(incoming))
+		var/list/lots = warehouse_items[stock_key] || list()
+		warehouse_items[stock_key] = lots + incoming
+	var/legacy_type = text2path("[packet["legacy_type"]]")
+	if(ispath(legacy_type, /obj/item))
+		set_stock_item_type(stock_key, legacy_type)
+	return amount
+
+/datum/cyberpunk_business/proc/store_physical_item(obj/item/item, turf/location)
+	var/list/entry = cyberpunk_persistent_capture_movable(item, location, location, null)
+	if(!entry)
+		return 0
+	var/amount = entry["stack_amount"] || 1
+	if(!receive_stock(item.name, list("amount" = amount, "items" = list(entry))))
+		return 0
+	qdel(item)
+	return amount
 
 /datum/cyberpunk_business/proc/deposit_warehouse_item(mob/living/user, obj/item/item)
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !warehouse_enabled || !warehouse_valid || !item)
@@ -285,18 +376,15 @@
 	var/obj/structure/cyberpunk_business_unload_zone/zone = get_unload_zone()
 	if(!zone || get_dist(user, zone) > 1)
 		return FALSE
-	if(item.item_flags & ABSTRACT)
+	if(item.item_flags & ABSTRACT || !reject_bad_text(item.name, max_length = 64, ascii_only = FALSE))
 		return FALSE
-	var/amount = 1
-	var/obj/item/stack/stack_item = item
-	if(istype(stack_item))
-		amount = max(1, stack_item.get_amount())
 	var/item_label = item.name
 	if(!user.transferItemToLoc(item, zone))
 		return FALSE
-	add_stock(item_label, amount)
-	set_stock_item_type(item_label, item.type)
-	qdel(item)
+	var/amount = store_physical_item(item, get_turf(zone))
+	if(!amount)
+		item.forceMove(get_turf(zone))
+		return FALSE
 	add_history("[user.real_name || user.name] deposited [amount]x [item_label] into warehouse")
 	return TRUE
 
@@ -306,22 +394,15 @@
 	var/obj/structure/cyberpunk_business_unload_zone/zone = get_unload_zone()
 	if(!zone)
 		return FALSE
+	var/area/business_area = get_business_area()
 	var/absorbed = 0
-	for(var/turf/nearby_turf as anything in range(1, zone))
-		if(get_area(nearby_turf) != get_business_area())
+	for(var/turf/nearby_turf as anything in RANGE_TURFS(1, zone))
+		if(get_area(nearby_turf) != business_area)
 			continue
 		for(var/obj/item/item in nearby_turf.contents)
-			if(item == zone || (item.item_flags & ABSTRACT))
+			if(QDELETED(item) || item.loc != nearby_turf || (item.item_flags & ABSTRACT))
 				continue
-			var/amount = 1
-			var/obj/item/stack/stack_item = item
-			if(istype(stack_item))
-				amount = max(1, stack_item.get_amount())
-			var/item_label = item.name
-			add_stock(item_label, amount)
-			set_stock_item_type(item_label, item.type)
-			qdel(item)
-			absorbed += amount
+			absorbed += store_physical_item(item, nearby_turf)
 	if(absorbed)
 		add_history("[user.real_name || user.name] absorbed [absorbed] physical item(s) from unload zone")
 	return absorbed > 0
@@ -337,23 +418,65 @@
 	if(!stock_key)
 		return FALSE
 	var/item_type = text2path("[warehouse_item_types[stock_key]]")
-	if(!ispath(item_type, /obj/item))
-		return FALSE
-	var/taken = consume_stock(stock_key, amount)
-	if(!taken)
+	var/list/packet = take_stock(stock_key, amount, allow_abstract = ispath(item_type, /obj/item))
+	if(!packet)
 		return FALSE
 	var/turf/drop_turf = get_turf(zone)
-	if(ispath(item_type, /obj/item/stack))
-		new item_type(drop_turf, taken)
-	else
-		for(var/i in 1 to taken)
-			new item_type(drop_turf)
+	var/legacy_units = packet["amount"]
+	var/taken = 0
+	for(var/list/entry as anything in packet["items"])
+		var/units = entry["stack_amount"] || 1
+		legacy_units -= units
+		if(cyberpunk_persistent_restore_movable(entry, drop_turf, null, drop_turf, null))
+			taken += units
+		else
+			receive_stock(stock_key, list("amount" = units, "items" = list(entry)))
+	if(legacy_units && ispath(item_type, /obj/item))
+		if(ispath(item_type, /obj/item/stack))
+			new item_type(drop_turf, legacy_units, FALSE)
+		else
+			for(var/i in 1 to legacy_units)
+				new item_type(drop_turf)
+		taken += legacy_units
 	add_history("[user.real_name || user.name] withdrew [taken]x [stock_key] from warehouse")
+	return taken > 0
+
+/datum/cyberpunk_business/proc/get_stock_price(item_label, datum/cyberpunk_business/buyer, default_price = CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST)
+	var/key = lowertext("[item_label]")
+	var/base_price = warehouse_prices[key]
+	if(!isnum(base_price))
+		base_price = round(default_price * (100 + warehouse_markup_percent) / 100)
+	var/buyer_key = buyer?.persistent_record_id()
+	var/adjustment = buyer_key ? warehouse_buyer_adjustments[buyer_key] : null
+	if(!isnum(adjustment))
+		var/registration = SScyberpunk_corporations.cyberpunk_normalize_corporation_id(buyer?.registered_to)
+		var/buyer_group = (registration in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT)) ? registration : "civilian"
+		adjustment = warehouse_buyer_adjustments[buyer_group] || 0
+	return max(1, round(base_price * (100 + adjustment) / 100))
+
+/datum/cyberpunk_business/proc/set_trade_price(mob/living/user, item_label, price)
+	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_FINANCE) || !isnum(price))
+		return FALSE
+	var/stock_key = get_stock_key(item_label)
+	if(!stock_key)
+		return FALSE
+	if(price <= 0)
+		warehouse_prices -= lowertext(stock_key)
+	else
+		warehouse_prices[lowertext(stock_key)] = clamp(round(price), 1, 1000000)
 	return TRUE
 
-/datum/cyberpunk_business/proc/get_stock_price(item_label)
-	var/base_price = CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST
-	return max(1, round(base_price * (100 + warehouse_markup_percent) / 100))
+/datum/cyberpunk_business/proc/set_buyer_adjustment(mob/living/user, buyer, adjustment)
+	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_FINANCE) || !isnum(adjustment))
+		return FALSE
+	var/buyer_key = lowertext(trim("[buyer]"))
+	if(!(buyer_key in list("civilian", CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT)))
+		var/datum/cyberpunk_business/partner = SScyberpunk_property.get_cyberpunk_business(buyer_key)
+		if(!partner || partner == src)
+			return FALSE
+		buyer_key = partner.persistent_record_id()
+	warehouse_buyer_adjustments[buyer_key] = clamp(round(adjustment), -99, 500)
+	return TRUE
 
 /datum/cyberpunk_business/proc/allows_warehouse_partner(datum/cyberpunk_business/partner, buy_side = TRUE)
 	if(!partner)
@@ -401,7 +524,6 @@
 	if(tax > 0)
 		tax_debt += tax
 		add_history("tax accrued [tax][MONEY_SYMBOL]: [reason]")
-		auto_pay_taxes()
 	log_econ("Business #[id] [legal ? "legal" : "off-ledger"] income [amount][MONEY_NAME]: [reason]; tax accrued [tax][MONEY_NAME].")
 	return TRUE
 
@@ -412,30 +534,21 @@
 	amount = clamp(amount, 0, tax_debt)
 	if(amount <= 0)
 		return FALSE
-	var/datum/bank_account/account = get_account()
-	if(!account || !account.adjust_money(-amount, "Business tax payment: [name]"))
-		return FALSE
-	SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(amount, "Business tax: [name]")
-	tax_debt -= amount
-	tax_paid += amount
-	add_history("[user.real_name || user.name] paid [amount][MONEY_SYMBOL] tax")
-	log_econ("Business #[id] [name] paid [amount][MONEY_NAME] tax.")
-	return TRUE
+	return settle_tax_debt(amount, user.real_name || user.name)
 
-/datum/cyberpunk_business/proc/auto_pay_taxes()
-	if(!legal || tax_debt <= 0)
+/datum/cyberpunk_business/proc/settle_tax_debt(amount, payer)
+	if(amount <= 0 || amount > tax_debt)
 		return FALSE
 	var/datum/bank_account/account = get_account()
-	if(!account)
+	var/datum/cyberpunk_corporation/sponsor = SScyberpunk_corporations.get_cyberpunk_corporation(registered_to)
+	var/datum/bank_account/recipient = sponsor?.get_account() || SSeconomy.get_dep_account(ACCOUNT_CIV)
+	if(!recipient || !account?.adjust_money(-amount, "Business tax payment: [name]"))
 		return FALSE
-	var/amount = min(tax_debt, max(0, round(account.account_balance)))
-	if(amount <= 0 || !account.adjust_money(-amount, "Automatic business tax payment: [name]"))
-		return FALSE
-	SSeconomy.get_dep_account(ACCOUNT_CIV)?.adjust_money(amount, "Automatic business tax: [name]")
+	recipient.adjust_money(amount, "Business tax: [name]")
 	tax_debt -= amount
 	tax_paid += amount
-	add_history("automatic tax payment: [amount][MONEY_SYMBOL]")
-	log_econ("Business #[id] [name] automatically paid [amount][MONEY_NAME] tax.")
+	add_history("[payer] paid [amount][MONEY_SYMBOL] tax to [recipient.account_holder]")
+	log_econ("Business #[id] [name] paid [amount][MONEY_NAME] tax.")
 	return TRUE
 
 /datum/cyberpunk_business/proc/process_payroll()
@@ -569,6 +682,10 @@
 /datum/cyberpunk_business/proc/set_settings(mob/living/user, list/params)
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_TERMINAL))
 		return FALSE
+	var/registration = reject_bad_text(params["registered_to"], max_length = 48, ascii_only = FALSE)
+	if(is_owner(user) && tax_debt && registration && registration != registered_to)
+		to_chat(user, span_warning("Pay the outstanding tax before changing the business registration."))
+		return FALSE
 	name = reject_bad_text(params["name"], max_length = 48, ascii_only = FALSE) || name
 	direction = reject_bad_text(params["direction"], max_length = 64, ascii_only = FALSE) || direction
 	if(is_owner(user))
@@ -582,7 +699,8 @@
 					return FALSE
 		legal = wants_legal
 		size_class = legal ? "17x17" : "off-ledger"
-	registered_to = reject_bad_text(params["registered_to"], max_length = 48, ascii_only = FALSE) || registered_to
+	if(is_owner(user) && registration)
+		registered_to = registration
 	add_history("[user.real_name || user.name] updated business settings")
 	return TRUE
 
@@ -729,13 +847,14 @@
 	if(!business_area)
 		return FALSE
 	saved_snapshot = cyberpunk_persistent_area_capture(business_area, terminal)
+	saved_this_round = TRUE
 	saved_at = world.time
 	user.cyberpunk_store_persistent_area_record(/datum/preference/cyberpunk_business_records, to_persistent_record())
 	add_history("[user.real_name || user.name] saved [length(saved_snapshot["movables"])] object(s) and [length(saved_snapshot["turfs"])] turf(s)")
 	return TRUE
 
 /datum/cyberpunk_business/proc/load_business(mob/living/user)
-	if(!can_save_load(user) || !terminal || loaded_this_round || !length(saved_snapshot))
+	if(!can_save_load(user) || !terminal || loaded_this_round || saved_this_round || !length(saved_snapshot))
 		return FALSE
 	if(!premises_valid && !validate_premises(user))
 		return FALSE
@@ -743,6 +862,17 @@
 	if(!business_area)
 		return FALSE
 	var/restored = cyberpunk_persistent_area_restore(business_area, terminal, saved_snapshot)
+	for(var/turf/business_turf as anything in get_business_turfs())
+		for(var/obj/structure/cyberpunk_business_unload_zone/zone in business_turf.contents)
+			if(!zone.business_id)
+				continue
+			zone.bind_business(src)
+			warehouse_unload_zone_ref = REF(zone)
+		for(var/obj/machinery/machine in business_turf.contents)
+			if(machine.cyberpunk_business_warehouse_linked || (istype(machine, /obj/machinery/vending) && machine.cyberpunk_business_id))
+				machine.cyberpunk_business_id = id
+	if(warehouse_enabled)
+		validate_warehouse(user)
 	loaded_this_round = TRUE
 	apply_generated_access(user)
 	add_history("[user.real_name || user.name] loaded [restored] object(s); area overwritten")
@@ -838,7 +968,9 @@
 			"name" = stock_name,
 			"amount" = warehouse_stock[stock_name],
 			"itemType" = warehouse_item_types[stock_name],
-			"canWithdraw" = !!warehouse_item_types[stock_name],
+			"canWithdraw" = !!warehouse_item_types[stock_name] || length(warehouse_items[stock_name]) > 0,
+			"price" = get_stock_price(stock_name),
+			"basePrice" = warehouse_prices[lowertext(stock_name)],
 		))
 	var/list/delivery_records = list()
 	for(var/datum/cyberpunk_business_delivery/delivery as anything in deliveries)
@@ -883,6 +1015,7 @@
 		"savedObjects" = islist(saved_snapshot) && islist(saved_snapshot["movables"]) ? length(saved_snapshot["movables"]) : 0,
 		"savedAt" = saved_at ? DisplayTimeText(world.time - saved_at) : null,
 		"loadedThisRound" = loaded_this_round,
+		"canRestore" = can_save_load(user) && !loaded_this_round && !saved_this_round && length(saved_snapshot) > 0,
 		"canSaveLoad" = can_save_load(user),
 		"canFinance" = has_access(user, CYBERPUNK_BUSINESS_ACCESS_FINANCE),
 		"canStock" = has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK),

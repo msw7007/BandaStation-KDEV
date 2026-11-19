@@ -4,6 +4,7 @@
 	var/business_id = 0
 	var/item_label = "goods"
 	var/amount = 1
+	var/list/stock_packet
 	var/source_label = "external supplier"
 	var/source_business_id = 0
 	var/destination_label = "business warehouse"
@@ -42,7 +43,11 @@
 	if(!business)
 		return FALSE
 	status = "completed"
-	business.add_stock(item_label, amount)
+	if(stock_packet)
+		business.receive_stock(item_label, stock_packet)
+		stock_packet = null
+	else
+		business.add_stock(item_label, amount)
 	business.add_history("delivery #[id] arrived: [amount]x [item_label]; cost [cost][MONEY_SYMBOL]")
 	var/atom/arrival_point = business.get_unload_zone() || business.terminal
 	var/atom/movable/arrival_speaker = arrival_point

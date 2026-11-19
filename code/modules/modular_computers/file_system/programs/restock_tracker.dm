@@ -354,6 +354,49 @@
 		return TRUE
 	return cyberpunk_apartment_terminal_ui_act(action, params, ui.user, src, apartment_id)
 
+/obj/machinery/computer/apartment_terminal/cyberpunk_test_receiver
+	name = "Квартира Б · восстановление"
+	desc = "Загружает обстановку квартиры А из предыдущего раунда в пустую квартиру Б."
+
+/obj/machinery/computer/apartment_terminal/cyberpunk_test_receiver/ui_data(mob/user)
+	var/list/data = ..()
+	data["testReceiver"] = SSmapping.current_map?.map_name == "Cyberpunk Test"
+	var/datum/cyberpunk_apartment/receiver = SScyberpunk_property.get_cyberpunk_apartment(apartment_id)
+	data["testLoaded"] = receiver?.loaded_this_round
+	return data
+
+/obj/machinery/computer/apartment_terminal/cyberpunk_test_receiver/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(SSmapping.current_map?.map_name != "Cyberpunk Test")
+		return ..()
+	var/mob/living/owner = ui.user
+	var/area/destination = get_area(src)
+	if(action != "restore_test_apartment" || ui_status(owner, state) != UI_INTERACTIVE || !istype(owner) || !Adjacent(owner) || !is_operational || !istype(destination, /area/cyberpunk/city/housing/apartment/unit_02/test_receiver))
+		return FALSE
+	if(!owner.has_neural_implant())
+		to_chat(owner, span_warning("Нужен нейроинтерфейс. На Z1 его выдаёт кнопка «Подготовить стенд» в мастерской."))
+		return TRUE
+	var/source_type = /area/cyberpunk/city/housing/apartment/unit_01/test_apartment
+	for(var/datum/cyberpunk_apartment/source as anything in SScyberpunk_property.get_cyberpunk_apartments_for_user(owner))
+		if(source.apartment_area_type == source_type && source.saved_this_round)
+			to_chat(owner, span_warning("Снимок квартиры А сделан в этом раунде. Вернись в квартиру Б в следующем."))
+			return TRUE
+	var/character_key = SScyberpunk_property.get_cyberpunk_business_key(owner, owner.get_bank_account())
+	var/list/record = owner.cyberpunk_find_persistent_area_record(/datum/preference/cyberpunk_apartment_records, "[character_key]:[source_type]")
+	var/list/snapshot = record?["snapshot"]
+	if(!islist(snapshot) || !length(snapshot["turfs"]))
+		to_chat(owner, span_warning("У этого персонажа нет снимка квартиры А."))
+		return TRUE
+	var/datum/cyberpunk_apartment/receiver = SScyberpunk_property.get_cyberpunk_apartment(apartment_id)
+	if(!receiver)
+		receiver = SScyberpunk_property.create_cyberpunk_apartment(owner, src, list("name" = "Квартира Б"))
+	if(!receiver?.can_save_load(owner) || receiver.loaded_this_round || receiver.terminal != src)
+		to_chat(owner, span_warning("Квартира Б уже занята или восстановлена в этом раунде."))
+		return TRUE
+	receiver.saved_snapshot = snapshot
+	if(receiver.load_apartment(owner))
+		to_chat(owner, span_notice("Снимок квартиры А восстановлен в квартире Б."))
+	return TRUE
+
 /mob/living/verb/create_cyberpunk_apartment_terminal()
 	set name = "Create Apartment Terminal"
 	set desc = "Temporarily create an apartment persistence terminal for testing."

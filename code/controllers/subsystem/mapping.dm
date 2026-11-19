@@ -432,8 +432,8 @@ Used by the AI doomsday and the self-destruct nuke.
 		var/datum/parsed_map/pm = P
 		pm.turf_blacklist = turf_blacklist // BANDASTATION EDIT ADDITION - apply blacklist
 		var/bounds = pm.bounds
-		var/x_offset = bounds ? round(world.maxx / 2 - bounds[MAP_MAXX] / 2) + 1 : 1
-		var/y_offset = bounds ? round(world.maxy / 2 - bounds[MAP_MAXY] / 2) + 1 : 1
+		var/x_offset = bounds ? max(1, round(world.maxx / 2 - bounds[MAP_MAXX] / 2) + 1) : 1
+		var/y_offset = bounds ? max(1, round(world.maxy / 2 - bounds[MAP_MAXY] / 2) + 1) : 1
 		if (!pm.load(x_offset, y_offset, start_z + parsed_maps[P], no_changeturf = TRUE, new_z = TRUE))
 			errorList |= pm.original_path
 	// BANDASTATION EDIT ADDITION BEGIN - We need to load our templates from cache after our space has been carved out.

@@ -36,6 +36,7 @@
 		return null
 	for(var/_ in 0 to t_max)
 		var/obj/item/seeds/t_prod = seed.Copy()
+		t_prod.cyberpunk_mutation_potential = max(0, seed.cyberpunk_mutation_potential - 10)
 		seeds.Add(t_prod)
 		t_prod.forceMove(seedloc)
 	qdel(object)
@@ -165,7 +166,7 @@
  */
 /obj/machinery/seed_extractor/proc/generate_seed_hash(obj/item/seeds/O)
 	var/genes = list2params(O.genes)
-	return md5("[O.name][O.lifespan][O.endurance][O.maturation][O.production][O.yield][O.potency][O.instability][genes]");
+	return md5("[O.name][O.lifespan][O.endurance][O.maturation][O.production][O.yield][O.potency][O.instability][O.cyberpunk_mutation_potential][O.cyberpunk_gene_points_spent][genes]");
 
 /** Add Seeds Proc.
  *

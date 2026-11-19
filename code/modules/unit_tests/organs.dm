@@ -97,9 +97,8 @@
 		TEST_ASSERT(organ.implant_emp_reboot_timer, "A failed roll must keep a pending reboot timer.")
 	TEST_ASSERT_EQUAL(organ.damage, 10, "A reboot must not repair physical damage.")
 	TEST_ASSERT_EQUAL(organ.implant_disabled_until, temporary_deadline, "A reboot must not clear unrelated temporary shutdown.")
-	var/datum/surgery_operation/organ/repair/implant/retune/operation = allocate(__IMPLIED_TYPE__)
-	TEST_ASSERT(operation.state_check(organ), "A disabled implant must offer surgical retuning.")
-	operation.on_success(organ)
+	var/datum/surgery_operation/organ/repair/implant/retune/unit_test/operation = allocate(__IMPLIED_TYPE__)
+	TEST_ASSERT(operation.test_retune(organ), "A disabled implant must offer surgical retuning.")
 	TEST_ASSERT(!organ.is_implant_disabled(), "Successful surgery must immediately retune the organ.")
 	TEST_ASSERT_NULL(organ.implant_emp_reboot_timer, "Surgery must cancel the pending reboot.")
 	TEST_ASSERT_EQUAL(organ.damage, 10, "Retuning must not repair physical damage.")
@@ -107,6 +106,15 @@
 	TEST_ASSERT(!implant.is_implant_disabled(), "Manual retuning must immediately restart a legacy implant.")
 	TEST_ASSERT_NULL(implant.implant_emp_reboot_timer, "Retuning must cancel the legacy implant timer.")
 	TEST_ASSERT(!organ.attempt_implant_emp_reboot() && !implant.attempt_implant_emp_reboot(), "Stale callbacks must not schedule attempts after retuning.")
+
+/datum/surgery_operation/organ/repair/implant/retune/unit_test
+	abstract_type = /datum/surgery_operation/organ/repair/implant/retune/unit_test
+
+/datum/surgery_operation/organ/repair/implant/retune/unit_test/proc/test_retune(obj/item/organ/organ)
+	if(!state_check(organ))
+		return FALSE
+	on_success(organ)
+	return TRUE
 
 /datum/unit_test/cyberpunk_implant_electric_retune/Run()
 	var/mob/living/carbon/human/consistent/patient = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)

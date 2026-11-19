@@ -51,6 +51,11 @@
 	. = ..()
 	if(!.)
 		return
+	INVOKE_ASYNC(src, PROC_REF(process_spell_symptoms), seconds_per_tick)
+
+/datum/disease/wizarditis/proc/process_spell_symptoms(seconds_per_tick)
+	if(QDELETED(affected_mob))
+		return
 
 	if(affected_mob.can_block_magic(charge_cost = 0))
 		update_stage(1)

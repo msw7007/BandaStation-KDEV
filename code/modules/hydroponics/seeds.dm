@@ -131,6 +131,8 @@
 	copy_seed.yield = yield
 	copy_seed.potency = potency
 	copy_seed.instability = instability
+	copy_seed.cyberpunk_mutation_potential = cyberpunk_mutation_potential
+	copy_seed.cyberpunk_gene_points_spent = cyberpunk_gene_points_spent
 	copy_seed.weed_rate = weed_rate
 	copy_seed.weed_chance = weed_chance
 	copy_seed.name = name
@@ -230,6 +232,8 @@
 			if(!t_prod)
 				continue
 			mutated_seed = new mutated_seed
+			mutated_seed.cyberpunk_mutation_potential = cyberpunk_mutation_potential
+			mutated_seed.cyberpunk_gene_points_spent = cyberpunk_gene_points_spent
 			for(var/datum/plant_gene/trait/trait in parent.myseed.genes)
 				if((trait.mutability_flags & PLANT_GENE_MUTATABLE) && trait.can_add(mutated_seed))
 					mutated_seed.genes += trait.Copy()

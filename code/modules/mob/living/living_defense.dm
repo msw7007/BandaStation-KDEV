@@ -946,7 +946,8 @@
 			cyberpunk_dodge_until = 0
 			report_cyberpunk_defense_break(hit_by, "dodge")
 			return FAILED_BLOCK
-	if(has_active_cyberpunk_dodge() && can_dodge())
+	// Shots use the perk-gated dodge in bullet_act. Thrown items still use this check.
+	if(attack_type != PROJECTILE_ATTACK && has_active_cyberpunk_dodge() && can_dodge())
 		var/dodge_chance = clamp(round((20 + get_cyberpunk_skill_perk_bonus(SKILL_EVASION, 1)) * get_cyberpunk_inspiration_guard_multiplier()), 5, 95)
 		if(prob(dodge_chance))
 			cyberpunk_dodge_until = 0

@@ -28,7 +28,11 @@
 	var/potential_phrase = parrot_controller.blackboard[BB_PARROT_REPEAT_STRING]
 
 	if(SPT_PROB(speak_chance, seconds_per_tick) && !isnull(potential_phrase))
-		affected_mob.say(potential_phrase, forced = "parrot possession")
+		INVOKE_ASYNC(src, PROC_REF(speak_through_host), potential_phrase)
+
+/datum/disease/parrot_possession/proc/speak_through_host(phrase)
+	if(!QDELETED(affected_mob))
+		affected_mob.say(phrase, forced = "parrot possession")
 
 
 /datum/disease/parrot_possession/cure(add_resistance = FALSE)

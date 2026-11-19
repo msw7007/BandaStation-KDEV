@@ -240,7 +240,7 @@
 	if(isliving(user))
 		var/mob/living/living_user = user
 		speed_bonus = max(speed_bonus, living_user.get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 1))
-	return 1 / max(0.1, 1 + speed_bonus * 0.01)
+	return cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_BENN, "benn_gene_combo", 0.75) / max(0.1, 1 + speed_bonus * 0.01)
 
 /obj/machinery/computer/dna_console/proc/get_analysis_decode_bonus(mob/user)
 	var/bonus = max(0, get_analysis_level(user) * 5)

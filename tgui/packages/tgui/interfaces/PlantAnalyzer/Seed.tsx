@@ -21,7 +21,7 @@ import type { PlantAnalyzerData, ReagentData, SeedData } from './types';
 
 export function PlantAnalyzerSeedStats(props) {
   const { data } = useBackend<PlantAnalyzerData>();
-  const { seed_data, tray_data, cycle_seconds, trait_db } = data;
+  const { seed_data, tray_data, cycle_seconds, stat_limits, trait_db } = data;
 
   if (!seed_data) {
     // This shouldn't be rendered if seed data is null
@@ -106,7 +106,7 @@ export function PlantAnalyzerSeedStats(props) {
         <Stack.Item width="100%">
           <LabeledList>
             {tray_data && (
-              <LabeledList.Item label="Health">
+              <LabeledList.Item label="Здоровье">
                 <ProgressBar
                   value={tray_data.plant_health / seed_data.endurance}
                   ranges={{
@@ -121,8 +121,8 @@ export function PlantAnalyzerSeedStats(props) {
             )}
 
             <LabeledList.Item
-              label="Endurance"
-              tooltip="The health pool of the plant that delays withering. Improves quality of resulting food & drinks."
+              label="Выносливость"
+              tooltip="Определяет запас здоровья растения. Влияет на качество урожая."
             >
               <ProgressBar
                 value={seed_data.endurance / 100}
@@ -137,11 +137,11 @@ export function PlantAnalyzerSeedStats(props) {
             </LabeledList.Item>
 
             {tray_data && (
-              <LabeledList.Item label="Age">
+              <LabeledList.Item label="Возраст">
                 {tray_data.is_dead ? (
                   <NoticeBox color="red" align="center">
                     <Icon name="skull" mr={1} />
-                    Dead
+                    Растение погибло
                   </NoticeBox>
                 ) : (
                   <ProgressBar
@@ -153,37 +153,49 @@ export function PlantAnalyzerSeedStats(props) {
                       bad: [seed_data.lifespan, Infinity],
                     }}
                   >
-                    {tray_data.plant_age * cycle_seconds} /{' '}
-                    {formatPerSecond(seed_data.lifespan, cycle_seconds, false)}
+                    {formatGrowthTime(tray_data.plant_age, cycle_seconds)} /{' '}
+                    {formatGrowthTime(seed_data.lifespan, cycle_seconds)}
                   </ProgressBar>
                 )}
               </LabeledList.Item>
             )}
 
             <LabeledList.Item
-              label="Maturation"
-              tooltip="The age at which the plant starts growing products."
+              label="Созревание"
+              tooltip="Возраст начала плодоношения. Полоса показывает долю срока жизни до созревания."
             >
-              {formatPerSecond(seed_data.maturation, cycle_seconds)}
+              <GrowthTimeBar
+                value={seed_data.maturation}
+                maxValue={Math.max(seed_data.lifespan, seed_data.maturation, 1)}
+                cycleSeconds={cycle_seconds}
+              />
             </LabeledList.Item>
 
             <LabeledList.Item
-              label="Production"
-              tooltip="The time needed for a mature plant to (re)grow a product."
+              label="Рост урожая"
+              tooltip="Время, за которое у зрелого растения вырастает урожай."
             >
-              {formatPerSecond(seed_data.production, cycle_seconds)}
+              <GrowthTimeBar
+                value={seed_data.production}
+                maxValue={stat_limits.production}
+                cycleSeconds={cycle_seconds}
+              />
             </LabeledList.Item>
 
             <LabeledList.Item
-              label="Lifespan"
-              tooltip={`The age at which the plant starts withering. Improves quality of resulting food & drinks.`}
+              label="Срок жизни"
+              tooltip="Возраст, с которого растение начинает увядать. Влияет на качество урожая."
             >
-              {formatPerSecond(seed_data.lifespan, cycle_seconds)}
+              <GrowthTimeBar
+                value={seed_data.lifespan}
+                maxValue={stat_limits.lifespan}
+                cycleSeconds={cycle_seconds}
+              />
             </LabeledList.Item>
 
             <LabeledList.Item
-              label="Yield"
-              tooltip="The number of products gathered in a single harvest."
+              label="Урожайность"
+              tooltip="Количество плодов за один сбор."
             >
               <ProgressBar
                 value={seed_data.yield / 10}
@@ -198,8 +210,8 @@ export function PlantAnalyzerSeedStats(props) {
             </LabeledList.Item>
 
             <LabeledList.Item
-              label="Potency"
-              tooltip="Determines product mass, reagent volume and strength of effects."
+              label="Потенция"
+              tooltip="Влияет на массу урожая, количество реагентов и силу эффектов."
             >
               <ProgressBar
                 value={seed_data.potency / 100}
@@ -214,8 +226,25 @@ export function PlantAnalyzerSeedStats(props) {
             </LabeledList.Item>
 
             <LabeledList.Item
-              label="Instability"
-              tooltip="The likelihood of the plant to randomize stats or mutate. Affects quality of resulting food & drinks."
+              label="Мутационный потенциал"
+              tooltip="Вероятность закрепления признака в смешивателе. При извлечении следующего поколения уменьшается на 10 п. п."
+            >
+              <ProgressBar
+                value={seed_data.mutation_potential}
+                maxValue={100}
+                ranges={{
+                  good: [70, Infinity],
+                  average: [30, 70],
+                  bad: [0, 30],
+                }}
+              >
+                {seed_data.mutation_potential}%
+              </ProgressBar>
+            </LabeledList.Item>
+
+            <LabeledList.Item
+              label="Нестабильность"
+              tooltip="Влияет на вероятность случайных изменений и качество урожая."
             >
               <ProgressBar
                 value={seed_data.instability}
@@ -230,9 +259,24 @@ export function PlantAnalyzerSeedStats(props) {
               </ProgressBar>
             </LabeledList.Item>
 
-            <LabeledList.Item label="Weeds">
-              {`${seed_data.weed_chance}% chance to grow by
-                ${seed_data.weed_rate} every ${cycle_seconds} seconds`}
+            <LabeledList.Item
+              label="Шанс роста сорняков"
+              tooltip={`Проверяется раз в ${cycle_seconds} с.`}
+            >
+              <ProgressBar value={seed_data.weed_chance} maxValue={100}>
+                {seed_data.weed_chance}%
+              </ProgressBar>
+            </LabeledList.Item>
+            <LabeledList.Item
+              label="Прирост сорняков"
+              tooltip="На сколько вырастут сорняки при успешной проверке."
+            >
+              <ProgressBar
+                value={seed_data.weed_rate}
+                maxValue={stat_limits.weed_rate}
+              >
+                {seed_data.weed_rate} / {stat_limits.weed_rate}
+              </ProgressBar>
             </LabeledList.Item>
             {seed_data.unique_labels.map((label) => (
               <LabeledList.Item key={label.label} label={label.label}>
@@ -500,25 +544,32 @@ function expectedReagentVolume(
   return Math.round(reagent.rate * baseVolume * (seed_data.potency / 100)) || 0;
 }
 
-function formatPerSecond(
-  value: number,
-  cycle_seconds: number,
-  simplify: boolean = true,
-) {
-  if (!simplify) {
-    return `${value * cycle_seconds} second${value * cycle_seconds > 1 ? 's' : ''}`;
+export function GrowthTimeBar(props: {
+  value: number;
+  maxValue: number;
+  cycleSeconds: number;
+}) {
+  const { value, maxValue, cycleSeconds } = props;
+  return (
+    <ProgressBar value={value} maxValue={maxValue} color="blue">
+      {formatGrowthTime(value, cycleSeconds)}
+    </ProgressBar>
+  );
+}
+
+function formatGrowthTime(cycles: number, cycleSeconds: number) {
+  if (cycles < 0) {
+    return '—';
   }
-  const seconds = Math.round(value * cycle_seconds);
+  const seconds = Math.round(cycles * cycleSeconds);
   if (seconds < 60) {
-    return `${seconds} second${seconds > 1 ? 's' : ''}`;
+    return `${seconds} с`;
   }
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes} minute${minutes > 1 ? 's' : ''}${
-    remainingSeconds > 0
-      ? `, ${remainingSeconds} second${remainingSeconds > 1 ? 's' : ''}`
-      : ''
-  }`;
+  return remainingSeconds
+    ? `${minutes} мин ${remainingSeconds} с`
+    : `${minutes} мин`;
 }
 
 function getTraitInfo(trait: string, trait_db: PlantAnalyzerData['trait_db']) {

@@ -23,6 +23,8 @@
 	var/category
 	///List of items that have been returned to the vending machine.
 	var/list/returned_products
+	/// Item records supplied by a player business, separate from free returns.
+	var/list/cyberpunk_warehouse_items
 	/// Sale datum that controls dynamic price, availability and rotated stock.
 	var/datum/cyberpunk_sale_entry/cyberpunk_sale_entry
 	/// Full stock amount before daily sale rotation.
@@ -161,6 +163,8 @@
 	var/extra_price = 50
 	/// Whether this vendor rotates its public sale stock.
 	var/cyberpunk_sale_rotation_enabled = TRUE
+	/// Use the configured catalogue amounts for deliveries instead of rolling availability.
+	var/cyberpunk_fixed_supply = FALSE
 	/// One in-world day for current Cyberpunk economy pacing.
 	var/cyberpunk_sale_rotation_interval = 30 MINUTES
 	/// Next world time when this vendor should reroll sale availability.
@@ -298,6 +302,7 @@
 				return
 
 /obj/machinery/vending/on_deconstruction(disassembled)
+	eject_cyberpunk_warehouse_stock()
 	var/obj/item/vending_refill/installed_refill = locate() in component_parts
 	if(!installed_refill)
 		return

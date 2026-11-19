@@ -70,3 +70,13 @@
 	TEST_ASSERT_EQUAL(outstanding, 0, "The claim must be fully settled.")
 	TEST_ASSERT_EQUAL(debtor.account_debt, 0, "The bank debt must be fully settled.")
 	TEST_ASSERT(!length(debtor.cyberpunk_contract_debts), "Settled claims must be removed.")
+
+/datum/unit_test/cyberpunk_business_vendor_empty_categories/Run()
+	var/obj/machinery/vending/tool/cyberpunk_business/vendor = allocate(__IMPLIED_TYPE__, run_loc_floor_bottom_left)
+	TEST_ASSERT(vendor.has_business_vending_module(), "Empty categories must not interrupt business vendor initialization.")
+	TEST_ASSERT_EQUAL(length(vendor.product_records), 3, "The test vendor must offer its three standard products.")
+	for(var/datum/data/vending_product/product as anything in vendor.product_records)
+		TEST_ASSERT_EQUAL(product.amount, 0, "The business vendor starts empty for warehouse testing.")
+		TEST_ASSERT_EQUAL(product.max_amount, vendor.products[product.product_path], "An empty business vendor must still have space for warehouse stock.")
+	var/obj/item/vending_refill/youtool/refill = allocate(__IMPLIED_TYPE__)
+	TEST_ASSERT(vendor.restock(refill) > 0, "An ordinary refill must work when both optional categories are absent.")

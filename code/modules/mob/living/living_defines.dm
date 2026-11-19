@@ -283,6 +283,10 @@
 	var/cyberpunk_parry_until = 0
 	/// Active dodge window expiry.
 	var/cyberpunk_dodge_until = 0
+	/// Earliest time the mob can prepare another parry, even if the current guard was consumed.
+	COOLDOWN_DECLARE(cyberpunk_parry_cooldown)
+	/// Earliest time the mob can prepare another dodge, even if the current guard was consumed.
+	COOLDOWN_DECLARE(cyberpunk_dodge_cooldown)
 	/// Evasion perk 6 temporary invisibility expiry.
 	var/cyberpunk_evasion_invisible_until = 0
 	/// Mob whose next attack bypasses this mob's Cyberpunk parry/dodge after a successful parry.

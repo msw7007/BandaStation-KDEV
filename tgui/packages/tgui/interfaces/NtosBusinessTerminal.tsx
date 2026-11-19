@@ -29,6 +29,8 @@ type StockEntry = {
   amount: number;
   itemType?: string;
   canWithdraw?: BooleanLike;
+  price: number;
+  basePrice?: number;
 };
 
 type Delivery = {
@@ -92,6 +94,7 @@ type Business = {
   savedAt?: string;
   loadedThisRound: BooleanLike;
   canSaveLoad: BooleanLike;
+  canRestore: BooleanLike;
   canFinance: BooleanLike;
   canStock: BooleanLike;
   canStaff: BooleanLike;
@@ -111,6 +114,7 @@ type Data = {
   businesses: Business[];
   business?: Business;
   warehouseOptions?: WarehouseOption[];
+  testBench?: BooleanLike;
 };
 
 const accessLabels = [
@@ -137,34 +141,57 @@ export const NtosBusinessTerminal = () => {
   return (
     <NtosWindow width={820} height={760}>
       <NtosWindow.Content scrollable className="CyberpunkPanel">
-        <Section title="Business terminal">
+        <Section title="Бизнес-терминал">
           <LabeledList>
-            <LabeledList.Item label="ID account">
-              {accountName || 'No ID account'}
+            <LabeledList.Item label="Счёт на ID">
+              {accountName || 'Счёт не найден'}
             </LabeledList.Item>
-            <LabeledList.Item label="Personal balance">
+            <LabeledList.Item label="Личные средства">
               {formatMoney(accountBalance)} cr
             </LabeledList.Item>
-            <LabeledList.Item label="Neural link">
-              {hasNeural ? 'online' : 'required for creation/save/load'}
+            <LabeledList.Item label="Нейроинтерфейс">
+              {hasNeural ? 'подключён' : 'требуется для регистрации и сейвлоада'}
             </LabeledList.Item>
-            <LabeledList.Item label="Premises">
+            <LabeledList.Item label="Помещение">
               {terminalSize === 'program'
-                ? 'business area required'
+                ? 'нужен стационарный терминал в помещении'
                 : `${terminalArea} / ${
                     terminalBusinessArea
-                      ? 'registered business area'
-                      : 'off-ledger area'
+                      ? 'торговое помещение'
+                      : 'вне торговой зоны'
                   }`}
             </LabeledList.Item>
           </LabeledList>
         </Section>
 
-        <BusinessCreation disabled={!hasNeural} terminalBusinessArea={!!terminalBusinessArea} />
-
-        <Section title={`Accessible businesses (${businesses.length})`}>
+        {data.testBench ? (
+          <Section
+            title="Тестовый стенд"
+            buttons={
+              <Button
+                icon="play"
+                tooltip="Регистрирует местный бизнес, связывает площадку с автоматом и пополняет счета."
+                onClick={() => act('prepare_test_bench')}
+              >
+                Подготовить стенд
+              </Button>
+            }
+          >
+            {business?.warehouse.valid
+              ? 'Стенд готов. Образцы лежат на полу возле белого квадрата.'
+              : 'Нажми «Подготовить стенд», чтобы начать. Понадобится ID со счётом.'}
+          </Section>
+        ) : (
+          <>
+          {terminalSize !== 'program' && (
+            <BusinessCreation
+              disabled={!hasNeural}
+              terminalBusinessArea={!!terminalBusinessArea}
+            />
+          )}
+          <Section title={`Доступные предприятия (${businesses.length})`}>
           {!businesses.length ? (
-            <Box className="CyberpunkPanel__Muted">No linked businesses.</Box>
+            <Box className="CyberpunkPanel__Muted">Доступных предприятий пока нет.</Box>
           ) : (
             <Stack wrap>
               {businesses.map((entry) => (
@@ -180,11 +207,95 @@ export const NtosBusinessTerminal = () => {
               ))}
             </Stack>
           )}
-        </Section>
+          </Section>
+          </>
+        )}
 
-        {!!business && <BusinessPanel business={business} />}
+        {!!business && (data.testBench
+          ? <TestBusinessBench business={business} />
+          : <BusinessPanel business={business} />)}
       </NtosWindow.Content>
     </NtosWindow>
+  );
+};
+
+const TestBusinessBench = (props: { business: Business }) => {
+  const { act } = useBackend<Data>();
+  const { business } = props;
+  const id = business.id;
+  const canStock = !!business.canStock && !!business.warehouse.valid;
+  return (
+    <>
+      <Section title="Склад и автомат">
+        <Stack>
+          <Stack.Item>
+            <Button
+              icon="box"
+              disabled={!canStock}
+              tooltip="Принимает свободно лежащие предметы с пола вокруг белого квадрата. Предметы в руках, на теле и в сумках остаются у владельцев."
+              onClick={() => act('absorb_warehouse_items', { id })}
+            >
+              Сдать с пола 3×3
+            </Button>
+          </Stack.Item>
+          <Stack.Item>
+            <Button
+              icon="cash-register"
+              disabled={!canStock}
+              tooltip="Перекладывает со склада в автомат только совместимые с ним товары. Одежду и другие предметы можно забрать через выдачу."
+              onClick={() => act('restock_vendors', { id })}
+            >
+              Загрузить автомат
+            </Button>
+          </Stack.Item>
+        </Stack>
+        {!business.stock.length && <Box mt={1}>На складе пусто.</Box>}
+        <Table>
+          {business.stock.map((stock) => (
+            <Table.Row key={stock.name}>
+              <Table.Cell>{stock.name}</Table.Cell>
+              <Table.Cell collapsing>{stock.amount} шт.</Table.Cell>
+              <Table.Cell collapsing>
+                <Button
+                  icon="box-open"
+                  disabled={!canStock || !stock.canWithdraw}
+                  tooltip="Кладёт одну штуку на белый квадрат. Встань рядом с ним."
+                  onClick={() => act('withdraw_warehouse_item', { id, item: stock.name, amount: 1 })}
+                >
+                  Выдать на площадку
+                </Button>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table>
+      </Section>
+      <Section title="Налог с продажи">
+        <LabeledList>
+          <LabeledList.Item
+            label="К уплате"
+            buttons={
+              <Button
+                icon="landmark"
+                disabled={!business.canFinance || business.taxDebt <= 0}
+                tooltip="Оплачивает весь долг со счёта бизнеса."
+                onClick={() => act('pay_taxes', { id, amount: business.taxDebt })}
+              >
+                Уплатить налог
+              </Button>
+            }
+          >
+            {formatMoney(business.taxDebt)} кр.
+          </LabeledList.Item>
+        </LabeledList>
+      </Section>
+      <BusinessSnapshot business={business} />
+      <Collapsible title="Дополнительные настройки">
+        <BusinessSettings business={business} />
+        <BusinessFinance business={business} />
+        <BusinessWarehouse business={business} />
+        <BusinessStaff business={business} />
+      </Collapsible>
+    </>
   );
 };
 
@@ -199,15 +310,15 @@ const BusinessCreation = (props: {
   const [legal, setLegal] = useState(true);
 
   return (
-    <Collapsible title="Create business">
+    <Collapsible title="Зарегистрировать предприятие">
       <Stack vertical>
         <Stack.Item>
-          <Input fluid placeholder="Business name" value={name} onChange={setName} />
+          <Input fluid placeholder="Название предприятия" value={name} onChange={setName} />
         </Stack.Item>
         <Stack.Item>
           <Input
             fluid
-            placeholder="Business direction"
+            placeholder="Направление деятельности"
             value={direction}
             onChange={setDirection}
           />
@@ -215,14 +326,14 @@ const BusinessCreation = (props: {
         <Stack.Item>
           <Input
             fluid
-            placeholder="Registration authority"
+            placeholder="Орган регистрации"
             value={registeredTo}
             onChange={setRegisteredTo}
           />
         </Stack.Item>
         <Stack.Item>
           <Button.Checkbox checked={legal} onClick={() => setLegal(!legal)}>
-            Legal registration
+            Легальная регистрация
           </Button.Checkbox>
         </Stack.Item>
         <Stack.Item>
@@ -239,7 +350,7 @@ const BusinessCreation = (props: {
               })
             }
           >
-            Bind to neural interface
+            Зарегистрировать на нейроинтерфейс
           </Button>
         </Stack.Item>
       </Stack>
@@ -430,8 +541,11 @@ const BusinessWarehouse = (props: { business: Business }) => {
   const [buyLinks, setBuyLinks] = useState(business.warehouse.buyLinks || '');
   const [sellLinks, setSellLinks] = useState(business.warehouse.sellLinks || '');
   const [item, setItem] = useState('goods');
-  const [source, setSource] = useState('external supplier');
+  const [source, setSource] = useState('auto');
   const [amount, setAmount] = useState(1);
+  const [prices, setPrices] = useState<Record<string, number>>({});
+  const [buyer, setBuyer] = useState('civilian');
+  const [adjustment, setAdjustment] = useState(0);
   const appendLink = (current: string, option: WarehouseOption) => {
     const existing = current
       .split(',')
@@ -445,7 +559,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
   };
 
   return (
-    <Collapsible title="Warehouse and logistics">
+    <Collapsible title="Склад и доставки">
       <Stack vertical>
         <Stack.Item>
           <Stack wrap>
@@ -514,7 +628,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
         </Stack.Item>
         {!!warehouseOptions.length && (
           <Stack.Item>
-            <Section title="Available warehouse links">
+            <Section title="Доступные поставщики и покупатели">
               <Stack wrap>
                 {warehouseOptions.map((option) => (
                   <Stack.Item key={option.id}>
@@ -569,14 +683,14 @@ const BusinessWarehouse = (props: { business: Business }) => {
             disabled={!business.canStock}
             onClick={() => act('deploy_unload_zone', { id: business.id })}
           >
-            Set unload zone here
+            Разметить площадку здесь
           </Button>
           <Button
             icon="clipboard-check"
             disabled={!business.canStock}
             onClick={() => act('validate_warehouse', { id: business.id })}
           >
-            Validate warehouse
+            Проверить склад
           </Button>
           <Button
             icon="warehouse"
@@ -594,42 +708,42 @@ const BusinessWarehouse = (props: { business: Business }) => {
               })
             }
           >
-            Apply warehouse
+            Применить настройки склада
           </Button>
           <Button
             icon="cash-register"
             disabled={!business.canStock}
             onClick={() => act('link_vendors', { id: business.id })}
           >
-            Link area vendors
+            Привязать автоматы помещения
           </Button>
           <Button
             icon="industry"
             disabled={!business.canStock}
             onClick={() => act('link_production', { id: business.id })}
           >
-            Link production
+            Привязать производство
           </Button>
           <Button
             icon="boxes-stacked"
             disabled={!business.canStock || !business.warehouse.valid}
             onClick={() => act('restock_vendors', { id: business.id })}
           >
-            Restock vendors
+            Загрузить автоматы
           </Button>
           <Button
             icon="hand-holding-box"
             disabled={!business.canStock || !business.warehouse.valid}
             onClick={() => act('deposit_warehouse_item', { id: business.id })}
           >
-            Deposit held
+            Сдать предмет из руки
           </Button>
           <Button
             icon="magnet"
             disabled={!business.canStock || !business.warehouse.valid}
             onClick={() => act('absorb_warehouse_items', { id: business.id })}
           >
-            Absorb 3x3
+            Сдать с пола 3×3
           </Button>
         </Stack.Item>
         <Stack.Item>
@@ -666,7 +780,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
                   })
                 }
               >
-                Request delivery
+                Заказать доставку
               </Button>
             </Stack.Item>
           </Stack>
@@ -674,14 +788,40 @@ const BusinessWarehouse = (props: { business: Business }) => {
         <Stack.Item>
           <Table>
             <Table.Row header>
-              <Table.Cell>Stock</Table.Cell>
-              <Table.Cell collapsing>Amount</Table.Cell>
-              <Table.Cell collapsing>Physical</Table.Cell>
+              <Table.Cell>Остатки</Table.Cell>
+              <Table.Cell collapsing>Количество</Table.Cell>
+              <Table.Cell>Цена за штуку</Table.Cell>
+              <Table.Cell collapsing>Выдача</Table.Cell>
             </Table.Row>
             {business.stock.map((stock) => (
               <Table.Row key={stock.name}>
                 <Table.Cell>{stock.name}</Table.Cell>
                 <Table.Cell>{stock.amount}</Table.Cell>
+                <Table.Cell>
+                  <NumberInput
+                    value={prices[stock.name] ?? stock.basePrice ?? 0}
+                    minValue={0}
+                    maxValue={1000000}
+                    step={1}
+                    disabled={!business.canFinance}
+                    onChange={(price) =>
+                      setPrices({ ...prices, [stock.name]: price })
+                    }
+                  />
+                  <Button
+                    disabled={!business.canFinance}
+                    tooltip={`Civilian quote: ${formatMoney(stock.price)} cr. Set 0 for the default.`}
+                    onClick={() =>
+                      act('set_trade_price', {
+                        id: business.id,
+                        item: stock.name,
+                        price: prices[stock.name] ?? stock.basePrice ?? 0,
+                      })
+                    }
+                  >
+                    Установить цену
+                  </Button>
+                </Table.Cell>
                 <Table.Cell collapsing>
                   <Button
                     icon="box-open"
@@ -694,12 +834,42 @@ const BusinessWarehouse = (props: { business: Business }) => {
                       })
                     }
                   >
-                    Withdraw
+                    Выдать на площадку
                   </Button>
                 </Table.Cell>
               </Table.Row>
             ))}
           </Table>
+        </Stack.Item>
+        <Stack.Item>
+          <Stack>
+            <Stack.Item grow>
+              <Input
+                fluid
+                value={buyer}
+                placeholder="civilian, benn, ryaznov, starlight, or business ID"
+                onChange={setBuyer}
+              />
+            </Stack.Item>
+            <Stack.Item>
+              <NumberInput
+                value={adjustment}
+                minValue={-99}
+                maxValue={500}
+                step={1}
+                unit="%"
+                onChange={setAdjustment}
+              />
+              <Button
+                disabled={!business.canFinance}
+                onClick={() =>
+                  act('set_buyer_adjustment', { id: business.id, buyer, adjustment })
+                }
+              >
+                Set buyer adjustment
+              </Button>
+            </Stack.Item>
+          </Stack>
         </Stack.Item>
         <Stack.Item>
           <Table>
@@ -863,15 +1033,15 @@ const BusinessSnapshot = (props: { business: Business }) => {
   const { business } = props;
 
   return (
-    <Collapsible title="Save and load">
+    <Collapsible title="Сохранение и загрузка">
       <LabeledList>
-        <LabeledList.Item label="Saved objects">
+        <LabeledList.Item label="Объектов в снимке">
           {business.savedObjects}
         </LabeledList.Item>
-        <LabeledList.Item label="Saved age">
-          {business.savedAt || 'not saved'}
+        <LabeledList.Item label="Время сохранения">
+          {business.savedAt || 'нет снимка'}
         </LabeledList.Item>
-        <LabeledList.Item label="Loaded this round">
+        <LabeledList.Item label="Загружено в этом раунде">
           {business.loadedThisRound ? 'yes' : 'no'}
         </LabeledList.Item>
       </LabeledList>
@@ -882,20 +1052,21 @@ const BusinessSnapshot = (props: { business: Business }) => {
             disabled={!business.canSaveLoad}
             onClick={() => act('save', { id: business.id })}
           >
-            Save snapshot
+            Сохранить снимок
           </Button>
         </Stack.Item>
         <Stack.Item>
           <Button.Confirm
             icon="download"
-            disabled={!business.canSaveLoad || business.loadedThisRound}
+            disabled={!business.canRestore}
+            tooltip="Загрузить снимок можно один раз в следующем раунде."
             onClick={() => act('load', { id: business.id })}
           >
-            Load once
+            Загрузить снимок
           </Button.Confirm>
         </Stack.Item>
       </Stack>
-      <Collapsible title="History">
+      <Collapsible title="История">
         {(business.history || []).map((entry, index) => (
           <Box key={index} className="CyberpunkPanel__Muted">
             {entry}
