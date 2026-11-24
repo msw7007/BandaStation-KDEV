@@ -6132,6 +6132,13 @@
 	},
 /turf/open/floor/iron,
 /area/cyberpunk/city/business)
+"aQQ" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 8;
+	name = "Аква Квин · подход через северный парк · лестница Z2–Z3"
+	},
+/turf/open/misc/grass,
+/area/cyberpunk/city/government)
 "bdv" = (
 /obj/machinery/light/floor,
 /obj/structure/railing{
@@ -6165,6 +6172,20 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/underground)
+"bFk" = (
+/obj/structure/railing{
+	dir = 4
+	},
+/obj/machinery/light/floor,
+/turf/open/misc/grass,
+/area/cyberpunk/city/government)
+"bJf" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 8;
+	name = "Даунтаун · северный бульвар · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/white/textured,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "bNx" = (
 /obj/machinery/light/floor,
 /obj/structure/railing{
@@ -6196,6 +6217,13 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/underground)
+"bYu" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 1;
+	name = "Гранд Плаза · правительственный квартал · лестница Z2–Z3"
+	},
+/turf/open/misc/grass,
+/area/cyberpunk/city/government)
 "chW" = (
 /obj/structure/transport/linear/tram/cyberpunk_intercity,
 /obj/structure/thermoplastic/light,
@@ -6228,6 +6256,16 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/underground)
+"dFo" = (
+/obj/structure/railing{
+	dir = 4
+	},
+/obj/machinery/light/floor,
+/obj/structure/railing{
+	dir = 8
+	},
+/turf/open/floor/iron/white/textured,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "dJv" = (
 /obj/machinery/light/floor,
 /obj/structure/railing{
@@ -6274,6 +6312,12 @@
 	},
 /turf/open/floor/tram/cyberpunk_intercity,
 /area/cyberpunk/city/metro)
+"ett" = (
+/obj/structure/stairs/cyberpunk_auto/east{
+	name = "Истбук · складской квартал · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/herringbone,
+/area/space)
 "evL" = (
 /obj/structure/fence/end{
 	dir = 8
@@ -6288,6 +6332,13 @@
 	},
 /turf/open/floor/tram/cyberpunk_intercity,
 /area/cyberpunk/city/metro)
+"eBW" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 8;
+	name = "Гранд Плаза · парк и полиция · лестница Z2–Z3"
+	},
+/turf/open/misc/grass,
+/area/cyberpunk/city/government)
 "fni" = (
 /turf/open/floor/asphalt,
 /area/space)
@@ -6303,6 +6354,12 @@
 	},
 /turf/open/floor/iron/white/textured,
 /area/cyberpunk/city/infrastructure/transit_hub)
+"fNA" = (
+/obj/structure/stairs/cyberpunk_auto/east{
+	name = "Даунтаун · северный бульвар · лестница Z2–Z3"
+	},
+/turf/open/floor/grass,
+/area/space)
 "fYu" = (
 /obj/structure/sign/departments/tram/directional/west{
 	name = "Станция «Блайтфорт»";
@@ -6398,6 +6455,13 @@
 	dir = 1
 	},
 /area/space)
+"hnQ" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 8;
+	name = "Истбук · складской квартал · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/white/textured,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "hpH" = (
 /obj/structure/railing{
 	dir = 4
@@ -6426,6 +6490,12 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/roof)
+"ixI" = (
+/obj/structure/stairs/cyberpunk_auto/east{
+	name = "Нортфилд · Старлайт · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/dark,
+/area/space)
 "iCm" = (
 /obj/structure/railing{
 	dir = 1
@@ -6456,6 +6526,12 @@
 	},
 /turf/open/floor/tram/cyberpunk_intercity,
 /area/cyberpunk/city/metro)
+"jqT" = (
+/obj/structure/stairs/cyberpunk_auto/east{
+	name = "Гранд Плаза · парк и полиция · лестница Z2–Z3"
+	},
+/turf/open/floor/grass,
+/area/space)
 "jvP" = (
 /obj/structure/transport/linear/tram/cyberpunk_intercity,
 /obj/structure/thermoplastic,
@@ -6482,6 +6558,12 @@
 	},
 /turf/open/floor/iron,
 /area/cyberpunk/city/corporate/ryaznov)
+"klF" = (
+/obj/structure/stairs/cyberpunk_auto/north{
+	name = "Чайнатаун · башня Бэнь · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/white,
+/area/space)
 "kpa" = (
 /turf/open/floor/iron/white/textured,
 /area/cyberpunk/city/metro)
@@ -6520,6 +6602,13 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/underground)
+"leG" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 8;
+	name = "Даунтаун · жилая мегабашня · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/white/textured,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "lom" = (
 /obj/machinery/light/cold/directional/north{
 	allow_break_on_init = 0
@@ -6596,6 +6685,13 @@
 	},
 /turf/open/floor/iron,
 /area/cyberpunk/city/corporate/ryaznov)
+"mPz" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 8;
+	name = "Нортфилд · Старлайт · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/roof)
 "mQt" = (
 /obj/structure/railing{
 	dir = 1
@@ -6622,6 +6718,13 @@
 	},
 /turf/open/floor/tram/cyberpunk_intercity,
 /area/cyberpunk/city/metro)
+"nfw" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 2;
+	name = "Чайнатаун · башня Бэнь · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/roof)
 "nio" = (
 /obj/effect/turf_decal/stripes/white/line{
 	dir = 1
@@ -6637,6 +6740,12 @@
 /area/cyberpunk/city/infrastructure/transit_hub)
 "ntt" = (
 /turf/open/misc/beach/sand,
+/area/space)
+"nDH" = (
+/obj/structure/stairs/cyberpunk_auto/east{
+	name = "Даунтаун · жилая мегабашня · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/herringbone,
 /area/space)
 "nEt" = (
 /obj/machinery/light/floor/transport{
@@ -6812,6 +6921,15 @@
 "qPj" = (
 /turf/open/floor/iron/large,
 /area/space)
+"qZY" = (
+/obj/structure/railing{
+	dir = 1
+	},
+/obj/structure/railing{
+	dir = 2
+	},
+/turf/open/misc/grass,
+/area/cyberpunk/city/government)
 "rdT" = (
 /obj/effect/turf_decal/stripes/white/line{
 	dir = 4
@@ -6972,6 +7090,12 @@
 /obj/structure/tram,
 /turf/open/floor/tram/cyberpunk_intercity,
 /area/cyberpunk/city/metro)
+"tNO" = (
+/obj/structure/stairs/cyberpunk_auto/south{
+	name = "Чейсвинд · восточная галерея · лестница Z2–Z3"
+	},
+/turf/open/floor/iron,
+/area/space)
 "tYs" = (
 /obj/structure/sign/departments/tram/directional/west{
 	name = "Станция «Гранд Плаза»";
@@ -6979,6 +7103,13 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/underground)
+"tZC" = (
+/obj/effect/turf_decal/arrows/white{
+	dir = 1;
+	name = "Чейсвинд · восточная галерея · лестница Z2–Z3"
+	},
+/turf/open/floor/iron/white/textured,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "uez" = (
 /obj/machinery/light/floor,
 /obj/structure/railing{
@@ -7051,6 +7182,18 @@
 	},
 /turf/open/floor/iron/white/textured,
 /area/cyberpunk/city/infrastructure/transit_hub)
+"weo" = (
+/obj/structure/stairs/cyberpunk_auto/east{
+	name = "Аква Квин · подход через северный парк · лестница Z2–Z3"
+	},
+/turf/open/floor/grass,
+/area/space)
+"wnL" = (
+/obj/structure/stairs/cyberpunk_auto/south{
+	name = "Гранд Плаза · правительственный квартал · лестница Z2–Z3"
+	},
+/turf/open/floor/grass,
+/area/space)
 "wth" = (
 /obj/machinery/light/floor,
 /obj/structure/railing{
@@ -7061,6 +7204,15 @@
 	},
 /turf/open/floor/iron,
 /area/cyberpunk/city/housing/tenement)
+"wzx" = (
+/obj/structure/railing{
+	dir = 2
+	},
+/obj/structure/railing{
+	dir = 1
+	},
+/turf/open/floor/iron/white/textured,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "wRk" = (
 /obj/effect/turf_decal/stripes/line{
 	dir = 4
@@ -7132,6 +7284,9 @@
 	},
 /turf/open/floor/iron/dark/textured,
 /area/cyberpunk/city/underground)
+"ybx" = (
+/turf/open/openspace,
+/area/cyberpunk/city/infrastructure/transit_hub)
 "ygd" = (
 /turf/open/floor/iron/half,
 /area/space)
@@ -123972,7 +124127,7 @@ sIj
 oPd
 oPd
 sIj
-sIj
+jqT
 sIj
 reK
 reK
@@ -125064,7 +125219,7 @@ wWd
 mAW
 xIq
 xIq
-xIq
+klF
 xIq
 mAW
 xIq
@@ -130723,7 +130878,7 @@ sIj
 sIj
 sIj
 sIj
-sIj
+wnL
 sIj
 sIj
 sIj
@@ -131909,7 +132064,7 @@ mAW
 reK
 reK
 reK
-sIj
+weo
 sIj
 sIj
 sIj
@@ -144698,7 +144853,7 @@ oPd
 oPd
 oPd
 oPd
-oPd
+nDH
 oPd
 reK
 reK
@@ -154215,7 +154370,7 @@ fni
 fni
 fni
 ygd
-sIj
+fNA
 sIj
 sIj
 ygd
@@ -155088,7 +155243,7 @@ iOk
 rqA
 rqA
 rqA
-rqA
+ixI
 iOk
 uUk
 reK
@@ -188238,7 +188393,7 @@ oPd
 oPd
 oPd
 oPd
-oPd
+ett
 reK
 reK
 fni
@@ -193561,7 +193716,7 @@ wWd
 iOk
 wWd
 wWd
-wWd
+tNO
 wWd
 iOk
 reK
@@ -224143,7 +224298,7 @@ ame
 ame
 ame
 ame
-ams
+bFk
 amo
 alY
 alY
@@ -224460,9 +224615,9 @@ ame
 ame
 ame
 ame
-ame
-ame
 amo
+acA
+qZY
 alY
 alY
 alY
@@ -224779,7 +224934,7 @@ ame
 ame
 ame
 ame
-ame
+eBW
 amo
 alY
 alY
@@ -225235,7 +225390,7 @@ amq
 amq
 amq
 amq
-amq
+aqG
 amq
 amq
 acc
@@ -225552,9 +225707,9 @@ amq
 amq
 amq
 amq
-amq
-amq
-amq
+nfw
+alY
+amp
 amq
 acc
 acc
@@ -225871,7 +226026,7 @@ amq
 amq
 amq
 amq
-amq
+amj
 amq
 amq
 acc
@@ -231213,7 +231368,7 @@ alY
 alY
 alY
 alY
-aml
+bYu
 ame
 ame
 ame
@@ -232080,7 +232235,7 @@ ame
 ame
 ame
 ame
-ame
+anC
 ame
 ame
 ame
@@ -232397,9 +232552,9 @@ abN
 ame
 amn
 ame
-ame
-ame
-ame
+amo
+acA
+aml
 ame
 ame
 abU
@@ -232716,7 +232871,7 @@ ame
 ame
 ame
 ame
-ame
+aQQ
 ame
 ame
 ame
@@ -245505,7 +245660,7 @@ ama
 ama
 ama
 ama
-ama
+leG
 ama
 ama
 ama
@@ -254386,7 +254541,7 @@ alY
 alY
 yjE
 amg
-abN
+amv
 abN
 abN
 amf
@@ -254703,9 +254858,9 @@ amr
 alY
 alY
 yjE
+wzx
+ybx
 amg
-abN
-abN
 abN
 amf
 alY
@@ -255022,7 +255177,7 @@ alY
 alY
 yjE
 amg
-abN
+bJf
 abN
 abN
 amf
@@ -255259,7 +255414,7 @@ aff
 aff
 aff
 aff
-amq
+aqG
 amr
 alY
 yjE
@@ -255577,8 +255732,8 @@ aff
 aff
 aff
 aff
-amq
-amr
+alY
+iCm
 alY
 yjE
 yjE
@@ -255895,7 +256050,7 @@ aff
 aff
 aff
 aff
-aqG
+mPz
 pFU
 alY
 yjE
@@ -256213,7 +256368,7 @@ aff
 aff
 aff
 aff
-alY
+amf
 alY
 alY
 yjE
@@ -256531,7 +256686,7 @@ aff
 aff
 aff
 aff
-yjE
+amf
 yjE
 yjE
 yjE
@@ -256849,7 +257004,7 @@ afG
 afG
 afG
 aff
-ama
+abN
 uez
 ama
 ama
@@ -288409,7 +288564,7 @@ afp
 afp
 afp
 ama
-uez
+dFo
 ama
 abN
 abN
@@ -288726,9 +288881,9 @@ agm
 agm
 agm
 aqY
-abN
-abN
-abN
+amf
+ybx
+amg
 abN
 abN
 abN
@@ -289045,7 +289200,7 @@ agm
 agm
 afp
 abN
-abN
+hnQ
 amv
 abN
 abN
@@ -293732,7 +293887,7 @@ akI
 akI
 akF
 abN
-abN
+amv
 abN
 amk
 alY
@@ -294049,9 +294204,9 @@ akI
 akI
 akI
 akF
-abN
-abN
-abN
+amf
+ybx
+tZC
 pFU
 alY
 alY
@@ -294368,7 +294523,7 @@ akI
 akX
 akF
 abN
-abN
+ama
 amf
 alY
 alY
