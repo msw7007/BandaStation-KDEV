@@ -86,6 +86,8 @@
 	owner = receiver
 
 	on_mob_insert(receiver, special, movement_flags)
+	if(!special && (organ_flags & ORGAN_ORGANIC) && (receiver.mob_biotypes & MOB_ORGANIC) && prob((100 - receiver.medical_immunity) * 0.2))
+		receiver.adjust_tox_loss(2 + (100 - receiver.medical_immunity) * 0.05)
 
 	return TRUE
 
@@ -94,6 +96,7 @@
 /// Override this proc to create unique side-effects for inserting your organ. Must be called by overrides.
 /obj/item/organ/proc/on_mob_insert(mob/living/carbon/organ_owner, special = FALSE, movement_flags)
 	SHOULD_CALL_PARENT(TRUE)
+	inherit_medical_capacity()
 
 	for(var/trait in organ_traits)
 		ADD_TRAIT(organ_owner, trait, REF(src))

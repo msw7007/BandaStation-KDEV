@@ -740,7 +740,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	// if lying down and dead (or faking death) or not stable: cpr
 	// if standing up or stable (and not faking death): shake/hug
 
-	if(target.body_position == LYING_DOWN && (IS_DEAD_OR_FAKING(target) || target.stat != STABLE))
+	if(target.can_receive_medical_cpr())
 		user.do_cpr(target)
 		return TRUE
 
@@ -1301,6 +1301,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 				var/pressure_damage = min(((adjusted_pressure / HAZARD_HIGH_PRESSURE) - 1) * PRESSURE_DAMAGE_COEFFICIENT, MAX_HIGH_PRESSURE_DAMAGE) * seconds_per_tick
 				pressure_damage *= GET_PHYSIOLOGY(human, PHYS_COEFF_PRESSURE)
 				human.adjust_brute_loss(pressure_damage, required_bodytype = BODYTYPE_ORGANIC)
+				human.medical_pressure_injury(pressure_damage)
 				human.throw_alert(ALERT_PRESSURE, /atom/movable/screen/alert/highpressure, 2)
 
 		// High pressure, show an alert
@@ -1330,6 +1331,7 @@ GLOBAL_LIST_EMPTY(features_by_species)
 				var/pressure_damage = min(round(1 + (human.seconds_in_low_pressure / 80 SECONDS), 0.05) * BASE_LOW_PRESSURE_DAMAGE, MAX_LOW_PRESSURE_DAMAGE) * seconds_per_tick
 				pressure_damage *= GET_PHYSIOLOGY(human, PHYS_COEFF_PRESSURE)
 				human.adjust_brute_loss(pressure_damage, required_bodytype = BODYTYPE_ORGANIC)
+				human.medical_pressure_injury(pressure_damage)
 				human.throw_alert(ALERT_PRESSURE, /atom/movable/screen/alert/lowpressure, 2)
 			human.seconds_in_low_pressure += seconds_per_tick
 

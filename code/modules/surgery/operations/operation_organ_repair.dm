@@ -12,16 +12,21 @@
 	/// What % damage do we apply to the organ on failure
 	var/failure_damage_percent = 0.2
 	/// If TRUE, an organ can be repaired multiple times
-	var/repeatable = FALSE
+	var/repeatable = TRUE
 
 /datum/surgery_operation/organ/repair/New()
 	. = ..()
+	if(!ispath(target_type, /obj/item/organ/brain))
+		desc += " Каждое восстановление уменьшает текущий запас прочности органа на 10%."
 	if(operation_flags & OPERATION_LOOPING)
 		repeatable = TRUE // if it's looping it would necessitate being repeatable
 	if(!repeatable)
 		desc += " Эту процедуру можно провести только один раз для каждого органа."
 
 /datum/surgery_operation/organ/repair/state_check(obj/item/organ/organ)
+	var/datum/component/medical_condition/condition = organ.get_medical_condition(FALSE)
+	if(condition?.organ_bleeding)
+		return TRUE
 	if(organ.damage < (organ.maxHealth * heal_to_percent) || (!repeatable && HAS_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON)))
 		return FALSE // conditionally available so we don't spam the radial with useless options, alas
 	return TRUE
@@ -37,7 +42,11 @@
 		. += "орган не должен был подвергаться хирургическому восстановлению ранее"
 
 /datum/surgery_operation/organ/repair/on_success(obj/item/organ/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
-	organ.set_organ_damage(organ.maxHealth * heal_to_percent)
+	var/datum/component/medical_condition/condition = organ.get_medical_condition(FALSE)
+	if(condition)
+		condition.organ_bleeding = FALSE
+	organ.set_medical_capacity(organ.medical_capacity * 0.9)
+	organ.set_organ_damage(min(organ.damage, organ.maxHealth * heal_to_percent))
 	organ.organ_flags &= ~ORGAN_EMP
 	ADD_TRAIT(organ, TRAIT_ORGAN_OPERATED_ON, TRAIT_GENERIC)
 
@@ -480,7 +489,7 @@
 	any_surgery_states_blocked = SURGERY_VESSELS_UNCLAMPED
 
 /datum/surgery_operation/organ/repair/brain/state_check(obj/item/organ/brain/organ)
-	return TRUE // always available so you can intentionally fail it
+	return organ.maxHealth > 0 && !organ.requires_reconstruction
 
 /datum/surgery_operation/organ/repair/brain/on_preop(obj/item/organ/brain/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
 	display_results(
@@ -535,3 +544,27 @@
 	success_sound = 'sound/items/taperecorder/taperecorder_close.ogg'
 	required_organ_flag = ORGAN_ROBOTIC
 	operation_flags = parent_type::operation_flags | OPERATION_MECHANIC
+
+/// Reconstructs truly destroyed neural tissue without charging for the same destruction again.
+/datum/surgery_operation/organ/repair/brain/reconstruction
+	name = "Восстановление разрушенного мозга"
+	desc = "Восстановление погибшей ткани мозга. Оставляет постоянную травму; утраченный запас прочности не возвращается."
+	rnd_name = null
+	time = 30 SECONDS
+	operation_flags = parent_type::operation_flags & ~(OPERATION_LOOPING | OPERATION_NO_PATIENT_REQUIRED)
+
+/datum/surgery_operation/organ/repair/brain/reconstruction/state_check(obj/item/organ/brain/organ)
+	return organ.requires_reconstruction && organ.maxHealth > 0
+
+/datum/surgery_operation/organ/repair/brain/reconstruction/on_success(obj/item/organ/brain/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	if(!organ.reconstruct_brain())
+		return
+	to_chat(surgeon, span_notice("Вам удалось восстановить погибшие ткани [organ.declent_ru(GENITIVE)]. Пациента можно готовить к реанимации."))
+
+/datum/surgery_operation/organ/repair/brain/reconstruction/mechanic
+	name = "Восстановление разрушенного нейропроцессора"
+	implements = /datum/surgery_operation/organ/repair/brain/mechanic::implements
+	required_organ_flag = ORGAN_ROBOTIC
+	operation_flags = parent_type::operation_flags | OPERATION_MECHANIC
+	preop_sound = 'sound/items/taperecorder/tape_flip.ogg'
+	success_sound = 'sound/items/taperecorder/taperecorder_close.ogg'

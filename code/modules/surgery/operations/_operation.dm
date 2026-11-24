@@ -766,7 +766,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 /// Returns a time modifier based on the surgeon's status
 /datum/surgery_operation/proc/get_surgeon_surgery_speed_mod(mob/living/patient, mob/living/surgeon, tool)
 	PROTECTED_PROC(TRUE)
-	var/basemod = 1.0
+	var/basemod = HAS_TRAIT(surgeon, TRAIT_MEDICAL_TRAINING) ? 0.85 : 1.0
 	if((operation_flags & OPERATION_MORBID) && HAS_MIND_TRAIT(surgeon, TRAIT_MORBID) && isitem(tool))
 		var/obj/item/realtool = tool
 		if(realtool.item_flags & CRUEL_IMPLEMENT)
@@ -871,6 +871,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 				update_surgery_mood(patient, SURGERY_STATE_FAILURE)
 			break
 
+		apply_medical_contamination(operating_on, patient, surgeon, tool, operation_args)
 		var/list/patient_dna = get_patient_blood_dna(patient, operating_on)
 		if (patient_dna)
 			if (ishuman(surgeon))
@@ -904,6 +905,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 				update_surgery_mood(patient, SURGERY_STATE_FAILURE)
 		else
 			success(operating_on, surgeon, tool, operation_args)
+			record_medical_event(patient, surgeon, "Операция: [name]", isitem(tool) ? tool : null)
 			result |= ITEM_INTERACT_SUCCESS
 			if (patient)
 				update_surgery_mood(patient, SURGERY_STATE_SUCCESS)
@@ -1065,6 +1067,9 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 	var/obj/structure/table/optable/operating_table = locate() in operating_turf
 	var/obj/machinery/computer/operating/operating_computer = operating_table?.computer
+	if(!operating_computer)
+		var/obj/machinery/stasis/medical_station/nerv/neurological_table = locate() in operating_turf
+		operating_computer = neurological_table?.computer
 
 	if(isnull(operating_computer) || (operating_computer.machine_stat & (NOPOWER|BROKEN)))
 		return null

@@ -25,6 +25,7 @@
 	. = ..()
 	if(QDELETED(src))
 		return FALSE
+	seconds_per_tick *= medical_time_scale()
 
 	// Body temperature stability and damage
 	dna.species.handle_body_temperature(src, seconds_per_tick)
@@ -288,7 +289,7 @@
 	if(!undergoing_cardiac_arrest())
 		return
 
-	if(we_breath)
+	if(we_breath && !HAS_TRAIT(src, TRAIT_CARDIAC_SUPPORT))
 		adjust_oxy_loss(4 * seconds_per_tick)
 		Unconscious(80)
 	// Tissues die without blood circulation

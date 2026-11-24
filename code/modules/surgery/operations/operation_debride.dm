@@ -36,7 +36,8 @@
 
 /datum/surgery_operation/limb/debride/state_check(obj/item/bodypart/limb)
 	var/datum/wound/burn/flesh/wound = locate() in limb.wounds
-	return wound?.infection > 0
+	var/datum/component/medical_condition/condition = limb.get_medical_condition(FALSE)
+	return condition && condition.infection_stage() > 0 && condition.infection_stage() < 4 || wound?.infection > 0 && !condition
 
 /// To give the surgeon a heads up how much work they have ahead of them
 /datum/surgery_operation/limb/debride/proc/get_progress(datum/wound/burn/flesh/wound)
@@ -71,6 +72,7 @@
 /datum/surgery_operation/limb/debride/on_success(obj/item/bodypart/limb, mob/living/surgeon, obj/item/tool, list/operation_args, default_display_results = FALSE)
 	limb.receive_damage(3, wound_bonus = CANT_WOUND, sharpness = tool.get_sharpness(), damage_source = tool)
 	var/datum/wound/burn/flesh/wound = locate() in limb.wounds
+	limb.get_medical_condition(FALSE)?.treat_infection(60)
 	wound?.infection -= infestation_removed
 	wound?.sanitization += sanitization_added
 	display_results(

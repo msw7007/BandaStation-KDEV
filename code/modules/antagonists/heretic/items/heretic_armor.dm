@@ -655,7 +655,7 @@
 /obj/item/clothing/suit/hooded/cultrobes/eldritch/moon/proc/handle_damage(mob/living/user, damage)
 	if(damage <= 0 || braindead)
 		return
-	user.adjust_organ_loss(ORGAN_SLOT_BRAIN, damage * damage_modifier)
+	user.adjust_phantom_brain_damage(damage * damage_modifier)
 	check_braindeath(user)
 
 /// Some sources of damage directly damage the limbs, so we have to handle physical damage on the limbs, not just mob-level damage
@@ -683,6 +683,8 @@
 /// Removes the HUD element from the wearer
 /obj/item/clothing/suit/hooded/cultrobes/eldritch/moon/proc/on_hud_remove(mob/living/carbon/human/wearer)
 	var/datum/hud/original_hud = wearer.hud_used
+	if(!original_hud)
+		return
 	QDEL_NULL(original_hud.screen_objects[HUD_HERETIC_MOON_HEALTH])
 	// Restore the old health elements
 	for(var/restoring in list(HUD_MOB_STAMINA, HUD_MOB_HEALTH, HUD_MOB_HEALTHDOLL))
@@ -717,13 +719,18 @@
 
 /// Once you reach this point you're completely brain dead, so lets play our effects before you eat shit
 /obj/item/clothing/suit/hooded/cultrobes/eldritch/moon/proc/kill_wearer(mob/living/carbon/human/wearer)
+	if(QDELETED(wearer) || loc != wearer || wearer.wear_suit != src || wearer.stat == DEAD)
+		return
+	var/obj/item/organ/brain/our_brain = wearer.get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(!our_brain || our_brain.damage < our_brain.maxHealth)
+		braindead = FALSE
+		return
 	if(IS_HERETIC(wearer))
 		var/datum/action/cooldown/spell/aoe/moon_ringleader/temp_spell = new(wearer)
 		temp_spell.cast(wearer)
 		qdel(temp_spell)
-	var/obj/item/organ/brain/our_brain = wearer.get_organ_slot(ORGAN_SLOT_BRAIN)
-	REMOVE_TRAIT(our_brain, TRAIT_BRAIN_DAMAGE_NODEATH, REF(src))
 	wearer.death()
+	braindead = FALSE
 
 /// Blows up your head when you die
 /obj/item/clothing/suit/hooded/cultrobes/eldritch/moon/proc/on_death(mob/wearer)
@@ -731,6 +738,11 @@
 	if(!ishuman(wearer))
 		return
 	var/mob/living/carbon/human/human_wearer = wearer
+	var/obj/item/organ/brain/brain = human_wearer.get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(brain?.phantom_death)
+		human_wearer.visible_message(span_warning("Лунный свет вспыхивает вокруг головы [human_wearer.declent_ru(GENITIVE)] с тошнотворным хрустом, оставляя тело неподвижным."))
+		new /obj/effect/gibspawner/generic(get_turf(human_wearer), human_wearer)
+		return
 	var/obj/item/bodypart/head/to_explode = human_wearer.get_bodypart(BODY_ZONE_HEAD)
 	if(!to_explode)
 		return
@@ -745,8 +757,12 @@
 	if(!istype(wearer) || wearer.wear_suit != src || wearer.stat == DEAD)
 		return ..()
 	if(!IS_HERETIC_OR_MONSTER(wearer))
-		wearer.adjust_organ_loss(ORGAN_SLOT_BRAIN, 20)
-	var/brain_damage = wearer.get_organ_loss(ORGAN_SLOT_BRAIN)
+		wearer.adjust_phantom_brain_damage(10 * seconds_per_tick)
+	check_braindeath(wearer)
+	var/obj/item/organ/brain/our_brain = wearer.get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(!our_brain)
+		return
+	var/brain_damage = our_brain.maxHealth > 0 ? our_brain.damage * BRAIN_DAMAGE_DEATH / our_brain.maxHealth : BRAIN_DAMAGE_DEATH
 	var/emote_rng = 0
 	var/list/emote_list = list()
 	switch(brain_damage)
@@ -772,16 +788,14 @@
 		return
 	for(var/perform in emote_list)
 		wearer.emote("[perform]")
-	check_braindeath(wearer)
 
 /// Checks if you are brain dead, starts the dying process once you've reached it
 /obj/item/clothing/suit/hooded/cultrobes/eldritch/moon/proc/check_braindeath(mob/living/carbon/human/wearer)
 	var/obj/item/organ/brain/our_brain = wearer.get_organ_slot(ORGAN_SLOT_BRAIN)
-	if(braindead || our_brain.damage < our_brain.maxHealth)
+	if(!our_brain || braindead || wearer.stat == DEAD || our_brain.damage < our_brain.maxHealth)
 		return
 
 	braindead = TRUE
-	wearer.set_organ_loss(ORGAN_SLOT_BRAIN, INFINITY)
 	playsound(wearer, 'sound/effects/pope_entry.ogg', 50)
 	to_chat(wearer, span_bold(span_hypnophrase("A terrible fate has befallen you.")))
 	addtimer(CALLBACK(src, PROC_REF(kill_wearer), wearer), 5 SECONDS)
@@ -833,7 +847,8 @@
 		if(robes.braindead)
 			icon_state = base_icon_state + "_6"
 			return // Don't update the icon once our "dying" process has begun
-	switch(brain.damage)
+	var/scaled_damage = brain.maxHealth > 0 ? brain.damage * BRAIN_DAMAGE_DEATH / brain.maxHealth : BRAIN_DAMAGE_DEATH
+	switch(scaled_damage)
 		if(0 to 20)
 			icon_state = base_icon_state + "_1"
 		if(21 to 50)

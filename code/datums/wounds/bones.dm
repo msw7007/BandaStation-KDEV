@@ -37,8 +37,6 @@
 	var/next_trauma_cycle
 	/// How long do we wait +/- 20% for the next trauma?
 	var/trauma_cycle_cooldown
-	/// If this is a chest wound and this is set, we have this chance to cough up blood when hit in the chest
-	var/internal_bleeding_chance = 0
 
 /*
 	Overwriting of base procs
@@ -94,7 +92,7 @@
 	if(!healing && (!gelled || (!taped && !is_bone_limb)))
 		return
 
-	regen_ticks_current++
+	regen_ticks_current += seconds_per_tick / SSMOBS_DT
 	if(victim.body_position == LYING_DOWN)
 		if(SPT_PROB(30, seconds_per_tick))
 			regen_ticks_current += 1
@@ -167,39 +165,8 @@
 	if(!HAS_TRAIT(victim, TRAIT_ANALGESIA))
 		bonus_spread_values[MAX_BONUS_SPREAD_INDEX] += (15 * severity * limb.get_splint_factor())
 
-/datum/wound/blunt/bone/receive_damage(wounding_type, wounding_dmg, wound_bonus)
-	if(!victim || wounding_dmg < WOUND_MINIMUM_DAMAGE || !victim.can_bleed())
-		return
-
-	if(limb.body_zone == BODY_ZONE_CHEST && victim.get_blood_volume() && prob(internal_bleeding_chance + wounding_dmg))
-		var/blood_bled = rand(1, wounding_dmg * (severity == WOUND_SEVERITY_CRITICAL ? 2 : 1.5)) // 12 brute toolbox can cause up to 18/24 bleeding with a severe/critical chest wound
-		switch(blood_bled)
-			if(1 to 6)
-				victim.bleed(blood_bled, TRUE)
-			if(7 to 13)
-				victim.visible_message(
-					span_smalldanger("Тонкая струйка крови капает из рта [victim.declent_ru(GENITIVE)] после удара по [victim.ru_p_them()] груди."),
-					span_danger("Вы откашливаете немного крови после удара в грудь."),
-					vision_distance = COMBAT_MESSAGE_RANGE,
-				)
-				victim.bleed(blood_bled, TRUE)
-			if(14 to 19)
-				victim.visible_message(
-					span_smalldanger("Кровь брызгает из рта [victim.declent_ru(GENITIVE)] после удара по [victim.ru_p_them()] груди!"),
-					span_danger("Вы сплевываете струйкой крови после удара в грудь!"),
-					vision_distance = COMBAT_MESSAGE_RANGE,
-				)
-				victim.create_splatter(victim.dir)
-				victim.bleed(blood_bled)
-			if(20 to INFINITY)
-				victim.visible_message(
-					span_danger("Кровь фонтанирует из рта [victim.declent_ru(GENITIVE)] после удара по [victim.ru_p_them()] груди!"),
-					span_bolddanger("Вы задыхаетесь от струи крови после удара в грудь!"),
-					vision_distance = COMBAT_MESSAGE_RANGE,
-				)
-				victim.bleed(blood_bled)
-				victim.create_splatter(victim.dir)
-				victim.add_splatter_floor(get_step(victim.loc, victim.dir))
+// Subsequent hits to fractures damage individual organs in bodypart.medical_hit().
+// Fractures do not also cause a second, generic internal bleed.
 
 /datum/wound/blunt/bone/modify_desc_before_span(desc)
 	. = ..()
@@ -389,7 +356,6 @@
 	scar_keyword = "bluntsevere"
 	brain_trauma_group = BRAIN_TRAUMA_MILD
 	trauma_cycle_cooldown = 1.5 MINUTES
-	internal_bleeding_chance = 40
 	wound_flags = (ACCEPTS_GAUZE | MANGLES_INTERIOR)
 	regen_ticks_needed = 120 // ticks every 2 seconds, 240 seconds, so roughly 4 minutes default
 
@@ -429,7 +395,6 @@
 	scar_keyword = "bluntcritical"
 	brain_trauma_group = BRAIN_TRAUMA_SEVERE
 	trauma_cycle_cooldown = 2.5 MINUTES
-	internal_bleeding_chance = 60
 	wound_flags = (ACCEPTS_GAUZE | MANGLES_INTERIOR)
 	regen_ticks_needed = 240 // ticks every 2 seconds, 480 seconds, so roughly 8 minutes default
 	surgery_states = SURGERY_SKIN_CUT | SURGERY_BONE_SAWED // Bad enough to count as a busted skull/ribcage

@@ -455,7 +455,7 @@
 		playsound(src, 'sound/items/weapons/egloves.ogg', 80, TRUE)
 
 /obj/structure/closet/body_bag/environmental/stasis
-	name = "stasis body bag"
+	name = "cryostasis body bag"
 	desc = "Мешок для тел, предназначенный для удержания содержимого в стазисе, предотвращая разложение \
 		и дальнейшие повреждения. Сам мешок не может поддерживать стазис долго и в конечном итоге развалится."
 	max_integrity = 300
@@ -523,16 +523,6 @@
 
 /obj/structure/closet/body_bag/environmental/stasis/Entered(atom/movable/arrived, atom/old_loc, list/atom/old_locs)
 	. = ..()
-	if(isorgan(arrived))
-		var/obj/item/organ/organ_arrived = arrived
-		organ_arrived.organ_flags |= ORGAN_FROZEN
-		return
-
-	if(isbodypart(arrived))
-		for(var/obj/item/organ/organ in arrived)
-			organ.organ_flags |= ORGAN_FROZEN
-		return
-
 	if(isliving(arrived))
 		if(seconds_freezing != -1)
 			return
@@ -540,21 +530,10 @@
 
 /obj/structure/closet/body_bag/environmental/stasis/Exited(atom/movable/gone, direction)
 	. = ..()
-	if(isorgan(gone))
-		var/obj/item/organ/organ_gone = gone
-		organ_gone.organ_flags &= ~ORGAN_FROZEN
-		return
-
-	if(isbodypart(gone))
-		for(var/obj/item/organ/organ in gone)
-			organ.organ_flags &= ~ORGAN_FROZEN
-		return
-
 	if(isliving(gone))
 		seconds_freezing = -1
 		STOP_PROCESSING(SSobj, src)
-		if(HAS_TRAIT(gone, TRAIT_STASIS))
-			remove_stasis(gone)
+		remove_stasis(gone)
 
 /obj/structure/closet/body_bag/environmental/stasis/process(seconds_per_tick)
 
@@ -567,7 +546,7 @@
 	if(seconds_freezing > 3 && freezing.on_fire)
 		freezing.extinguish_mob()
 
-	if(seconds_freezing > 5 && !HAS_TRAIT(freezing, TRAIT_STASIS))
+	if(seconds_freezing > 5 && !freezing.has_status_effect(/datum/status_effect/grouped/medical_stasis/cryostasis))
 		apply_stasis(freezing)
 
 	if(SPT_PROB(2 * (seconds_freezing / 60), seconds_per_tick))
@@ -584,7 +563,7 @@
 	COOLDOWN_START(src, freeze_sound_cd, 2 SECONDS)
 
 /obj/structure/closet/body_bag/environmental/stasis/proc/apply_stasis(mob/living/target)
-	target.apply_status_effect(/datum/status_effect/grouped/stasis, REF(src))
+	target.apply_status_effect(/datum/status_effect/grouped/medical_stasis/cryostasis, REF(src))
 	if(!INCAPACITATED_IGNORING(target, INCAPABLE_STASIS))
 		to_chat(target, span_notice("Вы чувствуете холод и онемение..."))
 	RegisterSignal(target, COMSIG_LIVING_EARLY_UNARMED_ATTACK, PROC_REF(skip_to_attack_hand))
@@ -596,7 +575,7 @@
 	COOLDOWN_START(src, freeze_sound_cd, 2 SECONDS)
 
 /obj/structure/closet/body_bag/environmental/stasis/proc/remove_stasis(mob/living/target)
-	target.remove_status_effect(/datum/status_effect/grouped/stasis, REF(src))
+	target.remove_status_effect(/datum/status_effect/grouped/medical_stasis/cryostasis, REF(src))
 	if(!INCAPACITATED_IGNORING(target, INCAPABLE_STASIS))
 		to_chat(target, span_notice("Вы снова чувствуете пальцы рук и ног."))
 	UnregisterSignal(target, COMSIG_LIVING_EARLY_UNARMED_ATTACK)

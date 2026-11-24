@@ -34,13 +34,13 @@
 		return FALSE
 
 	var/mob/living/living_owner = owner
-	living_owner.adjust_organ_loss(ORGAN_SLOT_BRAIN, 20, 140)
+	living_owner.adjust_phantom_brain_damage(20, 140)
 
 	cast_on.adjust_confusion(10 SECONDS)
 	cast_on.adjust_oxy_loss(30)
 	cast_on.cause_hallucination(get_random_valid_hallucination_subtype(/datum/hallucination/body), "Врата разума открыты [owner.declent_ru(INSTRUMENTAL)]")
 	cast_on.cause_hallucination(/datum/hallucination/delusion/preset/heretic/gate, "Вызваны вратами разума")
-	cast_on.adjust_organ_loss(ORGAN_SLOT_BRAIN, 30)
+	cast_on.adjust_phantom_brain_damage(30)
 
 	/// The duration of these effects are based on sanity, mainly for flavor but also to make it a weaker alpha strike
 	var/maximum_duration = 15 SECONDS

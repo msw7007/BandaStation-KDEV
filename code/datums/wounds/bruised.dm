@@ -34,8 +34,8 @@
 	if (!victim || HAS_TRAIT(victim, TRAIT_STASIS) || IS_DEAD_OR_FAKING(victim))
 		return
 
-	bruise_ticks--
-	if(!bruise_ticks)
+	bruise_ticks -= seconds_per_tick / SSMOBS_DT
+	if(bruise_ticks <= 0)
 		qdel(src)
 
 /datum/wound/bruised/on_xadone(power)

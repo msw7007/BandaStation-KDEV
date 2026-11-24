@@ -47,6 +47,7 @@
 	display_pain(organ.owner, "Ваша голова на мгновение полностью немеет, боль просто невыносима!")
 
 	organ.cure_all_traumas(TRAUMA_RESILIENCE_LOBOTOMY)
+	organ.set_brain_max_health(organ.maxHealth * 0.95)
 	if (organ.owner)
 		organ.owner.mind?.remove_antag_datum(/datum/antagonist/brainwashed)
 	else if (organ.brainmob)
@@ -75,6 +76,7 @@
 		span_notice("[surgeon] завершает операцию на мозге [organ.owner.declent_ru(GENITIVE)]."),
 	)
 	display_pain(organ.owner, "Боль в вашей голове, кажется, только усиливается!")
+	organ.set_brain_max_health(organ.maxHealth * 0.75)
 	organ.apply_organ_damage(80)
 	switch(rand(1, 3))
 		if(1)

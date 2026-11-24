@@ -86,6 +86,10 @@
 				gauze_href = "<a href='byond://?src=[REF(src)];gauze_limb=[REF(body_part)]'>[gauze_href]</a>"
 			. += span_notice("There is some [icon2html(current_gauze, user)] [gauze_href] wrapped around [t_his] [body_part.plaintext_zone].")
 
+		var/datum/component/medical_condition/condition = body_part.get_medical_condition(FALSE)
+		var/signs = condition?.visible_signs()
+		if(signs && is_location_accessible(body_part.body_zone, IGNORED_OPERATION_CLOTHING_SLOTS))
+			. += span_warning("[body_part.plaintext_zone]: [signs].")
 		for(var/datum/wound/iter_wound as anything in body_part.wounds)
 			if(isnull(iter_wound.examine_desc))
 				continue

@@ -178,9 +178,9 @@
 	target.emote(pick("giggle", "laugh"))
 	target.mob_mood?.adjust_sanity(-10)
 	if(!IS_UNCONSCIOUS_OR_CRIT(target) && target.mob_mood?.sanity >= SANITY_NEUTRAL)
-		target.adjust_organ_loss(ORGAN_SLOT_BRAIN, 10)
+		target.adjust_phantom_brain_damage(10)
 		return
-	target.adjust_organ_loss(ORGAN_SLOT_BRAIN, 25)
+	target.adjust_phantom_brain_damage(25)
 
 /datum/heretic_knowledge/spell/moon_ringleader
 	name = "Восшествие Артистов"

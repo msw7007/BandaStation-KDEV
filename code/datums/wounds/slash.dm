@@ -245,8 +245,7 @@
 			qdel(src)
 
 /datum/wound/slash/flesh/on_xadone(power)
-	. = ..()
-	adjust_blood_flow(-0.03 * power) // i think it's like a minimum of 3 power, so .09 blood_flow reduction per tick is pretty good for 0 effort
+	return
 
 /datum/wound/slash/flesh/on_synthflesh(reac_volume)
 	. = ..()

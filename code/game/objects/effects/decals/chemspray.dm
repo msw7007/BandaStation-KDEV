@@ -1,5 +1,6 @@
 //Used by spraybottles.
 /obj/effect/decal/chempuff
+	var/medical_target_zone = BODY_ZONE_CHEST
 	name = "chemicals"
 	icon = 'icons/obj/medical/chempuff.dmi'
 	pass_flags = PASSTABLE | PASSGRILLE
@@ -93,5 +94,14 @@
 	if(isnull(logging_string))
 		logging_string = reagents.get_reagent_log_string()
 
+	var/mob/living/carbon/patient = iscarbon(spraying) ? spraying : null
+	var/previous_zone = patient?.medical_exposure_zone
+	var/previous_spray = patient?.medical_exposure_is_spray
+	if(patient)
+		patient.medical_exposure_zone = medical_target_zone
+		patient.medical_exposure_is_spray = TRUE
 	reagents.expose(spraying, VAPOR)
+	if(!QDELETED(patient))
+		patient.medical_exposure_zone = previous_zone
+		patient.medical_exposure_is_spray = previous_spray
 	log_combat(user, spraying, "sprayed", sprayer, addition = "which had [logging_string]")

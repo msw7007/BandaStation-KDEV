@@ -244,7 +244,7 @@
 		return
 	//Propagation through pulling, fireman carry
 	if(!(flags & SHOCK_ILLUSION))
-		if(undergoing_cardiac_arrest())
+		if(undergoing_cardiac_arrest() && shock_damage * siemens_coeff >= 1 && medical_defib_roll(null, improvised = TRUE))
 			set_heartattack(FALSE)
 		var/list/shocking_queue = list()
 		if(iscarbon(pulling) && source != pulling)

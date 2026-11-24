@@ -69,6 +69,7 @@
 	description = "Хирургическое исследование абдукторов, позволяющее понять технологии инструментов хирургии."
 	prerequisite_nodes = list(/datum/techweb_node/alien/base, /datum/techweb_node/surgery_tools)
 	unlocked_designs = list(
+		/datum/design/board/medical_station/nerv,
 		/datum/design/aliencautery,
 		/datum/design/aliendrill,
 		/datum/design/alienhemostat,

@@ -149,6 +149,9 @@
 				continue
 			var/status = organ.get_status_text(scanpower = SCANPOWER_ADVANCED, add_tooltips = FALSE, colored = FALSE)
 			var/appendix = organ.get_status_appendix(scanpower = SCANPOWER_ADVANCED, add_tooltips = FALSE)
+			var/capacity = organ.get_capacity_status(SCANPOWER_ADVANCED)
+			if(capacity)
+				appendix = appendix ? "[appendix] [capacity]" : capacity
 			if(!status)
 				status ||= "OK" // otherwise flawless organs have no status reported by default
 			organreport += "<tr>\

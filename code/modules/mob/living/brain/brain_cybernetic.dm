@@ -7,12 +7,14 @@
 	shade_color = null
 
 /obj/item/organ/brain/cybernetic/brain_damage_examine()
+	if(maxHealth <= 0 || requires_reconstruction)
+		return ..()
 	if(suicided)
 		return span_info("Its circuitry is smoking slightly. They must not have been able to handle the stress of it all.")
 	if(brainmob && (decoy_override || brainmob.client || brainmob.get_ghost()))
 		if(organ_flags & ORGAN_FAILING)
 			return span_info("It seems to still have a bit of energy within it, but it's rather damaged... You may be able to repair it with a <b>multitool</b>.")
-		else if(damage >= BRAIN_DAMAGE_DEATH*0.5)
+		else if(damage >= maxHealth * 0.5)
 			return span_info("You can feel the small spark of life still left in this one, but it's got some dents. You may be able to restore it with a <b>multitool</b>.")
 		else
 			return span_info("You can feel the small spark of life still left in this one.")

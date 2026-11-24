@@ -246,144 +246,19 @@
 	return OXYLOSS
 
 /obj/item/clothing/neck/stethoscope/attack(mob/living/target, mob/living/user)
-	if(!ishuman(target) || !isliving(user))
+	if(!iscarbon(target) || user.combat_mode)
 		return ..()
-	if(user.combat_mode)
+	var/mob/living/carbon/patient = target
+	if(HAS_TRAIT(user, TRAIT_DEAF) || !patient.is_location_accessible(BODY_ZONE_CHEST, IGNORED_OPERATION_CLOTHING_SLOTS))
 		return
-
-	var/mob/living/carbon/carbon_patient = target
-	var/body_part = carbon_patient.parse_zone_with_bodypart(user.zone_selected)
-
-	if(body_part == BODY_ZONE_CHEST)
-		if(DOING_INTERACTION_WITH_TARGET(user, carbon_patient))
-			return
-		user.visible_message(span_notice("[user] begins to place [src] against [carbon_patient]'s [body_part]."), span_notice("You begin to place [src] against [carbon_patient]'s [body_part]..."), ignored_mobs = carbon_patient)
-		if(carbon_patient != user)
-			to_chat(carbon_patient, span_notice("[user] begins to place [src] against your [body_part]."))
-		if(!do_after(user, 2 SECONDS, carbon_patient))
-			return
-		user.visible_message(span_notice("[user] places [src] against [carbon_patient]'s [body_part] and listens attentively."), ignored_mobs = list(user, carbon_patient))
-		if(carbon_patient != user)
-			to_chat(carbon_patient, span_notice("You feel [src] pressed against your [body_part]."))
-		if(HAS_TRAIT(user, TRAIT_DEAF))
-			to_chat(user, span_notice("You place [src] against [carbon_patient]'s [body_part]. Fat load of good it does you though, since you can't hear."))
-			return
-
-	var/oxy_loss = carbon_patient.get_oxy_loss()
-
-	var/heart_strength
-	var/pulse_pressure
-	var/having_heart_attack = carbon_patient.has_status_effect(/datum/status_effect/heart_attack)
-	var/heart_noises = TRUE
-
-	var/obj/item/organ/heart/heart = carbon_patient.get_organ_slot(ORGAN_SLOT_HEART)
-	var/obj/item/organ/lungs/lungs = carbon_patient.get_organ_slot(ORGAN_SLOT_LUNGS)
-	var/obj/item/organ/liver/liver = carbon_patient.get_organ_slot(ORGAN_SLOT_LIVER)
-	var/obj/item/organ/appendix/appendix = carbon_patient.get_organ_slot(ORGAN_SLOT_APPENDIX)
-
-	var/render_list = list()//information will be packaged in a list for clean display to the user
-
-	//determine what specific action we're taking
-	switch (body_part)
-		if(BODY_ZONE_CHEST)//Listening to the chest
-			render_list += span_info("You place [src] against [carbon_patient]'s [body_part]:\n")
-
-			//assess breathing
-			var/lung_noises = TRUE
-			if(isnull(lungs) \
-				|| carbon_patient.stat == DEAD \
-				|| (HAS_TRAIT(carbon_patient, TRAIT_FAKEDEATH)) \
-				|| (HAS_TRAIT_NOT_FROM(carbon_patient, TRAIT_NOBREATH, BLOOD_WORM_HOST_TRAIT))\
-				|| carbon_patient.failed_last_breath \
-				|| carbon_patient.losebreath)//If pt is dead or otherwise not breathing
-				render_list += "<span class='danger ml-1'>[target.p_Theyre()] not breathing!</span>\n"
-				lung_noises = FALSE
-
-			else if(lungs.damage > 10)//if breathing, check for lung damage
-				render_list += "<span class='danger ml-1'>You hear fluid in [target.p_their()] lungs!</span>\n"
-			else if(oxy_loss > 10)//if they have suffocation damage
-				render_list += "<span class='danger ml-1'>[target.p_Theyre()] breathing heavily!</span>\n"
-			else
-				render_list += "<span class='notice ml-1'>[target.p_Theyre()] breathing normally.</span>\n"//they're okay :D
-			if(lung_noises)
-				render_list += "<span class='notice ml-1'>[lungs.hear_breath_noise(user)]</span>\n"
-			//assess heart
-			if(body_part == BODY_ZONE_CHEST)//if we're listening to the chest
-				if(isnull(heart) || !heart.is_beating() || carbon_patient.stat == DEAD)
-					render_list += "<span class='danger ml-1'>You don't hear a heartbeat!</span>\n"//they're dead or their heart isn't beating
-					heart_noises = FALSE
-				else if(having_heart_attack)
-					render_list += "<span class='danger ml-1'>You hear a rapid, irregular heartbeat.</span>\n"
-				else if(heart.damage > 10 || carbon_patient.get_blood_volume(apply_modifiers = TRUE) <= BLOOD_VOLUME_OKAY)
-					render_list += "<span class='danger ml-1'>You hear a weak heartbeat.</span>\n"//their heart is damaged, or they have critical blood
-				else
-					render_list += "<span class='notice ml-1'>You hear a healthy heartbeat.</span>\n"//they're okay :D
-				if(heart_noises)
-					render_list += "<span class='notice ml-1'>[heart.hear_beat_noise(user)]</span>\n"
-
-		if(BODY_ZONE_PRECISE_GROIN)//If we're targeting the groin
-			render_list += span_info("You carefully press down on [carbon_patient]'s abdomen:\n")
-			user.visible_message(span_notice("[user] presses their hands against [carbon_patient]'s abdomen."), ignored_mobs = user)
-
-			//assess abdominal organs
-			var/appendix_okay = TRUE
-			var/liver_okay = TRUE
-			if(!liver)//sanity check, ensure the patient actually has a liver
-				render_list += "<span class='danger ml-1'>You can't feel anything where [target.p_their()] liver would be.</span>\n"
-				liver_okay = FALSE
-			else
-				if(liver.damage > 10)
-					render_list += "<span class='danger ml-1'>[target.p_Their()] liver feels firm.</span>\n"//their liver is damaged
-					liver_okay = FALSE
-			if(!appendix)//sanity check, ensure the patient actually has an appendix
-				render_list += "<span class='danger ml-1'>You can't feel anything where [target.p_their()] appendix would be.</span>\n"
-				appendix_okay = FALSE
-			else
-				if(appendix.damage > 10 && !IS_UNCONSCIOUS_OR_CRIT(carbon_patient))
-					render_list += "<span class='danger ml-1'>[target] screams when you lift your hand from [target.p_their()] appendix!</span>\n"//scream if their appendix is damaged and they're awake
-					target.emote("scream")
-					appendix_okay = FALSE
-			if(liver_okay && appendix_okay)//if they have all their organs and have no detectable damage
-				render_list += "<span class='notice ml-1'>You don't find anything abnormal.</span>\n"//they're okay :D
-
-		if(BODY_ZONE_PRECISE_EYES)
-			balloon_alert(user, "can't do that!")
-			return
-
-		if(BODY_ZONE_PRECISE_MOUTH)
-			balloon_alert(user, "can't do that!")
-			return
-
-		else//targeting an extremity or the head
-			if(body_part ==  BODY_ZONE_HEAD)
-				render_list += span_info("You carefully press your fingers to [carbon_patient]'s neck:\n")
-				user.visible_message(span_notice("[user] presses their fingers against [carbon_patient]'s neck."), ignored_mobs = user)
-			else
-				render_list += span_info("You carefully press your fingers to [carbon_patient]'s [body_part]:\n")
-				user.visible_message(span_notice("[user] presses their fingers against [carbon_patient]'s [body_part]."), ignored_mobs = user)
-
-			var/cached_blood_volume = carbon_patient.get_blood_volume(apply_modifiers = TRUE)
-
-			//assess pulse (heart & blood level)
-			if(isnull(heart) || !heart.is_beating() || cached_blood_volume <= BLOOD_VOLUME_OKAY || carbon_patient.stat == DEAD)
-				render_list += "<span class='danger ml-1'>You can't find a pulse!</span>\n"//they're dead, their heart isn't beating, or they have critical blood
-			else
-				if(having_heart_attack)
-					heart_strength = span_danger("irregular")
-				else if(heart.damage > 10)
-					heart_strength = span_danger("weak")//their heart is damaged
-				else
-					heart_strength = span_notice("regular")//they're okay :D
-
-				if((cached_blood_volume <= BLOOD_VOLUME_SAFE && cached_blood_volume > BLOOD_VOLUME_OKAY) || having_heart_attack)
-					pulse_pressure = span_danger("thready")//low blood
-				else
-					pulse_pressure = span_notice("strong")//they're okay :D
-
-				render_list += "<span class='notice ml-1'>[target.p_Their()] pulse is [pulse_pressure] and [heart_strength].</span>\n"
-
-	//display our packaged information in an examine block for easy reading
-	to_chat(user, boxed_message(jointext(render_list, "")), type = MESSAGE_TYPE_INFO)
+	if(!do_after(user, 2 SECONDS, patient) || QDELETED(patient) || !user.Adjacent(patient))
+		return
+	var/obj/item/organ/heart/heart = patient.get_organ_slot(ORGAN_SLOT_HEART)
+	to_chat(user, span_notice(heart?.is_beating() ? "Сердцебиение слышно." : "Сердцебиения не слышно."))
+	if(heart)
+		to_chat(user, heart.hear_beat_noise(user))
+	if(user.has_medical_competence())
+		to_chat(user, boxed_message(jointext(patient.medical_auscultation(user.zone_selected, user), "<br>")))
 
 ///////////
 //SCARVES//

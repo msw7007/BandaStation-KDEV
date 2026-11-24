@@ -36,6 +36,8 @@
 	if(!CanContractDisease(disease))
 		return FALSE
 
+	if(prob(medical_immunity * 0.25))
+		return FALSE
 	var/passed = TRUE
 
 	var/head_chance = 80

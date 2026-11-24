@@ -205,8 +205,6 @@
 
 /datum/surgery_operation/limb/close_skin/on_success(obj/item/bodypart/limb, mob/living/surgeon, obj/item/tool, list/operation_args)
 	. = ..()
-	if(LIMB_HAS_SURGERY_STATE(limb, SURGERY_BONE_SAWED))
-		limb.heal_damage(40)
 	limb.remove_surgical_state(ALL_SURGERY_STATES_UNSET_ON_CLOSE)
 
 /datum/surgery_operation/limb/close_skin/abductor
@@ -247,9 +245,6 @@
 
 /datum/surgery_operation/limb/clamp_bleeders/on_success(obj/item/bodypart/limb)
 	. = ..()
-	// free brute healing if you do it after sawing bones
-	if(LIMB_HAS_SURGERY_STATE(limb, SURGERY_BONE_SAWED))
-		limb.heal_damage(20)
 	limb.add_surgical_state(SURGERY_VESSELS_CLAMPED)
 	limb.remove_surgical_state(SURGERY_VESSELS_UNCLAMPED)
 
@@ -424,7 +419,6 @@
 	if(!LIMB_HAS_SKIN(limb))
 		limb.remove_surgical_state(ALL_SURGERY_STATES_UNSET_ON_CLOSE)
 	limb.remove_surgical_state(ALL_SURGERY_BONE_STATES)
-	limb.heal_damage(40)
 
 /datum/surgery_operation/limb/drill_bones
 	name = "Сверление кости"

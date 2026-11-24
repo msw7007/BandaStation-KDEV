@@ -28,6 +28,11 @@
 	if(HAS_TRAIT_FROM(limb, TRAIT_DISFIGURED, TRAIT_GENERIC))
 		return TRUE //skip name selection if fixing disfigurement
 
+	var/obj/item/card/id/identity = surgeon.get_inactive_held_item()
+	if(istype(identity) && identity.registered_name)
+		operation_args[OPERATION_NEW_NAME] = identity.registered_name
+		return TRUE
+
 	var/list/names = list()
 	if(HAS_MIND_TRAIT(surgeon, TRAIT_ABDUCTOR_KNOWLEDGE))
 		for(var/j in 1 to 9)

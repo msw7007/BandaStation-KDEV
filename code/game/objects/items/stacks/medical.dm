@@ -270,6 +270,8 @@
 /// Checks a bunch of stuff to see if we can heal the patient, including can_heal
 /// Gives a feedback if we can't ultimatly heal the patient (unless silent is TRUE)
 /obj/item/stack/medical/proc/try_heal_checks(mob/living/patient, mob/living/user, healed_zone, silent = FALSE)
+	if(get_amount() < 1)
+		return FALSE
 	if(!(healed_zone in patient.get_all_limbs()))
 		healed_zone = BODY_ZONE_CHEST
 
@@ -299,7 +301,9 @@
 		var/brute_to_heal = heal_brute && affecting.brute_dam > 0
 		var/burn_to_heal = heal_burn && affecting.burn_dam > 0
 
-		if(!brute_to_heal && !burn_to_heal && !can_heal_burn_wounds && !can_suture_bleeding)
+		var/datum/component/medical_condition/condition = affecting.get_medical_condition(FALSE)
+		var/can_heal_minor = condition && (((heal_brute || stop_bleeding) && (LAZYACCESS(condition.minor_wounds, WOUND_SLASH) || LAZYACCESS(condition.minor_wounds, WOUND_PIERCE) || LAZYACCESS(condition.minor_wounds, WOUND_BLUNT))) || ((heal_burn || flesh_regeneration) && LAZYACCESS(condition.minor_wounds, WOUND_BURN)))
+		if(!brute_to_heal && !burn_to_heal && !can_heal_burn_wounds && !can_suture_bleeding && !can_heal_minor)
 			if(!silent)
 				if(!brute_to_heal && stop_bleeding) // no brute, no bleeding
 					carbon_patient.balloon_alert(user, "[affecting.plaintext_zone] не кровоточит или не повреждена!")
@@ -340,6 +344,8 @@
 		visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
 	)
 	var/previous_damage = affecting.get_damage()
+	var/datum/component/medical_condition/condition = affecting.get_medical_condition(FALSE)
+	condition?.treat_minor(heal_brute || stop_bleeding, heal_burn || flesh_regeneration, bruises = !istype(src, /obj/item/stack/medical/suture))
 	if(affecting.heal_damage(heal_brute, heal_burn))
 		patient.update_damage_overlays()
 	if(stop_bleeding)

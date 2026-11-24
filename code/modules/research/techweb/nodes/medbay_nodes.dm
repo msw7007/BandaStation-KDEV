@@ -3,6 +3,11 @@
 	description = "Базовый комплект медицинского оборудования для оказания неотложной помощи при сохранении функциональности медотдела."
 	node_flags = parent_type::node_flags | TECHWEB_NODE_STARTER
 	unlocked_designs = list(
+		/datum/design/medical_overhaul/wound_analyzer,
+		/datum/design/medical_overhaul/hemo_analyzer,
+		/datum/design/board/medical_station,
+		/datum/design/board/medical_network,
+		/datum/design/medical_overhaul/paramedic_terminal,
 		/datum/design/beaker,
 		/datum/design/blood_filter,
 		/datum/design/blood_pack,
@@ -73,6 +78,10 @@
 	description = "Современное медицинское оборудование для поддержания жизнеспособности экипажа с минимальными физическими повреждениями."
 	prerequisite_nodes = list(/datum/techweb_node/chem_synthesis)
 	unlocked_designs = list(
+		/datum/design/medical_overhaul/compressor,
+		/datum/design/medical_overhaul/medical_chip,
+		/datum/design/board/medical_station/cryostasis,
+		/datum/design/board/medical_station/self_analyzer,
 		/datum/design/board/chem_mass_spec,
 		/datum/design/crewpinpointer,
 		/datum/design/defibrillator_compact,

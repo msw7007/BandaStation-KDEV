@@ -105,7 +105,7 @@
 /// Checks if the heart is beating.
 /// Can be overridden to add more conditions for more complex hearts.
 /obj/item/organ/heart/proc/is_beating()
-	return beating
+	return beating && !(owner && HAS_TRAIT(owner, TRAIT_MEDICAL_ARRHYTHMIA))
 
 /obj/item/organ/heart/get_status_text(scanpower, add_tooltips, colored)
 	if(owner.has_status_effect(/datum/status_effect/heart_attack))

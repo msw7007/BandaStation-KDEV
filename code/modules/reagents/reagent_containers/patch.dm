@@ -168,7 +168,10 @@
 		show_message = TRUE
 		COOLDOWN_START(src, reagent_message_cd, PATCH_MESSAGE_COOLDOWN)
 
-	parent.reagents.trans_to(owner, transfer_per_second, methods = PATCH, show_message = show_message)
+	var/previous_zone = owner.medical_exposure_zone
+	owner.medical_exposure_zone = owner_limb.body_zone
+	parent.reagents.trans_to(owner, transfer_per_second * seconds_per_tick * owner.medical_time_scale(), methods = PATCH, show_message = show_message)
+	owner.medical_exposure_zone = previous_zone
 
 // delivers all of the patch's contents at once
 /datum/embedding/med_patch/instant

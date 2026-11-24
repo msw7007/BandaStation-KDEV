@@ -1,0 +1,5 @@
+medical_suits.dmi, operation_table_v3.dmi
+Copied without modifications from the author's medical overhaul PR:
+https://github.com/ss220club/BandaStation/pull/311
+Commit: 5ea60cd64e9a78802479c7423d541afdeefa3c99
+Original paths: modular_bandastation/medical/icons/

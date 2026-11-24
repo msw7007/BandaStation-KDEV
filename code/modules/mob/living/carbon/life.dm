@@ -1,6 +1,8 @@
 /mob/living/carbon/Life(seconds_per_tick = SSMOBS_DT)
 	if(HAS_TRAIT(src, TRAIT_NO_TRANSFORM))
 		return
+	seconds_per_tick *= medical_time_scale()
+	process_medical_life(seconds_per_tick)
 
 	if(damageoverlaytemp)
 		damageoverlaytemp = 0
@@ -43,6 +45,7 @@
 
 // Start of a breath chain, calls [carbon/proc/breathe()]
 /mob/living/carbon/handle_breathing(seconds_per_tick)
+	medical_breath_elapsed += seconds_per_tick
 	var/next_breath = 4
 	var/obj/item/organ/lungs/L = get_organ_slot(ORGAN_SLOT_LUNGS)
 	var/obj/item/organ/heart/H = get_organ_slot(ORGAN_SLOT_HEART)
@@ -53,7 +56,9 @@
 		if(H.damage > H.high_threshold)
 			next_breath--
 
-	if((SSmobs.times_fired % next_breath) == 0 || failed_last_breath)
+	var/breath_interval = (failed_last_breath ? 1 : next_breath) * SSMOBS_DT
+	if(medical_breath_elapsed >= breath_interval)
+		medical_breath_elapsed %= breath_interval
 		breathe(seconds_per_tick) //Breathe per 4 ticks if healthy, down to 2 if our lungs or heart are damaged, unless suffocating
 		if(failed_last_breath)
 			add_mood_event("suffocation", /datum/mood_event/suffocation)
@@ -455,6 +460,7 @@
 	. = ..()
 	if(. & COMSIG_MOB_STOP_REAGENT_TICK)
 		return
+	process_medical_chemistry(chem, seconds_per_tick * metabolization_ratio)
 
 	var/datum/blood_type/blood_type = get_bloodtype()
 	if(!blood_type)
@@ -471,6 +477,7 @@
 
 	if(. & COMPONENT_NO_EXPOSE_REAGENTS)
 		return
+	medical_exposure(chem, methods, reac_volume, touch_protection)
 
 	if(!(methods & INJECT) && !((methods & INGEST) && HAS_TRAIT(src, TRAIT_DRINKS_BLOOD)))
 		return

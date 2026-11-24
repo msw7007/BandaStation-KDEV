@@ -81,7 +81,7 @@
 
 		mob.AdjustStun(1 SECONDS)
 		mob.AdjustKnockdown(1 SECONDS)
-		mob.adjust_organ_loss(ORGAN_SLOT_BRAIN, 50, 150)
+		mob.adjust_phantom_brain_damage(50, 150)
 		mob.mob_mood?.adjust_sanity(-50)
 
 	qdel(victim)

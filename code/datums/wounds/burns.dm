@@ -46,110 +46,28 @@
 	var/strikes_to_lose_limb = 3
 
 /datum/wound/burn/flesh/handle_process(seconds_per_tick)
-
-	if (!victim || HAS_TRAIT(victim, TRAIT_STASIS))
+	if(!victim || HAS_TRAIT(victim, TRAIT_STASIS))
 		return
-
 	. = ..()
-	if(strikes_to_lose_limb <= 0) // we've already hit sepsis, nothing more to do
-		victim.adjust_tox_loss(0.25 * seconds_per_tick)
-		if(SPT_PROB(0.5, seconds_per_tick))
-			victim.visible_message(span_danger("Инфекция на остатках [limb.ru_plaintext_zone[GENITIVE] || limb.plaintext_zone] у [victim.declent_ru(GENITIVE)] тошнотворно пузырится!"), span_warning("Вы чувствуете, как инфекция на остатках вашей [limb.ru_plaintext_zone[GENITIVE] || limb.plaintext_zone] проникает в ваши вены!"), vision_distance = COMBAT_MESSAGE_RANGE)
-		return
-
+	// Limb contamination is the single source of infection, including burns.
+	var/datum/component/medical_condition/condition = limb.get_medical_condition(FALSE)
+	infection = condition ? condition.infection_seconds / 40 : 0
 	for(var/datum/reagent/reagent as anything in victim.reagents.reagent_list)
 		if(reagent.chemical_flags & REAGENT_AFFECTS_WOUNDS)
 			reagent.on_burn_wound_processing(src)
-
-	if(HAS_TRAIT(victim, TRAIT_VIRUS_RESISTANCE))
-		sanitization += 0.9
-	if(HAS_TRAIT(victim, TRAIT_IMMUNODEFICIENCY))
-		infection += 0.05
-		sanitization = max(sanitization - 0.15, 0)
-		if(infection_rate <= 0.15 && prob(50))
-			infection_rate += 0.001
-
 	var/obj/item/stack/medical/wrap/current_gauze = LAZYACCESS(limb.applied_items, LIMB_ITEM_GAUZE)
 	if(current_gauze)
 		limb.seep_gauze(WOUND_BURN_SANITIZATION_RATE * seconds_per_tick)
-
-	if(flesh_healing > 0) // good bandages multiply the length of flesh healing
+	if(flesh_healing > 0)
 		var/bandage_factor = current_gauze?.burn_cleanliness_bonus || 1
-		flesh_damage = max(flesh_damage - (0.5 * seconds_per_tick), 0)
-		flesh_healing = max(flesh_healing - (0.5 * bandage_factor * seconds_per_tick), 0) // good bandages multiply the length of flesh healing
-
-	// if we have little/no infection, the limb doesn't have much burn damage, and our nutrition is good, heal some flesh
-	if(infection <= WOUND_INFECTION_MODERATE && (limb.burn_dam < 5) && (victim.nutrition >= NUTRITION_LEVEL_FED))
-		flesh_healing += 0.2
-
-	// here's the check to see if we're cleared up
-	if((flesh_damage <= 0) && (infection <= WOUND_INFECTION_MODERATE))
-		to_chat(victim, span_green("Ожоги на вашей [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] зажили!"))
+		flesh_damage = max(0, flesh_damage - 0.5 * seconds_per_tick)
+		flesh_healing = max(0, flesh_healing - 0.5 * bandage_factor * seconds_per_tick)
+	if(flesh_damage <= 0 && infection <= WOUND_INFECTION_MODERATE)
 		qdel(src)
 		return
-
-	// sanitization is checked after the clearing check but before the actual ill-effects, because we freeze the effects of infection while we have sanitization
 	if(sanitization > 0)
-		var/bandage_factor = current_gauze?.burn_cleanliness_bonus || 1
-		infection = max(infection - (WOUND_BURN_SANITIZATION_RATE * seconds_per_tick), 0)
-		sanitization = max(sanitization - (WOUND_BURN_SANITIZATION_RATE * bandage_factor * seconds_per_tick), 0)
-		return
-
-	infection += infection_rate * seconds_per_tick
-	switch(infection)
-		if(0 to WOUND_INFECTION_MODERATE)
-			return
-
-		if(WOUND_INFECTION_MODERATE to WOUND_INFECTION_SEVERE)
-			if(SPT_PROB(15, seconds_per_tick))
-				victim.adjust_tox_loss(0.2)
-				if(prob(6))
-					to_chat(victim, span_warning("Волдыри на вашей [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] выделяют странный гной..."))
-
-		if(WOUND_INFECTION_SEVERE to WOUND_INFECTION_CRITICAL)
-			if(!disabling)
-				if(SPT_PROB(1, seconds_per_tick))
-					to_chat(victim, span_warning("<b>Ваша [limb.ru_plaintext_zone[ACCUSATIVE] || limb.plaintext_zone] полностью утратила чувствительность, и вы боретесь за контроль над инфекцией!</b>"))
-					set_disabling(TRUE)
-					return
-			else if(SPT_PROB(4, seconds_per_tick))
-				to_chat(victim, span_notice("Вы вновь чувствуете свою [limb.ru_plaintext_zone[ACCUSATIVE] || limb.plaintext_zone], но она по-прежнему в ужасном состоянии!"))
-				set_disabling(FALSE)
-				return
-
-			if(SPT_PROB(10, seconds_per_tick))
-				victim.adjust_tox_loss(0.5)
-
-		if(WOUND_INFECTION_CRITICAL to WOUND_INFECTION_SEPTIC)
-			if(!disabling)
-				if(SPT_PROB(1.5, seconds_per_tick))
-					to_chat(victim, span_warning("<b>Вы внезапно теряете все ощущения от гнойной инфекции в вашей [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone]!</b>"))
-					set_disabling(TRUE)
-					return
-			else if(SPT_PROB(1.5, seconds_per_tick))
-				to_chat(victim, span_notice("Вы едва чувствуете свою [limb.ru_plaintext_zone[ACCUSATIVE] || limb.plaintext_zone] снова, и вам нужно напрягаться, чтобы сохранить контроль над моторикой!"))
-				set_disabling(FALSE)
-				return
-
-			if(SPT_PROB(2.48, seconds_per_tick))
-				if(prob(20))
-					to_chat(victim, span_warning("Вы размышляете о жизни без своей [limb.ru_plaintext_zone[GENITIVE] || limb.plaintext_zone]..."))
-					victim.adjust_tox_loss(0.75)
-				else
-					victim.adjust_tox_loss(1)
-
-		if(WOUND_INFECTION_SEPTIC to INFINITY)
-			if(SPT_PROB(0.5 * infection, seconds_per_tick))
-				strikes_to_lose_limb--
-				switch(strikes_to_lose_limb)
-					if(2 to INFINITY)
-						to_chat(victim, span_deadsay("<b>Инфекция в вашей [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] буквально сочится, вы чувствуете себя ужасно!</b>"))
-					if(1)
-						to_chat(victim, span_deadsay("<b>Инфекция почти полностью захватила вашу [limb.ru_plaintext_zone[ACCUSATIVE] || limb.plaintext_zone]!</b>"))
-					if(0)
-						to_chat(victim, span_deadsay("<b>Последние нервные окончания в вашей [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] увядают, пока инфекция полностью парализует ваш сустав.</b>"))
-						threshold_penalty *= 2 // piss easy to destroy
-						set_disabling(TRUE)
+		condition?.treat_infection(WOUND_BURN_SANITIZATION_RATE * seconds_per_tick)
+		sanitization = max(0, sanitization - WOUND_BURN_SANITIZATION_RATE * seconds_per_tick)
 
 /datum/wound/burn/flesh/set_disabling(new_value)
 	. = ..()

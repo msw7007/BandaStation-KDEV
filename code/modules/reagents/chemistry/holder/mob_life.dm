@@ -102,8 +102,11 @@
 	if(!owner || !reagent || (dead && !(reagent.chemical_flags & REAGENT_DEAD_PROCESS)))
 		return FALSE
 
-	var/metabolized_volume = reagent.compute_metabolization(owner, seconds_per_tick)
-	var/metabolization_ratio = REM * metabolized_volume
+	// Biological time scales both drug consumption and effects once. The per-tick
+	// dosage ratio must not apply the stasis factor a second time in on_mob_life.
+	var/biological_scale = owner.medical_time_scale()
+	var/metabolized_volume = reagent.compute_metabolization(owner, seconds_per_tick / biological_scale) * biological_scale
+	var/metabolization_ratio = REM * metabolized_volume / biological_scale
 
 	var/tick_return = owner.reagent_tick(reagent, seconds_per_tick, metabolization_ratio)
 	if(tick_return & COMSIG_MOB_STOP_REAGENT_TICK)
@@ -139,7 +142,7 @@
 			if(reagent.volume < reagent.overdose_crit_threshold && reagent.overdosed_crit && reagent.overdose_crit_threshold)
 				reagent.overdosed_crit = FALSE
 // BANDASTATION EDIT END: NEW CHEMS
-	reagent.current_cycle++
+	reagent.current_cycle += biological_scale
 	need_mob_update += reagent.on_mob_life(owner, seconds_per_tick, metabolization_ratio)
 
 	if(dead && !QDELETED(owner) && !QDELETED(reagent))

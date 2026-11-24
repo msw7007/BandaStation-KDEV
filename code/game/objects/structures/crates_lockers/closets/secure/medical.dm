@@ -76,6 +76,7 @@
 
 /obj/structure/closet/secure_closet/chief_medical/PopulateContents()
 	..()
+	new /obj/item/skillchip/medical(src)
 
 	new /obj/item/clothing/suit/bio_suit/cmo(src)
 	new /obj/item/clothing/head/bio_hood/cmo(src)

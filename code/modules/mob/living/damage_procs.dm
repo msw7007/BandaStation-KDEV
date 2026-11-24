@@ -440,6 +440,8 @@
 /mob/living/proc/adjust_stamina_loss(amount, updating_stamina = TRUE, forced = FALSE, required_biotype = ALL)
 	if(amount > 0 && !forced)
 		amount *= GET_PHYSIOLOGY(src, STAMINA)
+		if(has_status_effect(/datum/status_effect/medical_pain))
+			amount *= 1.2
 
 	if(!amount || !can_adjust_stamina_loss(amount, forced, required_biotype))
 		return 0

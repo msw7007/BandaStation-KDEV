@@ -410,7 +410,7 @@
 		return PROCESS_KILL
 
 	// Don't bother with fully healed people.
-	if(mob_occupant.get_organic_health() >= mob_occupant.getMaxHealth())
+	if(mob_occupant.get_organic_health() >= mob_occupant.getMaxHealth() && !has_organ_capacity_treatment() && !has_cryoneurine_treatment() && !has_medical_wound_treatment())
 		if(iscarbon(mob_occupant))
 			var/mob/living/carbon/C = mob_occupant
 			if(C.all_wounds)

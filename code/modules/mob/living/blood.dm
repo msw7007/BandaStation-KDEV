@@ -279,7 +279,7 @@
 		add_splatter_floor(loc, (amount_bled <= 10))
 
 /mob/living/carbon/human/bleed(amount)
-	return ..()
+	return ..(amount * clamp(medical_pressure / 100, 0.5, 1.5))
 
 /// A helper to see how much blood we're losing per tick
 /mob/living/proc/get_bleed_rate()

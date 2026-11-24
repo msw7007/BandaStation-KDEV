@@ -392,7 +392,7 @@
 	if (scarring & side)
 		return
 	scarring |= side
-	maxHealth -= 15
+	maxHealth -= 15 * medical_capacity
 	update_appearance()
 	apply_scarring_effects()
 
@@ -412,7 +412,7 @@
 	if (!(scarring & side))
 		return
 	scarring &= ~side
-	maxHealth += 15
+	maxHealth += 15 * medical_capacity
 	update_appearance()
 	if (!owner)
 		return
@@ -540,7 +540,8 @@
 		return
 	var/left_delayed = prob(50)
 	// Storing blink delay so mistimed blinks of lizards don't get cut short
-	var/sync_blinking = synchronized_blinking && (owner.get_organ_loss(ORGAN_SLOT_BRAIN) < BRAIN_DAMAGE_ASYNC_BLINKING)
+	var/obj/item/organ/brain/brain = owner.get_organ_slot(ORGAN_SLOT_BRAIN)
+	var/sync_blinking = synchronized_blinking && (!brain || brain.damage < brain.maxHealth * (BRAIN_DAMAGE_ASYNC_BLINKING / BRAIN_DAMAGE_DEATH))
 	var/blink_delay = sync_blinking ? 0 : rand(0, RAND_BLINKING_DELAY)
 	animate(eyelid_left, alpha = 0, time = 0)
 	if (!sync_blinking && left_delayed)
@@ -558,7 +559,8 @@
 		addtimer(CALLBACK(src, PROC_REF(animate_eyelids), owner), blink_delay + duration)
 
 /obj/item/organ/eyes/proc/animate_eyelids(mob/living/carbon/human/parent)
-	var/sync_blinking = synchronized_blinking && (parent.get_organ_loss(ORGAN_SLOT_BRAIN) < BRAIN_DAMAGE_ASYNC_BLINKING)
+	var/obj/item/organ/brain/brain = parent.get_organ_slot(ORGAN_SLOT_BRAIN)
+	var/sync_blinking = synchronized_blinking && (!brain || brain.damage < brain.maxHealth * (BRAIN_DAMAGE_ASYNC_BLINKING / BRAIN_DAMAGE_DEATH))
 	// Randomize order for unsynched animations
 	if (sync_blinking || prob(50))
 		var/list/anim_times = animate_eyelid(eyelid_left, parent, sync_blinking)

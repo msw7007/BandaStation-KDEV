@@ -1,7 +1,7 @@
 #define STASIS_TOGGLE_COOLDOWN 50
 /obj/machinery/stasis
 	name = "lifeform stasis unit"
-	desc = "A not so comfortable looking bed with some nozzles at the top and bottom. It will keep someone in stasis."
+	desc = "Стазисная кровать замедляет биологические процессы пациента на 50%."
 	icon = 'icons/obj/machines/stasis.dmi'
 	icon_state = "stasis"
 	base_icon_state = "stasis"
@@ -60,6 +60,8 @@
 	if(world.time < stasis_can_toggle)
 		return CLICK_ACTION_BLOCKING
 	stasis_enabled = !stasis_enabled
+	if(!stasis_enabled && isliving(occupant))
+		thaw_them(occupant)
 	stasis_can_toggle = world.time + STASIS_TOGGLE_COOLDOWN
 	playsound(src, 'sound/machines/click.ogg', 60, TRUE)
 	user.visible_message(span_notice("\The [src] [stasis_enabled ? "powers on" : "shuts down"]."), \
@@ -72,7 +74,7 @@
 /obj/machinery/stasis/Exited(atom/movable/gone, direction)
 	if(gone == occupant)
 		var/mob/living/L = gone
-		if(HAS_TRAIT(L, TRAIT_STASIS))
+		if(L.has_status_effect(/datum/status_effect/grouped/medical_stasis))
 			thaw_them(L)
 	return ..()
 
@@ -120,7 +122,8 @@
 /obj/machinery/stasis/on_changed_z_level(turf/old_turf, turf/new_turf, same_z_layer, notify_contents)
 	if(same_z_layer)
 		return ..()
-	SET_PLANE(mattress_on, PLANE_TO_TRUE(mattress_on.plane), new_turf)
+	if(mattress_on)
+		SET_PLANE(mattress_on, PLANE_TO_TRUE(mattress_on.plane), new_turf)
 	return ..()
 
 /obj/machinery/stasis/atom_break(damage_flag)
@@ -130,6 +133,8 @@
 
 /obj/machinery/stasis/power_change()
 	. = ..()
+	if(!is_operational && isliving(occupant))
+		thaw_them(occupant)
 	play_power_sound()
 
 /obj/machinery/stasis/proc/chill_out(mob/living/target)
@@ -137,12 +142,12 @@
 		return
 	var/freq = rand(24750, 26550)
 	playsound(src, 'sound/effects/spray.ogg', 5, TRUE, 2, frequency = freq)
-	target.apply_status_effect(/datum/status_effect/grouped/stasis, STASIS_MACHINE_EFFECT)
+	target.apply_status_effect(/datum/status_effect/grouped/medical_stasis, STASIS_MACHINE_EFFECT)
 	target.extinguish_mob()
 	update_use_power(ACTIVE_POWER_USE)
 
 /obj/machinery/stasis/proc/thaw_them(mob/living/target)
-	target.remove_status_effect(/datum/status_effect/grouped/stasis, STASIS_MACHINE_EFFECT)
+	target.remove_status_effect(/datum/status_effect/grouped/medical_stasis, STASIS_MACHINE_EFFECT)
 	if(target == occupant)
 		update_use_power(IDLE_POWER_USE)
 
@@ -168,10 +173,10 @@
 		return
 	var/mob/living/L_occupant = occupant
 	if(stasis_running())
-		if(!HAS_TRAIT(L_occupant, TRAIT_STASIS))
+		if(!L_occupant.has_status_effect(/datum/status_effect/grouped/medical_stasis))
 			chill_out(L_occupant)
 
-	else if(HAS_TRAIT(L_occupant, TRAIT_STASIS))
+	else if(L_occupant.has_status_effect(/datum/status_effect/grouped/medical_stasis))
 		thaw_them(L_occupant)
 
 /obj/machinery/stasis/screwdriver_act(mob/living/user, obj/item/tool)

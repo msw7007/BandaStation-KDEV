@@ -156,6 +156,8 @@
 	metabolization_rate = REAGENTS_METABOLISM * (0.00001 * (affected_mob.bodytemperature ** 2) + 0.5)
 	if(affected_mob.bodytemperature >= T0C)
 		return
+	if(iscarbon(affected_mob))
+		affected_mob.restore_cryo_organ_capacity(seconds_per_tick * metabolization_ratio)
 	var/power = -0.00003 * (affected_mob.bodytemperature ** 2) + 3
 	if(IS_UNCONSCIOUS(affected_mob)) //Significantly more effective when unconscious
 		power *= 2
@@ -1850,6 +1852,9 @@
 
 /datum/reagent/medicine/granibitaluri/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
+	var/normal_temperature = affected_mob.get_body_temp_normal()
+	if(affected_mob.bodytemperature > normal_temperature)
+		affected_mob.adjust_bodytemperature(-0.5 * seconds_per_tick * metabolization_ratio, normal_temperature)
 	var/healamount = max(1.5 - round(0.01 * (affected_mob.get_brute_loss() + affected_mob.get_fire_loss()), 0.2), 0.5) //base of 1.5 healing per cycle and loses 0.2 healing for every 10 combined brute/burn damage you have
 	var/need_mob_update
 	need_mob_update = affected_mob.adjust_brute_loss(-1 * healamount * metabolization_ratio * seconds_per_tick, updating_health = FALSE, required_bodytype = affected_bodytype)

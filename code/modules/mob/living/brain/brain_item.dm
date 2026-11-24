@@ -1,3 +1,6 @@
+#define BRAIN_DESTRUCTION_COST 50
+#define BRAIN_RECOVERY_TIME (2 MINUTES)
+
 /obj/item/organ/brain
 	name = "brain"
 	desc = "A piece of juicy meat found in a person's head."
@@ -48,6 +51,16 @@
 	var/variant_traits_removed
 	/// The color of this brain. Fluff, only used when repairing (shade of...).
 	var/shade_color = "pink"
+	/// Part of damage caused by Moon effects. Ordinary healing removes this part first.
+	var/phantom_damage = 0
+	/// Whether the current failure was caused by at least as much phantom as real damage.
+	var/phantom_death = FALSE
+	/// A truly destroyed brain needs reconstruction before it can function again.
+	var/requires_reconstruction = FALSE
+	/// One maximum-health deduction is allowed per recovered destruction episode.
+	var/destruction_armed = TRUE
+	/// Time of the actual transition out of death, not a failed revive attempt.
+	var/recovery_started
 
 /obj/item/organ/brain/Initialize(mapload)
 	. = ..()
@@ -59,6 +72,7 @@
 
 /obj/item/organ/brain/on_mob_insert(mob/living/carbon/brain_owner, special = FALSE, movement_flags)
 	. = ..()
+	RegisterSignal(brain_owner, COMSIG_MOB_STATCHANGE, PROC_REF(on_owner_stat_change))
 
 	name = initial(name)
 
@@ -116,6 +130,7 @@
 		brain_owner.update_body_parts()
 
 /obj/item/organ/brain/on_mob_remove(mob/living/carbon/organ_owner, special, movement_flags)
+	UnregisterSignal(organ_owner, COMSIG_MOB_STATCHANGE)
 	. = ..()
 	// Delete skillchips first as parent proc sets owner to null, and skillchips need to know the brain's owner.
 	if(!QDELETED(organ_owner) && length(skillchips))
@@ -251,12 +266,16 @@
 
 /// Needed so subtypes can override examine text while still calling parent
 /obj/item/organ/brain/proc/brain_damage_examine()
+	if(maxHealth <= 0)
+		return span_warning("Нервная ткань полностью разрушена; восстановление невозможно.")
+	if(requires_reconstruction)
+		return span_warning("Нервная ткань погибла. Требуется операция по восстановлению мозга.")
 	if(suicided)
 		return span_info("It's started turning slightly grey. They must not have been able to handle the stress of it all.")
 	if(brainmob && (decoy_override || brainmob.client || brainmob.get_ghost()))
 		if(organ_flags & ORGAN_FAILING)
 			return span_info("It seems to still have a bit of energy within it, but it's rather damaged... You may be able to restore it with some <b>mannitol</b>.")
-		else if(damage >= BRAIN_DAMAGE_DEATH*0.5)
+		else if(damage >= maxHealth * 0.5)
 			return span_info("You can feel the small spark of life still left in this one, but it's got some bruises. You may be able to restore it with some <b>mannitol</b>.")
 		else
 			return span_info("You can feel the small spark of life still left in this one.")
@@ -343,10 +362,11 @@
 
 /obj/item/organ/brain/on_life(seconds_per_tick)
 	. = ..()
+	update_destruction_recovery()
 
 	if(HAS_TRAIT(src, TRAIT_BRAIN_DAMAGE_NODEATH))
 		return
-	if(damage >= BRAIN_DAMAGE_DEATH) //rip
+	if(maxHealth <= 0 || requires_reconstruction || damage >= maxHealth)
 		to_chat(owner, span_userdanger("The last spark of life in your brain fizzles out..."))
 		owner.investigate_log("has been killed by brain damage.", INVESTIGATE_DEATHS)
 		owner.death()
@@ -367,23 +387,104 @@
 	// once it's out in the world we need to make sure it's the right color
 	update_brain_color(animate = FALSE)
 
-/obj/item/organ/brain/apply_organ_damage(damage_amount, maximum = maxHealth, required_organ_flag = NONE)
-	. = ..()
+/obj/item/organ/brain/apply_organ_damage(damage_amount, maximum = maxHealth, required_organ_flag = NONE, phantom = FALSE)
+	if(maxHealth <= 0 || (required_organ_flag && !(organ_flags & required_organ_flag)))
+		return FALSE
+	update_destruction_recovery()
+	if(damage_amount > 0)
+		damage_amount = min(damage_amount, max(0, min(maximum, maxHealth) - damage))
+		if(phantom)
+			phantom_damage += damage_amount
+	else
+		phantom_damage = max(0, phantom_damage + damage_amount)
+	. = ..(damage_amount, maximum, required_organ_flag)
 	var/delta_dam = . //for the sake of clarity
 	if(isnull(bodypart_owner)) // no need to color it if it's in someone's noggin
 		update_brain_color()
-	if(delta_dam < 0 && damage > BRAIN_DAMAGE_MILD)
+	if(delta_dam < 0 && maxHealth > 0 && damage > maxHealth * (BRAIN_DAMAGE_MILD / BRAIN_DAMAGE_DEATH))
 		roll_for_brain_trauma(-delta_dam) // parent call returns negative numbers if take damage and positive if we heal
+	update_destruction_recovery()
+
+/// Moon damage uses the ordinary organ damage pipeline, including immunity and damage caps.
+/mob/living/proc/adjust_phantom_brain_damage(amount, maximum = INFINITY)
+	var/obj/item/organ/brain/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(!istype(brain) || HAS_TRAIT(src, TRAIT_GODMODE))
+		return FALSE
+	return brain.apply_organ_damage(amount, maximum, phantom = TRUE)
+
+/// Records a destruction before surgery or the next life tick can observe it.
+/obj/item/organ/brain/on_begin_failure()
+	. = ..()
+	if(requires_reconstruction)
+		return
+	phantom_death = phantom_damage >= damage - phantom_damage
+	if(phantom_death)
+		return
+	requires_reconstruction = TRUE
+	if(!destruction_armed)
+		return
+	destruction_armed = FALSE
+	recovery_started = null
+	set_brain_max_health(maxHealth - BRAIN_DESTRUCTION_COST)
+
+/// Chemical healing still removes damage, but reconstruction is required after real destruction.
+/obj/item/organ/brain/on_failure_recovery()
+	. = ..()
+	if(requires_reconstruction || maxHealth <= 0)
+		organ_flags |= ORGAN_FAILING
+	else
+		phantom_death = FALSE
+
+/// Changes brain capacity without healing it or silently discarding either damage pool.
+/obj/item/organ/brain/proc/set_brain_max_health(new_maximum)
+	maxHealth = max(0, new_maximum)
+	low_threshold = initial(low_threshold) * maxHealth / initial(maxHealth)
+	high_threshold = initial(high_threshold) * maxHealth / initial(maxHealth)
+	if(maxHealth <= 0)
+		organ_flags |= ORGAN_FAILING
+		return
+	if(damage >= maxHealth && !requires_reconstruction)
+		organ_flags |= ORGAN_FAILING
+		on_begin_failure()
+
+/// Tracks actual death/revival transitions; calling revive on a living patient cannot reset the timer.
+/obj/item/organ/brain/proc/on_owner_stat_change(mob/living/carbon/source, new_stat, old_stat)
+	SIGNAL_HANDLER
+	if(new_stat == DEAD)
+		recovery_started = null
+	else if(old_stat == DEAD)
+		recovery_started = world.time
+		update_destruction_recovery()
+
+/// A sufficiently healed brain or two minutes alive permits the next destruction cost.
+/obj/item/organ/brain/proc/update_destruction_recovery()
+	if(destruction_armed || requires_reconstruction || maxHealth <= 0 || !owner || owner.stat == DEAD)
+		return
+	if(damage - phantom_damage < maxHealth * 0.5 || (!isnull(recovery_started) && world.time > recovery_started + BRAIN_RECOVERY_TIME))
+		destruction_armed = TRUE
+
+/// Restores a destroyed brain's function; its capacity was already paid for at destruction.
+/obj/item/organ/brain/proc/reconstruct_brain()
+	if(!requires_reconstruction || maxHealth <= 0)
+		return FALSE
+	requires_reconstruction = FALSE
+	set_organ_damage(min(damage, maxHealth * 0.75))
+	organ_flags &= ~ORGAN_FAILING
+	gain_trauma_type(BRAIN_TRAUMA_MILD, TRAUMA_RESILIENCE_ABSOLUTE)
+	return TRUE
 
 /// Rolls a random chance to gain a brain trauma based on damage taken and current damage level
 /obj/item/organ/brain/proc/roll_for_brain_trauma(delta_dam)
-	if(prob(delta_dam * (1 + max(0, (damage - BRAIN_DAMAGE_MILD)/100)))) //Base chance is the hit damage; for every point of damage past the threshold the chance is increased by 1% //learn how to do your bloody math properly goddamnit
+	if(maxHealth <= 0)
+		return
+	var/scaled_damage = damage * BRAIN_DAMAGE_DEATH / maxHealth
+	if(prob(delta_dam * (1 + max(0, (scaled_damage - BRAIN_DAMAGE_MILD) / 100))))
 		gain_trauma_type(BRAIN_TRAUMA_MILD, natural_gain = TRUE)
 
 	var/is_boosted = (owner && HAS_TRAIT(src, TRAIT_SPECIAL_TRAUMA_BOOST))
-	if(damage < BRAIN_DAMAGE_SEVERE)
+	if(scaled_damage < BRAIN_DAMAGE_SEVERE)
 		return
-	if(prob(delta_dam * (1 + max(0, (damage - BRAIN_DAMAGE_SEVERE)/100)))) //Base chance is the hit damage; for every point of damage past the threshold the chance is increased by 1%
+	if(prob(delta_dam * (1 + max(0, (scaled_damage - BRAIN_DAMAGE_SEVERE) / 100))))
 		if(prob(20 + (is_boosted * 30)))
 			gain_trauma_type(BRAIN_TRAUMA_SPECIAL, is_boosted ? TRAUMA_RESILIENCE_SURGERY : null, natural_gain = TRUE)
 		else
@@ -402,7 +503,7 @@
 				remove_filter(BRAIN_DAMAGE_FILTER)
 		return
 
-	var/gradient = rgb_gradient(round(damage / maxHealth, 0.01), 0, "#ffffff", 1, "#7f7f7f")
+	var/gradient = rgb_gradient(maxHealth > 0 ? clamp(round(damage / maxHealth, 0.01), 0, 1) : 1, 0, "#ffffff", 1, "#7f7f7f")
 	if(animate)
 		if(!get_filter(BRAIN_DAMAGE_FILTER))
 			add_filter(BRAIN_DAMAGE_FILTER, 1, color_matrix_filter("#ffffff"))
@@ -416,16 +517,18 @@
 
 /obj/item/organ/brain/check_damage_thresholds()
 	. = ..()
-	if(!owner)
+	if(!owner || maxHealth <= 0)
 		return
+	var/scaled_damage = damage * BRAIN_DAMAGE_DEATH / maxHealth
+	var/scaled_previous = prev_damage * BRAIN_DAMAGE_DEATH / maxHealth
 	// If we crossed blinking brain damage thresholds either way, update our blinking
-	if((prev_damage >= BRAIN_DAMAGE_ASYNC_BLINKING && damage < BRAIN_DAMAGE_ASYNC_BLINKING) || (prev_damage < BRAIN_DAMAGE_ASYNC_BLINKING && damage >= BRAIN_DAMAGE_ASYNC_BLINKING))
+	if((scaled_previous >= BRAIN_DAMAGE_ASYNC_BLINKING && scaled_damage < BRAIN_DAMAGE_ASYNC_BLINKING) || (scaled_previous < BRAIN_DAMAGE_ASYNC_BLINKING && scaled_damage >= BRAIN_DAMAGE_ASYNC_BLINKING))
 		var/obj/item/organ/eyes/eyes = owner.get_organ_slot(ORGAN_SLOT_EYES)
 		if(eyes?.blink_animation)
 			eyes.animate_eyelids(owner)
-	if(damage >= 60 && prev_damage < 60)
+	if(scaled_damage >= 60 && scaled_previous < 60)
 		owner.add_mood_event("brain_damage", /datum/mood_event/brain_damage)
-	else if(prev_damage >= 60 && damage < 60)
+	else if(scaled_previous >= 60 && scaled_damage < 60)
 		owner.clear_mood_event("brain_damage")
 
 	// If we're not more injured than before, return without gambling for a trauma
@@ -434,11 +537,11 @@
 
 	// Conscious or soft-crit
 	var/brain_message
-	if(prev_damage < BRAIN_DAMAGE_MILD && damage >= BRAIN_DAMAGE_MILD)
+	if(scaled_previous < BRAIN_DAMAGE_MILD && scaled_damage >= BRAIN_DAMAGE_MILD)
 		brain_message = span_warning("You feel lightheaded.")
-	else if(prev_damage < BRAIN_DAMAGE_SEVERE && damage >= BRAIN_DAMAGE_SEVERE)
+	else if(scaled_previous < BRAIN_DAMAGE_SEVERE && scaled_damage >= BRAIN_DAMAGE_SEVERE)
 		brain_message = span_warning("You feel less in control of your thoughts.")
-	else if(prev_damage < (BRAIN_DAMAGE_DEATH - 20) && damage >= (BRAIN_DAMAGE_DEATH - 20))
+	else if(scaled_previous < (BRAIN_DAMAGE_DEATH - 20) && scaled_damage >= (BRAIN_DAMAGE_DEATH - 20))
 		brain_message = span_warning("You can feel your mind flickering on and off...")
 
 	if(.)
@@ -447,10 +550,20 @@
 		return brain_message
 
 /obj/item/organ/brain/before_organ_replacement(obj/item/organ/replacement)
-	. = ..()
 	var/obj/item/organ/brain/replacement_brain = replacement
 	if(!istype(replacement_brain))
-		return
+		return ..()
+	replacement_brain.phantom_damage = phantom_damage
+	replacement_brain.damage = damage
+	replacement_brain.prev_damage = damage
+	replacement_brain.phantom_death = phantom_death
+	replacement_brain.requires_reconstruction = requires_reconstruction
+	replacement_brain.destruction_armed = destruction_armed
+	replacement_brain.recovery_started = recovery_started
+	replacement_brain.set_brain_max_health(min(replacement_brain.maxHealth, maxHealth))
+	if(organ_flags & ORGAN_FAILING)
+		replacement_brain.organ_flags |= ORGAN_FAILING
+	. = ..()
 
 	// Transfer over skillcips to the new brain
 
@@ -769,3 +882,6 @@
 	foodtype_flags = PODPERSON_ORGAN_FOODTYPES
 	color = COLOR_LIME
 	shade_color = "lime"
+
+#undef BRAIN_DESTRUCTION_COST
+#undef BRAIN_RECOVERY_TIME

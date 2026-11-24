@@ -158,6 +158,8 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 		add_blood_DNA(blood_dna_info)
 
 /obj/item/organ/proc/on_death(seconds_per_tick) //runs decay when outside of a person
+	if(owner && world.time < owner.medical_cpr_protection_until)
+		return
 	if(organ_flags & (ORGAN_ROBOTIC | ORGAN_FROZEN))
 		return
 
@@ -237,6 +239,14 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	STOP_PROCESSING(SSobj, src)
 
 /obj/item/organ/process(seconds_per_tick)
+	var/atom/container = loc
+	while(container && !isturf(container))
+		if(istype(container, /obj/structure/closet/body_bag/environmental/stasis))
+			var/obj/structure/closet/body_bag/environmental/stasis/bag = container
+			if(!bag.opened)
+				seconds_per_tick *= 0.25
+				break
+		container = container.loc
 	on_death(seconds_per_tick) //Kinda hate doing it like this, but I really don't want to call process directly.
 
 /obj/item/organ/proc/OnEatFrom(eater, feeder)
@@ -251,13 +261,17 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 	if(!damage_amount) //Micro-optimization.
 		return FALSE
 	maximum = clamp(maximum, 0, maxHealth) // the logical max is, our max
-	if(maximum < damage)
+	if(damage_amount > 0 && maximum < damage)
 		return FALSE
 	if(required_organ_flag && !(organ_flags & required_organ_flag))
 		return FALSE
-	damage = clamp(damage + damage_amount, 0, maximum)
+	// A reduced maximum must not block healing, or turn a small heal into a free full repair.
+	damage = clamp(damage + damage_amount, 0, damage_amount < 0 ? damage : maximum)
 	SEND_SIGNAL(src, COMSIG_ORGAN_ADJUST_DAMAGE, damage_amount, maximum, required_organ_flag)
 	. = (prev_damage - damage) // return net damage
+	if(. < 0 && (organ_flags & ORGAN_ORGANIC))
+		var/datum/component/medical_condition/condition = get_medical_condition()
+		condition.add_pain(-.)
 	var/message = check_damage_thresholds()
 	prev_damage = damage
 
@@ -293,7 +307,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 			message = now_failing
 		return message
 
-	if(prev_damage == maxHealth)
+	if(prev_damage >= maxHealth && damage < maxHealth)
 		organ_flags &= ~ORGAN_FAILING
 		on_failure_recovery()
 		message = now_fixed
@@ -456,6 +470,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 /// Called before organs are replaced in regenerate_organs with new ones
 /obj/item/organ/proc/before_organ_replacement(obj/item/organ/replacement)
 	SHOULD_CALL_PARENT(TRUE)
+	replacement.set_medical_capacity(min(medical_capacity, replacement.medical_capacity))
 
 	SEND_SIGNAL(src, COMSIG_ORGAN_BEING_REPLACED, replacement)
 
@@ -473,7 +488,7 @@ INITIALIZE_IMMEDIATE(/obj/item/organ)
 
 	var/tech_text = ""
 	if(owner.has_reagent(/datum/reagent/inverse/technetium))
-		tech_text = "[round((damage / maxHealth) * 100, 1)]% повреждено"
+		tech_text = "[maxHealth > 0 ? round((damage / maxHealth) * 100, 1) : 100]% повреждено"
 
 	if(organ_flags & ORGAN_FAILING)
 		return conditional_tooltip("[colored ? "<font color='#cc3333'>" : ""][tech_text || "Не функционирует"][colored ? "</font>" : ""]", "Проведение операции или замена хирургическим путем.", add_tooltips)

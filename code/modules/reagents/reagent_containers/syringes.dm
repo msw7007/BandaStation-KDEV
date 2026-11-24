@@ -93,6 +93,13 @@
 			log_combat(user, living_target, "injected", src, addition="which had [contained]")
 
 	if(reagents.trans_to(target, amount_per_transfer_from_this, transferred_by = user, methods = INJECT))
+		if(iscarbon(target))
+			var/mob/living/carbon/patient = target
+			var/obj/item/bodypart/limb = patient.get_bodypart(user.zone_selected)
+			if(limb && IS_ORGANIC_LIMB(limb))
+				limb.receive_damage(1, sharpness = SHARP_POINTY, wound_bonus = CANT_WOUND)
+				var/datum/component/medical_condition/condition = limb.get_medical_condition()
+				condition.add_minor(WOUND_PIERCE)
 		to_chat(user, span_notice("You inject [amount_per_transfer_from_this] units of the solution. The syringe now contains [reagents.total_volume] units."))
 		target.update_appearance()
 		return ITEM_INTERACT_SUCCESS

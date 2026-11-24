@@ -285,7 +285,7 @@
 
 /datum/status_effect/eldritch/moon/on_effect()
 	owner.adjust_confusion(30 SECONDS)
-	owner.adjust_organ_loss(ORGAN_SLOT_BRAIN, 25, 160)
+	owner.adjust_phantom_brain_damage(25, 160)
 	owner.emote(pick("giggle", "laugh"))
 	owner.add_mood_event("Moon Insanity", /datum/mood_event/moon_insanity)
 	return ..()

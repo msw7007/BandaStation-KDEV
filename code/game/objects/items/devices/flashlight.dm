@@ -140,6 +140,8 @@
 		to_chat(user, span_warning("[patient] doesn't have any eyes!"))
 		return
 
+	if(user.has_medical_competence() && light_on && light_range >= 1)
+		. += patient.medical_eye_exam()
 	patient.flash_act(visual = TRUE, length = (user.combat_mode) ? 2.5 SECONDS : 1 SECONDS) // Apply a 1 second flash effect to the target. The duration increases to 2.5 Seconds if you have combat mode on.
 
 	if(patient == user) //they're using it on themselves
@@ -157,7 +159,7 @@
 
 		if(patient.stat == DEAD || patient.is_blind() || patient.get_eye_protection() >= FLASH_PROTECTION_WELDER) //this used to be just > but literally nothing accessable in the game gave greater than welder without also covering eyes
 			. += span_danger_ml("[patient.p_Their()] [eyes.pupils_name] don't react to the light!\n")//mob is dead
-		else if(brain.damage > 20)
+		else if(brain && brain.damage > brain.maxHealth * 0.25)
 			. += span_danger_ml("[patient.p_Their()] [eyes.pupils_name] contract unevenly!\n")//mob has sustained damage to their brain
 		else
 			. += span_notice_ml("[patient.p_Their()] [eyes.pupils_name] narrow.\n")//they're okay :D
@@ -180,6 +182,8 @@
 		to_chat(user, span_warning("You're going to need to remove that [(patient.head && patient.head.flags_cover & HEADCOVERSMOUTH) ? "helmet" : "mask"] first!"))
 		return
 
+	if(user.has_medical_competence() && light_on && light_range >= 1)
+		. += patient.medical_mouth_exam()
 	var/list/mouth_organs = list()
 	for(var/obj/item/organ/organ as anything in patient.organs)
 		if(organ.zone == BODY_ZONE_PRECISE_MOUTH)

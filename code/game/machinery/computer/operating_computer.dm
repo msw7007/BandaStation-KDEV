@@ -14,6 +14,8 @@
 
 	/// Linked operating table, if any
 	var/obj/structure/table/optable/table
+	/// Powered neurological table, linked when no conventional table is adjacent.
+	var/obj/machinery/stasis/medical_station/nerv/nerv_table
 	/// List if surgery typepaths available on this computer
 	var/list/advanced_surgeries = list()
 	/// Techweb linked to this operating computer
@@ -56,6 +58,9 @@
 	)
 
 /obj/machinery/computer/operating/Destroy()
+	if(nerv_table?.computer == src)
+		nerv_table.computer = null
+	nerv_table = null
 	for(var/direction in GLOB.alldirs)
 		table = locate(/obj/structure/table/optable) in get_step(src, direction)
 		if(table && table.computer == src)
@@ -98,7 +103,13 @@
 		table = locate(/obj/structure/table/optable) in get_step(src, direction)
 		if(table)
 			table.computer = src
-			break
+			return
+	for(var/direction in GLOB.alldirs)
+		var/obj/machinery/stasis/medical_station/nerv/candidate = locate() in get_step(src, direction)
+		if(candidate && (!candidate.computer || candidate.computer == src))
+			nerv_table = candidate
+			candidate.computer = src
+			return
 
 /obj/machinery/computer/operating/ui_status(mob/user, datum/ui_state/state)
 	. = ..()
@@ -118,7 +129,7 @@
 		return UI_CLOSE
 	// the patient itself should be blocked from viewing the computer
 	if(user.body_position == LYING_DOWN)
-		return (user.loc == table?.loc) ? UI_CLOSE : UI_DISABLED
+		return (user.loc == table?.loc || user.loc == nerv_table?.loc) ? UI_CLOSE : UI_DISABLED
 	// we have a tight range check so people can't spy on surgeries from across the room
 	// likewise it'd be pretty lame if you could see what was going on while incapacitated
 	if(get_dist(user, src) > 2 || user.incapacitated)
@@ -162,13 +173,13 @@
 /obj/machinery/computer/operating/ui_data(mob/user)
 	var/list/data = list()
 
-	data["has_table"] = !!table
+	data["has_table"] = !!(table || nerv_table)
 	data["target_zone"] = target_zone
-	if(isnull(table?.patient))
+	var/mob/living/patient = table?.patient || nerv_table?.occupant
+	if(isnull(patient))
 		return data
 
 	data["patient"] = list()
-	var/mob/living/patient = table.patient
 
 	if(patient.stat == DEAD)
 		data["patient"]["stat"] = "Мёртв"
@@ -220,9 +231,10 @@
 
 	var/list/operations = GLOB.operations.get_instances_from(GLOB.operations.unlocked | advanced_surgeries)
 	var/any_recommended = FALSE
+	var/mob/living/patient = table?.patient || nerv_table?.occupant
 	for(var/datum/surgery_operation/operation as anything in operations)
 		var/recommend = FALSE
-		if(table?.patient && operation.show_as_next_step(table.patient, target_zone))
+		if(patient && operation.show_as_next_step(patient, target_zone))
 			recommend = TRUE
 			any_recommended = TRUE
 
@@ -237,7 +249,7 @@
 			"mechanic" = operation.operation_flags & OPERATION_MECHANIC,
 		))
 
-	if(!any_recommended && table?.patient && !HAS_TRAIT(table.patient, TRAIT_READY_TO_OPERATE))
+	if(!any_recommended && patient && !HAS_TRAIT(patient, TRAIT_READY_TO_OPERATE))
 		data["surgeries"] += list(list(
 			"name" = "Подготовка к операции",
 			"desc" = "Начните операцию, постелив хирургическую простынь на пациента.",

@@ -41,13 +41,9 @@
 	var/initial_flow
 	/// How much our blood_flow will naturally decrease per second, even without gauze
 	var/clot_rate
-	/// If gauzed, what percent of the internal bleeding actually clots of the total absorption rate
+	/// If gauzed, what percent of the puncture bleeding actually clots of the total absorption rate
 	var/gauzed_clot_rate
 
-	/// When hit on this bodypart, we have this chance of losing some blood + the incoming damage
-	var/internal_bleeding_chance
-	/// A multiplier applied to how much blood is lost from damage to the wounded limb
-	var/internal_bleeding_coefficient = 1
 	/// If TRUE we are ready to be mended in surgery
 	VAR_FINAL/mend_state = FALSE
 
@@ -56,38 +52,6 @@
 	if(limb.can_bleed() && attack_direction && victim.get_blood_volume() > BLOOD_VOLUME_OKAY)
 		victim.spray_blood(attack_direction, severity)
 	return ..()
-
-/datum/wound/pierce/bleed/receive_damage(wounding_type, wounding_dmg, wound_bonus, attack_direction, damage_source)
-	if(victim.stat == DEAD || wounding_dmg < 5 || !limb.can_bleed() || !victim.get_blood_volume() || !prob(internal_bleeding_chance + wounding_dmg))
-		return
-	// 20 force attack ~=  5-16 blood loss ~= 1%-3% of blood volume
-	// 30 force attack ~= 6-20 blood loss ~= 1%-4% of blood volume
-	var/blood_bled = sqrt(wounding_dmg) * internal_bleeding_coefficient * limb.get_splint_factor() * pick(0.75, 1, 1.25, 1.5)
-	switch(blood_bled)
-		if(8 to 12)
-			victim.visible_message(
-				span_smalldanger("Капли крови вылетают из отверстия в [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] у [victim.declent_ru(GENITIVE)]!."),
-				span_danger("Вы откашливаетесь, выплевывая немного крови из-за удара по вашей [limb.ru_plaintext_zone[DATIVE] || limb.plaintext_zone]."),
-				vision_distance = COMBAT_MESSAGE_RANGE,
-				visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
-			)
-		if(12 to 18)
-			victim.visible_message(
-				span_smalldanger("Небольшая струя крови брызгает из дыры в [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] у [victim.declent_ru(GENITIVE)]!!"),
-				span_danger("Вы выплевываете струю крови из-за удара по вашей [limb.ru_plaintext_zone[DATIVE] || limb.plaintext_zone]!"),
-				vision_distance = COMBAT_MESSAGE_RANGE,
-				visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
-			)
-		if(18 to INFINITY)
-			victim.visible_message(
-				span_danger("Брызги крови струятся из прокола в [limb.ru_plaintext_zone[PREPOSITIONAL] || limb.plaintext_zone] у [victim.declent_ru(GENITIVE)]!"),
-				span_bolddanger("Вы задыхаетесь, выплевывая брызги крови из-за удара по вашей [limb.ru_plaintext_zone[DATIVE] || limb.plaintext_zone]!"),
-				vision_distance = COMBAT_MESSAGE_RANGE,
-				visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
-			)
-	victim.bleed(blood_bled)
-	if(blood_bled >= 18)
-		victim.spray_blood(attack_direction)
 
 /datum/wound/pierce/bleed/get_bleed_rate_of_change()
 	//basically if a species doesn't bleed, the wound is stagnant and will not heal on its own (nor get worse)
@@ -107,7 +71,7 @@
 
 
 	if(limb.can_bleed())
-		if(victim.bodytemperature < (BODYTEMP_NORMAL - 10))
+		if(severity < WOUND_SEVERITY_SEVERE && victim.bodytemperature < (victim.get_body_temp_normal() - 10))
 			adjust_blood_flow(-0.1 * seconds_per_tick)
 			if(QDELETED(src))
 				return
@@ -145,10 +109,7 @@
 		tool_cauterize(tool, user)
 
 /datum/wound/pierce/bleed/on_xadone(power)
-	. = ..()
-
-	if (limb) // parent can cause us to be removed, so its reasonable to check if we're still applied
-		adjust_blood_flow(-0.03 * power) // i think it's like a minimum of 3 power, so .09 blood_flow reduction per tick is pretty good for 0 effort
+	return
 
 /datum/wound/pierce/bleed/on_synthflesh(reac_volume)
 	. = ..()
@@ -201,7 +162,7 @@
 	name = "Незначительный прокол"
 	desc = "Кожа пациента была повреждена, вызвав сильный синяк и незначительное внутреннее кровотечение в пораженной области."
 	treat_text = "Перевяжите или зашейте рану, используйте средства для свертывания крови, \
-		прижигание или в крайних случаях - воздействие на рану сильным холодом или вакуумом. \
+		прижигание. Тяжёлая рана сама не заживает. \
 		Следует обеспечить прием пищи и период отдыха."
 	treat_text_short = "Примените повязку, швы, средства для свертывания крови или прижигание."
 	examine_desc = "имеет небольшое, слегка кровоточащее, разорванное отверстие"
@@ -211,8 +172,6 @@
 	initial_flow = 1.25
 	gauzed_clot_rate = 0.75
 	clot_rate = 0.03
-	internal_bleeding_chance = 30
-	internal_bleeding_coefficient = 1.5
 	series_threshold_penalty = 20
 	status_effect_type = /datum/status_effect/wound/pierce/moderate
 	scar_keyword = "piercemoderate"
@@ -245,7 +204,6 @@
 	initial_flow = 0.5 //very minor, mostly there as fluff and "dont do that idiot" reminder
 	gauzed_clot_rate = 0.1
 	clot_rate = 0.03 // will close quickly on its own
-	internal_bleeding_chance = 0
 	threshold_penalty = 5
 
 /datum/wound_pregen_data/flesh_pierce/open_puncture/pinprick
@@ -255,7 +213,7 @@
 
 /datum/wound/pierce/bleed/moderate/projectile
 	name = "Незначительный прокол кожи"
-	desc = "Кожа пациента была пробита, что привело к сильным ушибам и небольшому внутреннему кровотечению в поражённой области."
+	desc = "Кожа пациента была пробита, что привело к ушибам и устойчивому кровотечению из раны."
 	treat_text = "Наложить повязку или швы на рану, использовать кровоостанавливающие средства, \
 		прижечь рану, либо в крайних случаях подвергнуть воздействию экстремального холода или вакуума. \
 		Затем обеспечить питание и покой."
@@ -269,9 +227,9 @@
 
 /datum/wound/pierce/bleed/severe
 	name = "Открытая колотая рана"
-	desc = "Внутренние ткани пациента повреждены, что вызывает значительное внутреннее кровотечение и снижение стабильности конечности."
+	desc = "Глубокая колотая рана вызывает устойчивое кровотечение и снижает стабильность конечности."
 	treat_text = "Быстро примените повязку или швы к ране, используйте средства для свертывания крови или соляно-глюкозный раствор, \
-		прижигание или в крайних случаях - воздействие на рану сильным холодом или вакуумом. \
+		прижигание. Тяжёлая рана сама не заживает. \
 		Следует дополнить лечение добавками железа и периодом отдыха."
 	treat_text_short = "Примените повязку, швы, средства для свертывания крови или прижигание."
 	examine_desc = "проколота насквозь, с кусочками ткани, закрывающими открытое отверстие"
@@ -280,9 +238,7 @@
 	severity = WOUND_SEVERITY_SEVERE
 	initial_flow = 2
 	gauzed_clot_rate = 0.5
-	clot_rate = 0.02
-	internal_bleeding_chance = 60
-	internal_bleeding_coefficient = 2
+	clot_rate = 0
 	series_threshold_penalty = 35
 	status_effect_type = /datum/status_effect/wound/pierce/severe
 	scar_keyword = "piercesevere"
@@ -367,7 +323,6 @@
 	desc = "Уши пациента сильно кровоточат, так как кровь каким-то неизвестным образом просачивается через внутреннюю поверхность уха."
 	examine_desc = "всё покрыто кровью, из ушей течёт чёрно-фиолетовая жидкость"
 	occur_text = "промокает полностью, когда из ушей вырываются две струйки чёрной жидкости"
-	internal_bleeding_chance = 0 // just your ears
 
 /datum/wound_pregen_data/flesh_pierce/open_puncture/magicalearpain
 	wound_path_to_generate = /datum/wound/pierce/bleed/severe/magicalearpain
@@ -382,9 +337,9 @@
 
 /datum/wound/pierce/bleed/critical
 	name = "Разрыв полости"
-	desc = "Внутренние ткани и кровеносная система пациента разорваны, что вызывает значительное внутреннее кровотечение и повреждение внутренних органов."
+	desc = "Глубокие ткани и сосуды разорваны. Сильное кровотечение требует немедленной обработки раны."
 	treat_text = "Быстро примените повязку или швы к ране, используйте средства для свертывания крови или соляно-глюкозный раствор, \
-		прижигание или в крайних случаях - воздействие на рану сильным холодом или вакуумом. \
+		прижигание. Тяжёлая рана сама не заживает. \
 		Затем следует провести контролируемую реинфузию."
 	treat_text_short = "Примените повязку, швы, средства для свертывания крови или прижигание."
 	examine_desc = "разорвана насквозь, едва удерживается на месте открытой костью"
@@ -393,8 +348,6 @@
 	severity = WOUND_SEVERITY_CRITICAL
 	initial_flow = 2.5
 	gauzed_clot_rate = 0.3
-	internal_bleeding_chance = 80
-	internal_bleeding_coefficient = 2.5
 	threshold_penalty = 15
 	status_effect_type = /datum/status_effect/wound/pierce/critical
 	scar_keyword = "piercecritical"

@@ -109,6 +109,11 @@
 
 /mob/living/carbon/on_damage_loss_changed(amount, updating_health, forced, damage_type)
 	. = ..()
+	if(amount > 0 && stat != DEAD && !HAS_TRAIT(src, TRAIT_GODMODE))
+		if(damage_type == OXY)
+			adjust_organ_loss(ORGAN_SLOT_BRAIN, amount * 0.15, required_organ_flag = ORGAN_ORGANIC)
+		else if(damage_type == TOX)
+			adjust_organ_loss(ORGAN_SLOT_LIVER, amount * 0.2, required_organ_flag = ORGAN_ORGANIC)
 	if(damage_type == STAMINA && amount > 0 && (maxHealth - staminaloss) <= crit_threshold && stat != DEAD)
 		apply_status_effect(/datum/status_effect/incapacitating/stamcrit)
 

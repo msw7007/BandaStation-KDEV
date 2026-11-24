@@ -636,6 +636,8 @@
 					if (DEFIB_FAIL_GOLEM)
 						fail_reason = "Patient is constructed from inorganic materials. Further attempts futile, though manual reconstruction is possible."
 
+				if(!fail_reason && !H.medical_defib_roll(user))
+					fail_reason = "Ритм не восстановлен. Повторите разряд."
 				if(fail_reason)
 					user.visible_message(span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: Resuscitation failed - [fail_reason]"))
 					playsound(src, 'sound/machines/defib/defib_failed.ogg', 50, FALSE)
@@ -677,12 +679,12 @@
 				playsound(src, 'sound/machines/defib/defib_failed.ogg', 50, FALSE)
 			else if(H.undergoing_cardiac_arrest())
 				playsound(src, 'sound/machines/defib/defib_zap.ogg', 50, TRUE, -1)
-				if(!(heart.organ_flags & ORGAN_FAILING))
+				if(!(heart.organ_flags & ORGAN_FAILING) && H.medical_defib_roll(user))
 					H.set_heartattack(FALSE)
 					do_success()
 					user.visible_message(span_notice("[req_defib ? "[defib]" : "[src]"] pings: Patient's heart is now beating again."))
 				else
-					user.visible_message(span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: Resuscitation failed, heart damage detected."))
+					user.visible_message(span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: [heart.organ_flags & ORGAN_FAILING ? "Resuscitation failed, heart damage detected." : "Ритм не восстановлен. Повторите разряд."]"))
 			else if(H.has_status_effect(/datum/status_effect/heart_attack))
 				user.visible_message(span_notice("[req_defib ? "[defib]" : "[src]"] pings: Patient's heart has stabilized, further applications may be necessary."))
 				SEND_SIGNAL(H, COMSIG_HEARTATTACK_DEFIB)

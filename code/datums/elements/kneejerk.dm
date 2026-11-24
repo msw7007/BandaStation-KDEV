@@ -46,7 +46,11 @@
 	if(!target_brain)
 		return
 
-	var/target_brain_damage = target_brain.damage
+	target.adjust_stamina_loss(1)
+	var/mob/living/carbon/patient = target
+	if(patient.medical_pressure < 70)
+		target.apply_status_effect(/datum/status_effect/medical_hypotension)
+	var/target_brain_damage = target_brain.maxHealth > 0 ? target_brain.damage * BRAIN_DAMAGE_DEATH / target_brain.maxHealth : BRAIN_DAMAGE_DEATH
 
 	if(target_brain_damage < BRAIN_DAMAGE_MILD) //a healthy brain produces a normal reaction
 		playsound(target, 'sound/items/weapons/punchmiss.ogg', 25, TRUE, -1)

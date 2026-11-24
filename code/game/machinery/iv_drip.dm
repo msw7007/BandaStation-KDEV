@@ -243,6 +243,12 @@
 	if(!transfer_rate)
 		return
 
+	if(iscarbon(attached_to))
+		var/mob/living/carbon/patient = attached_to
+		seconds_per_tick *= patient.medical_time_scale()
+		if(patient.medical_infusion_unsafe())
+			mode = IV_TAKING
+
 	// Give reagents
 	if(mode)
 		if(drip_reagents.total_volume)

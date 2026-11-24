@@ -11,7 +11,7 @@
 	worn_icon_state = "healthanalyzer"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
-	desc = "Ручной сканер тела, способный определять жизненно важные показатели объекта. Имеет боковую кнопку для сканирования на наличие химических веществ, а также функцию сканирования ран."
+	desc = "Ручной сканер общих жизненных показателей. Для подробной диагностики используйте профильные анализаторы или СДУ."
 	obj_flags = CONDUCTS_ELECTRICITY
 	item_flags = NOBLUDGEON
 	slot_flags = ITEM_SLOT_BELT
@@ -44,23 +44,16 @@
 
 /obj/item/healthanalyzer/examine(mob/user)
 	. = ..()
-	if(src.mode != SCANNER_NO_MODE)
-		. += span_notice("Alt+ЛКМ по [declent_ru(DATIVE)], чтобы переключить отображение повреждений конечностей. Ctrl+shift+ЛКМ чтобы распечатать отчёт.")
+	. += span_notice("Ctrl+Shift+ЛКМ — распечатать последний отчёт.")
+	if(scanpower >= SCANPOWER_SUPER && mode != SCANNER_NO_MODE)
+		. += span_notice("Alt+ЛКМ — переключить подробности повреждений конечностей.")
 
 /obj/item/healthanalyzer/suicide_act(mob/living/user)
 	user.visible_message(span_suicide("[user.declent_ru(NOMINATIVE)] начинает анализировать себя при помощи [declent_ru(GENITIVE)]! Дисплей показывает, что [user.ru_p_they()] мёртв!"))
 	return BRUTELOSS
 
 /obj/item/healthanalyzer/attack_self(mob/user)
-	if(!user.can_read(src) || user.is_blind())
-		return
-
-	scanmode = (scanmode + 1) % SCANMODE_COUNT
-	switch(scanmode)
-		if(SCANMODE_HEALTH)
-			to_chat(user, span_notice("Вы переключаете анализатор здоровья на проверку физического состояния."))
-		if(SCANMODE_WOUND)
-			to_chat(user, span_notice("Вы переключаете анализатор здоровья на отображение дополнительной информации о ранах."))
+	balloon_alert(user, "общая диагностика")
 
 /obj/item/healthanalyzer/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	if(!isliving(interacting_with))
@@ -101,7 +94,7 @@
 	var/readability_check = user.can_read(src) && !user.is_blind()
 	switch (scanmode)
 		if (SCANMODE_HEALTH)
-			last_scan_text = healthscan(user, M, mode, scanpower, tochat = readability_check)
+			last_scan_text = medical_scan(user, M, tochat = readability_check)
 			if((M.health / M.maxHealth) > CLEAN_BILL_OF_HEALTH_RATIO)
 				last_healthy_scanned = WEAKREF(M)
 			else
@@ -113,11 +106,7 @@
 	add_fingerprint(user)
 
 /obj/item/healthanalyzer/interact_with_atom_secondary(atom/interacting_with, mob/living/user, list/modifiers)
-	if(!isliving(interacting_with))
-		return NONE
-	if(user.can_read(src) && !user.is_blind())
-		chemscan(user, interacting_with)
-	return ITEM_INTERACT_SUCCESS
+	return interact_with_atom(interacting_with, user, modifiers)
 
 /obj/item/healthanalyzer/add_item_context(
 	obj/item/source,
@@ -133,7 +122,7 @@
 		if (SCANMODE_WOUND)
 			context[SCREENTIP_CONTEXT_LMB] = "Сканирование травм"
 
-	context[SCREENTIP_CONTEXT_RMB] = "Сканирование на химикаты"
+	context[SCREENTIP_CONTEXT_RMB] = "Сканирование здоровья"
 
 	return CONTEXTUAL_SCREENTIP_SET
 
@@ -316,6 +305,9 @@
 				continue
 			var/status = organ.get_status_text(scanpower, tochat)
 			var/appendix = organ.get_status_appendix(scanpower, tochat)
+			var/capacity = organ.get_capacity_status(scanpower)
+			if(capacity)
+				appendix = appendix ? "[appendix] [capacity]" : capacity
 			if(status || appendix)
 				status ||= "<font color='#ffcc33'>OK</font>" // otherwise flawless organs have no status reported by default
 				render = TRUE
@@ -612,7 +604,7 @@
 			return jointext(render_list, "")
 
 /obj/item/healthanalyzer/click_alt(mob/user)
-	if(mode == SCANNER_NO_MODE)
+	if(scanpower < SCANPOWER_SUPER || mode == SCANNER_NO_MODE)
 		return CLICK_ACTION_BLOCKING
 
 	mode = !mode

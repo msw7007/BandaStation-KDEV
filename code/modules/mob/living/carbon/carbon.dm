@@ -1,6 +1,7 @@
 /mob/living/carbon/Initialize(mapload)
 	. = ..()
 	create_carbon_reagents()
+	AddComponent(/datum/component/medical_activity)
 	update_body(is_creating = TRUE) //to update the carbon's new bodyparts appearance
 	living_flags &= ~STOP_OVERLAY_UPDATE_BODY_PARTS
 
@@ -706,6 +707,9 @@
 	if(HAS_TRAIT_NOT_FROM(src, TRAIT_HUSK, /datum/status_effect/zombie::id))
 		return FALSE
 	if(!HAS_TRAIT(src, TRAIT_BRAINLESS_CARBON) && !get_organ_by_type(/obj/item/organ/brain))
+		return FALSE
+	var/obj/item/organ/brain/brain = get_organ_slot(ORGAN_SLOT_BRAIN)
+	if(brain && (brain.maxHealth <= 0 || brain.requires_reconstruction))
 		return FALSE
 	return ..()
 

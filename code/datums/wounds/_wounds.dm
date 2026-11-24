@@ -576,6 +576,8 @@
 
 /// Called from cryoxadone and pyroxadone when they're proc'ing. Wounds will slowly be fixed separately from other methods when these are in effect. crappy name but eh
 /datum/wound/proc/on_xadone(power)
+	if(!istype(src, /datum/wound/burn))
+		return
 	cryo_progress += power
 
 	return handle_xadone_progress()

@@ -58,7 +58,8 @@
 	// INJECT
 	syringe.reagents.add_reagent(/datum/reagent/method_patch_test, 1)
 	syringe.melee_attack_chain(human, human)
-	TEST_ASSERT_EQUAL(human.get_brute_loss(), 10, "Human health did not update after injection from syringe")
+	// The reagent sets damage to ten; an open syringe also leaves a one-damage puncture.
+	TEST_ASSERT_EQUAL(human.get_brute_loss(), 11, "Injection did not apply reagent damage followed by the needle puncture")
 
 	// INHALE
 	human.fully_heal(ALL)

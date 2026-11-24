@@ -181,6 +181,8 @@
 #undef CONDITIONAL_DAMAGE_MESSAGE
 
 /datum/surgery_operation/basic/tend_wounds/on_success(mob/living/patient, mob/living/surgeon, tool, list/operation_args)
+	if(!consume_medical_supplies(surgeon, operation_args))
+		return
 	var/user_msg = "Вам удается залечить некоторые раны [patient.declent_ru(GENITIVE)]" //no period, add initial space to "addons"
 	var/target_msg = "[surgeon] залечивает некоторые раны [patient.declent_ru(GENITIVE)]" //see above
 

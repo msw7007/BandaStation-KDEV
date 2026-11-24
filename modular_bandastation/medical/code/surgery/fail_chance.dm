@@ -9,12 +9,24 @@
 	var/fail_chance = clamp(GET_FAILURE_CHANCE(operation_time, operation_args[OPERATION_SPEED]), 0, 99)
 
 	// Боль
-	if(!(HAS_TRAIT(patient, TRAIT_ANALGESIA) || patient.stat >= 2))
-		fail_chance += 40
+	if(patient && patient.stat < HARD_CRIT && !HAS_TRAIT(patient, TRAIT_PAIN_NUMB))
+		if(iscarbon(patient))
+			var/mob/living/carbon/carbon = patient
+			fail_chance += 40 * (1 - carbon.medical_analgesia(operation_args[OPERATION_TARGET_ZONE]))
+		else if(!HAS_TRAIT(patient, TRAIT_ANALGESIA))
+			fail_chance += 40
+	if(HAS_TRAIT(surgeon, TRAIT_MEDICAL_TRAINING))
+		fail_chance -= 10
+	if(HAS_TRAIT(surgeon, TRAIT_PROFESSIONAL_SURGEON))
+		fail_chance -= 15
+	if(patient)
+		var/turf/operation_turf = get_turf(patient)
+		if(!(locate(/obj/structure/table/optable) in operation_turf) && !(locate(/obj/machinery/stasis) in operation_turf))
+			fail_chance += time >= 5 SECONDS ? 20 : 10
 
 	// Свет или абдуктор
 	if(!(surgeon.has_nightvision() || isabductor(surgeon)))
-		var/turf/patient_turf = get_turf(patient)
+		var/turf/patient_turf = get_turf(patient || surgeon)
 		var/light_amount = patient_turf.get_lumcount() // минимальное кол-во света для успеха - 0.6
 		if(light_amount < 0.6)
 			fail_chance += (1.0 - (light_amount / 0.6))**1.5 * 60.0
@@ -24,7 +36,7 @@
 	if(isitem(tool) || tool_check(tool))
 		var/obj/item/realtool = tool
 		var/tool_type = realtool.type
-		if(implements[tool] > 1.15) // чек на гетто инструмент
+		if(get_tool_quality(realtool) > 1.15) // чек на гетто инструмент
 			tool_mod = SURGERY_TOOL_MOD_GHETTO
 		else
 			if(findtext("[tool_type]", "/advanced"))
@@ -43,7 +55,7 @@
 	if(istype(worn_gloves) && locate(/obj/item/clothing/accessory/gloves_accessory/ring) in worn_gloves.attached_accessories)
 		fail_chance += SURGERY_RING_FAIL_MOD - 5
 
-	return fail_chance
+	return clamp(fail_chance, 0, 100)
 
 #undef SURGERY_TOOL_MOD_GHETTO
 #undef SURGERY_TOOL_MOD_ADVANCED

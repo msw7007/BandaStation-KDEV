@@ -365,6 +365,10 @@
 		. += span_warning("У этой конечности [brute_dam > 30 ? "тяжёлые" : "лёгкие"] ушибы.")
 	if(burn_dam > DAMAGE_PRECISION)
 		. += span_warning("У этой конечности [burn_dam > 30 ? "тяжёлые" : "лёгкие"] ожоги.")
+	var/datum/component/medical_condition/condition = get_medical_condition(FALSE)
+	var/signs = condition?.visible_signs()
+	if(signs)
+		. += span_warning(signs)
 
 	for(var/datum/wound/wound as anything in wounds)
 		var/wound_desc = wound.get_limb_examine_description()
@@ -725,6 +729,7 @@
 
 	brute *= wound_damage_multiplier
 	burn *= wound_damage_multiplier
+	var/had_medical_fracture = medical_fracture()
 
 	/*
 	// START WOUND HANDLING
@@ -796,6 +801,7 @@
 		set_brute_dam(brute_dam + brute)
 	if(burn)
 		set_burn_dam(burn_dam + burn)
+	medical_hit(brute, burn, sharpness, had_medical_fracture, wound_bonus != CANT_WOUND)
 
 	if(owner)
 		if(can_be_disabled)

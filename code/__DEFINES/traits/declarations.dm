@@ -611,6 +611,14 @@ Remember to update _globalvars/traits.dm if you're adding/removing/renaming trai
 #define TRAIT_USER_SCOPED "user_scoped"
 /// Mob is unable to feel pain
 #define TRAIT_ANALGESIA "analgesia"
+/// Perception loss without suppressing the accumulation or consequences of pain.
+#define TRAIT_PAIN_NUMB "medical_pain_numb"
+#define TRAIT_MEDICAL_ANESTHESIA "medical_anesthesia"
+#define TRAIT_MEDICAL_TRAINING "medical_training"
+#define TRAIT_PROFESSIONAL_DOCTOR "professional_doctor"
+#define TRAIT_PROFESSIONAL_SURGEON "professional_surgeon"
+#define TRAIT_MEDICAL_ARRHYTHMIA "medical_arrhythmia"
+#define TRAIT_CARDIAC_SUPPORT "cardiac_support"
 /// Mob does not get a damage overlay from brute/burn
 #define TRAIT_NO_DAMAGE_OVERLAY "no_damage_overlay"
 /// Mob has a scar on their left/right eye

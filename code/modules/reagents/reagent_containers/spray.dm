@@ -84,6 +84,7 @@
 	var/range = max(min(current_range, get_dist(src, target)), 1)
 
 	var/obj/effect/decal/chempuff/reagent_puff = new(start_turf)
+	reagent_puff.medical_target_zone = check_zone(user.zone_selected)
 
 	reagent_puff.create_reagents(amount_per_transfer_from_this)
 	var/puff_reagent_left = range //how many turf, mob or dense objet we can react with before we consider the chem puff consumed
