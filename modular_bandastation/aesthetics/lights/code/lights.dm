@@ -4,6 +4,8 @@
 	bulb_colour = "#FFF7F2"
 	bulb_power = 0.8
 	nightshift_light_power = 0.6
+	/// Visual translation from the fixture tile to the face of a compact wall.
+	var/list/compact_wall_shift
 
 /obj/machinery/light/small
 	icon = MAP_SWITCH('icons/obj/lighting.dmi', 'modular_bandastation/objects/icons/obj/structures/light.dmi')
@@ -14,6 +16,36 @@
 
 /obj/structure/light_construct
 	icon = 'modular_bandastation/aesthetics/lights/icons/lighting.dmi'
+	var/list/compact_wall_shift
+
+/obj/structure/light_construct/find_and_mount_on_atom(mark_for_late_init, late_init)
+	. = ..()
+	if(fixture_type == "tube" || fixture_type == "bulb")
+		compact_wall_shift = cyberpunk_align_wall_fixture(src, compact_wall_shift, .)
+
+/// Replaces the previous visual shift while preserving the object's location and mapped pixel offsets.
+/proc/cyberpunk_align_wall_fixture(obj/fixture, list/previous_shift, mounted)
+	var/shift_x = 0
+	var/shift_y = 0
+	var/turf/support = get_step(fixture, fixture.dir)
+	if(mounted && iswallturf(support) && support.icon == 'icons/turf/walls/32x40wall.dmi')
+		// Side faces start 7 px into this wall sheet, after the lamp's 4 px frame.
+		switch(fixture.dir)
+			if(EAST)
+				shift_x = 11
+			if(WEST)
+				shift_x = -11
+			if(NORTH)
+				shift_y = 16
+			if(SOUTH)
+				shift_y = 8
+	var/delta_x = shift_x - (previous_shift?[1] || 0)
+	var/delta_y = shift_y - (previous_shift?[2] || 0)
+	if(delta_x || delta_y)
+		var/matrix/adjusted = matrix(fixture.transform)
+		adjusted.Translate(delta_x, delta_y)
+		fixture.transform = adjusted
+	return (shift_x || shift_y) ? list(shift_x, shift_y) : null
 
 /obj/structure/light_construct/small
 	icon = 'icons/obj/lighting.dmi'

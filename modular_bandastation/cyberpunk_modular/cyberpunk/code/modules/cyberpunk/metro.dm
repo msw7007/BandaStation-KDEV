@@ -901,6 +901,67 @@ SUBSYSTEM_DEF(cyberpunk_metro)
 /turf/open/floor/tram/cyberpunk_intercity
 	name = "intercity railway guideway"
 
+/obj/machinery/cryopod/cyberpunk_ticket_terminal
+	name = "Терминал выезда из города"
+	desc = "Оформляет бесплатный выезд из Брайт-Сити и завершает участие персонажа в текущем раунде."
+	icon = 'modular_bandastation/cyberpunk_modular/cyberpunk/icons/metro_ticket_terminal.dmi'
+	icon_state = "terminal"
+	base_icon_state = "terminal"
+	open_icon_state = "terminal"
+	interaction_flags_mouse_drop = NONE
+	cyberpunk_public_access = TRUE
+
+/obj/machinery/cryopod/cyberpunk_ticket_terminal/find_control_computer(force)
+	return FALSE
+
+/obj/machinery/cryopod/cyberpunk_ticket_terminal/mouse_drop_receive(atom/dropped, mob/user, params)
+	return FALSE
+
+/obj/machinery/cryopod/cyberpunk_ticket_terminal/can_be_put_inside(mob/target)
+	return FALSE
+
+/obj/machinery/cryopod/cyberpunk_ticket_terminal/proc/can_depart(mob/living/customer)
+	if(QDELETED(src) || QDELETED(customer) || !customer.client || customer.mind?.current != customer)
+		return FALSE
+	if(customer.stat != CONSCIOUS || customer.incapacitated || customer.buckled || customer.has_buckled_mobs())
+		return FALSE
+	return Adjacent(customer) && is_operational && !occupant && SSticker.IsRoundInProgress()
+
+/obj/machinery/cryopod/cyberpunk_ticket_terminal/attack_hand(mob/user, list/modifiers)
+	var/mob/living/customer = user
+	if(!istype(customer) || !can_depart(customer))
+		return TRUE
+	var/answer = tgui_alert(
+		customer,
+		"Персонаж покинет город до конца раунда. Вы перейдёте в наблюдатели, а вещи останутся у терминала.",
+		"Желаете покинуть город?",
+		list("Покинуть город", "Остаться"),
+	)
+	if(answer != "Покинуть город" || !can_depart(customer))
+		return TRUE
+
+	set_occupant(customer)
+	despawn_occupant()
+	return TRUE
+
+/obj/machinery/cryopod/cyberpunk_ticket_terminal/despawn_occupant()
+	var/mob/living/passenger = occupant
+	if(!istype(passenger) || QDELETED(passenger))
+		return
+	var/role_title = passenger.mind?.assigned_role?.title
+	GLOB.joined_player_list -= passenger.ckey || passenger.mind?.key
+	handle_occupant_items()
+	handle_objectives()
+	erase_crew_manifest_record(passenger)
+	SSjob.free_job_position(role_title)
+
+	log_game("[key_name(passenger)] departed Bright City via the departure terminal at [AREACOORD(src)].")
+	visible_message(span_notice("[passenger] покидает Брайт-Сити."))
+	to_chat(passenger, span_notice("Вы покидаете Брайт-Сити."))
+	passenger.ghostize(can_reenter_corpse = FALSE)
+	set_occupant(null)
+	qdel(passenger)
+
 /obj/effect/landmark/cyberpunk_intercity_platform
 	name = "intercity platform anchor (southwest corner)"
 	var/platform_id = "city"

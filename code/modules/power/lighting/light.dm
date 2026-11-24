@@ -122,8 +122,11 @@
 	return list(get_step(src, dir))
 
 /obj/machinery/light/find_and_mount_on_atom(mark_for_late_init, late_init)
-	if(break_if_moved)
-		return ..()
+	if(!break_if_moved)
+		return
+	. = ..()
+	if(fitting == "tube" || fitting == "bulb")
+		compact_wall_shift = cyberpunk_align_wall_fixture(src, compact_wall_shift, .)
 
 /obj/machinery/light/post_machine_initialize()
 	. = ..()
@@ -168,6 +171,10 @@
 	var/list/dir_offset = dir2offset(REVERSE_DIR(dir))
 	hand_back[1] += dir_offset[1] * 0.5
 	hand_back[2] += dir_offset[2] * 0.5
+	if(compact_wall_shift && !(light_flags & LIGHT_IGNORE_OFFSET))
+		// calculate_light_offset already subtracted the visual translation.
+		hand_back[1] += compact_wall_shift[1] / ICON_SIZE_X
+		hand_back[2] += compact_wall_shift[2] / ICON_SIZE_Y
 	return hand_back
 
 /obj/machinery/light/update_icon_state()
