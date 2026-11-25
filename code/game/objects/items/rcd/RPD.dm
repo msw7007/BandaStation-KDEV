@@ -423,7 +423,7 @@
 					return ITEM_INTERACT_FAILURE
 				playsound(get_turf(src), SFX_TOOL_SWITCH, 20, TRUE)
 
-				if(!do_after(user, disposal_build_speed, target = attack_target))
+				if(!do_after(user, get_pipe_work_time(user, disposal_build_speed), target = attack_target))
 					return ITEM_INTERACT_FAILURE
 
 				var/obj/structure/disposalconstruct/new_disposals_segment = new (attack_target, queued_pipe_type, queued_pipe_dir, queued_pipe_flipped)
@@ -455,7 +455,7 @@
 					return ITEM_INTERACT_FAILURE
 
 				playsound(get_turf(src), SFX_TOOL_SWITCH, 20, TRUE)
-				if(!do_after(user, transit_build_speed, target = attack_target))
+				if(!do_after(user, get_pipe_work_time(user, transit_build_speed), target = attack_target))
 					return ITEM_INTERACT_FAILURE
 
 				playsound(get_turf(src), RPD_USE_SOUND, 50, TRUE)
@@ -515,13 +515,14 @@
 	)
 	return is_type_in_typecache(target_of_attack, make_pipe_whitelist)
 
-/**
- * Build pipe on the target
- * Arguments
- *
- * * atom/atom_to_target - the target we are trying to build the pipe on
- * * mob/user - mob performing the action
- */
+/obj/item/pipe_dispenser/proc/get_pipe_work_time(mob/user, base_time)
+	var/mob/living/builder = user
+	if(!istype(builder))
+		return base_time
+	var/construction_bonus = builder.get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5)
+	return max(2 SECONDS, base_time) * builder.get_cyberpunk_professional_time_multiplier(SKILL_CONSTRUCTION, construction_bonus)
+
+/// Builds a pipe at the target with the dispenser's current settings.
 /obj/item/pipe_dispenser/proc/do_pipe_build(atom/atom_to_target, mob/user)
 	PRIVATE_PROC(TRUE)
 
@@ -536,7 +537,7 @@
 	var/list/pipe_layer_numbers = get_active_pipe_layers()
 	for(var/layer_to_build in pipe_layer_numbers)
 		playsound(get_turf(src), SFX_TOOL_SWITCH, 20, vary = TRUE)
-		if(!do_after(user, atmos_build_speed, target = atom_to_target))
+		if(!do_after(user, get_pipe_work_time(user, atmos_build_speed), target = atom_to_target))
 			return FALSE
 		if(!recipe.all_layers && (layer_to_build == 1 || layer_to_build == MAX_PIPE_LAYERS))
 			balloon_alert(user, "can't build on layer [layer_to_build]!")

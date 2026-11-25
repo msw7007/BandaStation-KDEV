@@ -414,7 +414,7 @@
 		to_chat(user, span_warning("Open the maintenance panel before installing a machine module."))
 		return ITEM_INTERACT_BLOCKING
 	var/datum/cyberpunk_machine_module/module = create_module_datum()
-	if(machine.install_cyberpunk_module(module, user, TRUE))
+	if(machine.install_cyberpunk_module(module, user, src))
 		to_chat(user, span_notice("You install [module.name] into [machine]."))
 		qdel(src)
 		return ITEM_INTERACT_SUCCESS

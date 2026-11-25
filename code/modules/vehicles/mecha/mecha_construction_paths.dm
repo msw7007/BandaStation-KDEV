@@ -422,11 +422,6 @@
 	outer_plating=/obj/item/mecha_parts/part/gygax_armor
 	outer_plating_amount=1
 
-/datum/component/construction/mecha/gygax/action(datum/source, atom/used_atom, mob/user)
-	ASYNC //This proc will never actually sleep, it calls do_after with a time of 0.
-		. = check_step(used_atom, user)
-	return .
-
 // BANDASTATION EDIT START - gygax mech core
 /datum/component/construction/mecha/gygax/get_outer_plating_steps()
 	return list(

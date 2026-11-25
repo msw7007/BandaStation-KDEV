@@ -350,7 +350,7 @@
 			return
 		if(get_dist(src, user) > 1)
 			return
-		coil.place_turf(T, user)
+		coil.place_turf(T, user, manual = TRUE)
 	else
 		return ..()
 

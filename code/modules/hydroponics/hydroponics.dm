@@ -920,6 +920,8 @@
 		if(!reagent_source.reagents.total_volume)
 			to_chat(user, span_warning("[reagent_source] is empty!"))
 			return 1
+		if(!wait_for_tray_work(user, 2 SECONDS, reagent_source) || !reagent_source.reagents?.total_volume)
+			return TRUE
 
 		if(reagents.total_volume >= reagents.maximum_volume && !reagent_source.reagents.has_reagent(/datum/reagent/water, 1))
 			to_chat(user, span_notice("[src] is full."))
@@ -1005,6 +1007,8 @@
 		return
 	else if(istype(O, /obj/item/cultivator))
 		if(weedlevel > 0)
+			if(!wait_for_tray_work(user, 3 SECONDS, O) || weedlevel <= 0)
+				return TRUE
 			user.visible_message(span_notice("[user] uproots the weeds."), span_notice("You remove the weeds from [src]."))
 			set_weedlevel(0)
 			return
@@ -1023,6 +1027,10 @@
 			to_chat(user, span_notice("You can't take any more cuttings from this plant!"))
 			return
 		else
+			if(!wait_for_tray_work(user, 4 SECONDS, O) || plant_status != HYDROTRAY_PLANT_HARVESTABLE)
+				return TRUE
+			if(myseed.grafts_taken >= ((tray_flags & MULTIGRAFT) ? MULTI_GRAFT_MAX_COUNT : 1))
+				return TRUE
 			user.visible_message(span_notice("[user] grafts off a limb from [src]."), span_notice("You carefully graft off a portion of [src]."))
 			var/obj/item/graft/snip = myseed.create_graft()
 			if(!snip)
@@ -1041,6 +1049,7 @@
 			to_chat(user, span_notice("This plant looks too unhealty to be sheared right now."))
 			return
 
+		var/obj/item/seeds/target_seed = myseed
 		var/list/current_traits = list()
 		for(var/datum/plant_gene/gene in myseed.genes)
 			if(islist(gene))
@@ -1053,8 +1062,10 @@
 			return
 		if(!user.can_perform_action(src))
 			return
-		if(!myseed)
+		if(myseed != target_seed)
 			return
+		if(!wait_for_tray_work(user, 5 SECONDS, O))
+			return TRUE
 		if(plant_health <= GENE_SHEAR_MIN_HEALTH) //Check health again to make sure they're not keeping inputs open to get free shears.
 			return
 		for(var/datum/plant_gene/gene in myseed.genes)
@@ -1077,6 +1088,8 @@
 				return
 			to_chat(user, span_notice("The tray is empty."))
 			return
+		if(!wait_for_tray_work(user, 5 SECONDS, snip))
+			return TRUE
 		var/datum/plant_gene/grafted_trait = myseed.apply_graft(snip)
 		if(grafted_trait)
 			to_chat(user, span_notice("You carefully integrate the grafted plant limb onto [myseed.plantname], granting it [grafted_trait.get_name()]."))
@@ -1087,10 +1100,14 @@
 
 	else if(istype(O, /obj/item/storage/bag/plants))
 		if(plant_status == HYDROTRAY_PLANT_HARVESTABLE)
+			if(!wait_for_tray_work(user, 3 SECONDS, O) || plant_status != HYDROTRAY_PLANT_HARVESTABLE)
+				return TRUE
 			var/list/harvest = myseed.harvest(user)
 			for(var/obj/item/food/grown/G in harvest)
 				O.atom_storage?.attempt_insert(G, user, TRUE)
 		else if(plant_status == HYDROTRAY_PLANT_DEAD)
+			if(!wait_for_tray_work(user, 2 SECONDS, O) || plant_status != HYDROTRAY_PLANT_DEAD)
+				return TRUE
 			to_chat(user, span_notice("You remove the dead plant from [src]."))
 			set_seed(null)
 		return
@@ -1149,7 +1166,7 @@
 			return
 
 		balloon_alert(user, "filling the tray...")
-		if(!do_after(user, 2 SECONDS, src))
+		if(!wait_for_tray_work(user, 3 SECONDS, oursoil) || current_soil || plant_status != HYDROTRAY_NO_PLANT)
 			return
 
 		current_soil = oursoil.transfer_soil(src, inside_tray = TRUE)
@@ -1162,6 +1179,18 @@
 
 	else
 		return ..()
+
+/obj/machinery/hydroponics/proc/wait_for_tray_work(mob/living/user, base_time, obj/item/work_item)
+	if(!istype(user))
+		return FALSE
+	var/obj/item/seeds/target_seed = myseed
+	var/care_bonus = user.get_cyberpunk_skill_perk_bonus(SKILL_GARDENING, 3)
+	var/duration = base_time * user.get_cyberpunk_professional_time_multiplier(SKILL_GARDENING, care_bonus)
+	if(!do_after(user, duration, target = src))
+		return FALSE
+	if(QDELETED(src) || myseed != target_seed)
+		return FALSE
+	return (!work_item || (!QDELETED(work_item) && user.is_holding(work_item))) && user.can_perform_action(src)
 
 /obj/machinery/hydroponics/attackby_secondary(obj/item/weapon, mob/user, list/modifiers, list/attack_modifiers)
 	if (istype(weapon, /obj/item/reagent_containers/syringe))
@@ -1182,9 +1211,13 @@
 	if(HAS_SILICON_ACCESS(user)) //How does AI know what plant is?
 		return
 	if(plant_status == HYDROTRAY_PLANT_HARVESTABLE)
+		if(!wait_for_tray_work(user, 3 SECONDS) || plant_status != HYDROTRAY_PLANT_HARVESTABLE)
+			return TRUE
 		return myseed.harvest(user)
 
 	else if(plant_status == HYDROTRAY_PLANT_DEAD)
+		if(!wait_for_tray_work(user, 2 SECONDS) || plant_status != HYDROTRAY_PLANT_DEAD)
+			return TRUE
 		to_chat(user, span_notice("You remove the dead plant from [src]."))
 		set_seed(null)
 	else

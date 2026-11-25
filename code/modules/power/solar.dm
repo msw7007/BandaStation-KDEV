@@ -100,7 +100,7 @@
 		assembly.forceMove(src)
 
 /obj/machinery/power/solar/crowbar_act(mob/user, obj/item/I)
-	if(I.use_tool(src, user, 0))
+	if(I.tool_start_check(user) && I.use_tool(src, user, 3 SECONDS) && !QDELETED(src))
 		playsound(src.loc, 'sound/items/deconstruct.ogg', 50, TRUE)
 		user.visible_message(span_notice("[user] takes the glass off [src]."), span_notice("You take the glass off [src]."))
 		deconstruct(TRUE)

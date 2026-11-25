@@ -26,9 +26,10 @@
 
 /datum/component/construction/proc/action(datum/source, obj/item/I, mob/living/user)
 	SIGNAL_HANDLER
-	ASYNC //This proc will never actually sleep, it calls do_after with a time of 0.
-		. = check_step(I, user)
-	return .
+	if(QDELETED(I) || QDELETED(user) || !is_right_key(I))
+		return NONE
+	INVOKE_ASYNC(src, PROC_REF(check_step), I, user)
+	return COMPONENT_NO_AFTERATTACK
 
 /datum/component/construction/proc/update_index(diff)
 	index += diff
@@ -36,10 +37,20 @@
 
 /datum/component/construction/proc/check_step(obj/item/I, mob/living/user)
 	var/diff = is_right_key(I)
-	if(diff && custom_action(I, user, diff))
+	if(diff && wait_for_construction_step(I, user, diff) && custom_action(I, user, diff))
 		update_index(diff)
 		return TRUE
 	return FALSE
+
+/datum/component/construction/proc/wait_for_construction_step(obj/item/work_item, mob/living/user, step_key)
+	var/atom/work_target = parent
+	var/initial_index = index
+	var/duration = 4 SECONDS * user.get_cyberpunk_structure_time_multiplier(work_target, "build")
+	if(!do_after(user, duration, target = work_target))
+		return FALSE
+	if(QDELETED(src) || QDELETED(work_target) || QDELETED(work_item) || QDELETED(user) || index != initial_index)
+		return FALSE
+	return user.is_holding(work_item) && user.can_perform_action(work_target) && step_key == is_right_key(work_item)
 
 /datum/component/construction/proc/is_right_key(obj/item/I) // returns index step
 	var/list/L = steps[index]
@@ -137,11 +148,17 @@
 // Takes a list of part types, to be added in any order, as steps.
 // Calls spawn_result() when every type has been added.
 /datum/component/construction/unordered/check_step(obj/item/I, mob/living/user)
+	var/typepath = is_right_key(I)
+	if(typepath && wait_for_construction_step(I, user, typepath) && custom_action(I, user, typepath))
+		steps -= typepath
+		on_step()
+		return TRUE
+	return FALSE
+
+/datum/component/construction/unordered/is_right_key(obj/item/I)
 	for(var/typepath in steps)
-		if(istype(I, typepath) && custom_action(I, user, typepath))
-			steps -= typepath
-			on_step()
-			return TRUE
+		if(istype(I, typepath))
+			return typepath
 	return FALSE
 
 /datum/component/construction/unordered/on_step()

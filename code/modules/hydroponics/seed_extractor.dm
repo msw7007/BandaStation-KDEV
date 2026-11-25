@@ -122,7 +122,12 @@
 		to_chat(user, span_warning("There are no seeds in [tool]."))
 		return ITEM_INTERACT_BLOCKING
 
-	var/list/generated_seeds = seedify(tool, -1, src, user)
+	var/list/generated_seeds
+	if(tool.get_plant_seed())
+		var/duration = 3 SECONDS * user.get_cyberpunk_professional_time_multiplier(SKILL_GARDENING)
+		if(!do_after(user, duration, target = src) || QDELETED(src) || QDELETED(tool) || !user.is_holding(tool) || !user.can_perform_action(src))
+			return ITEM_INTERACT_BLOCKING
+		generated_seeds = seedify(tool, -1, src, user)
 	if(!isnull(generated_seeds))
 		if(LAZYACCESS(modifiers, RIGHT_CLICK))
 			//find all seeds lying on the turf and add them to the machine

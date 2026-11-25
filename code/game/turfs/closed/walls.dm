@@ -221,7 +221,7 @@
 			return FALSE
 
 		to_chat(user, span_notice("Вы начинаете чинить вмятины на [src.declent_ru(PREPOSITIONAL)]..."))
-		if(W.use_tool(src, user, 0, volume=100))
+		if(W.use_tool(src, user, 2 SECONDS, volume = 100))
 			if(iswallturf(src) && LAZYLEN(dent_decals))
 				to_chat(user, span_notice("Вы запаиваете некоторые вмятины на [src.declent_ru(PREPOSITIONAL)]."))
 				cut_overlay(dent_decals)

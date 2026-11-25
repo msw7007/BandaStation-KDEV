@@ -2030,12 +2030,14 @@
 		return FALSE
 
 	var/service_amount = user.get_cyberpunk_machine_service_amount(src, 10)
-	var/service_delay = 2 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "repair") * tool.toolspeed * get_cyberpunk_machine_tool_time_multiplier()
+	var/service_delay = 6 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "repair") * tool.toolspeed * get_cyberpunk_machine_tool_time_multiplier()
 	var/service_fuel_cost = tool.tool_behaviour == TOOL_WELDER ? 1 : 0
 	if(!tool.tool_start_check(user, amount = service_fuel_cost))
 		return FALSE
 	tool.play_tool_sound(src, 40)
 	if(service_delay && !do_after(user, service_delay, target = src))
+		return FALSE
+	if(QDELETED(src) || QDELETED(tool) || !panel_open || !user.is_holding(tool) || !(component in get_cyberpunk_wearable_components()) || !get_cyberpunk_component_wear(component))
 		return FALSE
 	if(service_fuel_cost && !tool.use(service_fuel_cost))
 		return FALSE
@@ -2060,24 +2062,32 @@
 			return FALSE
 	return module.can_install(src, user)
 
-/obj/machinery/proc/install_cyberpunk_module(datum/cyberpunk_machine_module/module, mob/living/user, use_delay = FALSE)
+/obj/machinery/proc/install_cyberpunk_module(datum/cyberpunk_machine_module/module, mob/living/user, obj/item/cyberpunk_machine_module/source_item)
 	if(!can_install_cyberpunk_module(module, user))
 		return FALSE
-	if(use_delay)
-		var/install_delay = 2 SECONDS
-		if(user)
-			install_delay *= user.get_cyberpunk_machine_module_time_multiplier(src)
-		if(install_delay && !do_after(user, install_delay, target = src))
+	if(source_item)
+		if(QDELETED(user))
+			return FALSE
+		var/install_delay = 6 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "module")
+		if(!do_after(user, install_delay, target = src))
+			return FALSE
+		if(QDELETED(src) || QDELETED(module) || QDELETED(source_item) || !panel_open || !user.is_holding(source_item) || !user.can_perform_action(src) || !can_install_cyberpunk_module(module, user))
 			return FALSE
 	LAZYADD(cyberpunk_machine_modules, module)
 	module.on_install(src, user)
 	user?.reward_cyberpunk_structure_tool_experience(src, "module")
 	return TRUE
 
-/obj/machinery/proc/extract_cyberpunk_module(module_id, mob/living/user)
+/obj/machinery/proc/extract_cyberpunk_module(module_id, mob/living/user, use_delay = FALSE)
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		if(module.id != module_id)
 			continue
+		if(use_delay)
+			var/duration = 4 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "module")
+			if(!do_after(user, duration, target = src))
+				return null
+			if(QDELETED(src) || QDELETED(module) || !panel_open || !(module in cyberpunk_machine_modules) || !user.can_perform_action(src))
+				return null
 		module.on_remove(src, user)
 		cyberpunk_machine_modules -= module
 		user?.reward_cyberpunk_structure_tool_experience(src, "module")
@@ -2224,7 +2234,7 @@
 			if(!istype(held_module_item))
 				return TRUE
 			var/datum/cyberpunk_machine_module/module = held_module_item.create_module_datum()
-			if(machine.install_cyberpunk_module(module, user, TRUE))
+			if(machine.install_cyberpunk_module(module, user, held_module_item))
 				to_chat(user, span_notice("You install [module.name] into [machine]."))
 				qdel(held_module_item)
 			else
@@ -2235,7 +2245,7 @@
 			if(!machine.panel_open)
 				to_chat(user, span_warning("Open the maintenance panel before removing a machine module."))
 				return TRUE
-			var/datum/cyberpunk_machine_module/module = machine.extract_cyberpunk_module(params["module_id"], user)
+			var/datum/cyberpunk_machine_module/module = machine.extract_cyberpunk_module(params["module_id"], user, use_delay = TRUE)
 			if(!module)
 				return TRUE
 			var/item_type = module.module_item_type

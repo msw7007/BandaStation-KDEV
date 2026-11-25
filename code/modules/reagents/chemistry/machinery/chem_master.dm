@@ -24,6 +24,8 @@
 	var/obj/item/reagent_containers/selected_container
 	/// Whether the machine is busy with printing containers
 	var/is_printing = FALSE
+	/// Identifies the active batch so an old callback cannot resume it.
+	var/printing_batch = 0
 	/// Number of containers printed so far
 	var/printing_progress
 	/// Number of containers to be printed
@@ -515,14 +517,15 @@
 			if(isnull(item_count) || item_count <= 0)
 				return FALSE
 			item_count = min(item_count, MAX_CONTAINER_PRINT_AMOUNT)
-			var/volume_in_each = min(round(reagents.total_volume / item_count, CHEMICAL_VOLUME_ROUNDING), initial(selected_container.volume))
+			var/obj/item/reagent_containers/chosen_container = selected_container
+			var/volume_in_each = min(round(reagents.total_volume / item_count, CHEMICAL_VOLUME_ROUNDING), initial(chosen_container.volume))
 
 			// Generate item name
-			var/item_name_default = initial(selected_container.name)
+			var/item_name_default = initial(chosen_container.name)
 			var/datum/reagent/master_reagent = reagents.get_master_reagent()
-			if(selected_container == default_container) // Tubes and bottles gain reagent name
+			if(chosen_container == default_container) // Tubes and bottles gain reagent name
 				item_name_default = "[master_reagent.name] [item_name_default]"
-			if(!(initial(selected_container.initial_reagent_flags) & OPENCONTAINER)) // Closed containers get both reagent name and units in the name
+			if(!(initial(chosen_container.initial_reagent_flags) & OPENCONTAINER)) // Closed containers get both reagent name and units in the name
 				item_name_default = "[master_reagent.name] [item_name_default] ([volume_in_each]u)"
 			var/item_name = tgui_input_text(
 				usr,
@@ -534,13 +537,24 @@
 
 			if(!item_name || is_printing)
 				return FALSE
+			var/mob/living/operator = ui.user
+			if(!istype(operator))
+				return FALSE
+			var/chemistry_multiplier = operator.get_cyberpunk_professional_time_multiplier(SKILL_CHEMISTRY)
+			if(!do_after(operator, 3 SECONDS * chemistry_multiplier, target = src))
+				return FALSE
+			if(QDELETED(src) || !is_operational || is_printing || selected_container != chosen_container || !operator.can_perform_action(src, ALLOW_SILICON_REACH))
+				return FALSE
+			if(reagents.get_master_reagent() != master_reagent || volume_in_each != min(round(reagents.total_volume / item_count, CHEMICAL_VOLUME_ROUNDING), initial(chosen_container.volume)))
+				return FALSE
 
 			//start printing
 			is_printing = TRUE
+			printing_batch++
 			printing_progress = 0
 			printing_total = item_count
 			update_appearance(UPDATE_OVERLAYS)
-			create_containers(ui.user, item_count, item_name, volume_in_each, selected_container)
+			create_containers(operator, item_count, item_name, volume_in_each, chosen_container, printing_batch, printing_speed * chemistry_multiplier)
 			return TRUE
 
 /**
@@ -552,16 +566,18 @@
  * * item_name - the name for each container printed
  * * volume_in_each - volume in each container created
  * * chosen_container - type of the container we're going to print
+ * * batch - the batch that scheduled this print
+ * * print_delay - time per subsequent container
  */
-/obj/machinery/chem_master/proc/create_containers(mob/user, item_count, item_name, volume_in_each, chosen_container)
+/obj/machinery/chem_master/proc/create_containers(mob/user, item_count, item_name, volume_in_each, chosen_container, batch, print_delay)
 	PRIVATE_PROC(TRUE)
 
 	//lost power or manually stopped
-	if(!is_printing)
+	if(!is_printing || batch != printing_batch)
 		return
 
 	//use power
-	if(!use_energy(active_power_usage, force = FALSE))
+	if(!reagents.total_volume || !use_energy(active_power_usage, force = FALSE))
 		is_printing = FALSE
 		update_appearance(UPDATE_OVERLAYS)
 		return
@@ -581,7 +597,7 @@
 	//print more items
 	item_count --
 	if(item_count > 0)
-		addtimer(CALLBACK(src, PROC_REF(create_containers), user, item_count, item_name, volume_in_each, chosen_container), printing_speed)
+		addtimer(CALLBACK(src, PROC_REF(create_containers), user, item_count, item_name, volume_in_each, chosen_container, batch, print_delay), print_delay)
 	else
 		is_printing = FALSE
 		update_appearance(UPDATE_OVERLAYS)

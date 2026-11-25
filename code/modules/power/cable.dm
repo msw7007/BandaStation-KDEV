@@ -665,11 +665,15 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	user.visible_message(span_notice("[user] starts to fix some of the wires in [attacked_humanoid == user ? user.p_their() : "[attacked_humanoid]'s"] [affecting.name]."),
 		span_notice("You start fixing some of the wires in [attacked_humanoid == user ? "your" : "[attacked_humanoid]'s"] [affecting.name]."))
 
-	var/use_delay = repeating ? 1 SECONDS : 0
+	var/use_delay = repeating ? 2 SECONDS : 3 SECONDS
 	if(user == attacked_humanoid)
 		use_delay = 5 SECONDS
 
-	if(!do_after(user, use_delay, attacked_humanoid))
+	if(!do_after(user, use_delay * user.get_cyberpunk_electrics_time_multiplier(), attacked_humanoid))
+		return ITEM_INTERACT_BLOCKING
+	if(QDELETED(src) || !user.is_holding(src) || get_amount() < 1 || !user.can_perform_action(attacked_humanoid))
+		return ITEM_INTERACT_BLOCKING
+	if(attacked_humanoid.get_bodypart(check_zone(user.zone_selected)) != affecting)
 		return ITEM_INTERACT_BLOCKING
 
 	if (!attacked_humanoid.item_heal(user, brute_heal = 0, burn_heal = 15, heal_message_brute = "вмятины", heal_message_burn = "сожженую проводку", required_bodytype = BODYTYPE_ROBOTIC))
@@ -685,7 +689,7 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 //////////////////////////////////////////////
 
 // called when cable_coil is clicked on a turf
-/obj/item/stack/cable_coil/proc/place_turf(turf/target_turf, mob/user, dirnew)
+/obj/item/stack/cable_coil/proc/place_turf(turf/target_turf, mob/user, manual = FALSE)
 	if(!isturf(user.loc))
 		return
 
@@ -700,6 +704,16 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 	if(get_dist(target_turf,user) > 1) // Too far
 		to_chat(user, span_warning("You can't lay cable at a place that far away!"))
 		return
+
+	if(manual && isliving(user))
+		var/mob/living/operator = user
+		var/chosen_layer = target_layer
+		if(!do_after(operator, 2 SECONDS * operator.get_cyberpunk_electrics_time_multiplier(), target = target_turf))
+			return
+		if(QDELETED(src) || QDELETED(target_turf) || !operator.is_holding(src) || !operator.can_perform_action(target_turf) || !isturf(operator.loc))
+			return
+		if(chosen_layer != target_layer || get_amount() < 1 || target_turf.underfloor_accessibility < UNDERFLOOR_INTERACTABLE || !target_turf.can_have_cabling())
+			return
 
 	for(var/obj/structure/cable/old_cable in target_turf)
 		if(old_cable.cable_layer & target_layer)
@@ -718,8 +732,8 @@ GLOBAL_LIST_INIT(wire_node_generating_types, typecacheof(list(
 
 	use(1)
 
-	if(new_cable.powernet.avail && new_cable.shock(user, 50) && prob(50))
-		new_cable.deconstruct()
+	if(new_cable.powernet?.avail)
+		new_cable.shock(user, 50)
 
 	return new_cable
 

@@ -964,7 +964,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 		if(!do_after(
 			user = surgeon,
-			// Poor conditions beyond the time cap add risk. Skill only changes the delay.
+			// Poor conditions beyond the time cap add risk even when they cannot add more time.
 			delay = time * min(operation_args[OPERATION_SPEED], SURGERY_MODIFIER_FAILURE_THRESHOLD) * perk_time_multiplier,
 			target = patient || operating_on,
 			extra_checks = CALLBACK(src, PROC_REF(operate_check), patient, operating_on, surgeon, tool, operation_args),
@@ -1007,13 +1007,19 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		if(HAS_TRAIT(surgeon, TRAIT_IGNORE_SURGERY_MODIFIERS) && !(operation_flags & OPERATION_ALWAYS_FAILABLE))
 			operation_args[OPERATION_SPEED] = 0
 
-		var/failure_chance = get_modified_failure_chance(time, patient, surgeon, tool, operation_args) // BANDASTATION EDIT
-		if(operation_args[OPERATION_FORCE_FAIL] || prob(clamp(failure_chance, 0, 99))) // BANDASTATION EDIT
+		var/failure_chance = get_modified_failure_chance(time, patient, surgeon, tool, operation_args)
+		failure_chance -= 2 * surgeon.get_character_skill_level(SKILL_SURGERY)
+		var/complication = prob(clamp(failure_chance, 0, 99))
+		var/has_special_failure = get_cyberpunk_step_severity() == SURGERY_STEP_SEVERITY_RARE || (operation_flags & OPERATION_ALWAYS_FAILABLE) || istype(src, /datum/surgery_operation/organ/repair/brain)
+		if(operation_args[OPERATION_FORCE_FAIL] || (complication && has_special_failure))
 			failure(operating_on, surgeon, tool, operation_args)
 			result |= ITEM_INTERACT_FAILURE
 			if (patient)
 				update_surgery_mood(patient, SURGERY_STATE_FAILURE)
 		else
+			if(complication)
+				to_chat(surgeon, span_warning("Этап завершён, но вы задели ткани пациента."))
+				apply_surgery_failure_damage(operating_on, surgeon, tool, operation_args)
 			success(operating_on, surgeon, tool, operation_args)
 			result |= ITEM_INTERACT_SUCCESS
 			if (patient)

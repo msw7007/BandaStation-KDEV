@@ -22,6 +22,9 @@
 		to_chat(user, span_warning("This device can only scan slimes!"))
 		return ITEM_INTERACT_BLOCKING
 	var/mob/living/basic/slime/scanned_slime = interacting_with
+	var/duration = 4 SECONDS * user.get_cyberpunk_analysis_time_multiplier()
+	if(!do_after(user, duration, target = scanned_slime) || QDELETED(src) || QDELETED(scanned_slime) || !user.can_read(src) || user.is_blind())
+		return ITEM_INTERACT_BLOCKING
 	playsound(src, SFX_INDUSTRIAL_SCAN, 20, TRUE, -2, TRUE, FALSE)
 	slime_scan(scanned_slime, user)
 	return ITEM_INTERACT_SUCCESS

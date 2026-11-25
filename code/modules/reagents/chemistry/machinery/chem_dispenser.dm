@@ -274,6 +274,15 @@
 
 	return data
 
+/obj/machinery/chem_dispenser/proc/wait_for_dispense(mob/living/user, base_time)
+	if(!istype(user) || QDELETED(beaker))
+		return FALSE
+	var/obj/item/reagent_containers/target_beaker = beaker
+	var/duration = base_time * user.get_cyberpunk_professional_time_multiplier(SKILL_CHEMISTRY)
+	if(!do_after(user, duration, target = src))
+		return FALSE
+	return !QDELETED(src) && is_operational && !QDELETED(cell) && !recording_recipe && !QDELETED(target_beaker) && beaker == target_beaker && user.can_perform_action(src, ALLOW_SILICON_REACH)
+
 /obj/machinery/chem_dispenser/ui_act(action, params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
 	if(.)
@@ -296,8 +305,11 @@
 			if(!recording_recipe)
 				var/reagent = GLOB.name2reagent[reagent_name]
 				if(beaker && dispensable_reagents.Find(reagent))
+					var/dispense_amount = amount
+					if(!wait_for_dispense(ui.user, 2 SECONDS) || !dispensable_reagents.Find(reagent))
+						return FALSE
 					var/datum/reagents/holder = beaker.reagents
-					var/to_dispense = max(0, min(amount, holder.maximum_volume - holder.total_volume))
+					var/to_dispense = max(0, min(dispense_amount, holder.maximum_volume - holder.total_volume))
 					if(!to_dispense)
 						say("The container is full!")
 						return
@@ -341,6 +353,11 @@
 			var/list/chemicals_to_dispense = saved_recipes[params["recipe"]]
 			if(!LAZYLEN(chemicals_to_dispense))
 				return
+			if(!recording_recipe)
+				if(!wait_for_dispense(ui.user, 3 SECONDS))
+					return FALSE
+				if(chemicals_to_dispense != saved_recipes[params["recipe"]])
+					return FALSE
 			for(var/key in chemicals_to_dispense)
 				var/reagent = GLOB.name2reagent[key]
 				var/dispense_amount = chemicals_to_dispense[key]

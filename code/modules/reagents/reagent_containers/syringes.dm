@@ -71,17 +71,17 @@
 
 	if(isliving(target))
 		var/mob/living/living_target = target
+		var/medical_delay = living_target == user ? 2 SECONDS : 3 SECONDS
 		if(living_target != user)
 			living_target.visible_message(
 				span_danger("[user] is trying to inject [living_target]!"),
 				span_userdanger("[user] is trying to inject you!"),
 			)
-			if(!do_after(user, CHEM_INTERACT_DELAY(3 SECONDS, user), living_target, extra_checks = CALLBACK(src, PROC_REF(try_syringe), living_target, user)))
-				return ITEM_INTERACT_BLOCKING
-			if(!reagents.total_volume)
-				return ITEM_INTERACT_BLOCKING
-			if(living_target.reagents.holder_full())
-				return ITEM_INTERACT_BLOCKING
+		if(!do_after(user, CHEM_INTERACT_DELAY(medical_delay, user), living_target, extra_checks = CALLBACK(src, PROC_REF(try_syringe), living_target, user)))
+			return ITEM_INTERACT_BLOCKING
+		if(!reagents?.total_volume || !living_target.reagents || living_target.reagents.holder_full())
+			return ITEM_INTERACT_BLOCKING
+		if(living_target != user)
 			living_target.visible_message(
 				span_danger("[user] injects [living_target] with the syringe!"),
 				span_userdanger("[user] injects you with the syringe!"),
@@ -113,16 +113,17 @@
 
 	if(isliving(target))
 		var/mob/living/living_target = target
-		var/drawn_amount = reagents.maximum_volume - reagents.total_volume
+		var/medical_delay = target == user ? 2 SECONDS : 3 SECONDS
 		if(target != user)
 			target.visible_message(
 				span_danger("[user] is trying to take a blood sample from [target]!"),
 				span_userdanger("[user] is trying to take a blood sample from you!"),
 			)
-			if(!do_after(user, CHEM_INTERACT_DELAY(3 SECONDS, user), target, extra_checks = CALLBACK(src, PROC_REF(try_syringe), living_target, user)))
-				return ITEM_INTERACT_BLOCKING
-			if(reagents.holder_full())
-				return ITEM_INTERACT_BLOCKING
+		if(!do_after(user, CHEM_INTERACT_DELAY(medical_delay, user), target, extra_checks = CALLBACK(src, PROC_REF(try_syringe), living_target, user)))
+			return ITEM_INTERACT_BLOCKING
+		if(!reagents || reagents.holder_full())
+			return ITEM_INTERACT_BLOCKING
+		var/drawn_amount = reagents.maximum_volume - reagents.total_volume
 		if(living_target.transfer_blood_to(src, drawn_amount))
 			user.visible_message(span_notice("[user] takes a blood sample from [living_target]."))
 		else

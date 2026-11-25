@@ -31,7 +31,7 @@
 		if(CAMERA_STATE_WIRED)
 			tool.play_tool_sound(src)
 			var/input = tgui_input_text(user, "Which networks would you like to connect this camera to? Separate networks with a comma. No Spaces!\nFor example: SS13,Security,Secret", "Set Network", "SS13", max_length = MAX_NAME_LEN)
-			if(isnull(input))
+			if(isnull(input) || QDELETED(src) || camera_construction_state != CAMERA_STATE_WIRED || !wait_for_camera_work(user, tool))
 				return ITEM_INTERACT_BLOCKING
 			var/list/tempnetwork = splittext(input, ",")
 			if(!length(tempnetwork))
@@ -45,6 +45,8 @@
 			network = tempnetwork
 			return ITEM_INTERACT_SUCCESS
 		if(CAMERA_STATE_FINISHED)
+			if(!wait_for_camera_work(user, tool))
+				return ITEM_INTERACT_BLOCKING
 			toggle_panel_open()
 			to_chat(user, span_notice("You screw the camera's panel [panel_open ? "open" : "closed"]."))
 			tool.play_tool_sound(src)
@@ -55,13 +57,15 @@
 /obj/machinery/camera/wirecutter_act(mob/user, obj/item/tool)
 	switch(camera_construction_state)
 		if(CAMERA_STATE_WIRED)
+			if(!wait_for_camera_work(user, tool))
+				return ITEM_INTERACT_BLOCKING
 			new /obj/item/stack/cable_coil(drop_location(), 2)
 			tool.play_tool_sound(src)
 			to_chat(user, span_notice("You cut the wires from the circuits."))
 			camera_construction_state = CAMERA_STATE_WELDED
 			return ITEM_INTERACT_SUCCESS
 		if(CAMERA_STATE_FINISHED)
-			if(!panel_open)
+			if(!panel_open || !wait_for_camera_work(user, tool))
 				return ITEM_INTERACT_BLOCKING
 			toggle_cam(user, 1)
 			atom_integrity = max_integrity //this is a pretty simplistic way to heal the camera, but there's no reason for this to be complex.
@@ -73,6 +77,8 @@
 /obj/machinery/camera/wrench_act(mob/user, obj/item/tool)
 	if(camera_construction_state != CAMERA_STATE_WRENCHED)
 		return NONE
+	if(!wait_for_camera_work(user, tool))
+		return ITEM_INTERACT_BLOCKING
 	tool.play_tool_sound(src)
 	to_chat(user, span_notice("You detach [src] from its place."))
 	deconstruct(TRUE)
@@ -91,7 +97,9 @@
 	if(!length(droppable_parts))
 		return ITEM_INTERACT_BLOCKING
 	var/obj/item/choice = tgui_input_list(user, "Select a part to remove", "Part Removal", sort_names(droppable_parts))
-	if(isnull(choice))
+	if(QDELETED(choice) || QDELETED(src) || camera_construction_state != CAMERA_STATE_FINISHED || !panel_open || !wait_for_camera_work(user, tool))
+		return ITEM_INTERACT_BLOCKING
+	if(choice != xray_module && choice != emp_module && choice != proximity_monitor)
 		return ITEM_INTERACT_BLOCKING
 	if(!user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
 		return ITEM_INTERACT_BLOCKING
@@ -111,6 +119,8 @@
 /obj/machinery/camera/multitool_act(mob/living/user, obj/item/tool)
 	if(camera_construction_state != CAMERA_STATE_FINISHED || !panel_open)
 		return NONE
+	if(!wait_for_camera_work(user, tool))
+		return ITEM_INTERACT_BLOCKING
 	setViewRange((view_range == initial(view_range)) ? short_range : initial(view_range))
 	to_chat(user, span_notice("You [(view_range == initial(view_range)) ? "restore" : "mess up"] the camera's focus."))
 	return ITEM_INTERACT_SUCCESS
@@ -121,7 +131,7 @@
 	if(isXRay(TRUE))
 		to_chat(user, span_warning("[src] already has that upgrade!"))
 		return ITEM_INTERACT_BLOCKING
-	if(!user.temporarilyRemoveItemFromInventory(tool, newloc = src))
+	if(!wait_for_camera_work(user, tool) || isXRay(TRUE) || !user.temporarilyRemoveItemFromInventory(tool, newloc = src))
 		return ITEM_INTERACT_BLOCKING
 	upgradeXRay(FALSE, TRUE)
 	to_chat(user, span_notice("You attach [tool] into [src]'s inner circuits."))
@@ -134,7 +144,7 @@
 	if(isEmpProof(TRUE))
 		to_chat(user, span_warning("[src] already has that upgrade!"))
 		return ITEM_INTERACT_BLOCKING
-	if(!tool.use_tool(src, user, 0, amount = 1))
+	if(!wait_for_camera_work(user, tool) || isEmpProof(TRUE) || !tool.use_tool(src, user, 0, amount = 1))
 		return ITEM_INTERACT_BLOCKING
 	upgradeEmpProof(FALSE, TRUE)
 	to_chat(user, span_notice("You attach [tool] into [src]'s inner circuits."))
@@ -146,7 +156,7 @@
 	if(isMotion())
 		to_chat(user, span_warning("[src] already has that upgrade!"))
 		return ITEM_INTERACT_BLOCKING
-	if(!user.temporarilyRemoveItemFromInventory(tool, newloc = src))
+	if(!wait_for_camera_work(user, tool) || isMotion() || !user.temporarilyRemoveItemFromInventory(tool, newloc = src))
 		return ITEM_INTERACT_BLOCKING
 	upgradeMotion()
 	to_chat(user, span_notice("You attach [tool] into [src]'s inner circuits."))
@@ -156,12 +166,27 @@
 /obj/machinery/camera/proc/cable_act(mob/living/user, obj/item/tool)
 	if(camera_construction_state != CAMERA_STATE_WELDED)
 		return NONE
-	if(!astype(tool, /obj/item/stack/cable_coil)?.use(2))
+	var/obj/item/stack/cable_coil/coil = tool
+	if(!istype(coil))
+		return ITEM_INTERACT_BLOCKING
+	if(coil.get_amount() >= 2 && !wait_for_camera_work(user, tool))
+		return ITEM_INTERACT_BLOCKING
+	if(!coil.use(2))
 		to_chat(user, span_warning("You need two lengths of cable to wire [src]!"))
 		return ITEM_INTERACT_BLOCKING
 	to_chat(user, span_notice("You add wires to [src]."))
 	camera_construction_state = CAMERA_STATE_WIRED
 	return ITEM_INTERACT_SUCCESS
+
+/obj/machinery/camera/proc/wait_for_camera_work(mob/living/user, obj/item/tool)
+	if(!istype(user) || QDELETED(tool) || !user.is_holding(tool))
+		return FALSE
+	var/initial_state = camera_construction_state
+	var/was_open = panel_open
+	var/duration = 3 SECONDS * user.get_cyberpunk_electrics_time_multiplier()
+	if(!do_after(user, duration, target = src))
+		return FALSE
+	return !QDELETED(src) && !QDELETED(tool) && user.is_holding(tool) && user.can_perform_action(src) && initial_state == camera_construction_state && was_open == panel_open
 
 /obj/machinery/camera/proc/computer_act(mob/living/user, obj/item/tool)
 	if(camera_construction_state != CAMERA_STATE_FINISHED)

@@ -139,51 +139,27 @@
 /obj/item/stack/medical/proc/try_heal(mob/living/patient, mob/living/user, healed_zone, silent = FALSE, auto_change_zone = TRUE, continuous = FALSE)
 	if(heal_begin_sound && !continuous)
 		playsound(patient, heal_begin_sound, 75, TRUE, MEDIUM_RANGE_SOUND_EXTRARANGE)
-	if(patient == user)
-		if(!silent)
+	if(!silent)
+		if(patient == user)
 			user.visible_message(
 				span_notice("[user] начинает применять [src.declent_ru(ACCUSATIVE)] на себя..."),
 				span_notice("Вы начинаете применять [src.declent_ru(ACCUSATIVE)] на себя..."),
 				visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
 			)
-		if(!do_after(
-			user,
-			self_delay * (auto_change_zone ? 1 : 0.9),
-			patient,
-			extra_checks = CALLBACK(src, PROC_REF(can_heal), patient, user, healed_zone),
-		))
-			return
-		if(!auto_change_zone)
-			healed_zone = check_zone(user.zone_selected)
-		if(!try_heal_checks(patient, user, healed_zone))
-			return
-
-	else if(other_delay)
-		if(!silent)
+		else
 			user.visible_message(
 				span_notice("[user] начинает применять [src.declent_ru(ACCUSATIVE)] на [patient.declent_ru(PREPOSITIONAL)]."),
 				span_notice("Вы начинаете применять [src.declent_ru(ACCUSATIVE)] на [patient.declent_ru(PREPOSITIONAL)]..."),
 				visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
 			)
-		if(!do_after(
-			user,
-			other_delay * (auto_change_zone ? 1 : 0.9),
-			patient,
-			extra_checks = CALLBACK(src, PROC_REF(can_heal), patient, user, healed_zone),
-		))
-			return
-		if(!auto_change_zone)
-			healed_zone = check_zone(user.zone_selected)
-		if(!try_heal_checks(patient, user, healed_zone))
-			return
-
-	else
-		if(!silent)
-			user.visible_message(
-				span_notice("[user] применяет [src.declent_ru(ACCUSATIVE)] на [patient.declent_ru(PREPOSITIONAL)]."),
-				span_notice("Вы применяете [src.declent_ru(ACCUSATIVE)] на [patient.declent_ru(PREPOSITIONAL)]."),
-				visible_message_flags = ALWAYS_SHOW_SELF_MESSAGE,
-			)
+	var/treatment_delay = max(2 SECONDS, patient == user ? self_delay : other_delay)
+	treatment_delay *= user.get_cyberpunk_medical_treatment_time_multiplier() * (auto_change_zone ? 1 : 0.9)
+	if(!do_after(user, treatment_delay, patient, extra_checks = CALLBACK(src, PROC_REF(can_heal), patient, user, healed_zone)))
+		return
+	if(!auto_change_zone)
+		healed_zone = check_zone(user.zone_selected)
+	if(!try_heal_checks(patient, user, healed_zone))
+		return
 
 	if(iscarbon(patient))
 		if(!heal_carbon(patient, user, healed_zone))
@@ -248,7 +224,7 @@
 	PRIVATE_PROC(TRUE)
 
 	patient.balloon_alert(user, "оценка травмы...")
-	if(!do_after(user, 1 SECONDS, patient))
+	if(!do_after(user, 1 SECONDS * user.get_cyberpunk_medical_treatment_time_multiplier(), patient))
 		return
 	var/new_zone = check_zone(user.zone_selected)
 	if(!try_heal_checks(patient, user, new_zone))
@@ -435,7 +411,7 @@
 		return .
 
 /// Callback for limb applicability component
-/obj/item/stack/medical/wrap/proc/do_gauze_limb(mob/user, mob/living/patient, obj/item/bodypart/limb)
+/obj/item/stack/medical/wrap/proc/do_gauze_limb(mob/living/user, mob/living/patient, obj/item/bodypart/limb)
 
 	var/scanned_wound = FALSE
 	for(var/datum/wound/wound as anything in limb.wounds)
@@ -444,7 +420,7 @@
 		scanned_wound = TRUE
 		break
 
-	var/treatment_delay = (user == patient ? self_delay : other_delay)
+	var/treatment_delay = max(2 SECONDS, user == patient ? self_delay : other_delay) * user.get_cyberpunk_medical_treatment_time_multiplier()
 	if(scanned_wound)
 		treatment_delay *= 0.5
 		if(user == patient)

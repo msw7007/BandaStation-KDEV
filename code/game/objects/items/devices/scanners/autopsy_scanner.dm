@@ -29,6 +29,12 @@
 		to_chat(user, span_deadsay("[icon2html(src, user)] ERROR! CANNOT SCAN LIVE CADAVERS. PROCURE HEALTH ANALYZER OR TERMINATE PATIENT."))
 		return ITEM_INTERACT_BLOCKING
 
+	var/duration = 6 SECONDS * user.get_cyberpunk_medical_scan_time_multiplier(scanned)
+	if(!do_after(user, duration, target = scanned) || QDELETED(src) || QDELETED(scanned) || !user.can_read(src) || user.is_blind())
+		return ITEM_INTERACT_BLOCKING
+	if(scanned.stat != DEAD && !HAS_TRAIT(scanned, TRAIT_FAKEDEATH))
+		return ITEM_INTERACT_BLOCKING
+
 	. = ITEM_INTERACT_SUCCESS
 
 	// Clumsiness/brain damage check

@@ -133,6 +133,14 @@
 		if(!advanced)
 			to_chat(user, span_warning("Basic analyzer does not show reagents."))
 			return ITEM_INTERACT_SUCCESS
+		if(scanner_busy)
+			balloon_alert(user, "busy")
+			return ITEM_INTERACT_BLOCKING
+		scanner_busy = TRUE
+		var/completed_scan = do_after(user, 6 SECONDS * user.get_cyberpunk_medical_scan_time_multiplier(interacting_with), target = interacting_with)
+		scanner_busy = FALSE
+		if(!completed_scan || QDELETED(src) || QDELETED(interacting_with) || !user.can_read(src) || user.is_blind())
+			return ITEM_INTERACT_BLOCKING
 		chemscan(user, interacting_with)
 	return ITEM_INTERACT_SUCCESS
 
@@ -841,6 +849,9 @@
 		show_emotion(AI_EMOTION_SAD)
 		return ITEM_INTERACT_BLOCKING
 
+	var/duration = 4 SECONDS * user.get_cyberpunk_medical_scan_time_multiplier(interacting_with)
+	if(!do_after(user, duration, target = interacting_with) || QDELETED(src) || QDELETED(interacting_with) || !user.can_read(src) || user.is_blind())
+		return ITEM_INTERACT_BLOCKING
 	do_the_scan(interacting_with, user)
 	flick(icon_state + "_pinprick", src)
 	update_appearance(UPDATE_OVERLAYS)

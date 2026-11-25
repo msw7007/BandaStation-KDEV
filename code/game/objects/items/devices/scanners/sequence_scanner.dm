@@ -49,6 +49,9 @@
 
 	//no scanning if its a husk or DNA-less Species
 	if (!HAS_TRAIT(interacting_with, TRAIT_GENELESS) && !HAS_TRAIT(interacting_with, TRAIT_BADDNA))
+		var/duration = 4 SECONDS * user.get_cyberpunk_analysis_time_multiplier()
+		if(!do_after(user, duration, target = interacting_with) || QDELETED(src) || QDELETED(interacting_with) || HAS_TRAIT(interacting_with, TRAIT_GENELESS) || HAS_TRAIT(interacting_with, TRAIT_BADDNA))
+			return ITEM_INTERACT_BLOCKING
 		user.visible_message(span_notice("[user] analyzes [interacting_with]'s genetic sequence."))
 		balloon_alert(user, "sequence analyzed")
 		playsound(user, 'sound/items/healthanalyzer.ogg', 50) // close enough
@@ -73,9 +76,11 @@
 	//no scanning if its a husk, DNA-less Species or DNA that isn't able to be copied by a changeling/disease
 	if (!HAS_TRAIT(interacting_with, TRAIT_GENELESS) && !HAS_TRAIT(interacting_with, TRAIT_BADDNA) && !HAS_TRAIT(interacting_with, TRAIT_NO_DNA_COPY))
 		user.visible_message(span_warning("[user] is scanning [interacting_with]'s genetic makeup."))
-		if(!do_after(user, 3 SECONDS, interacting_with))
+		if(!do_after(user, 4 SECONDS * user.get_cyberpunk_analysis_time_multiplier(), interacting_with) || QDELETED(src) || QDELETED(interacting_with))
 			balloon_alert(user, "scan failed!")
 			user.visible_message(span_warning("[user] fails to scan [interacting_with]'s genetic makeup."))
+			return ITEM_INTERACT_BLOCKING
+		if(HAS_TRAIT(interacting_with, TRAIT_GENELESS) || HAS_TRAIT(interacting_with, TRAIT_BADDNA) || HAS_TRAIT(interacting_with, TRAIT_NO_DNA_COPY))
 			return ITEM_INTERACT_BLOCKING
 		makeup_scan(interacting_with, user)
 		balloon_alert(user, "makeup scanned")

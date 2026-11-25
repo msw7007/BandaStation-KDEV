@@ -251,7 +251,7 @@
 
 		if(isliving(crafter))
 			var/mob/living/living_crafter = crafter
-			recipe_time *= living_crafter.get_cyberpunk_crafting_time_multiplier(recipe)
+			recipe_time = max(2 SECONDS, recipe_time) * living_crafter.get_cyberpunk_crafting_time_multiplier(recipe)
 
 		if(!do_after(crafter, round(recipe_time, 0.1 SECONDS), target = crafter))
 			return "."

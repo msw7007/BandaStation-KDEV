@@ -2,7 +2,7 @@
 
 /datum/skill_perk/professional/surgery/perk_1
 	name = "Диагностика"
-	desc = "Полный анализ сканером здоровья или биомонитором требует на {value}% меньше времени."
+	desc = "Полный анализ сканером здоровья или биомонитором проходит на {value}% быстрее."
 	effectiveness_values = list(25, 50, 75, 100)
 
 /datum/skill_perk/professional/surgery/perk_2
@@ -16,8 +16,8 @@
 	)
 
 /datum/skill_perk/professional/surgery/perk_3
-	name = "Скорость операции"
-	desc = "+{value}% скорости проведения этапа операции."
+	name = "Скорость лечения"
+	desc = "+{value}% к скорости хирургических этапов, перевязок, инъекций и других лечебных действий."
 	effectiveness_values = list(25, 50, 75, 100)
 
 /datum/skill_perk/professional/surgery/perk_4

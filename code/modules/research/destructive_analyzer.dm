@@ -121,6 +121,14 @@
 				unload_item()
 				return TRUE
 		if("deconstruct")
+			var/mob/living/operator = ui.user
+			var/obj/item/sample = loaded_item
+			if(!istype(operator) || !is_operational || busy || QDELETED(sample))
+				return FALSE
+			if(!do_after(operator, 6 SECONDS * operator.get_cyberpunk_analysis_time_multiplier(), target = src))
+				return FALSE
+			if(QDELETED(src) || QDELETED(sample) || loaded_item != sample || busy || !is_operational || !operator.can_perform_action(src, ALLOW_SILICON_REACH))
+				return FALSE
 			if(!user_try_decon_id(params["deconstruct_id"]))
 				say("Destructive analysis failed!")
 			return TRUE

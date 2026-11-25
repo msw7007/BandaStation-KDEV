@@ -33,15 +33,14 @@
 	user.changeNext_move(CLICK_CD_MELEE)
 	if(target_mob == user)
 		target_mob.visible_message(span_notice("[user] attempts to [apply_method] [src]."))
-		if(self_delay)
-			if(!do_after(user, self_delay, target_mob))
-				return ITEM_INTERACT_BLOCKING
+		if(!do_after(user, CHEM_INTERACT_DELAY(max(self_delay, 1.5 SECONDS), user), target_mob) || !canconsume(target_mob, user))
+			return ITEM_INTERACT_BLOCKING
 		to_chat(target_mob, span_notice("You [apply_method] [src]."))
 		on_consumption(user, user, modifiers)
 		return ITEM_INTERACT_SUCCESS
 
 	target_mob.visible_message(span_danger("[user] attempts to force [target_mob] to [apply_method] [src]."), span_userdanger("[user] attempts to force you to [apply_method] [src]."))
-	if(!do_after(user, CHEM_INTERACT_DELAY(application_delay, user), target_mob))
+	if(!do_after(user, CHEM_INTERACT_DELAY(max(application_delay, 1.5 SECONDS), user), target_mob) || !canconsume(target_mob, user))
 		return ITEM_INTERACT_BLOCKING
 
 	target_mob.visible_message(span_danger("[user] forces [target_mob] to [apply_method] [src]."), span_userdanger("[user] forces you to [apply_method] [src]."))

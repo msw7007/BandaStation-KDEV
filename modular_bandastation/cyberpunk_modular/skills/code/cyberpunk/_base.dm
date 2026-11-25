@@ -20,13 +20,25 @@
 		return 0
 	return mind.get_character_perk_effectiveness(skill_path, perk_index, effect_key)
 
+/mob/living/proc/get_cyberpunk_professional_time_multiplier(skill, speed_bonus = 0)
+	return 1 / (1 + get_character_skill_level(skill) * 0.1 + max(0, speed_bonus) * 0.01)
+
+/mob/living/proc/get_cyberpunk_electrics_time_multiplier()
+	return get_cyberpunk_professional_time_multiplier(SKILL_ELECTRICS, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
+
+/mob/living/proc/get_cyberpunk_medical_treatment_time_multiplier()
+	return get_cyberpunk_professional_time_multiplier(SKILL_SURGERY, get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 3))
+
 /mob/living/proc/get_cyberpunk_structure_work_speed_modifier(atom/target, action = "work")
 	var/highest_bonus = 0
+	var/work_level = 0
 
-	if(target?.is_cyberpunk_structure_target())
+	if(target?.is_cyberpunk_structure_target() || istype(target, /turf/open/floor))
+		work_level = get_character_skill_level(SKILL_CONSTRUCTION)
 		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5))
 
 	if(istype(target, /obj/machinery))
+		work_level = max(work_level, get_character_skill_level(SKILL_ELECTRICS), get_character_skill_level(SKILL_INVENTION))
 		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
 
 	switch(target?.get_cyberpunk_structure_category())
@@ -35,6 +47,7 @@
 		if("foldable_structure")
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
 		if("nonmobile_mechanism")
+			work_level = max(work_level, get_character_skill_level(SKILL_INVENTION), get_character_skill_level(SKILL_ELECTRICS))
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5), get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3))
 
 	switch(action)
@@ -49,25 +62,31 @@
 			if(istype(target, /obj/machinery))
 				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
 		if("build", "assemble", "construction")
+			work_level = max(work_level, get_character_skill_level(SKILL_CONSTRUCTION), get_character_skill_level(SKILL_INVENTION))
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
 		if("dismantle", "disassemble", "deconstruct")
+			work_level = max(work_level, get_character_skill_level(SKILL_INVENTION))
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 2))
 			if(target?.is_cyberpunk_recently_analyzed())
 				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 3))
 		if("repair")
+			work_level = max(work_level, get_character_skill_level(SKILL_INVENTION))
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3))
 		if("panel", "service")
+			work_level = max(work_level, get_character_skill_level(SKILL_ELECTRICS), get_character_skill_level(SKILL_INVENTION))
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5), get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3))
 			if(target?.is_cyberpunk_recently_analyzed())
 				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
 		if("module")
-			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1), get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
+			work_level = max(work_level, get_character_skill_level(SKILL_ELECTRICS), get_character_skill_level(SKILL_INVENTION))
+			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5), get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1), get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
 			if(target?.is_cyberpunk_recently_analyzed())
 				highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
 		if("hack", "sabotage")
+			work_level = max(work_level, get_character_skill_level(SKILL_HACKING), get_character_skill_level(SKILL_ELECTRICS))
 			highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_HACKING, 6), get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5))
 
-	return max(0.1, 1 + highest_bonus * 0.01)
+	return max(0.1, 1 + work_level * 0.1 + highest_bonus * 0.01)
 
 /mob/living/proc/get_cyberpunk_structure_time_multiplier(atom/target, action = "work")
 	return 1 / get_cyberpunk_structure_work_speed_modifier(target, action)
@@ -75,21 +94,19 @@
 /mob/living/proc/get_cyberpunk_crafting_time_multiplier(datum/crafting_recipe/recipe)
 	if(!recipe || !mind)
 		return 1
-	var/highest_bonus = 0
 	if(ispath(recipe.result, /obj/machinery))
-		highest_bonus = max(
-			highest_bonus,
-			get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
-			get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3),
-			get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
+		return min(
+			get_cyberpunk_electrics_time_multiplier(),
+			get_cyberpunk_professional_time_multiplier(SKILL_INVENTION, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 3)),
+			get_cyberpunk_professional_time_multiplier(SKILL_CONSTRUCTION, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5)),
 		)
-	else if(ispath(recipe.result, /obj/structure) || ispath(recipe.result, /turf))
-		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5))
-	else if(ispath(recipe.result, /obj/item/food) || istype(recipe, /datum/crafting_recipe/food))
-		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_2"))
-	else if(ispath(recipe.result, /obj/item))
-		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
-	return 1 / max(0.1, 1 + highest_bonus * 0.01)
+	if(ispath(recipe.result, /obj/structure) || ispath(recipe.result, /turf))
+		return get_cyberpunk_professional_time_multiplier(SKILL_CONSTRUCTION, get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5))
+	if(ispath(recipe.result, /obj/item/food) || istype(recipe, /datum/crafting_recipe/food))
+		return get_cyberpunk_cooking_manual_time_multiplier()
+	if(ispath(recipe.result, /obj/item))
+		return get_cyberpunk_professional_time_multiplier(SKILL_INVENTION, get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1))
+	return 1
 
 /mob/living/proc/reward_cyberpunk_crafting_experience(datum/crafting_recipe/recipe)
 	if(!recipe || !mind)
@@ -134,17 +151,6 @@
 		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
 	return base_amount * (1 + highest_bonus * 0.01)
 
-/mob/living/proc/get_cyberpunk_machine_module_time_multiplier(atom/target)
-	if(!istype(target, /obj/machinery))
-		return 1
-	var/highest_bonus = max(
-		get_cyberpunk_skill_perk_bonus(SKILL_INVENTION, 1),
-		get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 5),
-		get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5),
-	)
-	if(target?.is_cyberpunk_recently_analyzed())
-		highest_bonus = max(highest_bonus, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2))
-	return 1 / max(0.1, 1 + highest_bonus * 0.01)
 
 /mob/living/proc/get_cyberpunk_machine_diagnostic_depth(atom/target)
 	if(!target?.is_cyberpunk_structure_target())
@@ -335,7 +341,7 @@
 	return target.get_cyberpunk_diagnostic_data(src)
 
 /mob/living/proc/get_cyberpunk_analysis_time_multiplier()
-	return 1 / max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 1) * 0.01)
+	return get_cyberpunk_professional_time_multiplier(SKILL_ANALYSIS, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 1))
 
 /proc/get_cyberpunk_science_techweb()
 	return locate(/datum/techweb/science) in SSresearch.techwebs
@@ -391,11 +397,10 @@
 	return FALSE
 
 /mob/living/proc/get_cyberpunk_medical_scan_time_multiplier(atom/target, base_time = 10 SECONDS)
-	var/highest_bonus = max(
-		get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 1),
-		get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2),
+	return min(
+		get_cyberpunk_professional_time_multiplier(SKILL_SURGERY, get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 1)),
+		get_cyberpunk_professional_time_multiplier(SKILL_ANALYSIS, get_cyberpunk_skill_perk_bonus(SKILL_ANALYSIS, 2)),
 	)
-	return 1 / max(0.1, 1 + highest_bonus * 0.01)
 
 /mob/living/proc/get_cyberpunk_medical_scan_depth(atom/target, base_depth = 0)
 	var/analysis_depth = 0
@@ -416,7 +421,7 @@
 			speed_bonus += get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_2")
 		if(SURGERY_STEP_SEVERITY_RARE)
 			speed_bonus += get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_3")
-	return 1 / max(0.1, 1 + speed_bonus * 0.01)
+	return get_cyberpunk_professional_time_multiplier(SKILL_SURGERY, speed_bonus)
 
 /mob/living/proc/get_cyberpunk_surgery_sterility_chance()
 	return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 4)
@@ -439,7 +444,7 @@
 	return get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 2)
 
 /mob/living/proc/get_cyberpunk_chemistry_speed_multiplier()
-	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 3) * 0.01)
+	return 1 / get_cyberpunk_professional_time_multiplier(SKILL_CHEMISTRY, get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 3))
 
 /mob/living/proc/get_cyberpunk_chemistry_yield_multiplier()
 	return max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 4) * 0.01)
@@ -448,7 +453,7 @@
 	return get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 5)
 
 /mob/living/proc/get_cyberpunk_mining_time_multiplier()
-	return 1 / max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_MINING, 1) * 0.01)
+	return get_cyberpunk_professional_time_multiplier(SKILL_MINING, get_cyberpunk_skill_perk_bonus(SKILL_MINING, 1))
 
 /mob/living/proc/get_cyberpunk_mining_ore_amount(base_amount, drill = FALSE)
 	if(base_amount <= 0)
@@ -477,10 +482,10 @@
 	return 0
 
 /mob/living/proc/get_cyberpunk_cooking_manual_time_multiplier()
-	return 1 / max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_1") * 0.01)
+	return get_cyberpunk_professional_time_multiplier(SKILL_COOKING, get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_1"))
 
 /mob/living/proc/get_cyberpunk_cooking_machine_time_multiplier()
-	return 1 / max(0.1, 1 + get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_2") * 0.01)
+	return get_cyberpunk_professional_time_multiplier(SKILL_COOKING, get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 1, "value_2"))
 
 /mob/living/proc/get_cyberpunk_cooking_spoil_reduction()
 	return get_cyberpunk_skill_perk_bonus(SKILL_COOKING, 3)

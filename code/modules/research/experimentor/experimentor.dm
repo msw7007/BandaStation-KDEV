@@ -229,6 +229,14 @@
 			if(isnull(reaction))
 				return
 
+			var/mob/living/operator = ui.user
+			var/obj/item/sample = loaded_item
+			if(!istype(operator) || QDELETED(sample) || !is_operational || !COOLDOWN_FINISHED(src, run_experiment))
+				return FALSE
+			if(!do_after(operator, 6 SECONDS * operator.get_cyberpunk_analysis_time_multiplier(), target = src))
+				return FALSE
+			if(QDELETED(src) || QDELETED(sample) || loaded_item != sample || !is_operational || !operator.can_perform_action(src, ALLOW_SILICON_REACH))
+				return FALSE
 			try_perform_experiment(reaction)
 			return TRUE
 

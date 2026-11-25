@@ -304,6 +304,10 @@
 /obj/item/construction/rcd/proc/_rcd_create_effect(atom/target, mob/user, delay, list/rcd_results)
 	PRIVATE_PROC(TRUE)
 
+	var/mob/living/living_user = user
+	if(istype(living_user))
+		var/construction_bonus = living_user.get_cyberpunk_skill_perk_bonus(SKILL_CONSTRUCTION, 5)
+		delay = max(2 SECONDS, delay) * living_user.get_cyberpunk_professional_time_multiplier(SKILL_CONSTRUCTION, construction_bonus)
 	var/obj/effect/constructing_effect/rcd_effect = new(get_turf(target), delay, rcd_results[RCD_DESIGN_MODE], construction_upgrades)
 
 	//resource & structure placement sanity checks before & after delay along with beam effects

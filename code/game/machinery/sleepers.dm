@@ -249,10 +249,15 @@
 				return
 			if(mob_occupant.health < min_health && !ispath(chem, /datum/reagent/medicine/epinephrine))
 				return
-			if(inject_chem(chem, usr))
+			var/mob/living/operator = ui.user
+			if(!istype(operator) || !do_after(operator, 2 SECONDS * operator.get_cyberpunk_medical_treatment_time_multiplier(), target = src))
+				return
+			if(QDELETED(src) || !is_operational || occupant != mob_occupant || !operator.can_perform_action(src, ALLOW_SILICON_REACH))
+				return
+			if(inject_chem(chem, operator))
 				. = TRUE
 				if((obj_flags & EMAGGED) && prob(5))
-					to_chat(usr, span_warning("Chemical system re-route detected, results may not be as expected!"))
+					to_chat(operator, span_warning("Chemical system re-route detected, results may not be as expected!"))
 
 /obj/machinery/sleeper/emag_act(mob/user, obj/item/card/emag/emag_card)
 	if(obj_flags & EMAGGED)
@@ -380,6 +385,13 @@
 	var/next_bioscan = 0
 	var/last_bioscan_report
 	var/datum/weakref/last_operator
+
+/obj/machinery/sleeper/bioscanner/close_machine(mob/user, density_to_set = TRUE)
+	. = ..()
+	if(occupant && !state_open)
+		var/mob/living/operator = last_operator?.resolve()
+		next_bioscan = world.time + 10 SECONDS * (operator?.get_cyberpunk_medical_scan_time_multiplier(occupant) || 1)
+		last_bioscan_report = null
 
 /obj/machinery/sleeper/bioscanner/process()
 	use_energy(idle_power_usage)

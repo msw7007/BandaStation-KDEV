@@ -221,6 +221,14 @@
 	if(!amt)
 		return FALSE
 
+	if(!no_sound)
+		var/obj/item/circuitboard/installed_board = circuit
+		var/duration = 3 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "build")
+		if(!do_after(user, duration, target = src) || QDELETED(src) || QDELETED(replacer) || circuit != installed_board || !user.is_holding(replacer))
+			return FALSE
+		if(!istype(replacer, /obj/item/storage/part_replacer/bluespace) && !user.can_perform_action(src))
+			return FALSE
+
 	var/play_sound = FALSE
 	var/list/part_list = replacer.get_sorted_parts() //parts sorted in order of tier
 	for(var/path in req_components)
@@ -305,6 +313,10 @@
 	if(state != FRAME_STATE_BOARD_INSTALLED)
 		return ITEM_INTERACT_BLOCKING
 
+	var/obj/item/circuitboard/installed_board = circuit
+	var/duration = 4 SECONDS * user.get_cyberpunk_professional_time_multiplier(SKILL_INVENTION)
+	if(!do_after(user, duration, target = src) || QDELETED(src) || circuit != installed_board)
+		return ITEM_INTERACT_BLOCKING
 	tool.play_tool_sound(src)
 	var/list/leftover_components = components.Copy() - circuit
 	dump_contents()
@@ -345,6 +357,12 @@
 		else if(!istype(tool, stock_part_path))
 			continue
 
+		var/obj/item/circuitboard/installed_board = circuit
+		var/duration = 3 SECONDS * user.get_cyberpunk_professional_time_multiplier(SKILL_INVENTION)
+		if(!do_after(user, duration, target = src) || QDELETED(src) || QDELETED(tool) || !user.is_holding(tool))
+			return FALSE
+		if(circuit != installed_board || !req_components?[stock_part_base] || !user.can_perform_action(src))
+			return FALSE
 		if(isstack(tool))
 			var/obj/item/stack/S = tool
 			var/used_amt = min(round(S.get_amount()), req_components[stock_part_path])
@@ -445,6 +463,9 @@
 			user.balloon_alert(user, "missing components!")
 			return FALSE
 
+	var/obj/item/circuitboard/machine/installed_board = circuit
+	if(!tool.use_tool(src, user, 4 SECONDS) || QDELETED(src) || circuit != installed_board || locate(circuit.build_path) in loc)
+		return FALSE
 	if(!circuit.completion_requirements(src, user))
 		return FALSE
 

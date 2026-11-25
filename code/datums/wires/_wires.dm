@@ -408,6 +408,9 @@
 		if("cut")
 			I = L.is_holding_tool_quality(TOOL_WIRECUTTER)
 			if(I || isAdminGhostAI(usr))
+				var/was_cut = is_color_cut(target_wire)
+				if(!wait_for_wire_work(L, target_wire, I, was_cut ? 4 SECONDS : 2 SECONDS) || was_cut != is_color_cut(target_wire))
+					return
 				if(I && holder)
 					I.play_tool_sound(holder, 20)
 				cut_color(target_wire, source = L)
@@ -417,6 +420,8 @@
 		if("pulse")
 			I = L.is_holding_tool_quality(TOOL_MULTITOOL)
 			if(I || isAdminGhostAI(usr))
+				if(!wait_for_wire_work(L, target_wire, I, 1.5 SECONDS))
+					return
 				if(I && holder)
 					I.play_tool_sound(holder, 20)
 				pulse_color(target_wire, L)
@@ -425,6 +430,8 @@
 				to_chat(L, span_warning("You need a multitool!"))
 		if("attach")
 			if(is_attached(target_wire))
+				if(!wait_for_wire_work(L, target_wire, null, 2.5 SECONDS) || !is_attached(target_wire))
+					return
 				I = detach_assembly(target_wire)
 				if(I)
 					L.put_in_hands(I)
@@ -434,6 +441,8 @@
 				if(isassembly(I))
 					var/obj/item/assembly/A = I
 					if(A.assembly_behavior & wire_behavior)
+						if(!wait_for_wire_work(L, target_wire, A, 2.5 SECONDS) || is_attached(target_wire))
+							return
 						if(!L.temporarilyRemoveItemFromInventory(A))
 							return
 						if(!attach_assembly(target_wire, A))
@@ -441,5 +450,21 @@
 						. = TRUE
 					else
 						to_chat(L, span_warning("You cannot attach this assembly to these wires!"))
+
+/datum/wires/proc/wait_for_wire_work(mob/living/user, color, obj/item/tool, base_time)
+	var/wire = get_wire(color)
+	if(isnull(wire) || QDELETED(holder))
+		return FALSE
+	if(isAdminGhostAI(user))
+		return TRUE
+	if(!istype(user))
+		return FALSE
+	var/atom/work_target = holder
+	var/duration = base_time * user.get_cyberpunk_electrics_time_multiplier()
+	if(!do_after(user, duration, target = work_target))
+		return FALSE
+	if(QDELETED(src) || QDELETED(work_target) || holder != work_target || wire != get_wire(color))
+		return FALSE
+	return (!tool || (!QDELETED(tool) && user.is_holding(tool))) && user.can_perform_action(work_target) && interactable(user)
 
 #undef MAXIMUM_EMP_WIRES

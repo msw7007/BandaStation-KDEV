@@ -143,6 +143,14 @@
 	if(!istype(board, board_type) || !board.build_path)
 		balloon_alert(user, "invalid board!")
 		return FALSE
+	if(by_hand)
+		var/initial_state = state
+		var/was_anchored = anchored
+		var/duration = 3 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "build")
+		if(!do_after(user, duration, target = src))
+			return FALSE
+		if(QDELETED(src) || QDELETED(board) || circuit || state != initial_state || anchored != was_anchored || !user.is_holding(board) || !user.can_perform_action(src))
+			return FALSE
 	if(by_hand && !user.transferItemToLoc(board, src))
 		return FALSE
 	else if(!board.forceMove(src))
@@ -192,6 +200,15 @@
 		var/close_enough = istype(replacer, /obj/item/storage/part_replacer/bluespace) || user.Adjacent(src)
 		if(!close_enough)
 			return FALSE
+
+	var/initial_state = state
+	var/duration = 3 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "build")
+	if(!do_after(user, duration, target = src))
+		return FALSE
+	if(QDELETED(src) || QDELETED(target_board) || QDELETED(replacer) || circuit || state != initial_state || target_board.loc != replacer || !user.is_holding(replacer))
+		return FALSE
+	if(!istype(replacer, /obj/item/storage/part_replacer/bluespace) && !user.can_perform_action(src))
+		return FALSE
 
 	if(install_board(user, target_board, by_hand = FALSE))
 		// After installing, attempts to follow up by inserting parts

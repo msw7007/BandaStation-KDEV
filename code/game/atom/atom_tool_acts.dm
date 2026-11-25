@@ -358,7 +358,7 @@
 	if(!is_cyberpunk_structure_target())
 		return
 	tool.play_tool_sound(src)
-	var/analyze_time = 2 SECONDS * user.get_cyberpunk_analysis_time_multiplier()
+	var/analyze_time = 5 SECONDS * user.get_cyberpunk_analysis_time_multiplier()
 	if(analyze_time > 0 && !do_after(user, analyze_time, target = src))
 		return TRUE
 	mark_cyberpunk_analyzed(user)

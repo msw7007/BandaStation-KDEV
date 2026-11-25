@@ -140,6 +140,10 @@
 /obj/item/analyzer/attack_self(mob/user, modifiers)
 	if(user.stat != CONSCIOUS || !user.can_read(src) || user.is_blind())
 		return
+	var/mob/living/operator = user
+	var/turf/scan_target = get_turf(src)
+	if(!istype(operator) || !wait_for_air_scan(operator, scan_target))
+		return
 	atmos_scan(user=user, target=get_turf(src), silent=FALSE)
 	on_analyze(source=src, target=get_turf(src))
 
@@ -158,8 +162,16 @@
 
 /obj/item/analyzer/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	if(!HAS_TRAIT(interacting_with, TRAIT_COMBAT_MODE_SKIP_INTERACTION) && can_see(user, interacting_with, ranged_scan_distance))
+		if(!wait_for_air_scan(user, interacting_with))
+			return ITEM_INTERACT_BLOCKING
 		atmos_scan(user, interacting_with.return_analyzable_air() ? interacting_with : get_turf(interacting_with))
 	return NONE // Non-blocking
+
+/obj/item/analyzer/proc/wait_for_air_scan(mob/living/user, atom/scan_target)
+	var/duration = 3 SECONDS * user.get_cyberpunk_analysis_time_multiplier()
+	if(!do_after(user, duration, target = scan_target))
+		return FALSE
+	return !QDELETED(src) && !QDELETED(scan_target) && can_see(user, scan_target, ranged_scan_distance)
 
 /// Called when our analyzer is used on something
 /obj/item/analyzer/proc/on_analyze(datum/source, atom/target)

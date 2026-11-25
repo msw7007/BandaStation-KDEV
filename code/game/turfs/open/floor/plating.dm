@@ -45,6 +45,10 @@
 /turf/open/floor/plating/attackby(obj/item/C, mob/user, list/modifiers)
 	if(..())
 		return
+	var/mob/living/builder = user
+	if(!istype(builder))
+		return
+	var/work_multiplier = builder.get_cyberpunk_structure_time_multiplier(src, "build")
 	if(istype(C, /obj/item/stack/rods) && attachment_holes)
 		if(broken || burnt)
 			if(!iscyborg(user))
@@ -58,7 +62,7 @@
 			return
 		else
 			to_chat(user, span_notice("You begin reinforcing the floor..."))
-			if(do_after(user, 3 SECONDS, target = src))
+			if(do_after(user, 3 SECONDS * work_multiplier, target = src))
 				if (R.get_amount() >= 2 && !istype(src, /turf/open/floor/engine))
 					place_on_top(/turf/open/floor/engine, flags = CHANGETURF_INHERIT_AIR)
 					playsound(src, 'sound/items/deconstruct.ogg', 80, TRUE)
@@ -67,6 +71,9 @@
 				return
 	else if(istype(C, /obj/item/stack/tile))
 		if(!broken && !burnt)
+			var/initial_type = type
+			if(!do_after(user, 2 SECONDS * work_multiplier, target = src) || QDELETED(src) || QDELETED(C) || initial_type != type || broken || burnt || !builder.is_holding(C))
+				return
 			for(var/obj/O in src)
 				for(var/M in O.buckled_mobs)
 					to_chat(user, span_warning("Someone is buckled to \the [O]! Unbuckle [M] to move \him out of the way."))
@@ -79,7 +86,7 @@
 			else
 				balloon_alert(user, "too damaged, use a welding or plating repair tool!")
 	else if(istype(C, /obj/item/cautery/prt)) //plating repair tool
-		if((broken || burnt) && C.use_tool(src, user, 0, volume=80))
+		if((broken || burnt) && C.tool_start_check(user) && C.use_tool(src, user, 2 SECONDS, volume = 80) && (broken || burnt))
 			to_chat(user, span_danger("You fix some dents on the broken plating."))
 			icon_state = base_icon_state
 			burnt = FALSE
@@ -91,7 +98,7 @@
 			if(sheets.get_amount() < PLATE_REINFORCE_COST)
 				return
 			balloon_alert(user, "reinforcing plating...")
-			if(do_after(user, 12 SECONDS, target = src))
+			if(do_after(user, 12 SECONDS * work_multiplier, target = src))
 				if(sheets.get_amount() < PLATE_REINFORCE_COST)
 					return
 				sheets.use(PLATE_REINFORCE_COST)
@@ -115,7 +122,7 @@
 			return
 		else
 			balloon_alert(user, "insulating flooring...")
-			if(!do_after(user, 1.5 SECONDS, target = src))
+			if(!do_after(user, 1.5 SECONDS * work_multiplier, target = src))
 				return
 			if(sheet.get_amount() < 1 || istype(src, /turf/open/floor/engine/insulation))
 				return
@@ -127,7 +134,7 @@
 
 /turf/open/floor/plating/welder_act(mob/living/user, obj/item/I)
 	..()
-	if((broken || burnt) && I.use_tool(src, user, 0, volume=80))
+	if((broken || burnt) && I.tool_start_check(user) && I.use_tool(src, user, 2 SECONDS, volume = 80) && (broken || burnt))
 		to_chat(user, span_danger("You fix some dents on the broken plating."))
 		icon_state = base_icon_state
 		burnt = FALSE
@@ -165,7 +172,8 @@
 		return NONE
 
 	var/obj/item/stack/tile/tiles = tool
-	if(!tiles.use(1))
+	var/duration = 2 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "build")
+	if(!do_after(user, duration, target = src) || QDELETED(src) || QDELETED(tiles) || !istype(src, /turf/open/floor/plating/foam) || !user.is_holding(tiles) || !tiles.use(1))
 		return ITEM_INTERACT_BLOCKING
 	var/obj/lattice = locate(/obj/structure/lattice) in src
 	if(lattice)

@@ -71,22 +71,25 @@
 /// When we attack something, try to scan something we hit with left click. Left-clicking uses scans for stats
 /obj/item/plant_analyzer/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
 	if(isliving(interacting_with))
-		playsound(src, SFX_INDUSTRIAL_SCAN, 20, TRUE, -2, TRUE, FALSE)
 		var/mob/living/living_target = interacting_with
 		if(living_target.mob_biotypes & MOB_PLANT)
+			if(!wait_for_plant_scan(user, living_target))
+				return ITEM_INTERACT_BLOCKING
+			playsound(src, SFX_INDUSTRIAL_SCAN, 20, TRUE, -2, TRUE, FALSE)
 			plant_biotype_health_scan(living_target, user)
 			return ITEM_INTERACT_SUCCESS
 		return ITEM_INTERACT_BLOCKING
 
-	shown_tab = PLANT_ANALYZER_STAT_TAB
 	var/obj/item/source_item = interacting_with
-	var/obj/item/seeds/source_seed
-	if(istype(source_item, /obj/item/seeds))
-		source_seed = source_item
-	else if(istype(source_item))
-		source_seed = source_item.get_plant_seed()
-	if(source_seed && user.can_read(src) && !user.is_blind())
-		cyberpunk_capture_gene_sample(source_seed, user)
+	if(!is_valid_plant_scan_target(interacting_with))
+		return NONE
+	if(!wait_for_plant_scan(user, interacting_with))
+		return ITEM_INTERACT_BLOCKING
+	shown_tab = PLANT_ANALYZER_STAT_TAB
+	if(istype(source_item) && !user.is_blind())
+		var/obj/item/seeds/source_seed = istype(source_item, /obj/item/seeds) ? source_item : source_item.get_plant_seed()
+		if(source_seed)
+			cyberpunk_capture_gene_sample(source_seed, user)
 	return analyze(user, interacting_with)
 
 /// Same as above, but with right click. Right-clicking scans for chemicals.
@@ -102,16 +105,38 @@
  * returns FALSE if it's not an object or item that does something when we scan it.
  * returns TRUE if we can scan the object, and outputs the message to the USER.
  */
-/obj/item/plant_analyzer/proc/do_plant_chem_scan(atom/scan_target, mob/user)
+/obj/item/plant_analyzer/proc/do_plant_chem_scan(atom/scan_target, mob/living/user)
 	if(isliving(scan_target))
 		var/mob/living/living_target = scan_target
 		if(living_target.mob_biotypes & MOB_PLANT)
+			if(!wait_for_plant_scan(user, living_target))
+				return ITEM_INTERACT_BLOCKING
 			plant_biotype_chem_scan(scan_target, user)
 			return ITEM_INTERACT_SUCCESS
 		return ITEM_INTERACT_BLOCKING
 
+	if(!is_valid_plant_scan_target(scan_target))
+		return NONE
+	if(!wait_for_plant_scan(user, scan_target))
+		return ITEM_INTERACT_BLOCKING
 	shown_tab = PLANT_ANALYZER_CHEM_TAB
 	return analyze(user, scan_target)
+
+/obj/item/plant_analyzer/proc/is_valid_plant_scan_target(atom/scan_target)
+	if(istype(scan_target, /obj/machinery/hydroponics) || istype(scan_target, /obj/structure/glowshroom))
+		return TRUE
+	if(istype(scan_target, /obj/item/graft) || istype(scan_target, /obj/item/seeds))
+		return TRUE
+	var/obj/item/plant_item = scan_target
+	return istype(plant_item) && plant_item.get_plant_seed()
+
+/obj/item/plant_analyzer/proc/wait_for_plant_scan(mob/living/user, atom/scan_target)
+	if(!user.can_read(src))
+		return FALSE
+	var/duration = 4 SECONDS * user.get_cyberpunk_analysis_time_multiplier()
+	if(!do_after(user, duration, target = scan_target))
+		return FALSE
+	return !QDELETED(src) && !QDELETED(scan_target) && user.can_read(src)
 
 /*
  * Scan a living mob's (with MOB_PLANT biotype) health with the plant analyzer. No wound scanning, though.

@@ -170,14 +170,16 @@
 
 	switch(state)
 		if(FRAME_COMPUTER_STATE_BOARD_INSTALLED)
-			tool.play_tool_sound(src)
+			if(!tool.use_tool(src, user, 2 SECONDS) || state != FRAME_COMPUTER_STATE_BOARD_INSTALLED)
+				return ITEM_INTERACT_BLOCKING
 			balloon_alert(user, "circuit secured")
 			state = FRAME_COMPUTER_STATE_BOARD_SECURED
 			update_appearance(UPDATE_ICON_STATE)
 			return ITEM_INTERACT_SUCCESS
 
 		if(FRAME_COMPUTER_STATE_BOARD_SECURED)
-			tool.play_tool_sound(src)
+			if(!tool.use_tool(src, user, 2 SECONDS) || state != FRAME_COMPUTER_STATE_BOARD_SECURED)
+				return ITEM_INTERACT_BLOCKING
 			balloon_alert(user, "circuit unsecured")
 			state = FRAME_COMPUTER_STATE_BOARD_INSTALLED
 			update_appearance(UPDATE_ICON_STATE)
@@ -199,7 +201,9 @@
 
 	switch(state)
 		if(FRAME_COMPUTER_STATE_BOARD_INSTALLED)
-			tool.play_tool_sound(src)
+			var/obj/item/circuitboard/installed_board = circuit
+			if(!tool.use_tool(src, user, 2 SECONDS) || circuit != installed_board || state != FRAME_COMPUTER_STATE_BOARD_INSTALLED)
+				return ITEM_INTERACT_BLOCKING
 			balloon_alert(user, "circuit removed")
 			circuit.add_fingerprint(user)
 			circuit.forceMove(drop_location())
@@ -214,7 +218,8 @@
 			return ITEM_INTERACT_BLOCKING
 
 		if(FRAME_COMPUTER_STATE_GLASSED)
-			tool.play_tool_sound(src)
+			if(!tool.use_tool(src, user, 2 SECONDS) || state != FRAME_COMPUTER_STATE_GLASSED)
+				return ITEM_INTERACT_BLOCKING
 			balloon_alert(user, "glass removed")
 			state = FRAME_COMPUTER_STATE_WIRED
 			update_appearance(UPDATE_ICON_STATE)
@@ -230,7 +235,8 @@
 	if(state != FRAME_COMPUTER_STATE_WIRED)
 		return ITEM_INTERACT_BLOCKING
 
-	tool.play_tool_sound(src)
+	if(!tool.use_tool(src, user, 2 SECONDS) || state != FRAME_COMPUTER_STATE_WIRED)
+		return ITEM_INTERACT_BLOCKING
 	balloon_alert(user, "cables removed")
 	state = FRAME_COMPUTER_STATE_BOARD_SECURED
 	update_appearance(UPDATE_ICON_STATE)
@@ -294,7 +300,9 @@
 		balloon_alert(user, "frame must be anchored!")
 		return FALSE
 
-	tool.play_tool_sound(src)
+	var/obj/item/circuitboard/installed_board = circuit
+	if(!tool.use_tool(src, user, 4 SECONDS) || QDELETED(src) || circuit != installed_board || state != FRAME_COMPUTER_STATE_GLASSED || !anchored)
+		return FALSE
 	var/obj/machinery/new_machine = new circuit.build_path(loc)
 	new_machine.balloon_alert(user, "monitor connected")
 	new_machine.setDir(dir)
