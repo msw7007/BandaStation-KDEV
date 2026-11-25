@@ -1073,8 +1073,7 @@
 		var/obj/item/graft/snip = O
 		if(!myseed)
 			if(tray_flags & GRAFT_MEDIUM)
-				propagate_plant(snip.plant_dna, user)
-				qdel(snip)
+				propagate_plant(snip.plant_dna, user, snip)
 				return
 			to_chat(user, span_notice("The tray is empty."))
 			return
@@ -1261,8 +1260,8 @@
 	C.set_faction(list(FACTION_PLANTS))
 
 /// Plants the seed / graft into the tray and resets growth related stats such as maturity on the tray.
-/obj/machinery/hydroponics/proc/propagate_plant(obj/item/seeds/young_plant, mob/living/user)
-	if(!istype(young_plant))
+/obj/machinery/hydroponics/proc/propagate_plant(obj/item/seeds/young_plant, mob/living/user, obj/item/graft/graft_source)
+	if(!istype(young_plant) || QDELETED(young_plant))
 		return
 	if(myseed)
 		to_chat(user, span_warning("[src] already has a plant growing in it!"))
@@ -1270,20 +1269,36 @@
 	if(young_plant.seed_flags & NO_PLANTING)
 		to_chat(user, span_warning("[young_plant] cannot be planted in [src]!"))
 		return
+	var/obj/item/planting_item = graft_source || young_plant
+	var/atom/original_item_location = planting_item.loc
+	var/planting_time = 4 SECONDS * user.get_cyberpunk_gardening_planting_time_multiplier()
+	if(!do_after(user, planting_time, target = src))
+		return
+	if(QDELETED(src) || QDELETED(user) || QDELETED(planting_item) || QDELETED(young_plant))
+		return
+	if(planting_item.loc != original_item_location || !user.can_perform_action(src))
+		return
+	if(myseed)
+		to_chat(user, span_warning("[src] already has a plant growing in it!"))
+		return
+	if(graft_source && (!(tray_flags & GRAFT_MEDIUM) || graft_source.plant_dna != young_plant))
+		return
+	if(!user.transferItemToLoc(planting_item, src))
+		return
 	if(istype(young_plant, /obj/item/seeds/kudzu))
 		investigate_log("had Kudzu planted in it by [key_name(user)] at [AREACOORD(src)].", INVESTIGATE_BOTANY)
-	if(prob(user.get_cyberpunk_gardening_plant_ruin_chance()))
-		user.visible_message(span_warning("[user] ruins [young_plant] while trying to plant it."), span_warning("You ruin [young_plant] while trying to plant it."))
-		qdel(young_plant)
-		return
-	if(!user.transferItemToLoc(young_plant, src))
-		return
 	SEND_SIGNAL(young_plant, COMSIG_SEED_ON_PLANTED, src)
 	to_chat(user, span_notice("You plant [young_plant]."))
 	cyberpunk_gardener = WEAKREF(user)
 	set_seed(young_plant)
-	set_plant_health(myseed.endurance)
+	var/starting_health = myseed.endurance
+	if(prob(max(0, 20 - user.get_cyberpunk_skill_perk_bonus(SKILL_GARDENING, 1))))
+		starting_health = max(1, starting_health * 0.65)
+		to_chat(user, span_warning("Росток прижился, но выглядит ослабленным."))
+	set_plant_health(starting_health)
 	lastcycle = world.time
+	if(graft_source)
+		qdel(graft_source)
 
 /// Clears the plant from the tray, killing it in the process, optionally clearing weeds as well.
 /obj/machinery/hydroponics/proc/remove_plant(clear_weeds = TRUE)

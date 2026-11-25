@@ -493,8 +493,9 @@
 //source is an object caused electrocuting (airlock, grille, etc)
 //siemens_coeff - layman's terms, conductivity
 //dist_check - set to only shock mobs within 1 of source (vendors, airlocks, etc.)
+//shock_flags - passed to the victim's electrocute_act.
 //No animations will be performed by this proc.
-/proc/electrocute_mob(mob/living/carbon/victim, power_source, obj/source, siemens_coeff = 1, dist_check = FALSE)
+/proc/electrocute_mob(mob/living/carbon/victim, power_source, obj/source, siemens_coeff = 1, dist_check = FALSE, shock_flags = NONE)
 	if(!istype(victim) || ismecha(victim.loc))
 		return FALSE //feckin mechs are dumb
 
@@ -526,7 +527,7 @@
 	else
 		power_source = cell
 		shock_damage = cell_damage
-	var/drained_hp = victim.electrocute_act(shock_damage, source, siemens_coeff) //zzzzzzap!
+	var/drained_hp = victim.electrocute_act(shock_damage, source, siemens_coeff, shock_flags) //zzzzzzap!
 	log_combat(source, victim, "electrocuted")
 
 	var/drained_energy = drained_hp*20

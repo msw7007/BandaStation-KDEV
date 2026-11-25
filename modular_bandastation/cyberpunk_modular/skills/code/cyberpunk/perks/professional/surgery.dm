@@ -7,7 +7,7 @@
 
 /datum/skill_perk/professional/surgery/perk_2
 	name = "База операций"
-	desc = "База операций всех трех уровней повышена на {value_1}%, {value_2}% и {value_3}% соответтвенно."
+	desc = "Ускоряет простые, сложные и редкие этапы операции на {value_1}%, {value_2}% и {value_3}% соответственно. Также увеличивает объём лечения мозга за этап."
 	effectiveness_values = list(1, 2, 3, 4)
 	effectiveness_by_key = list(
 		"value_1" = list(15, 30, 45, 60),

@@ -407,20 +407,16 @@
 		analysis_depth = max(analysis_depth, 3)
 	return max(base_depth, analysis_depth)
 
-/mob/living/proc/get_cyberpunk_surgery_time_multiplier()
+/mob/living/proc/get_cyberpunk_surgery_time_multiplier(datum/surgery_operation/operation)
 	var/speed_bonus = get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 3)
-	return 1 / max(0.1, 1 + speed_bonus * 0.01)
-
-/mob/living/proc/get_cyberpunk_surgery_failure_reduction(datum/surgery_operation/operation)
-	var/tier = operation?.get_cyberpunk_step_severity() || SURGERY_STEP_SEVERITY_BASIC
-	switch(tier)
+	switch(operation.get_cyberpunk_step_severity())
 		if(SURGERY_STEP_SEVERITY_BASIC)
-			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_1")
+			speed_bonus += get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_1")
 		if(SURGERY_STEP_SEVERITY_ADVANCED)
-			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_2")
+			speed_bonus += get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_2")
 		if(SURGERY_STEP_SEVERITY_RARE)
-			return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_3")
-	return 0
+			speed_bonus += get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 2, "value_3")
+	return 1 / max(0.1, 1 + speed_bonus * 0.01)
 
 /mob/living/proc/get_cyberpunk_surgery_sterility_chance()
 	return get_cyberpunk_skill_perk_bonus(SKILL_SURGERY, 4)
@@ -526,8 +522,8 @@
 /mob/living/proc/get_cyberpunk_gardening_safe_mutation_chance()
 	return get_cyberpunk_skill_perk_bonus(SKILL_GARDENING, 5)
 
-/mob/living/proc/get_cyberpunk_gardening_plant_ruin_chance()
-	return max(0, 20 - get_cyberpunk_skill_perk_bonus(SKILL_GARDENING, 1))
+/mob/living/proc/get_cyberpunk_gardening_planting_time_multiplier()
+	return 1 - get_cyberpunk_skill_perk_bonus(SKILL_GARDENING, 1) * 0.01
 
 /mob/living/proc/get_cyberpunk_stamina_cost_multiplier(source)
 	if(has_character_giga_perk(ATTRIBUTE_SPIRIT) && prob(get_character_skill_level(SKILL_ATHLETICS) * 15))

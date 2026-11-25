@@ -44,6 +44,8 @@
 	var/h_ion_mod = 1
 	///Temp mod
 	var/thermic_mod = 1
+	/// Output adjustment decided when an operator starts this batch.
+	var/cyberpunk_batch_yield_multiplier = 1
 	///Allow us to deal with lag by "charging" up our reactions to react faster over a period - this means that the reaction doesn't suddenly mass react - which can cause explosions
 	var/time_deficit
 	///Used to store specific data needed for a reaction, usually used to keep track of things between explosion calls. CANNOT be used as a part of chemical_recipe - those vars are static lookup tables.
@@ -78,6 +80,9 @@
 		return
 	speed_mod *= operator.get_cyberpunk_chemistry_speed_multiplier()
 	h_ion_mod *= operator.get_cyberpunk_chemistry_ph_drift_multiplier()
+	cyberpunk_batch_yield_multiplier = operator.get_cyberpunk_chemistry_yield_multiplier()
+	if(length(reaction.results) && prob(max(0, 20 - operator.get_cyberpunk_skill_perk_bonus(SKILL_CHEMISTRY, 4))))
+		cyberpunk_batch_yield_multiplier *= 0.85
 
 /datum/equilibrium/Destroy()
 	LAZYREMOVE(holder.reaction_list, src)
@@ -286,7 +291,6 @@
 	var/mob/living/operator = get_cyberpunk_reaction_operator()
 	var/ph_range_bonus = operator?.get_cyberpunk_chemistry_purity_range_bonus() || 0
 	var/effective_ph_range = reaction.determin_ph_range * (1 + ph_range_bonus * 0.01)
-	var/yield_multiplier = operator?.get_cyberpunk_chemistry_yield_multiplier() || 1
 
 	//Begin checks
 	//Calculate DeltapH (Deviation of pH from optimal)
@@ -383,7 +387,7 @@
 	var/total_step_added = 0
 	for(var/datum/reagent/product as anything in reaction.results)
 		//create the products
-		step_add = holder.add_reagent(product, delta_chem_factor * reaction.results[product] * yield_multiplier, null, cached_temp, purity, override_base_ph = TRUE)
+		step_add = holder.add_reagent(product, delta_chem_factor * reaction.results[product] * cyberpunk_batch_yield_multiplier, null, cached_temp, purity, override_base_ph = TRUE)
 		if(!step_add)
 			to_delete = TRUE
 			return

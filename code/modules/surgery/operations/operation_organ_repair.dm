@@ -620,26 +620,35 @@
 /datum/surgery_operation/organ/repair/brain/state_check(obj/item/organ/brain/organ)
 	return TRUE // always available so you can intentionally fail it
 
+/datum/surgery_operation/organ/repair/brain/can_loop(mob/living/patient, obj/item/organ/brain/organ, mob/living/surgeon, tool, list/operation_args)
+	return ..() && (organ.damage > 0 || operation_args[OPERATION_FORCE_FAIL])
+
+/datum/surgery_operation/organ/repair/brain/proc/get_brain_healing_amount(obj/item/organ/brain/organ, mob/living/surgeon)
+	var/surgery_rank = surgeon.get_character_perk_rank(SKILL_SURGERY, 2)
+	return organ.maxHealth * heal_to_percent * (0.4 + surgery_rank * 0.15)
+
 /datum/surgery_operation/organ/repair/brain/on_preop(obj/item/organ/brain/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	var/target_name = organ.owner ? "мозг [organ.owner.declent_ru(GENITIVE)]" : "извлечённый мозг"
 	display_results(
 		surgeon,
 		organ.owner,
-		span_notice("Вы начинаете лечить мозг [organ.owner.declent_ru(GENITIVE)]..."),
-		span_notice("[surgeon] начинает лечить мозг [organ.owner.declent_ru(GENITIVE)]."),
-		span_notice("[surgeon] начинает проводить операцию на мозге [organ.owner.declent_ru(GENITIVE)]."),
+		span_notice("Вы начинаете лечить [target_name]..."),
+		span_notice("[surgeon] начинает лечить [target_name]."),
+		span_notice("[surgeon] начинает операцию на мозге."),
 	)
 	display_pain(organ.owner, "Ваша голова пульсирует от невообразимой боли!")
 
 /datum/surgery_operation/organ/repair/brain/on_success(obj/item/organ/brain/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
-	organ.apply_organ_damage(-organ.maxHealth * heal_to_percent) // no parent call, special healing for this one
+	organ.apply_organ_damage(-get_brain_healing_amount(organ, surgeon))
 	organ.organ_flags &= ~ORGAN_EMP
 	organ.clear_organ_conditions()
+	var/target_name = organ.owner ? "мозг [organ.owner.declent_ru(GENITIVE)]" : "извлечённый мозг"
 	display_results(
 		surgeon,
 		organ.owner,
-		span_notice("Вам удалось прооперировать мозг [organ.owner.declent_ru(GENITIVE)]."),
-		span_notice("[surgeon] успешно оперирует мозг [organ.owner.declent_ru(GENITIVE)]!"),
-		span_notice("[surgeon] завершает операцию на мозге [organ.owner.declent_ru(GENITIVE)]."),
+		span_notice("Вы восстанавливаете ткани мозга."),
+		span_notice("[surgeon] успешно оперирует [target_name]."),
+		span_notice("[surgeon] заканчивает этап операции на мозге."),
 	)
 	display_pain(organ.owner, "Боль в голове отступает, думать становится немного легче!")
 	if (organ.owner)
@@ -649,10 +658,21 @@
 	else if (organ.brainmob)
 		organ.brainmob.mind?.remove_antag_datum(/datum/antagonist/brainwashed)
 	organ.cure_all_traumas(TRAUMA_RESILIENCE_SURGERY)
-	if(organ.damage > organ.maxHealth * 0.1)
-		to_chat(surgeon, "Мозг [organ.owner.declent_ru(GENITIVE)] выглядит так, будто его можно вылечить еще немного.")
+	if(organ.damage > 0)
+		to_chat(surgeon, span_notice("Часть повреждений ещё предстоит залечить."))
 
 /datum/surgery_operation/organ/repair/brain/on_failure(obj/item/organ/brain/organ, mob/living/surgeon, obj/item/tool, list/operation_args)
+	if(!operation_args[OPERATION_FORCE_FAIL])
+		organ.apply_organ_damage(-get_brain_healing_amount(organ, surgeon) * 0.5)
+		display_results(
+			surgeon,
+			organ.owner,
+			span_warning("Ткани поддаются лечению хуже, чем ожидалось. Вы восстанавливаете меньше повреждений."),
+			span_notice("[surgeon] осторожно продолжает восстанавливать ткани мозга."),
+			span_notice("[surgeon] продолжает операцию."),
+		)
+		return
+
 	. = ..()
 	display_results(
 		surgeon,

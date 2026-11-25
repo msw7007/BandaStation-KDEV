@@ -120,14 +120,11 @@
 	balloon_alert(user, "проводим проводку...")
 	playsound(src, 'sound/items/deconstruct.ogg', 50, TRUE)
 
-	if(!do_after(user, 2 SECONDS, target = src))
+	var/wiring_duration = 6 SECONDS * user.get_cyberpunk_structure_time_multiplier(src, "repair")
+	var/list/wiring = list("shock_at" = world.time + wiring_duration * user.cached_multiplicative_actions_slowdown * 0.5)
+	if(!do_after(user, wiring_duration, target = src, extra_checks = CALLBACK(src, PROC_REF(check_apc_wiring), user, installing_cable, terminal_cable_layer, wiring)))
 		return ITEM_INTERACT_BLOCKING
-	if(!can_place_terminal(user, installing_cable, silent = TRUE))
-		return ITEM_INTERACT_BLOCKING
-	var/turf/our_turf = get_turf(src)
-	var/obj/structure/cable/cable_node = our_turf.get_cable_node(terminal_cable_layer)
-	if(prob(50) && electrocute_mob(usr, cable_node, cable_node, 1, TRUE))
-		do_sparks(5, TRUE, src)
+	if(!check_apc_wiring(user, installing_cable, terminal_cable_layer, wiring))
 		return ITEM_INTERACT_BLOCKING
 	installing_cable.use(10)
 	user.visible_message(span_notice("[user.name] проводит проводку к [declent_ru(GENITIVE)]."))
@@ -135,6 +132,21 @@
 	make_terminal(terminal_cable_layer)
 	terminal.connect_to_network()
 	return ITEM_INTERACT_SUCCESS
+
+/// Check the work and resolve one live-wire contact during the wiring action.
+/obj/machinery/power/apc/proc/check_apc_wiring(mob/living/user, obj/item/stack/cable_coil/installing_cable, terminal_cable_layer, list/wiring)
+	if(QDELETED(src) || QDELETED(user) || QDELETED(installing_cable) || user.stat >= UNCONSCIOUS)
+		return FALSE
+	if(!user.is_holding(installing_cable) || !user.Adjacent(src) || !can_place_terminal(user, installing_cable))
+		return FALSE
+	var/shock_at = wiring["shock_at"]
+	if(shock_at && world.time >= shock_at)
+		wiring["shock_at"] = null
+		var/turf/our_turf = get_turf(src)
+		var/obj/structure/cable/cable_node = our_turf.get_cable_node(terminal_cable_layer)
+		if(cable_node && prob(50) && electrocute_mob(user, cable_node, cable_node, siemens_coeff = 0.3, dist_check = TRUE, shock_flags = SHOCK_NOSTUN))
+			do_sparks(5, TRUE, src)
+	return user.stat < UNCONSCIOUS
 
 /// Called when we interact with the APC with APC electronics, attempts to install the board
 /obj/machinery/power/apc/proc/electronics_act(mob/living/user, obj/item/electronics/apc/installing_board)

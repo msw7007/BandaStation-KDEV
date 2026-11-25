@@ -17,7 +17,7 @@
 
 /datum/skill_perk/professional/chemistry/perk_4
 	name = "Выход вещества"
-	desc = "Реакция, вызванная вами, образует дополнительно {value}% целевого вещества."
+	desc = "Реакция, вызванная вами, образует дополнительно {value}% целевого вещества. При длительной реакции реже возникают потери выхода."
 	effectiveness_values = list(5, 10, 15, 20)
 
 /datum/skill_perk/professional/chemistry/perk_5

@@ -2,7 +2,7 @@
 
 /datum/skill_perk/professional/gardening/perk_1
 	name = "Посадка"
-	desc = "+{value}% шанс не загубить посаженные вами семена."
+	desc = "Посадка семян и черенков требует на {value}% меньше времени. Ослабленные ростки встречаются реже."
 	effectiveness_values = list(15, 30, 45, 60)
 
 /datum/skill_perk/professional/gardening/perk_2

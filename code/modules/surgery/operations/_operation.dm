@@ -801,7 +801,6 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 		basemod *= 0.8
 	else
 		basemod *= 1 + round((drunkness ** 1.5) / 90, 0.1)
-	basemod *= surgeon.get_cyberpunk_surgery_time_multiplier()
 
 	return basemod
 
@@ -866,7 +865,6 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	if(istype(worn_gloves) && locate(/obj/item/clothing/accessory/gloves_accessory/ring) in worn_gloves.attached_accessories)
 		fail_chance += SURGERY_RING_FAIL_MOD - 5
 
-	fail_chance -= surgeon.get_cyberpunk_surgery_failure_reduction(src)
 	fail_chance -= surgeon.get_cyberpunk_surgical_processor_failure_reduction()
 	if(patient == surgeon && HAS_TRAIT(surgeon, TRAIT_SELF_SURGERY))
 		fail_chance -= 50
@@ -962,11 +960,12 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 
 	do
 		operation_args[OPERATION_SPEED] = get_time_modifiers(operating_on, surgeon, tool)
+		var/perk_time_multiplier = HAS_TRAIT(surgeon, TRAIT_IGNORE_SURGERY_MODIFIERS) ? 1 : surgeon.get_cyberpunk_surgery_time_multiplier(src)
 
 		if(!do_after(
 			user = surgeon,
-			// Actual delay is capped - think of the excess time as being added to failure chance instead
-			delay = time * min(operation_args[OPERATION_SPEED], SURGERY_MODIFIER_FAILURE_THRESHOLD),
+			// Poor conditions beyond the time cap add risk. Skill only changes the delay.
+			delay = time * min(operation_args[OPERATION_SPEED], SURGERY_MODIFIER_FAILURE_THRESHOLD) * perk_time_multiplier,
 			target = patient || operating_on,
 			extra_checks = CALLBACK(src, PROC_REF(operate_check), patient, operating_on, surgeon, tool, operation_args),
 			// You can only operate on one mob at a time without a hippocratic oath
