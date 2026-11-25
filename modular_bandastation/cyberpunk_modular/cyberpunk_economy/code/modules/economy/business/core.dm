@@ -259,13 +259,23 @@
 	var/stock_key = get_stock_key(item_label)
 	return stock_key ? (warehouse_stock[stock_key] || 0) : 0
 
-/datum/cyberpunk_business/proc/get_sellable_stock_amount(item_label)
-	var/amount = get_stock_amount(item_label)
-	if(amount <= 0)
+/datum/cyberpunk_business/proc/get_sellable_stock_amount(item_label, required_type)
+	var/stock_key = get_stock_key(item_label)
+	if(!stock_key)
 		return 0
+	var/physical_amount = 0
+	var/matching_amount = 0
+	for(var/list/record as anything in warehouse_items[stock_key])
+		var/units = record["stack_amount"] || 1
+		physical_amount += units
+		if(!required_type || record["type"] == "[required_type]")
+			matching_amount += units
+	var/legacy_type = text2path(warehouse_item_types[stock_key])
+	if(ispath(legacy_type, /obj/item) && (!required_type || legacy_type == required_type))
+		matching_amount += max(0, warehouse_stock[stock_key] - physical_amount)
 	if(warehouse_surplus_percent <= 0)
-		return amount
-	return max(0, round(amount * warehouse_surplus_percent / 100))
+		return matching_amount
+	return max(0, round(matching_amount * warehouse_surplus_percent / 100))
 
 /datum/cyberpunk_business/proc/add_stock(item_label, amount)
 	item_label = reject_bad_text(item_label, max_length = 64, ascii_only = FALSE)
@@ -883,6 +893,28 @@
 		return FALSE
 	return !!SScyberpunk_property.create_cyberpunk_business_delivery(src, item_label, amount, source_label)
 
+/datum/cyberpunk_business/proc/export_stock(mob/living/user, item_label, amount)
+	if(!legal || !warehouse_enabled || !warehouse_valid || !has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !has_access(user, CYBERPUNK_BUSINESS_ACCESS_FINANCE))
+		return FALSE
+	if(!isnum(amount) || amount < 1 || amount > 1000 || amount != round(amount))
+		return FALSE
+	var/stock_key = get_stock_key(item_label)
+	var/list/catalog = cyberpunk_external_trade_catalog()
+	var/item_type = catalog[lowertext(stock_key)]
+	if(!item_type)
+		return FALSE
+	var/typed_abstract = warehouse_item_types[stock_key] == "[item_type]"
+	var/list/packet = take_stock(stock_key, amount, item_type, allow_abstract = typed_abstract)
+	if(!packet)
+		return FALSE
+	var/unit_price = FLOOR(cyberpunk_external_trade_price(item_type) * 0.65, 1)
+	var/proceeds = unit_price * amount
+	if(packet["amount"] != amount || !record_income(proceeds, "Внешняя продажа: [amount] × [stock_key]"))
+		receive_stock(stock_key, packet)
+		return FALSE
+	add_history("Продано за город: [amount] × [stock_key] за [proceeds][MONEY_SYMBOL].")
+	return TRUE
+
 /datum/cyberpunk_business/proc/link_nearby_vendors(mob/living/user)
 	if(!has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK) || !terminal)
 		return FALSE
@@ -924,7 +956,7 @@
 				continue
 			restocked += vendor.cyberpunk_business_restock_from_warehouse()
 	if(restocked)
-		add_history("[user.real_name || user.name] restocked linked vendors with [restocked] item(s)")
+		add_history("[user.real_name || user.name] dispatched drones with [restocked] item(s) for linked vendors")
 	return restocked > 0
 
 /datum/cyberpunk_business/proc/auto_restock_linked_vendors()
@@ -932,14 +964,26 @@
 		return FALSE
 	last_auto_restock_at = world.time
 	var/restocked = 0
+	var/list/shortages = list()
 	for(var/turf/business_turf as anything in get_business_turfs())
 		for(var/obj/machinery/vending/vendor in business_turf.contents)
 			if(vendor.cyberpunk_business_id != id || !vendor.cyberpunk_business_auto_restock)
 				continue
-			restocked += vendor.cyberpunk_business_restock_from_warehouse()
+			restocked += vendor.cyberpunk_business_restock_from_warehouse(shortages)
 	if(restocked)
-		add_history("automatic vendor restock: [restocked] item(s)")
-	return restocked > 0
+		add_history("automatic vendor replenishment dispatched: [restocked] item(s)")
+	var/ordered = FALSE
+	for(var/obj/item/product as anything in shortages)
+		var/item_label = initial(product.name)
+		var/needed = shortages[product]
+		for(var/datum/cyberpunk_business_delivery/delivery as anything in deliveries)
+			if(delivery.status == "enroute" && !delivery.vending_product_ref && delivery.required_type == product)
+				needed -= delivery.amount
+		if(needed <= 0)
+			continue
+		if(SScyberpunk_property.create_cyberpunk_business_delivery(src, item_label, min(needed, 1000), "auto", required_type = product))
+			ordered = TRUE
+	return restocked > 0 || ordered
 
 /datum/cyberpunk_business/proc/to_ui_data(mob/living/user, include_history = FALSE)
 	var/datum/bank_account/account = get_account()
@@ -962,11 +1006,21 @@
 			"wage" = pending_employee["wage"],
 			"access" = pending_employee["access"],
 		))
+	var/list/external_catalog = list()
+	var/list/export_prices = list()
+	if(legal)
+		var/list/catalog = cyberpunk_external_trade_catalog()
+		for(var/catalog_name in catalog)
+			var/obj/item/product = catalog[catalog_name]
+			var/import_price = cyberpunk_external_trade_price(product)
+			external_catalog += list(list("name" = initial(product.name), "price" = import_price))
+			export_prices[catalog_name] = FLOOR(import_price * 0.65, 1)
 	var/list/stock_records = list()
 	for(var/stock_name in warehouse_stock)
 		stock_records += list(list(
 			"name" = stock_name,
 			"amount" = warehouse_stock[stock_name],
+			"exportPrice" = export_prices[lowertext(stock_name)] || 0,
 			"itemType" = warehouse_item_types[stock_name],
 			"canWithdraw" = !!warehouse_item_types[stock_name] || length(warehouse_items[stock_name]) > 0,
 			"price" = get_stock_price(stock_name),
@@ -1011,6 +1065,7 @@
 		"pendingEmployees" = pending_employee_records,
 		"canAcceptEmployment" = !!pending_employees[user_key(user)],
 		"stock" = stock_records,
+		"externalCatalog" = external_catalog,
 		"deliveries" = delivery_records,
 		"savedObjects" = islist(saved_snapshot) && islist(saved_snapshot["movables"]) ? length(saved_snapshot["movables"]) : 0,
 		"savedAt" = saved_at ? DisplayTimeText(world.time - saved_at) : null,

@@ -302,9 +302,9 @@
 		if("specialist-ripper")
 			return list("Medicine", "Chemistry", "Implants", "Biotech services")
 		if("specialist-engineer")
-			return list("Construction", "Repairs", "Equipment production", "Exosuit and ore work")
+			return list("Construction", "Repairs", "Equipment production", "Wreckage and exosuit research")
 		if("specialist-logist")
-			return list("Logistics", "Vehicle work", "Cargo movement", "Wreck and foreign tech scans")
+			return list("Logistics", "Vehicle work", "Cargo movement", "Ore research")
 		if("representative")
 			return list("Corporate development", "Profit routing", "Contracts", "Staff direction")
 		if("netrunner")
@@ -591,7 +591,7 @@
 
 /datum/job/cyberpunk/corporate/ryaznov_engineer
 	title = "Ryaznov Engineering Specialist"
-	description = "Ryaznov specialist: construction, repairs, fabrication, power, and heavy equipment."
+	description = "Ryaznov specialist: construction, repairs, fabrication, power, and wreckage research."
 	config_tag = "CYBERPUNK_RYAZNOV_ENGINEERING_SPECIALIST"
 	total_positions = 6
 	spawn_positions = 6
@@ -609,7 +609,7 @@
 
 /datum/job/cyberpunk/corporate/starlight_logist
 	title = "Starlight Logistics Specialist"
-	description = "Starlight specialist: vehicles, delivery, cargo routing, wreck recovery, and scans."
+	description = "Starlight specialist: vehicles, delivery, cargo routing, and ore research."
 	config_tag = "CYBERPUNK_STARLIGHT_LOGISTICS_SPECIALIST"
 	total_positions = 6
 	spawn_positions = 6

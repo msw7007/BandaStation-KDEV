@@ -182,7 +182,7 @@
 			continue
 
 		// Nothing would come from grinding or juicing
-		if(!length(ingredient.grind_results()) && !ingredient.reagents.total_volume)
+		if(!can_process_cyberpunk_donation(ingredient) && !length(ingredient.grind_results()) && !ingredient.reagents?.total_volume)
 			to_chat(user, span_warning("You cannot grind/juice [ingredient] into reagents!"))
 			continue
 
@@ -254,7 +254,7 @@
 		return ITEM_INTERACT_SUCCESS
 
 	//add item directly
-	else if(length(tool.grind_results()) || tool.reagents?.total_volume)
+	else if(can_process_cyberpunk_donation(tool) || length(tool.grind_results()) || tool.reagents?.total_volume)
 		if(tool.atom_storage && length(tool.contents)) //anything that has internal storage would be too much recursion for us to handle
 			to_chat(user, span_notice("Drag this item onto [src] to dump its contents, or empty it to grind the container."))
 			return ITEM_INTERACT_BLOCKING
@@ -429,6 +429,12 @@
 		//record item weight before & after blending
 		item_weight = ingredient.w_class
 
+		if(!juicing && can_process_cyberpunk_donation(ingredient) && cyberpunk_record_benn_biodata(src, "benn_donor_program", "Organ and limb recycling", 3))
+			to_chat(user, span_notice("Бэнь получила исследовательские данные после переработки [ingredient]."))
+			total_weight += item_weight
+			qdel(ingredient)
+			continue
+
 		if(juicing)
 			if(!ingredient.juice(beaker.reagents, user))
 				to_chat(user, span_danger("[src] shorts out as it tries to juice up [ingredient], and transfers it back to storage."))
@@ -450,6 +456,11 @@
 	use_energy((active_power_usage * (duration / (1 SECONDS))) * (total_weight / maximum_weight))
 
 	addtimer(CALLBACK(src, PROC_REF(stop_operating)), duration)
+
+/obj/machinery/reagentgrinder/proc/can_process_cyberpunk_donation(obj/item/item)
+	if(!isorgan(item) && !isbodypart(item))
+		return FALSE
+	return cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_BENN, "benn_donor_program", 2) > 1
 
 ///Reset the operating status of the machine
 /obj/machinery/reagentgrinder/proc/stop_operating()

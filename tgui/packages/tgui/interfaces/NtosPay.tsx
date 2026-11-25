@@ -21,6 +21,17 @@ type Data = {
   money: number;
   transaction_list: Transactions[];
   wanted_token: string;
+  shareMarket?: ShareQuote[];
+};
+
+type ShareQuote = {
+  id: string;
+  name: string;
+  buyPrice: number;
+  sellPrice: number;
+  available: number;
+  owned: number;
+  level: number;
 };
 
 type Transactions = {
@@ -40,7 +51,8 @@ export const NtosPay = (props) => {
 
 export const NtosPayContent = (props) => {
   const { data } = useBackend<Data>();
-  const { name } = data;
+  const { name, shareMarket } = data;
+  const [showExchange, setShowExchange] = useState(false);
 
   if (!name) {
     return (
@@ -56,13 +68,96 @@ export const NtosPayContent = (props) => {
       <Stack.Item>
         <Introduction />
       </Stack.Item>
-      <Stack.Item>
-        <TransferSection />
-      </Stack.Item>
-      <Stack.Item grow>
-        <TransactionHistory />
-      </Stack.Item>
+      {shareMarket && (
+        <Stack.Item>
+          <Button
+            selected={!showExchange}
+            onClick={() => setShowExchange(false)}
+          >
+            Счёт
+          </Button>
+          <Button selected={showExchange} onClick={() => setShowExchange(true)}>
+            Биржа корпораций
+          </Button>
+        </Stack.Item>
+      )}
+      {showExchange && shareMarket ? (
+        <Stack.Item grow>
+          <ShareExchange />
+        </Stack.Item>
+      ) : (
+        <>
+          <Stack.Item>
+            <TransferSection />
+          </Stack.Item>
+          <Stack.Item grow>
+            <TransactionHistory />
+          </Stack.Item>
+        </>
+      )}
     </Stack>
+  );
+};
+
+const ShareExchange = () => {
+  const { act, data } = useBackend<Data>();
+  const [quantity, setQuantity] = useState(1);
+  const [validQuantity, setValidQuantity] = useState(true);
+  const quantityIsValid =
+    validQuantity && Number.isInteger(quantity) && quantity > 0;
+  return (
+    <Section fill scrollable title="Акции корпораций">
+      <Stack vertical>
+        <Stack.Item>
+          <RestrictedInput
+            minValue={1}
+            maxValue={300}
+            onChange={setQuantity}
+            onValidationChange={setValidQuantity}
+            value={quantity}
+          />
+          {' Количество акций для сделки'}
+        </Stack.Item>
+        {data.shareMarket?.map((quote) => (
+          <Stack.Item key={quote.id}>
+            <Section title={quote.name}>
+              <Box mb={1}>
+                Уровень {quote.level} · На бирже {quote.available} · У вас{' '}
+                {quote.owned}
+              </Box>
+              <Button
+                disabled={
+                  !quantityIsValid ||
+                  quantity > quote.available ||
+                  quantity * quote.buyPrice > data.money
+                }
+                onClick={() =>
+                  act('buy_corporate_shares', {
+                    issuer: quote.id,
+                    quantity,
+                    price: quote.buyPrice,
+                  })
+                }
+              >
+                Купить · {quote.buyPrice * quantity}¢
+              </Button>
+              <Button
+                disabled={!quantityIsValid || quantity > quote.owned}
+                onClick={() =>
+                  act('sell_corporate_shares', {
+                    issuer: quote.id,
+                    quantity,
+                    price: quote.sellPrice,
+                  })
+                }
+              >
+                Продать · {quote.sellPrice * quantity}¢
+              </Button>
+            </Section>
+          </Stack.Item>
+        ))}
+      </Stack>
+    </Section>
   );
 };
 

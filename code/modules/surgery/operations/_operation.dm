@@ -1268,6 +1268,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	if(operation_flags & OPERATION_NOTABLE)
 		SSblackbox.record_feedback("tally", "surgeries_completed", 1, type)
 		surgeon.add_mob_memory(/datum/memory/surgery, deuteragonist = get_patient(operating_on) || operating_on, surgery_type = name)
+		cyberpunk_record_benn_biodata(operating_on, "benn_self_analysis", "Completed surgery")
 
 	SEND_SIGNAL(surgeon, COMSIG_ATOM_SURGERY_SUCCESS, src, operating_on, tool)
 	apply_surgery_sterility(operating_on, surgeon)

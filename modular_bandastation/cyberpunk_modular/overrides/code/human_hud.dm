@@ -217,7 +217,38 @@
 	add_screen_object(/atom/movable/screen/cp13_emotes, "cp13_emotes", HUD_GROUP_STATIC)
 	add_screen_object(/atom/movable/screen/cp13_underwear, "cp13_underwear", HUD_GROUP_TOGGLEABLE_INVENTORY)
 	add_screen_object(/atom/movable/screen/cp13_accessories, "cp13_accessories", HUD_GROUP_TOGGLEABLE_INVENTORY)
+	add_screen_object(/atom/movable/screen/cp13_vitals, "cp13_vitals", HUD_GROUP_INFO)
 	cp13_position_controls()
+	cp13_update_vitals()
+
+/datum/hud/human/proc/cp13_update_vitals()
+	var/mob/living/carbon/human/owner = mymob
+	var/atom/movable/screen/cp13_vitals/vitals = screen_objects["cp13_vitals"]
+	if(!istype(owner) || QDELETED(vitals))
+		return
+	if(owner.stat == DEAD)
+		vitals.maptext = null
+		return
+
+	var/hydration_color = owner.has_thirst() ? "#f0b45e" : "#a4c4cb"
+	var/rest_color = owner.has_sleepiness() ? "#f0b45e" : "#a4c4cb"
+	var/overheat_limit = round(owner.get_effective_chromity(), 0.1)
+	var/heat_color = owner.chromity_overheat > overheat_limit ? "#ff7979" : "#a4c4cb"
+	var/html = MAPTEXT("<div style='background-color:#111921;font-size:8px;padding:2px 4px'>\
+		<span style='color:[hydration_color]'>Вода [round(owner.hydration)]</span><br>\
+		<span style='color:[rest_color]'>Отдых [round(owner.tireness)]</span><br>\
+		<span style='color:#a4c4cb'>Запас сил [round(owner.energy_pool)]/[round(owner.max_energy_pool)]</span><br>\
+		<span style='color:[heat_color]'>Нагрев [round(owner.chromity_overheat, 0.1)]/[overheat_limit]</span></div>")
+	if(vitals.maptext != html)
+		vitals.maptext = html
+
+/atom/movable/screen/cp13_vitals
+	name = "Показатели организма"
+	icon = null
+	screen_loc = "EAST-3:4,SOUTH+4:0"
+	maptext_width = 104
+	maptext_height = 48
+	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 
 /datum/hud/human/build_hand_slots(update_hud = FALSE)
 	. = ..()

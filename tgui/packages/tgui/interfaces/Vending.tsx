@@ -46,6 +46,11 @@ type Category = {
 
 type VendingData = {
   cargoTracking?: boolean;
+  diagnostics?: {
+    type: 'medical' | 'technical';
+    canPrint: boolean;
+    price: number;
+  };
   corporateChip?: { name: string; price: number };
   corporateSupply?: { active: boolean; interval: string; next: string };
   all_products_free: boolean;
@@ -134,6 +139,31 @@ export const Vending = () => {
               >
                 Attach cargo tracker
               </Button>
+            </Stack.Item>
+          )}
+          {data.diagnostics && (
+            <Stack.Item>
+              <Section title="Диагностика">
+                <Button
+                  icon="magnifying-glass"
+                  onClick={() => act('corporate_diagnostics')}
+                >
+                  {data.diagnostics.type === 'medical'
+                    ? 'Проверить здоровье'
+                    : 'Проверить оборудование'}
+                  {data.diagnostics.price > 0
+                    ? ` · ${data.diagnostics.price} кр.`
+                    : ''}
+                </Button>
+                {data.diagnostics.canPrint && (
+                  <Button
+                    icon="print"
+                    onClick={() => act('print_corporate_diagnostics')}
+                  >
+                    Распечатать отчёт
+                  </Button>
+                )}
+              </Section>
             </Stack.Item>
           )}
           {data.corporateChip && (

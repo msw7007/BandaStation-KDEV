@@ -892,6 +892,7 @@
 	chromity_overheat = 2
 	var/armor_value = 8
 	var/speed_penalty = 0.05
+	var/style_penalty = 2
 
 /obj/item/organ/cyberimp/utility/skull/subdermal_armor/Initialize(mapload)
 	. = ..()

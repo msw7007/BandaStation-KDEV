@@ -22,15 +22,7 @@ SUBSYSTEM_DEF(statpanels)
 		num_fires++
 		var/datum/map_config/cached = SSmap_vote.next_map_config
 
-		if(isnull(SSmapping.current_map))
-			global_data = list("Loading")
-		else if(SSmapping.current_map.feedback_link)
-			global_data = list(list("Map: [SSmapping.current_map.map_name]", " (Feedback)", "action=openLink&link=[SSmapping.current_map.feedback_link]"))
-		else
-			global_data = list("Map: [SSmapping.current_map?.map_name]")
-
-		if(SSmapping.current_map?.mapping_url)
-			global_data += list(list("same_line", " | (View in Browser)", "action=openWebMap"))
+		global_data = get_map_status()
 
 		if(cached)
 			global_data += "Next Map: [cached.map_name]"
@@ -98,11 +90,24 @@ SUBSYSTEM_DEF(statpanels)
  * 4- a list with "same_line" as the first entry, which will automatically put it on the line above it,
  * with the second/third entry matching #3 (text & url), allowing you to have 2 clickable links on one line.
  */
+/datum/controller/subsystem/statpanels/proc/get_map_status()
+	var/datum/map_config/map = SSmapping?.current_map
+	if(!map)
+		return list("Loading")
+	if(!SSmapping.initialized)
+		return list("Loading: [map.map_name]")
+	var/list/status = list()
+	if(map.feedback_link)
+		status += list(list("Map: [map.map_name]", " (Feedback)", "action=openLink&link=[map.feedback_link]"))
+	else
+		status += "Map: [map.map_name]"
+	if(map.mapping_url)
+		status += list(list("same_line", " | (View in Browser)", "action=openWebMap"))
+	return status
+
 /datum/controller/subsystem/statpanels/proc/set_status_tab(client/target)
-	if(!global_data)//statbrowser hasnt fired yet and we were called from immediate_send_stat_data()
-		return
 	target.stat_panel.send_message("update_stat", list(
-		"global_data" = global_data,
+		"global_data" = SSmapping?.initialized && global_data ? global_data : get_map_status(),
 		"other_str" = target.mob?.get_status_tab_items(),
 	))
 

@@ -7,6 +7,8 @@
 	var/account_holder = "Rusty Venture"
 	///How many credits are currently held in the bank account.
 	var/account_balance = 0
+	/// Round-local holdings on the corporate exchange, keyed by issuer ID.
+	var/list/cyberpunk_share_holdings
 	///How many mining points (shaft miner credits) is held in the bank account, used for mining vendors.
 	var/mining_points = 0
 	/// Points for bit runner's vendor. Awarded for completing virtual domains.

@@ -27,6 +27,7 @@
 	var/cyberpunk_business_auto_restock = FALSE
 	var/cyberpunk_business_markup_percent = 0
 	var/cyberpunk_business_minimum_stock = 0
+	var/datum/weakref/cyberpunk_refill_in_progress
 	cyberpunk_public_access = TRUE
 
 /obj/machinery/vending/proc/has_business_vending_module()
@@ -60,11 +61,24 @@
 	var/markup = clamp(round(cyberpunk_business_markup_percent), -100, 500)
 	return max(0, round(base_price * (100 + markup) / 100))
 
-/obj/machinery/vending/proc/cyberpunk_business_restock_from_warehouse()
+/obj/machinery/vending/proc/cyberpunk_business_restock_from_warehouse(list/shortages)
 	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(cyberpunk_business_id)
-	if(!business || !business.warehouse_enabled || !business.warehouse_valid)
+	var/datum/cyberpunk_business_delivery/active_refill = cyberpunk_refill_in_progress?.resolve()
+	if(active_refill?.status == "enroute" || !business || !business.warehouse_enabled || !business.warehouse_valid)
 		return 0
-	var/restocked = 0
+	var/obj/structure/cyberpunk_business_unload_zone/source = business.get_unload_zone()
+	if(!source || !business.validate_unload_zone())
+		return 0
+	var/area/business_area = business.get_business_area()
+	var/turf/landing
+	for(var/direction in GLOB.cardinals)
+		var/turf/candidate = get_step(src, direction)
+		if(!candidate || get_area(candidate) != business_area || isspaceturf(candidate) || candidate.is_blocked_turf(exclude_mobs = TRUE))
+			continue
+		if(!landing || get_dist(source, candidate) < get_dist(source, landing))
+			landing = candidate
+	if(!landing)
+		return 0
 	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
 		var/stock_multiplier = get_cyberpunk_machine_vending_stock_multiplier()
 		stock_multiplier *= get_cyberpunk_corporate_stock_multiplier()
@@ -74,15 +88,15 @@
 		if(needed <= 0)
 			continue
 		var/taken = 0
-		// The display name may be translated, changed by the user, or shared by different item types.
+		var/list/physical_lots = list()
+		// Match by type so renamed items retain their individual properties.
 		for(var/stock_key in business.warehouse_stock.Copy())
 			if(!length(business.warehouse_items[stock_key]))
 				continue
 			var/list/packet = business.take_stock(stock_key, needed - taken, record.product_path, allow_abstract = FALSE)
 			if(!packet)
 				continue
-			var/list/lots = packet["items"]
-			record.cyberpunk_warehouse_items = (record.cyberpunk_warehouse_items || list()) + lots
+			physical_lots += packet["items"]
 			taken += packet["amount"]
 			if(taken >= needed)
 				break
@@ -92,11 +106,40 @@
 			taken += business.consume_fungible_stock("[record.product_path]", needed - taken, record.product_path)
 		if(taken < needed)
 			taken += business.consume_fungible_stock("goods", needed - taken, record.product_path)
-		record.amount += taken
-		restocked += taken
-	if(restocked)
-		business.add_history("[name] restocked [restocked] item(s) from warehouse")
-	return restocked
+		if(shortages && taken < needed && record.product_path)
+			shortages[record.product_path] = (shortages[record.product_path] || 0) + needed - taken
+		if(!taken)
+			continue
+
+		var/datum/cyberpunk_business_delivery/refill = new
+		refill.id = SScyberpunk_property.next_cyberpunk_business_delivery_id++
+		refill.business_id = business.id
+		refill.source_business_id = business.id
+		refill.item_label = record.name
+		refill.required_type = record.product_path
+		refill.amount = taken
+		refill.source_label = business.name
+		refill.destination_label = name
+		refill.created_at = world.time
+		refill.stock_packet = list("amount" = taken, "items" = physical_lots, "legacy_type" = "[record.product_path]")
+		refill.vending_product_ref = WEAKREF(record)
+		SScyberpunk_property.cyberpunk_business_deliveries["[refill.id]"] = refill
+		business.deliveries += refill
+		cyberpunk_refill_in_progress = WEAKREF(refill)
+		refill.begin_warehouse_delivery(source, src, landing)
+		return taken
+	return 0
+
+/obj/machinery/vending/proc/receive_cyberpunk_business_refill(datum/cyberpunk_business/business, datum/data/vending_product/product, list/packet)
+	if(QDELETED(product) || !packet || business.id != cyberpunk_business_id || !has_business_vending_module())
+		return FALSE
+	if(!(product in product_records) && !(product in coin_records) && !(product in hidden_records))
+		return FALSE
+	if(LAZYLEN(packet["items"]))
+		product.cyberpunk_warehouse_items = (product.cyberpunk_warehouse_items || list()) + packet["items"]
+	product.amount += packet["amount"]
+	update_appearance()
+	return TRUE
 
 /obj/machinery/vending/proc/dispense_cyberpunk_warehouse_item(datum/data/vending_product/record, atom/location)
 	var/list/lots = record.cyberpunk_warehouse_items

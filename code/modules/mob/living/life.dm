@@ -84,6 +84,10 @@
 	process_cyberpunk_status_effects(seconds_per_tick)
 	process_cyberpsychosis(seconds_per_tick)
 	apply_body_state_effects()
+	if(client)
+		var/datum/hud/human/human_hud = hud_used
+		if(istype(human_hud))
+			human_hud.cp13_update_vitals()
 
 /mob/living/get_status_tab_items()
 	. = ..()
@@ -453,6 +457,11 @@
 		if(istype(item, /obj/item/clothing/suit/armor) || istype(item, /obj/item/clothing/head/helmet))
 			item_score -= 1
 		style_score += item_score
+	var/mob/living/carbon/wearer = src
+	if(istype(wearer))
+		var/obj/item/organ/cyberimp/utility/skull/subdermal_armor/armor = wearer.get_organ_slot(ORGAN_SLOT_NECK_AUG)
+		if(istype(armor))
+			style_score -= armor.style_penalty
 	style = clamp(style_score, -15, 15)
 	return style
 

@@ -56,7 +56,7 @@
 	return reagent_records
 
 /proc/cyberpunk_persistent_capture_movable(atom/movable/thing, turf/base_turf, turf/center, obj/machinery/active_terminal, depth = 0, allow_vehicle = FALSE)
-	if(!thing || thing == active_terminal || ismob(thing))
+	if(!thing || thing == active_terminal || ismob(thing) || istype(thing, /obj/item/cyberpunk_business_delivery_crate) || istype(thing, /obj/vehicle/ridden/cyberpunk/avi/warehouse))
 		return null
 	var/is_persistent_vehicle = allow_vehicle && istype(thing, /obj/vehicle/sealed/car/cyberpunk)
 	if(!(isitem(thing) || istype(thing, /obj/machinery) || istype(thing, /obj/structure) || is_persistent_vehicle))
@@ -434,8 +434,11 @@
 /datum/controller/subsystem/cyberpunk_property/proc/autosave_persistent_properties()
 	for(var/delivery_id in cyberpunk_business_deliveries)
 		var/datum/cyberpunk_business_delivery/delivery = cyberpunk_business_deliveries[delivery_id]
-		if(delivery?.status == "enroute")
-			delivery.complete_delivery()
+		if(delivery?.status == "enroute" && delivery.arrival_time <= world.time)
+			if(delivery.source_business_id)
+				delivery.expire_warehouse_delivery()
+			else
+				delivery.complete_delivery()
 	var/saved = 0
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/business = cyberpunk_businesses[business_id]

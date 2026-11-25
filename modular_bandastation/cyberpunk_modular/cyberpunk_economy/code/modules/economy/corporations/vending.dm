@@ -91,6 +91,144 @@
 		return TRUE
 	return FALSE
 
+/obj/machinery/vending/proc/get_cyberpunk_diagnostic_service(datum/cyberpunk_corporation/corporation)
+	switch(corporation?.id)
+		if(CYBERPUNK_CORP_BENN)
+			if(corporation.has_edict("benn_med_report"))
+				return "medical"
+		if(CYBERPUNK_CORP_RYAZNOV)
+			if(corporation.has_edict("ryaznov_industrial_analysis"))
+				return "technical"
+	return null
+
+/obj/machinery/vending/proc/get_cyberpunk_vendor_diagnostic_offer(mob/living/user)
+	if(!istype(user) || !is_operational)
+		return null
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	var/service = get_cyberpunk_diagnostic_service(corporation)
+	if(!service)
+		return null
+	var/subscribed = corporation.is_subscribed(user)
+	return list(
+		"type" = service,
+		"canPrint" = subscribed,
+		"price" = service == "medical" && !subscribed ? 15 : 0,
+	)
+
+/obj/machinery/vending/proc/run_cyberpunk_vendor_diagnostics(mob/living/user, print_report)
+	var/list/offer = get_cyberpunk_vendor_diagnostic_offer(user)
+	if(!offer || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+		return FALSE
+	if(print_report && !offer["canPrint"])
+		return FALSE
+
+	var/service = offer["type"]
+	var/datum/choice
+	if(service == "technical")
+		var/list/targets = user.get_equipped_items(INCLUDE_HELD)
+		var/mob/living/carbon/carbon_user = user
+		if(istype(carbon_user))
+			for(var/obj/item/organ/cyberimp/implant in carbon_user.organs)
+				targets |= implant
+		for(var/atom/nearby in view(1, src))
+			if(istype(nearby, /obj/vehicle) || istype(nearby, /obj/machinery) || istype(nearby, /obj/structure) || istype(nearby, /turf/closed/wall))
+				targets |= nearby
+		for(var/datum/cyberpunk_business/business as anything in SScyberpunk_property.get_cyberpunk_businesses_for_user(user))
+			if(business.has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK))
+				targets |= business
+		choice = tgui_input_list(user, "Что проверить?", "Диагностика Рязнова", targets)
+		if(QDELETED(src) || QDELETED(choice) || QDELETED(user) || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+			return FALSE
+
+	var/duration = 6 SECONDS * (service == "medical" ? user.get_cyberpunk_medical_scan_time_multiplier(user) : user.get_cyberpunk_analysis_time_multiplier())
+	if(!do_after(user, duration, target = src) || QDELETED(src) || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+		return FALSE
+
+	offer = get_cyberpunk_vendor_diagnostic_offer(user)
+	if(offer?["type"] != service || (print_report && !offer["canPrint"]))
+		return FALSE
+	var/advanced = offer["canPrint"]
+	var/report
+	if(service == "medical")
+		report = healthscan(null, user, tochat = FALSE, scan_depth = advanced ? 2 : 0)
+		if(advanced && iscarbon(user))
+			var/mob/living/carbon/patient = user
+			for(var/obj/item/bodypart/limb as anything in patient.get_wounded_bodyparts())
+				for(var/datum/wound/wound as anything in limb.wounds)
+					if(wound.treat_text)
+						report += "<br>[html_encode(limb.name)] — [html_encode(wound.name)]: [html_encode(wound.treat_text)]"
+	else
+		report = get_cyberpunk_industrial_report(user, choice, advanced)
+	if(!report)
+		return FALSE
+
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	var/price = offer["price"]
+	if(price)
+		var/datum/bank_account/account = user.get_bank_account()
+		if(!account?.adjust_money(-price, "Диагностика [corporation.name]"))
+			to_chat(user, span_warning("На счёте недостаточно средств для диагностики."))
+			return FALSE
+		corporation.add_funds(price, "Диагностика")
+	if(service == "medical" && iscarbon(user))
+		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Benn vending diagnosis", branded_service = TRUE)
+		cyberpunk_record_benn_biodata(src, "benn_gene_registry", "Benn vending diagnosis: genetic registry", 1, 1, branded_service = TRUE)
+	to_chat(user, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
+	if(print_report)
+		var/obj/item/paper/printout = new(drop_location())
+		printout.name = "отчёт диагностики [corporation.name]"
+		printout.add_raw_text(report)
+		printout.update_appearance()
+		user.put_in_hands(printout)
+	return TRUE
+
+/obj/machinery/vending/proc/get_cyberpunk_industrial_report(mob/living/user, datum/choice, advanced)
+	if(QDELETED(choice))
+		return null
+	var/list/lines = list()
+	var/datum/cyberpunk_business/business = choice
+	if(istype(business))
+		if(!business.has_access(user, CYBERPUNK_BUSINESS_ACCESS_STOCK))
+			return null
+		lines += "Предприятие: [business.name]"
+		lines += "Склад: [business.warehouse_enabled ? (business.warehouse_valid ? "готов" : "требует настройки") : "отключён"]"
+		if(advanced)
+			lines += "Для диагностики склада проверьте привязку зоны разгрузки и подключение оборудования на бизнес-терминале."
+	else
+		var/atom/target = choice
+		if(!istype(target) || (target.loc != user && !(target in view(1, src))))
+			return null
+		lines += "Объект: [target.name]"
+		if(target.uses_integrity)
+			lines += "Прочность: [round(target.get_integrity_percentage() * 100)]%"
+		var/obj/machinery/machine = target
+		if(istype(machine))
+			lines += "Питание: [machine.powered() ? "есть" : "отсутствует"]"
+			lines += "Состояние: [machine.is_operational ? "работает" : "не работает"]"
+		var/obj/item/organ/cyberimp/implant = target
+		if(istype(implant))
+			lines += "Повреждения: [round(implant.damage)]/[implant.maxHealth]"
+		if(advanced)
+			lines += user.get_cyberpunk_machine_diagnostic_data(target)
+			if(istype(machine))
+				for(var/component in machine.get_cyberpunk_wearable_components())
+					lines += "[machine.get_cyberpunk_component_name(component)]: износ [round(machine.get_cyberpunk_component_wear(component))]"
+				lines += "Для обслуживания откройте панель. Повреждённые компоненты обслуживаются гаечным ключом или сваркой."
+			var/obj/vehicle/sealed/car/cyberpunk/car = target
+			if(istype(car))
+				for(var/datum/cyberpunk_vehicle_part/part as anything in car.vehicle_parts)
+					lines += "[part.name]: [round(part.health)]/[part.max_health]"
+				lines += "Откройте панель и обслужите повреждённые детали гаечным ключом."
+			if(istype(implant))
+				lines += "Повреждённый имплант обслуживается хирургической операцией."
+			else if(isitem(target))
+				lines += "Проверьте ремонт на верстаке и состояние установленных модулей."
+
+	var/list/safe_lines = list()
+	for(var/line in lines)
+		safe_lines += html_encode(line)
+	return safe_lines.Join("<br>")
+
 /obj/machinery/vending/proc/has_corporate_vending_module()
 	for(var/datum/cyberpunk_machine_module/module as anything in cyberpunk_machine_modules)
 		if(istype(module, /datum/cyberpunk_machine_module/corporate_vending_bus))

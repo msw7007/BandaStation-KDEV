@@ -30,7 +30,10 @@ SUBSYSTEM_DEF(cyberpunk_property)
 	for(var/delivery_id in cyberpunk_business_deliveries)
 		var/datum/cyberpunk_business_delivery/delivery = cyberpunk_business_deliveries[delivery_id]
 		if(delivery?.status == "enroute" && delivery.arrival_time <= world.time)
-			delivery.complete_delivery()
+			if(delivery.source_business_id)
+				delivery.expire_warehouse_delivery()
+			else
+				delivery.complete_delivery()
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/business = cyberpunk_businesses[business_id]
 		if(business)

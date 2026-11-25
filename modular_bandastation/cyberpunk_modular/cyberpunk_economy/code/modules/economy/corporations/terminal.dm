@@ -1223,6 +1223,7 @@
 	parent_type = /obj/item/analyzer
 	name = "corporate field analyzer"
 	desc = "A corporate field analyzer for turning approved scans into research data."
+	tool_behaviour = null
 	var/corporation_id
 	var/data_type = "general"
 	var/scan_time = 15 SECONDS
@@ -1242,8 +1243,8 @@
 	user.visible_message(span_notice("[user] starts scanning [interacting_with] with [src]."), span_notice("You start scanning [interacting_with]."))
 	if(!do_after(user, actual_scan_time, target = interacting_with))
 		return ITEM_INTERACT_BLOCKING
-	if(!can_scan_target(interacting_with))
-		to_chat(user, span_warning("[interacting_with] is no longer a valid scan target."))
+	if(QDELETED(src) || QDELETED(interacting_with) || !user.is_holding(src) || !can_scan_target(interacting_with))
+		to_chat(user, span_warning("The sample is no longer available for analysis."))
 		return ITEM_INTERACT_BLOCKING
 	if(!SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, data_type, data_amount, 0, "[src] scan of [interacting_with] by [user.real_name || user.name]"))
 		to_chat(user, span_warning("[src] cannot upload its scan result."))
@@ -1264,18 +1265,18 @@
 
 /obj/item/cyberpunk_corporate_analyzer/ryaznov
 	name = "Ryaznov machine reader"
-	desc = "A Ryaznov reader for robotics, mechs, rigs and cybernetic implants."
+	desc = "A Ryaznov reader for wreckage, vehicle parts, robotics, mechs, rigs and cybernetic implants."
 	corporation_id = CYBERPUNK_CORP_RYAZNOV
 	data_type = "engineering"
 	icon_state = "analyzer"
 	inhand_icon_state = "analyzer"
 
 /obj/item/cyberpunk_corporate_analyzer/ryaznov/can_scan_target(atom/target)
-	return issilicon(target) || isdrone(target) || istype(target, /obj/vehicle/sealed/mecha) || istype(target, /obj/item/mod/control) || istype(target, /obj/item/organ/cyberimp)
+	return istype(target, /obj/structure/mecha_wreckage) || istype(target, /obj/item/cyberpunk_vehicle_part) || issilicon(target) || isdrone(target) || istype(target, /obj/vehicle/sealed/mecha) || istype(target, /obj/item/mod/control) || istype(target, /obj/item/organ/cyberimp)
 
 /obj/item/cyberpunk_corporate_analyzer/starlight
 	name = "Starlight spectral analyzer"
-	desc = "A Starlight spectral analyzer for ores, alloys, machinery and transport."
+	desc = "A Starlight spectral analyzer for characterizing ore, alloys and transport equipment."
 	corporation_id = CYBERPUNK_CORP_STARLIGHT
 	data_type = "market"
 	icon_state = "analyzer"

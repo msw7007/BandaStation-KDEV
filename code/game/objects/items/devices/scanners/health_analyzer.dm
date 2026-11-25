@@ -249,6 +249,11 @@
 	var/report = jointext(render_list, "")
 	if(tochat)
 		to_chat(user, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
+	var/mob/living/carbon/sample = target
+	if(isliving(user) && istype(sample) && sample.dna && world.time >= sample.cyberpunk_benn_scan_available_at)
+		var/mob/living/scanning_user = user
+		if(cyberpunk_record_benn_biodata(scanning_user.get_active_held_item(), "benn_self_analysis", "Medical scan") || cyberpunk_record_benn_biodata(user, "benn_self_analysis", "Medical scan"))
+			sample.cyberpunk_benn_scan_available_at = world.time + 2 MINUTES
 	return report
 //CYBERPUNK BUILD - rebuild and delete before release
 

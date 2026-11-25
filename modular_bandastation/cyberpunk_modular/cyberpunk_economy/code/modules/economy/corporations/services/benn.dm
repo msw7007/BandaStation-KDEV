@@ -53,6 +53,18 @@
 		new /obj/item/reagent_containers/applicator/pill/epinephrine/benn(package)
 	return TRUE
 
+/// Records in-game medical or genetic research produced at Benn equipment or on Benn territory.
+/proc/cyberpunk_record_benn_biodata(atom/source, edict_id, activity, amount = 1, credits = 0, branded_service = FALSE)
+	if(!source || !SScyberpunk_corporations?.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_BENN, edict_id))
+		return FALSE
+	if(!branded_service && cyberpunk_property_edict_multiplier(source, CYBERPUNK_CORP_BENN, edict_id, 2) == 1)
+		var/manufacturer = get_cyberspace_manufacturer(source)
+		if(SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(manufacturer) != CYBERPUNK_CORP_BENN)
+			return FALSE
+	return SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_BENN, "bio", amount, credits, activity)
+
+/mob/living/carbon/var/cyberpunk_benn_scan_available_at = 0
+
 /proc/cyberpunk_complete_benn_service(datum/weakref/user_ref, corporation_id, service_id)
 	var/mob/living/user = user_ref?.resolve()
 	if(!user || QDELETED(user))
@@ -83,4 +95,8 @@
 				package.forceMove(get_turf(user))
 			to_chat(user, span_notice("Benn chemical support delivers a compact chemistry kit."))
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "bio", 2, 0, "Benn service completed: [service_id]")
+	if(iscarbon(user))
+		cyberpunk_record_benn_biodata(user, "benn_gene_registry", "Benn service: genetic registry", 2, 1, branded_service = TRUE)
+		if(service_id == "medical")
+			cyberpunk_record_benn_biodata(user, "benn_self_analysis", "Benn remote treatment", branded_service = TRUE)
 	return TRUE

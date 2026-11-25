@@ -8,6 +8,8 @@
 	var/hidden = FALSE
 	var/account_id
 	var/level = 1
+	/// Shares still available from the exchange this round.
+	var/shares_available = 300
 	var/experience = 0
 	var/research_points = 0
 	var/influence = 0

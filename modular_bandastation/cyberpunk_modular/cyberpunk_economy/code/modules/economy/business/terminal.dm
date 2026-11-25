@@ -263,9 +263,15 @@
 			return TRUE
 		if("request_delivery")
 			if(business?.request_delivery(living_user, params["item"], text2num(params["amount"]), params["source"]))
-				to_chat(living_user, span_notice("Delivery requested. ETA two minutes."))
+				to_chat(living_user, span_notice("Заказ принят. Состояние поставки доступно в списке заказов."))
 			else
-				to_chat(living_user, span_warning("Unable to request delivery. Enable and validate warehouse access first."))
+				to_chat(living_user, span_warning("Заказ не принят. Проверь настройку склада, наличие товара у поставщика и баланс."))
+			return TRUE
+		if("export_stock")
+			if(business?.export_stock(living_user, params["item"], text2num(params["amount"])))
+				to_chat(living_user, span_notice("Товар продан за город. Деньги зачислены на счёт бизнеса."))
+			else
+				to_chat(living_user, span_warning("Продажа не прошла. Проверь количество подходящих товаров и доступ к финансам."))
 			return TRUE
 		if("deposit_warehouse_item")
 			if(business?.deposit_warehouse_item(living_user, living_user.get_active_held_item()))
@@ -341,9 +347,9 @@
 			return TRUE
 		if("restock_vendors")
 			if(business?.restock_linked_vendors(living_user))
-				to_chat(living_user, span_notice("Товар со склада загружен в автомат."))
+				to_chat(living_user, span_notice("Дрон отправлен со склада. Автомат примет товар, когда груз прибудет."))
 			else
-				to_chat(living_user, span_warning("В автомате нет свободных мест для товаров, которые есть на складе."))
+				to_chat(living_user, span_warning("Дрон не отправлен. Проверь товары на складе, остаток в автомате и открытый проход к нему."))
 			return TRUE
 	return FALSE
 

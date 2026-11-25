@@ -108,6 +108,7 @@
 	maybe_rotate_cyberpunk_sale_stock()
 	. = list()
 	.["corporateChip"] = get_cyberpunk_service_chip_offer()
+	.["diagnostics"] = get_cyberpunk_vendor_diagnostic_offer(user)
 	var/datum/cyberpunk_corporation/supply_corporation = get_cyberpunk_supply_corporation()
 	.["cargoTracking"] = supply_corporation?.has_edict("starlight_log_observation") && supply_corporation.is_subscribed(user)
 
@@ -149,6 +150,8 @@
 		return
 
 	switch(action)
+		if("corporate_diagnostics", "print_corporate_diagnostics")
+			return run_cyberpunk_vendor_diagnostics(ui.user, action == "print_corporate_diagnostics")
 		if("attach_cargo_tracker")
 			return attach_starlight_tracking(ui.user)
 		if("buy_corporate_chip")

@@ -169,6 +169,8 @@
 			return
 	else
 		CRASH("Stack medical item healing a non-carbon, non-animal mob [patient] ([patient.type])")
+	if(iscarbon(patient))
+		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Successful treatment")
 	if(!use(1) || !repeating || amount <= 0)
 		var/atom/alert_loc = QDELETED(src) ? user : src
 		alert_loc.balloon_alert(user, repeating ? "всё истрачено!" : "[parse_zone(healed_zone, NOMINATIVE)] обработана")

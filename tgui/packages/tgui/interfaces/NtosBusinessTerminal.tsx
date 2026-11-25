@@ -29,6 +29,7 @@ type StockEntry = {
   amount: number;
   itemType?: string;
   canWithdraw?: BooleanLike;
+  exportPrice: number;
   price: number;
   basePrice?: number;
 };
@@ -89,6 +90,7 @@ type Business = {
   employees: Employee[];
   pendingEmployees: Employee[];
   stock: StockEntry[];
+  externalCatalog: { name: string; price: number }[];
   deliveries: Delivery[];
   savedObjects: number;
   savedAt?: string;
@@ -242,10 +244,10 @@ const TestBusinessBench = (props: { business: Business }) => {
             <Button
               icon="cash-register"
               disabled={!canStock}
-              tooltip="Перекладывает со склада в автомат только совместимые с ним товары. Одежду и другие предметы можно забрать через выдачу."
+              tooltip="Отправляет дрон с подходящим товаром со склада. Состояние рейса видно в складских поставках."
               onClick={() => act('restock_vendors', { id })}
             >
-              Загрузить автомат
+              Отправить дрон к автомату
             </Button>
           </Stack.Item>
         </Stack>
@@ -289,10 +291,10 @@ const TestBusinessBench = (props: { business: Business }) => {
         </LabeledList>
       </Section>
       <BusinessSnapshot business={business} />
+      <BusinessWarehouse business={business} />
       <Collapsible title="Дополнительные настройки">
         <BusinessSettings business={business} />
         <BusinessFinance business={business} />
-        <BusinessWarehouse business={business} />
         <BusinessStaff business={business} />
       </Collapsible>
     </>
@@ -540,7 +542,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
   const [unloadZone, setUnloadZone] = useState(business.warehouse.unloadZone || 'unset');
   const [buyLinks, setBuyLinks] = useState(business.warehouse.buyLinks || '');
   const [sellLinks, setSellLinks] = useState(business.warehouse.sellLinks || '');
-  const [item, setItem] = useState('goods');
+  const [item, setItem] = useState('');
   const [source, setSource] = useState('auto');
   const [amount, setAmount] = useState(1);
   const [prices, setPrices] = useState<Record<string, number>>({});
@@ -559,7 +561,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
   };
 
   return (
-    <Collapsible title="Склад и доставки">
+    <Collapsible title="Складские поставки и внешний рынок">
       <Stack vertical>
         <Stack.Item>
           <Stack wrap>
@@ -749,10 +751,20 @@ const BusinessWarehouse = (props: { business: Business }) => {
         <Stack.Item>
           <Stack>
             <Stack.Item grow>
-              <Input fluid value={item} onChange={setItem} />
+              <Input
+                fluid
+                placeholder="Название товара"
+                value={item}
+                onChange={setItem}
+              />
             </Stack.Item>
             <Stack.Item grow>
-              <Input fluid value={source} onChange={setSource} />
+              <Input
+                fluid
+                placeholder="auto или название склада"
+                value={source}
+                onChange={setSource}
+              />
             </Stack.Item>
             <Stack.Item>
               <NumberInput
@@ -785,6 +797,24 @@ const BusinessWarehouse = (props: { business: Business }) => {
             </Stack.Item>
           </Stack>
         </Stack.Item>
+        {!!business.externalCatalog.length && (
+          <Stack.Item>
+            <Collapsible title="Внешний рынок">
+              {business.externalCatalog.map(({ name, price }) => (
+                <Button
+                  key={name}
+                  selected={item === name && source === 'external supplier'}
+                  onClick={() => {
+                    setItem(name);
+                    setSource('external supplier');
+                  }}
+                >
+                  {name} · {formatMoney(price)}
+                </Button>
+              ))}
+            </Collapsible>
+          </Stack.Item>
+        )}
         <Stack.Item>
           <Table>
             <Table.Row header>
@@ -836,6 +866,27 @@ const BusinessWarehouse = (props: { business: Business }) => {
                   >
                     Выдать на площадку
                   </Button>
+                  {stock.exportPrice > 0 && (
+                    <Button
+                      icon="truck"
+                      tooltip={`За город · ${formatMoney(stock.exportPrice)} за единицу`}
+                      disabled={
+                        !business.canFinance ||
+                        !business.canStock ||
+                        !business.warehouse.valid ||
+                        amount > stock.amount
+                      }
+                      onClick={() =>
+                        act('export_stock', {
+                          id: business.id,
+                          item: stock.name,
+                          amount,
+                        })
+                      }
+                    >
+                      Продать за город ×{amount}
+                    </Button>
+                  )}
                 </Table.Cell>
               </Table.Row>
             ))}
@@ -874,20 +925,27 @@ const BusinessWarehouse = (props: { business: Business }) => {
         <Stack.Item>
           <Table>
             <Table.Row header>
-              <Table.Cell>Delivery</Table.Cell>
-              <Table.Cell collapsing>Cost</Table.Cell>
-              <Table.Cell>Status</Table.Cell>
-              <Table.Cell>Courier</Table.Cell>
-              <Table.Cell collapsing>ETA</Table.Cell>
+              <Table.Cell>Поставка</Table.Cell>
+              <Table.Cell collapsing>Цена</Table.Cell>
+              <Table.Cell>Состояние</Table.Cell>
+              <Table.Cell>Курьер</Table.Cell>
+              <Table.Cell collapsing>Время</Table.Cell>
             </Table.Row>
             {business.deliveries.map((delivery) => (
               <Table.Row key={delivery.id}>
                 <Table.Cell>
-                  #{delivery.id} {delivery.amount}x {delivery.item} from{' '}
-                  {delivery.source}
+                  #{delivery.id} · {delivery.amount} × {delivery.item}
+                  <br />
+                  {delivery.source} → {delivery.destination}
                 </Table.Cell>
                 <Table.Cell>{formatMoney(delivery.cost)} cr</Table.Cell>
-                <Table.Cell>{delivery.status}</Table.Cell>
+                <Table.Cell>
+                  {delivery.status === 'completed'
+                    ? 'Доставлено'
+                    : delivery.status === 'failed'
+                      ? 'Сорвано'
+                      : 'В пути'}
+                </Table.Cell>
                 <Table.Cell>{delivery.aiCourierStatus || 'not requested'}</Table.Cell>
                 <Table.Cell>{delivery.eta}</Table.Cell>
               </Table.Row>

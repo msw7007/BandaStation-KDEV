@@ -23,7 +23,12 @@
 
 /datum/computer_file/program/nt_pay/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
+	if(.)
+		return
 	switch(action)
+		if("buy_corporate_shares", "sell_corporate_shares")
+			var/datum/bank_account/trading_account = computer.stored_id?.registered_account
+			return SScyberpunk_corporations.trade_cyberpunk_shares(ui.user, trading_account, params["issuer"], text2num("[params["quantity"]]"), action == "buy_corporate_shares", text2num("[params["price"]]"))
 		if("Transaction")
 			var/token = params["token"]
 			var/money_to_send = params["amount"]
@@ -51,6 +56,8 @@
 		data["money"] = current_user.account_balance
 		data["wanted_token"] = wanted_token
 		data["transaction_list"] = current_user.transaction_history || list()
+		if(!IS_DEPARTMENTAL_ACCOUNT(current_user) && !istype(current_user, /datum/bank_account/cyberpunk_corporation))
+			data["shareMarket"] = SScyberpunk_corporations.get_cyberpunk_share_market(current_user)
 
 	return data
 

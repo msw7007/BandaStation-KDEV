@@ -48,7 +48,7 @@
 		))
 	return entries
 
-/datum/controller/subsystem/cyberpunk_property/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label)
+/datum/controller/subsystem/cyberpunk_property/proc/find_cyberpunk_business_supplier(datum/cyberpunk_business/requester, item_label, amount, source_label, required_type)
 	item_label = reject_bad_text(item_label, max_length = 64, ascii_only = FALSE)
 	if(!requester || !item_label)
 		return null
@@ -60,7 +60,7 @@
 	var/best_price = INFINITY
 	for(var/business_id in cyberpunk_businesses)
 		var/datum/cyberpunk_business/supplier = cyberpunk_businesses[business_id]
-		if(!supplier || supplier == requester || !supplier.warehouse_enabled)
+		if(!supplier || supplier == requester || !supplier.warehouse_enabled || !supplier.warehouse_valid || !supplier.validate_unload_zone() || !supplier.get_account())
 			continue
 		if(length(requester.warehouse_buy_links) && !requester.allows_warehouse_partner(supplier, TRUE))
 			continue
@@ -69,7 +69,7 @@
 		if(source_key && source_key != "auto")
 			if(source_key != lowertext("[supplier.id]") && source_key != lowertext(supplier.name))
 				continue
-		if(supplier.get_sellable_stock_amount(item_label) < amount)
+		if(supplier.get_sellable_stock_amount(item_label, required_type) < amount)
 			continue
 		var/unit_price = supplier.get_stock_price(item_label, requester)
 		if(unit_price < best_price)
@@ -117,24 +117,76 @@
 	business.apply_generated_access(owner)
 	business.validate_premises(owner)
 	return business
-/datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse")
+/// Public off-map suppliers trade standard civilian hardware and consumables.
+/proc/cyberpunk_external_trade_catalog()
+	var/static/list/catalog
+	if(!catalog)
+		catalog = list()
+		for(var/obj/item/product as anything in list(
+			/obj/item/stack/sheet/iron,
+			/obj/item/stack/sheet/glass,
+			/obj/item/stack/sheet/plastic,
+			/obj/item/stack/cable_coil,
+			/obj/item/stack/medical/bruise_pack,
+			/obj/item/stack/medical/wrap/gauze,
+			/obj/item/screwdriver,
+			/obj/item/wrench,
+			/obj/item/crowbar,
+			/obj/item/wirecutters,
+			/obj/item/multitool,
+		))
+			catalog[lowertext(initial(product.name))] = product
+	return catalog
+
+/proc/cyberpunk_external_trade_price(item_type)
+	return get_cyberpunk_sale_price_for_type(item_type, "vendor", default_price = CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST)
+
+/datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse", required_type)
 	if(!business)
 		return null
 	item_label = reject_bad_text(item_label, max_length = 64, ascii_only = FALSE)
 	if(!item_label)
 		return null
-	amount = clamp(round(amount), 1, 1000)
-	var/datum/cyberpunk_business/supplier = find_cyberpunk_business_supplier(business, item_label, amount, source_label)
+	if(!isnum(amount) || amount < 1 || amount > 1000 || amount != round(amount))
+		return null
+	var/datum/cyberpunk_business/supplier = find_cyberpunk_business_supplier(business, item_label, amount, source_label, required_type)
 	var/source_key = lowertext(source_label || "auto")
-	if(!supplier && !(source_key in list("auto", "external supplier")))
+	var/obj/item/external_type
+	if(!supplier)
+		if(!business.legal || !(source_key in list("auto", "external supplier")) || (source_key == "auto" && length(business.warehouse_buy_links)))
+			return null
+		var/list/catalog = cyberpunk_external_trade_catalog()
+		external_type = catalog[lowertext(item_label)]
+		if(!external_type || (required_type && required_type != external_type))
+			return null
+		item_label = initial(external_type.name)
+		var/stock_key = business.get_stock_key(item_label)
+		var/existing_type = business.warehouse_item_types[stock_key]
+		if(existing_type && existing_type != "[external_type]")
+			return null
+	var/atom/delivery_destination = business.get_unload_zone()
+	var/atom/delivery_source = supplier?.get_unload_zone()
+	if(!business.validate_unload_zone() || !get_turf(delivery_destination) || (supplier && !get_turf(delivery_source)))
 		return null
-	var/unit_cost = supplier ? supplier.get_stock_price(item_label, business) : CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST
+
+	var/unit_cost = supplier ? supplier.get_stock_price(item_label, business) : cyberpunk_external_trade_price(external_type)
 	var/total_cost = max(0, round(unit_cost * amount))
-	if(total_cost && !business.charge(total_cost, "Business delivery #[next_cyberpunk_business_delivery_id]: [amount]x [item_label]"))
-		return null
 	var/list/stock_packet
 	if(supplier)
-		stock_packet = supplier.take_stock(item_label, amount)
+		var/stock_key = supplier.get_stock_key(item_label)
+		var/legacy_type = text2path(supplier.warehouse_item_types[stock_key])
+		stock_packet = supplier.take_stock(item_label, amount, required_type, allow_abstract = ispath(legacy_type, /obj/item))
+		if(stock_packet?["amount"] != amount)
+			if(stock_packet)
+				supplier.receive_stock(item_label, stock_packet)
+			return null
+	else
+		stock_packet = list("amount" = amount, "legacy_type" = "[external_type]")
+	if(total_cost && !business.charge(total_cost, "Business delivery #[next_cyberpunk_business_delivery_id]: [amount]x [item_label]"))
+		if(supplier)
+			supplier.receive_stock(item_label, stock_packet)
+		return null
+	if(supplier)
 		supplier.record_income(total_cost, "Business supply sale to [business.name]: [amount]x [item_label]")
 	var/datum/cyberpunk_business_delivery/delivery = new
 	delivery.id = next_cyberpunk_business_delivery_id++
@@ -142,8 +194,9 @@
 	delivery.source_business_id = supplier?.id || 0
 	delivery.item_label = item_label
 	delivery.amount = amount
+	delivery.required_type = required_type || external_type
 	delivery.stock_packet = stock_packet
-	delivery.source_label = supplier ? supplier.name : (reject_bad_text(source_label, max_length = 48, ascii_only = FALSE) || "external supplier")
+	delivery.source_label = supplier ? supplier.name : "Внешний рынок"
 	delivery.destination_label = reject_bad_text(destination_label, max_length = 48, ascii_only = FALSE) || "business warehouse"
 	delivery.cost = total_cost
 	delivery.created_at = world.time
@@ -151,19 +204,15 @@
 	cyberpunk_business_deliveries["[delivery.id]"] = delivery
 	business.deliveries += delivery
 	business.add_history("delivery #[delivery.id] requested: [amount]x [item_label] from [delivery.source_label]; cost [total_cost][MONEY_SYMBOL]")
-	var/atom/delivery_destination = business.get_unload_zone() || business.terminal
-	var/atom/delivery_source = supplier?.get_unload_zone() || supplier?.terminal
-	if(delivery_source && delivery_destination)
-		if(delivery.dispatch_ai_courier(delivery_source, delivery_destination))
-			business.add_history("delivery #[delivery.id] assigned to city courier from [supplier.name]")
-			supplier.add_history("delivery #[delivery.id] courier pickup requested for [business.name]")
-	else if(delivery_destination)
-		delivery.create_flight_visual(null, delivery_destination)
-		delivery.ai_courier_status = "external AVI inbound"
+	if(supplier)
+		delivery.begin_warehouse_delivery(delivery_source, delivery_destination)
+		supplier.add_history("Поставка #[delivery.id] подготовлена для [business.name].")
+	else
+		delivery.ai_courier_status = "АВИ внешнего поставщика в пути"
+		addtimer(CALLBACK(delivery, TYPE_PROC_REF(/datum/cyberpunk_business_delivery, complete_delivery)), 2 MINUTES)
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "market", max(1, round(amount / 2)), max(0, round(total_cost * 0.03)), "business delivery #[delivery.id]")
 	if(SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_cargo_tracking"))
 		SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "cargo tracking: delivery #[delivery.id]")
 	if(SScyberpunk_corporations.cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_log_observation"))
 		SScyberpunk_corporations.record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", max(1, round(amount / 4)), 0, "log observation: delivery #[delivery.id]")
-	addtimer(CALLBACK(delivery, TYPE_PROC_REF(/datum/cyberpunk_business_delivery, complete_delivery)), 2 MINUTES, TIMER_STOPPABLE)
 	return delivery

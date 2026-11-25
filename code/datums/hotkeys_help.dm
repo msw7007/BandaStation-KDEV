@@ -1,3 +1,20 @@
+/client/verb/open_cyberpunk_encyclopedia()
+	set name = "Энциклопедия Брайт-Сити"
+	set category = "OOC"
+
+	if(mob)
+		var/static/datum/cyberpunk_encyclopedia/encyclopedia = new
+		encyclopedia.ui_interact(mob)
+
+/datum/cyberpunk_encyclopedia/ui_state()
+	return GLOB.always_state
+
+/datum/cyberpunk_encyclopedia/ui_interact(mob/user, datum/tgui/ui)
+	ui = SStgui.try_update_ui(user, src, ui)
+	if(!ui)
+		ui = new(user, src, "CyberpunkEncyclopedia")
+		ui.open()
+
 /datum/hotkeys_help
 	var/static/list/hotkeys = list()
 

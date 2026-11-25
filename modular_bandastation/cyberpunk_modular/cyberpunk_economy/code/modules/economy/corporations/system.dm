@@ -3,6 +3,60 @@
 	ensure_cyberpunk_corporations_seeded()
 	return cyberpunk_corporations[cyberpunk_normalize_corporation_id(corporation_id)]
 
+/datum/cyberpunk_corporation/proc/get_cyberpunk_share_buy_price()
+	var/datum/bank_account/corporate_account = get_account()
+	var/treasury_modifier = clamp(round(((corporate_account?.account_balance || 0) - tax_debt) / 1000), -20, 35)
+	return max(10, 25 + 8 * (level - 1) + length(unlocked_technologies) * 2 + round(influence / 10) + treasury_modifier)
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_share_market(datum/bank_account/account)
+	var/list/rows = list()
+	for(var/id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+		var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(id)
+		var/buy_price = corporation.get_cyberpunk_share_buy_price()
+		rows += list(list(
+			"id" = id,
+			"name" = corporation.name,
+			"buyPrice" = buy_price,
+			"sellPrice" = max(1, round(buy_price * 0.9)),
+			"available" = corporation.shares_available,
+			"owned" = account.cyberpunk_share_holdings?[id] || 0,
+			"level" = corporation.level,
+		))
+	return rows
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/trade_cyberpunk_shares(mob/living/user, datum/bank_account/account, issuer_id, amount, buying, shown_price)
+	if(!istype(user) || QDELETED(account) || IS_DEPARTMENTAL_ACCOUNT(account) || istype(account, /datum/bank_account/cyberpunk_corporation))
+		return FALSE
+	var/area/current_area = get_area(user)
+	if(current_area && is_area_virtual(current_area))
+		return FALSE
+	if(!isnum(amount) || amount != round(amount) || amount < 1 || amount > 300)
+		return FALSE
+	if(!(issuer_id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT)))
+		return FALSE
+
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(issuer_id)
+	var/buy_price = corporation.get_cyberpunk_share_buy_price()
+	var/price = buying ? buy_price : max(1, round(buy_price * 0.9))
+	if(shown_price != price)
+		to_chat(user, span_warning("Котировка изменилась. Проверьте цену и подтвердите сделку снова."))
+		return TRUE
+	var/holding = account.cyberpunk_share_holdings?[issuer_id] || 0
+	if((buying && amount > corporation.shares_available) || (!buying && amount > holding))
+		to_chat(user, span_warning("Недостаточно акций для сделки."))
+		return TRUE
+
+	var/total = amount * price
+	var/direction = buying ? 1 : -1
+	if(!account.adjust_money(-direction * total, "Биржа: [buying ? "покупка" : "продажа"] [amount] × [corporation.name]"))
+		to_chat(user, span_warning("На счёте недостаточно средств для покупки."))
+		return TRUE
+	LAZYINITLIST(account.cyberpunk_share_holdings)
+	account.cyberpunk_share_holdings[issuer_id] = holding + direction * amount
+	corporation.shares_available -= direction * amount
+	to_chat(user, span_notice("Биржа: [buying ? "куплено" : "продано"] [amount] × [corporation.name] за [total] кр."))
+	return TRUE
+
 /datum/controller/subsystem/cyberpunk_corporations/proc/cyberpunk_normalize_corporation_id(corporation_id)
 	var/corp_id = lowertext(trim("[corporation_id]"))
 	switch(corp_id)
