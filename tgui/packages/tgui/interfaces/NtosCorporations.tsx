@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   Icon,
   LabeledList,
+  NumberInput,
   Table,
   Tooltip,
 } from 'tgui-core/components';
@@ -220,11 +221,17 @@ type Corporation = {
   history: string[];
 };
 
+type ExternalTradeOffer = {
+  imports: { key: string; name: string; price: number }[];
+  heldExport?: { key: string; name: string; price: number; amount: number };
+};
+
 export type CorporateInterfaceData = {
   accountName?: string;
   accountBalance: number;
   corporations: Corporation[];
   selected?: Corporation;
+  externalTrade?: ExternalTradeOffer;
 };
 
 const displayTabs = [
@@ -271,7 +278,11 @@ export function NtosCorporationsContent(props: {
   const [dataType, setDataType] = useState('general');
   const [amount, setAmount] = useState('10');
   const availableTabs =
-    visibleCorporation?.id === 'government' ? displayGovernmentTabs : displayTabs;
+    visibleCorporation?.id === 'government'
+      ? displayGovernmentTabs
+      : data.externalTrade
+        ? [...displayTabs, ['trade', 'Внешний рынок']]
+        : displayTabs;
   const activeCorporationTab = availableTabs.some(([id]) => id === activeTab)
     ? activeTab
     : 'state';
@@ -344,19 +355,126 @@ export function NtosCorporationsContent(props: {
                     </button>
                   ))}
                 </div>
-                <CorporateTab
-                  activeTab={activeCorporationTab}
-                  corporation={visibleCorporation}
-                  dataType={dataType}
-                  amount={amount}
-                  setDataType={setDataType}
-                  setAmount={setAmount}
-                />
+                {activeCorporationTab === 'trade' && data.externalTrade ? (
+                  <ExternalTradeTab
+                    offer={data.externalTrade}
+                    balance={visibleCorporation.balance}
+                    act={act}
+                  />
+                ) : (
+                  <CorporateTab
+                    activeTab={activeCorporationTab}
+                    corporation={visibleCorporation}
+                    dataType={dataType}
+                    amount={amount}
+                    setDataType={setDataType}
+                    setAmount={setAmount}
+                  />
+                )}
               </>
             )}
           </main>
         </div>
       </>
+  );
+}
+
+function ExternalTradeTab(props: {
+  offer: ExternalTradeOffer;
+  balance: number;
+  act: (action: string, payload: Record<string, unknown>) => void;
+}) {
+  const { imports, heldExport } = props.offer;
+  const [selected, setSelected] = useState('');
+  const [buyAmount, setBuyAmount] = useState(1);
+  const [sellAmount, setSellAmount] = useState(1);
+  const product = imports.find((item) => item.key === selected) ?? imports[0];
+  const available = Math.min(100, heldExport?.amount || 1);
+  const quantity = Math.min(sellAmount, available);
+
+  return (
+    <div className="CorporateInterface__tabGrid">
+      <MetricPanel title="Закупка">
+        <LabeledList>
+          <LabeledList.Item label="Товар">
+            <CorporateDropdown
+              options={imports.map(({ key, name }) => ({
+                value: key,
+                displayText: name,
+              }))}
+              selected={product?.key ?? ''}
+              displayText={product?.name ?? ''}
+              onSelected={setSelected}
+            />
+          </LabeledList.Item>
+          <LabeledList.Item label="Количество">
+            <NumberInput
+              value={buyAmount}
+              minValue={1}
+              maxValue={100}
+              step={1}
+              onChange={setBuyAmount}
+            />
+          </LabeledList.Item>
+        </LabeledList>
+        <button
+          type="button"
+          className="StyleGuide__button"
+          disabled={
+            !product ||
+            !Number.isInteger(buyAmount) ||
+            buyAmount * product.price > props.balance
+          }
+          onClick={() =>
+            product &&
+            props.act('external_import', {
+              item: product.key,
+              quantity: buyAmount,
+              price: product.price,
+            })
+          }
+        >
+          Заказать за {formatCredits(buyAmount * (product?.price ?? 0))}
+        </button>
+        <p>Ящик с товаром прибудет к этому терминалу.</p>
+      </MetricPanel>
+      <MetricPanel title="Продажа">
+        {heldExport ? (
+          <>
+            <LabeledList>
+              <LabeledList.Item label="Товар в руке">
+                {heldExport.name}
+              </LabeledList.Item>
+              <LabeledList.Item label="Количество">
+                <NumberInput
+                  value={quantity}
+                  minValue={1}
+                  maxValue={available}
+                  step={1}
+                  onChange={setSellAmount}
+                />
+              </LabeledList.Item>
+            </LabeledList>
+            <button
+              type="button"
+              className="StyleGuide__button"
+              disabled={!Number.isInteger(quantity) || !heldExport.price}
+              onClick={() =>
+                props.act('external_export', {
+                  item: heldExport.key,
+                  quantity,
+                  price: heldExport.price,
+                })
+              }
+            >
+              Продать за {formatCredits(quantity * heldExport.price)}
+            </button>
+          </>
+        ) : (
+          <p>Возьми в активную руку товар из каталога.</p>
+        )}
+      </MetricPanel>
+    </div>
   );
 }
 

@@ -141,6 +141,9 @@
 /proc/cyberpunk_external_trade_price(item_type)
 	return get_cyberpunk_sale_price_for_type(item_type, "vendor", default_price = CYBERPUNK_BUSINESS_EXTERNAL_UNIT_COST)
 
+/proc/cyberpunk_external_export_price(item_type)
+	return FLOOR(cyberpunk_external_trade_price(item_type) * 0.65, 1)
+
 /datum/controller/subsystem/cyberpunk_property/proc/create_cyberpunk_business_delivery(datum/cyberpunk_business/business, item_label, amount, source_label = "external supplier", destination_label = "business warehouse", required_type)
 	if(!business)
 		return null

@@ -40,6 +40,6 @@
 		list("id" = "benn_gene_combo", "name" = "Gene Combinatorics", "level" = 4, "description" = "On Benn property, DNA console delays and plant gene mixing time and point costs are reduced."),
 		list("id" = "benn_chem_tuning", "name" = "Chemical Tuning", "level" = 4, "description" = "Benn chemical plants work faster on Benn property."),
 		list("id" = "benn_med_observation", "name" = "Medical Observation", "level" = 5, "description" = "Benn vendors can dispatch paid treatment drones to wounded citizens."),
-		list("id" = "benn_dna_storage", "name" = "DNA Storage", "level" = 5, "description" = "Benn services provide extra research and slow foreign tech scanning."),
+		list("id" = "benn_dna_storage", "name" = "DNA Storage", "level" = 5, "description" = "Benn vendors, drones, and clinical revivals add research and copy recognizable foreign technology. Recovering nonemployees yields more data."),
 		list("id" = "benn_chem_guardians", "name" = "Chemical Guardians", "level" = 5, "description" = "Threats near Benn infrastructure can trigger acidic defensive drones.")
 	)

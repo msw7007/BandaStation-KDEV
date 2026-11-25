@@ -273,9 +273,7 @@
 	var/legacy_type = text2path(warehouse_item_types[stock_key])
 	if(ispath(legacy_type, /obj/item) && (!required_type || legacy_type == required_type))
 		matching_amount += max(0, warehouse_stock[stock_key] - physical_amount)
-	if(warehouse_surplus_percent <= 0)
-		return matching_amount
-	return max(0, round(matching_amount * warehouse_surplus_percent / 100))
+	return FLOOR(matching_amount * warehouse_surplus_percent / 100, 1)
 
 /datum/cyberpunk_business/proc/add_stock(item_label, amount)
 	item_label = reject_bad_text(item_label, max_length = 64, ascii_only = FALSE)
@@ -907,7 +905,7 @@
 	var/list/packet = take_stock(stock_key, amount, item_type, allow_abstract = typed_abstract)
 	if(!packet)
 		return FALSE
-	var/unit_price = FLOOR(cyberpunk_external_trade_price(item_type) * 0.65, 1)
+	var/unit_price = cyberpunk_external_export_price(item_type)
 	var/proceeds = unit_price * amount
 	if(packet["amount"] != amount || !record_income(proceeds, "Внешняя продажа: [amount] × [stock_key]"))
 		receive_stock(stock_key, packet)
@@ -1014,7 +1012,7 @@
 			var/obj/item/product = catalog[catalog_name]
 			var/import_price = cyberpunk_external_trade_price(product)
 			external_catalog += list(list("name" = initial(product.name), "price" = import_price))
-			export_prices[catalog_name] = FLOOR(import_price * 0.65, 1)
+			export_prices[catalog_name] = cyberpunk_external_export_price(product)
 	var/list/stock_records = list()
 	for(var/stock_name in warehouse_stock)
 		stock_records += list(list(

@@ -145,12 +145,28 @@
 	var/obj/item/clothing/clothing = thing
 	if(istype(clothing) && islist(clothing.cyberpunk_custom_design_data))
 		entry["clothing_design"] = clothing.cyberpunk_custom_design_data.Copy()
+	if(istype(machine) && islist(machine.component_parts) && depth < 3)
+		var/list/parts = list()
+		for(var/datum/component as anything in machine.component_parts)
+			var/list/part_record
+			if(istype(component, /datum/stock_part))
+				part_record = list("stock_part" = "[component.type]")
+			else if(isitem(component))
+				part_record = cyberpunk_persistent_capture_movable(component, base_turf, center, active_terminal, depth + 1)
+			if(part_record)
+				part_record["wear"] = machine.get_cyberpunk_component_wear(component)
+				parts += list(part_record)
+		if(length(parts) == length(machine.component_parts))
+			entry["machine_parts"] = parts
+		entry["machine_failure"] = machine.cyberpunk_machine_failure_state
 	if(is_persistent_vehicle)
 		var/obj/vehicle/sealed/car/cyberpunk/vehicle = thing
 		entry["cyberpunk_vehicle"] = vehicle.cyberpunk_to_persistent_record()
 	if(depth < 3 && length(thing.contents))
 		var/list/content_records = list()
 		for(var/atom/movable/content as anything in thing.contents)
+			if(islist(entry["machine_parts"]) && (content in machine.component_parts))
+				continue
 			var/list/content_entry = cyberpunk_persistent_capture_movable(content, base_turf, center, active_terminal, depth + 1)
 			if(content_entry)
 				content_records += list(content_entry)
@@ -253,6 +269,11 @@
 				module.on_install(restored_machine, null)
 			else
 				qdel(module)
+	if(istype(restored_machine) && islist(entry["machine_parts"]))
+		cyberpunk_persistent_restore_machine_parts(restored_machine, entry["machine_parts"], target_area, center, active_terminal)
+		var/failure = entry["machine_failure"]
+		if(failure in list("offline", "short", "jammed", "network", "unsafe", "wrong_function"))
+			restored_machine.set_cyberpunk_failure_state(failure)
 	var/obj/machinery/vending/restored_vendor = restored_atom
 	if(istype(restored_vendor) && islist(entry["cyberpunk_vending_stock"]))
 		for(var/list/stock_entry as anything in entry["cyberpunk_vending_stock"])
@@ -271,6 +292,36 @@
 	if(istype(vehicle) && islist(vehicle_record))
 		vehicle.cyberpunk_after_persistent_restore(vehicle_record)
 	return restored_atom
+
+/proc/cyberpunk_persistent_restore_machine_parts(obj/machinery/machine, list/records, area/target_area, turf/center, obj/machinery/active_terminal)
+	var/list/restored_parts = list()
+	var/list/restored_wear = list()
+	for(var/list/record as anything in records)
+		var/datum/part
+		if(record["stock_part"])
+			var/stock_part_type = text2path(record["stock_part"])
+			part = GLOB.stock_part_datums[stock_part_type]
+		else if(ispath(text2path(record["type"]), /obj/item))
+			part = cyberpunk_persistent_restore_movable(record, machine, target_area, center, active_terminal)
+		if(!part)
+			for(var/obj/item/temporary_part in restored_parts)
+				qdel(temporary_part)
+			return FALSE
+		restored_parts += part
+		if(isnum(record["wear"]) && record["wear"] > 0)
+			restored_wear[part] = min(record["wear"], machine.cyberpunk_machine_wear_limit)
+
+	var/list/initial_parts = machine.component_parts
+	machine.component_parts = restored_parts
+	var/obj/item/circuitboard/restored_board = locate() in restored_parts
+	if(restored_board || (machine.circuit in initial_parts))
+		machine.circuit = restored_board
+	for(var/obj/item/initial_part in initial_parts)
+		qdel(initial_part)
+	machine.RefreshParts()
+	machine.cyberpunk_component_wear = length(restored_wear) ? restored_wear : null
+	machine.recalculate_cyberpunk_machine_wear()
+	return TRUE
 
 /proc/cyberpunk_persistent_restore_item(obj/item/item, list/entry)
 	item.cyberpunk_quality = clamp(round(entry["item_quality"]), 1, 200)

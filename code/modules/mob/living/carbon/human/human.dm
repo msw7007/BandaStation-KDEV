@@ -1079,7 +1079,10 @@
 	return ..()
 
 /mob/living/carbon/human/updatehealth()
+	var/previous_health = health
 	. = ..()
+	if(previous_health > maxHealth * 0.5 && health <= maxHealth * 0.5 && stat != DEAD && mind)
+		addtimer(CALLBACK(src, PROC_REF(check_cyberpunk_guardian_response)), 0)
 	var/health_deficiency = max((maxHealth - health), staminaloss)
 	if(health_deficiency >= 40)
 		add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/damage_slowdown, TRUE, multiplicative_slowdown = health_deficiency / 75)

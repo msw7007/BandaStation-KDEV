@@ -65,6 +65,55 @@
 
 /mob/living/carbon/var/cyberpunk_benn_scan_available_at = 0
 
+/datum/cyberpunk_corporation/var/list/benn_dna_sample_after = list()
+
+/// Benn services collect game research data and recognizable foreign implant or equipment signatures.
+/proc/cyberpunk_collect_benn_dna_sample(mob/living/carbon/human/patient, activity, revived = FALSE)
+	if(!istype(patient) || !patient.dna || patient.stat == DEAD)
+		return FALSE
+	var/datum/cyberpunk_corporation/benn = SScyberpunk_corporations?.cyberpunk_corporations[CYBERPUNK_CORP_BENN]
+	if(!benn?.has_edict("benn_dna_storage"))
+		return FALSE
+	var/area/patient_area = get_area(patient)
+	if(!patient_area || is_area_virtual(patient_area))
+		return FALSE
+	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(patient, patient.get_bank_account())
+	if(!character_key)
+		return FALSE
+	if(revived && benn.is_service_employee(patient, character_key))
+		return FALSE
+	var/sample_key = revived ? "revival:[character_key]" : character_key
+	if(benn.benn_dna_sample_after[sample_key] > world.time)
+		return FALSE
+	benn.benn_dna_sample_after[sample_key] = world.time + (revived ? (5 MINUTES) : (1 MINUTES))
+
+	benn.add_data("bio", revived ? 6 : 2, activity)
+	var/list/foreign_ids = list()
+	var/job_corporation = patient.mind?.assigned_role?.get_cyberpunk_corporation_id()
+	if(job_corporation in list(CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+		foreign_ids += job_corporation
+	var/list/equipment = patient.get_equipped_items(INCLUDE_HELD) + patient.organs
+	for(var/obj/item/item as anything in equipment)
+		var/id = SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(item))
+		if(id in list(CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+			foreign_ids |= id
+	for(var/id in foreign_ids)
+		var/datum/cyberpunk_corporation/foreign = SScyberpunk_corporations.get_cyberpunk_corporation(id)
+		benn.steal_technology_from(foreign, revived ? 8 : 2, activity)
+	return TRUE
+
+/mob/living/basic/cyberpunk_corporate_agent/service_drone/dna_sampler
+	agent_title = "clinical sampling drone"
+
+/mob/living/basic/cyberpunk_corporate_agent/service_drone/dna_sampler/complete_treatment()
+	var/mob/living/carbon/human/patient = target_ref?.resolve()
+	if(!istype(patient) || !patient.IsReachableBy(src))
+		return FALSE
+	if(cyberpunk_collect_benn_dna_sample(patient, "Benn sampling drone: DNA storage"))
+		visible_message(span_notice("[src] confirms the clinical scan of [patient]."))
+	QDEL_IN(src, 1 SECONDS)
+	return TRUE
+
 /proc/cyberpunk_complete_benn_service(datum/weakref/user_ref, corporation_id, service_id)
 	var/mob/living/user = user_ref?.resolve()
 	if(!user || QDELETED(user))
@@ -95,6 +144,13 @@
 				package.forceMove(get_turf(user))
 			to_chat(user, span_notice("Benn chemical support delivers a compact chemistry kit."))
 	SScyberpunk_corporations.record_cyberpunk_corporate_activity(corporation_id, "bio", 2, 0, "Benn service completed: [service_id]")
+	if(ishuman(user) && corporation?.has_edict("benn_dna_storage") && (service_id in list("medical", "body")))
+		var/atom/source = corporation.get_nearby_service_source(user)
+		if(source && user.stat != DEAD)
+			var/mob/living/basic/cyberpunk_corporate_agent/service_drone/dna_sampler/drone = new(get_turf(source), corporation_id, "dna storage", user.real_name)
+			drone.target_ref = WEAKREF(user)
+			drone.ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, user)
+			to_chat(user, span_notice("Бэнь направила клинический дрон для анализа. Оставайся рядом."))
 	if(iscarbon(user))
 		cyberpunk_record_benn_biodata(user, "benn_gene_registry", "Benn service: genetic registry", 2, 1, branded_service = TRUE)
 		if(service_id == "medical")

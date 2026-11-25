@@ -584,7 +584,7 @@ const BusinessWarehouse = (props: { business: Business }) => {
               </Button.Checkbox>
             </Stack.Item>
             <Stack.Item>
-              Surplus{' '}
+              Доля остатка на продажу (%)
               <NumberInput
                 value={surplus}
                 minValue={0}

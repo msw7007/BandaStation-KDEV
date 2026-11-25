@@ -2720,6 +2720,8 @@
 		updatehealth()
 		get_up(TRUE)
 
+	if(. && stat != DEAD && !(full_heal_flags & HEAL_ADMIN) && ishuman(src))
+		cyberpunk_collect_benn_dna_sample(src, "Benn revival: DNA storage", revived = TRUE)
 	// The signal is called after everything else so components can properly check the updated values
 	SEND_SIGNAL(src, COMSIG_LIVING_REVIVE, full_heal_flags)
 

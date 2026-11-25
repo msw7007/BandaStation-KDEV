@@ -174,6 +174,9 @@
 /obj/machinery/reagentgrinder/proc/load_items(mob/user, list/obj/item/to_add)
 	PRIVATE_PROC(TRUE)
 
+	if(operating)
+		return 0
+
 	//surface level checks to filter out items that can be grinded/juice
 	var/list/obj/item/filtered_list = list()
 	for(var/obj/item/ingredient as anything in to_add)
@@ -222,6 +225,9 @@
 /obj/machinery/reagentgrinder/item_interaction(mob/living/user, obj/item/tool, list/modifiers)
 	if(user.combat_mode && !is_reagent_container(tool)  && !tool.is_open_container() || (tool.item_flags & ABSTRACT) || (tool.flags_1 & HOLOGRAM_1))
 		return ITEM_INTERACT_SKIP_TO_ATTACK
+	if(operating)
+		balloon_alert(user, "измельчитель работает")
+		return ITEM_INTERACT_BLOCKING
 
 	//add the beaker
 	if (is_reagent_container(tool) && tool.is_open_container())
@@ -376,10 +382,8 @@
 		if("eject")
 			replace_beaker(user)
 			dump_inventory_contents()
-		if("grind", "juice")
-			operate_for(6 SECONDS, choice == "juice", user)
-		if("mix")
-			mix(5 SECONDS, user)
+		if("grind", "juice", "mix")
+			operate_for(choice == "mix" ? 5 SECONDS : 6 SECONDS, choice, user)
 		if("examine")
 			to_chat(user, boxed_message(jointext(examine(user), "\n")))
 
@@ -399,26 +403,43 @@
  * Arguments
  *
  * * time - the duration in deciseconds to perform the operation
- * * juicing - FALSE to grind, TRUE to juice
+ * * mode - "grind", "juice" or "mix"
  * * mob/user - the player who initiated this process
  */
-/obj/machinery/reagentgrinder/proc/operate_for(time, juicing = FALSE, mob/user)
+/obj/machinery/reagentgrinder/proc/operate_for(time, mode, mob/living/user)
 	PRIVATE_PROC(TRUE)
 
-	if(!anchored || !is_operational || QDELETED(beaker) || beaker.reagents.holder_full())
-		operating = FALSE
+	var/obj/item/reagent_containers/batch_beaker = beaker
+	if(operating || !istype(user) || !can_complete_batch(batch_beaker, mode, user))
 		return
 	operating = TRUE
 
-	var/duration = time / speed
-
+	var/duration = max(1 SECONDS, time / (speed * user.get_cyberpunk_chemistry_speed_multiplier()))
 	Shake(pixelshiftx = 1, pixelshifty = 0, duration = duration)
-	if(!juicing)
-		playsound(src, 'sound/machines/blender.ogg', 50, TRUE)
-	else
-		playsound(src, 'sound/machines/juicer.ogg', 20, TRUE)
+	playsound(src, mode == "grind" ? 'sound/machines/blender.ogg' : 'sound/machines/juicer.ogg', 50, TRUE)
+	var/finished = do_after(user, duration, target = src, extra_checks = CALLBACK(src, PROC_REF(can_complete_batch), batch_beaker, mode, user))
+	if(QDELETED(src))
+		return
+	if(finished && can_complete_batch(batch_beaker, mode, user))
+		if(mode == "mix")
+			mix_complete(duration)
+		else
+			grind_complete(duration, mode == "juice", user)
+	operating = FALSE
 
-	var/total_weight
+/obj/machinery/reagentgrinder/proc/can_complete_batch(obj/item/reagent_containers/batch_beaker, mode, mob/living/user)
+	PRIVATE_PROC(TRUE)
+
+	if(!anchored || !is_operational || QDELETED(batch_beaker) || beaker != batch_beaker || batch_beaker.loc != src)
+		return FALSE
+	if(!user.can_perform_action(src, ALLOW_SILICON_REACH | FORBID_TELEKINESIS_REACH))
+		return FALSE
+	return mode == "mix" ? batch_beaker.reagents.total_volume > 0 : !batch_beaker.reagents.holder_full()
+
+/obj/machinery/reagentgrinder/proc/grind_complete(duration, juicing, mob/living/user)
+	PRIVATE_PROC(TRUE)
+
+	var/total_weight = 0
 	var/item_weight
 	for(var/obj/item/ingredient in contents)
 		if(beaker.reagents.holder_full())
@@ -455,41 +476,11 @@
 	//use power according to the total weight of items grinded
 	use_energy((active_power_usage * (duration / (1 SECONDS))) * (total_weight / maximum_weight))
 
-	addtimer(CALLBACK(src, PROC_REF(stop_operating)), duration)
 
 /obj/machinery/reagentgrinder/proc/can_process_cyberpunk_donation(obj/item/item)
 	if(!isorgan(item) && !isbodypart(item))
 		return FALSE
 	return cyberpunk_property_edict_multiplier(src, CYBERPUNK_CORP_BENN, "benn_donor_program", 2) > 1
-
-///Reset the operating status of the machine
-/obj/machinery/reagentgrinder/proc/stop_operating()
-	PRIVATE_PROC(TRUE)
-
-	operating = FALSE
-
-/**
- * Mixes the reagents inside the beaker
- * Arguments
- *
- * * time - the length of time in deciseconds to operate
- * * mob/user - the player who started the mixing process
- */
-/obj/machinery/reagentgrinder/proc/mix(time, mob/user)
-	PRIVATE_PROC(TRUE)
-
-	if(!anchored || !is_operational || QDELETED(beaker) || !beaker.reagents.total_volume)
-		operating = FALSE
-		return
-	operating = TRUE
-
-	var/duration = time / speed
-
-	Shake(pixelshiftx = 1, pixelshifty = 0, duration = duration)
-
-	playsound(src, 'sound/machines/juicer.ogg', 20, TRUE)
-
-	addtimer(CALLBACK(src, PROC_REF(mix_complete), duration), duration)
 
 /**
  * Mix the reagents
@@ -510,8 +501,6 @@
 	for(var/i in 1 to butter_amt)
 		var/obj/item/food/butter/tasty_butter = new(drop_location())
 		tasty_butter.reagents.set_all_reagents_purity(purity)
-
-	operating = FALSE
 
 	if (!beaker.reagents.total_volume)
 		return

@@ -118,6 +118,9 @@
 		try_cyberpunk_trans_travel_defense_teleport(attacking_item)
 
 	SEND_SIGNAL(src, COMSIG_MOB_AFTER_APPLY_DAMAGE, damage_dealt, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, attacking_item, wound_clothing)
+	var/mob/living/carbon/human/protected = src
+	if(damage_dealt > 0 && istype(protected) && protected.health <= protected.maxHealth * 0.5)
+		protected.check_cyberpunk_guardian_response(attacking_item)
 	return damage_dealt
 
 /**

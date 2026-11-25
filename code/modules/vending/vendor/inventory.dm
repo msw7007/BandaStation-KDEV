@@ -249,6 +249,7 @@
 	if(iscarbon(user) && get_cyberpunk_supply_corporation()?.id == CYBERPUNK_CORP_BENN)
 		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Benn vending order", branded_service = TRUE)
 		cyberpunk_record_benn_biodata(src, "benn_gene_registry", "Benn vending order: genetic registry", 1, 1, branded_service = TRUE)
+		cyberpunk_collect_benn_dna_sample(user, "Benn vending order: DNA storage")
 	if(greyscale_colors)
 		vended_item.set_greyscale(colors=greyscale_colors)
 	if(isliving(user) && route_cyberpunk_starlight_purchase(user, vended_item))

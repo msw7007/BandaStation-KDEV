@@ -241,7 +241,12 @@
 		ui.open()
 
 /obj/machinery/computer/corporate_terminal/ui_data(mob/user)
-	return cyberpunk_corporations_ui_data(user, corporation_id, corporation_id)
+	var/list/data = cyberpunk_corporations_ui_data(user, corporation_id, corporation_id)
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
+	var/mob/living/trader = user
+	if(can_access_external_trade(trader, corporation))
+		data["externalTrade"] = get_external_trade_offer(trader)
+	return data
 
 /obj/machinery/computer/corporate_terminal/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
 	. = ..()
@@ -250,7 +255,105 @@
 	params["corporation_id"] = corporation_id
 	if(action == "select")
 		return TRUE
+	if(action == "external_import" || action == "external_export")
+		var/mob/living/trader = ui.user
+		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
+		if(!can_access_external_trade(trader, corporation))
+			return FALSE
+		var/quantity = text2num("[params["quantity"]]")
+		var/price = text2num("[params["price"]]")
+		var/success = action == "external_import" ? order_external_import(corporation, params["item"], quantity, price) : sell_external_export(corporation, trader, params["item"], quantity, price)
+		if(success)
+			to_chat(trader, span_notice(action == "external_import" ? "Заказ оплачен со счёта корпорации. Груз привезут к этому терминалу." : "Товар отправлен за город. Выручка зачислена корпорации."))
+		else
+			to_chat(trader, span_warning(action == "external_import" ? "Заказ не принят. Проверь котировку, бюджет и свободный пол рядом с терминалом." : "Продажа не прошла. Проверь котировку, количество и товар в активной руке."))
+		return TRUE
 	return cyberpunk_corporations_ui_act(action, params, ui.user)
+
+/obj/machinery/computer/corporate_terminal/proc/can_access_external_trade(mob/living/user, datum/cyberpunk_corporation/corporation)
+	return istype(user) && corporation && !corporation.hidden && corporation.can_manage(user) && is_operational && anchored && isturf(loc) && !is_area_virtual(get_area(src)) && has_cyberpunk_crypto_access(user) && user.can_perform_action(src, FORBID_TELEKINESIS_REACH)
+
+/obj/machinery/computer/corporate_terminal/proc/get_external_trade_offer(mob/living/user)
+	var/list/catalog = cyberpunk_external_trade_catalog()
+	var/list/imports = list()
+	for(var/key in catalog)
+		var/obj/item/product = catalog[key]
+		imports += list(list("key" = key, "name" = initial(product.name), "price" = cyberpunk_external_trade_price(product)))
+	var/obj/item/held = user.get_active_held_item()
+	var/list/export
+	if(held && (catalog[lowertext(initial(held.name))] == held.type) && !(held.item_flags & ABSTRACT) && !(held.flags_1 & HOLOGRAM_1))
+		var/obj/item/stack/stack = held
+		if(!istype(stack) || !stack.is_cyborg)
+			export = list("key" = REF(held), "name" = held.name, "price" = cyberpunk_external_export_price(held.type), "amount" = istype(stack) ? stack.get_amount() : 1)
+	return list("imports" = imports, "heldExport" = export)
+
+/obj/machinery/computer/corporate_terminal/proc/get_external_import_drop_turf()
+	RETURN_TYPE(/turf)
+	for(var/direction in GLOB.alldirs)
+		var/turf/candidate = get_step(src, direction)
+		if(candidate && get_area(candidate) == get_area(src) && !isspaceturf(candidate) && !candidate.is_blocked_turf(exclude_mobs = TRUE))
+			return candidate
+	return null
+
+/obj/machinery/computer/corporate_terminal/proc/order_external_import(datum/cyberpunk_corporation/corporation, item_key, quantity, expected_price)
+	if(!istext(item_key) || !isnum(quantity) || quantity < 1 || quantity > 100 || quantity != round(quantity) || !get_external_import_drop_turf())
+		return FALSE
+	var/list/catalog = cyberpunk_external_trade_catalog()
+	var/obj/item/product = catalog[item_key]
+	if(!product || expected_price != cyberpunk_external_trade_price(product))
+		return FALSE
+	var/cost = quantity * expected_price
+	if(!corporation.charge_funds(cost, "Внешняя закупка: [quantity] × [initial(product.name)]"))
+		return FALSE
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_finish_corporate_import), WEAKREF(src), WEAKREF(corporation), get_turf(src), product, quantity, cost), 2 MINUTES)
+	return TRUE
+
+/proc/cyberpunk_finish_corporate_import(datum/weakref/terminal_ref, datum/weakref/corporation_ref, turf/ordered_turf, item_type, quantity, cost)
+	var/obj/machinery/computer/corporate_terminal/terminal = terminal_ref?.resolve()
+	var/datum/cyberpunk_corporation/corporation = corporation_ref?.resolve()
+	if(!corporation)
+		return
+	var/turf/drop_turf
+	if(terminal && terminal.corporation_id == corporation.id && terminal.loc == ordered_turf)
+		drop_turf = terminal.get_external_import_drop_turf()
+	if(!drop_turf)
+		var/datum/bank_account/account = corporation.get_account()
+		account?.adjust_money(cost, "Возврат за внешнюю поставку")
+		corporation.add_history("Внешняя поставка отменена. Точка приёма недоступна.")
+		return
+	var/obj/structure/closet/crate/freight = new(drop_turf)
+	freight.name = "ящик внешней поставки [corporation.name]"
+	if(ispath(item_type, /obj/item/stack))
+		new item_type(freight, quantity, FALSE)
+	else
+		for(var/index in 1 to quantity)
+			new item_type(freight)
+	var/obj/item/product = item_type
+	corporation.add_history("Внешняя поставка прибыла: [quantity] × [initial(product.name)].")
+	terminal.say("Внешняя поставка на месте.")
+
+/obj/machinery/computer/corporate_terminal/proc/sell_external_export(datum/cyberpunk_corporation/corporation, mob/living/user, item_key, quantity, expected_price)
+	if(!isnum(quantity) || quantity < 1 || quantity > 100 || quantity != round(quantity))
+		return FALSE
+	var/obj/item/item = user.get_active_held_item()
+	if(QDELETED(item) || REF(item) != item_key || (item.item_flags & ABSTRACT) || (item.flags_1 & HOLOGRAM_1))
+		return FALSE
+	var/list/catalog = cyberpunk_external_trade_catalog()
+	if(catalog[lowertext(initial(item.name))] != item.type)
+		return FALSE
+	var/price = cyberpunk_external_export_price(item.type)
+	if(!price || expected_price != price || !corporation.get_account())
+		return FALSE
+	var/item_label = item.name
+	var/obj/item/stack/stack = item
+	if(istype(stack))
+		if(stack.is_cyborg || !stack.use(quantity))
+			return FALSE
+	else
+		if(quantity != 1 || !user.transferItemToLoc(item, src))
+			return FALSE
+		qdel(item)
+	return corporation.add_funds(quantity * price, "Внешняя продажа: [quantity] × [item_label]")
 
 /obj/machinery/computer/corporate_terminal/benn
 	name = "корпоративный терминал Benn"

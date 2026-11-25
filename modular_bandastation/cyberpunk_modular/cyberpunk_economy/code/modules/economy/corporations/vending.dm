@@ -173,6 +173,7 @@
 	if(service == "medical" && iscarbon(user))
 		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Benn vending diagnosis", branded_service = TRUE)
 		cyberpunk_record_benn_biodata(src, "benn_gene_registry", "Benn vending diagnosis: genetic registry", 1, 1, branded_service = TRUE)
+		cyberpunk_collect_benn_dna_sample(user, "Benn diagnosis: DNA storage")
 	to_chat(user, custom_boxed_message("blue_box", report), trailing_newline = FALSE, type = MESSAGE_TYPE_INFO)
 	if(print_report)
 		var/obj/item/paper/printout = new(drop_location())
@@ -322,7 +323,7 @@
 	if(!has_corporate_vending_module())
 		return null
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(cyberpunk_corporate_vendor_id)
-	if(!corporation || (!corporation.has_edict(corporation.service_tracking_edict()) && !corporation.has_edict(corporation.service_guardian_edict())))
+	if(!corporation?.has_edict(corporation.service_tracking_edict()))
 		return null
 	return list("name" = "[corporation.name] service chip (autoimplant)", "price" = 100)
 
@@ -354,9 +355,6 @@
 	allow_multiple = TRUE
 	var/corporation_id
 	var/next_alarm_at = 0
-	var/shield_until = 0
-	var/datum/weakref/last_attacker_ref
-	var/last_attack_at = 0
 	var/datum/weakref/equipment_ref
 	var/emergency_until = 0
 
@@ -364,38 +362,17 @@
 	. = ..()
 	if(!.)
 		return
-	RegisterSignal(target, COMSIG_MOB_AFTER_APPLY_DAMAGE, PROC_REF(on_damage))
 	RegisterSignal(target, COMSIG_LIVING_HEALTH_UPDATE, PROC_REF(on_health_update))
-	RegisterSignal(target, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS, PROC_REF(on_damage_modifiers))
 
 /obj/item/implant/cyberpunk_service/removed(mob/living/source, silent = FALSE, special = FALSE)
-	UnregisterSignal(source, list(COMSIG_MOB_AFTER_APPLY_DAMAGE, COMSIG_LIVING_HEALTH_UPDATE, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS))
+	UnregisterSignal(source, COMSIG_LIVING_HEALTH_UPDATE)
 	release_stasis()
 	clear_equipment()
-	last_attacker_ref = null
 	return ..()
 
 /obj/item/implant/cyberpunk_service/proc/on_health_update()
 	SIGNAL_HANDLER
 	addtimer(CALLBACK(src, PROC_REF(check_alarm)), 0, TIMER_UNIQUE)
-
-/obj/item/implant/cyberpunk_service/proc/on_damage(mob/living/source, damage, damagetype, def_zone, blocked, wound_bonus, exposed_wound_bonus, sharpness, attack_direction, atom/attacking_item)
-	SIGNAL_HANDLER
-	var/mob/living/attacker = isliving(attacking_item) ? attacking_item : null
-	if(isitem(attacking_item) && isliving(attacking_item.loc))
-		attacker = attacking_item.loc
-	var/obj/projectile/projectile = attacking_item
-	if(istype(projectile) && isliving(projectile.firer))
-		attacker = projectile.firer
-	if(attacker && attacker != source)
-		last_attacker_ref = WEAKREF(attacker)
-		last_attack_at = world.time
-	on_health_update()
-
-/obj/item/implant/cyberpunk_service/proc/on_damage_modifiers(datum/source, list/modifiers)
-	SIGNAL_HANDLER
-	if(world.time < shield_until && !is_implant_disabled() && imp_in?.has_neural_implant())
-		modifiers += 0.5
 
 /obj/item/implant/cyberpunk_service/proc/release_stasis()
 	imp_in?.remove_status_effect(/datum/status_effect/grouped/stasis, REF(src))
@@ -404,42 +381,117 @@
 	if(!imp_in || imp_in.stat == DEAD || imp_in.health > imp_in.maxHealth * 0.5 || world.time < next_alarm_at || !can_activate_implant())
 		return
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
-	if(!corporation)
-		return
-	var/tracking = corporation.has_edict(corporation.service_tracking_edict())
-	var/member_key = SSeconomy.get_cyberpunk_contract_character_key(imp_in, imp_in.get_bank_account())
-	var/guardians = (corporation.employees[member_key] || corporation.is_subscribed(imp_in)) && corporation.has_edict(corporation.service_guardian_edict()) && corporation.has_service_infrastructure(imp_in)
-	if(!tracking && !guardians)
+	if(!corporation?.has_edict(corporation.service_tracking_edict()))
 		return
 	next_alarm_at = world.time + 3 MINUTES
 	corporation.broadcast_service_alarm(imp_in, "critical body condition")
-	if(tracking && corporation_id == CYBERPUNK_CORP_BENN && corporation.is_subscribed(imp_in))
+	if(corporation_id == CYBERPUNK_CORP_BENN && corporation.is_subscribed(imp_in))
 		imp_in.apply_status_effect(/datum/status_effect/grouped/stasis, REF(src))
 		addtimer(CALLBACK(src, PROC_REF(release_stasis)), 3 MINUTES)
-	if(guardians)
-		var/mob/living/attacker = world.time <= last_attack_at + 10 SECONDS ? last_attacker_ref?.resolve() : null
-		var/mob/living/basic/cyberpunk_corporate_agent/guardian/drone = new(get_turf(imp_in), corporation_id, "guardian", imp_in.real_name)
-		drone.set_faction(list("corporate_guardian_[corporation_id]"))
-		if(attacker && attacker != imp_in && attacker.z == imp_in.z && get_dist(attacker, imp_in) <= 7)
-			drone.ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, attacker)
-		if(corporation_id == CYBERPUNK_CORP_RYAZNOV)
-			shield_until = world.time + 20 SECONDS
-		else if(corporation_id == CYBERPUNK_CORP_STARLIGHT && attacker)
-			var/turf/escape = get_step(attacker, REVERSE_DIR(attacker.dir))
-			if(escape && escape.z == imp_in.z && get_dist(escape, imp_in) <= 7 && !escape.is_blocked_turf(source_atom = imp_in))
-				imp_in.forceMove(escape)
-				attacker.adjust_staggered_up_to(2 SECONDS, 2 SECONDS)
 
-/datum/cyberpunk_corporation/proc/has_service_infrastructure(atom/target)
-	for(var/vendor_key in vendor_registry)
-		var/datum/weakref/vendor_ref = vendor_registry[vendor_key]
-		var/obj/machinery/vending/vendor = vendor_ref?.resolve()
-		if(vendor?.is_operational && vendor.has_corporate_vending_module() && vendor.z == target.z && get_dist(vendor, target) <= 7)
-			return TRUE
-	for(var/obj/machinery/machine in range(7, target))
-		if(machine.is_operational && SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(machine)) == id)
-			return TRUE
-	return FALSE
+/mob/living/carbon/human/var/next_cyberpunk_guardian_check = 0
+
+/// Damage and critical health transitions trigger this locally, without polling the player population.
+/mob/living/carbon/human/proc/check_cyberpunk_guardian_response(atom/attacking_item)
+	if(stat == DEAD || health > maxHealth * 0.5 || !mind || world.time < next_cyberpunk_guardian_check)
+		return
+	var/turf/current = get_turf(src)
+	if(!current || is_area_virtual(get_area(current)))
+		return
+	next_cyberpunk_guardian_check = world.time + 2 SECONDS
+	var/mob/living/attacker = attacking_item
+	if(!istype(attacker))
+		attacker = null
+		var/obj/projectile/projectile = attacking_item
+		if(istype(projectile) && isliving(projectile.firer))
+			attacker = projectile.firer
+		else if(isitem(attacking_item) && isliving(attacking_item.loc))
+			attacker = attacking_item.loc
+	if(attacker == src || attacker?.z != z || get_dist(attacker, src) > 7)
+		attacker = null
+
+	for(var/id in list(CYBERPUNK_CORP_BENN, CYBERPUNK_CORP_RYAZNOV, CYBERPUNK_CORP_STARLIGHT))
+		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations?.cyberpunk_corporations[id]
+		if(corporation?.has_edict(corporation.service_guardian_edict()))
+			corporation.dispatch_guardian_response(src, attacker)
+
+/datum/cyberpunk_corporation/proc/is_service_employee(mob/living/user, character_key)
+	return user.mind?.assigned_role?.get_cyberpunk_corporation_id() == id || (character_key && employees[character_key])
+
+/datum/cyberpunk_corporation/var/list/guardian_response_until = list()
+
+/datum/cyberpunk_corporation/proc/dispatch_guardian_response(mob/living/protected, mob/living/attacker)
+	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(protected, protected.get_bank_account())
+	if(!character_key || guardian_response_until[character_key] > world.time)
+		return FALSE
+	if(!is_service_employee(protected, character_key) && !is_subscribed(protected))
+		return FALSE
+	var/atom/source = get_guardian_infrastructure(protected)
+	if(!source)
+		return FALSE
+	guardian_response_until[character_key] = world.time + 3 MINUTES
+	broadcast_service_alarm(protected, "guardians responding to critical condition")
+	var/mob/living/basic/cyberpunk_corporate_agent/guardian/drone = new(get_turf(source), id, "guardian", protected.real_name)
+	drone.set_faction(list("corporate_guardian_[id]"))
+	if(attacker)
+		drone.ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, attacker)
+	if(id == CYBERPUNK_CORP_RYAZNOV)
+		protected.apply_status_effect(/datum/status_effect/cyberpunk_guardian_shield)
+	else if(id == CYBERPUNK_CORP_STARLIGHT && attacker)
+		var/turf/escape = get_step(attacker, REVERSE_DIR(attacker.dir))
+		if(escape && escape.z == protected.z && get_dist(escape, protected) <= 7 && !escape.is_blocked_turf(source_atom = protected))
+			protected.forceMove(escape)
+			attacker.adjust_staggered_up_to(2 SECONDS, 2 SECONDS)
+	return TRUE
+
+/datum/cyberpunk_corporation/proc/get_nearby_service_source(atom/target)
+	var/obj/machinery/closest
+	var/closest_distance = 8
+	for(var/source_key in service_sources)
+		var/datum/weakref/source_ref = service_sources[source_key]
+		var/obj/machinery/machine = source_ref?.resolve()
+		if(!machine?.is_operational || machine.z != target.z)
+			continue
+		var/distance = get_dist(machine, target)
+		if(distance >= closest_distance)
+			continue
+		var/obj/machinery/vending/vendor = machine
+		if(istype(vendor) && (!vendor.has_corporate_vending_module() || vendor.cyberpunk_corporate_vendor_id != id))
+			continue
+		closest = machine
+		closest_distance = distance
+	return closest
+
+/datum/cyberpunk_corporation/proc/get_guardian_infrastructure(atom/target)
+	var/atom/source = get_nearby_service_source(target)
+	if(source)
+		return source
+	if(id == CYBERPUNK_CORP_STARLIGHT)
+		for(var/obj/item/cyberpunk_delivery_beacon/beacon in range(7, target))
+			if(beacon.active && isturf(beacon.loc))
+				return beacon
+		for(var/obj/structure/cyberpunk_business_unload_zone/zone in range(7, target))
+			var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(zone.business_id)
+			if(business?.warehouse_valid && SScyberpunk_corporations.cyberpunk_normalize_corporation_id(business.registered_to) == id)
+				return zone
+	return null
+
+/datum/status_effect/cyberpunk_guardian_shield
+	id = "cyberpunk_guardian_shield"
+	duration = 20 SECONDS
+	status_type = STATUS_EFFECT_REFRESH
+	alert_type = null
+
+/datum/status_effect/cyberpunk_guardian_shield/on_apply()
+	RegisterSignal(owner, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS, PROC_REF(protect))
+	return TRUE
+
+/datum/status_effect/cyberpunk_guardian_shield/on_remove()
+	UnregisterSignal(owner, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS)
+
+/datum/status_effect/cyberpunk_guardian_shield/proc/protect(datum/source, list/modifiers)
+	SIGNAL_HANDLER
+	modifiers += 0.5
 
 /datum/cyberpunk_corporation/proc/broadcast_service_alarm(atom/target, reason)
 	add_history("Service beacon: [reason] at [AREACOORD(target)]")

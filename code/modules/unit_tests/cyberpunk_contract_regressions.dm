@@ -80,3 +80,38 @@
 		TEST_ASSERT_EQUAL(product.max_amount, vendor.products[product.product_path], "An empty business vendor must still have space for warehouse stock.")
 	var/obj/item/vending_refill/youtool/refill = allocate(__IMPLIED_TYPE__)
 	TEST_ASSERT(vendor.restock(refill) > 0, "An ordinary refill must work when both optional categories are absent.")
+
+/datum/unit_test/cyberpunk_warehouse_surplus_limit/Run()
+	var/datum/cyberpunk_business/business = allocate(__IMPLIED_TYPE__)
+	business.add_stock("cable", 11)
+	business.set_stock_item_type("cable", /obj/item/stack/cable_coil)
+	business.warehouse_surplus_percent = 0
+	TEST_ASSERT_EQUAL(business.get_sellable_stock_amount("cable"), 0, "A disabled listing must reserve all stock.")
+	business.warehouse_surplus_percent = 50
+	TEST_ASSERT_EQUAL(business.get_sellable_stock_amount("cable"), 5, "A fractional unit must not exceed the sale limit.")
+	business.warehouse_surplus_percent = 100
+	TEST_ASSERT_EQUAL(business.get_sellable_stock_amount("cable"), 11, "A full listing may offer all units.")
+
+/datum/unit_test/cyberpunk_machine_part_persistence/Run()
+	var/turf/test_floor = run_loc_floor_bottom_left
+	var/obj/machinery/reagentgrinder/original = allocate(__IMPLIED_TYPE__, test_floor)
+	var/datum/stock_part/servo/old_part = locate() in original.component_parts
+	TEST_ASSERT_NOTNULL(old_part, "The machine must start with a servo.")
+	var/datum/stock_part/servo/upgrade = GLOB.stock_part_datums[/datum/stock_part/servo/tier3]
+	original.component_parts -= old_part
+	original.component_parts += upgrade
+	original.cyberpunk_component_wear = list()
+	original.cyberpunk_component_wear[upgrade] = 21
+	original.recalculate_cyberpunk_machine_wear()
+	original.RefreshParts()
+	var/list/snapshot = cyberpunk_persistent_capture_movable(original, test_floor, test_floor, null)
+	var/list/saved_parts = snapshot["machine_parts"]
+	TEST_ASSERT_EQUAL(length(saved_parts), length(original.component_parts), "A snapshot must capture each installed component.")
+	var/obj/machinery/reagentgrinder/restored = allocate(__IMPLIED_TYPE__, test_floor)
+	TEST_ASSERT(cyberpunk_persistent_restore_machine_parts(restored, saved_parts, null, test_floor, null), "A valid saved part list must restore successfully.")
+	TEST_ASSERT(upgrade in restored.component_parts, "The upgraded part must replace the default part.")
+	TEST_ASSERT_EQUAL(length(restored.component_parts), length(original.component_parts), "Restoring must not duplicate factory parts.")
+	TEST_ASSERT(!QDELETED(restored.circuit) && (restored.circuit in restored.component_parts), "The machine must reference its restored circuit board.")
+	TEST_ASSERT_EQUAL(restored.get_cyberpunk_component_wear(upgrade), 21, "The upgraded part must retain its wear.")
+	TEST_ASSERT_EQUAL(restored.cyberpunk_machine_wear, 21, "The overall machine state must reflect the restored wear.")
+	TEST_ASSERT_EQUAL(restored.speed, upgrade.tier, "The restored part tier must affect processing speed.")
