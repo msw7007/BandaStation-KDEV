@@ -1,0 +1,9 @@
+// Overmap never depends on this addon; the standalone reactor remains available without it.
+#ifdef ST_SPACE_AU_SCALE
+#include "_precision_maneuver.dm"
+#include "code/defines.dm"
+#include "code/ship.dm"
+#include "code/impact.dm"
+#include "code/maneuver.dm"
+#include "code/console.dm"
+#endif

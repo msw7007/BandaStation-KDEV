@@ -1,0 +1,8 @@
+#include "_nuclear_power_block.dm"
+#include "code/defines.dm"
+#include "code/turbine.dm"
+#include "code/reactor.dm"
+#include "code/processing.dm"
+#include "code/service.dm"
+#include "code/interface.dm"
+#include "code/parts.dm"

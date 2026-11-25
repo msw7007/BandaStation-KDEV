@@ -1,0 +1,27 @@
+reactor.dmi (96x96): reactor, reactor_open.
+lid.dmi (32x32): lid, lid_broken.
+New artwork generated with OpenAI imagegen for the nuclear power block, 2026-11-22.
+Art direction: native /tg/station pixel machinery, top surface and south-facing
+front wall, desaturated steel, separate pressure lid, two independent turbines.
+Existing TG machinery was used as a style reference, not copied as source pixels.
+License: repository CC BY-SA 3.0 asset license.
+
+Generated source PNGs and SHA256:
+exec-f4d7758f-0003-4c9a-b7de-d458ce96b9f0.png (body)
+b6a2ccb102caf290cad08a87b8e0a7c8ba67d12efdd0dae5763390aa37f2008a
+exec-02d82bc4-ff57-4c8f-b335-0e20a6959dab.png (service panel)
+c4f55f4278916c8c299d6c293827826b78f625b9f1409a6d68ec04a654ee9418
+exec-f9c3a773-dd88-4013-814d-ced91024720e.png (square lid)
+2b3bb51862d590e2198aff0f61273ff81edfac6f7cf14cb9cdd9765565a11e87
+exec-49d0ebdb-c75e-4e32-860b-09d8ae816864.png (broken square lid)
+6e54aed74780d07f2dea96146f4d1d1ebf7a5dfdbab7c59fcf5ec5941aca2cfd
+
+Preparation: nearest-neighbor reduction, binary alpha, 40-color body / 20-color
+lid palettes without dithering. The open body changes only its service panel.
+Packed using the repository tools/dmi library, with named states and metadata.
+
+indicators.dmi (96x96): original native-resolution hardware lens masks,
+separate from all body/lid artwork, distributed under CC BY-SA 3.0.
+Five independently controlled groups: temperature, reaction, main turbine,
+reserve turbine, coolant (two pump lenses). 15 named states, 16 frames total.
+temperature_red_blink has two 0.5-second frames and loops indefinitely.

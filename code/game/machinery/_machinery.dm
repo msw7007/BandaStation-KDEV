@@ -647,7 +647,7 @@
 
 	set_panel_open(!panel_open)
 
-/obj/machinery/can_interact(mob/user)
+/obj/machinery/can_interact(mob/user, require_adjacent_turf = TRUE)
 	if(QDELETED(user))
 		return FALSE
 

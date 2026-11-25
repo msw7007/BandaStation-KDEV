@@ -91,6 +91,8 @@
 #include "skillchip_rcd/_skillchip_rcd.dme"
 #include "skills/_skills.dme"
 #include "sounds/_sounds.dme"
+#include "nuclear_power_block/_nuclear_power_block.dme"
+#include "space_overmap/extensions/precision_maneuver/_precision_maneuver.dme"
 #include "species/_species.dme"
 #include "speech_filter/_speech_filter.dme"
 #include "ssd_indicator/_ssd_indicator.dme"

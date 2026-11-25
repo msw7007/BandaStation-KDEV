@@ -103,8 +103,9 @@
 		return interact(user)
 	return FALSE
 
+/// Callers with a validated custom footprint may replace only the adjacency gate.
 /atom/proc/can_interact(mob/user, require_adjacent_turf = TRUE)
-	if(!user.can_interact_with(src, interaction_flags_atom & INTERACT_ATOM_ALLOW_USER_LOCATION))
+	if(require_adjacent_turf && !user.can_interact_with(src, interaction_flags_atom & INTERACT_ATOM_ALLOW_USER_LOCATION))
 		return FALSE
 	if((interaction_flags_atom & INTERACT_ATOM_REQUIRES_DEXTERITY) && !ISADVANCEDTOOLUSER(user))
 		to_chat(user, span_warning("You don't have the dexterity to do this!"))
@@ -126,7 +127,7 @@
 	if(!can_interact(user))
 		. = min(., UI_UPDATE)
 
-/atom/movable/can_interact(mob/user)
+/atom/movable/can_interact(mob/user, require_adjacent_turf = TRUE)
 	. = ..()
 	if(!.)
 		return
