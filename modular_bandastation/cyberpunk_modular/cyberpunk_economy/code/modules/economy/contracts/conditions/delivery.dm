@@ -6,6 +6,11 @@
 	var/destination_kind = "creator"
 	var/destination_text = ""
 	var/target_kind = "item"
+	var/datum/weakref/person_contract_ref
+	var/datum/weakref/person_deliverable_ref
+	var/datum/weakref/person_contractor_ref
+	var/datum/weakref/person_recipient_ref
+	var/next_person_search = 0
 
 
 /datum/cyberpunk_contract_condition/delivery/configure_from_contract(datum/cyberpunk_contract/contract, list/params)
@@ -37,7 +42,7 @@
 	)
 
 
-/datum/cyberpunk_contract_condition/delivery/proc/item_at_destination(datum/cyberpunk_contract/contract, atom/movable/deliverable, mob/living/holder)
+/datum/cyberpunk_contract_condition/delivery/proc/item_at_destination(datum/cyberpunk_contract/contract, atom/movable/deliverable, mob/living/holder, mob/living/known_recipient)
 	if(!contract || !deliverable)
 		return FALSE
 	if(destination_kind == "coordinates")
@@ -47,10 +52,10 @@
 			if(nearby.has_contract_terminal_module() && terminal_matches(nearby))
 				return TRUE
 		return FALSE
-	var/mob/living/recipient
-	if(destination_kind == "recipient")
+	var/mob/living/recipient = known_recipient
+	if(!recipient && destination_kind == "recipient")
 		recipient = SSeconomy.find_cyberpunk_contract_person(destination_text)
-	else
+	else if(!recipient)
 		recipient = holder && contract.user_character_key(holder) == contract.creator_character_key ? holder : contract.find_creator_mob()
 	var/turf/recipient_turf = get_turf(recipient)
 	var/turf/cargo_turf = get_turf(deliverable)
@@ -93,14 +98,8 @@
 
 /datum/cyberpunk_contract_condition/delivery/check_nearby(datum/cyberpunk_contract/contract, mob/living/user)
 	if(target_kind == "mob")
-		var/mob/living/person = SSeconomy.find_cyberpunk_contract_person(target_text)
-		if(person && item_at_destination(contract, person, user))
-			delivered_amount = max(delivered_amount, required_amount)
-			contract.delivered_amount = max(contract.delivered_amount, delivered_amount)
-			contract.add_history("[person.real_name || person.name] delivered to [destination_text || destination_kind]")
-			if(!contract.creator_confirm_required)
-				contract.complete("person delivered")
-			return TRUE
+		var/mob/living/person = person_deliverable_ref?.resolve() || SSeconomy.find_cyberpunk_contract_person(target_text)
+		return record_person_delivery(contract, person, user, person_recipient_ref?.resolve())
 	for(var/atom/target in view(1, user))
 		if(!matches_atom(target))
 			continue
@@ -115,6 +114,70 @@
 				contract.complete("object delivered")
 			return TRUE
 	return FALSE
+
+
+/datum/cyberpunk_contract_condition/delivery/on_accept(datum/cyberpunk_contract/contract, mob/living/user)
+	if(target_kind != "mob")
+		return
+	person_contract_ref = WEAKREF(contract)
+	person_contractor_ref = WEAKREF(user)
+	START_PROCESSING(SSobj, src)
+
+/datum/cyberpunk_contract_condition/delivery/Destroy()
+	stop_person_delivery()
+	return ..()
+
+/datum/cyberpunk_contract_condition/delivery/proc/stop_person_delivery()
+	STOP_PROCESSING(SSobj, src)
+	person_contract_ref = null
+	person_deliverable_ref = null
+	person_contractor_ref = null
+	person_recipient_ref = null
+
+/datum/cyberpunk_contract_condition/delivery/process(seconds_per_tick)
+	var/datum/cyberpunk_contract/contract = person_contract_ref?.resolve()
+	if(!contract || contract.status != CYBERPUNK_CONTRACT_ACCEPTED || delivered_amount >= required_amount)
+		stop_person_delivery()
+		return PROCESS_KILL
+	var/mob/living/person = person_deliverable_ref?.resolve()
+	var/mob/living/contractor = person_contractor_ref?.resolve()
+	var/mob/living/recipient = person_recipient_ref?.resolve()
+	var/needs_recipient = destination_kind in list("creator", "recipient")
+	if(world.time >= next_person_search && (!person || !contractor || (needs_recipient && !recipient)))
+		next_person_search = world.time + 5 SECONDS
+		if(!person)
+			person = SSeconomy.find_cyberpunk_contract_person(target_text)
+			if(person)
+				person_deliverable_ref = WEAKREF(person)
+		if(!contractor)
+			contractor = SSeconomy.find_cyberpunk_contract_person(contract.contractor_character_key)
+			if(contractor)
+				person_contractor_ref = WEAKREF(contractor)
+		if(needs_recipient && !recipient)
+			recipient = destination_kind == "recipient" ? SSeconomy.find_cyberpunk_contract_person(destination_text) : contract.find_creator_mob()
+			if(recipient)
+				person_recipient_ref = WEAKREF(recipient)
+	if(!needs_recipient || recipient)
+		record_person_delivery(contract, person, contractor, recipient)
+
+/datum/cyberpunk_contract_condition/delivery/proc/record_person_delivery(datum/cyberpunk_contract/contract, mob/living/person, mob/living/contractor, mob/living/recipient)
+	if(!person || !contractor || contract.status != CYBERPUNK_CONTRACT_ACCEPTED)
+		return FALSE
+	if(delivered_amount >= required_amount)
+		return TRUE
+	var/turf/person_turf = get_turf(person)
+	var/turf/contractor_turf = get_turf(contractor)
+	if(!person_turf || !contractor_turf || person_turf.z != contractor_turf.z || get_dist(person_turf, contractor_turf) > 1)
+		return FALSE
+	if(!item_at_destination(contract, person, contractor, recipient))
+		return FALSE
+	delivered_amount = max(delivered_amount, required_amount)
+	contract.delivered_amount = max(contract.delivered_amount, delivered_amount)
+	contract.add_history("[person.real_name || person.name] delivered to [destination_text || destination_kind]")
+	stop_person_delivery()
+	if(!contract.creator_confirm_required)
+		contract.complete("person delivered")
+	return TRUE
 
 
 /datum/controller/subsystem/economy/proc/record_cyberpunk_contract_item_in_hands(mob/living/holder, obj/item/item)
@@ -201,6 +264,8 @@
 		if(item.cyberpunk_contract_id == id)
 			item.cyberpunk_contract_id = 0
 	delivery_items.Cut()
+	for(var/datum/cyberpunk_contract_condition/delivery/delivery in completion_conditions)
+		delivery.stop_person_delivery()
 	for(var/datum/cyberpunk_contract_condition/guard/condition as anything in completion_conditions)
 		var/obj/item/guarded_item = locate(condition.protected_ref)
 		if(istype(guarded_item) && guarded_item.cyberpunk_contract_id == id)

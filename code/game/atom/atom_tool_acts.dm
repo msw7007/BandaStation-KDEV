@@ -144,11 +144,12 @@
 					to_chat(user, span_notice("Ваши строительные навыки улучшают ремонт на [applied_repair] прочности."))
 
 			SSeconomy.record_cyberpunk_contract_repair(user, src)
+			var/atom/movable/repaired_object = src
+			if(istype(repaired_object))
+				SScyberpunk_corporations.record_ryaznov_work(repaired_object, "ремонт", istype(repaired_object, /obj/vehicle) ? 3 : 1)
 			SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "engineering", max(1, round((current_integrity - previous_integrity) / 10)), 0, "field repair")
 			if(SScyberpunk_corporations.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_self_diagnostics"))
 				SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "diagnostics", 1, 0, "field repair telemetry")
-			if(SScyberpunk_corporations.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_route_registry"))
-				SScyberpunk_corporations.record_cyberpunk_corporate_activity("ryaznov", "infrastructure", 1, 0, "serviced infrastructure: [src]")
 
 	if(is_left_clicking && tool_type == TOOL_WELDER)
 		user.roll_cyberpunk_construction_welding_hazard(src, tool)

@@ -1,14 +1,119 @@
 //CYBERPUNK CORPORATIONS - government monitoring helpers.
 
+/obj/item/circuitboard/machine/cyberpunk_bank_server
+	name = "правительственный банковский сервер"
+	build_path = /obj/machinery/cyberpunk_bank_server
+	req_components = list(
+		/datum/stock_part/capacitor = 2,
+		/datum/stock_part/micro_laser = 1,
+	)
+
+/obj/machinery/cyberpunk_bank_server
+	name = "правительственный банковский сервер"
+	desc = "Серверный узел, хранящий реестры личных, корпоративных и коммерческих счетов города."
+	icon = 'icons/obj/machines/research.dmi'
+	icon_state = "RD-server-on"
+	density = TRUE
+	anchored = TRUE
+	circuit = /obj/item/circuitboard/machine/cyberpunk_bank_server
+	req_access = list("government:all")
+	var/list/account_registry = list()
+	var/list/department_registry = list()
+
+/obj/machinery/cyberpunk_bank_server/LateInitialize()
+	. = ..()
+	if(!SSeconomy.cyberpunk_bank_server)
+		account_registry = SSeconomy.bank_accounts_by_id
+		department_registry = SSeconomy.departmental_accounts
+		SSeconomy.bank_accounts_by_id = null
+		SSeconomy.departmental_accounts = null
+		SSeconomy.cyberpunk_bank_server = src
+		SSeconomy.cyberpunk_bank_server_configured = TRUE
+		if(length(SSeconomy.cyberpunk_pending_credits))
+			START_PROCESSING(SSobj, src)
+
+/obj/machinery/cyberpunk_bank_server/Initialize(mapload)
+	. = ..()
+	return INITIALIZE_HINT_LATELOAD
+
+/obj/machinery/cyberpunk_bank_server/screwdriver_act(mob/living/user, obj/item/tool)
+	return default_deconstruction_screwdriver(user, tool)
+
+/obj/machinery/cyberpunk_bank_server/crowbar_act(mob/living/user, obj/item/tool)
+	return default_deconstruction_crowbar(user, tool)
+
+/obj/machinery/cyberpunk_bank_server/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	if(SSeconomy.cyberpunk_bank_server == src)
+		SSeconomy.bank_accounts_by_id = account_registry
+		SSeconomy.departmental_accounts = department_registry
+		SSeconomy.cyberpunk_bank_server = null
+	account_registry = null
+	department_registry = null
+	return ..()
+
+/obj/machinery/cyberpunk_bank_server/process(seconds_per_tick)
+	if(!length(SSeconomy.cyberpunk_pending_credits))
+		return PROCESS_KILL
+	if(!is_operational)
+		return
+	var/list/pending = SSeconomy.cyberpunk_pending_credits
+	SSeconomy.cyberpunk_pending_credits = list()
+	for(var/list/entry as anything in pending)
+		var/datum/weakref/account_ref = entry["account"]
+		var/datum/bank_account/account = account_ref?.resolve()
+		account?.adjust_money(entry["amount"], entry["reason"])
+	return PROCESS_KILL
+
+/datum/controller/subsystem/economy/proc/is_cyberpunk_bank_online()
+	return !cyberpunk_bank_server_configured || cyberpunk_bank_server?.is_operational
+
+/datum/controller/subsystem/economy/proc/get_bank_accounts()
+	return cyberpunk_bank_server ? cyberpunk_bank_server.account_registry : bank_accounts_by_id
+
+/datum/controller/subsystem/economy/proc/get_bank_departments()
+	return cyberpunk_bank_server ? cyberpunk_bank_server.department_registry : departmental_accounts
+
+/datum/controller/subsystem/economy/proc/queue_cyberpunk_bank_credit(datum/bank_account/account, amount, reason)
+	cyberpunk_pending_credits += list(list("account" = WEAKREF(account), "amount" = amount, "reason" = reason))
+	if(cyberpunk_bank_server)
+		START_PROCESSING(SSobj, cyberpunk_bank_server)
+	return TRUE
+
+/datum/controller/subsystem/economy/proc/get_cyberpunk_bank_registry()
+	return is_cyberpunk_bank_online() ? get_bank_accounts() : null
+
 /obj/item/cyberpunk_council_emergency_chip
 	name = "council emergency chip"
-	desc = "A personal council authorization chip for activating city emergency mode."
+	desc = "Персональный чип для голосования о режиме ЧС и подписания директив совета."
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "skillchip"
 	w_class = WEIGHT_CLASS_TINY
 	var/registered_council_key
 	var/registered_council_name
-	var/spent = FALSE
+
+/obj/structure/closet/secure_closet/cyberpunk_emergency_armory
+	name = "оружейный шкаф ЧС"
+	desc = "Шкаф с полицейским снаряжением. Доступен полиции при действующем режиме ЧС."
+	anchored = TRUE
+	req_one_access = list("city:police", "government:all")
+
+/obj/structure/closet/secure_closet/cyberpunk_emergency_armory/PopulateContents()
+	. = ..()
+	new /obj/item/clothing/suit/armor/riot(src)
+	new /obj/item/clothing/head/helmet/cyberpunk/plasteel(src)
+	new /obj/item/shield/riot(src)
+	new /obj/item/gun/energy/disabler(src)
+
+/obj/structure/closet/secure_closet/cyberpunk_emergency_armory/togglelock(mob/living/user, silent)
+	if(!SScyberpunk_corporations.cyberpunk_government_emergency_active)
+		if(!silent)
+			balloon_alert(user, "режим ЧС выключен")
+		return TRUE
+	return ..()
+
+/obj/structure/closet/secure_closet/cyberpunk_emergency_armory/can_open(mob/living/user, force = FALSE)
+	return (force || SScyberpunk_corporations.cyberpunk_government_emergency_active) && ..()
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_tax_monitor_ui()
 	var/list/businesses = list()
@@ -48,8 +153,9 @@
 			"overdue" = corporation.tax_debt > 0,
 		))
 	var/list/accounts = list()
-	for(var/account_id in SSeconomy.bank_accounts_by_id)
-		var/datum/bank_account/account = SSeconomy.bank_accounts_by_id[account_id]
+	var/list/bank_registry = SSeconomy.get_cyberpunk_bank_registry()
+	for(var/account_id in bank_registry)
+		var/datum/bank_account/account = bank_registry[account_id]
 		if(!account)
 			continue
 		accounts += list(list(
@@ -70,22 +176,27 @@
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_council_ui()
 	var/list/votes = list()
+	var/yes_votes = 0
 	for(var/voter_key in cyberpunk_government_emergency_chips)
 		var/list/vote_record = cyberpunk_government_emergency_chips[voter_key]
 		if(!islist(vote_record))
 			continue
 		votes += list(vote_record.Copy())
+		if(vote_record["vote"])
+			yes_votes++
 	return list(
 		"emergencyActive" = cyberpunk_government_emergency_active,
 		"directive" = cyberpunk_government_directive,
-		"yesVotes" = length(votes),
-		"noVotes" = 0,
+		"pendingDirective" = cyberpunk_pending_government_directive,
+		"directiveVotes" = length(cyberpunk_directive_votes),
+		"yesVotes" = yes_votes,
+		"noVotes" = length(votes) - yes_votes,
 		"requiredVotes" = get_cyberpunk_government_emergency_required_chips(),
 		"votes" = votes,
 	)
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_council_seats()
-	return 4
+	return 7
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_emergency_required_chips()
 	var/total_seats = get_cyberpunk_government_council_seats()
@@ -116,38 +227,46 @@
 			return "[living_user.real_name || living_user.name] / [corporation?.name || corporation_id]"
 	return living_user.real_name || living_user.name
 
-/datum/controller/subsystem/cyberpunk_corporations/proc/cast_cyberpunk_government_emergency_vote(mob/user, vote)
-	return FALSE
+/datum/controller/subsystem/cyberpunk_corporations/proc/cast_cyberpunk_government_emergency_vote(mob/living/user, vote, obj/machinery/source_terminal, directive_ballot = FALSE)
+	var/obj/item/cyberpunk_council_emergency_chip/chip = user?.get_active_held_item()
+	return insert_cyberpunk_government_emergency_chip(user, chip, source_terminal, vote, directive_ballot)
 
-/datum/controller/subsystem/cyberpunk_corporations/proc/insert_cyberpunk_government_emergency_chip(mob/living/user, obj/item/cyberpunk_council_emergency_chip/chip, obj/machinery/source_terminal)
-	if(!istype(user) || !istype(chip))
+/datum/controller/subsystem/cyberpunk_corporations/proc/insert_cyberpunk_government_emergency_chip(mob/living/user, obj/item/cyberpunk_council_emergency_chip/chip, obj/machinery/source_terminal, vote = TRUE, directive_ballot = FALSE)
+	if(!istype(user) || !istype(chip) || !source_terminal?.is_operational || !user.is_holding(chip) || !user.can_perform_action(source_terminal, FORBID_TELEKINESIS_REACH))
 		return FALSE
-	if(!user.has_cyberpunk_crypto_access("city:council"))
-		to_chat(user, span_warning("Only council members can authorize emergency mode."))
+	var/datum/cyberpunk_corporation/government = get_cyberpunk_corporation(CYBERPUNK_CORP_GOVERNMENT)
+	if(!government?.can_vote_council(user))
 		return FALSE
-	if(chip.spent)
-		to_chat(user, span_warning("[chip] has already been used."))
+	if(directive_ballot ? isnull(cyberpunk_pending_government_directive) : cyberpunk_government_emergency_active)
 		return FALSE
 	var/voter_key = get_cyberpunk_government_voter_key(user)
-	if(!voter_key)
+	if(!voter_key || chip.registered_council_key != voter_key)
 		return FALSE
-	if(cyberpunk_government_emergency_chips[voter_key])
-		to_chat(user, span_warning("Your council authorization is already registered."))
-		return FALSE
-	chip.registered_council_key = voter_key
-	chip.registered_council_name = get_cyberpunk_government_voter_label(user)
-	chip.spent = TRUE
-	cyberpunk_government_emergency_chips[voter_key] = list(
-		"name" = chip.registered_council_name,
-		"vote" = TRUE,
+	var/datum/job/job = user.mind?.assigned_role
+	var/seat = job?.get_cyberpunk_role_class() == "representative" ? job.get_cyberpunk_corporation_id() : null
+	var/ballot_key = seat ? "corp:[seat]" : voter_key
+	var/list/ballot = directive_ballot ? cyberpunk_directive_votes : cyberpunk_government_emergency_chips
+	ballot[ballot_key] = list(
+		"name" = get_cyberpunk_government_voter_label(user),
+		"vote" = !!vote,
 		"at" = round_timestamp(),
-		"terminal" = source_terminal ? "[get_area_name(source_terminal, TRUE)]" : "unknown terminal",
+		"terminal" = get_area_name(source_terminal, TRUE),
 	)
-	var/inserted_chips = length(cyberpunk_government_emergency_chips)
+	var/approved = 0
+	for(var/key in ballot)
+		var/list/entry = ballot[key]
+		if(entry["vote"])
+			approved++
 	var/required_chips = get_cyberpunk_government_emergency_required_chips()
-	to_chat(user, span_notice("Emergency authorization registered: [inserted_chips]/[required_chips]."))
-	if(!cyberpunk_government_emergency_active && inserted_chips >= required_chips)
-		start_cyberpunk_government_emergency(user?.name || "council chip")
+	to_chat(user, span_notice("Чип принят. Голосов за [approved] из [required_chips]."))
+	if(approved >= required_chips)
+		if(directive_ballot)
+			cyberpunk_government_directive = cyberpunk_pending_government_directive
+			cyberpunk_pending_government_directive = null
+			cyberpunk_directive_votes.Cut()
+			government.add_history("Совет утвердил директиву: [cyberpunk_government_directive || "снята"]")
+		else
+			start_cyberpunk_government_emergency(user.real_name)
 	return TRUE
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/start_cyberpunk_government_emergency(actor = "council")
@@ -204,9 +323,12 @@
 	text = trim("[text]")
 	if(length(text) > 240)
 		text = copytext_char(text, 1, 241)
-	cyberpunk_government_directive = text
+	if(!isnull(cyberpunk_pending_government_directive))
+		return FALSE
+	cyberpunk_pending_government_directive = text
+	cyberpunk_directive_votes.Cut()
 	var/datum/cyberpunk_corporation/government = get_cyberpunk_corporation(CYBERPUNK_CORP_GOVERNMENT)
-	government?.add_history("[actor] updated directive: [text || "cleared"]")
+	government?.add_history("[actor] submitted directive for approval: [text || "clear active directive"]")
 	return TRUE
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_corporation_tax_rate(corporation_id)
@@ -441,10 +563,13 @@
 	return FALSE
 
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_government_transfer_account(kind, account_key)
+	var/list/bank_registry = SSeconomy.get_cyberpunk_bank_registry()
+	if(!bank_registry)
+		return null
 	kind = lowertext(trim("[kind]"))
 	switch(kind)
 		if("account", "person", "player")
-			return SSeconomy.bank_accounts_by_id["[account_key]"]
+			return bank_registry?["[account_key]"]
 		if("corporation", "corp")
 			var/datum/cyberpunk_corporation/corporation = get_cyberpunk_corporation(account_key)
 			return corporation?.get_account()

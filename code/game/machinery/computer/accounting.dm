@@ -22,8 +22,9 @@
 	var/list/data = list()
 	var/list/player_accounts = list()
 
-	for(var/id in SSeconomy.bank_accounts_by_id)
-		var/datum/bank_account/current_bank_account = SSeconomy.bank_accounts_by_id[id]
+	var/list/accounts = SSeconomy.get_cyberpunk_bank_registry()
+	for(var/id in accounts)
+		var/datum/bank_account/current_bank_account = accounts[id]
 		if(!(current_bank_account.account_job?.job_flags & JOB_CREW_MANIFEST))
 			continue
 		player_accounts += list(list(
@@ -56,7 +57,8 @@
 		return
 
 	playsound(src, SFX_TERMINAL_TYPE, 50, FALSE)
-	var/datum/bank_account/bank_account = SSeconomy.bank_accounts_by_id[params["account_id"]]
+	var/list/accounts = SSeconomy.get_cyberpunk_bank_registry()
+	var/datum/bank_account/bank_account = accounts?[params["account_id"]]
 	if(isnull(bank_account) || !(bank_account.account_job?.job_flags & JOB_CREW_MANIFEST))
 		return
 

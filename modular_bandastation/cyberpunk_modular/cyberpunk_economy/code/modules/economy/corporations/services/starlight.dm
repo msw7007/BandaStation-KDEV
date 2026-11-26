@@ -20,55 +20,103 @@
 	var/cargo_name
 	var/status = "tracking"
 	var/turf/destination
+	var/turf/pickup_turf
+	var/priority_delivery = FALSE
 	var/created_at
 	var/next_dispatch_at = 0
 	var/persistent_tracking = FALSE
+	var/datum/weakref/ordered_product_ref
+	var/datum/weakref/payer_ref
+	var/reserved_payment = 0
 
 /datum/cyberpunk_starlight_shipment/Destroy()
 	STOP_PROCESSING(SSobj, src)
+	refund_reservation()
 	cargo_ref = null
 	customer_ref = null
 	source_ref = null
 	beacon_ref = null
 	corporation_ref = null
 	destination = null
+	pickup_turf = null
 	return ..()
 
+/datum/cyberpunk_starlight_shipment/proc/refund_reservation()
+	var/datum/bank_account/payer = payer_ref?.resolve()
+	if(reserved_payment)
+		payer?.adjust_money(reserved_payment, "Возврат за заказ Старлайта")
+	reserved_payment = 0
+	payer_ref = null
+
 /datum/cyberpunk_starlight_shipment/proc/finish(success)
-	if(status in list("received", "failed"))
+	if(status == "received" || status == "failed" || status == "delivered")
 		return
 	status = success ? "delivered" : "failed"
+	refund_reservation()
 	STOP_PROCESSING(SSobj, src)
 	var/mob/customer = customer_ref?.resolve()
 	if(customer)
 		to_chat(customer, span_notice("Starlight: [cargo_name] - [status]."))
 
 /datum/cyberpunk_starlight_shipment/process(seconds_per_tick)
-	if(status != "queued")
+	if(!(status in list("queued", "awaiting stock")))
 		return PROCESS_KILL
 	if(world.time < next_dispatch_at)
 		return
-	next_dispatch_at = world.time + 10 SECONDS
-	var/atom/movable/cargo = cargo_ref?.resolve()
-	var/obj/machinery/vending/source = source_ref?.resolve()
+	next_dispatch_at = world.time + (priority_delivery ? 5 SECONDS : 10 SECONDS)
+	var/obj/machinery/source = source_ref?.resolve()
+	var/mob/living/customer = customer_ref?.resolve()
 	var/obj/item/cyberpunk_delivery_beacon/beacon = beacon_ref?.resolve()
 	var/datum/cyberpunk_corporation/corporation = corporation_ref?.resolve()
-	var/turf/pickup = get_turf(source)
-	if(!cargo || !source || !corporation || !beacon?.active || beacon.owner_key != owner_key || !isturf(beacon.loc) || world.time > created_at + 10 MINUTES)
+	var/turf/pickup = pickup_turf || get_turf(source)
+	if(!source || !corporation || world.time > created_at + 10 MINUTES)
 		finish(FALSE)
 		return
-	// A stolen or moved parcel is not available to the queue, even if its reference survives.
-	if(cargo.loc != pickup || cargo.anchored)
-		finish(FALSE)
+	if(!source.is_operational)
 		return
+	var/turf/dropoff = get_turf(customer)
+	if(beacon?.active && beacon.owner_key == owner_key && isturf(beacon.loc))
+		dropoff = get_turf(beacon)
+	if(!dropoff || !is_station_level(dropoff.z) || isspaceturf(dropoff) || is_area_virtual(get_area(dropoff)))
+		return
+	if(dropoff.is_blocked_turf(exclude_mobs = TRUE))
+		for(var/direction in GLOB.cardinals)
+			var/turf/nearby = get_step(dropoff, direction)
+			if(isopenturf(nearby) && !isspaceturf(nearby) && !nearby.is_blocked_turf(exclude_mobs = TRUE))
+				dropoff = nearby
+				break
+		if(dropoff.is_blocked_turf(exclude_mobs = TRUE))
+			return
 	corporation.update_agent_pool()
 	if(!corporation.service_auto_enabled || corporation.agents_available <= 0)
 		return
-	destination = get_turf(beacon)
-	if(!destination || !is_station_level(destination.z) || destination.density || isspaceturf(destination))
+	if(status == "awaiting stock")
+		var/obj/machinery/vending/vendor = source
+		var/datum/data/vending_product/product = ordered_product_ref?.resolve()
+		if(!istype(vendor) || !(product in vendor.product_records) || vendor.get_cyberpunk_supply_corporation() != corporation)
+			finish(FALSE)
+			return
+		if(product.amount <= LAZYLEN(product.returned_products))
+			vendor.schedule_cyberpunk_preorder_supply(product)
+			return
+		var/obj/item/ordered_item = vendor.dispense(product, pickup, silent = TRUE)
+		if(!ordered_item)
+			return
+		cargo_ref = WEAKREF(ordered_item)
+		ordered_product_ref = null
+		corporation.add_funds(reserved_payment, "Заказ с доставкой: [product.name]")
+		reserved_payment = 0
+		payer_ref = null
+		status = "queued"
+	var/atom/movable/cargo = cargo_ref?.resolve()
+	// A stolen or moved parcel is not available to the queue, even if its reference survives.
+	if(!cargo || cargo.loc != pickup || cargo.anchored)
 		finish(FALSE)
 		return
+	destination = dropoff
 	var/obj/vehicle/ridden/cyberpunk/avi/courier = new(pickup)
+	courier.cyberpunk_route_corporation_id = CYBERPUNK_CORP_STARLIGHT
+	courier.cyberpunk_priority_delivery = priority_delivery
 	if(!courier.start_cyberpunk_avi_delivery(pickup, destination, list(cargo)))
 		qdel(courier)
 		finish(FALSE)
@@ -76,12 +124,40 @@
 	if(!corporation.dispatch_agent("queued beacon delivery", 5 MINUTES))
 		qdel(courier)
 		return
-	courier.avi_shipment_ref = WEAKREF(src)
-	status = "in transit"
+	courier.track_starlight_shipment(src, dropoff)
 	STOP_PROCESSING(SSobj, src)
 
-/datum/cyberpunk_corporation/proc/register_starlight_tracking(mob/living/customer, atom/movable/cargo)
-	if(id != CYBERPUNK_CORP_STARLIGHT || !customer || !cargo)
+/obj/vehicle/ridden/cyberpunk
+	var/list/cargo_tracking_refs
+
+/obj/vehicle/ridden/cyberpunk/proc/track_starlight_shipment(datum/cyberpunk_starlight_shipment/shipment, turf/dropoff)
+	LAZYADD(cargo_tracking_refs, WEAKREF(shipment))
+	shipment.status = "in transit"
+	shipment.destination = dropoff
+
+/obj/vehicle/ridden/cyberpunk/proc/track_starlight_delivery(mob/living/customer, list/cargo_atoms, turf/dropoff)
+	if(!customer)
+		return
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
+	if(!corporation?.has_edict("starlight_log_observation"))
+		return
+	for(var/atom/movable/cargo as anything in cargo_atoms)
+		if(QDELETED(cargo))
+			continue
+		var/datum/cyberpunk_starlight_shipment/shipment = corporation.register_starlight_tracking(customer, cargo)
+		if(shipment)
+			track_starlight_shipment(shipment, dropoff)
+
+/obj/vehicle/ridden/cyberpunk/proc/finish_starlight_delivery(list/delivered_cargo)
+	for(var/datum/weakref/shipment_ref as anything in cargo_tracking_refs)
+		var/datum/cyberpunk_starlight_shipment/shipment = shipment_ref.resolve()
+		if(shipment?.status == "in transit")
+			var/atom/movable/cargo = shipment.cargo_ref?.resolve()
+			shipment.finish(cargo && (cargo in delivered_cargo))
+	cargo_tracking_refs = null
+
+/datum/cyberpunk_corporation/proc/register_starlight_tracking(mob/living/customer, atom/movable/cargo, order_name)
+	if(id != CYBERPUNK_CORP_STARLIGHT || !customer || (!cargo && !order_name))
 		return null
 	var/key = SSeconomy.get_cyberpunk_contract_character_key(customer, customer.get_bank_account())
 	if(!key)
@@ -91,7 +167,7 @@
 		records = list()
 		starlight_shipments[key] = records
 	for(var/datum/cyberpunk_starlight_shipment/existing as anything in records.Copy())
-		if(existing.cargo_ref?.resolve() == cargo && !(existing.status in list("received", "failed")))
+		if(cargo && existing.cargo_ref?.resolve() == cargo && !(existing.status in list("received", "failed")))
 			return existing
 		if(existing.status in list("received", "failed"))
 			records -= existing
@@ -99,28 +175,29 @@
 	if(length(records) >= 32)
 		return null
 	var/datum/cyberpunk_starlight_shipment/shipment = new
-	shipment.cargo_ref = WEAKREF(cargo)
+	if(cargo)
+		shipment.cargo_ref = WEAKREF(cargo)
 	shipment.customer_ref = WEAKREF(customer)
 	shipment.corporation_ref = WEAKREF(src)
 	shipment.owner_key = key
-	shipment.cargo_name = cargo.name
+	shipment.cargo_name = cargo?.name || order_name
 	shipment.created_at = world.time
 	records += shipment
 	return shipment
 
 /datum/cyberpunk_corporation/proc/get_starlight_tracking_ui(mob/living/customer)
 	var/list/result = list()
-	if(id != CYBERPUNK_CORP_STARLIGHT || !istype(customer) || !has_edict("starlight_log_observation"))
+	if(id != CYBERPUNK_CORP_STARLIGHT || !istype(customer))
 		return result
 	var/key = SSeconomy.get_cyberpunk_contract_character_key(customer, customer.get_bank_account())
 	for(var/datum/cyberpunk_starlight_shipment/shipment as anything in starlight_shipments[key])
 		var/atom/movable/cargo = shipment.cargo_ref?.resolve()
-		if(!cargo)
+		if(!cargo && shipment.status != "awaiting stock")
 			shipment.finish(FALSE)
-		else if(!shipment.persistent_tracking && customer.contains(cargo))
+		else if(cargo && !shipment.persistent_tracking && customer.contains(cargo))
 			shipment.status = "received"
-		var/turf/position = shipment.status == "received" ? null : get_turf(cargo)
-		result += list(list("ref" = REF(shipment), "name" = shipment.cargo_name, "status" = shipment.status, "position" = position ? "[position.x], [position.y], [position.z]" : "-", "canClear" = !(shipment.status in list("queued", "in transit"))))
+		var/turf/position = shipment.status != "received" && has_edict("starlight_log_observation") ? get_turf(cargo) : null
+		result += list(list("ref" = REF(shipment), "name" = shipment.cargo_name, "status" = shipment.status, "position" = position ? "[position.x], [position.y], [position.z]" : "-", "canClear" = !(shipment.status in list("awaiting stock", "queued", "in transit"))))
 	return result
 
 /datum/cyberpunk_corporation/proc/clear_starlight_tracking(mob/living/customer, shipment_ref)
@@ -129,7 +206,7 @@
 	var/key = SSeconomy.get_cyberpunk_contract_character_key(customer, customer.get_bank_account())
 	var/list/records = starlight_shipments[key]
 	for(var/datum/cyberpunk_starlight_shipment/shipment as anything in records)
-		if(REF(shipment) != shipment_ref || (shipment.status in list("queued", "in transit")))
+		if(REF(shipment) != shipment_ref || (shipment.status in list("awaiting stock", "queued", "in transit")))
 			continue
 		records -= shipment
 		qdel(shipment)

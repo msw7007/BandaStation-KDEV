@@ -51,7 +51,9 @@
 /obj/machinery/vending/proc/get_cyberpunk_business_vending_price(base_price, item_label)
 	base_price = max(0, round(base_price))
 	if(!cyberpunk_business_id)
-		return base_price
+		if(!cyberpunk_corporate_markup_percent || !has_corporate_vending_module())
+			return base_price
+		return max(0, round(base_price * (100 + cyberpunk_corporate_markup_percent) / 100))
 	var/datum/cyberpunk_business/business = SScyberpunk_property.get_cyberpunk_business(cyberpunk_business_id)
 	if(!business)
 		return base_price
@@ -146,9 +148,9 @@
 	if(!length(lots))
 		return null
 	var/list/lot = lots[1]
-	var/units = lot["stack_amount"] || 1
+	var/units = lot["vending_bundle"] ? 1 : (lot["stack_amount"] || 1)
 	var/list/entry = lot.Copy()
-	if(lot["stack_amount"])
+	if(lot["stack_amount"] && !lot["vending_bundle"])
 		entry["stack_amount"] = 1
 	var/turf/drop_turf = get_turf(location)
 	var/obj/item/restored = cyberpunk_persistent_restore_movable(entry, location, null, drop_turf, null)
@@ -167,5 +169,5 @@
 	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
 		for(var/list/lot as anything in record.cyberpunk_warehouse_items)
 			if(cyberpunk_persistent_restore_movable(lot, drop_turf, null, drop_turf, null))
-				record.amount -= lot["stack_amount"] || 1
+				record.amount -= lot["vending_bundle"] ? 1 : (lot["stack_amount"] || 1)
 		record.cyberpunk_warehouse_items = null

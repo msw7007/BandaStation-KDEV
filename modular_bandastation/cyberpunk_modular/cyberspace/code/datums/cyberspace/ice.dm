@@ -145,15 +145,48 @@
 	if(source && target)
 		var/atom/beam_source = source.cyberspace_session?.avatar || source
 		beam_source.visible_message(span_danger("A red intrusion ping links [beam_source] to [target]."), span_danger("A red intrusion ping exposes your connection to [target]. Signal strength: [detection_context["signal"]]%."))
-		beam_source.Beam(target, icon_state = "rped_upgrade", time = detection_context["duration"], beam_color = detection_context["color"])
+		start_cyberspace_intrusion_trace(source, beam_source, target, detection_context["signal"])
 	return TRUE
+
+/mob/living/var/tmp/datum/weakref/cyberspace_intrusion_trace_ref
+
+/proc/start_cyberspace_intrusion_trace(mob/living/source, atom/beam_source, atom/target, signal)
+	if(QDELETED(source) || QDELETED(beam_source) || QDELETED(target) || beam_source.z != target.z || beam_source == target)
+		return
+	var/datum/beam/cyberspace_trace/existing = source.cyberspace_intrusion_trace_ref?.resolve()
+	if(existing?.origin == beam_source && existing.target == target)
+		return
+	qdel(existing)
+	var/limit = max(CYBERSPACE_DETECTION_SENSOR_RANGE, 2 * get_dist(beam_source, target))
+	var/datum/beam/cyberspace_trace/trace = new(beam_source, target, icon_state = "rped_upgrade", max_distance = limit + 1, beam_color = "#ff334a", emissive = FALSE)
+	source.cyberspace_intrusion_trace_ref = WEAKREF(trace)
+	var/hacking = source.get_cyber_hacking_skill()
+	var/neutralization = source.get_character_skill_level(SKILL_NEUTRALIZATION)
+	trace.reveal_amount = clamp((signal - 5 * neutralization) / 100, 0.08, 1)
+	trace.reveal_step = max(0.02, 0.10 - (hacking + neutralization) * 0.01)
+	trace.Start()
+
+/datum/beam/cyberspace_trace
+	var/reveal_amount
+	var/reveal_step
+
+/datum/beam/cyberspace_trace/Start()
+	. = ..()
+	reveal_next_step()
+
+/datum/beam/cyberspace_trace/proc/reveal_next_step()
+	if(!visuals)
+		return
+	visuals.alpha = round(reveal_amount * 255)
+	if(reveal_amount < 1)
+		reveal_amount = min(1, reveal_amount + reveal_step)
+		addtimer(CALLBACK(src, PROC_REF(reveal_next_step)), 1 SECONDS)
 
 /proc/get_cyberspace_detection_context(mob/living/source, atom/target)
 	var/list/context = list(
 		"summary" = "No nearby sensors amplify it.",
 		"signal" = 25,
-		"duration" = 2 SECONDS,
-		"color" = "#ff8892",
+		"witnesses" = 0,
 	)
 	if(!target)
 		return context
@@ -163,13 +196,12 @@
 		if(camera.can_use())
 			sensor_count++
 	for(var/mob/living/nearby_living in range(CYBERSPACE_DETECTION_SENSOR_RANGE, target))
-		if(nearby_living.has_neural_implant())
+		if(nearby_living != source && nearby_living.has_neural_implant())
 			owner_count++
 	var/hacking_skill = source?.get_cyber_hacking_skill() || 0
 	var/signal = clamp(25 + (sensor_count * 20) + (owner_count * 15) - (hacking_skill * 10), 10, 100)
 	context["signal"] = signal
-	context["duration"] = max(1 SECONDS, round((signal / 25) SECONDS))
-	context["color"] = signal >= 75 ? "#ff334a" : (signal >= 40 ? "#ff7a3d" : "#ffb1b8")
+	context["witnesses"] = sensor_count + owner_count
 	var/list/parts = list()
 	if(sensor_count)
 		parts += "[sensor_count] camera sensor(s)"
@@ -724,6 +756,7 @@
 	return rand(2, 9)
 
 /datum/cyberspace_cryptokey
+	parent_type = /datum/cyberpunk_crypto_key
 	/// Shared digital key. Objects of the same type/manufacturer/area resolve to the same key.
 	var/key
 	var/object_type
@@ -731,15 +764,40 @@
 	var/manufacturer = "independent"
 	var/list/rights = list("view", "use", "control", "settings")
 
-/datum/cyberspace_cryptokey/New(atom/movable/target)
+/datum/cyberspace_cryptokey/authorizes(required_right)
+	return !required_right || (required_right in rights)
+
+GLOBAL_LIST_EMPTY(cyberpunk_device_keys)
+
+/proc/get_cyberpunk_device_key_type(atom/movable/target)
+	if(istype(target, /obj/machinery/door))
+		return /obj/machinery/door
+	if(istype(target, /obj/machinery/computer) || istype(target, /obj/machinery/modular_computer))
+		return /obj/machinery/computer
+	return target.type
+
+/proc/get_cyberpunk_device_key(atom/movable/target)
+	if(!target)
+		return null
+	var/object_type = get_cyberpunk_device_key_type(target)
+	var/area/target_area = get_area(target)
+	var/manufacturer = ckey(get_cyberspace_manufacturer(target)) || "independent"
+	var/group = "[manufacturer]|[object_type]|[REF(target_area)]"
+	var/datum/cyberspace_cryptokey/key_datum = GLOB.cyberpunk_device_keys[group]
+	if(!key_datum)
+		key_datum = new(target, group)
+		GLOB.cyberpunk_device_keys[group] = key_datum
+	return key_datum
+
+/datum/cyberspace_cryptokey/New(atom/movable/target, group)
 	. = ..()
 	if(!target)
 		return
-	object_type = target.type
+	object_type = get_cyberpunk_device_key_type(target)
 	var/area/target_area = get_area(target)
 	area_type = target_area?.type
-	manufacturer = get_cyberspace_manufacturer(target)
-	key = uppertext(copytext(md5("[manufacturer]|[object_type]|[area_type]"), 1, 17))
-
-/datum/cyberspace_cryptokey/proc/matches(datum/cyberspace_cryptokey/other_key)
-	return !isnull(other_key) && key == other_key.key
+	manufacturer = ckey(get_cyberspace_manufacturer(target)) || "independent"
+	key = group ? generate_cyberpunk_crypto_code() : uppertext(copytext(md5("[manufacturer]|[object_type]|[REF(target_area)]"), 1, 21))
+	code = key
+	name = "[target.name] / [target_area?.name]"
+	owner = manufacturer

@@ -72,9 +72,14 @@
 	if(!I.use_tool(src, user, 0, volume = 50))
 		return TRUE
 
-	var/sheets_made = values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT
-	new refined_type(drop_location(), max(1, floor(sheets_made)))
-	use(max(1, ceil(1 / sheets_made)))
+	var/sheets_made = values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT * get_cyberpunk_ore_yield()
+	if(sheets_made <= 0)
+		return TRUE
+	var/quality = resource_quality
+	if(!use(max(1, ceil(1 / sheets_made))))
+		return TRUE
+	var/obj/item/output = new refined_type(drop_location(), max(1, floor(sheets_made)), FALSE)
+	output.set_resource_quality(quality)
 	return TRUE
 
 /obj/item/stack/ore/fire_act(exposed_temperature, exposed_volume)
@@ -84,9 +89,10 @@
 
 	var/probability = rand(0, 100) / 100
 	var/burn_value = probability * amount
-	var/amount_refined = floor(burn_value * values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT)
+	var/amount_refined = floor(burn_value * values_sum(mats_per_unit) / SHEET_MATERIAL_AMOUNT * get_cyberpunk_ore_yield())
 	if(amount_refined > 1)
-		new refined_type(drop_location(), amount_refined)
+		var/obj/item/output = new refined_type(drop_location(), amount_refined, FALSE)
+		output.set_resource_quality(resource_quality)
 	qdel(src)
 
 /obj/item/stack/ore/uranium
@@ -146,6 +152,7 @@ GLOBAL_LIST_INIT(sand_recipes, list(\
 /obj/item/stack/ore/glass/on_orm_collection() //we need to smelt the glass beforehand because the silo and orm don't accept sand mats
 	//If we spawn the sheet of glass on the turf the ORM is "listening" to, it'll get redeemed before we can use it as return value and weird stuff my happen.
 	var/obj/item/stack/sheet/glass = new refined_type(null, amount)
+	glass.set_resource_quality(resource_quality)
 	qdel(src)
 	return glass
 

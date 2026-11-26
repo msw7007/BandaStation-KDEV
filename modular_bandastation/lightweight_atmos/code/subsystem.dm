@@ -62,6 +62,9 @@ SUBSYSTEM_DEF(gas_effects)
 		A.process_air_tick(seconds_per_tick)
 
 /datum/controller/subsystem/gas_effects/proc/process_cloud(obj/effect/gas_cloud/cloud, seconds_per_tick)
+	if(cloud.amount <= LIGHTWEIGHT_ATMOS_CLOUD_FLOOR)
+		qdel(cloud)
+		return
 	var/turf/T = cloud.loc
 	if(!isturf(T))
 		qdel(cloud)
@@ -82,17 +85,22 @@ SUBSYSTEM_DEF(gas_effects)
 	var/decay = effect.decay_rate
 	if(A?.is_outdoor_air())
 		decay *= effect.outdoor_decay_multiplier
-	if(effect.scrubbable && A?.air_scrubbers?.len)
-		var/scrub_total = 0
-		for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrub as anything in A.air_scrubbers)
+	if(A && !A.is_outdoor_air() && effect.scrubbable)
+		for(var/obj/machinery/atmospherics/components/unary/vent_pump/pump as anything in A?.air_vents)
+			if(pump.pump_direction == ATMOS_DIRECTION_RELEASING)
+				continue
+			transfer_lightweight_vent_cloud(cloud, pump.get_lightweight_air_endpoint(), LIGHTWEIGHT_ATMOS_VENT_SCRUB_RATE * pump.get_lightweight_vent_efficiency() * seconds_per_tick)
+		for(var/obj/machinery/atmospherics/components/unary/vent_scrubber/scrub as anything in A?.air_scrubbers)
 			var/scrub_efficiency = scrub.get_lightweight_scrubber_efficiency()
 			if(scrub_efficiency <= 0)
 				continue
-			if(scrub.scrubbing != ATMOS_DIRECTION_SCRUBBING)
-				continue
-			scrub_total += LIGHTWEIGHT_ATMOS_VENT_SCRUB_RATE * scrub_efficiency
+			var/scrub_amount = LIGHTWEIGHT_ATMOS_VENT_SCRUB_RATE * scrub_efficiency * seconds_per_tick
+			if(scrub.scrubbing == ATMOS_DIRECTION_SIPHONING)
+				transfer_lightweight_vent_cloud(cloud, scrub.get_lightweight_air_endpoint(), scrub_amount)
+			else
+				decay += scrub_amount / seconds_per_tick
 			scrub.add_lightweight_filter_clog(0.01 * seconds_per_tick)
-		decay += scrub_total
+		old_amount = cloud.amount
 	cloud.amount -= decay * seconds_per_tick
 
 	var/list/chem_pool = cloud.chemicals || effect.default_chemicals

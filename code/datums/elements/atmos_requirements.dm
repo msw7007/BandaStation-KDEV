@@ -46,7 +46,8 @@
 	if(target.pulledby && target.pulledby.grab_state >= GRAB_KILL && atmos_requirements["min_oxy"])
 		return FALSE
 
-	if(!isopenturf(target.loc))
+	var/turf/open/open_turf = istype(target.loc, /obj/effect/cyberpunk_phantom_body) ? get_turf(target) : target.loc
+	if(!istype(open_turf))
 		return TRUE
 
 	var/can_breathe_vacuum = HAS_TRAIT(target, TRAIT_NO_BREATHLESS_DAMAGE) || HAS_TRAIT(target, TRAIT_NOBREATH)
@@ -56,7 +57,6 @@
 	var/min_n2 = can_breathe_vacuum ? 0 : atmos_requirements["min_n2"]
 	var/min_co2 = can_breathe_vacuum ? 0 : atmos_requirements["min_co2"]
 
-	var/turf/open/open_turf = target.loc
 	if(isnull(open_turf.air))
 		if (can_breathe_vacuum)
 			return TRUE

@@ -92,8 +92,8 @@
 			edicts = list()
 
 /datum/cyberpunk_corporation/proc/ensure_account()
-	if(account_id && SSeconomy.bank_accounts_by_id["[account_id]"])
-		return SSeconomy.bank_accounts_by_id["[account_id]"]
+	if(account_id && SSeconomy.get_bank_accounts()["[account_id]"])
+		return SSeconomy.get_bank_accounts()["[account_id]"]
 	var/datum/bank_account/account = new /datum/bank_account/cyberpunk_corporation("[name] corporate account")
 	account.adjust_money(CYBERPUNK_CORP_STARTING_BUDGET, "Corporate starting budget")
 	account_id = account.account_id
@@ -101,7 +101,7 @@
 
 /datum/cyberpunk_corporation/proc/get_account()
 	RETURN_TYPE(/datum/bank_account)
-	return SSeconomy.bank_accounts_by_id["[account_id]"]
+	return SSeconomy.get_bank_accounts()["[account_id]"]
 
 /datum/cyberpunk_corporation/proc/add_history(message)
 	LAZYADD(history, "[round_timestamp()] - [message]")
@@ -115,10 +115,12 @@
 /datum/cyberpunk_corporation/proc/get_head_access_id()
 	return cyberpunk_corporation_access_id(id, "head")
 
-/datum/cyberpunk_corporation/proc/can_manage(mob/user)
+/datum/cyberpunk_corporation/proc/can_manage(mob/user, obj/machinery/computer/corporate_terminal/source_terminal)
 	var/mob/living/living_user = user
 	if(!istype(living_user))
 		return FALSE
+	if(source_terminal?.corporation_id == id && !source_terminal.cyberpunk_public_access)
+		return source_terminal.check_cyberpunk_crypto_access(living_user, "settings")
 	if(id == CYBERPUNK_CORP_GOVERNMENT)
 		return living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("city:council")
 	if(living_user.has_cyberpunk_crypto_access("government:all") || living_user.has_cyberpunk_crypto_access("corp:heads"))
@@ -176,7 +178,7 @@
 		return null
 	var/account_id = employee["accountId"]
 	if(account_id)
-		var/datum/bank_account/stored_account = SSeconomy.bank_accounts_by_id["[account_id]"]
+		var/datum/bank_account/stored_account = SSeconomy.get_bank_accounts()["[account_id]"]
 		if(stored_account)
 			return stored_account
 	for(var/mob/living/person as anything in GLOB.player_list)
@@ -216,18 +218,16 @@
 	var/access_id = get_basic_access_id()
 	if(!access_id)
 		return FALSE
-	var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
-	if(!access_key)
-		return FALSE
 	for(var/mob/living/person as anything in GLOB.player_list)
 		var/datum/bank_account/account = person.get_bank_account()
 		if(SSeconomy.get_cyberpunk_contract_character_key(person, account) != employee_key)
 			continue
-		person.remember_cyberpunk_crypto_key(access_key)
+		if(!person.grant_cyberpunk_role_keys(list(access_id)))
+			return FALSE
 		employee["accessGranted"] = TRUE
 		employee["lastSeen"] = round_timestamp()
 		add_history("basic corporate access granted to [employee["name"]]")
-		to_chat(person, span_notice("[name] basic corporate access key has been loaded into your neural interface."))
+		to_chat(person, span_notice("Выданы ключи базового доступа [name]."))
 		return TRUE
 	return FALSE
 
@@ -641,6 +641,7 @@
 			if(!vendor)
 				continue
 			vendor.sync_cyberpunk_energy_stock()
+			vendor.sync_cyberpunk_subscription_stock()
 			vendor.cyberpunk_next_sale_rotation = min(vendor.cyberpunk_next_sale_rotation, world.time + vendor.get_cyberpunk_corporate_supply_interval())
 			vendor.update_static_data_for_all_viewers()
 		var/edict_name = edict["name"]
@@ -662,7 +663,7 @@
 	return !!node?.starting_node && get_cyberpunk_techweb_node_corporation_id(node) == id
 
 /datum/cyberpunk_corporation/proc/subscribe(mob/living/user)
-	if(!user)
+	if(!user || !offers_cyberpunk_subscription())
 		return FALSE
 	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(user, user.get_bank_account())
 	if(!character_key)
@@ -680,10 +681,20 @@
 	return TRUE
 
 /datum/cyberpunk_corporation/proc/is_subscribed(mob/living/user)
-	if(!user)
+	if(!user || !offers_cyberpunk_subscription())
 		return FALSE
 	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(user, user.get_bank_account())
 	return !!subscribers[character_key]
+
+/datum/cyberpunk_corporation/proc/offers_cyberpunk_subscription()
+	switch(id)
+		if(CYBERPUNK_CORP_BENN)
+			return has_edict("benn_med_insurance")
+		if(CYBERPUNK_CORP_RYAZNOV)
+			return has_edict("ryaznov_tech_contract")
+		if(CYBERPUNK_CORP_STARLIGHT)
+			return has_edict("starlight_trade_subscription")
+	return FALSE
 
 /datum/cyberpunk_corporation/proc/get_subscription_cost()
 	switch(id)
@@ -862,7 +873,7 @@
 			addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_complete_starlight_service), WEAKREF(user), id, service_id), 30 SECONDS, TIMER_STOPPABLE)
 	return TRUE
 
-/datum/cyberpunk_corporation/proc/to_ui_data(include_hidden = FALSE, mob/user = null)
+/datum/cyberpunk_corporation/proc/to_ui_data(include_hidden = FALSE, mob/user = null, obj/machinery/computer/corporate_terminal/source_terminal)
 	if(hidden && !include_hidden)
 		return null
 	update_agent_pool()
@@ -894,7 +905,7 @@
 		"direction" = direction,
 		"combatDoctrine" = combat_doctrine,
 		"hidden" = hidden,
-		"canManage" = can_manage(user),
+		"canManage" = can_manage(user, source_terminal),
 		"canCouncilVote" = can_vote_council(user),
 		"subsidiaries" = subsidiary_records,
 		"level" = level,
@@ -918,6 +929,7 @@
 		"activeEdicts" = active_edicts,
 		"subscribers" = length(subscribers),
 		"subscriptionCost" = get_subscription_cost(),
+		"canSubscribe" = offers_cyberpunk_subscription() && !is_subscribed(living_user),
 		"serviceMedical" = can_request_service("medical"),
 		"serviceTechnical" = can_request_service("technical"),
 		"serviceDelivery" = can_request_service("delivery"),

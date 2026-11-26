@@ -5,6 +5,7 @@
 	var/sender_name = "unknown"
 	var/recipient_name = "unknown"
 	var/recipient_key
+	var/recipient_corporation
 	var/obj/item/item
 	var/contract_id = 0
 	var/source_terminal = "unknown terminal"
@@ -18,6 +19,9 @@
 /datum/cyberpunk_contract_mail/proc/can_receive(mob/living/user)
 	if(!user || !item)
 		return FALSE
+	if(recipient_corporation)
+		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(recipient_corporation)
+		return corporation?.can_manage(user)
 	var/user_key = ckey(user.real_name || user.name)
 	return user_key == recipient_key
 
@@ -37,11 +41,12 @@
 	mail.recipient_key = ckey(recipient_name)
 	mail.item = item
 	mail.contract_id = contract_id
+	var/datum/cyberpunk_contract/contract = contract_id ? get_cyberpunk_contract(contract_id) : null
+	mail.recipient_corporation = contract?.source_corporation
 	mail.source_terminal = terminal.get_cyberpunk_contract_terminal_label()
 	mail.sent_at = world.time
 	cyberpunk_contract_mail["[mail.id]"] = mail
 	if(contract_id)
-		var/datum/cyberpunk_contract/contract = get_cyberpunk_contract(contract_id)
 		contract?.add_history("[item.name] routed to [recipient_name] through [mail.source_terminal]")
 	return mail
 

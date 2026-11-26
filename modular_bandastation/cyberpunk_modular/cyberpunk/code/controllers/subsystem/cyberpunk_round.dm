@@ -983,6 +983,19 @@ SUBSYSTEM_DEF(cyberpunk_round)
 	html += "</main></body></html>"
 	return html.Join()
 
+/// Catastrophic antagonist victories may leave a short playable finale.
+/datum/controller/subsystem/cyberpunk_round/proc/start_cyberpunk_antag_finale(reason, delay)
+	if(!SSticker.IsRoundInProgress() || cyberpunk_round_end_state == "ending")
+		return
+	cyberpunk_round_end_state = "ending"
+	record_cyberpunk_round_summary(reason, build_cyberpunk_round_snapshot())
+	record_cyberpunk_round_event(reason, "endround", "city", cyberpunk_round_chaos, "Победа антагонистов запустила финальную фазу.", "executed")
+	addtimer(CALLBACK(src, PROC_REF(finish_cyberpunk_antag_finale)), delay)
+
+/datum/controller/subsystem/cyberpunk_round/proc/finish_cyberpunk_antag_finale()
+	if(SSticker.IsRoundInProgress())
+		SSticker.force_ending = FORCE_END_ROUND
+
 /datum/controller/subsystem/cyberpunk_round/proc/cyberpunk_round_process_endround()
 	if(!SSticker || !SSticker.IsRoundInProgress())
 		return

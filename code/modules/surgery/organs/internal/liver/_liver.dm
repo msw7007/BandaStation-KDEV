@@ -148,6 +148,10 @@
 
 /obj/item/organ/liver/on_life(seconds_per_tick)
 	. = ..()
+	metabolize_blood_reagents(seconds_per_tick)
+
+/// Runs blood chemistry independently of the organ's regular life tick.
+/obj/item/organ/liver/proc/metabolize_blood_reagents(seconds_per_tick)
 	if(IS_ROBOTIC_ORGAN(src) && !can_use_chrome_effects())
 		owner.reagents.end_metabolization(keep_liverless = TRUE)
 		owner.reagents.metabolize(owner, seconds_per_tick, can_overdose = TRUE, liverless = TRUE)
@@ -392,7 +396,7 @@
 	toxTolerance = LIVER_DEFAULT_TOX_TOLERANCE + 1
 	liver_resistance = 1.1 * LIVER_DEFAULT_TOX_RESISTANCE
 
-/obj/item/organ/liver/bloody/on_life(seconds_per_tick)
+/obj/item/organ/liver/bloody/metabolize_blood_reagents(seconds_per_tick)
 	. = ..()
 
 	owner.adjust_blood_volume(4 * seconds_per_tick, maximum = BLOOD_VOLUME_NORMAL)
@@ -413,7 +417,7 @@
 	/// What to convert stuff into
 	var/convert_into = /datum/reagent/consumable/ethanol
 
-/obj/item/organ/liver/distillery/on_life(seconds_per_tick)
+/obj/item/organ/liver/distillery/metabolize_blood_reagents(seconds_per_tick)
 	. = ..()
 
 	for(var/datum/reagent/reagent as anything in owner.reagents.reagent_list)

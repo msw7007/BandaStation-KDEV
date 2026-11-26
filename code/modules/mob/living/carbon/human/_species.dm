@@ -790,6 +790,10 @@ GLOBAL_LIST_EMPTY(features_by_species)
 	if(SEND_SIGNAL(target, COMSIG_CARBON_PRE_HELP, user, attacker_style) & COMPONENT_BLOCK_HELP_ACT)
 		return TRUE
 
+	if(target.stat == UNCONSCIOUS && target.oxygenation < 90 && target.body_position == LYING_DOWN)
+		user.do_cpr(target)
+		return TRUE
+
 	if(target.body_position == STANDING_UP || (target.appears_alive() && target.stat != SOFT_CRIT && target.stat != HARD_CRIT))
 		target.help_shake_act(user)
 		if(target != user)

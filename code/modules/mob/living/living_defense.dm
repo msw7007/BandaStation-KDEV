@@ -162,6 +162,16 @@
 			projectile_brute_type = BODYPART_DAMAGE_PIERCE
 		else
 			projectile_brute_type = BODYPART_DAMAGE_BLUNT
+	var/mob/living/cyberpunk_attacker = proj.firer
+	var/previous_attacker
+	var/previous_attacker_key
+	var/credit_cyberpunk_kill = istype(cyberpunk_attacker) && cyberpunk_attacker.ckey && cyberpunk_attacker.mind?.has_antag_datum(/datum/antagonist/cyberpunk, check_subtypes = TRUE)
+	if(credit_cyberpunk_kill)
+		// Death is signalled within damage application. Set the attacker first and roll it back for a stopped hit.
+		previous_attacker = lastattacker
+		previous_attacker_key = lastattackerckey
+		lastattacker = cyberpunk_attacker.real_name
+		lastattackerckey = cyberpunk_attacker.ckey
 	var/damage_dealt = apply_damage(
 		damage = proj.damage,
 		damagetype = proj.damage_type,
@@ -175,6 +185,9 @@
 		brute_type = projectile_brute_type,
 		precise_zone = def_zone,
 	)
+	if(credit_cyberpunk_kill && damage_dealt <= 0)
+		lastattacker = previous_attacker
+		lastattackerckey = previous_attacker_key
 	if(damage_dealt > 0 && isliving(proj.firer) && isitem(proj.fired_from))
 		var/mob/living/living_firer = proj.firer
 		var/obj/item/fired_weapon = proj.fired_from
@@ -432,6 +445,8 @@
 	if(!user.can_cyberpunk_grab_succeed(src, TRUE))
 		return user.fail_cyberpunk_grab_attempt(src, TRUE)
 	user.setGrabState(user.grab_state + 1)
+	if(user.grab_state == old_grab_state)
+		return FALSE
 	if(user.has_character_giga_perk(ATTRIBUTE_STRENGTH) && user.grab_state == GRAB_AGGRESSIVE)
 		user.setGrabState(min(user.max_grab, GRAB_TWOHANDED))
 	if(!user.update_cyberpunk_grab_hold_items())
@@ -643,12 +658,13 @@
 	if(SEND_SIGNAL(src, COMSIG_LIVING_ELECTROCUTE_ACT, shock_damage, source, siemens_coeff, flags) & COMPONENT_LIVING_BLOCK_SHOCK)
 		return FALSE
 	shock_damage *= siemens_coeff
-	shock_damage *= get_cyberpunk_electric_shock_multiplier()
 	if((flags & SHOCK_TESLA) && HAS_TRAIT(src, TRAIT_TESLA_SHOCKIMMUNE))
 		return FALSE
 	if(!(flags & SHOCK_IGNORE_IMMUNITY) && HAS_TRAIT(src, TRAIT_SHOCKIMMUNE))
 		return FALSE
 	if(shock_damage < 1)
+		return FALSE
+	if(!(flags & (SHOCK_ILLUSION | SHOCK_IGNORE_IMMUNITY)) && !prob(get_cyberpunk_electric_shock_chance(flags)))
 		return FALSE
 	reward_character_check_experience(SKILL_ELECTRICS, max(1, shock_damage * 0.1), FALSE, 1)
 	if(!(flags & SHOCK_ILLUSION))

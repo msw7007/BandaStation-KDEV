@@ -21,7 +21,6 @@
 		reagents?.handle_stasis_chems(src, seconds_per_tick)
 	else
 		//Reagent processing needs to come before breathing, to prevent edge cases.
-		handle_hardcrit_circulation(seconds_per_tick)
 		handle_dead_metabolization(seconds_per_tick) //Dead metabolization first since it can modify life metabolization.
 		handle_organs(seconds_per_tick)
 
@@ -112,9 +111,11 @@
 	else if(!can_breathe_tube())
 		if(pulledby?.grab_state >= GRAB_KILL)
 			adjust_oxy_loss(CARBON_KILL_GRAB_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
+			var/obj/item/bodypart/head = get_bodypart(BODY_ZONE_HEAD)
+			head?.add_bodypart_pain(seconds_per_tick)
 			adjust_brute_loss(0.5 * seconds_per_tick, required_bodytype = BODYTYPE_ORGANIC, brute_type = BODYPART_DAMAGE_BLUNT)
 			losebreath++
-		else if(stat == HARD_CRIT)
+		else if(stat == HARD_CRIT && undergoing_cardiac_arrest())
 			adjust_oxy_loss(CARBON_HARDCRIT_OXYLOSS_RATE * seconds_per_tick, forced = TRUE)
 			losebreath++
 
@@ -631,21 +632,7 @@
 /mob/living/carbon/proc/get_heart_oxygen_delivery_multiplier(heart_efficiency)
 	if(undergoing_cardiac_arrest())
 		heart_efficiency = 0
-	else
-		heart_efficiency *= 1 - get_hardcrit_circulation_ratio()
 	return heart_efficiency * 3
-
-/mob/living/carbon/proc/handle_hardcrit_circulation(seconds_per_tick)
-	if(stat == DEAD || !has_cyberpunk_hardcrit_damage() || HAS_TRAIT(src, TRAIT_NOHARDCRIT))
-		hardcrit_circulation_seconds = 0
-		return
-	hardcrit_circulation_seconds = min(CARBON_HARDCRIT_CIRCULATION_COLLAPSE_TIME, hardcrit_circulation_seconds + seconds_per_tick)
-
-/mob/living/carbon/proc/get_hardcrit_circulation_ratio()
-	return clamp(hardcrit_circulation_seconds / CARBON_HARDCRIT_CIRCULATION_COLLAPSE_TIME, 0, 1)
-
-/mob/living/carbon/proc/has_hardcrit_circulatory_collapse()
-	return get_hardcrit_circulation_ratio() >= 1
 
 /mob/living/carbon/proc/get_oxygenation_target(blood_transport, heart_delivery, lung_uptake, pressure)
 	return clamp(blood_transport * heart_delivery * pressure * lung_uptake * 16.7, 0, 100)

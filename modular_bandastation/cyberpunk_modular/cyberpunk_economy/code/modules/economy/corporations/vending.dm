@@ -1,4 +1,5 @@
 //CYBERPUNK CORPORATIONS - corporate vending network integration.
+GLOBAL_LIST_EMPTY(cyberpunk_corporate_supply_depots)
 
 /obj/machinery/vending
 	var/cyberpunk_corporate_vendor_id
@@ -6,6 +7,220 @@
 	var/cyberpunk_corporate_vendor_revenue = 0
 	var/corp_manufacturer
 	var/cyberpunk_energy_stock_added = FALSE
+	var/list/cyberpunk_supply_targets
+	var/datum/weakref/cyberpunk_supply_courier
+	var/cyberpunk_supply_retry_at = 0
+
+/// A physical stockroom container. Staff can replenish it by putting goods inside.
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot
+	name = "склад пополнения автоматов"
+	desc = "Положите сюда товары для корпоративных автоматов. Грузы забираются из закрытого ящика."
+	anchored = TRUE
+	var/corporation_id
+	var/list/initial_supply
+
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/Initialize(mapload)
+	. = ..()
+	GLOB.cyberpunk_corporate_supply_depots += src
+	if(mapload)
+		for(var/product_type in initial_supply)
+			for(var/index in 1 to initial_supply[product_type])
+				if(ispath(product_type, /obj/item/stack))
+					var/obj/item/stack/template = product_type
+					new product_type(src, initial(template.amount), FALSE)
+				else
+					new product_type(src)
+
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/Destroy()
+	GLOB.cyberpunk_corporate_supply_depots -= src
+	return ..()
+
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/benn
+	name = "склад автоматов Бэнь"
+	corporation_id = "benn"
+	initial_supply = list(/obj/item/reagent_containers/hypospray/medipen/salbutamol/benn = 12, /obj/item/reagent_containers/hypospray/medipen/atropine = 8, /obj/item/reagent_containers/applicator/pill/epinephrine/benn = 8)
+
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/ryaznov
+	name = "склад автоматов Рязнова"
+	corporation_id = "ryaznov"
+	initial_supply = list(/obj/item/stock_parts/power_store/cell = 10, /obj/item/stock_parts/power_store/battery = 10, /obj/item/stack/cable_coil = 10, /obj/item/crowbar/ryaznov_prybar = 8, /obj/item/multitool/ryaznov_gridkey = 8)
+
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/starlight
+	name = "склад автоматов Старлайта"
+	corporation_id = "starlight"
+	initial_supply = list(/obj/item/flashlight/starlight_beacon = 12, /obj/item/cyberpunk_delivery_beacon = 12)
+
+/obj/vehicle/ridden/cyberpunk/avi/warehouse/corporate_supply
+	name = "дрон пополнения корпоративного автомата"
+	var/datum/weakref/vendor_ref
+	var/datum/weakref/product_ref
+	var/datum/weakref/freight_ref
+	var/use_depot_quality = TRUE
+
+/obj/vehicle/ridden/cyberpunk/avi/warehouse/corporate_supply/cyberpunk_avi_unload_cargo()
+	var/obj/structure/closet/crate/freight = freight_ref?.resolve()
+	var/arrived = freight?.loc == src
+	. = ..()
+	if(. && arrived)
+		var/obj/machinery/vending/vendor = vendor_ref?.resolve()
+		vendor?.accept_cyberpunk_corporate_supply(product_ref?.resolve(), freight, use_depot_quality)
+
+/obj/machinery/vending/proc/process_cyberpunk_corporate_supply()
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	if(!corporation || !length(cyberpunk_supply_targets) || world.time < cyberpunk_supply_retry_at || cyberpunk_supply_courier?.resolve())
+		return
+	cyberpunk_supply_retry_at = world.time + 30 SECONDS
+	var/turf/landing
+	for(var/direction in GLOB.cardinals)
+		var/turf/candidate = get_step(src, direction)
+		if(isopenturf(candidate) && !isspaceturf(candidate) && !candidate.is_blocked_turf(exclude_mobs = TRUE))
+			landing = candidate
+			break
+	if(!landing)
+		return
+	for(var/datum/data/vending_product/product as anything in cyberpunk_supply_targets.Copy())
+		if(!(product in (product_records + coin_records + hidden_records)))
+			cyberpunk_supply_targets -= product
+			continue
+		var/shortage = cyberpunk_supply_targets[product] - max(0, product.amount - LAZYLEN(product.returned_products))
+		if(shortage <= 0)
+			cyberpunk_supply_targets -= product
+			continue
+		if(purchase_cyberpunk_corporate_supply(corporation, landing, product, shortage))
+			return
+		for(var/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/depot as anything in GLOB.cyberpunk_corporate_supply_depots)
+			if(depot.corporation_id != corporation.id || depot.opened)
+				continue
+			var/list/lot = list()
+			for(var/obj/item/item in depot.contents)
+				if(item.type != product.product_path || (item.item_flags & ABSTRACT))
+					continue
+				lot += item
+				if(length(lot) >= shortage)
+					break
+			if(length(lot) && dispatch_cyberpunk_corporate_supply(depot, landing, product, lot))
+				return
+
+/obj/machinery/vending/proc/dispatch_cyberpunk_corporate_supply(obj/structure/closet/crate/cyberpunk_corporate_supply_depot/depot, turf/landing, datum/data/vending_product/product, list/lot)
+	var/turf/loading = get_turf(depot)
+	if(!loading)
+		return FALSE
+	var/obj/structure/closet/crate/freight = new(loading)
+	freight.name = "груз автомата: [product.name]"
+	freight.anchored = FALSE
+	if(!launch_cyberpunk_corporate_supply(loading, landing, product, freight))
+		qdel(freight)
+		return FALSE
+	for(var/obj/item/item as anything in lot)
+		item.forceMove(freight)
+	return TRUE
+
+/obj/machinery/vending/proc/launch_cyberpunk_corporate_supply(turf/loading, turf/landing, datum/data/vending_product/product, obj/structure/closet/crate/freight, from_depot = TRUE)
+	var/obj/vehicle/ridden/cyberpunk/avi/warehouse/corporate_supply/courier = new(loading)
+	courier.cyberpunk_route_corporation_id = cyberpunk_corporate_vendor_id
+	courier.use_depot_quality = from_depot
+	if(!courier.start_cyberpunk_avi_delivery(loading, landing, list(freight)))
+		qdel(courier)
+		return FALSE
+	courier.vendor_ref = WEAKREF(src)
+	courier.product_ref = WEAKREF(product)
+	courier.freight_ref = WEAKREF(freight)
+	cyberpunk_supply_courier = WEAKREF(courier)
+	return TRUE
+
+/obj/machinery/vending/proc/purchase_cyberpunk_corporate_supply(datum/cyberpunk_corporation/corporation, turf/landing, datum/data/vending_product/product, shortage)
+	if(!SSeconomy.is_cyberpunk_bank_online())
+		return FALSE
+	var/is_stack = ispath(product.product_path, /obj/item/stack)
+	var/obj/item/stack/stack_type = is_stack ? product.product_path : null
+	var/units_per_product = is_stack ? max(1, initial(stack_type.amount)) : 1
+	var/datum/cyberpunk_business/supplier
+	var/stock_key
+	var/stock_amount
+	var/best_price = cyberpunk_external_trade_price(product.product_path)
+	for(var/business_id in SScyberpunk_property.cyberpunk_businesses)
+		var/datum/cyberpunk_business/candidate = SScyberpunk_property.cyberpunk_businesses[business_id]
+		if(!candidate.legal || !candidate.warehouse_enabled || !candidate.warehouse_valid || !candidate.get_account() || !candidate.validate_unload_zone())
+			continue
+		if(length(candidate.warehouse_sell_links) && !(corporation.id in candidate.warehouse_sell_links))
+			continue
+		for(var/label in candidate.warehouse_stock)
+			var/available = candidate.get_sellable_stock_amount(label, product.product_path, units_per_product)
+			if(available < units_per_product)
+				continue
+			var/price = candidate.get_stock_price(label, null, corporate_buyer_id = corporation.id)
+			if(price >= best_price)
+				continue
+			best_price = price
+			supplier = candidate
+			stock_key = label
+			stock_amount = min(shortage, FLOOR(available / units_per_product, 1))
+	if(!supplier)
+		return FALSE
+	var/turf/loading = get_turf(supplier.get_unload_zone())
+	if(!loading)
+		return FALSE
+	var/units = stock_amount * units_per_product
+	var/list/packet = supplier.take_stock(stock_key, units, product.product_path, bundle_size = units_per_product)
+	if(!packet)
+		return FALSE
+	var/cost = units * best_price
+	var/reason = "Пополнение автомата [corporation.name]: [product.name]"
+	if(packet["amount"] != units || !corporation.charge_funds(cost, reason))
+		supplier.receive_stock(stock_key, packet)
+		return FALSE
+	var/obj/structure/closet/crate/freight = new(loading)
+	freight.name = "груз автомата от «[supplier.name]»"
+	freight.anchored = FALSE
+	if(!launch_cyberpunk_corporate_supply(loading, landing, product, freight, from_depot = FALSE))
+		qdel(freight)
+		supplier.receive_stock(stock_key, packet)
+		corporation.get_account()?.adjust_money(cost, "Возврат за несостоявшийся рейс")
+		return FALSE
+	var/unpacked = units
+	for(var/list/record as anything in packet["items"])
+		unpacked -= record["stack_amount"] || 1
+		if(!is_stack)
+			cyberpunk_persistent_restore_movable(record, freight, null, loading, null)
+			continue
+		var/remaining = record["stack_amount"] || 1
+		var/list/bundle = record.Copy()
+		while(remaining > 0)
+			var/pack_amount = min(remaining, units_per_product)
+			bundle["stack_amount"] = pack_amount
+			cyberpunk_persistent_restore_movable(bundle, freight, null, loading, null)
+			remaining -= pack_amount
+	for(var/unit in 1 to CEILING(unpacked / units_per_product, 1))
+		if(is_stack)
+			new stack_type(freight, min(unpacked, units_per_product), FALSE)
+			unpacked -= units_per_product
+		else
+			new product.product_path(freight)
+	supplier.record_income(cost, reason)
+	return TRUE
+
+/obj/machinery/vending/proc/accept_cyberpunk_corporate_supply(datum/data/vending_product/product, obj/structure/closet/crate/freight, use_depot_quality)
+	if(!get_cyberpunk_supply_corporation() || !(product in (product_records + coin_records + hidden_records)) || !Adjacent(freight))
+		return FALSE
+	var/turf/landing = get_turf(freight)
+	for(var/obj/item/item in freight.contents.Copy())
+		if(item.type != product.product_path)
+			continue
+		if(use_depot_quality)
+			apply_cyberpunk_corporate_supply_quality(item)
+		var/list/lot = cyberpunk_persistent_capture_movable(item, landing, landing, null)
+		if(!lot)
+			continue
+		lot["vending_bundle"] = TRUE
+		LAZYADD(product.cyberpunk_warehouse_items, list(lot))
+		product.amount++
+		product.cyberpunk_sale_available = TRUE
+		qdel(item)
+	if(!length(freight.contents))
+		qdel(freight)
+	cyberpunk_supply_courier = null
+	update_appearance()
+	return TRUE
 
 /obj/machinery/vending/proc/get_cyberpunk_supply_corporation()
 	if(!has_corporate_vending_module())
@@ -62,7 +277,7 @@
 		record.name = initial(product.name)
 		record.cyberpunk_base_amount = energy_products[product_type]
 		record.max_amount = record.cyberpunk_base_amount
-		record.amount = record.max_amount
+		record.amount = 0
 		record.cyberpunk_sale_source = cyberpunk_sale_source
 		record.cyberpunk_sale_entry = get_cyberpunk_sale_entry_for_type(product_type, cyberpunk_sale_source)
 		record.price = record.cyberpunk_sale_entry.get_price(default_price, extra_price)
@@ -72,24 +287,110 @@
 	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
 	if(product && corporation?.id == CYBERPUNK_CORP_STARLIGHT && corporation.has_edict("starlight_log_observation"))
 		corporation.register_starlight_tracking(customer, product)
-	if(!product || corporation?.id != CYBERPUNK_CORP_STARLIGHT || !corporation.service_auto_enabled || !corporation.has_edict("starlight_cargo_tracking") || !corporation.is_subscribed(customer))
+	if(!product || corporation?.id != CYBERPUNK_CORP_STARLIGHT || !corporation.service_auto_enabled || !corporation.has_edict("starlight_cargo_tracking"))
 		return FALSE
-	var/character_key = SSeconomy.get_cyberpunk_contract_character_key(customer, customer.get_bank_account())
+	var/datum/cyberpunk_starlight_shipment/shipment = corporation.register_starlight_tracking(customer, product)
+	if(!shipment)
+		return FALSE
+	queue_cyberpunk_starlight_shipment(corporation, customer, shipment, "queued")
+	to_chat(customer, span_notice("Покупка передана в доставку Старлайта."))
+	return TRUE
+
+/obj/machinery/vending/proc/sync_cyberpunk_subscription_stock()
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	if(!corporation?.offers_cyberpunk_subscription())
+		return
+	var/list/assortment
+	switch(corporation.id)
+		if(CYBERPUNK_CORP_BENN)
+			assortment = list(/obj/item/reagent_containers/hypospray/medipen/atropine, /obj/item/reagent_containers/applicator/pill/epinephrine/benn)
+		if(CYBERPUNK_CORP_RYAZNOV)
+			assortment = list(/obj/item/crowbar/ryaznov_prybar, /obj/item/multitool/ryaznov_gridkey)
+	for(var/obj/item/product_type as anything in assortment)
+		var/known = FALSE
+		for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
+			if(record.product_path == product_type)
+				known = TRUE
+				break
+		if(known)
+			continue
+		var/datum/data/vending_product/record = new
+		record.product_path = product_type
+		record.name = initial(product_type.name)
+		record.cyberpunk_subscription_only = TRUE
+		record.cyberpunk_base_amount = 2
+		record.max_amount = 2
+		record.age_restricted = initial(product_type.age_restricted)
+		record.cyberpunk_sale_source = cyberpunk_sale_source
+		record.cyberpunk_sale_entry = get_cyberpunk_sale_entry_for_type(product_type, cyberpunk_sale_source)
+		record.price = record.cyberpunk_sale_entry?.get_price(default_price, extra_price) || default_price
+		product_records += record
+		LAZYSET(cyberpunk_supply_targets, record, record.max_amount)
+
+/obj/machinery/vending/proc/can_buy_cyberpunk_subscription_stock(mob/user)
+	var/mob/living/customer = user
+	return istype(customer) && get_cyberpunk_supply_corporation()?.is_subscribed(customer)
+
+/obj/machinery/vending/proc/can_submit_cyberpunk_starlight_contract(mob/user)
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	return corporation?.id == CYBERPUNK_CORP_STARLIGHT && can_buy_cyberpunk_subscription_stock(user)
+
+/obj/machinery/proc/queue_cyberpunk_starlight_shipment(datum/cyberpunk_corporation/corporation, mob/living/customer, datum/cyberpunk_starlight_shipment/shipment, status, turf/pickup)
+	shipment.source_ref = WEAKREF(src)
+	shipment.status = status
+	shipment.pickup_turf = pickup || get_turf(src)
+	if(corporation.is_subscribed(customer))
+		shipment.priority_delivery = corporation.has_edict("starlight_trade_subscription")
+		var/obj/item/cyberpunk_delivery_beacon/beacon = find_cyberpunk_shipment_beacon(shipment.owner_key)
+		if(beacon)
+			shipment.beacon_ref = WEAKREF(beacon)
+	START_PROCESSING(SSobj, shipment)
+
+/obj/machinery/proc/find_cyberpunk_shipment_beacon(character_key)
 	for(var/obj/item/cyberpunk_delivery_beacon/beacon as anything in GLOB.cyberpunk_starlight_beacons)
 		var/turf/destination = get_turf(beacon)
 		if(beacon.owner_key != character_key || !beacon.active || !isturf(beacon.loc) || !destination || !is_station_level(destination.z) || destination.density || isspaceturf(destination))
 			continue
-		var/datum/cyberpunk_starlight_shipment/shipment = corporation.register_starlight_tracking(customer, product)
-		if(!shipment)
-			return FALSE
-		shipment.source_ref = WEAKREF(src)
-		shipment.beacon_ref = WEAKREF(beacon)
-		shipment.destination = destination
-		shipment.status = "queued"
-		START_PROCESSING(SSobj, shipment)
-		to_chat(customer, span_notice("Starlight queued [product] for your beacon. The parcel waits at this vendor until a courier is available."))
+		return beacon
+	return null
+
+/obj/machinery/vending/proc/can_order_cyberpunk_starlight_stock(mob/living/customer)
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	return istype(customer) && corporation?.id == CYBERPUNK_CORP_STARLIGHT && corporation.service_auto_enabled && (corporation.has_edict("starlight_cargo_tracking") || (corporation.has_edict("starlight_trade_subscription") && corporation.is_subscribed(customer)))
+
+/obj/machinery/vending/proc/schedule_cyberpunk_preorder_supply(datum/data/vending_product/product)
+	LAZYINITLIST(cyberpunk_supply_targets)
+	cyberpunk_supply_targets[product] = max(1, cyberpunk_supply_targets[product], product.cyberpunk_base_amount)
+
+/obj/machinery/vending/proc/order_cyberpunk_starlight_stock(mob/living/customer, datum/data/vending_product/product)
+	if(!can_order_cyberpunk_starlight_stock(customer) || !(product in product_records) || product.amount > 0 || !is_operational || !Adjacent(customer) || customer.incapacitated || is_area_virtual(get_area(src)))
+		return FALSE
+	var/obj/item/card/id/card = customer.get_idcard(TRUE)
+	if(age_restrictions && product.age_restricted && (!card?.registered_age || card.registered_age < AGE_MINOR))
+		return FALSE
+	var/datum/bank_account/payer = customer.get_bank_account()
+	if(!payer)
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	var/datum/cyberpunk_starlight_shipment/shipment = corporation.register_starlight_tracking(customer, null, product.name)
+	if(!shipment)
+		return FALSE
+	var/price = all_products_free ? 0 : max(0, get_cyberpunk_business_vending_price(product.price, product.name))
+	if(price && payer.account_job?.paycheck_department == payment_department)
+		price = max(1, round(price * DEPARTMENT_DISCOUNT))
+	if(price && !payer.adjust_money(-price, "Заказ с доставкой Старлайта: [product.name]"))
+		shipment.finish(FALSE)
+		to_chat(customer, span_warning("Заказ не принят. Проверь баланс и доступность банковской сети."))
 		return TRUE
-	return FALSE
+	shipment.payer_ref = WEAKREF(payer)
+	shipment.reserved_payment = price
+	shipment.ordered_product_ref = WEAKREF(product)
+	schedule_cyberpunk_preorder_supply(product)
+	queue_cyberpunk_starlight_shipment(corporation, customer, shipment, "awaiting stock")
+	if(shipment.priority_delivery)
+		cyberpunk_supply_retry_at = min(cyberpunk_supply_retry_at, world.time)
+	to_chat(customer, span_notice("Заказ принят. Старлайт доставит [product.name], когда он поступит в автомат."))
+	return TRUE
 
 /obj/machinery/vending/proc/get_cyberpunk_diagnostic_service(datum/cyberpunk_corporation/corporation)
 	switch(corporation?.id)
@@ -170,6 +471,11 @@
 			to_chat(user, span_warning("На счёте недостаточно средств для диагностики."))
 			return FALSE
 		corporation.add_funds(price, "Диагностика")
+	if(service == "technical" && corporation?.id == CYBERPUNK_CORP_RYAZNOV && isitem(choice))
+		var/obj/item/scrap = choice
+		if(scrap.cyberpunk_recovered_scrap && !scrap.cyberpunk_scrap_analyzed)
+			scrap.cyberpunk_scrap_analyzed = SScyberpunk_corporations.record_ryaznov_scrap(scrap.name, "анализ обломков")
+
 	if(service == "medical" && iscarbon(user))
 		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Benn vending diagnosis", branded_service = TRUE)
 		cyberpunk_record_benn_biodata(src, "benn_gene_registry", "Benn vending diagnosis: genetic registry", 1, 1, branded_service = TRUE)
@@ -326,6 +632,79 @@
 	if(!corporation?.has_edict(corporation.service_tracking_edict()))
 		return null
 	return list("name" = "[corporation.name] service chip (autoimplant)", "price" = 100)
+
+/obj/machinery/vending/proc/get_cyberpunk_local_aid(mob/living/user)
+	if(!istype(user) || !has_corporate_vending_module())
+		return null
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	var/edict
+	var/service
+	var/label
+	switch(corporation?.id)
+		if(CYBERPUNK_CORP_BENN)
+			edict = "benn_med_help"
+			service = "medical"
+			label = "Автодок"
+		if(CYBERPUNK_CORP_RYAZNOV)
+			edict = "ryaznov_field_support"
+			service = "technical"
+			label = "Ремонт снаряжения и лёгкой техники"
+	if(!edict || !corporation.has_edict(edict))
+		return null
+	return list("label" = label, "edict" = edict, "service" = service, "drone" = corporation.is_subscribed(user), "cost" = corporation.get_service_cost(service, user))
+
+/obj/machinery/vending/proc/request_cyberpunk_local_aid(mob/living/user, use_drone)
+	var/list/aid = get_cyberpunk_local_aid(user)
+	if(!aid || !is_operational || !Adjacent(user) || user.incapacitated || is_area_virtual(get_area(src)))
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	var/atom/target = user
+	if(aid["service"] == "medical")
+		if(user.stat == DEAD || user.health >= user.maxHealth)
+			to_chat(user, span_notice("Автодок не обнаружил повреждений для лечения."))
+			return TRUE
+	else
+		target = user.get_active_held_item()
+		if(!cyberpunk_needs_technical_service(target))
+			for(var/obj/candidate in range(1, user))
+				if((use_drone || istype(candidate, /obj/machinery) || istype(candidate, /obj/vehicle/ridden)) && cyberpunk_needs_technical_service(candidate))
+					target = candidate
+					break
+		if(!cyberpunk_needs_technical_service(target))
+			to_chat(user, span_warning("Поднеси повреждённый предмет к автомату."))
+			return TRUE
+	if(use_drone)
+		if(!aid["drone"] || !corporation.service_auto_enabled || !corporation.dispatch_observation_drone(src, target, user, TRUE, aid_edict = aid["edict"]))
+			to_chat(user, span_warning("Дрон недоступен. Проверь договор и доступность службы."))
+		return TRUE
+	var/cost = aid["cost"]
+	var/datum/bank_account/account = user.get_bank_account()
+	if(cost && !account?.adjust_money(-cost, "[corporation.name]: [aid["label"]]"))
+		to_chat(user, span_warning("На счёте недостаточно средств."))
+		return TRUE
+	if(cost)
+		corporation.add_funds(cost, "local aid")
+	if(aid["service"] == "medical")
+		user.heal_ordered_damage(corporation.is_subscribed(user) ? 60 : 35, list(BRUTE, BURN, TOX, OXY))
+		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Benn autodoc treatment", branded_service = TRUE)
+		cyberpunk_record_benn_biodata(src, "benn_gene_registry", "Benn autodoc: genetic registry", 1, 1, branded_service = TRUE)
+		if(ishuman(user))
+			cyberpunk_collect_benn_dna_sample(user, "Benn autodoc: DNA storage")
+	else
+		var/obj/repair_target = target
+		var/repair_amount = corporation.is_subscribed(user) ? 80 : 45
+		repair_target.extinguish()
+		if(isitem(repair_target))
+			var/obj/item/repair_item = repair_target
+			repair_item.repair_cyberpunk_item(repair_amount, user)
+		else if(repair_target.uses_integrity)
+			repair_target.repair_damage(repair_amount)
+		var/obj/machinery/machine = repair_target
+		if(istype(machine))
+			machine.repair_cyberpunk_machine_wear(repair_amount, user)
+		SScyberpunk_corporations.record_ryaznov_work(repair_target, "терминальный ремонт")
+	to_chat(user, span_notice("[aid["label"]]: обслуживание завершено."))
+	return TRUE
 
 /obj/machinery/vending/proc/buy_cyberpunk_service_chip(mob/living/user)
 	var/list/offer = get_cyberpunk_service_chip_offer()
@@ -587,8 +966,15 @@
 		var/mob/living/victim = target
 		if(corporation_id == CYBERPUNK_CORP_BENN)
 			victim.apply_damage(3, BURN, burn_type = BODYPART_DAMAGE_ACID)
-		else
+		else if(corporation_id == CYBERPUNK_CORP_RYAZNOV)
+			do_sparks(2, TRUE, victim)
+			victim.adjust_stamina_loss(12)
 			victim.adjust_staggered_up_to(2 SECONDS, 2 SECONDS)
+		else if(corporation_id == CYBERPUNK_CORP_STARLIGHT)
+			victim.adjust_staggered_up_to(2 SECONDS, 2 SECONDS)
+			var/turf/flank = get_step(victim, get_dir(src, victim))
+			if(isopenturf(flank) && !is_vacuum_turf(flank) && !flank.is_blocked_turf(source_atom = src))
+				forceMove(flank)
 
 /obj/machinery/vending/proc/set_cyberpunk_corporate_vendor(manufacturer, mob/living/user = null)
 	var/corporation_id = SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(manufacturer)
@@ -609,6 +995,49 @@
 	if(!corporation)
 		return FALSE
 	corporation.record_vendor_sale(src, amount, product_label)
+	return TRUE
+
+/obj/machinery/vending/var/cyberpunk_corporate_markup_percent = 0
+
+/obj/machinery/vending/proc/can_change_cyberpunk_corporate_markup(mob/living/user)
+	if(!istype(user) || !is_operational || cyberpunk_business_id || !has_corporate_vending_module())
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	if(!corporation || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+		return FALSE
+	var/access_id = cyberpunk_corporation_access_id(corporation.id, "specialist")
+	return (access_id && user.has_cyberpunk_crypto_access(access_id)) || has_cyberpunk_network_access(user, "settings")
+
+/obj/machinery/vending/proc/get_ryaznov_scrap_offer(mob/living/user)
+	if(!istype(user) || !is_operational || !user.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+		return 0
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	if(corporation?.id != CYBERPUNK_CORP_RYAZNOV || !corporation.has_edict("ryaznov_route_registry"))
+		return 0
+	var/obj/item/stack/scrap = user.get_active_held_item()
+	if(!istype(scrap) || scrap.is_cyborg || !scrap.cyberpunk_recovered_scrap || istype(scrap, /obj/item/stack/ore))
+		return 0
+	return cyberpunk_external_export_price(scrap.type)
+
+/obj/machinery/vending/proc/buy_ryaznov_scrap(mob/living/user)
+	var/price = get_ryaznov_scrap_offer(user)
+	if(!price)
+		return FALSE
+	var/datum/cyberpunk_corporation/corporation = get_cyberpunk_supply_corporation()
+	var/datum/bank_account/buyer = corporation.get_account()
+	var/datum/bank_account/seller = user.get_bank_account()
+	var/obj/item/stack/scrap = user.get_active_held_item()
+	if(!buyer || !seller || buyer == seller)
+		return FALSE
+	var/scrap_name = scrap.name
+	if(!buyer.transfer_money(seller, price, "Рязнов: закупка обломков"))
+		to_chat(user, span_warning("Не удалось оплатить обломки. Проверь банковский счёт."))
+		return TRUE
+	if(!scrap.use(1))
+		seller.transfer_money(buyer, price, "Рязнов: отмена закупки обломков")
+		return FALSE
+	SScyberpunk_corporations.record_ryaznov_scrap(scrap_name, "продажа обломков")
+	to_chat(user, span_notice("Автомат принял обломки. На ваш счёт зачислено [price] кр."))
 	return TRUE
 
 /obj/machinery/vending/proc/get_cyberpunk_corporate_vendor_ui()

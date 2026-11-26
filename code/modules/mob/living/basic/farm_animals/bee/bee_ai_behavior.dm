@@ -88,20 +88,8 @@
 	if(!.)
 		return FALSE
 
-	var/mob/living/mob_target = target
-
-	if(mob_target.mob_biotypes & MOB_PLANT)
-		return FALSE
-
-	var/datum/ai_controller/basic_controller/bee_ai = owner.ai_controller
-	if(isnull(bee_ai))
-		return FALSE
-
-	var/atom/bee_hive = bee_ai.blackboard[BB_CURRENT_HOME]
-	if(bee_hive && get_dist(target, bee_hive) > AGGRO_DISTANCE_FROM_HIVE && can_see(owner, bee_hive, 9))
-		return FALSE
-
-	return !(mob_target.bee_friendly())
+	var/mob/living/basic/bee/bee = owner
+	return istype(bee) && (!bee.beehome || bee.loc != bee.beehome)
 
 
 ///pet commands

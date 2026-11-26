@@ -62,6 +62,12 @@ SUBSYSTEM_DEF(cyberspace_nodes)
 /datum/controller/subsystem/cyberspace_nodes/Initialize()
 	if(!SScyberspace?.finalize_initial_layer())
 		return SS_INIT_FAILURE
+	for(var/obj/machinery/machine as anything in SSmachines.get_all_machines())
+		if(!machine.cyberpunk_public_access && istype(get_area(machine), /area/cyberpunk) && (length(machine.req_access) || length(machine.req_one_access) || machine.has_cyberpunk_direct_crypto_requirements()))
+			get_cyberpunk_device_key(machine)
+			machine.cyberpunk_requires_device_key = TRUE
+			GLOB.cyberpunk_role_device_targets += WEAKREF(machine)
+		CHECK_TICK
 	return SS_INIT_SUCCESS
 
 /datum/cyberspace_layer

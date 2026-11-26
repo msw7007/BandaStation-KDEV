@@ -57,7 +57,8 @@
 
 /datum/bank_account/Destroy()
 	if(add_to_accounts)
-		SSeconomy.bank_accounts_by_id -= "[account_id]"
+		var/list/bank_registry = SSeconomy.get_bank_accounts()
+		bank_registry -= "[account_id]"
 		SSeconomy.bank_accounts_by_job[account_job.type] -= src
 	QDEL_LIST(redeemed_coupons)
 	return ..()
@@ -65,21 +66,21 @@
 /**
  * Proc guarantees the account_id possesses a unique number.
  * If it doesn't, it tries to find a unique alternative.
- * It then adds it to the `SSeconomy.bank_accounts_by_id` global list.
+ * It then adds it to the `SSeconomy.get_bank_accounts()` global list.
  */
 /datum/bank_account/proc/setup_unique_account_id()
 	if (!add_to_accounts)
 		return
-	if(account_id && !SSeconomy.bank_accounts_by_id["[account_id]"])
-		SSeconomy.bank_accounts_by_id["[account_id]"] = src
+	if(account_id && !SSeconomy.get_bank_accounts()["[account_id]"])
+		SSeconomy.get_bank_accounts()["[account_id]"] = src
 		return //Already unique
 	for(var/i in 1 to 1000)
 		account_id = rand(111111, 999999)
-		if(!SSeconomy.bank_accounts_by_id["[account_id]"])
+		if(!SSeconomy.get_bank_accounts()["[account_id]"])
 			break
-	if(SSeconomy.bank_accounts_by_id["[account_id]"])
+	if(SSeconomy.get_bank_accounts()["[account_id]"])
 		stack_trace("Unable to find a unique account ID, substituting currently existing account of id [account_id].")
-	SSeconomy.bank_accounts_by_id["[account_id]"] = src
+	SSeconomy.get_bank_accounts()["[account_id]"] = src
 
 /**
  * Proc places this account into the right place in the `SSeconomy.bank_accounts_by_job` list, if needed.
@@ -102,7 +103,8 @@
 	switch(var_name)
 		if(NAMEOF(src, account_id))
 			if(add_to_accounts)
-				SSeconomy.bank_accounts_by_id -= "[old_id]"
+				var/list/bank_registry = SSeconomy.get_bank_accounts()
+				bank_registry -= "[old_id]"
 				setup_unique_account_id()
 		if(NAMEOF(src, account_job))
 			update_account_job_lists(account_job, old_job)
@@ -111,7 +113,8 @@
 				setup_unique_account_id()
 				update_account_job_lists(account_job)
 			else
-				SSeconomy.bank_accounts_by_id -= "[account_id]"
+				var/list/bank_registry = SSeconomy.get_bank_accounts()
+				bank_registry -= "[account_id]"
 				SSeconomy.bank_accounts_by_job[account_job.type] -= src
 		if(NAMEOF(src, account_balance))
 			add_log_to_history(var_value - old_balance, "Nanotrasen: Moderator Action")
@@ -153,6 +156,8 @@
  * * reason - the reason for the appearance or loss of money
  */
 /datum/bank_account/proc/adjust_money(amount, reason)
+	if(!SSeconomy.is_cyberpunk_bank_online())
+		return amount > 0 && SSeconomy.queue_cyberpunk_bank_credit(src, amount, reason)
 	if((amount < 0 && has_money(-amount)) || amount > 0)
 		var/debt_collected = 0
 		if(account_debt > 0 && amount > 0)
@@ -162,6 +167,8 @@
 			add_log_to_history(amount, reason)
 		if(debt_collected)
 			pay_debt(debt_collected, FALSE)
+		if(amount > debt_collected)
+			SEND_SIGNAL(src, COMSIG_BANK_ACCOUNT_CREDIT_POSTED, amount - debt_collected, reason)
 		return TRUE
 	return FALSE
 
@@ -187,6 +194,8 @@
  * * transfer_reason - override for adjust_money reason. Use if no default reason(Transfer to/from Name Surname).
  */
 /datum/bank_account/proc/transfer_money(datum/bank_account/from, amount, transfer_reason)
+	if(!SSeconomy.is_cyberpunk_bank_online() || !from || amount <= 0)
+		return FALSE
 	if(from.has_money(amount))
 		var/reason_to = "Перевод: От [from.account_holder]"
 		var/reason_from = "Перевод: [account_holder]"
@@ -199,8 +208,10 @@
 			reason_to = IS_DEPARTMENTAL_ACCOUNT(src) ? "" : transfer_reason
 			reason_from = transfer_reason
 
+		if(!from.adjust_money(-amount, reason_from))
+			return FALSE
 		adjust_money(amount, reason_to)
-		from.adjust_money(-amount, reason_from)
+		SEND_SIGNAL(src, COMSIG_BANK_ACCOUNT_RECEIVED_TRANSFER, from, amount, transfer_reason)
 		SSblackbox.record_feedback("amount", "credits_transferred", amount)
 		log_econ("[amount][MONEY_NAME] were transferred from [from.account_holder]'s account to [src.account_holder]")
 		return TRUE
@@ -335,7 +346,8 @@
 	department_id = dep_id
 	account_balance = budget
 	account_holder = SSeconomy.department_accounts[dep_id]
-	SSeconomy.departmental_accounts += src
+	var/list/departments = SSeconomy.get_bank_departments()
+	departments += src
 
 /datum/bank_account/department/adjust_money(amount, reason)
 	. = ..()

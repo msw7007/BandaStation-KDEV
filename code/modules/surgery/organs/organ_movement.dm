@@ -87,6 +87,8 @@
 	owner = receiver
 
 	on_mob_insert(receiver, special, movement_flags)
+	if(cyberpunk_infusion_humanoidity_cost && receiver.dna)
+		addtimer(CALLBACK(receiver.dna, TYPE_PROC_REF(/datum/dna, update_humanoidity)), 0, TIMER_UNIQUE)
 
 	return TRUE
 
@@ -177,6 +179,8 @@
 
 	owner = null
 	on_mob_remove(organ_owner, special, movement_flags)
+	if(cyberpunk_infusion_humanoidity_cost && organ_owner?.dna)
+		addtimer(CALLBACK(organ_owner.dna, TYPE_PROC_REF(/datum/dna, update_humanoidity)), 0, TIMER_UNIQUE)
 	return TRUE
 
 /// Called after the organ is removed from a mob.

@@ -206,8 +206,10 @@
 	if(player_client)
 		spawned_human.apply_cyberpunk_fortitude_starting_organs()
 
-	apply_cyberpunk_role_grants(spawned_human)
 	player_client?.prefs?.apply_character_role_setup_to_human(spawned_human, src)
+	var/list/configured_quirks = player_client?.prefs?.all_quirks
+	var/card_only = ("No Neural Interface" in configured_quirks)
+	apply_cyberpunk_role_grants(spawned_human, card_only)
 
 	SEND_GLOBAL_SIGNAL(COMSIG_GLOB_JOB_AFTER_SPAWN, src, spawned, player_client)
 
@@ -345,18 +347,19 @@
 		bonuses += "[bonus_credits] credits starting role bonus"
 	return bonuses
 
-/datum/job/proc/apply_cyberpunk_role_grants(mob/living/spawned)
+/datum/job/proc/apply_cyberpunk_role_grants(mob/living/spawned, card_only = FALSE)
 	if(!istype(spawned))
 		return
 	var/list/accesses = get_cyberpunk_role_accesses()
 	if(length(accesses))
-		var/obj/item/card/id/id_card = spawned.get_idcard(FALSE)
-		for(var/access_id in accesses)
-			var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
-			if(!access_key)
-				continue
-			spawned.remember_cyberpunk_crypto_key(access_key)
-			id_card?.store_cyberpunk_crypto_access(access_id)
+		spawned.grant_cyberpunk_role_keys(accesses, card_only)
+	if(get_cyberpunk_role_class() in list("council", "representative"))
+		var/obj/item/cyberpunk_council_emergency_chip/chip = new(get_turf(spawned))
+		chip.registered_council_key = SScyberpunk_corporations.get_cyberpunk_government_voter_key(spawned)
+		chip.registered_council_name = SScyberpunk_corporations.get_cyberpunk_government_voter_label(spawned)
+		var/obj/item/backpack = spawned.get_item_by_slot(ITEM_SLOT_BACK)
+		if(!backpack?.atom_storage?.attempt_insert(chip, spawned, override = TRUE, messages = FALSE))
+			spawned.put_in_hands(chip)
 	var/bonus_credits = get_cyberpunk_bonus_credits()
 	if(bonus_credits > 0)
 		var/datum/bank_account/account = spawned.get_bank_account()
@@ -436,7 +439,6 @@
 	parent_type = /datum/outfit/job/hop
 	name = "Council Member"
 	jobtype = /datum/job/cyberpunk/councilor
-	backpack_contents = list(/obj/item/cyberpunk_council_emergency_chip = 1)
 
 /datum/job/cyberpunk/government
 	title = "Government Officer"
@@ -956,7 +958,7 @@
 
 		card.update_label()
 		card.update_icon()
-		var/datum/bank_account/account = SSeconomy.bank_accounts_by_id["[equipped.account_id]"]
+		var/datum/bank_account/account = SSeconomy.get_bank_accounts()["[equipped.account_id]"]
 
 		if(account && account.account_id == equipped.account_id)
 			card.set_account(account)

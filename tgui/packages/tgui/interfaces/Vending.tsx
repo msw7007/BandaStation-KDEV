@@ -28,6 +28,7 @@ type ProductRecord = {
   category: string;
   colorable: boolean;
   premium: boolean;
+  subscriptionOnly?: BooleanLike;
   image?: string;
   icon?: string;
   icon_state?: string;
@@ -45,6 +46,9 @@ type Category = {
 };
 
 type VendingData = {
+  canOrderStock?: BooleanLike;
+  subscriptionStock?: BooleanLike;
+  starlightContractTurnIn?: BooleanLike;
   cargoTracking?: boolean;
   diagnostics?: {
     type: 'medical' | 'technical';
@@ -52,6 +56,9 @@ type VendingData = {
     price: number;
   };
   corporateChip?: { name: string; price: number };
+  corporateMarkup?: number;
+  ryaznovScrapPrice?: number;
+  corporateAid?: { label: string; drone: BooleanLike; cost: number };
   corporateSupply?: { active: boolean; interval: string; next: string };
   all_products_free: boolean;
   ad: string;
@@ -97,7 +104,9 @@ export const Vending = () => {
   }
 
   // Just in case we still have undefined values in the list
-  inventory = inventory.filter((item) => !!item);
+  inventory = inventory.filter(
+    (item) => item && (!item.subscriptionOnly || data.subscriptionStock),
+  );
 
   if (stockSearch.length >= 2) {
     inventory = inventory.filter(stockSearchFn);
@@ -123,12 +132,21 @@ export const Vending = () => {
             <Stack.Item>
               <Section title="Поставки корпорации">
                 <div>
-                  Сертификация {data.corporateSupply.active ? 'действует' : 'не действует'}
+                  Сертификация{' '}
+                  {data.corporateSupply.active ? 'действует' : 'не действует'}
                 </div>
                 <div>Интервал · {data.corporateSupply.interval}</div>
                 <div>Следующая поставка через {data.corporateSupply.next}</div>
               </Section>
             </Stack.Item>
+          )}
+          {!!data.starlightContractTurnIn && (
+            <Button
+              icon="box"
+              onClick={() => act('submit_starlight_contract')}
+            >
+              Сдать груз Старлайту
+            </Button>
           )}
           {!!data.cargoTracking && (
             <Stack.Item>
@@ -166,6 +184,20 @@ export const Vending = () => {
               </Section>
             </Stack.Item>
           )}
+          {(typeof data.corporateMarkup === 'number' || !!data.ryaznovScrapPrice) && (
+            <Section>
+              {typeof data.corporateMarkup === 'number' && (
+                <Button icon="tags" onClick={() => act('set_corporate_markup')}>
+                  Изменить цены · {data.corporateMarkup}%
+                </Button>
+              )}
+              {!!data.ryaznovScrapPrice && (
+                <Button icon="recycle" onClick={() => act('sell_ryaznov_scrap')}>
+                  Сдать обломки · {data.ryaznovScrapPrice} кр. за шт.
+                </Button>
+              )}
+            </Section>
+          )}
           {data.corporateChip && (
             <Stack.Item>
               <Button
@@ -175,6 +207,18 @@ export const Vending = () => {
               >
                 {data.corporateChip.name}: {data.corporateChip.price}
               </Button>
+            </Stack.Item>
+          )}
+          {data.corporateAid && (
+            <Stack.Item>
+              <Button onClick={() => act('corporate_local_aid')}>
+                {data.corporateAid.label} · {data.corporateAid.cost} кр.
+              </Button>
+              {!!data.corporateAid.drone && (
+                <Button onClick={() => act('corporate_aid_drone')}>
+                  Вызвать дрон по договору
+                </Button>
+              )}
             </Stack.Item>
           )}
           {!all_products_free && (
@@ -327,9 +371,10 @@ const Product = (props: ProductProps) => {
   const free = all_products_free || productStock.free || product.price === 0;
   const discount = !product.premium && department === user?.department;
   const remaining = productStock.amount;
+  const canOrder = !!data.canOrderStock && !product.premium && remaining === 0;
   const redPrice = Math.round(product.price * jobDiscount);
   const disabled =
-    remaining === 0 ||
+    (remaining === 0 && !canOrder) ||
     (!all_products_free && !user) ||
     (!free && (discount ? redPrice : product.price) > user?.cash);
 
@@ -340,14 +385,15 @@ const Product = (props: ProductProps) => {
     asset: ['vending32x32', product.path],
     disabled: disabled,
     tooltipPosition: 'bottom',
-    buttons: colorable && (
+    buttons: colorable && !canOrder && (
       <ProductColorSelect disabled={disabled} product={product} fluid={fluid} />
     ),
     product: product,
     colorable: colorable,
     remaining: remaining,
+    canOrder: canOrder,
     onClick: () => {
-      act('vend', {
+      act(canOrder ? 'order_missing_stock' : 'vend', {
         ref: product.ref,
         discountless: !!product.premium,
       });
@@ -369,7 +415,7 @@ const Product = (props: ProductProps) => {
 };
 
 const ProductGrid = (props: any) => {
-  const { product, remaining, ...baseProps } = props;
+  const { product, remaining, canOrder, ...baseProps } = props;
   const { ...priceProps } = props;
 
   return (
@@ -381,7 +427,9 @@ const ProductGrid = (props: any) => {
           <Stack.Item grow textAlign={'left'}>
             <ProductPrice {...priceProps} />
           </Stack.Item>
-          <Stack.Item color={'lightgray'}>x{remaining}</Stack.Item>
+          <Stack.Item color={'lightgray'}>
+            {canOrder ? 'Заказать' : `x${remaining}`}
+          </Stack.Item>
         </Stack>
       }
     >
@@ -391,7 +439,7 @@ const ProductGrid = (props: any) => {
 };
 
 const ProductList = (props: any) => {
-  const { colorable, product, remaining, ...baseProps } = props;
+  const { colorable, product, remaining, canOrder, ...baseProps } = props;
   const { ...priceProps } = props;
 
   return (
@@ -405,7 +453,7 @@ const ProductList = (props: any) => {
           fontSize={0.8}
           color={'rgba(255, 255, 255, 0.5)'}
         >
-          {remaining} ост.
+          {canOrder ? 'Заказать' : `${remaining} ост.`}
         </Stack.Item>
         <Stack.Item
           width={3.5}

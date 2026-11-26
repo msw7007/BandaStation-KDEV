@@ -95,7 +95,8 @@ GLOBAL_LIST_EMPTY(objects_by_id_tag)
 	var/stack_amount = get_cyberpunk_deconstruction_stack_amount(base_amount)
 	if(stack_amount <= 0)
 		return null
-	var/obj/item/stack/created_stack = new stack_type(drop_loc, stack_amount)
+	var/obj/item/stack/created_stack = new stack_type(drop_loc, stack_amount, FALSE)
+	created_stack.cyberpunk_recovered_scrap = TRUE
 	return created_stack
 //CYBERPUNK BUILD - rebuild and delete before release
 

@@ -31,6 +31,8 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	var/cyberpunk_government_emergency_active = FALSE
 	/// Round-local emergency directive text.
 	var/cyberpunk_government_directive = ""
+	var/cyberpunk_pending_government_directive
+	var/list/cyberpunk_directive_votes = list()
 	//CYBERPUNK BUILD - rebuild and delete before release
 
 /datum/controller/subsystem/cyberpunk_corporations/Initialize()
@@ -52,6 +54,8 @@ SUBSYSTEM_DEF(cyberpunk_corporations)
 	cyberpunk_government_dispatch_history = SScyberpunk_corporations.cyberpunk_government_dispatch_history
 	cyberpunk_government_emergency_active = SScyberpunk_corporations.cyberpunk_government_emergency_active
 	cyberpunk_government_directive = SScyberpunk_corporations.cyberpunk_government_directive
+	cyberpunk_pending_government_directive = SScyberpunk_corporations.cyberpunk_pending_government_directive
+	cyberpunk_directive_votes = SScyberpunk_corporations.cyberpunk_directive_votes
 
 /datum/controller/subsystem/cyberpunk_corporations/fire(resumed = 0)
 	ensure_cyberpunk_corporations_seeded()

@@ -88,15 +88,23 @@
 	if(!force && world.time < cyberpunk_next_sale_rotation)
 		return FALSE
 	sync_cyberpunk_energy_stock()
+	sync_cyberpunk_subscription_stock()
 	cyberpunk_next_sale_rotation = world.time + get_cyberpunk_corporate_supply_interval()
+	var/corporate_supply = !!get_cyberpunk_supply_corporation()
+	if(corporate_supply)
+		cyberpunk_supply_targets = list()
 	for(var/datum/data/vending_product/record as anything in product_records + coin_records + hidden_records)
-		if(!record.cyberpunk_sale_entry)
+		if(!record.cyberpunk_sale_entry && !(corporate_supply && record.cyberpunk_subscription_only))
 			record.cyberpunk_sale_available = TRUE
 			continue
 		var/returned_count = LAZYLEN(record.returned_products)
 		var/base_amount = record.cyberpunk_base_amount || record.max_amount
-		var/rotated_amount = cyberpunk_fixed_supply ? base_amount : record.cyberpunk_sale_entry.get_rotated_stock_amount(base_amount)
+		var/rotated_amount = (cyberpunk_fixed_supply || !record.cyberpunk_sale_entry) ? base_amount : record.cyberpunk_sale_entry.get_rotated_stock_amount(base_amount)
 		rotated_amount = CEILING(rotated_amount * get_cyberpunk_corporate_stock_multiplier(), 1)
+		if(corporate_supply)
+			cyberpunk_supply_targets[record] = rotated_amount
+			record.cyberpunk_sale_available = rotated_amount > 0 || record.amount > 0
+			continue
 		record.cyberpunk_sale_available = rotated_amount > 0 || returned_count > 0
 		record.amount = rotated_amount + returned_count
 	return TRUE
@@ -200,6 +208,9 @@
 			return
 	else if (!(item_record in record_to_check))
 		message_admins("Vending machine exploit attempted by [ADMIN_LOOKUPFLW(user)]!")
+		return
+	if(item_record.cyberpunk_subscription_only && !can_buy_cyberpunk_subscription_stock(user))
+		speak("Этот товар доступен по корпоративной подписке.")
 		return
 	if (item_record.amount <= 0)
 		speak("Sold out of [item_record.name].")

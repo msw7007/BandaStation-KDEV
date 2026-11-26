@@ -110,6 +110,9 @@
 /datum/cyberpunk_crypto_key/proc/matches(datum/cyberpunk_crypto_key/other_key)
 	return !isnull(other_key) && code == other_key.code
 
+/datum/cyberpunk_crypto_key/proc/authorizes(required_right)
+	return TRUE
+
 /proc/generate_cyberpunk_crypto_code(length = CYBERPUNK_CRYPTO_KEY_LENGTH)
 	. = ""
 	for(var/index in 1 to length)
@@ -137,13 +140,13 @@
 	cyberpunk_crypto_memory += key_datum
 	return TRUE
 
-/mob/living/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+/mob/living/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum, required_right)
 	if(!key_datum)
 		return TRUE
 	if(!has_neural_implant())
 		return FALSE
 	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_memory)
-		if(stored_key.matches(key_datum))
+		if(stored_key.matches(key_datum) && stored_key.authorizes(required_right))
 			return TRUE
 	return FALSE
 
@@ -157,20 +160,21 @@
 	var/obj/item/neck_item = get_item_by_slot(ITEM_SLOT_NECK)
 	if(istype(neck_item, /obj/item/card/id))
 		return neck_item
-	return null
+	return get_idcard(FALSE)
 
-/mob/living/proc/held_or_neck_card_has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+/mob/living/proc/held_or_neck_card_has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum, required_right)
 	if(!key_datum)
 		return TRUE
 	for(var/obj/item/item as anything in held_items)
 		if(!istype(item, /obj/item/card/id))
 			continue
-		if(item.has_cyberpunk_crypto_key(key_datum))
+		if(item.has_cyberpunk_crypto_key(key_datum, required_right))
 			return TRUE
 	var/obj/item/neck_item = get_item_by_slot(ITEM_SLOT_NECK)
-	if(istype(neck_item, /obj/item/card/id) && neck_item.has_cyberpunk_crypto_key(key_datum))
+	if(istype(neck_item, /obj/item/card/id) && neck_item.has_cyberpunk_crypto_key(key_datum, required_right))
 		return TRUE
-	return FALSE
+	var/obj/item/card/id/worn_id = get_idcard(FALSE)
+	return worn_id?.has_cyberpunk_crypto_key(key_datum, required_right)
 
 /mob/living/proc/sync_cyberpunk_access_card_to_neural_interface(obj/item/card/id/card)
 	if(!has_neural_implant())
@@ -267,11 +271,11 @@
 	cyberpunk_crypto_keys += key_datum
 	return TRUE
 
-/obj/item/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum)
+/obj/item/proc/has_cyberpunk_crypto_key(datum/cyberpunk_crypto_key/key_datum, required_right)
 	if(!key_datum)
 		return TRUE
 	for(var/datum/cyberpunk_crypto_key/stored_key as anything in cyberpunk_crypto_keys)
-		if(stored_key.matches(key_datum))
+		if(stored_key.matches(key_datum) && stored_key.authorizes(required_right))
 			return TRUE
 	return FALSE
 
@@ -303,23 +307,13 @@
 	var/list/cyberpunk_crypto_bypass_until
 
 /obj/machinery/proc/get_or_create_cyberpunk_crypto_key()
-	LAZYINITLIST(cyberpunk_crypto_keys)
-	if(!length(cyberpunk_crypto_keys))
-		var/manufacturer = get_cyberspace_manufacturer(src)
-		create_and_add_cyberpunk_crypto_key("[name] service key", manufacturer)
-	return cyberpunk_crypto_keys[1]
+	var/datum/cyberspace_cryptokey/device_key = get_cyberpunk_device_key(src)
+	if(!length(req_access) && !length(req_one_access) && !length(cyberpunk_crypto_keys))
+		add_cyberpunk_crypto_key(device_key)
+	return device_key
 
-/obj/machinery/proc/has_cyberpunk_crypto_access(mob/living/user)
-	if(!length(cyberpunk_crypto_keys))
-		return TRUE
-	if(!user)
-		return FALSE
-	if(has_cyberpunk_crypto_bypass(user))
-		return TRUE
-	for(var/datum/cyberpunk_crypto_key/key_datum as anything in cyberpunk_crypto_keys)
-		if(user.has_cyberpunk_crypto_key(key_datum) || user.held_or_neck_card_has_cyberpunk_crypto_key(key_datum))
-			return TRUE
-	return FALSE
+/obj/machinery/proc/has_cyberpunk_crypto_access(mob/living/user, required_right = "use")
+	return cyberpunk_public_access || check_cyberpunk_crypto_access(user, required_right)
 
 /obj/machinery/proc/has_cyberpunk_crypto_bypass(mob/living/user)
 	if(!user || !cyberpunk_crypto_bypass_until)
@@ -1520,6 +1514,8 @@
 		return //Just delete us, no need to call anything else.
 
 	on_deconstruction(disassembled)
+	if(disassembled && cyberpunk_corporate_area_id(src) == "ryaznov")
+		SScyberpunk_corporations.record_ryaznov_work(src, "разбор оборудования", length(component_parts) || 1, salvage = TRUE)
 
 	if(circuit)
 		spawn_frame(disassembled)
@@ -1712,15 +1708,10 @@
 			continue
 		var/supplied_amount = 0
 		for(var/stock_key in cyberpunk_business_material_stock_keys(material))
-			var/taken = business.consume_stock(stock_key, missing_amount - supplied_amount)
-			if(!taken)
-				continue
-			supplied_amount += taken
+			supplied_amount += business.supply_material(container, material, stock_key, missing_amount - supplied_amount)
 			if(supplied_amount >= missing_amount)
 				break
-		if(supplied_amount > 0)
-			container.insert_amount_mat(supplied_amount, material)
-			supplied_total += supplied_amount
+		supplied_total += supplied_amount
 	if(supplied_total)
 		business.add_history("[name] pulled [supplied_total] material unit(s) from warehouse")
 	return supplied_total > 0
@@ -1869,9 +1860,8 @@
 		return FALSE
 	switch(cyberpunk_machine_failure_state)
 		if("short", "unsafe")
-			var/shock_chance = round(cyberpunk_machine_failure_shock_chance * get_cyberpunk_machine_failure_shock_multiplier() * user.get_cyberpunk_machine_shock_multiplier(src))
-			if(powered() && prob(shock_chance))
-				shock(user, 100)
+			var/shock_chance = round(cyberpunk_machine_failure_shock_chance * get_cyberpunk_machine_failure_shock_multiplier())
+			if(powered() && prob(shock_chance) && shock(user, 100))
 				return TRUE
 		if("jammed")
 			balloon_alert(user, "jammed")

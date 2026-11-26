@@ -114,10 +114,20 @@
 	TEST_ASSERT(CAN_HAVE_BLOOD(dummy), "Caching of blood volume status is screwed up after the removal of TRAIT_NOBLOOD.")
 	TEST_ASSERT_EQUAL(dummy.get_blood_volume(), dummy.default_blood_volume, "Blood volume wasn't fixed after the removal of TRAIT_NOBLOOD.")
 
+/datum/unit_test/cyberpunk_phantom_chemistry
+	var/received_reagent_tick = FALSE
+
+/datum/unit_test/cyberpunk_phantom_chemistry/proc/on_reagent_tick()
+	SIGNAL_HANDLER
+	received_reagent_tick = TRUE
+
 /datum/unit_test/cyberpunk_phantom_chemistry/Run()
 	var/mob/living/carbon/human/body = allocate(/mob/living/carbon/human/consistent)
 	var/datum/ai_controller/controller = allocate(/datum/ai_controller/basic_controller/simple/cyberpunk_city, body)
+	body.adjust_brute_loss(20)
+	var/starting_brute_loss = body.get_brute_loss()
 	body.reagents.add_reagent(/datum/reagent/medicine/omnizine, 10)
+	RegisterSignal(body, COMSIG_MOB_REAGENT_TICK, PROC_REF(on_reagent_tick))
 	var/datum/reagent/medicine/omnizine/medicine = body.reagents.has_reagent(/datum/reagent/medicine/omnizine)
 	TEST_ASSERT(controller.cyberpunk_can_suspend_body(), "An NPC with active chemistry must support compact medical processing.")
 	controller.set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_WAITING)
@@ -127,13 +137,39 @@
 	var/starting_cycles = medicine.current_cycle
 	controller.phantom_medical_at = world.time - 6 SECONDS
 	TEST_ASSERT(controller.cyberpunk_process_phantom_health(force = TRUE), "Compact chemistry processing failed.")
-	TEST_ASSERT_EQUAL(medicine.current_cycle - starting_cycles, 3, "Six seconds must preserve three native reagent cycles.")
-	TEST_ASSERT(body.reagents.total_volume < 10, "A suspended NPC's liver did not metabolize its medicine.")
+	TEST_ASSERT_EQUAL(medicine.current_cycle - starting_cycles, 3, "Six seconds must account for three reagent cycles.")
+	TEST_ASSERT(body.reagents.total_volume < 10, "The compact model did not consume medicine.")
+	TEST_ASSERT(body.get_brute_loss() < starting_brute_loss, "The compact model did not apply the healing dose.")
+	TEST_ASSERT(!received_reagent_tick, "The compact model dispatched a native reagent tick.")
 	var/volume_after_tick = body.reagents.total_volume
 	controller.cyberpunk_materialize_phantom("unit test")
 	TEST_ASSERT_EQUAL(body.reagents.total_volume, volume_after_tick, "Materialization metabolized the same time twice.")
 	TEST_ASSERT(isturf(body.loc), "Materialization did not restore the body to a turf.")
 	TEST_ASSERT_NULL(controller.phantom_body, "Materialization leaked the suspended body context.")
+
+	body.reagents.del_reagent(/datum/reagent/medicine/omnizine)
+	controller.set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_WAITING)
+	controller.phantom_body = new(get_turf(body))
+	body.forceMove(controller.phantom_body)
+	body.reagents.add_reagent(/datum/reagent/drug/bath_salts, 25)
+	var/datum/reagent/drug/bath_salts/drug = body.reagents.has_reagent(/datum/reagent/drug/bath_salts)
+	TEST_ASSERT_NOTNULL(drug, "Failed to add the test drug.")
+	TEST_ASSERT(!controller.cyberpunk_can_suspend_body(), "Drugs with behavioral effects require physical processing.")
+	controller.phantom_medical_at = world.time - 6 SECONDS
+	TEST_ASSERT(!controller.cyberpunk_process_phantom_health(), "A drug acquired while hidden must end profiling.")
+	TEST_ASSERT(isturf(body.loc), "The drug-bearing NPC did not materialize.")
+	TEST_ASSERT_NULL(controller.phantom_body, "The drug-bearing NPC retained its suspended context.")
+	TEST_ASSERT(!received_reagent_tick && !drug.overdosed, "Drug callbacks ran before physical processing resumed.")
+	UnregisterSignal(body, COMSIG_MOB_REAGENT_TICK)
+	body.reagents.del_reagent(/datum/reagent/drug/bath_salts)
+	TEST_ASSERT(controller.cyberpunk_can_suspend_body(), "An NPC must be able to profile again after the drug clears.")
+
+/datum/unit_test/cyberpunk_phantom_nonhuman
+	var/received_life_signal = FALSE
+
+/datum/unit_test/cyberpunk_phantom_nonhuman/proc/on_full_life()
+	SIGNAL_HANDLER
+	received_life_signal = TRUE
 
 /datum/unit_test/cyberpunk_phantom_nonhuman/Run()
 	var/mob/living/carbon/human/species/monkey/monkey = allocate(/mob/living/carbon/human/species/monkey)
@@ -144,5 +180,9 @@
 	dog.adjust_brute_loss(1)
 	TEST_ASSERT(dog_controller.cyberpunk_can_suspend_body(), "An injured basic NPC must support compact medicine.")
 	dog.bodytemperature = 600
-	TEST_ASSERT(dog_controller.cyberpunk_phantom_medical_step(dog, SSMOBS_DT), "Basic NPC physiology processing failed.")
-	TEST_ASSERT(dog.get_fire_loss() > 0, "Compact medicine skipped the basic NPC's native temperature damage signal.")
+	RegisterSignal(dog, COMSIG_LIVING_LIFE, PROC_REF(on_full_life))
+	var/processed = dog_controller.cyberpunk_phantom_medical_step(dog, SSMOBS_DT)
+	UnregisterSignal(dog, COMSIG_LIVING_LIFE)
+	TEST_ASSERT(processed, "Basic NPC physiology processing failed.")
+	TEST_ASSERT(dog.get_fire_loss() > 0, "Compact medicine skipped the basic NPC's native temperature damage.")
+	TEST_ASSERT(!received_life_signal, "Phantom temperature must not dispatch the general life signal.")

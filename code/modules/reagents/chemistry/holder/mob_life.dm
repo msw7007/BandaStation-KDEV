@@ -17,7 +17,7 @@
 	var/list/cached_reagents = reagent_list
 	if(owner)
 		expose_temperature(owner.bodytemperature, 0.25)
-		if(owner.has_hardcrit_circulatory_collapse())
+		if(owner.stat == HARD_CRIT && owner.undergoing_cardiac_arrest())
 			seconds_per_tick *= CARBON_HARDCRIT_CIRCULATION_METABOLISM_MULTIPLIER
 
 	var/need_mob_update = FALSE

@@ -46,7 +46,7 @@
 #define ACCOUNT_SEC_NAME "Оборонный бюджет"
 
 #define IS_DEPARTMENTAL_CARD(card) (card in SSeconomy.dep_cards)
-#define IS_DEPARTMENTAL_ACCOUNT(account) (account in SSeconomy.departmental_accounts)
+#define IS_DEPARTMENTAL_ACCOUNT(account) (account in SSeconomy.get_bank_departments())
 
 #define NO_FREEBIES "commies go home"
 

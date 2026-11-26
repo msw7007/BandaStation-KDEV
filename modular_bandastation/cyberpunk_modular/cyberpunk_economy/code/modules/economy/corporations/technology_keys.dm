@@ -242,6 +242,38 @@
 		return target_corporation.add_foreign_technology_progress(source_corporation_id, technology_id, progress, "[source]: [source_item]")
 	return FALSE
 
+/datum/controller/subsystem/cyberpunk_corporations/proc/record_ryaznov_scrap(item_name, operation, units = 1)
+	var/datum/cyberpunk_corporation/ryaznov = get_cyberpunk_corporation(CYBERPUNK_CORP_RYAZNOV)
+	if(!ryaznov?.has_edict("ryaznov_route_registry"))
+		return FALSE
+	ryaznov.add_data("engineering", units, "[operation]: [item_name]")
+	return TRUE
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/record_ryaznov_work(atom/movable/target, operation, complexity = 1, salvage = FALSE)
+	var/datum/cyberpunk_corporation/ryaznov = get_cyberpunk_corporation(CYBERPUNK_CORP_RYAZNOV)
+	if(!ryaznov || !target)
+		return
+	var/archive = ryaznov.has_edict("ryaznov_blueprint_archive")
+	if(archive || (salvage && ryaznov.has_edict("ryaznov_salvage_program")))
+		ryaznov.add_data("engineering", complexity, "[operation]: [target.name]")
+	if(archive)
+		record_cyberpunk_reverse_engineering(ryaznov.id, target, operation)
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/record_starlight_vehicle_use(atom/vehicle)
+	if(cyberpunk_corporation_has_edict(CYBERPUNK_CORP_STARLIGHT, "starlight_route_registry"))
+		record_cyberpunk_corporate_activity(CYBERPUNK_CORP_STARLIGHT, "route", 1, 0, "эксплуатация: [vehicle.name]")
+
+/datum/controller/subsystem/cyberpunk_corporations/proc/record_starlight_delivered_cargo(atom/movable/cargo)
+	var/datum/cyberpunk_corporation/starlight = get_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
+	if(!starlight || !isobj(cargo) || !starlight.has_edict("starlight_route_archive"))
+		return
+	starlight.add_data("route", 1, "доставка груза: [cargo.name]")
+	if(record_cyberpunk_reverse_engineering(starlight.id, cargo, "архив маршрутов"))
+		return
+	for(var/obj/item/package_item in cargo.contents)
+		if(record_cyberpunk_reverse_engineering(starlight.id, package_item, "архив маршрутов"))
+			break
+
 /datum/controller/subsystem/cyberpunk_corporations/proc/get_cyberpunk_corporation_by_techweb(datum/techweb/techweb)
 	return get_cyberpunk_corporation(cyberpunk_corporation_id_from_manufacturer(techweb?.organization))
 

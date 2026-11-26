@@ -22,6 +22,8 @@
 	var/cold_trauma = TRAUMA_NONE
 	var/acid_trauma = TRAUMA_NONE
 	var/last_precise_zone
+	/// The torso zone affected by the active BLUNT fracture.
+	var/fracture_zone
 	var/last_blunt_organ_damage = 0
 	var/last_pierce_organ_damage = 0
 	var/last_slash_organ_damage = 0
@@ -767,11 +769,11 @@
 		add_bodypart_pain(acid_cut * 1.4)
 		damage_covering_clothes(acid_cut, BURN)
 		sync_composite_damage()
-	if(pierce_trauma == TRAUMA_CRITICAL && body_zone == BODY_ZONE_CHEST)
+	if(locate(/datum/wound/pierce/bleed/critical/aorta) in wounds)
 		internal_blood_volume += 1 * seconds_per_tick
 		var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
 		lungs?.add_internal_blood(1 * seconds_per_tick)
-	if((blunt_trauma == TRAUMA_CRITICAL || cold_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL) && (body_zone == BODY_ZONE_CHEST || last_precise_zone == BODY_ZONE_PRECISE_ABDOMEN) && !has_cyberpunk_medical_wrap())
+	if((cold_trauma == TRAUMA_CRITICAL || acid_trauma == TRAUMA_CRITICAL) && body_zone == BODY_ZONE_CHEST && !has_cyberpunk_medical_wrap())
 		apply_organ_spill_damage(0.25 * seconds_per_tick, last_precise_zone)
 	return TRUE
 
@@ -790,14 +792,20 @@
 	acid_trauma = get_threshold_state(acid_dam, 0.25, 0.6)
 	if(owner)
 		if(blunt_trauma > old_blunt)
+			if(body_zone == BODY_ZONE_CHEST && blunt_trauma == TRAUMA_CRITICAL)
+				fracture_zone = precise_zone || BODY_ZONE_CHEST
 			force_medical_wound(blunt_trauma == TRAUMA_CRITICAL ? /datum/wound/blunt/bone/severe : /datum/wound/blunt/bone/moderate, damage_source)
 			if(body_zone == BODY_ZONE_HEAD && precise_zone == BODY_ZONE_PRECISE_NECK)
 				owner.Paralyze(blunt_trauma == TRAUMA_CRITICAL ? 5 SECONDS : 2 SECONDS)
 				owner.Knockdown(blunt_trauma == TRAUMA_CRITICAL ? 5 SECONDS : 2 SECONDS)
 			else if(body_zone == BODY_ZONE_HEAD && blunt_trauma == TRAUMA_CRITICAL)
 				owner.adjust_confusion(10 SECONDS)
+		var/piercing_aorta = pierce_trauma == TRAUMA_CRITICAL && pierce_dam > last_pierce_organ_damage && can_have_aorta_wound()
+		if(piercing_aorta)
+			force_medical_wound(/datum/wound/pierce/bleed/critical/aorta, damage_source)
 		if(pierce_trauma > old_pierce)
-			force_medical_wound(pierce_trauma == TRAUMA_CRITICAL ? /datum/wound/pierce/bleed/critical/aorta : /datum/wound/pierce/bleed/moderate, damage_source)
+			if(!piercing_aorta)
+				force_medical_wound(pierce_trauma == TRAUMA_CRITICAL ? /datum/wound/pierce/bleed/severe : /datum/wound/pierce/bleed/moderate, damage_source)
 			if(body_zone == BODY_ZONE_CHEST && !(precise_zone in list(BODY_ZONE_PRECISE_ABDOMEN, BODY_ZONE_PRECISE_GROIN)))
 				lung_punctures = min(lung_punctures + 1, 4)
 				var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
@@ -811,6 +819,9 @@
 		if(acid_trauma > old_acid)
 			force_medical_wound(acid_trauma == TRAUMA_CRITICAL ? /datum/wound/burn/flesh/chemical/severe : /datum/wound/burn/flesh/chemical/moderate, damage_source)
 	apply_organ_trauma_from_damage(precise_zone)
+
+/obj/item/bodypart/proc/can_have_aorta_wound()
+	return (body_zone == BODY_ZONE_CHEST && last_precise_zone != BODY_ZONE_PRECISE_GROIN) || (body_zone == BODY_ZONE_HEAD && last_precise_zone == BODY_ZONE_PRECISE_NECK)
 
 /obj/item/bodypart/proc/force_medical_wound(datum/wound/wound_path, wound_source)
 	if(!wound_path)
@@ -867,7 +878,7 @@
 				apply_random_organ_damage(list(ORGAN_SLOT_STOMACH, ORGAN_SLOT_LIVER), pierce_delta * 0.2)
 			else
 				apply_random_organ_damage(list(ORGAN_SLOT_HEART, ORGAN_SLOT_LUNGS), pierce_delta * 0.2)
-			if(pierce_trauma == TRAUMA_CRITICAL)
+			if(locate(/datum/wound/pierce/bleed/critical/aorta) in wounds)
 				internal_blood_volume += pierce_delta * 0.2
 				var/obj/item/organ/lungs/lungs = owner.get_organ_slot(ORGAN_SLOT_LUNGS)
 				lungs?.add_internal_blood(pierce_delta * 0.2)

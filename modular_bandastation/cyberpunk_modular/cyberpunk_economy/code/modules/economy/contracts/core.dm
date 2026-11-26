@@ -47,11 +47,11 @@
 
 
 /datum/cyberpunk_contract/proc/get_creator_account()
-	return SSeconomy.bank_accounts_by_id["[creator_account_id]"]
+	return SSeconomy.get_bank_accounts()["[creator_account_id]"]
 
 
 /datum/cyberpunk_contract/proc/get_contractor_account()
-	return SSeconomy.bank_accounts_by_id["[contractor_account_id]"]
+	return SSeconomy.get_bank_accounts()["[contractor_account_id]"]
 
 
 /datum/cyberpunk_contract/proc/find_security_record(character_name)
@@ -121,7 +121,7 @@
 		var/collected = min(remaining, cyberpunk_contract_debts[contract])
 		if(collected <= 0)
 			break
-		var/datum/bank_account/creditor = SSeconomy.bank_accounts_by_id["[contract.penalty_creditor_account_id]"]
+		var/datum/bank_account/creditor = SSeconomy.get_bank_accounts()["[contract.penalty_creditor_account_id]"]
 		contract.penalty_outstanding -= collected
 		cyberpunk_contract_debts[contract] -= collected
 		remaining -= collected

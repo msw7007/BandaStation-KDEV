@@ -117,3 +117,68 @@
 
 /datum/surgery_operation/basic/revival/mechanic/mob_check(mob/living/patient)
 	return !..()
+
+/datum/surgery_operation/cyberpunk_cpr
+	name = "Сердечно-лёгочная реанимация"
+	desc = "Циклы компрессий и искусственного дыхания для пациента без сознания."
+	time = 5 SECONDS
+	implements = list(IMPLEMENT_HAND = 1)
+	operation_flags = OPERATION_LOOPING | OPERATION_ALWAYS_FAILABLE | OPERATION_IGNORE_CLOTHES
+	cyberpunk_step_severity = SURGERY_STEP_SEVERITY_ADVANCED
+	stamina_cost_on_completion = 5 * STAMINA_COST_PROGRESS_TICK
+
+/datum/surgery_operation/cyberpunk_cpr/state_check(mob/living/carbon/patient)
+	return iscarbon(patient) && patient.stat >= UNCONSCIOUS && patient.stat < DEAD && !HAS_TRAIT(patient, TRAIT_FAKEDEATH) && patient.body_position == LYING_DOWN && !patient.buckled && patient.oxygenation < 90
+
+/datum/surgery_operation/cyberpunk_cpr/snowflake_check_availability(atom/movable/operating_on, mob/living/surgeon, tool, operated_zone)
+	return operated_zone == BODY_ZONE_CHEST && !get_block_reason(operating_on, surgeon)
+
+/datum/surgery_operation/cyberpunk_cpr/proc/get_block_reason(mob/living/carbon/patient, mob/living/carbon/surgeon)
+	if(!iscarbon(surgeon) || QDELETED(patient) || patient == surgeon)
+		return "СЛР недоступна"
+	if(patient.stat == DEAD || HAS_TRAIT(patient, TRAIT_FAKEDEATH))
+		return "пациент мёртв"
+	if(patient.buckled)
+		return "сначала отстегните пациента"
+	if(patient.stat < UNCONSCIOUS || patient.body_position != LYING_DOWN)
+		return "пациент должен лежать без сознания"
+	if(patient.oxygenation >= 90)
+		return "оксигенация пациента достаточна"
+	if(surgeon.is_mouth_covered() || patient.is_mouth_covered())
+		return "освободите рот пациента и свой"
+	var/obj/item/organ/lungs/lungs = surgeon.get_organ_slot(ORGAN_SLOT_LUNGS)
+	if(!lungs || (lungs.organ_flags & ORGAN_FAILING) || HAS_TRAIT_FROM(surgeon, TRAIT_NOBREATH, DISEASE_TRAIT))
+		return "вы не можете дышать"
+	if(surgeon.stamina <= 0)
+		return "не хватает сил"
+	return null
+
+/datum/surgery_operation/cyberpunk_cpr/get_location_modifier(turf/operation_turf, mob/living/patient, mob/living/surgeon, tool)
+	return 1
+
+/datum/surgery_operation/cyberpunk_cpr/on_preop(mob/living/carbon/patient, mob/living/surgeon, tool, list/operation_args)
+	surgeon.visible_message(span_notice("[surgeon] начинает СЛР."), span_notice("Вы начинаете СЛР [patient.declent_ru(GENITIVE)]. Оставайтесь рядом."))
+
+/datum/surgery_operation/cyberpunk_cpr/on_success(mob/living/carbon/patient, mob/living/surgeon, tool, list/operation_args)
+	var/obj/item/organ/heart/heart = patient.get_organ_slot(ORGAN_SLOT_HEART)
+	if(istype(heart) && !(heart.organ_flags & (ORGAN_FAILING | ORGAN_EMP)) && patient.set_heartattack(FALSE))
+		to_chat(surgeon, span_notice("Сердце пациента снова бьётся."))
+	support_breathing(patient, 7)
+	to_chat(surgeon, span_notice("Вы завершаете цикл СЛР."))
+	if(HAS_MIND_TRAIT(surgeon, TRAIT_MORBID))
+		surgeon.add_mood_event("morbid_saved_life", /datum/mood_event/morbid_saved_life)
+	else
+		surgeon.add_mood_event("saved_life", /datum/mood_event/saved_life)
+	log_combat(surgeon, patient, "performed CPR on")
+
+/datum/surgery_operation/cyberpunk_cpr/apply_surgery_failure_damage(atom/movable/operating_on, mob/living/surgeon, tool, list/operation_args)
+	var/mob/living/carbon/patient = operating_on
+	patient.apply_damage(5, BRUTE, BODY_ZONE_CHEST, wound_bonus = CANT_WOUND, brute_type = BODYPART_DAMAGE_BLUNT)
+
+/datum/surgery_operation/cyberpunk_cpr/on_failure(mob/living/carbon/patient, mob/living/surgeon, tool, list/operation_args)
+	to_chat(surgeon, span_warning("Неудачная компрессия повредила грудную клетку пациента."))
+	support_breathing(patient, 3)
+
+/datum/surgery_operation/cyberpunk_cpr/proc/support_breathing(mob/living/carbon/patient, amount)
+	if(patient.stat != DEAD && !HAS_TRAIT(patient, TRAIT_NOBREATH) && patient.get_organ_slot(ORGAN_SLOT_LUNGS))
+		patient.adjust_oxy_loss(-amount)

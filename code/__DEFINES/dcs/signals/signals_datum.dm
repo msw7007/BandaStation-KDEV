@@ -57,6 +57,10 @@
 
 ///from /datum/bank_account/pay_debt(), after a portion or all the debt has been paid.
 #define COMSIG_BANK_ACCOUNT_DEBT_PAID "bank_account_debt_paid"
+/// From a posted credit, after collection: (amount, reason).
+#define COMSIG_BANK_ACCOUNT_CREDIT_POSTED "bank_account_credit_posted"
+/// From a settled transfer: (sender, amount, explicit_reason).
+#define COMSIG_BANK_ACCOUNT_RECEIVED_TRANSFER "bank_account_received_transfer"
 
 ///from /datum/component/on_hit_effect/send_signal(): (user, target, hit_zone)
 #define COMSIG_ON_HIT_EFFECT "comsig_on_hit_effect"

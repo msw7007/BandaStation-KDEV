@@ -442,6 +442,9 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 	/// Flags modifying the behavior of this operation
 	var/operation_flags = NONE
 
+	/// Charge this stamina once a cycle completes, instead of charging during its progress bar.
+	var/stamina_cost_on_completion = 0
+
 	/// The target must have ALL of these surgery states for the operation to be available
 	var/all_surgery_states_required = NONE
 	/// The target must have ANY of these surgery states for the operation to be available
@@ -967,6 +970,7 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 			// Poor conditions beyond the time cap add risk even when they cannot add more time.
 			delay = time * min(operation_args[OPERATION_SPEED], SURGERY_MODIFIER_FAILURE_THRESHOLD) * perk_time_multiplier,
 			target = patient || operating_on,
+			timed_action_flags = stamina_cost_on_completion ? DO_AFTER_DEFER_STAMINA_COST : NONE,
 			extra_checks = CALLBACK(src, PROC_REF(operate_check), patient, operating_on, surgeon, tool, operation_args),
 			// You can only operate on one mob at a time without a hippocratic oath
 			interaction_key = HAS_TRAIT(surgeon, TRAIT_HIPPOCRATIC_OATH) ? (patient || operating_on) : DOAFTER_SOURCE_SURGERY,
@@ -975,6 +979,9 @@ GLOBAL_DATUM_INIT(operations, /datum/operation_holder, new)
 			if (patient)
 				update_surgery_mood(patient, SURGERY_STATE_FAILURE)
 			break
+
+		if(stamina_cost_on_completion)
+			surgeon.spend_stamina(stamina_cost_on_completion, "progress", allow_negative = TRUE)
 
 		var/list/patient_dna = get_patient_blood_dna(patient, operating_on)
 		if (patient_dna)

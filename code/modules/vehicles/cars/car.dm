@@ -1867,14 +1867,10 @@
 	var/avi_route_pending = FALSE
 	var/avi_route_generation = 0
 	var/avi_route_climb_attempted = FALSE
-	var/datum/weakref/avi_shipment_ref
 
 /obj/vehicle/ridden/cyberpunk/avi/Destroy(force)
 	STOP_PROCESSING(SSobj, src)
-	var/datum/cyberpunk_starlight_shipment/shipment = avi_shipment_ref?.resolve()
-	if(shipment?.status == "in transit")
-		shipment.finish(FALSE)
-	avi_shipment_ref = null
+	finish_starlight_delivery()
 	avi_route_generation++
 	avi_route_path = null
 	avi_route_edge = null
@@ -1901,7 +1897,7 @@
 		return
 	switch(avi_state)
 		if("pickup")
-			if(cyberpunk_avi_step_towards(avi_pickup_turf))
+			if(advance_avi_route(avi_pickup_turf))
 				return
 			if(get_turf(src) != avi_pickup_turf)
 				return
@@ -1910,8 +1906,10 @@
 				qdel(src)
 				return
 			avi_state = "dropoff"
+			if(cyberpunk_route_corporation_id == CYBERPUNK_CORP_STARLIGHT)
+				SScyberpunk_corporations.record_starlight_vehicle_use(src)
 		if("dropoff")
-			if(cyberpunk_avi_step_towards(avi_dropoff_turf))
+			if(advance_avi_route(avi_dropoff_turf))
 				return
 			if(get_turf(src) != avi_dropoff_turf)
 				return
@@ -1919,7 +1917,7 @@
 			avi_exit_turf = cyberpunk_avi_find_exit_turf(avi_dropoff_turf)
 			avi_state = avi_exit_turf ? "exit" : "despawn"
 		if("exit")
-			if(cyberpunk_avi_step_towards(avi_exit_turf))
+			if(advance_avi_route(avi_exit_turf))
 				return
 			qdel(src)
 		if("despawn")
@@ -1955,17 +1953,18 @@
 /obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_unload_cargo()
 	if(get_turf(src) != avi_dropoff_turf)
 		return FALSE
-	var/delivered = FALSE
+	var/list/delivered_cargo = list()
 	for(var/atom/movable/cargo as anything in avi_cargo.Copy())
 		if(QDELETED(cargo))
 			avi_cargo -= cargo
 			continue
 		if(cargo.loc == src)
 			cargo.forceMove(avi_dropoff_turf)
-			delivered = TRUE
+			if(cyberpunk_route_corporation_id == CYBERPUNK_CORP_STARLIGHT)
+				SScyberpunk_corporations.record_starlight_delivered_cargo(cargo)
+			delivered_cargo += cargo
 	avi_cargo.Cut()
-	var/datum/cyberpunk_starlight_shipment/shipment = avi_shipment_ref?.resolve()
-	shipment?.finish(delivered)
+	finish_starlight_delivery(delivered_cargo)
 	visible_message(span_notice("[src] unloads its cargo."))
 	return TRUE
 
@@ -2030,6 +2029,13 @@
 	if(!SSpathfinder.pathfind(src, avi_route_leg, max_distance = max(world.maxx, world.maxy) * 2, mintargetdist = 0, simulated_only = FALSE, on_finish = on_path))
 		cyberpunk_avi_path_ready(avi_route_generation, null)
 	return TRUE
+
+/obj/vehicle/ridden/cyberpunk/avi/proc/advance_avi_route(turf/target)
+	var/turf/before = get_turf(src)
+	var/advanced = cyberpunk_avi_step_towards(target)
+	if(advanced && get_turf(src) != before && spend_starlight_extra_route_step())
+		cyberpunk_avi_step_towards(target)
+	return advanced
 
 /obj/vehicle/ridden/cyberpunk/avi/proc/cyberpunk_avi_path_ready(generation, list/path)
 	if(QDELETED(src) || generation != avi_route_generation || !avi_route_pending)
@@ -2102,6 +2108,7 @@
 
 /obj/vehicle/ridden/cyberpunk/cargo/Destroy(force)
 	STOP_PROCESSING(SSobj, src)
+	finish_starlight_delivery()
 	for(var/atom/movable/cargo as anything in mule_cargo)
 		if(cargo.loc == src)
 			cargo.forceMove(get_turf(src))
@@ -2121,7 +2128,7 @@
 		return
 	switch(mule_state)
 		if("pickup")
-			if(cyberpunk_mule_step_towards(mule_pickup_turf))
+			if(advance_mule_route(mule_pickup_turf))
 				return
 			if(get_turf(src) != mule_pickup_turf)
 				return
@@ -2130,8 +2137,10 @@
 				qdel(src)
 				return
 			mule_state = "dropoff"
+			if(cyberpunk_route_corporation_id == CYBERPUNK_CORP_STARLIGHT)
+				SScyberpunk_corporations.record_starlight_vehicle_use(src)
 		if("dropoff")
-			if(cyberpunk_mule_step_towards(mule_dropoff_turf))
+			if(advance_mule_route(mule_dropoff_turf))
 				return
 			if(get_turf(src) != mule_dropoff_turf)
 				return
@@ -2139,7 +2148,7 @@
 			mule_exit_turf = cyberpunk_mule_find_exit_turf(mule_dropoff_turf)
 			mule_state = mule_exit_turf ? "exit" : "despawn"
 		if("exit")
-			if(cyberpunk_mule_step_towards(mule_exit_turf))
+			if(advance_mule_route(mule_exit_turf))
 				return
 			qdel(src)
 		if("despawn")
@@ -2175,13 +2184,18 @@
 /obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_unload_cargo()
 	if(get_turf(src) != mule_dropoff_turf)
 		return FALSE
+	var/list/delivered_cargo = list()
 	for(var/atom/movable/cargo_atom as anything in mule_cargo.Copy())
 		if(QDELETED(cargo_atom))
 			mule_cargo -= cargo_atom
 			continue
 		if(cargo_atom.loc == src)
 			cargo_atom.forceMove(mule_dropoff_turf)
+			if(cyberpunk_route_corporation_id == CYBERPUNK_CORP_STARLIGHT)
+				SScyberpunk_corporations.record_starlight_delivered_cargo(cargo_atom)
+			delivered_cargo += cargo_atom
 	mule_cargo.Cut()
+	finish_starlight_delivery(delivered_cargo)
 	visible_message(span_notice("[src] unloads its cargo."))
 
 /obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_step_towards(turf/target)
@@ -2196,6 +2210,29 @@
 		if(cyberpunk_mule_try_move(get_step(src, side_dir)))
 			return TRUE
 	return FALSE
+
+/obj/vehicle/ridden/cyberpunk/cargo/proc/advance_mule_route(turf/target)
+	var/advanced = cyberpunk_mule_step_towards(target)
+	if(advanced && spend_starlight_extra_route_step())
+		cyberpunk_mule_step_towards(target)
+	return advanced
+
+/obj/vehicle/ridden/cyberpunk/var/starlight_route_step_credit = 0
+/obj/vehicle/ridden/cyberpunk/var/cyberpunk_route_corporation_id
+/obj/vehicle/ridden/cyberpunk/var/cyberpunk_priority_delivery = FALSE
+
+/obj/vehicle/ridden/cyberpunk/proc/spend_starlight_extra_route_step()
+	if(cyberpunk_route_corporation_id != CYBERPUNK_CORP_STARLIGHT)
+		return FALSE
+	var/bonus = get_starlight_archive_speed_multiplier() - 1 + (cyberpunk_priority_delivery ? 0.25 : 0)
+	if(bonus <= 0)
+		starlight_route_step_credit = 0
+		return FALSE
+	starlight_route_step_credit += bonus
+	if(starlight_route_step_credit < 1)
+		return FALSE
+	starlight_route_step_credit -= 1
+	return TRUE
 
 /obj/vehicle/ridden/cyberpunk/cargo/proc/cyberpunk_mule_try_move(turf/target)
 	if(target?.z != z || get_dist(src, target) > 1 || !cyberpunk_mule_can_occupy(target))
@@ -3184,7 +3221,7 @@
 	var/speed_multiplier = driver?.get_cyberpunk_driving_speed_multiplier() || 1
 	var/reaction_multiplier = driver?.get_cyberpunk_driving_reaction_multiplier() || 1
 	var/corporate_vehicle_multiplier = get_vehicle_corporate_synergy_multiplier(driver)
-	var/effective_max_speed = base_max_speed * speed_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
+	var/effective_max_speed = base_max_speed * speed_multiplier * corporate_vehicle_multiplier * get_starlight_archive_speed_multiplier() * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
 	. += span_notice("Drive status: driver [driver ? driver : "none"], skill speed x[round(speed_multiplier, 0.01)], reaction x[round(reaction_multiplier, 0.01)], surface grip x[round(turf_grip, 0.01)], max speed [round(effective_max_speed, 0.1)].")
 	. += span_notice("Part health: hull [round(hull_health * 100)]%, drivetrain [round(drivetrain_health * 100)]%, engine [round(engine_health * 100)]%.")
 
@@ -3266,7 +3303,7 @@
 	var/drivetrain_health = get_part_health_fraction("drivetrain")
 	var/engine_health = get_part_health_fraction("engine")
 	var/turf_grip = get_current_turf_grip_multiplier()
-	var/max_speed = base_max_speed * speed_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
+	var/max_speed = base_max_speed * speed_multiplier * corporate_vehicle_multiplier * get_starlight_archive_speed_multiplier() * get_vehicle_stat_multiplier("speed") * turf_grip * (0.35 + engine_health * 0.65) * (0.55 + hull_health * 0.45)
 	var/acceleration = base_acceleration * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("acceleration") * (0.25 + engine_health * 0.75)
 	var/maneuver = base_maneuver * maneuver_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("maneuver") * (0.35 + drivetrain_health * 0.65)
 	var/traction = base_traction * reaction_multiplier * corporate_vehicle_multiplier * get_vehicle_stat_multiplier("traction") * turf_grip * (0.3 + drivetrain_health * 0.7)
@@ -3444,6 +3481,7 @@
 		return
 	cy_driving_xp_next_time = world.time + cy_driving_xp_interval
 	driver.reward_cyberpunk_driving_movement_experience(src)
+	SScyberpunk_corporations.record_starlight_vehicle_use(src)
 
 /obj/vehicle/sealed/car/cyberpunk/proc/approach_value(current, target, amount)
 	if(current < target)
@@ -4126,16 +4164,18 @@
 	if(!driver)
 		return 1
 	var/base_manufacturer = "Starlight"
-	var/total_multiplier = driver.get_corporate_synergy_multiplier(base_manufacturer) * SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(base_manufacturer, list("starlight_route_registry"), 1, 1.05)
+	var/total_multiplier = driver.get_corporate_synergy_multiplier(base_manufacturer)
 	var/counted_parts = 1
 	for(var/datum/cyberpunk_vehicle_part/part as anything in vehicle_parts)
 		if(!part?.manufacturer)
 			continue
 		var/part_multiplier = driver.get_corporate_synergy_multiplier(part.manufacturer)
-		part_multiplier *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(part.manufacturer, list("starlight_route_registry"), 1, 1.05)
 		total_multiplier += part_multiplier
 		counted_parts++
 	return total_multiplier / max(1, counted_parts)
+
+/proc/get_starlight_archive_speed_multiplier()
+	return SScyberpunk_corporations.cyberpunk_corporation_has_edict("starlight", "starlight_route_archive") ? 1.05 : 1
 
 /obj/vehicle/sealed/car/cyberpunk/proc/get_current_turf_grip_multiplier()
 	var/turf/current_turf = get_turf(src)

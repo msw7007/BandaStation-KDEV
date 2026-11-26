@@ -254,14 +254,60 @@
 		qdel(target)
 		return TRUE
 
-	var/retrieved = materials.insert_item(target, multiplier = (amount_produced / 100))
+	var/retrieved = materials.insert_item(target, multiplier = (amount_produced / 100), delete_item = FALSE)
 	if(retrieved > 0) //item was salvaged i.e. deleted
+		if(istype(src, /obj/machinery/recycler/ryaznov))
+			var/salvage_units = max(1, round(retrieved / SHEET_MATERIAL_AMOUNT))
+			if(!istype(target, /obj/item/stack/ore))
+				SScyberpunk_corporations.record_ryaznov_scrap(target.name, "переработка обломков", salvage_units)
+			SScyberpunk_corporations.record_ryaznov_work(target, "переработка", salvage_units, salvage = TRUE)
+			try_cyberpunk_salvage_synthesis()
 		materials.retrieve_all()
 		qdel(target)
 		return TRUE
 
 	qdel(target)
 	return FALSE
+
+/obj/machinery/recycler/proc/try_cyberpunk_salvage_synthesis()
+	var/module_multiplier = get_cyberpunk_machine_salvage_multiplier()
+	if(module_multiplier <= 1 || !SScyberpunk_corporations.cyberpunk_corporation_has_edict("ryaznov", "ryaznov_salvage_program"))
+		return
+	var/datum/material/glass = SSmaterials.get_material(/datum/material/glass)
+	var/cost = 20 * SHEET_MATERIAL_AMOUNT
+	if(materials.get_material_amount(glass) < cost || !prob(clamp(20 * module_multiplier, 0, 100)))
+		return
+	var/quality = materials.get_material_resource_quality(glass)
+	if(materials.use_amount_mat(cost, glass))
+		var/obj/item/stack/sheet/mineral/diamond/result = new(drop_location(), 1, FALSE)
+		result.set_cyberpunk_output_resource_quality(quality)
+
+/obj/machinery/recycler/ryaznov
+	name = "промышленный переработчик Рязнов"
+	desc = "Перерабатывает лом. Стекло можно подать вручную для синтеза технического алмаза."
+
+/obj/machinery/recycler/ryaznov/base_item_interaction(mob/living/user, obj/item/tool, list/modifiers)
+	if(!istype(tool, /obj/item/stack/sheet/glass))
+		return ..()
+	var/obj/item/stack/sheet/glass/glass = tool
+	var/skill = user.get_character_skill_level(SKILL_INVENTION)
+	var/glass_required = max(10, 20 - skill)
+	if(!is_operational || !anchored || panel_open || glass.get_amount() < glass_required)
+		to_chat(user, span_warning("Для синтеза нужен исправный закреплённый переработчик и [glass_required] листов стекла."))
+		return ITEM_INTERACT_BLOCKING
+	if(!do_after(user, 8 SECONDS * user.get_cyberpunk_professional_time_multiplier(SKILL_INVENTION), src))
+		return ITEM_INTERACT_BLOCKING
+	if(!is_operational || !anchored || panel_open || QDELETED(glass) || glass.loc != user || glass.get_amount() < glass_required)
+		return ITEM_INTERACT_BLOCKING
+	var/quality = glass.resource_quality
+	if(!glass.use(glass_required))
+		return ITEM_INTERACT_BLOCKING
+	var/obj/item/stack/sheet/mineral/diamond/result = new(drop_location(), 1, FALSE)
+	result.set_cyberpunk_output_resource_quality(quality)
+	user.apply_cyberpunk_invention_quality_bonus(result)
+	user.reward_character_check_experience(SKILL_INVENTION, 3, FALSE, 1)
+	SScyberpunk_corporations.record_ryaznov_work(result, "промышленный синтез", salvage = TRUE)
+	return ITEM_INTERACT_SUCCESS
 
 /obj/machinery/recycler/proc/emergency_stop()
 	playsound(src, 'sound/machines/buzz/buzz-sigh.ogg', 50, FALSE)

@@ -75,3 +75,18 @@
 	if(!istype(living_owner))
 		return FALSE
 	return living_owner.stop_cyberspace_session()
+
+/// Antagonist forms can project directly through an anchor.
+/mob/living/proc/cyberpunk_antag_project(atom/movable/anchor)
+	return start_cyberspace_session(CYBERSPACE_MODE_ENGRAM, anchor)
+
+/mob/living/proc/cyberpunk_anchor_demons(mob/living/victim)
+	var/static/datum/cyberspace_demon/burn
+	if(!burn)
+		burn = new()
+		burn.effect = CYBER_DEMON_EFFECT_BURN
+		burn.demon_name = "Якорная атака"
+	if(!burn.apply_primary_effect(src, victim, 12, TRUE))
+		return FALSE
+	victim.Paralyze(2 SECONDS)
+	return TRUE

@@ -278,6 +278,13 @@
 	bound_body_ref = null
 	return ..()
 
+/obj/item/cyberspace_engram_chip/emp_act(severity)
+	. = ..()
+	if(. & EMP_PROTECT_SELF)
+		return
+	var/mob/living/bound_body = get_bound_body()
+	bound_body?.cyberspace_session?.on_engram_anchor_destroyed(src, power_loss = TRUE)
+
 /obj/item/cyberspace_engram_chip/proc/bind_body(mob/living/target, mob/user)
 	if(!istype(target))
 		return FALSE
@@ -469,6 +476,11 @@
 	var/effect = CYBER_DEMON_EFFECT_BURN
 	var/effect_power = 1
 	var/cast_time = 2 SECONDS
+	/// Distance before physical application slows down.
+	var/physical_range = 6
+	/// Distance beyond which a direct deployment cannot affect its target.
+	var/network_range = 12
+	var/list/datum/cyberpunk_crypto_key/blocking_keys = list()
 	var/duration = 0
 	var/list/special_effects = list()
 	var/memory_cost = 1
@@ -483,6 +495,7 @@
 	var/target_skill = SKILL_HACKING
 	var/cooldown = 0
 	var/tmp/next_use = 0
+	var/tmp/integrity = 100
 
 /datum/cyberspace_demon/New()
 	. = ..()
@@ -496,6 +509,9 @@
 	new_demon.effect = effect
 	new_demon.effect_power = effect_power
 	new_demon.cast_time = cast_time
+	new_demon.physical_range = physical_range
+	new_demon.network_range = network_range
+	new_demon.blocking_keys = blocking_keys.Copy()
 	new_demon.duration = duration
 	new_demon.special_effects = special_effects.Copy()
 	new_demon.memory_cost = memory_cost
@@ -521,7 +537,8 @@
 	power *= caster?.cyberdemon_consume_next_power_multiplier() || 1
 	var/synergy = caster?.get_corporate_synergy_multiplier(manufacturer) || 1
 	power *= synergy
-	power *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_recycling", "ryaznov_overload_loop", "starlight_suppression_loop"), 1, 1.1)
+	if(is_hostile_negative_effect(power))
+		power *= SScyberpunk_corporations.cyberpunk_corporate_edict_multiplier(manufacturer, list("benn_chem_recycling", "ryaznov_overload_loop", "starlight_suppression_loop"), 1, 1.1)
 	power *= caster?.cyberspace_session?.get_free_engram_power_multiplier() || 1
 	if(physical_world)
 		power *= CYBER_DEMON_PHYSICAL_WORLD_MULTIPLIER
@@ -659,15 +676,63 @@
 	to_chat(user, span_notice("You compile [demon_name] into [disk]. Net-data left: [user.mind.cyber_net_data]."))
 	return TRUE
 
+/datum/cyberspace_demon/proc/get_deployment_distance(mob/living/caster, atom/target, physical_world)
+	var/turf/origin = get_turf(physical_world ? caster : caster?.cyberspace_session?.avatar)
+	var/turf/target_turf = get_turf(target)
+	if(!origin || !target_turf || origin.z != target_turf.z)
+		return INFINITY
+	return get_dist(origin, target_turf)
+
+/datum/cyberspace_demon/proc/announce_open_preparation(mob/living/caster, atom/target, physical_world)
+	if(CYBER_DEMON_SPECIAL_STEALTH in special_effects)
+		return
+	var/atom/beam_source = physical_world ? caster : caster.cyberspace_session?.avatar
+	if(!beam_source)
+		return
+	var/datum/cyberspace_node/local_node
+	if(!target)
+		var/datum/cyberspace_layer/layer = SScyberspace?.get_layer()
+		local_node = layer?.get_nearest_node(caster)
+		if(!local_node?.anchor)
+			return
+		target = physical_world ? local_node.anchor : layer.resolve_physical_turf(local_node.cyber_x, local_node.cyber_y)
+	if(!target || beam_source.z != target.z)
+		return
+	var/datum/cyberspace_node/target_node = get_target_node(target)
+	var/atom/sensor_origin = get_target_node_object(target) || target_node?.anchor || local_node?.anchor || target
+	var/list/context = get_cyberspace_detection_context(caster, sensor_origin)
+	if(!context["witnesses"])
+		return
+	to_chat(caster, span_warning("Nearby sensors detect [demon_name]'s open signal."))
+	start_cyberspace_intrusion_trace(caster, beam_source, target, context["signal"])
+
+/datum/cyberspace_demon/proc/is_blocked_by_key(atom/target)
+	if(!length(blocking_keys))
+		return FALSE
+	var/mob/living/living_target = target
+	var/mob/eye/cyberspace_avatar/avatar_target = target
+	if(istype(avatar_target))
+		living_target = avatar_target.body_ref?.resolve()
+	if(!istype(living_target))
+		return FALSE
+	for(var/datum/cyberpunk_crypto_key/blocking_key as anything in blocking_keys)
+		if(living_target.has_cyberpunk_crypto_key(blocking_key) || living_target.held_or_neck_card_has_cyberpunk_crypto_key(blocking_key))
+			return TRUE
+	return FALSE
+
 /datum/cyberspace_demon/proc/apply(mob/living/caster, atom/target, obj/item/clothing/gloves/cyberdeck/deck)
 	if(!caster || !target || !deck)
 		return FALSE
 	if(!deck.can_run_demons(caster))
 		return FALSE
-	if(cooldown > 0 && world.time < next_use)
+	if(world.time < next_use)
 		to_chat(caster, span_warning("[demon_name] is cooling down for [DisplayTimeText(next_use - world.time)]."))
 		return FALSE
 	var/physical_world = !caster.is_projected_into_cyberspace()
+	if(get_deployment_distance(caster, target, physical_world) > network_range)
+		to_chat(caster, span_warning("The target is beyond [demon_name]'s network range."))
+		return FALSE
+	announce_open_preparation(caster, target, physical_world)
 	var/current_power = get_effective_power(caster, physical_world)
 	var/effective_cast_time = get_effective_cast_time(caster)
 	if(CYBER_DEMON_SPECIAL_STEALTH in special_effects)
@@ -683,12 +748,19 @@
 		return FALSE
 	if(!deck.can_run_demons(caster))
 		return FALSE
+	var/distance = get_deployment_distance(caster, target, physical_world)
+	if(distance > network_range)
+		to_chat(caster, span_warning("The target is beyond [demon_name]'s network range."))
+		return FALSE
+	announce_open_preparation(caster, target, physical_world)
 	var/mob/living/original_target = istype(target, /mob/living) ? target : null
 	if(original_target?.cyberdemon_should_reflect_directed_demon(caster, src))
 		to_chat(original_target, span_notice("You reflect [demon_name] back through the connection."))
 		to_chat(caster, span_warning("[demon_name] reflects back through [original_target]'s neural defense."))
 		target = caster
 	var/effective_activation_delay = round(get_effective_activation_delay(caster) * max(0, activation_delay_multiplier))
+	if(physical_world && distance > physical_range)
+		effective_activation_delay = max(2 SECONDS, effective_activation_delay * 2)
 	var/effective_stamina_cost = get_effective_stamina_cost(caster)
 	if(caster.cyberdemon_has_botanist())
 		var/free_chance = (caster.mind?.get_character_skill_level(SKILL_FAST_CODE) || 0) * 15
@@ -716,8 +788,10 @@
 		if(caster)
 			to_chat(caster, span_warning("[demon_name] loses its target before activation."))
 		return FALSE
-	if(caster)
-		to_chat(caster, span_notice("[demon_name] activates."))
+	if(!caster || get_deployment_distance(caster, target, physical_world) > network_range)
+		to_chat(caster, span_warning("[demon_name] loses its target outside the network range."))
+		return FALSE
+	to_chat(caster, span_notice("[demon_name] activates."))
 	var/success = apply_effect(caster, target, current_power, physical_world)
 	if(success)
 		apply_botanist_followups(caster, target, current_power, physical_world)
@@ -883,20 +957,16 @@
 	return TRUE
 
 /datum/cyberspace_demon/proc/is_hostile_negative_effect(current_power)
-	if(current_power < 0)
-		return TRUE
-	return effect in list(
-		CYBER_DEMON_EFFECT_ATTRIBUTE,
-		CYBER_DEMON_EFFECT_SKILL,
-		CYBER_DEMON_EFFECT_MOVE_SPEED,
-		CYBER_DEMON_EFFECT_INTERACTION_SPEED,
-		CYBER_DEMON_EFFECT_BLIND,
-		CYBER_DEMON_EFFECT_DEAF,
-		CYBER_DEMON_EFFECT_SILENCE,
-		CYBER_DEMON_EFFECT_BLOCK_IMPLANTS,
-		CYBER_DEMON_EFFECT_BLOCK_DEMONS,
-		CYBER_DEMON_EFFECT_DEBUFF,
-	)
+	switch(effect)
+		if(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX, CYBER_DEMON_EFFECT_EMP)
+			return TRUE
+		if(CYBER_DEMON_EFFECT_BLIND, CYBER_DEMON_EFFECT_DEAF, CYBER_DEMON_EFFECT_SILENCE, CYBER_DEMON_EFFECT_BLOCK_IMPLANTS, CYBER_DEMON_EFFECT_BLOCK_DEMONS, CYBER_DEMON_EFFECT_ENGRAM_STUN, CYBER_DEMON_EFFECT_DEBUFF)
+			return TRUE
+		if(CYBER_DEMON_EFFECT_OVERHEAT, CYBER_DEMON_EFFECT_OVERHEAT_DELTA, CYBER_DEMON_EFFECT_STAMINA)
+			return current_power > 0
+		if(CYBER_DEMON_EFFECT_BUFF, CYBER_DEMON_EFFECT_PROTECTION, CYBER_DEMON_EFFECT_ATTRIBUTE, CYBER_DEMON_EFFECT_SKILL, CYBER_DEMON_EFFECT_MOVE_SPEED, CYBER_DEMON_EFFECT_INTERACTION_SPEED)
+			return current_power < 0
+	return FALSE
 
 /datum/cyberspace_demon/proc/requires_neural_living_target()
 	return !(effect in list(
@@ -951,15 +1021,16 @@
 	return result
 
 /datum/cyberspace_demon/proc/apply_effect(mob/living/caster, atom/target, current_power, physical_world)
-	var/success = apply_primary_effect(caster, target, current_power, physical_world)
-	if(success)
-		apply_corporate_edict_effects(caster, target, current_power, physical_world)
-		schedule_periodic_effects(caster, target, current_power, physical_world)
-		apply_special_effects(caster, target, current_power, physical_world)
-	return success
+	var/list/application = list("power" = current_power)
+	if(!apply_primary_effect(caster, target, current_power, physical_world, application = application))
+		return FALSE
+	apply_corporate_edict_effects(caster, target, application["power"], physical_world)
+	schedule_periodic_effects(caster, target, current_power, physical_world)
+	apply_special_effects(caster, target, current_power, physical_world)
+	return TRUE
 
 /datum/cyberspace_demon/proc/apply_corporate_edict_effects(mob/living/caster, atom/target, current_power, physical_world)
-	if(!target || !SSeconomy)
+	if(!target || !SSeconomy || !current_power || !is_hostile_negative_effect(current_power))
 		return FALSE
 	var/corporation_id = SScyberpunk_corporations.cyberpunk_corporation_id_from_manufacturer(manufacturer)
 	if(!corporation_id)
@@ -1032,7 +1103,11 @@
 		return FALSE
 	return apply_primary_effect(caster, target, current_power, physical_world, FALSE)
 
-/datum/cyberspace_demon/proc/apply_primary_effect(mob/living/caster, atom/target, current_power, physical_world, announce = TRUE)
+/datum/cyberspace_demon/proc/apply_primary_effect(mob/living/caster, atom/target, current_power, physical_world, announce = TRUE, list/application)
+	if(is_blocked_by_key(target))
+		if(announce && caster)
+			to_chat(caster, span_warning("[target] carries a key that blocks [demon_name]."))
+		return FALSE
 	var/absolute_power = abs(current_power)
 	var/effect_duration = duration
 	var/datum/cyberspace_node/target_node = get_target_node(target)
@@ -1070,6 +1145,10 @@
 			to_chat(caster, span_notice("[demon_name] converts a buff into [restored] restored network protection on [target_node_name]."))
 		return TRUE
 	var/mob/living/neutralized_target = istype(target, /mob/living) ? target : null
+	if(effect == CYBER_DEMON_EFFECT_ENGRAM_STUN)
+		var/mob/eye/cyberspace_avatar/engram_target = get_cyberspace_avatar_target(target)
+		if(engram_target?.session?.mode == CYBERSPACE_MODE_ENGRAM)
+			neutralized_target = get_cyberspace_body_target(engram_target)
 	if(neutralized_target)
 		if(requires_neural_living_target() && !neutralized_target.has_neural_implant())
 			if(announce && caster)
@@ -1079,10 +1158,12 @@
 		if(neutralized["blocked"])
 			if(announce && caster)
 				to_chat(caster, span_warning("[target] neutralizes [demon_name]."))
-			return TRUE
+			return FALSE
 		current_power = neutralized["power"]
 		effect_duration = neutralized["duration"]
 		absolute_power = abs(current_power)
+		if(application)
+			application["power"] = current_power
 	switch(effect)
 		if(CYBER_DEMON_EFFECT_DAMAGE)
 			var/mob/living/living_target = target
@@ -1311,7 +1392,9 @@
 /datum/cyberspace_demon/proc/apply_special_effects(mob/living/caster, atom/target, current_power, physical_world)
 	if(!length(special_effects))
 		return
-	var/secondary_power = max(1, round(current_power * CYBER_DEMON_SPECIAL_SECONDARY_MULTIPLIER))
+	var/secondary_power = current_power ? max(1, round(abs(current_power) * CYBER_DEMON_SPECIAL_SECONDARY_MULTIPLIER)) : 0
+	if(current_power < 0)
+		secondary_power = -secondary_power
 	var/end_delay = max(1 SECONDS, duration || CYBER_DEMON_SPECIAL_SPREAD_DELAY)
 	if((CYBER_DEMON_SPECIAL_EMP in special_effects) || (CYBER_DEMON_SPECIAL_EMP_LIGHT in special_effects))
 		addtimer(CALLBACK(src, PROC_REF(apply_emp_aftershock), WEAKREF(caster), WEAKREF(target), EMP_LIGHT), end_delay)
@@ -1330,21 +1413,31 @@
 /datum/cyberspace_demon/proc/apply_emp_aftershock(datum/weakref/caster_ref, datum/weakref/target_ref, emp_severity)
 	var/mob/living/caster = caster_ref?.resolve()
 	var/atom/target = target_ref?.resolve()
-	if(!target)
+	var/datum/cyberspace_node/target_node = get_target_node(target)
+	var/turf/epicenter = get_turf(get_target_node_object(target) || target_node?.anchor || target)
+	if(!epicenter)
 		return FALSE
-	if(!hascall(target, "emp_act"))
-		return FALSE
-	call(target, "emp_act")(emp_severity)
+	var/heavy = emp_severity == EMP_HEAVY
+	empulse(epicenter, heavy ? 2 : 0, heavy ? 3 : 2, emp_source = caster)
 	if(caster)
-		to_chat(caster, span_notice("[demon_name] releases [emp_severity == EMP_HEAVY ? "a heavy" : "a weak"] EMP aftershock on [target]."))
+		to_chat(caster, span_notice("[demon_name] releases [heavy ? "a heavy" : "a weak"] EMP around [target]."))
 	return TRUE
 
-/datum/cyberspace_demon/proc/apply_jump_effect_delayed(datum/weakref/caster_ref, datum/weakref/origin_ref, current_power, physical_world)
+/datum/cyberspace_demon/proc/apply_jump_effect_delayed(datum/weakref/caster_ref, datum/weakref/origin_ref, current_power, physical_world, list/excluded, jumps_left = CYBER_DEMON_SPECIAL_JUMP_LIMIT)
 	var/mob/living/caster = caster_ref?.resolve()
 	var/atom/origin = origin_ref?.resolve()
-	if(!origin)
+	if(!origin || jumps_left <= 0)
 		return FALSE
-	apply_jump_effect(caster, origin, current_power, physical_world)
+	if(!excluded)
+		excluded = list(origin, caster)
+	var/atom/next_target = find_secondary_effect_target(caster, origin, excluded)
+	if(!next_target || !apply_primary_effect(caster, next_target, current_power, physical_world, FALSE))
+		return FALSE
+	excluded += next_target
+	if(caster)
+		to_chat(caster, span_notice("[demon_name] jumps to [next_target]."))
+	if(jumps_left > 1)
+		addtimer(CALLBACK(src, PROC_REF(apply_jump_effect_delayed), caster_ref, WEAKREF(next_target), current_power, physical_world, excluded, jumps_left - 1), max(1, duration))
 	return TRUE
 
 /datum/cyberspace_demon/proc/apply_mass_effect(mob/living/caster, atom/origin, current_power, physical_world)
@@ -1360,23 +1453,6 @@
 	if(applied)
 		if(caster)
 			to_chat(caster, span_notice("[demon_name] hits [applied] nearby network target[applied == 1 ? "" : "s"]."))
-
-/datum/cyberspace_demon/proc/apply_jump_effect(mob/living/caster, atom/origin, current_power, physical_world)
-	var/atom/current_origin = origin
-	var/list/excluded = list(origin, caster)
-	var/jumps = 0
-	while(jumps < CYBER_DEMON_SPECIAL_JUMP_LIMIT)
-		var/atom/next_target = find_secondary_effect_target(caster, current_origin, excluded)
-		if(!next_target)
-			break
-		if(!apply_primary_effect(caster, next_target, current_power, physical_world, FALSE))
-			break
-		excluded += next_target
-		current_origin = next_target
-		jumps++
-	if(jumps)
-		if(caster)
-			to_chat(caster, span_notice("[demon_name] jumps through [jumps] extra target[jumps == 1 ? "" : "s"]."))
 
 /datum/cyberspace_demon/proc/apply_spread_effect(datum/weakref/caster_ref, datum/weakref/origin_ref, current_power, physical_world)
 	var/mob/living/caster = caster_ref?.resolve()
@@ -1421,7 +1497,7 @@
 	return pick(candidates)
 
 /datum/cyberspace_demon/proc/can_apply_secondary_effect(mob/living/caster, atom/origin, atom/candidate)
-	if(!candidate || QDELETED(candidate) || candidate == origin || candidate == caster)
+	if(!candidate || QDELETED(candidate) || candidate == origin || candidate == caster || is_blocked_by_key(candidate))
 		return FALSE
 	var/mob/living/living_candidate = candidate
 	if(istype(living_candidate) && requires_neural_living_target() && !living_candidate.has_neural_implant())
@@ -1510,7 +1586,9 @@
 	net_data_cost = 5
 	prebuilt = TRUE
 
-/datum/cyberspace_demon/soulconduit/apply_primary_effect(mob/living/caster, atom/target, current_power, physical_world, announce = TRUE)
+/datum/cyberspace_demon/soulconduit/apply_primary_effect(mob/living/caster, atom/target, current_power, physical_world, announce = TRUE, list/application)
+	if(is_blocked_by_key(target))
+		return FALSE
 	var/obj/item/cyberspace_engram_chip/chip = target
 	if(istype(chip))
 		var/mob/living/chip_body = chip.get_bound_body()
@@ -1699,7 +1777,19 @@
 		))
 	return skills_data
 
-/proc/create_custom_cyberdemon_from_params(list/params)
+/proc/get_cyberdemon_compiler_keys(mob/living/user)
+	var/list/datum/cyberpunk_crypto_key/keys = list()
+	if(user.has_neural_implant())
+		keys |= user.cyberpunk_crypto_memory || list()
+	var/obj/item/card/id/card = user.get_cyberpunk_access_card()
+	if(card?.cyberpunk_crypto_keys)
+		keys |= card.cyberpunk_crypto_keys
+	return keys
+
+/proc/create_custom_cyberdemon_from_params(list/params, mob/living/user)
+	if(user?.mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/data_cult))
+		to_chat(user, span_warning("Культисты используют способности Контрл и не разрабатывают демонов."))
+		return null
 	var/effect_id = params["effect"]
 	if(!is_valid_cyberdemon_effect(effect_id))
 		return null
@@ -1747,6 +1837,15 @@
 	new_demon.effect = effect_id
 	new_demon.effect_power = round(power)
 	new_demon.cast_time = round(cast_seconds) SECONDS
+	new_demon.physical_range = clamp(cyberdemon_parse_ui_index(params["physical_range"]) || 6, 1, 20)
+	new_demon.network_range = clamp(cyberdemon_parse_ui_index(params["network_range"]) || 12, new_demon.physical_range, 30)
+	var/list/requested_keys = params["blocking_keys"]
+	if(islist(requested_keys) && length(requested_keys))
+		for(var/datum/cyberpunk_crypto_key/key as anything in get_cyberdemon_compiler_keys(user))
+			if(key.code in requested_keys)
+				new_demon.blocking_keys += key
+			if(length(new_demon.blocking_keys) >= 3)
+				break
 	new_demon.duration = round(duration_seconds) SECONDS
 	new_demon.activation_delay = round(activation_seconds) SECONDS
 	new_demon.effect_frequency = frequency
@@ -1797,6 +1896,8 @@
 		"effect" = demon.effect,
 		"power" = demon.effect_power,
 		"cast_time" = round(demon.cast_time / 10),
+		"physical_range" = demon.physical_range,
+		"network_range" = demon.network_range,
 		"duration" = round(demon.duration / 10),
 		"specials" = demon.special_effects.Copy(),
 		"memory" = demon.memory_cost,
@@ -1890,6 +1991,17 @@
 		for(var/datum/cyberspace_demon/demon as anything in deck.demons)
 			deck_demons += list(cyberdemon_to_ui_data(demon, deck_index++))
 
+	var/list/terminal_demons = list()
+	var/terminal_index = 1
+	for(var/datum/cyberspace_demon/demon as anything in terminal?.demons)
+		terminal_demons += list(cyberdemon_to_ui_data(demon, terminal_index++))
+
+	var/list/available_keys = list()
+	var/mob/living/living_user = user
+	if(istype(living_user))
+		for(var/datum/cyberpunk_crypto_key/key as anything in get_cyberdemon_compiler_keys(living_user))
+			available_keys += list(list("id" = key.code, "name" = "[key.name] ([copytext(key.code, 1, 6)])"))
+
 	var/list/disk_demons = list()
 	if(disk)
 		disk.rebuild_demon_index()
@@ -1899,6 +2011,7 @@
 
 	return list(
 		"net_data" = user?.mind?.cyber_net_data || 0,
+		"blocking_key_choices" = available_keys,
 		"compile_requirement_multiplier" = cyberdemon_compile_requirement_multiplier(user),
 		"deck" = list(
 			"present" = !!deck,
@@ -1923,6 +2036,10 @@
 			"present" = !!terminal || virtual_terminal_present,
 			"name" = terminal?.name || virtual_terminal_name,
 			"cooldown" = terminal ? max(0, round((terminal.compile_cooldown_until - world.time) / 10)) : virtual_terminal_cooldown,
+			"used_memory" = terminal?.get_used_memory() || 0,
+			"memory_capacity" = terminal?.memory_capacity || 0,
+			"free_memory" = terminal ? terminal.memory_capacity - terminal.get_used_memory() : 0,
+			"demons" = terminal_demons,
 		),
 		"limits" = list(
 			"max_specials" = CYBER_DEMON_MAX_SPECIAL_EFFECTS,
@@ -1972,9 +2089,6 @@
 	if(!demon)
 		to_chat(user, span_warning("No demon exists in that [src] slot."))
 		return FALSE
-	if(demon.prebuilt)
-		to_chat(user, span_warning("Prebuilt demons cannot be deleted from [src]."))
-		return FALSE
 	for(var/datum/cyberpunk_data_payload/demon/payload as anything in get_data_payloads(CYBERPUNK_DATA_PAYLOAD_DEMON))
 		if(payload.contained_datum != demon)
 			continue
@@ -1997,7 +2111,7 @@
 			to_chat(user, span_warning("Prebuilt demons are loaded from demon disks. Copy one into a custom demon before development."))
 			return TRUE
 		if("compile_custom")
-			var/datum/cyberspace_demon/demon = create_custom_cyberdemon_from_params(params)
+			var/datum/cyberspace_demon/demon = create_custom_cyberdemon_from_params(params, user)
 			if(!demon)
 				return TRUE
 			var/target = params["target"]
@@ -2007,9 +2121,36 @@
 					return TRUE
 				if(demon.compile_to_disk(user, disk, terminal) && deck && !terminal)
 					deck.start_compile_cooldown()
+			else if(target == "terminal" && terminal)
+				terminal.store_compiled_demon(demon, user)
 			else
 				demon.compile_to_deck(user, deck, terminal)
 			qdel(demon)
+			return TRUE
+		if("delete_terminal")
+			if(terminal?.is_operational)
+				delete_cyberdemon_from_list(terminal.demons, params["index"], user, terminal)
+			return TRUE
+		if("copy_terminal_disk", "load_from_terminal")
+			if(!terminal?.is_operational)
+				return TRUE
+			var/index = cyberdemon_parse_ui_index(params["index"])
+			if(index < 1 || index > length(terminal.demons))
+				return TRUE
+			var/datum/cyberspace_demon/demon = terminal.demons[index]
+			var/datum/cyberspace_demon/copy = demon.copy()
+			var/stored = action == "copy_terminal_disk" ? disk?.store_demon(copy, user) : deck?.store_demon(copy, user)
+			if(stored)
+				to_chat(user, span_notice("You copy [demon.demon_name] from [terminal]."))
+			else
+				qdel(copy)
+			return TRUE
+		if("delete_disk_keys")
+			if(disk)
+				for(var/datum/cyberpunk_data_payload/cryptokey/payload as anything in disk.get_data_payloads(CYBERPUNK_DATA_PAYLOAD_CRYPTOKEY))
+					disk.data_payloads -= payload
+					qdel(payload)
+				disk.stored_cryptokeys?.Cut()
 			return TRUE
 		if("delete_deck")
 			if(deck)
@@ -2137,7 +2278,7 @@
 		if(feedback)
 			living_owner.balloon_alert(living_owner, "demons blocked")
 		return FALSE
-	if(demon.cooldown > 0 && world.time < demon.next_use)
+	if(world.time < demon.next_use)
 		if(feedback)
 			living_owner.balloon_alert(living_owner, "cooling")
 		return FALSE
@@ -2289,14 +2430,14 @@
 	if(preparing_demon)
 		to_chat(user, span_warning("[preparing_demon.demon_name] is still preparing."))
 		return TRUE
-	return prepare_selected_demon(user, demon || selected_demon)
+	return prepare_selected_demon(user, demon || selected_demon, target)
 
-/obj/item/clothing/gloves/cyberdeck/proc/prepare_selected_demon(mob/living/user, datum/cyberspace_demon/demon)
+/obj/item/clothing/gloves/cyberdeck/proc/prepare_selected_demon(mob/living/user, datum/cyberspace_demon/demon, atom/target)
 	if(!istype(user) || !demon || !(demon in demons))
 		return FALSE
 	if(!can_run_demons(user))
 		return FALSE
-	if(demon.cooldown > 0 && world.time < demon.next_use)
+	if(world.time < demon.next_use)
 		to_chat(user, span_warning("[demon.demon_name] is cooling down for [DisplayTimeText(demon.next_use - world.time)]."))
 		return TRUE
 	preparing_demon = demon
@@ -2304,6 +2445,7 @@
 	prepare_token++
 	var/current_token = prepare_token
 	prepared_physical_world = !user.is_projected_into_cyberspace()
+	demon.announce_open_preparation(user, target, prepared_physical_world)
 	prepared_power = demon.get_effective_power(user, prepared_physical_world)
 	prepared_ready_time = 0
 	var/prepare_time = demon.get_effective_cast_time(user)
@@ -2779,6 +2921,7 @@
 		return null
 	var/datum/cyberspace_cryptokey/cryptokey = new()
 	cryptokey.key = key
+	cryptokey.code = key
 	cryptokey.object_type = memory_entry["object_type"]
 	cryptokey.area_type = memory_entry["area_type"]
 	cryptokey.manufacturer = memory_entry["manufacturer"] || "independent"
@@ -2813,19 +2956,18 @@
 /obj/item/cyberdemon_disk/proc/download_cryptokeys(mob/living/user)
 	if(!user)
 		return FALSE
-	if(!length(user?.mind?.cyber_cryptokeys) && !length(user.memory_holder))
+	if(!length(user.cyberpunk_crypto_memory) && !length(user.memory_holder))
 		to_chat(user, span_warning("No cached or remembered cryptographic keys are available to write."))
 		return FALSE
 	if(!stored_cryptokeys)
 		stored_cryptokeys = list()
 	var/copied = 0
-	if(length(user?.mind?.cyber_cryptokeys))
-		for(var/key in user.mind.cyber_cryptokeys)
-			if(stored_cryptokeys[key])
-				continue
-			stored_cryptokeys[key] = user.mind.cyber_cryptokeys[key]
-			add_data_payload(new /datum/cyberpunk_data_payload/cryptokey(stored_cryptokeys[key]))
-			copied++
+	for(var/datum/cyberspace_cryptokey/cryptokey in user.cyberpunk_crypto_memory)
+		if(stored_cryptokeys[cryptokey.key])
+			continue
+		stored_cryptokeys[cryptokey.key] = cryptokey
+		add_data_payload(new /datum/cyberpunk_data_payload/cryptokey(cryptokey))
+		copied++
 	if(length(user.memory_holder))
 		for(var/memory_title in user.memory_holder)
 			if(!findtext(memory_title, "cryptokey:"))
@@ -2979,7 +3121,7 @@
 
 /obj/machinery/cyberdemon_terminal
 	name = "demon compiler terminal"
-	desc = "A network terminal that compiles demons into cyberdecks."
+	desc = "A network terminal with local memory for compiled demons."
 	icon = 'icons/obj/machines/telecomms.dmi'
 	icon_state = "comm_server"
 	base_icon_state = "comm_server"
@@ -2987,12 +3129,36 @@
 	anchored = TRUE
 	var/compile_cooldown_until = 0
 	var/obj/item/cyberdemon_disk/inserted_disk
+	var/memory_capacity = 12
+	var/list/datum/cyberspace_demon/demons = list()
 
 /obj/machinery/cyberdemon_terminal/Destroy(force)
+	QDEL_LIST(demons)
 	QDEL_NULL(inserted_disk)
 	return ..()
 
+/obj/machinery/cyberdemon_terminal/proc/get_used_memory()
+	. = 0
+	for(var/datum/cyberspace_demon/demon as anything in demons)
+		. += demon.memory_cost
+
+/obj/machinery/cyberdemon_terminal/proc/store_compiled_demon(datum/cyberspace_demon/demon, mob/living/user)
+	if(!user.mind || !demon.can_compile(user, null, src))
+		return FALSE
+	if(get_used_memory() + demon.memory_cost > memory_capacity)
+		to_chat(user, span_warning("[src] has insufficient free memory."))
+		return FALSE
+	var/cost = round(demon.get_net_data_cost() * demon.get_compile_requirement_multiplier(user))
+	demons += demon.copy()
+	user.mind.cyber_net_data -= cost
+	start_compile_cooldown()
+	to_chat(user, span_notice("You compile [demon.demon_name] into [src]."))
+	return TRUE
+
 /obj/machinery/cyberdemon_terminal/proc/can_compile(mob/user)
+	if(!is_operational)
+		to_chat(user, span_warning("[src] has no power."))
+		return FALSE
 	if(world.time < compile_cooldown_until)
 		to_chat(user, span_warning("[src] is cooling down for [DisplayTimeText(compile_cooldown_until - world.time)]."))
 		return FALSE

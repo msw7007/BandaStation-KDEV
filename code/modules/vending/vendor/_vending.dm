@@ -5,6 +5,7 @@
  * A datum that represents a product that is vendable
  */
 /datum/data/vending_product
+	var/cyberpunk_subscription_only = FALSE
 	name = "generic"
 	///Typepath of the product that is created when this record "sells"
 	var/product_path = null
@@ -459,6 +460,9 @@
 /obj/machinery/vending/process(seconds_per_tick)
 	if(!is_operational)
 		return PROCESS_KILL
+	if(get_cyberpunk_supply_corporation())
+		maybe_rotate_cyberpunk_sale_stock()
+		process_cyberpunk_corporate_supply()
 
 	if(seconds_electrified > MACHINE_NOT_ELECTRIFIED)
 		seconds_electrified--

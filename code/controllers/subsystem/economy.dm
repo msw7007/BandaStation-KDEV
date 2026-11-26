@@ -22,6 +22,10 @@ SUBSYSTEM_DEF(economy)
 	  * A list of sole account datums can be obtained with assoc_to_values(), another variable would be redundant rn.
 	  */
 	var/list/bank_accounts_by_id = list()
+	/// City banking hardware owns the active account index on maps that have it.
+	var/obj/machinery/cyberpunk_bank_server/cyberpunk_bank_server
+	var/cyberpunk_bank_server_configured = FALSE
+	var/list/cyberpunk_pending_credits = list()
 	/// A list of bank accounts indexed by their assigned job typepath.
 	var/list/bank_accounts_by_job = list()
 	///List of the departmental budget cards in existence.
@@ -95,6 +99,9 @@ SUBSYSTEM_DEF(economy)
 /datum/controller/subsystem/economy/Recover()
 	departmental_accounts = SSeconomy.departmental_accounts
 	bank_accounts_by_id = SSeconomy.bank_accounts_by_id
+	cyberpunk_bank_server = SSeconomy.cyberpunk_bank_server
+	cyberpunk_bank_server_configured = SSeconomy.cyberpunk_bank_server_configured
+	cyberpunk_pending_credits = SSeconomy.cyberpunk_pending_credits
 	dep_cards = SSeconomy.dep_cards
 	//CYBERPUNK BUILD - rebuild and delete before release
 	cyberpunk_contracts = SSeconomy.cyberpunk_contracts
@@ -123,7 +130,8 @@ SUBSYSTEM_DEF(economy)
 			return
 
 		processing_part = ECON_ACCOUNT_STEP
-		cached_processing = bank_accounts_by_id.Copy()
+		var/list/accounts = get_bank_accounts()
+		cached_processing = accounts.Copy()
 		station_total = 0
 		station_target_buffer += STATION_TARGET_BUFFER
 
@@ -132,7 +140,7 @@ SUBSYSTEM_DEF(economy)
 			return
 
 		processing_part = ECON_PRICE_UPDATE_STEP
-		station_target = max(round(temporary_total / max(bank_accounts_by_id.len * 2, 1)) + station_target_buffer, 1)
+		station_target = max(round(temporary_total / max(length(get_bank_accounts()) * 2, 1)) + station_target_buffer, 1)
 
 	if(processing_part == ECON_PRICE_UPDATE_STEP)
 		if(!HAS_TRAIT(SSeconomy, TRAIT_MARKET_CRASHING) && !price_update())
@@ -148,7 +156,7 @@ SUBSYSTEM_DEF(economy)
  * Handy proc for obtaining a department's bank account, given the department ID, AKA the define assigned for what department they're under.
  */
 /datum/controller/subsystem/economy/proc/get_dep_account(dep_id) as /datum/bank_account/department
-	for(var/datum/bank_account/department/D in departmental_accounts)
+	for(var/datum/bank_account/department/D in get_bank_departments())
 		if(D.department_id == dep_id)
 			return D
 
@@ -200,8 +208,9 @@ SUBSYSTEM_DEF(economy)
 	if(HAS_TRAIT(SSstation, STATION_TRAIT_ECONOMY_ALERTS) && (living_player_count() > 1))
 		var/datum/bank_account/moneybags
 		var/static/list/typecache_bank = typecacheof(list(/datum/bank_account/department, /datum/bank_account/remote, /datum/bank_account/cyberpunk_corporation))
-		for(var/i in bank_accounts_by_id)
-			var/datum/bank_account/current_acc = bank_accounts_by_id[i]
+		var/list/accounts = get_bank_accounts()
+		for(var/i in accounts)
+			var/datum/bank_account/current_acc = accounts[i]
 			if(typecache_bank[current_acc.type])
 				continue
 			if(!moneybags || moneybags.account_balance < current_acc.account_balance)
@@ -222,11 +231,12 @@ SUBSYSTEM_DEF(economy)
  * The goal here is that if you want to spend money, you'll have to get it, and the most efficient method is typically from other players.
  **/
 /datum/controller/subsystem/economy/proc/inflation_value()
-	if(!bank_accounts_by_id.len)
+	var/account_count = length(get_bank_accounts())
+	if(!account_count)
 		return 1
 	if(HAS_TRAIT(SSeconomy, TRAIT_MARKET_CRASHING))
 		return inflation_value //early return instead of the actual check
-	inflation_value = max(round(((station_total / bank_accounts_by_id.len) / station_target), 0.1), 1.0)
+	inflation_value = max(round(((station_total / account_count) / station_target), 0.1), 1.0)
 	return inflation_value
 
 /**

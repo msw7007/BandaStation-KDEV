@@ -2,6 +2,14 @@
 	/// Resource quality tier (RESOURCE_QUALITY_NONE = untracked). Drives examine + tool/armor scaling.
 	var/resource_quality = RESOURCE_QUALITY_NONE
 
+/obj/item/stack/ore/proc/get_cyberpunk_ore_yield()
+	if(resource_quality == RESOURCE_QUALITY_NONE)
+		return 1
+	return 1 + (resource_quality - RESOURCE_QUALITY_AVERAGE) * 0.2
+
+/obj/item/proc/set_cyberpunk_output_resource_quality(input_quality, quality_adjustment = 0)
+	set_resource_quality(clamp((input_quality || RESOURCE_QUALITY_AVERAGE) + quality_adjustment, RESOURCE_QUALITY_DISGUSTING, RESOURCE_QUALITY_EXCELLENT))
+
 /proc/get_weighted_resource_quality(first_quality, first_amount, second_quality, second_amount)
 	if(first_quality == RESOURCE_QUALITY_NONE && second_quality == RESOURCE_QUALITY_NONE)
 		return RESOURCE_QUALITY_NONE

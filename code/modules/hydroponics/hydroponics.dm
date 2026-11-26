@@ -48,6 +48,8 @@
 	var/unwrenchable = TRUE
 	///Have we been visited by a bee recently, so bees dont overpollinate one plant
 	var/recent_bee_visit = FALSE
+	/// Bonus consumed by the next growth cycle after pollination.
+	var/pollination_growth_bonus = 0
 	///The last user to add a reagent to the tray, mostly for logging purposes.
 	var/datum/weakref/lastuser
 	///The gardener who planted or recently cared for this tray.
@@ -317,7 +319,8 @@
 			var/mob/living/gardener = cyberpunk_gardener?.resolve()
 			if(gardener)
 				age_gain *= gardener.get_cyberpunk_gardening_growth_multiplier()
-			age += age_gain
+			age += age_gain + pollination_growth_bonus
+			pollination_growth_bonus = 0
 			if(age < myseed.maturation)
 				lastproduce = age
 			needs_update = TRUE
@@ -542,6 +545,7 @@
 	for(var/datum/plant_gene/trait/gene in myseed?.genes)
 		gene.on_plant_in_tray(src, myseed)
 	age = 0
+	pollination_growth_bonus = 0
 	update_appearance()
 	if(isnull(myseed))
 		remove_shared_particles(/particles/pollen)

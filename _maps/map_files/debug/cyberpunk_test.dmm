@@ -3839,7 +3839,11 @@
 /turf/open/floor/wood,
 /area/cyberpunk/city/housing/apartment/unit_01/test_apartment)
 "kn" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on,
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on{
+	air_outside_dx = -16;
+	air_outside_dy = 2;
+	air_outside_dz = 1
+	},
 /obj/machinery/light/floor,
 /turf/open/floor/iron,
 /area/cyberpunk/city/business/lot_10/test_shop)
@@ -3902,7 +3906,11 @@
 /turf/open/floor/iron,
 /area/cyberpunk/city/corporate/starlight)
 "oN" = (
-/obj/machinery/atmospherics/components/unary/vent_pump/on,
+/obj/machinery/atmospherics/components/unary/vent_pump/on{
+	air_outside_dx = -16;
+	air_outside_dy = 3;
+	air_outside_dz = 1
+	},
 /turf/open/floor/iron,
 /area/cyberpunk/city/business/lot_10/test_shop)
 "rz" = (
@@ -4043,7 +4051,11 @@
 /turf/open/floor/iron,
 /area/cyberpunk/city/business/lot_09/test_warehouse)
 "IJ" = (
-/obj/machinery/atmospherics/components/unary/vent_pump/on,
+/obj/machinery/atmospherics/components/unary/vent_pump/on{
+	air_outside_dx = -5;
+	air_outside_dy = 0;
+	air_outside_dz = -1
+	},
 /turf/open/floor/wood,
 /area/cyberpunk/city/housing/apartment/unit_01/test_apartment)
 "IO" = (
@@ -4055,7 +4067,11 @@
 /turf/open/floor/iron,
 /area/cyberpunk/city/business)
 "IW" = (
-/obj/machinery/atmospherics/components/unary/vent_scrubber/on,
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on{
+	air_outside_dx = -5;
+	air_outside_dy = 0;
+	air_outside_dz = -1
+	},
 /obj/machinery/light/floor,
 /turf/open/floor/wood,
 /area/cyberpunk/city/housing/apartment/unit_01/test_apartment)
@@ -4322,6 +4338,64 @@
 	},
 /turf/open/floor/wood,
 /area/cyberpunk/city/housing/apartment/unit_01/test_apartment)
+"ek" = (
+/obj/machinery/cyberpunk_bank_server,
+/turf/open/floor/iron,
+/area/cyberpunk/city/government)
+"el" = (
+/obj/machinery/computer/corporate_terminal/external_market,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"em" = (
+/obj/machinery/computer/corporate_terminal/external_market/starlight,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"er" = (
+/obj/machinery/computer/corporate_terminal/external_market/ryaznov,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"ev" = (
+/obj/machinery/mineral/ore_redemption/offstation/cyberpunk,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"ew" = (
+/obj/machinery/recycler/ryaznov,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"ex" = (
+/obj/machinery/atmospherics/components/unary/vent_pump/on{
+	air_outside_dx = -5;
+	air_outside_dy = 0;
+	air_outside_dz = 0
+	},
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/lot_09/test_warehouse)
+"ey" = (
+/obj/machinery/light/floor,
+/obj/machinery/atmospherics/components/unary/vent_scrubber/on{
+	air_outside_dx = -6;
+	air_outside_dy = 0;
+	air_outside_dz = 0;
+	scrubbing = 0
+	},
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/lot_09/test_warehouse)
+"ez" = (
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/starlight,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"eA" = (
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/ryaznov,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"gj" = (
+/obj/structure/closet/crate/cyberpunk_corporate_supply_depot/benn,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business)
+"gD" = (
+/obj/structure/closet/secure_closet/cyberpunk_emergency_armory,
+/turf/open/floor/iron,
+/area/cyberpunk/city/government)
 
 (1,1,1) = {"
 aa
@@ -5365,7 +5439,7 @@ ab
 ab
 ab
 ab
-ab
+ev
 ab
 ab
 ab
@@ -5409,7 +5483,7 @@ aN
 az
 ab
 ab
-ab
+ez
 ae
 am
 ae
@@ -5449,7 +5523,7 @@ ab
 az
 aO
 az
-ab
+el
 ab
 ab
 ae
@@ -5535,7 +5609,7 @@ ab
 ab
 ab
 ab
-ab
+eA
 ab
 ab
 VZ
@@ -5575,7 +5649,7 @@ ab
 av
 ab
 ab
-ab
+em
 ab
 av
 ab
@@ -5661,7 +5735,7 @@ aQ
 aB
 ab
 ab
-ab
+gj
 au
 ap
 af
@@ -5701,7 +5775,7 @@ ab
 aC
 aR
 aC
-ab
+er
 ab
 ab
 af
@@ -5744,7 +5818,7 @@ aC
 aS
 aC
 ab
-ab
+ew
 ab
 af
 ar
@@ -6284,7 +6358,7 @@ dM
 uI
 Rp
 lC
-HR
+ex
 vL
 dM
 eb
@@ -6327,7 +6401,7 @@ Sw
 lC
 lC
 lC
-CJ
+ey
 dM
 ec
 dS
@@ -9644,7 +9718,7 @@ gi
 gi
 dM
 ik
-id
+gD
 id
 id
 ib
@@ -9728,7 +9802,7 @@ gi
 gi
 dM
 im
-id
+ek
 id
 id
 id

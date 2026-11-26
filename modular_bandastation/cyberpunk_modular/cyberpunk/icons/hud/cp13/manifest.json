@@ -3,7 +3,7 @@
     "tgui/packages/tgui/styles/interfaces/CyberpunkPanel.scss:.StyleGuide",
     "tgui/packages/tgui-panel/styles/themes/cyberpunk.scss"
   ],
-  "method": "TG Midnight filled sprite construction: original inventory pixels darkened, original TG small controls, shaded five-ink cyberpunk hands/equipment and relief pixel lettering; no wireframe replacement; CSS-derived frames",
+  "method": "TG Midnight filled sprite construction: original inventory pixels darkened, original TG small controls, shaded five-ink cyberpunk hands/equipment and relief pixel lettering; frames from the supplied ui.dmi",
   "max_colors_per_glyph": 5,
   "glyph_palette": [
     "#1c3540",
@@ -48,7 +48,8 @@
     "contour/sleep.png": "c15bbe0a12476885d82b958969816a2a47c4d242d3a4e74ab1d6dd10ab7b31b7",
     "contour/swap.png": "6b06856fa4d81af8f509f2b288cc8f90a1433c93a229c040d1004c0323b8e458",
     "contour/tg/handcuff.png": "6030813b4f23ac4430a3a5072e62aa79b4056d8045c59d08eeb195feccd1989a",
-    "contour/throw.png": "876620c4471355faa65b54bc08774cfb976b2946dd1c373645694ceedf73eb24"
+    "contour/throw.png": "876620c4471355faa65b54bc08774cfb976b2946dd1c373645694ceedf73eb24",
+    "contour/ui.dmi": "1c1084e91bb99e5ff032c6593d88f65a0e1c5f3459cfa8cdb33a8c37850a6dcf"
   },
   "dmi": {
     "floor_16x32.dmi": {
@@ -74,13 +75,13 @@
         "grid"
       ],
       "rgba_sha256": {
-        "idle": "26fb026c5b73b201062c5641e4d6410aaaf3191cbf22d62dfc3a6b22bd46dc0a",
-        "hover": "66ab214dfe5df2c129f9777f873a43cee4b864e3f5c99a23d83f269c7bcb1828",
-        "active": "0ef87e0db1f306ae28ac1bc608ebd99480e52bf7e33fcd447c28482b60f1ced6",
-        "combat": "ecdff51ac93d63ae19dcafa29b6284590d9eeda22886e595077292916e6a5b59",
-        "disabled": "b5755a25a378d3e6a3e5006d1f693d0eff48bc144de67f4aaefd6ef445833b20",
-        "outline": "26fb026c5b73b201062c5641e4d6410aaaf3191cbf22d62dfc3a6b22bd46dc0a",
-        "grid": "26fb026c5b73b201062c5641e4d6410aaaf3191cbf22d62dfc3a6b22bd46dc0a"
+        "idle": "0d95c3a72381b7c7edb3476fdb32ccde36ad38516487d952f0c37e666a32e6b8",
+        "hover": "4d8cff3d3bb6aa3edb7729cc614593a2d389499ba8ad5627490498f7f20bbfc2",
+        "active": "1985de18916029dacf30042dddde6aa5dce84a4cdcae7f75afc1f8c29a688d57",
+        "combat": "56dcc1f5ac5b8757e7482820df8c4608fe6893d0a6c75aa12f6b437440c02d29",
+        "disabled": "4b58ae679933902ce2f8542464fc5fdc6ed5b7e6ea2ed0b89b052075d4cf9ef9",
+        "outline": "0d95c3a72381b7c7edb3476fdb32ccde36ad38516487d952f0c37e666a32e6b8",
+        "grid": "0d95c3a72381b7c7edb3476fdb32ccde36ad38516487d952f0c37e666a32e6b8"
       }
     },
     "frames_16x32.dmi": {
@@ -99,16 +100,16 @@
         "split"
       ],
       "rgba_sha256": {
-        "idle": "f2f41133a6886d28c9bb646878535ec7955ce73eac399defbaf8dea5671f42fc",
-        "hover": "c96295825a759bef03dcd475c39bfc21bbcc38a4e29e571cf3723c1f7d50585e",
-        "active": "9a97c8605189712afcd1305aba1dfa0a1f8c5e64fa216c93bf6aa6bdbf188250",
-        "combat": "ad7149bda72d130330aedad629b147c7fbc3579d85b43ee1fc22ae16c6febeaa",
-        "disabled": "5d61754667e3d828f99cbaff34069c1c41a543716fb6b04ebe8d9cb92841be08",
-        "outline": "f2f41133a6886d28c9bb646878535ec7955ce73eac399defbaf8dea5671f42fc",
-        "grid": "f2f41133a6886d28c9bb646878535ec7955ce73eac399defbaf8dea5671f42fc",
-        "buff": "c96295825a759bef03dcd475c39bfc21bbcc38a4e29e571cf3723c1f7d50585e",
-        "debuff": "ad7149bda72d130330aedad629b147c7fbc3579d85b43ee1fc22ae16c6febeaa",
-        "split": "5a65d03bf1aa1f88bb6671b31e966969a5f819498634d809614fd1de184792a7"
+        "idle": "32b78154a6f2a0164d38ab8257ab3b7d4523fec659ad60fefee453803afb8ae5",
+        "hover": "3297ec5803a5d36ab3c01f4c68925be61541ddee6d4333e9cf4fa58583c5eb84",
+        "active": "7998e7c9d4a500f968df5de348e5c7545ae6a45ae3c6ca28cc001034715fc7e1",
+        "combat": "07ad0160305413a363f0090f5a2f22ba626807f1e87f84b670e59646c2bf1d57",
+        "disabled": "d084687b40ca97e9c8a23042a017219815a49f1d64220ca8af4c383e85682f06",
+        "outline": "32b78154a6f2a0164d38ab8257ab3b7d4523fec659ad60fefee453803afb8ae5",
+        "grid": "32b78154a6f2a0164d38ab8257ab3b7d4523fec659ad60fefee453803afb8ae5",
+        "buff": "3297ec5803a5d36ab3c01f4c68925be61541ddee6d4333e9cf4fa58583c5eb84",
+        "debuff": "07ad0160305413a363f0090f5a2f22ba626807f1e87f84b670e59646c2bf1d57",
+        "split": "e132556b85bda3900045e3de64ab6f2a49b567d84334d0a0766c975cba7ed9a5"
       }
     },
     "frames_24x16.dmi": {
@@ -124,13 +125,13 @@
         "grid"
       ],
       "rgba_sha256": {
-        "idle": "585d24fa76c7fe0b419809e7e858b8b41e7512455a5ab36f38eaa7c96368901a",
-        "hover": "1b372aeeb842f6479def444b69cd6ebaf875cd3353a5a16038144b8b65a2feb5",
-        "active": "31e7cea62dc082fd526323987eb3f7e9acc6d634ac9a2565d8bdaa43e815bb4c",
-        "combat": "b765dd1996b929bab5ea51b827a6c931c702d9fd69c10521e2c87377d19eeaa5",
-        "disabled": "f4a29f3b947598bba1ebbdc5cf7102006b57010a40c7e4cca66febd72faf9ded",
-        "outline": "585d24fa76c7fe0b419809e7e858b8b41e7512455a5ab36f38eaa7c96368901a",
-        "grid": "585d24fa76c7fe0b419809e7e858b8b41e7512455a5ab36f38eaa7c96368901a"
+        "idle": "300cb0a841acdb7ebc9427efd088da78430f7c28d02bb838d3752d05cb88c6e9",
+        "hover": "c861dd01a31aafcff1f2974afb8e1c2a9795b3cf7ea744ab793972398182e500",
+        "active": "ca02eb7da86dacf03cadb68a7d99bf7fc3d961dbfa5838f1c8bb4e70921aac46",
+        "combat": "e6ad2b4f3d3735be2adb74301d640458a5c647e80d26dfa924dac6032c8abe92",
+        "disabled": "026f610c2a9c0909520476c59022f88d1f8117a78e90dae30e173ff545d707a3",
+        "outline": "300cb0a841acdb7ebc9427efd088da78430f7c28d02bb838d3752d05cb88c6e9",
+        "grid": "300cb0a841acdb7ebc9427efd088da78430f7c28d02bb838d3752d05cb88c6e9"
       }
     },
     "frames_24x32.dmi": {
@@ -148,15 +149,15 @@
         "debuff"
       ],
       "rgba_sha256": {
-        "idle": "bc92fa66a9a8bf800efa0582dd742573149692ea80d4ed58904036bb39278847",
-        "hover": "4eb8c85ea02cc2c59ec7711abb2f27ac385b99cbfccb754846250872ff8727a0",
-        "active": "7bbdfcad6a8e20a9dcf8b46377b37d38ae40d46c3486efe79ffeae89781fe972",
-        "combat": "f36539aaa9201a262799f908cd8fe1cdba9a8ab932a39e6bd4601cdd5ff35136",
-        "disabled": "03d8d4827921e5d12591f6e6c8f5d01130c8c87135cae6abd6fa504378e7d736",
-        "outline": "bc92fa66a9a8bf800efa0582dd742573149692ea80d4ed58904036bb39278847",
-        "grid": "bc92fa66a9a8bf800efa0582dd742573149692ea80d4ed58904036bb39278847",
-        "buff": "4eb8c85ea02cc2c59ec7711abb2f27ac385b99cbfccb754846250872ff8727a0",
-        "debuff": "f36539aaa9201a262799f908cd8fe1cdba9a8ab932a39e6bd4601cdd5ff35136"
+        "idle": "bb420544a150eb3660e0a4caf5a98a3a4bac0ee9081a8cea33ac6098a15fdf82",
+        "hover": "cf4329387f2373e13741e6a90bb127ce215b0f8ac468ba7aade81230f9da376b",
+        "active": "a063029a73c76b64dfa136d0d670712e8663ebc3cdf0fe31f032f34b92b0c4cc",
+        "combat": "4a283a1c03f3ce59650f6d5deefd0f41349fa465b287e10484fede153aa0a7e1",
+        "disabled": "ec58cf204675d6c7d30cc68e41cd28fc5607ff1e4bbee576e800b0b4f24f1df3",
+        "outline": "bb420544a150eb3660e0a4caf5a98a3a4bac0ee9081a8cea33ac6098a15fdf82",
+        "grid": "bb420544a150eb3660e0a4caf5a98a3a4bac0ee9081a8cea33ac6098a15fdf82",
+        "buff": "cf4329387f2373e13741e6a90bb127ce215b0f8ac468ba7aade81230f9da376b",
+        "debuff": "4a283a1c03f3ce59650f6d5deefd0f41349fa465b287e10484fede153aa0a7e1"
       }
     },
     "frames_32x16.dmi": {
@@ -172,13 +173,13 @@
         "grid"
       ],
       "rgba_sha256": {
-        "idle": "3c310f718bfa2f88f8928345473c15dfddeb5244265257f9eae5f8a94f32625c",
-        "hover": "a86621a2a68d735491b9787b3142008296dd447bf14c2102f2c3966fe4889167",
-        "active": "bde276eea2336c6ab32c3a53cdc62be66240c297bcf561861f73e311477323ac",
-        "combat": "cacd14dd550fbdfe5cbdffe2b10cdb1c703b8c4896fa8e65fb8f564a86a141d4",
-        "disabled": "4b137ec1890c4969d2d79b836fa28c247054ec6da141717719429a055cc92f34",
-        "outline": "3c310f718bfa2f88f8928345473c15dfddeb5244265257f9eae5f8a94f32625c",
-        "grid": "3c310f718bfa2f88f8928345473c15dfddeb5244265257f9eae5f8a94f32625c"
+        "idle": "05dc5c5770c00ef39cd285efd76af05813336c7b9b5bda1e85866d591b99c60b",
+        "hover": "b580fd480f4a7ff6130cc01106f869aa1e9731b21aeedffe5f59c42532eca5dd",
+        "active": "d874df6f4891622644531b1c3448ff23abcecc0ae13dd3c499d1122744f038a2",
+        "combat": "44bd9ecf1b2f482d886f24cb6eb3ff32cdf843de1bcb18ce0a6dba42536c70ad",
+        "disabled": "c7630c582790a862cbe087d65cf686dbda3061bd0cacc35aea2912a24f9a8f45",
+        "outline": "05dc5c5770c00ef39cd285efd76af05813336c7b9b5bda1e85866d591b99c60b",
+        "grid": "05dc5c5770c00ef39cd285efd76af05813336c7b9b5bda1e85866d591b99c60b"
       }
     },
     "frames_32x32.dmi": {
@@ -197,16 +198,16 @@
         "scroll_down"
       ],
       "rgba_sha256": {
-        "idle": "5f4c5b520ae682de9251fef4dd49849c01097b8c4f07c036009388c1bee08e3b",
-        "hover": "babccb4b99d5542e8c73eddf63fe03cab0425e67f3297a093ba502bf9fb08944",
-        "active": "b8f100f0c98c003d81e9d40f2202fdec09fbbb4d80a14089e7557c088c882d4b",
-        "combat": "3c2e32e042e636a08b5078e3964397afc1beccb71f299f8793ebce4341826376",
-        "disabled": "a38e1caa6b13b154cfd3a3f025f09ca439aea1ee9bbfb22cea1387562ec28417",
-        "outline": "5f4c5b520ae682de9251fef4dd49849c01097b8c4f07c036009388c1bee08e3b",
-        "grid": "5f4c5b520ae682de9251fef4dd49849c01097b8c4f07c036009388c1bee08e3b",
-        "reserved": "babccb4b99d5542e8c73eddf63fe03cab0425e67f3297a093ba502bf9fb08944",
-        "scroll_up": "f3a8e16fefc39b332a1e00e21ac55f10ef5025c625829d98bc4b632e6405a7be",
-        "scroll_down": "053177aabd4255ba6dea3e1962fa6a48941ff5e143b4d33c6f964b70c4cdf447"
+        "idle": "1f4a90ad15937ff9143fa87f7ae978388c2da09263d344bf459cb826832de6e9",
+        "hover": "ecac71fe6dac039a9644537be0b2dc8fad29e8f6eaefc75a627ed2fccacfa71a",
+        "active": "d47bdb49653d05f25f27c78f58af3b82d53e27acf7866b449aede0251b6771f3",
+        "combat": "467332d5dae195f5ff75c928d895271e4982ba2a2c8307c98b7af618d868b86b",
+        "disabled": "ae14614800e58b139f7ce959fc22d7f8ce447c061477f5e08c46f5eaf2b1bcd8",
+        "outline": "1f4a90ad15937ff9143fa87f7ae978388c2da09263d344bf459cb826832de6e9",
+        "grid": "1f4a90ad15937ff9143fa87f7ae978388c2da09263d344bf459cb826832de6e9",
+        "reserved": "ecac71fe6dac039a9644537be0b2dc8fad29e8f6eaefc75a627ed2fccacfa71a",
+        "scroll_up": "6152099273b4ec717ecf91fbd6a3c5e54c4a89380af0dbcc4001266669f45d80",
+        "scroll_down": "932cd679efc001e7914dc746e347a8a1545a0389ed6c3d7d41c15b810dc2d1e1"
       }
     },
     "glyphs_16x16.dmi": {
@@ -280,9 +281,9 @@
       ],
       "rgba_sha256": {
         "hand_l": "d99e676800b7e1edacb0dceb5c3fcf5e24d781f468880e559da2d1dcfc9b8336",
-        "lhandactive": "981110dc9bf9718db7169e5fa7e984e236fd831cbcb8c17274477f8f7b47323a",
+        "lhandactive": "a304d1bba944ce97c67e31261b3ca91f96aa4ccf9aa2d1e5f425c673db82ee0c",
         "hand_r": "2407e8a9a1fdb4e85b18a4fb3fb56738598d44c249c64916ae75d7e9e4ef0ed8",
-        "rhandactive": "981110dc9bf9718db7169e5fa7e984e236fd831cbcb8c17274477f8f7b47323a"
+        "rhandactive": "a304d1bba944ce97c67e31261b3ca91f96aa4ccf9aa2d1e5f425c673db82ee0c"
       }
     },
     "inventory_32x32.dmi": {

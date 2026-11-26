@@ -32,7 +32,7 @@
 	if(isnum(heat_damage))
 		src.heat_damage = heat_damage
 
-	RegisterSignal(target, COMSIG_LIVING_LIFE, PROC_REF(on_life))
+	RegisterSignals(target, list(COMSIG_LIVING_LIFE, COMSIG_LIVING_PHANTOM_TEMPERATURE), PROC_REF(on_life))
 
 	if(!mapload || !PERFORM_ALL_TESTS(focus_only/atmos_and_temp_requirements))
 		return
@@ -40,7 +40,7 @@
 
 /datum/element/body_temp_sensitive/Detach(datum/source)
 	if(source)
-		UnregisterSignal(source, COMSIG_LIVING_LIFE)
+		UnregisterSignal(source, list(COMSIG_LIVING_LIFE, COMSIG_LIVING_PHANTOM_TEMPERATURE))
 	return ..()
 
 /datum/element/body_temp_sensitive/proc/on_life(datum/target, seconds_per_tick)

@@ -82,6 +82,7 @@ multiple modular subtrees with behaviors
 	/// Invisible location context for a suspended city NPC; never owns/deletes its contents.
 	var/obj/effect/cyberpunk_phantom_body/phantom_body
 	var/phantom_medical_at = 0
+	var/phantom_bleed_rate
 	var/phantom_breath_seconds = 0
 	var/processing_phantom_medicine = FALSE
 	var/phantom_route_generation = 0
@@ -433,10 +434,10 @@ multiple modular subtrees with behaviors
 	return contract.fail("AI task: [reason]")
 
 /// TRUE when the controller should keep logical city-task processing while physically idle.
-/datum/ai_controller/proc/cyberpunk_should_process_phantom()
+/datum/ai_controller/proc/cyberpunk_should_process_phantom(check_chemistry = TRUE)
 	if(!blackboard[BB_CP_PHANTOM_ENABLED])
 		return FALSE
-	if(!cyberpunk_can_suspend_body())
+	if(!cyberpunk_can_suspend_body(check_chemistry))
 		return FALSE
 	cyberpunk_ensure_phantom_idle_behavior()
 	if(!blackboard_key_exists(BB_CP_CITY_TASK))
@@ -453,7 +454,7 @@ multiple modular subtrees with behaviors
 	return blackboard[BB_CP_PHANTOM_STATE] != CP_AI_PHANTOM_INACTIVE || should_idle()
 
 /// Only opt-in carbon/basic NPCs may suspend; players and interactive bodies never do.
-/datum/ai_controller/proc/cyberpunk_can_suspend_body()
+/datum/ai_controller/proc/cyberpunk_can_suspend_body(check_chemistry = TRUE)
 	var/mob/living/living_pawn = pawn
 	if(!istype(living_pawn) || living_pawn.client || living_pawn.ckey || living_pawn.mind?.key)
 		return FALSE
@@ -467,7 +468,40 @@ multiple modular subtrees with behaviors
 		return FALSE
 	if(!iscarbon(living_pawn) && !isbasicmob(living_pawn))
 		return FALSE
-	return TRUE
+	return !check_chemistry || cyberpunk_can_compact_chemistry(living_pawn)
+
+/// Digestion, blends and reagents with behavioral effects need a physical NPC.
+/datum/ai_controller/proc/cyberpunk_can_compact_chemistry(mob/living/living_pawn)
+	var/mob/living/carbon/carbon_pawn = living_pawn
+	if(!istype(carbon_pawn))
+		return !living_pawn.reagents?.total_volume
+
+	var/obj/item/organ/stomach/stomach = carbon_pawn.get_organ_slot(ORGAN_SLOT_STOMACH)
+	if(stomach?.reagents?.total_volume)
+		if(stomach.reagents.is_reacting || (stomach.organ_flags & ORGAN_FAILING))
+			return FALSE
+		for(var/datum/reagent/stomach_chem as anything in stomach.reagents.reagent_list)
+			if(stomach_chem.metabolization_rate > 0 && stomach_chem.volume > LAZYACCESS(stomach.food_reagents, stomach_chem.type))
+				return FALSE
+
+	var/datum/reagents/bloodstream = carbon_pawn.reagents
+	if(!bloodstream?.total_volume)
+		return TRUE
+	if(bloodstream.is_reacting || length(bloodstream.reagent_list) != 1)
+		return FALSE
+
+	var/datum/reagent/medicine = bloodstream.reagent_list[1]
+	if(medicine.type != /datum/reagent/medicine/omnizine && medicine.type != /datum/reagent/medicine/omnizine/protozine)
+		return FALSE
+	if(medicine.overdosed || medicine.overdosed_crit || (medicine.overdose_threshold && medicine.volume >= medicine.overdose_threshold))
+		return FALSE
+	if(medicine.overdose_crit_threshold && medicine.volume >= medicine.overdose_crit_threshold)
+		return FALSE
+
+	var/obj/item/organ/liver/liver = carbon_pawn.get_organ_slot(ORGAN_SLOT_LIVER)
+	if(liver?.type != /obj/item/organ/liver || (liver.organ_flags & ORGAN_FAILING) || (liver.organ_condition_flags & ORGAN_CONDITION_CIRRHOSIS))
+		return FALSE
+	return !HAS_TRAIT(carbon_pawn, TRAIT_LIVERLESS_METABOLISM)
 
 /// Hidden NPCs do not need full AI cadence. Light profiles are cheaper; heavy profiles still advance more often.
 /datum/ai_controller/proc/cyberpunk_phantom_tick_interval()
@@ -708,6 +742,7 @@ multiple modular subtrees with behaviors
 		CancelActions()
 		able_to_plan = FALSE
 		phantom_medical_at = world.time
+		phantom_bleed_rate = living_pawn.get_bleed_rate()
 		phantom_breath_seconds = 0
 		phantom_body = new(current_turf)
 		living_pawn.forceMove(phantom_body)
@@ -729,6 +764,7 @@ multiple modular subtrees with behaviors
 	if(istype(living_pawn) && approx_turf && !QDELETED(living_pawn) && (isnull(living_pawn.loc) || living_pawn.loc == phantom_body))
 		living_pawn.forceMove(approx_turf)
 	QDEL_NULL(phantom_body)
+	phantom_bleed_rate = null
 	able_to_plan = check_able_to_plan()
 	cyberpunk_materialize_phantom_cargo()
 	set_blackboard_key(BB_CP_PHANTOM_STATE, CP_AI_PHANTOM_INACTIVE)
@@ -776,98 +812,145 @@ multiple modular subtrees with behaviors
 	var/mob/living/living_pawn = pawn
 	if(!istype(living_pawn) || QDELETED(living_pawn) || processing_phantom_medicine || living_pawn.client || living_pawn.ckey || living_pawn.mind?.key)
 		return FALSE
+	var/can_compact_chemistry = cyberpunk_can_compact_chemistry(living_pawn)
+	if(!can_compact_chemistry && !force)
+		cyberpunk_materialize_phantom("chemistry needs physical processing")
+		return FALSE
+
 	var/elapsed_seconds = (world.time - phantom_medical_at) / (1 SECONDS)
 	if(elapsed_seconds <= 0 || (!force && elapsed_seconds < 5))
 		return TRUE
+
 	processing_phantom_medicine = TRUE
 	var/turf/virtual_turf = blackboard[BB_CP_PHANTOM_APPROX_TURF]
-	if(phantom_body && get_turf(phantom_body) != virtual_turf)
-		phantom_body.forceMove(virtual_turf)
-	var/step_seconds = elapsed_seconds
+	var/unsafe_environment = virtual_turf && (isspaceturf(virtual_turf) || is_water_turf(virtual_turf))
+	var/needs_environment = living_pawn.on_fire || unsafe_environment
+	if(needs_environment && !force)
+		elapsed_seconds = min(elapsed_seconds, cyberpunk_phantom_tick_interval() / (1 SECONDS))
+
 	var/mob/living/carbon/carbon_pawn = living_pawn
-	if(istype(carbon_pawn))
-		var/obj/item/organ/stomach/stomach = carbon_pawn.get_organ_slot(ORGAN_SLOT_STOMACH)
-		if(carbon_pawn.reagents?.total_volume || stomach?.reagents?.total_volume)
-			// Reagents use current_cycle as well as seconds_per_tick; preserve native cycles.
-			step_seconds = SSMOBS_DT
-			if(!force)
-				elapsed_seconds = FLOOR(elapsed_seconds / step_seconds, 1) * step_seconds
-	var/remaining_seconds = force ? elapsed_seconds : min(elapsed_seconds, max(step_seconds, FLOOR(cyberpunk_phantom_tick_interval() / (1 SECONDS) / step_seconds, 1) * step_seconds))
-	while(remaining_seconds > 0)
-		var/medical_seconds = min(step_seconds, remaining_seconds)
-		phantom_medical_at += medical_seconds * (1 SECONDS)
-		remaining_seconds -= medical_seconds
-		if(!cyberpunk_phantom_medical_step(living_pawn, medical_seconds) || QDELETED(living_pawn) || living_pawn.stat == DEAD)
-			break
+	var/active_medicine = can_compact_chemistry && istype(carbon_pawn) && carbon_pawn.reagents?.total_volume
+	if(active_medicine && !force)
+		elapsed_seconds = FLOOR(elapsed_seconds, SSMOBS_DT)
+	phantom_medical_at += elapsed_seconds * (1 SECONDS)
+
+	if(active_medicine && living_pawn.stat != DEAD && !HAS_TRAIT(living_pawn, TRAIT_STASIS) && !HAS_TRAIT(living_pawn, TRAIT_NO_TRANSFORM))
+		cyberpunk_advance_phantom_medicine(carbon_pawn, elapsed_seconds)
+	if(virtual_turf && phantom_body && get_turf(phantom_body) != virtual_turf)
+		phantom_body.forceMove(virtual_turf)
+	if(!QDELETED(living_pawn))
+		if(needs_environment)
+			cyberpunk_phantom_medical_step(living_pawn, elapsed_seconds)
+		else
+			cyberpunk_advance_phantom_injury(living_pawn, elapsed_seconds)
 	processing_phantom_medicine = FALSE
 	if(QDELETED(living_pawn))
 		return FALSE
 	set_blackboard_key(BB_CP_PHANTOM_HEALTH_VALUE, living_pawn.health)
 	set_blackboard_key(BB_CP_PHANTOM_HEALTH_STATE, living_pawn.stat == DEAD ? "dead" : "[round(living_pawn.health)]/[living_pawn.maxHealth]")
+	if(!force)
+		if(living_pawn.stat == DEAD)
+			cyberpunk_materialize_phantom("death on the route")
+			return FALSE
+		if(needs_environment && !cyberpunk_can_compact_chemistry(living_pawn))
+			cyberpunk_materialize_phantom("chemistry needs physical processing")
+			return FALSE
 	return TRUE
 
-/// Physiology only: native organs/metabolism/signals, without Life(), AI, inventory or movement.
-/datum/ai_controller/proc/cyberpunk_phantom_medical_step(mob/living/living_pawn, elapsed_seconds)
-	if(SEND_SIGNAL(living_pawn, COMSIG_LIVING_PRE_LIFE, elapsed_seconds) & COMPONENT_LIVING_CANCEL_LIFE_PROCESSING)
-		return FALSE
-	if(QDELETED(living_pawn))
-		return FALSE
+/// Integrates a simple medicine's healing and consumption over elapsed time.
+/datum/ai_controller/proc/cyberpunk_advance_phantom_medicine(mob/living/carbon/body, elapsed_seconds)
+	var/datum/reagent/medicine/omnizine/medicine = body.reagents.reagent_list[1]
+	var/circulation = 1
+	if(body.stat == HARD_CRIT && body.undergoing_cardiac_arrest())
+		circulation = CARBON_HARDCRIT_CIRCULATION_METABOLISM_MULTIPLIER
+
+	var/step_seconds = SSMOBS_DT * circulation
+	var/volume_per_step = medicine.get_metabolization_amount(body, step_seconds)
+	if(volume_per_step <= 0)
+		return
+
+	var/full_steps = FLOOR(elapsed_seconds / SSMOBS_DT, 1)
+	var/partial_seconds = (elapsed_seconds - full_steps * SSMOBS_DT) * circulation
+	var/full_volume = min(medicine.volume, volume_per_step * full_steps)
+	var/partial_volume = min(medicine.volume - full_volume, volume_per_step * partial_seconds / step_seconds)
+	var/exposure = REM * (full_volume * step_seconds + partial_volume * partial_seconds)
+	medicine.current_cycle += min(full_steps, CEILING(medicine.volume / volume_per_step, 1)) + (partial_volume > 0)
+	var/health_changed = medicine.heal_damage(body, exposure)
+	if(!QDELETED(body) && !QDELETED(medicine))
+		body.reagents.remove_reagent(medicine.type, full_volume + partial_volume)
+	if(!QDELETED(body) && health_changed)
+		body.updatehealth()
+
+/// Advance the consequences of existing injuries without running the pawn's body cycle.
+/datum/ai_controller/proc/cyberpunk_advance_phantom_injury(mob/living/living_pawn, elapsed_seconds)
+	if(living_pawn.stat == DEAD || HAS_TRAIT(living_pawn, TRAIT_STASIS))
+		return
 	var/mob/living/carbon/carbon_pawn = living_pawn
-	if(istype(carbon_pawn) && carbon_pawn.stat != DEAD && !HAS_TRAIT(carbon_pawn, TRAIT_STASIS))
-		for(var/datum/wound/wound as anything in carbon_pawn.all_wounds?.Copy())
-			if(!QDELETED(wound) && wound.processes)
-				wound.handle_process(elapsed_seconds)
-		carbon_pawn.handle_hardcrit_circulation(elapsed_seconds)
-		carbon_pawn.handle_dead_metabolization(elapsed_seconds)
-		carbon_pawn.handle_organs(elapsed_seconds)
-		if(QDELETED(carbon_pawn))
-			return FALSE
-	SEND_SIGNAL(living_pawn, COMSIG_LIVING_LIFE, elapsed_seconds)
-	if(QDELETED(living_pawn))
-		return FALSE
-	if(istype(carbon_pawn) && carbon_pawn.stat != DEAD && !HAS_TRAIT(carbon_pawn, TRAIT_STASIS))
-		phantom_breath_seconds += elapsed_seconds
-		var/breath_ticks = carbon_pawn.failed_last_breath ? 1 : carbon_pawn.get_cyberpunk_breath_tick_interval()
-		if(phantom_breath_seconds >= breath_ticks * SSMOBS_DT)
-			// Do not alias SSmobs.times_fired: compact ticks have an independent cadence.
-			carbon_pawn.breathe(phantom_breath_seconds / breath_ticks)
-			phantom_breath_seconds = 0
-		carbon_pawn.handle_body_state(elapsed_seconds)
-		var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(carbon_pawn)
-		if(environment)
-			carbon_pawn.handle_environment(environment, elapsed_seconds)
-		if(QDELETED(carbon_pawn))
-			return FALSE
-		carbon_pawn.handle_blood(elapsed_seconds)
-		carbon_pawn.handle_oxygenation(elapsed_seconds)
-		if(carbon_pawn.stat != DEAD)
-			for(var/addiction in carbon_pawn.mind?.addiction_points)
-				GLOB.addictions[addiction].process_addiction(carbon_pawn, elapsed_seconds)
-			carbon_pawn.handle_brain_damage(elapsed_seconds)
-			carbon_pawn.handle_bodyparts(elapsed_seconds)
-			carbon_pawn.handle_liver(elapsed_seconds)
-		var/mob/living/carbon/human/human_pawn = carbon_pawn
-		if(istype(human_pawn) && human_pawn.dna && human_pawn.stat != DEAD)
-			human_pawn.dna.species.handle_body_temperature(human_pawn, elapsed_seconds)
-			human_pawn.handle_heart(elapsed_seconds)
-			for(var/datum/mutation/mutation as anything in human_pawn.dna.mutations)
-				mutation.on_life(elapsed_seconds)
-		if(QDELETED(carbon_pawn))
-			return FALSE
-		carbon_pawn.updatehealth()
-	else if(living_pawn.stat != DEAD && !HAS_TRAIT(living_pawn, TRAIT_STASIS))
-		living_pawn.handle_breathing(elapsed_seconds)
-		if(QDELETED(living_pawn))
-			return FALSE
-		living_pawn.handle_body_state(elapsed_seconds)
-		var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(living_pawn)
-		if(environment)
-			living_pawn.handle_environment(environment, elapsed_seconds)
+	if(!istype(carbon_pawn))
 		var/mob/living/basic/basic_pawn = living_pawn
 		if(istype(basic_pawn) && basic_pawn.staminaloss > 0)
 			basic_pawn.adjust_stamina_loss(-basic_pawn.stamina_recovery * elapsed_seconds, forced = TRUE)
-		if(!QDELETED(living_pawn))
-			living_pawn.updatehealth()
+		return
+
+	if(isnull(phantom_bleed_rate))
+		phantom_bleed_rate = carbon_pawn.get_bleed_rate()
+	if(phantom_bleed_rate > 0 && carbon_pawn.can_bleed())
+		var/blood_lost = phantom_bleed_rate * elapsed_seconds
+		var/elapsed_bleed_ticks = FLOOR(elapsed_seconds / SSMOBS_DT, 1)
+		if(elapsed_bleed_ticks > 0)
+			var/bleed_rate_before = carbon_pawn.get_bleed_rate()
+			for(var/obj/item/bodypart/limb as anything in carbon_pawn.get_bodyparts())
+				if(limb.generic_bleedstacks)
+					limb.adjustBleedStacks(-elapsed_bleed_ticks, 0)
+			phantom_bleed_rate = carbon_pawn.get_bleed_rate()
+			blood_lost -= max(0, bleed_rate_before - phantom_bleed_rate) * elapsed_seconds * 0.5
+		carbon_pawn.adjust_blood_volume(-max(0, blood_lost))
+		if(carbon_pawn.get_blood_volume(apply_modifiers = TRUE) < BLOOD_VOLUME_SURVIVE && !HAS_TRAIT(carbon_pawn, TRAIT_NODEATH))
+			carbon_pawn.death()
+			return
+
+	if(carbon_pawn.undergoing_cardiac_arrest())
+		carbon_pawn.adjust_oxy_loss(CARBON_HARDCRIT_OXYLOSS_RATE * elapsed_seconds, updating_health = FALSE, forced = TRUE)
+	if(carbon_pawn.oxygenation < 100 || carbon_pawn.get_blood_volume(apply_modifiers = TRUE) < BLOOD_VOLUME_SAFE || carbon_pawn.get_organ_loss(ORGAN_SLOT_LUNGS) > 0)
+		carbon_pawn.handle_oxygenation(elapsed_seconds)
+		carbon_pawn.updatehealth()
+
+/// Applies breathing and temperature effects without invoking the body's Life proc.
+/datum/ai_controller/proc/cyberpunk_phantom_medical_step(mob/living/living_pawn, elapsed_seconds)
+	if(QDELETED(living_pawn))
+		return FALSE
+	if(living_pawn.stat == DEAD || HAS_TRAIT(living_pawn, TRAIT_STASIS))
+		return TRUE
+	if(HAS_TRAIT(living_pawn, TRAIT_NO_TRANSFORM))
+		return FALSE
+	var/mob/living/carbon/carbon_pawn = living_pawn
+	SEND_SIGNAL(living_pawn, COMSIG_LIVING_PHANTOM_TEMPERATURE, elapsed_seconds)
+	if(QDELETED(living_pawn))
+		return FALSE
+	if(istype(carbon_pawn))
+		phantom_breath_seconds += elapsed_seconds
+		var/breath_ticks = carbon_pawn.failed_last_breath ? 1 : carbon_pawn.get_cyberpunk_breath_tick_interval()
+		if(phantom_breath_seconds >= breath_ticks * SSMOBS_DT)
+			carbon_pawn.breathe(phantom_breath_seconds / breath_ticks)
+			phantom_breath_seconds = 0
+	else
+		living_pawn.handle_breathing(elapsed_seconds)
+	if(QDELETED(living_pawn))
+		return FALSE
+	var/datum/gas_mixture/environment = lightweight_atmos_scan_gasmix(living_pawn)
+	if(environment)
+		living_pawn.handle_environment(environment, elapsed_seconds)
+	if(QDELETED(living_pawn))
+		return FALSE
+	var/mob/living/carbon/human/human_pawn = carbon_pawn
+	if(istype(human_pawn) && human_pawn.dna)
+		human_pawn.dna.species.handle_body_temperature(human_pawn, elapsed_seconds)
+
+	if(QDELETED(living_pawn))
+		return FALSE
+	cyberpunk_advance_phantom_injury(living_pawn, elapsed_seconds)
+	if(!QDELETED(living_pawn))
+		living_pawn.updatehealth()
 	return !QDELETED(living_pawn)
 
 /// Processes one phantom task tick. This intentionally stays in the tg idle behavior path.
@@ -1146,7 +1229,8 @@ multiple modular subtrees with behaviors
 	if(on_failed_planning_timeout || !able_to_run)
 		return AI_STATUS_OFF
 	if(!length(SSmobs.clients_by_zlevel[pawn_turf.z]))
-		return cyberpunk_should_process_phantom() ? AI_STATUS_IDLE : AI_STATUS_OFF
+		// Keep the idle scheduler available so a city task can resume once physical chemistry clears.
+		return cyberpunk_should_process_phantom(check_chemistry = FALSE) ? AI_STATUS_IDLE : AI_STATUS_OFF
 	if(should_idle())
 		return AI_STATUS_IDLE
 	return AI_STATUS_ON

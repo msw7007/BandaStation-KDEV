@@ -139,6 +139,8 @@ type GovernmentTaxMonitor = {
   council?: {
     emergencyActive: BooleanLike;
     directive: string;
+    pendingDirective?: string | null;
+    directiveVotes?: number;
     yesVotes: number;
     noVotes: number;
     requiredVotes: number;
@@ -188,6 +190,7 @@ type Corporation = {
   edicts: CorporateEdict[];
   subscribers: number;
   subscriptionCost: number;
+  canSubscribe?: BooleanLike;
   serviceMedical: BooleanLike;
   serviceTechnical: BooleanLike;
   serviceDelivery: BooleanLike;
@@ -224,6 +227,7 @@ type Corporation = {
 type ExternalTradeOffer = {
   imports: { key: string; name: string; price: number }[];
   heldExport?: { key: string; name: string; price: number; amount: number };
+  personal?: boolean;
 };
 
 export type CorporateInterfaceData = {
@@ -277,6 +281,15 @@ export function NtosCorporationsContent(props: {
   const [activeTab, setActiveTab] = useState('state');
   const [dataType, setDataType] = useState('general');
   const [amount, setAmount] = useState('10');
+  if (data.externalTrade?.personal) {
+    return (
+      <ExternalTradeTab
+        offer={data.externalTrade}
+        balance={accountBalance}
+        act={act}
+      />
+    );
+  }
   const availableTabs =
     visibleCorporation?.id === 'government'
       ? displayGovernmentTabs
@@ -655,6 +668,12 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
           <LabeledList.Item label="Directive">
             {council?.directive || '-'}
           </LabeledList.Item>
+          {council?.pendingDirective != null && (
+            <LabeledList.Item label="На утверждении">
+              {council.pendingDirective || 'Отмена директивы'} ·{' '}
+              {council.directiveVotes} / {council.requiredVotes}
+            </LabeledList.Item>
+          )}
         </LabeledList>
         <div className="CorporateInterface__actions">
           <button
@@ -711,7 +730,7 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
           <button
             type="button"
             className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
-            disabled={!corporation.canManage}
+            disabled={!corporation.canManage || council?.pendingDirective != null}
             onClick={() =>
               act('government_directive', {
                 corporation_id: corporation.id,
@@ -720,8 +739,23 @@ function GovernmentStateTab(props: { corporation: Corporation }) {
             }
           >
             <Icon name="file-signature" />
-            <span>Set directive</span>
+            <span>Предложить директиву</span>
           </button>
+          {council?.pendingDirective != null && (
+            <button
+              type="button"
+              className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+              disabled={!corporation.canCouncilVote}
+              onClick={() =>
+                act('government_sign_directive', {
+                  corporation_id: corporation.id,
+                })
+              }
+            >
+              <Icon name="microchip" />
+              <span>Подписать чипом</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1080,6 +1114,7 @@ function ServicesTab(props: { corporation: Corporation }) {
           <button
             type="button"
             className="StyleGuide__cutButton StyleGuide__cutButton--cyan-dark"
+            disabled={!corporation.canSubscribe}
             onClick={() =>
               act('subscribe', {
                 corporation_id: corporation.id,

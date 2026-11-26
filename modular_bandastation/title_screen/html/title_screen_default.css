@@ -1308,3 +1308,16 @@ html.loading #logo::after {
   border: 0;
   border-radius: 0;
 }
+
+#loading_spinner {
+  display: none;
+  align-self: center;
+  order: 4;
+  image-rendering: pixelated;
+  margin-top: 0.35rem;
+}
+
+html.loading #loading_spinner {
+  display: block;
+  margin-inline: auto;
+}

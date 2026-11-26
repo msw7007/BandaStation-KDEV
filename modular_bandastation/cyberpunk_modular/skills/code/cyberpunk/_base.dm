@@ -185,14 +185,6 @@
 		return 0
 	return get_cyberpunk_skill_perk_bonus(SKILL_HACKING, 5)
 
-/mob/living/proc/get_cyberpunk_machine_shock_multiplier(atom/target)
-	if(!istype(target, /obj/machinery))
-		return 1
-	var/electric_safety = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 3)
-	if(electric_safety <= 0)
-		return 1
-	return clamp(electric_safety * 0.01, 0, 1)
-
 /mob/living/proc/get_cyberpunk_mobile_structure_pull_force(atom/target, base_force)
 	if(!target || target.get_cyberpunk_structure_category() != "mobile_structure")
 		return base_force
@@ -902,17 +894,11 @@
 	to_chat(src, span_notice("Your eagle-eyed strike blinds [target.declent_ru(ACCUSATIVE)]."))
 	return TRUE
 
-/mob/living/proc/get_cyberpunk_electric_shock_multiplier()
-	var/electric_safety = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 3)
-	if(electric_safety <= 0)
-		return 1
-	return clamp(electric_safety * 0.01, 0.1, 1)
-
-/mob/living/proc/get_cyberpunk_electric_chain_multiplier()
-	var/chain_safety = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 4)
-	if(chain_safety <= 0)
-		return 1
-	return clamp(chain_safety * 0.01, 0.1, 1)
+/mob/living/proc/get_cyberpunk_electric_shock_chance(flags)
+	var/perk = (flags & SHOCK_CHAIN) ? 4 : 3
+	if(!get_character_perk_rank(SKILL_ELECTRICS, perk))
+		return 100
+	return clamp(get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, perk), 0, 100)
 
 /mob/living/proc/get_cyberpunk_electric_wire_stun_cap()
 	var/wire_stun = get_cyberpunk_skill_perk_bonus(SKILL_ELECTRICS, 2)
@@ -1399,8 +1385,8 @@
 		return FALSE
 	pulling = target
 	target.set_pulledby(src)
-	setGrabState(old_grab_state)
 	cyberpunk_grab_zone = old_grab_zone
+	setGrabState(old_grab_state)
 	cyberpunk_grab_durability = old_grab_durability
 	cyberpunk_grab_max_durability = old_grab_max_durability
 	update_cyberpunk_grab_hold_items()
@@ -1599,6 +1585,8 @@
 		if(BODY_ZONE_PRECISE_EARS)
 			target.sound_damage(0, 4 SECONDS)
 		if(BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_NOSE, BODY_ZONE_PRECISE_NECK, BODY_ZONE_HEAD)
+			var/obj/item/bodypart/head = target.get_bodypart(BODY_ZONE_HEAD)
+			head?.add_bodypart_pain(10 * damage_multiplier)
 			target.apply_damage(round(10 * damage_multiplier), STAMINA)
 			target.adjust_staggered_up_to(2 SECONDS, 6 SECONDS)
 		if(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_ABDOMEN)
@@ -1710,19 +1698,65 @@
 	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] squeezes [target.declent_ru(GENITIVE)] head!"), span_danger("You squeeze [target.declent_ru(GENITIVE)] head!"), null, COMBAT_MESSAGE_RANGE, target)
 	target.sound_damage(0, 5 SECONDS)
 	target.adjust_staggered_up_to(1 SECONDS, 4 SECONDS)
+	var/obj/item/bodypart/head = target.get_bodypart(BODY_ZONE_HEAD)
+	head?.add_bodypart_pain(10 * get_cyberpunk_grapple_power_damage_multiplier())
 	if(grab_state >= GRAB_TWOHANDED)
 		target.apply_damage(round(get_cyberpunk_grapple_unarmed_damage(BODY_ZONE_HEAD, 1.1) * get_cyberpunk_grapple_power_damage_multiplier()), BRUTE, BODY_ZONE_HEAD)
 	log_combat(src, target, "grapple head controlled")
 	return TRUE
 
-/mob/living/proc/perform_cyberpunk_neck_choke(mob/living/target)
-	if(!can_cyberpunk_grapple_action(target, "choke", BODY_ZONE_PRECISE_NECK))
+#define CYBERPUNK_CHOKE_STAMINA_PER_SECOND 2
+
+/mob/living/var/tmp/cyberpunk_choke_timer = TIMER_ID_NULL
+
+/mob/living/proc/clear_cyberpunk_choke_timer()
+	if(cyberpunk_choke_timer == TIMER_ID_NULL)
+		return
+	deltimer(cyberpunk_choke_timer)
+	cyberpunk_choke_timer = TIMER_ID_NULL
+
+/// Each payment covers the next second of the hold, including the first.
+/mob/living/proc/pay_cyberpunk_choke_upkeep()
+	if(!spend_stamina(get_cyberpunk_grab_stamina_cost(CYBERPUNK_CHOKE_STAMINA_PER_SECOND), "attack"))
 		return FALSE
+	if(!isliving(pulling) || HAS_TRAIT(src, TRAIT_INCAPACITATED))
+		return FALSE
+	cyberpunk_choke_timer = addtimer(CALLBACK(src, PROC_REF(maintain_cyberpunk_neck_choke)), 1 SECONDS, TIMER_STOPPABLE)
+	return TRUE
+
+/mob/living/proc/maintain_cyberpunk_neck_choke()
+	cyberpunk_choke_timer = TIMER_ID_NULL
+	var/mob/living/target = pulling
+	if(grab_state != GRAB_KILL || !istype(target))
+		return
+	if(stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_INCAPACITATED))
+		stop_pulling()
+		return
+	if(target.stat == DEAD || !target.is_cyberpunk_neck_choked())
+		setGrabState(GRAB_TWOHANDED)
+		return
+	if(pay_cyberpunk_choke_upkeep())
+		return
+	if(pulling == target && grab_state == GRAB_KILL)
+		setGrabState(GRAB_TWOHANDED)
+		to_chat(src, span_warning("Вам не хватает выносливости, чтобы продолжать удушение."))
+
+/mob/living/proc/perform_cyberpunk_neck_choke(mob/living/target)
+	if(!can_cyberpunk_grapple_action(target, "choke", BODY_ZONE_PRECISE_NECK) || target.stat == DEAD)
+		return FALSE
+	if(grab_state == GRAB_KILL)
+		return TRUE
+	setGrabState(GRAB_KILL)
+	if(grab_state != GRAB_KILL)
+		return TRUE
 	visible_message(span_danger("[capitalize(declent_ru(NOMINATIVE))] chokes [target.declent_ru(ACCUSATIVE)]!"), span_danger("You choke [target.declent_ru(ACCUSATIVE)]!"), null, COMBAT_MESSAGE_RANGE, target)
-	target.apply_damage(12, OXY)
+	var/obj/item/bodypart/head = target.get_bodypart(BODY_ZONE_HEAD)
+	head?.add_bodypart_pain(10)
 	target.apply_damage(35, STAMINA)
 	log_combat(src, target, "choked")
 	return TRUE
+
+#undef CYBERPUNK_CHOKE_STAMINA_PER_SECOND
 
 /mob/living/proc/perform_cyberpunk_spine_knee(mob/living/target)
 	if(!can_cyberpunk_grapple_action(target, "spine_knee", BODY_ZONE_PRECISE_NECK))

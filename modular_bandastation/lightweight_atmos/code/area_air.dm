@@ -78,7 +78,7 @@
 		return
 	vent_pump_refill_area(src, seconds_per_tick)
 	vent_scrubber_clean_area(src, seconds_per_tick)
-	if(oxygen_level > AREA_AIR_O2_DEFAULT * 0.2 && !LAZYLEN(air_vents))
+	if(!istype(src, /area/cyberpunk) && oxygen_level > AREA_AIR_O2_DEFAULT * 0.2 && !LAZYLEN(air_vents))
 		oxygen_level = max(AREA_AIR_O2_DEFAULT * 0.2, oxygen_level - AREA_AIR_INDOOR_DRIFT * seconds_per_tick)
 	if(!LAZYLEN(air_vents))
 		exchange_environment_temperature(AREA_AIR_TEMP_DEFAULT, AREA_AIR_TEMP_DRIFT, seconds_per_tick)

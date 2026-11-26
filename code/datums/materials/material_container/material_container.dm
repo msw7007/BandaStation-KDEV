@@ -220,7 +220,7 @@
  * - amt: amount of said material to insert
  * - mat: the material type to insert
  */
-/datum/material_container/proc/insert_amount_mat(amt, datum/material/mat)
+/datum/material_container/proc/insert_amount_mat(amt, datum/material/mat, resource_quality)
 	if(amt <= 0)
 		return 0
 	amt = OPTIMAL_COST(amt)
@@ -233,7 +233,7 @@
 			mat = SSmaterials.get_material(mat)
 		var/previous_amount = materials[mat]
 		materials[mat] += amt
-		merge_material_resource_quality(mat, null, amt, previous_amount)
+		merge_material_resource_quality(mat, resource_quality, amt, previous_amount)
 	else
 		var/num_materials = length(materials)
 		if(!num_materials)

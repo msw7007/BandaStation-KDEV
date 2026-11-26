@@ -222,22 +222,32 @@ def combat_tint(image):
     return Image.fromarray(pixels)
 
 
-def frame(size, state, outline_only=False):
-    """Rasterize StyleGuide__cutButton geometry directly on the native grid."""
-    w, h = size
+def frame_axis(original, target):
+    """Resize the middle of a frame and preserve its corners at native size."""
+    edge = 5
+    middle = np.linspace(edge, original - edge - 1, target - 2 * edge)
+    return np.r_[np.arange(edge), middle.round().astype(int), np.arange(original - edge, original)]
+
+
+def frame(art, size, state, outline_only=False):
+    """Use the supplied UI frame and keep hover, active and disabled distinct."""
+    width, height = size
+    tile = 16 if min(size) == 16 else 32
+    source = art[tile, state == "combat"]
+    pixels = np.array(source)[np.ix_(frame_axis(tile, height), frame_axis(tile, width))]
     cut = 2 if min(size) == 16 else 3
     palette = {
-        "idle": ((7,9,14,235), (61,30,41,210)),
-        "hover": ((6,14,19,236), (42,77,88,235)),
-        "active": ((5,16,21,240), (55,105,117,255)),
-        "combat": ((24,8,13,238), (116,40,55,255)),
-        "disabled": ((5,7,11,225), (25,31,37,190)),
+        "hover": ((24, 34, 42), (88, 151, 173)),
+        "active": ((23, 39, 49), (106, 218, 234)),
+        "disabled": ((14, 17, 23), (63, 66, 77)),
     }
-    fill, border = palette[state]
-    image = Image.new("RGBA", size)
-    points = [(cut,0), (w-1,0), (w-1,h-1-cut), (w-1-cut,h-1), (0,h-1), (0,cut)]
-    ImageDraw.Draw(image).polygon(points, fill=None if outline_only else fill, outline=border)
-    return image
+    if state in palette:
+        dark, light = map(np.array, palette[state])
+        intensity = np.clip((pixels[:, :, :1].astype(float) - 28) / 227, 0, 1)
+        pixels[:, :, :3] = (dark + intensity * (light - dark)).round()
+    if outline_only:
+        pixels[cut+1:-(cut+1), cut+1:-(cut+1), 3] = 0
+    return Image.fromarray(pixels)
 
 
 def compose(frame_image, glyph):
@@ -290,6 +300,14 @@ def main():
     parser.add_argument("--export-pngs", action="store_true", help="Export individual states under build/cp13-hud/native")
     args = parser.parse_args()
     source_dir = OUTPUT / "sources" / "contour"
+    ui_sheet = Dmi.from_file(source_dir / "ui.dmi")
+    # The artist's sheet has repeated state names. Use its authored cell order.
+    frame_art = {
+        (16, False): ui_sheet.states[22].get_frame().crop((8, 8, 24, 24)),
+        (16, True): ui_sheet.states[15].get_frame().crop((8, 8, 24, 24)),
+        (32, False): ui_sheet.states[21].get_frame(),
+        (32, True): ui_sheet.states[5].get_frame(),
+    }
     settings = json.loads((source_dir / "grid.json").read_text(encoding="utf-8"))
     contours = {name: contour_glyph(source_dir, spec) for name, spec in settings.items()}
     glyphs = dict.fromkeys((
@@ -340,15 +358,15 @@ def main():
 
     frames = {}
     for size in ((16,16), (32,16), (32,32), (16,32), (24,16), (24,32)):
-        states = {key: frame(size, key) for key in ("idle", "hover", "active", "combat", "disabled")}
+        states = {key: frame(frame_art, size, key) for key in ("idle", "hover", "active", "combat", "disabled")}
         states.update({"outline": states["idle"].copy(), "grid": states["idle"].copy()})
         if size in ((16,32), (24,32)):
             states["buff"] = states["hover"].copy()
             states["debuff"] = states["combat"].copy()
         if size == (16,32):
             states["split"] = Image.new("RGBA", size)
-            states["split"].alpha_composite(frame((16,16), "idle"), (0,0))
-            states["split"].alpha_composite(frame((16,16), "idle"), (0,16))
+            states["split"].alpha_composite(frames[(16,16)]["idle"], (0,0))
+            states["split"].alpha_composite(frames[(16,16)]["idle"], (0,16))
         frames[size] = states
         write_dmi(OUTPUT, f"frames_{size[0]}x{size[1]}", size, states)
 
@@ -360,14 +378,14 @@ def main():
     # DM's y-axis starts at the bottom, so the top image is the UP region.
     write_dmi(OUTPUT, "floor_16x32", (16,32), {"floor_change_v": floor})
     frames[(32,32)]["reserved"] = frames[(32,32)]["hover"].copy()
-    frames[(32,32)]["scroll_up"] = compose(frame((32,32), "idle"), fit(up.crop(up.getbbox()), (32,32), (10,14)))
-    frames[(32,32)]["scroll_down"] = compose(frame((32,32), "idle"), fit(down.crop(down.getbbox()), (32,32), (10,14)))
+    frames[(32,32)]["scroll_up"] = compose(frames[(32,32)]["idle"], fit(up.crop(up.getbbox()), (32,32), (10,14)))
+    frames[(32,32)]["scroll_down"] = compose(frames[(32,32)]["idle"], fit(down.crop(down.getbbox()), (32,32), (10,14)))
     write_dmi(OUTPUT, "frames_32x32", (32,32), frames[(32,32)])
 
     hands = {}
     for side in ("l", "r"):
         hands[f"hand_{side}"] = contours["hand"].transpose(Image.Transpose.FLIP_LEFT_RIGHT) if side == "l" else contours["hand"].copy()
-        hands[f"{side}handactive"] = frame((32,32), "active", outline_only=True)
+        hands[f"{side}handactive"] = frame(frame_art, (32,32), "active", outline_only=True)
     write_dmi(OUTPUT, "hands_32x32", (32,32), hands)
 
     all_sets = {"glyphs_16x16": glyphs, "glyphs_32x32": large, "movement_32x16": movement, "hands_32x32": hands, "floor_16x32": {"floor_change_v": floor}}
@@ -398,7 +416,7 @@ def main():
         preview.save(REVIEW_OUTPUT / "catalogue.png")
     manifest = {
         "style_sources": ["tgui/packages/tgui/styles/interfaces/CyberpunkPanel.scss:.StyleGuide", "tgui/packages/tgui-panel/styles/themes/cyberpunk.scss"],
-        "method": "TG Midnight filled sprite construction: original inventory pixels darkened, original TG small controls, shaded five-ink cyberpunk hands/equipment and relief pixel lettering; no wireframe replacement; CSS-derived frames",
+        "method": "TG Midnight filled sprite construction: original inventory pixels darkened, original TG small controls, shaded five-ink cyberpunk hands/equipment and relief pixel lettering; frames from the supplied ui.dmi",
         "max_colors_per_glyph": 5,
         "glyph_palette": ["#%02x%02x%02x" % color[:3] for color in GLYPH_PALETTE],
         "hand_palette": ["#%02x%02x%02x" % color[:3] for color in HAND_PALETTE],

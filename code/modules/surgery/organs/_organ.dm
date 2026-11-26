@@ -23,6 +23,8 @@
 	var/slot_index = 1
 	/// Random flags that describe this organ
 	var/organ_flags = ORGAN_ORGANIC | ORGAN_EDIBLE | ORGAN_VIRGIN
+	/// Humanoidity cost of this organ's active DNA infusion.
+	var/cyberpunk_infusion_humanoidity_cost = 0
 	/// Treatable medical condition flags specific to organ function.
 	var/organ_condition_flags = NONE
 	/// Maximum damage the organ can take, ever.

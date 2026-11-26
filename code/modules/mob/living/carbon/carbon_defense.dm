@@ -267,20 +267,20 @@
 			set_heartattack(FALSE)
 		var/list/shocking_queue = list()
 		if(iscarbon(pulling) && source != pulling)
-			shocking_queue += pulling
+			shocking_queue |= pulling
 		if(iscarbon(pulledby) && source != pulledby)
-			shocking_queue += pulledby
+			shocking_queue |= pulledby
 		if(iscarbon(buckled) && source != buckled)
-			shocking_queue += buckled
+			shocking_queue |= buckled
 		for(var/mob/living/carbon/carried in buckled_mobs)
 			if(source != carried)
-				shocking_queue += carried
+				shocking_queue |= carried
 		//Found our victims, now lets shock them all
 		for(var/victim in shocking_queue)
 			var/mob/living/carbon/C = victim
-			var/chain_damage = shock_damage * 0.75 * C.get_cyberpunk_electric_chain_multiplier()
+			var/chain_damage = . * 0.75
 			if(chain_damage >= 1)
-				C.electrocute_act(chain_damage, src, 1, flags, jitter_time, stutter_time, stun_duration)
+				C.electrocute_act(chain_damage, src, 1, (flags & ~SHOCK_NOGLOVES) | SHOCK_CHAIN, jitter_time, stutter_time, stun_duration)
 	//Stun
 	var/should_stun = (!(flags & SHOCK_TESLA) || siemens_coeff > 0.5) && !(flags & SHOCK_NOSTUN)
 	var/stun = !(flags & SHOCK_KNOCKDOWN)

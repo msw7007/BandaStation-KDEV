@@ -457,14 +457,18 @@
 
 /datum/reagent/medicine/omnizine/on_mob_life(mob/living/carbon/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()
-	var/heal = -2 * healing * metabolization_ratio * seconds_per_tick
+	if(heal_damage(affected_mob, metabolization_ratio * seconds_per_tick))
+		return UPDATE_MOB_HEALTH
+
+/// Applies the healing dose without running reagent lifecycle effects.
+/datum/reagent/medicine/omnizine/proc/heal_damage(mob/living/carbon/affected_mob, exposure)
+	var/heal = -2 * healing * exposure
 	var/need_mob_update
 	need_mob_update = affected_mob.adjust_tox_loss(heal, updating_health = FALSE, required_biotype = affected_biotype)
 	need_mob_update += affected_mob.adjust_oxy_loss(heal, updating_health = FALSE, required_biotype = affected_biotype, required_respiration_type = affected_respiration_type)
 	need_mob_update += affected_mob.adjust_brute_loss(heal, updating_health = FALSE, required_bodytype = affected_bodytype)
 	need_mob_update += affected_mob.adjust_fire_loss(heal, updating_health = FALSE, required_bodytype = affected_bodytype)
-	if(need_mob_update)
-		return UPDATE_MOB_HEALTH
+	return need_mob_update
 
 /datum/reagent/medicine/omnizine/overdose_process(mob/living/affected_mob, seconds_per_tick, metabolization_ratio)
 	. = ..()

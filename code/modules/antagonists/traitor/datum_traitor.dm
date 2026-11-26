@@ -367,31 +367,43 @@
 
 /datum/team/cyberpunk_anarchists
 	name = "Anarchists"
-	var/list/sabotaged_refs = list()
+	var/list/sabotaged = list()
+	var/list/killed_workers = list()
 	var/damage_score = 0
+	var/intel = 0
+	var/datum/uplink_handler/armory
 
-/datum/team/cyberpunk_anarchists/proc/record_sabotage(atom/target, amount = 250)
-	if(!target)
-		return FALSE
-	var/target_ref = REF(target)
-	if(target_ref in sabotaged_refs)
-		return FALSE
-	sabotaged_refs += target_ref
+/datum/team/cyberpunk_anarchists/Destroy()
+	QDEL_NULL(armory)
+	return ..()
+
+/datum/team/cyberpunk_anarchists/proc/record_pogrom(amount)
 	damage_score += amount
-	get_cyberpunk_faction_resources().add_resource("influence", amount)
-	return TRUE
+	for(var/datum/antagonist/cyberpunk/anarchist/member in GLOB.antagonists)
+		if(member.get_team() == src)
+			member.add_progress(max(0, damage_score - member.progress_points), "погром")
 
 /datum/team/cyberpunk_liberation_army
 	name = "Liberation Army"
 	var/list/established_cells = list()
+	var/list/casualties = list()
+	var/list/wrecks = list()
+	var/chaos = 0
+	var/nuke_ordered = FALSE
+	var/won = FALSE
 
 /datum/team/cyberpunk_data_cult
 	name = "Data Cult"
 	var/list/harvested_refs = list()
+	var/stolen_data = 0
+	var/summoned = FALSE
 
 /datum/team/cyberpunk_star_swarm
 	name = "Starlight Swarm"
-	var/list/pylon_refs = list()
+	var/list/pylons = list()
+	var/list/builders = list()
+	var/biomass = 0
+	var/plasma = 0
 
 /datum/antagonist/cyberpunk
 	roundend_category = "Cyberpunk antagonists"
@@ -432,20 +444,22 @@
 	antag_hud_name = "traitor"
 	progress_goal = 5000
 	var/datum/team/cyberpunk_gang/gang
-	var/last_synced_account_balance = 0
+	var/datum/bank_account/watched_account
+	var/cartel_deadline
+	var/cartel_job_active = FALSE
+	var/cartel_credit_baseline
+
+/proc/cyberpunk_find_gang(gang_name)
+	for(var/datum/team/cyberpunk_gang/existing in GLOB.antagonist_teams)
+		if(lowertext(existing.gang_name) == lowertext(gang_name))
+			return existing
+	return new /datum/team/cyberpunk_gang(null, gang_name)
 
 /datum/antagonist/cyberpunk/bandit/create_team(datum/team/new_team)
 	if(istype(new_team, /datum/team/cyberpunk_gang))
 		gang = new_team
 		return
-	var/static/list/gangs
-	if(!gangs)
-		gangs = list(
-			new /datum/team/cyberpunk_gang(null, "Chrome Rats"),
-			new /datum/team/cyberpunk_gang(null, "Red Line"),
-			new /datum/team/cyberpunk_gang(null, "Null Saints"),
-		)
-	gang = pick(gangs)
+	gang = cyberpunk_find_gang(pick("Chrome Rats", "Red Line", "Null Saints"))
 
 /datum/antagonist/cyberpunk/bandit/get_team()
 	return gang
@@ -455,8 +469,8 @@
 	var/obj/item/cyberpunk_black_market_chip/chip = new(get_turf(owner.current))
 	chip.owner_ref = WEAKREF(src)
 	owner.current.put_in_hands(chip)
-	var/datum/bank_account/account = owner.current.get_bank_account()
-	last_synced_account_balance = account?.account_balance || 0
+	watch_account()
+	START_PROCESSING(SSobj, src)
 	if(prob(50))
 		var/datum/record/crew/record = cyberpunk_find_security_record_for_mob(owner.current)
 		if(record)
@@ -469,18 +483,62 @@
 	. = ..()
 	to_chat(owner.current, span_boldnotice("Earn dirty money. Spend it through the black market chip. Deliveries appear at marked coordinates, not in your hands. Gang: [gang?.gang_name || "none"]."))
 
+/datum/antagonist/cyberpunk/bandit/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	if(watched_account)
+		UnregisterSignal(watched_account, list(COMSIG_BANK_ACCOUNT_CREDIT_POSTED, COMSIG_BANK_ACCOUNT_RECEIVED_TRANSFER))
+	return ..()
+
+/datum/antagonist/cyberpunk/bandit/proc/watch_account()
+	var/datum/bank_account/current = owner?.current?.get_bank_account()
+	if(current == watched_account)
+		return
+	if(watched_account)
+		UnregisterSignal(watched_account, list(COMSIG_BANK_ACCOUNT_CREDIT_POSTED, COMSIG_BANK_ACCOUNT_RECEIVED_TRANSFER))
+	watched_account = current
+	if(watched_account)
+		RegisterSignal(watched_account, COMSIG_BANK_ACCOUNT_CREDIT_POSTED, PROC_REF(on_account_credit))
+		RegisterSignal(watched_account, COMSIG_BANK_ACCOUNT_RECEIVED_TRANSFER, PROC_REF(on_account_transfer))
+
+/datum/antagonist/cyberpunk/bandit/proc/on_account_credit(datum/bank_account/account, amount, reason)
+	SIGNAL_HANDLER
+	if(!reason || (findtext(reason, "Off-ledger contract payout") != 1 && findtext(reason, "Black market proceeds") != 1))
+		return
+	add_progress(amount, "криминальный доход")
+	gang?.get_cyberpunk_faction_resources().add_resource("funds", amount)
+	if(cartel_job_active && progress_points >= cartel_credit_baseline + 500)
+		cartel_job_active = FALSE
+		to_chat(owner?.current, span_notice("Картель: поручение выполнено."))
+	cartel_deadline = world.time + 15 MINUTES
+
+/datum/antagonist/cyberpunk/bandit/proc/on_account_transfer(datum/bank_account/account, datum/bank_account/from, amount, explicit_reason)
+	SIGNAL_HANDLER
+	if(from == account || IS_DEPARTMENTAL_ACCOUNT(from) || !from.account_job || findtext(explicit_reason || "", "payroll"))
+		return
+	cartel_deadline = world.time + 15 MINUTES
+
+/datum/antagonist/cyberpunk/bandit/process(seconds_per_tick)
+	watch_account()
+	if(!cartel_deadline || world.time < cartel_deadline || owner?.current?.stat == DEAD)
+		return
+	if(!cartel_job_active)
+		cartel_job_active = TRUE
+		cartel_credit_baseline = progress_points
+		cartel_deadline = world.time + 15 MINUTES
+		to_chat(owner.current, span_userdanger("Картель: заработайте 500 кредитов на нелегальных сделках за 15 минут. Иначе полиция получит ордер."))
+		return
+	var/datum/record/crew/record = cyberpunk_find_security_record_for_mob(owner.current)
+	if(!record)
+		return
+	record.wanted_status = WANTED_ARREST
+	record.security_note = "[record.security_note ? "[record.security_note]\n" : ""]Ордер Картеля."
+	update_matching_security_huds(record.name)
+	cartel_job_active = FALSE
+	cartel_deadline = world.time + 15 MINUTES
+	to_chat(owner.current, span_userdanger("Картель передал полиции ордер на ваш арест."))
+
 /datum/antagonist/cyberpunk/bandit/proc/sync_dirty_money(mob/living/user)
-	var/datum/bank_account/account = user.get_bank_account()
-	if(!account)
-		to_chat(user, span_warning("No bank account found."))
-		return FALSE
-	var/new_money = max(account.account_balance - last_synced_account_balance, 0)
-	last_synced_account_balance = account.account_balance
-	if(!new_money)
-		to_chat(user, span_warning("No new money to launder into gang progress."))
-		return FALSE
-	add_progress(new_money, "dirty money")
-	gang?.get_cyberpunk_faction_resources().add_resource("funds", new_money)
+	to_chat(user, span_notice("Подтверждённый криминальный доход: [progress_points]/[progress_goal]. [cartel_deadline ? "До следующего сообщения: [DisplayTimeText(max(0, cartel_deadline - world.time))]." : "Пополните счёт, чтобы Картель вышел на связь."]"))
 	return TRUE
 
 /datum/antagonist/cyberpunk/bandit/proc/show_gang_status(mob/living/user)
@@ -491,36 +549,42 @@
 
 /datum/antagonist/cyberpunk/bandit/proc/configure_gang(mob/living/user)
 	var/list/options = list("Chrome Rats", "Red Line", "Null Saints", "Create custom gang", "Cancel")
-	var/choice = tgui_input_list(user, "Choose or create a gang.", "Gang Setup", options)
+	var/choice = tgui_input_list(user, "Выберите или создайте банду.", "Банда", options)
 	if(!choice || choice == "Cancel")
 		return FALSE
 	if(choice == "Create custom gang")
-		var/custom_name = tgui_input_text(user, "Gang name", "Gang Setup", gang?.gang_name || "Free gang", max_length = 32)
-		if(!custom_name)
+		choice = tgui_input_text(user, "Название банды", "Банда", gang?.gang_name, max_length = 32)
+		if(!length(choice))
 			return FALSE
-		gang = new /datum/team/cyberpunk_gang(null, custom_name)
-	else
-		gang = new /datum/team/cyberpunk_gang(null, choice)
-	gang.add_member(owner)
-	to_chat(user, span_notice("Gang set to [gang.gang_name]."))
+	var/datum/team/cyberpunk_gang/new_gang = cyberpunk_find_gang(choice)
+	if(new_gang != gang)
+		gang?.remove_member(owner)
+		gang = new_gang
+		gang.add_member(owner)
+	to_chat(user, span_notice("Ваша банда — [gang.gang_name]."))
 	return TRUE
 
 /datum/antagonist/cyberpunk/corporate_spy
 	name = "Corporate Spy"
 	pref_flag = ROLE_CYBERPUNK_CORPORATE_SPY
 	antag_hud_name = "traitor"
-	progress_goal = 300
+	progress_goal = 3
 	var/real_corporation_id
 	var/cover_corporation_id
-	var/next_task_refresh = 0
-	var/current_task_day = 0
 	var/completed_tasks_today = 0
 	var/list/spy_tasks = list()
+	var/datum/uplink_handler/spy_shop
 
 /datum/antagonist/cyberpunk/corporate_spy/on_gain()
 	pick_corporations()
-	refresh_tasks()
+	spy_shop = new()
+	spy_shop.uplink_flag = UPLINK_TRAITORS
+	spy_shop.has_progression = FALSE
+	spy_shop.owner = owner
+	spy_shop.assigned_role = owner.assigned_role?.title
+	spy_shop.purchase_log = new()
 	. = ..()
+	addtimer(CALLBACK(src, PROC_REF(refresh_tasks)), 2 SECONDS)
 	var/obj/item/cyberpunk_spy_uplink_chip/chip = new(get_turf(owner.current))
 	chip.owner_ref = WEAKREF(src)
 	owner.current.put_in_hands(chip)
@@ -532,28 +596,142 @@
 	if(!real_corporation_id)
 		real_corporation_id = pick(corporations)
 
+/proc/cyberpunk_antag_corporation(atom/movable/target)
+	var/mob/living/person = target
+	if(istype(person))
+		var/mob/living/carbon/human/cyberpunk_npc/worker = person
+		if(istype(worker) && worker.cyberpunk_corporation_id)
+			return worker.cyberpunk_corporation_id
+		return person.mind?.assigned_role?.get_cyberpunk_corporation_id()
+	var/corporation = SScyberpunk_corporations?.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(target))
+	if(corporation in list("benn", "ryaznov", "starlight"))
+		return corporation
+	var/area/location = get_area(target)
+	return location?.cyberpunk_world_owner
+
+/datum/cyberpunk_spy_task
+	var/description
+	var/kind
+	var/datum/weakref/target_ref
+	var/completed = FALSE
+	var/broken = FALSE
+
+/datum/cyberpunk_spy_task/New(new_kind, atom/movable/target)
+	..()
+	kind = new_kind
+	target_ref = WEAKREF(target)
+	switch(kind)
+		if("sabotage")
+			description = "Выведите из строя [target.name] в [get_area_name(target)]."
+			RegisterSignals(target, list(COMSIG_ATOM_BREAK, COMSIG_MACHINERY_BROKEN, COMSIG_QDELETING), PROC_REF(on_broken))
+		if("research")
+			description = "Добудьте [target.name] и доставьте на территорию работодателя."
+		if("kidnap")
+			description = "Доставьте [target.name] живым на территорию работодателя."
+
+/datum/cyberpunk_spy_task/Destroy()
+	var/atom/movable/target = target_ref?.resolve()
+	if(target && kind == "sabotage")
+		UnregisterSignal(target, list(COMSIG_ATOM_BREAK, COMSIG_MACHINERY_BROKEN, COMSIG_QDELETING))
+	return ..()
+
+/datum/cyberpunk_spy_task/proc/on_broken()
+	SIGNAL_HANDLER
+	broken = TRUE
+
+/datum/antagonist/cyberpunk/corporate_spy/Destroy()
+	QDEL_LIST(spy_tasks)
+	QDEL_NULL(spy_shop)
+	return ..()
+
 /datum/antagonist/cyberpunk/corporate_spy/proc/refresh_tasks()
-	current_task_day = SScyberpunk_round?.cyberpunk_round_day || current_task_day || 1
-	completed_tasks_today = 0
-	spy_tasks = list(
-		"Disable one important asset of [cover_corporation_id || "your cover corporation"].",
-		"Steal or photograph a research item.",
-		"Remove one useful employee from work without revealing yourself.",
-	)
-	next_task_refresh = world.time + 30 MINUTES
+	if(length(spy_tasks) || !owner?.current)
+		return
+	var/list/machines = list()
+	var/list/research = list()
+	var/list/people = list()
+	for(var/obj/machinery/machine in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery))
+		if(QDELETED(machine) || !is_station_level(machine.z) || cyberpunk_antag_corporation(machine) != cover_corporation_id)
+			continue
+		machines += machine
+		for(var/obj/item/sample in machine.contents)
+			if(!sample.anchored)
+				research += sample
+	for(var/mob/living/person in GLOB.mob_living_list)
+		if(person.mind && person != owner.current && person.stat != DEAD && cyberpunk_antag_corporation(person) == cover_corporation_id)
+			people += person
+	if(!length(research))
+		for(var/obj/item/sample in view(8, owner.current))
+			if(!sample.anchored && cyberpunk_antag_corporation(sample) == cover_corporation_id)
+				research += sample
+	if(!length(machines) || !length(people))
+		return
+	if(!length(research))
+		var/obj/machinery/storage_point = pick(machines)
+		var/obj/item/paper/sample = new(get_turf(storage_point))
+		sample.name = "исследовательское досье [cover_corporation_id]"
+		research += sample
+	spy_tasks += new /datum/cyberpunk_spy_task("sabotage", pick(machines))
+	spy_tasks += new /datum/cyberpunk_spy_task("research", pick(research))
+	spy_tasks += new /datum/cyberpunk_spy_task("kidnap", pick(people))
+	to_chat(owner.current, span_notice("Получен пакет из трёх поручений. Откройте прибор связи."))
 
 /datum/antagonist/cyberpunk/corporate_spy/proc/complete_task(mob/living/user)
-	var/day_now = SScyberpunk_round?.cyberpunk_round_day || current_task_day || 1
-	if(day_now != current_task_day || world.time >= next_task_refresh)
+	if(!length(spy_tasks))
 		refresh_tasks()
-	if(completed_tasks_today >= length(spy_tasks))
-		to_chat(user, span_warning("No remaining spy tasks in today's packet."))
+	var/completed_now = 0
+	var/area/location = get_area(user)
+	for(var/datum/cyberpunk_spy_task/task in spy_tasks)
+		if(task.completed)
+			continue
+		var/atom/movable/target = task.target_ref?.resolve()
+		var/area/destination = get_area(target)
+		switch(task.kind)
+			if("sabotage")
+				if(!task.broken)
+					continue
+			if("research")
+				if(!target || location?.cyberpunk_world_owner != real_corporation_id || !(target in user.get_all_contents()))
+					continue
+			if("kidnap")
+				var/mob/living/person = target
+				if(!person || person.stat == DEAD || destination?.cyberpunk_world_owner != real_corporation_id || !user.Adjacent(person))
+					continue
+		task.completed = TRUE
+		completed_tasks_today++
+		completed_now++
+		add_progress(1, task.description)
+		SScyberpunk_corporations?.record_cyberpunk_corporate_activity(real_corporation_id, "espionage", 25, 0, task.description)
+	if(!completed_now)
+		to_chat(user, span_warning("Нет подтверждённых результатов для передачи."))
+	return !!completed_now
+
+/proc/cyberpunk_antag_choose_uplink_item(mob/living/user, datum/uplink_handler/shop, rate, currency, weapons_only = FALSE)
+	var/list/options = list()
+	for(var/datum/uplink_item/item as anything in SStraitor.uplink_items)
+		if(!shop.check_if_restricted(item) || item.cost <= 0 || !item.item || item.restricted)
+			continue
+		if(weapons_only && !istype(item, /datum/uplink_item/weapon_kits) && !istype(item, /datum/uplink_item/ammo_nuclear) && !ispath(item.item, /obj/item/gun) && !ispath(item.item, /obj/item/ammo_box) && !ispath(item.item, /obj/item/grenade))
+			continue
+		options["[item.name] ([item.cost * rate] [currency]) · [item.type]"] = item
+	var/choice = tgui_input_list(user, "Выберите снаряжение.", "Аплинк", options)
+	return options[choice]
+
+/datum/antagonist/cyberpunk/corporate_spy/proc/purchase_supplies(mob/living/user, atom/movable/source)
+	var/datum/uplink_item/item = cyberpunk_antag_choose_uplink_item(user, spy_shop, 250, "кредитов")
+	var/datum/bank_account/account = user.get_bank_account()
+	if(!item || !account || owner?.current != user || QDELETED(source))
 		return FALSE
-	completed_tasks_today++
-	add_progress(25, "spy task")
-	SScyberpunk_corporations?.record_cyberpunk_corporate_activity(real_corporation_id, "espionage", 25, 0, "Corporate spy task")
-	to_chat(user, span_notice("Task uploaded to [real_corporation_id]. Remaining today: [max(length(spy_tasks) - completed_tasks_today, 0)]."))
-	return TRUE
+	var/cost = item.cost * 250
+	spy_shop.telecrystals = item.cost
+	if(!spy_shop.can_purchase_item(user, item) || !account.adjust_money(-cost, "Прибор связи: [item.name]"))
+		spy_shop.telecrystals = 0
+		return FALSE
+	var/purchased = spy_shop.purchase_item(user, item, source)
+	spy_shop.telecrystals = 0
+	if(!purchased)
+		account.adjust_money(cost, "Возврат за заказ прибора связи")
+	return purchased
 
 /datum/antagonist/cyberpunk/corporate_spy/greet()
 	. = ..()
@@ -565,6 +743,8 @@
 	antag_hud_name = "rev"
 	progress_goal = 10000
 	var/datum/team/cyberpunk_anarchists/anarchist_team
+	var/datum/cyberpunk_anarchist_recruitment/recruitment
+	var/list/sabotage_targets = list()
 
 /datum/antagonist/cyberpunk/anarchist/create_team(datum/team/new_team)
 	if(istype(new_team, /datum/team/cyberpunk_anarchists))
@@ -587,47 +767,187 @@
 	var/obj/item/cyberpunk_anarchist_chip/chip = new(get_turf(owner.current))
 	chip.owner_ref = WEAKREF(src)
 	owner.current.put_in_hands(chip)
+	var/obj/item/cyberpunk_anarchist_beacon/beacon = new(get_turf(owner.current))
+	beacon.team = anarchist_team
+	owner.current.put_in_hands(beacon)
+	if(anarchist_team.damage_score)
+		add_progress(anarchist_team.damage_score, "результат ячейки")
+	RegisterSignal(SSdcs, COMSIG_GLOB_MOB_DEATH, PROC_REF(on_worker_death))
+
+/datum/antagonist/cyberpunk/anarchist/Destroy()
+	UnregisterSignal(SSdcs, COMSIG_GLOB_MOB_DEATH)
+	QDEL_NULL(recruitment)
+	for(var/datum/weakref/reference as anything in sabotage_targets)
+		var/atom/movable/target = reference.resolve()
+		if(target)
+			UnregisterSignal(target, COMSIG_QDELETING)
+	return ..()
+
+/datum/antagonist/cyberpunk/anarchist/proc/on_worker_death(datum/source, mob/living/target)
+	SIGNAL_HANDLER
+	if(!owner?.current?.ckey || target.lastattackerckey != owner.current.ckey || !target.mind || target == owner.current)
+		return
+	var/corporation = cyberpunk_antag_corporation(target)
+	if(!(corporation in list("benn", "ryaznov", "starlight")) || target.mind in anarchist_team.killed_workers)
+		return
+	anarchist_team.killed_workers += target.mind
+	anarchist_team.record_pogrom(500)
 
 /datum/antagonist/cyberpunk/anarchist/proc/convert_target(mob/living/user, mob/living/target)
-	if(!target?.mind || target.stat == DEAD)
+	if(!target?.mind || target.stat == DEAD || !target.has_neural_implant() || target.mind.has_antag_datum(type) || get_dist(user, target) > 2 || user.z != target.z)
 		return FALSE
-	if(target.mind.has_antag_datum(/datum/antagonist/cyberpunk/anarchist))
-		to_chat(user, span_warning("[target] is already with you."))
-		return FALSE
-	if(!target.has_neural_implant())
-		to_chat(user, span_warning("[target] has no functional neural interface."))
-		return FALSE
-	user.visible_message(span_warning("[user] starts a silent neural overwrite on [target]."), span_notice("You start the two minute overwrite. Do not move."))
-	if(!do_after(user, 2 MINUTES, target = target))
-		to_chat(user, span_warning("The overwrite was interrupted."))
-		return FALSE
-	var/datum/antagonist/cyberpunk/anarchist/new_anarchist = new()
-	new_anarchist.silent = TRUE
-	target.mind.add_antag_datum(new_anarchist, anarchist_team)
-	to_chat(target, span_userdanger("The city hierarchy becomes intolerable. You are an anarchist now."))
-	add_progress(100, "recruitment")
+	QDEL_NULL(recruitment)
+	recruitment = new(src, user, target)
+	to_chat(user, span_notice("Говорите с целью в пределах двух клеток. Нужна минута речи."))
 	return TRUE
 
+/datum/cyberpunk_anarchist_recruitment
+	var/datum/antagonist/cyberpunk/anarchist/recruiter
+	var/mob/living/user
+	var/mob/living/target
+	var/words = 0
+	var/next_word = 0
+
+/datum/cyberpunk_anarchist_recruitment/New(datum/antagonist/cyberpunk/anarchist/new_recruiter, mob/living/speaker, mob/living/listener)
+	..()
+	recruiter = new_recruiter
+	user = speaker
+	target = listener
+	RegisterSignal(user, COMSIG_MOB_SAY, PROC_REF(on_speech))
+	RegisterSignals(user, list(COMSIG_MOB_APPLY_DAMAGE, COMSIG_LIVING_DISARM_HIT, COMSIG_QDELETING, COMSIG_LIVING_DEATH), PROC_REF(interrupt))
+	RegisterSignals(target, list(COMSIG_MOB_APPLY_DAMAGE, COMSIG_LIVING_DISARM_HIT, COMSIG_QDELETING, COMSIG_LIVING_DEATH), PROC_REF(interrupt))
+
+/datum/cyberpunk_anarchist_recruitment/Destroy()
+	UnregisterSignal(user, list(COMSIG_MOB_SAY, COMSIG_MOB_APPLY_DAMAGE, COMSIG_LIVING_DISARM_HIT, COMSIG_QDELETING, COMSIG_LIVING_DEATH))
+	UnregisterSignal(target, list(COMSIG_MOB_APPLY_DAMAGE, COMSIG_LIVING_DISARM_HIT, COMSIG_QDELETING, COMSIG_LIVING_DEATH))
+	if(recruiter?.recruitment == src)
+		recruiter.recruitment = null
+	recruiter = null
+	user = null
+	target = null
+	return ..()
+
+/datum/cyberpunk_anarchist_recruitment/proc/interrupt()
+	SIGNAL_HANDLER
+	to_chat(user, span_warning("Перепрошивка сорвана."))
+	qdel(src)
+
+/datum/cyberpunk_anarchist_recruitment/proc/on_speech(mob/living/speaker, list/speech_args)
+	SIGNAL_HANDLER
+	if(world.time < next_word || speaker.z != target.z || get_dist(speaker, target) > 2 || speaker.stat != CONSCIOUS || speech_args[SPEECH_FORCED])
+		return
+	var/message = trim(speech_args[SPEECH_MESSAGE])
+	if(!length(message) || (copytext(message, 1, 2) in list(":", ";", "*")))
+		return
+	next_word = world.time + 1 SECONDS
+	words++
+	if(words == 60)
+		INVOKE_ASYNC(src, PROC_REF(finish))
+
+/datum/cyberpunk_anarchist_recruitment/proc/finish()
+	if(QDELETED(recruiter) || !target?.mind || target.stat == DEAD || target.mind.has_antag_datum(/datum/antagonist/cyberpunk/anarchist) || !target.has_neural_implant() || user.z != target.z || get_dist(user, target) > 2)
+		qdel(src)
+		return
+	var/datum/antagonist/cyberpunk/anarchist/convert = new()
+	convert.silent = TRUE
+	target.mind.add_antag_datum(convert, recruiter.anarchist_team)
+	recruiter.anarchist_team.intel += 20
+	to_chat(target, span_userdanger("Вы вступили в ячейку анархистов."))
+	qdel(src)
+
 /datum/antagonist/cyberpunk/anarchist/proc/mark_sabotage(mob/living/user, obj/target)
-	if(!target)
+	if(!target?.uses_integrity || !(cyberpunk_antag_corporation(target) in list("benn", "ryaznov", "starlight")))
 		return FALSE
-	if(REF(target) in anarchist_team.sabotaged_refs)
-		to_chat(user, span_warning("[target] is already counted."))
+	if(WEAKREF(target) in sabotage_targets)
 		return FALSE
-	user.visible_message(span_warning("[user] tampers with [target]."), span_notice("You start marking sabotage. Hold still."))
-	if(!do_after(user, 10 SECONDS, target = target))
-		to_chat(user, span_warning("Sabotage marking interrupted."))
-		return FALSE
-	if(!anarchist_team.record_sabotage(target))
-		to_chat(user, span_warning("[target] is already counted."))
-		return FALSE
-	add_progress(250, "sabotage")
-	to_chat(user, span_notice("Sabotage logged. Team damage score: [anarchist_team.damage_score]."))
+	sabotage_targets += WEAKREF(target)
+	RegisterSignal(target, COMSIG_QDELETING, PROC_REF(on_sabotage))
+	to_chat(user, span_notice("Цель ячейки: [target.name] · [cyberpunk_antag_corporation(target)]."))
 	return TRUE
+
+/datum/antagonist/cyberpunk/anarchist/proc/on_sabotage(obj/target)
+	SIGNAL_HANDLER
+	if(target.get_integrity() > 0 || REF(target) in anarchist_team.sabotaged)
+		return
+	anarchist_team.sabotaged += REF(target)
+	anarchist_team.record_pogrom(250)
+
+/datum/antagonist/cyberpunk/anarchist/proc/generate_pogrom(mob/living/user)
+	var/target_corp = tgui_input_list(user, "Выберите корпорацию.", "Задания ячейки", list("benn", "ryaznov", "starlight"))
+	if(!target_corp)
+		return FALSE
+	var/list/equipment = list()
+	var/list/workers = list()
+	for(var/obj/machinery/machine in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery))
+		if(machine.uses_integrity && is_station_level(machine.z) && cyberpunk_antag_corporation(machine) == target_corp && !(WEAKREF(machine) in sabotage_targets))
+			equipment += machine
+	for(var/mob/living/person in GLOB.alive_player_list)
+		if(person.mind && cyberpunk_antag_corporation(person) == target_corp)
+			workers += person
+	if(length(equipment))
+		var/obj/machinery/target = pick(equipment)
+		mark_sabotage(user, target)
+		to_chat(user, span_notice("Погром: уничтожьте [target.name] в [get_area_name(target)]."))
+	if(length(workers))
+		var/mob/living/worker = pick(workers)
+		to_chat(user, span_notice("Цель ячейки: [worker.real_name], сотрудник [target_corp]."))
+	to_chat(user, span_notice("На маяк можно сдать предмет производителя [target_corp] и получить разведданные."))
+	return TRUE
+
+/datum/antagonist/cyberpunk/anarchist/proc/purchase_armory(mob/living/user, atom/movable/source)
+	var/datum/uplink_handler/shop = anarchist_team.armory
+	if(!shop)
+		shop = new()
+		shop.uplink_flag = UPLINK_NUKE_OPS
+		shop.has_progression = FALSE
+		shop.purchase_log = new()
+		anarchist_team.armory = shop
+	var/datum/uplink_item/item = cyberpunk_antag_choose_uplink_item(user, shop, 5, "данных", weapons_only = TRUE)
+	if(!item || owner?.current != user || QDELETED(source) || anarchist_team.intel < item.cost * 5)
+		return FALSE
+	shop.telecrystals = item.cost
+	anarchist_team.intel -= item.cost * 5
+	var/purchased = shop.purchase_item(user, item, source)
+	shop.telecrystals = 0
+	if(!purchased)
+		anarchist_team.intel += item.cost * 5
+	return purchased
 
 /datum/antagonist/cyberpunk/anarchist/greet()
 	. = ..()
-	to_chat(owner.current, span_boldnotice("Damage corporations and government. Anarchists see each other. Use the chip to recruit neural-interface users: two minutes, interrupted by movement."))
+	to_chat(owner.current, span_boldnotice("Разрушайте инфраструктуру корпораций и устраняйте их работников. Кражи и вербовка дают данные на оружие."))
+
+/obj/item/cyberpunk_anarchist_beacon
+	name = "маяк анархистов"
+	desc = "Разверните в трущобах и сдавайте корпоративные предметы."
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "datadisk3"
+	w_class = WEIGHT_CLASS_SMALL
+	var/datum/team/cyberpunk_anarchists/team
+	var/deployed = FALSE
+
+/obj/item/cyberpunk_anarchist_beacon/attack_self(mob/living/user)
+	var/area/location = get_area(user)
+	if(!(location?.cyberpunk_district_id in list("wasteland", "test_ground")))
+		to_chat(user, span_warning("Маяк можно развернуть в западных трущобах."))
+		return
+	if(user.dropItemToGround(src))
+		set_anchored(TRUE)
+		deployed = TRUE
+		to_chat(user, span_notice("Маяк развёрнут."))
+
+/obj/item/cyberpunk_anarchist_beacon/attackby(obj/item/offering, mob/user, params)
+	var/datum/antagonist/cyberpunk/anarchist/anarchist = user.mind?.has_antag_datum(/datum/antagonist/cyberpunk/anarchist)
+	if(!deployed || !team || anarchist?.anarchist_team != team)
+		return ..()
+	var/corporation = SScyberpunk_corporations?.cyberpunk_corporation_id_from_manufacturer(get_cyberspace_manufacturer(offering))
+	if(!(corporation in list("benn", "ryaznov", "starlight")) || !user.dropItemToGround(offering))
+		to_chat(user, span_warning("Маяк принимает только предметы с маркировкой корпораций."))
+		return TRUE
+	team.intel += 10
+	qdel(offering)
+	to_chat(user, span_notice("Предмет принят. Ячейка получила 10 разведданных."))
+	return TRUE
 
 /datum/antagonist/cyberpunk/major
 	show_in_antagpanel = TRUE
@@ -730,6 +1050,15 @@
 			targets += nearby
 	return tgui_input_list(user, prompt, name, targets)
 
+/proc/cyberpunk_antag_select_corpse(mob/living/user, title)
+	var/list/corpses = list()
+	for(var/mob/living/nearby in view(1, user))
+		if(nearby.stat == DEAD)
+			corpses += nearby
+	var/mob/living/choice = tgui_input_list(user, "Выберите погибшего.", title, corpses)
+	if(!QDELETED(choice) && user.Adjacent(choice) && choice.stat == DEAD)
+		return choice
+
 /datum/antagonist/cyberpunk/major/proc/direct_damage(mob/living/user, mob/living/target, amount = 20, damage_type = BRUTE, reason = "attack")
 	if(!target || target.stat == DEAD)
 		return FALSE
@@ -768,73 +1097,213 @@
 	add_progress(points, "ghost reinforcement")
 	return TRUE
 
+/datum/team/cyberpunk_shifters
+	name = "Оборотни Бэнь"
+	var/required_conversions
+	var/list/converted = list()
+	var/outbreak = FALSE
+
+/datum/team/cyberpunk_shifters/proc/register_conversion(datum/mind/converted_mind)
+	if(!converted_mind || converted_mind in converted)
+		return
+	converted += converted_mind
+	if(!outbreak && length(converted) >= required_conversions)
+		outbreak = TRUE
+		priority_announce("Заражение Бэнь достигло критического порога. У носителей обнаружены боевые щупальца.", "Биологическая тревога")
+	for(var/datum/antagonist/cyberpunk/major/benn_shifter/shifter in GLOB.antagonists)
+		if(shifter.get_team() == src)
+			shifter.progress_points = length(converted)
+			shifter.goal_completed = outbreak
+
 /datum/antagonist/cyberpunk/major/benn_shifter
 	name = "Benn Shifter"
 	pref_flag = ROLE_CYBERPUNK_BENN_SHIFTER
-	progress_goal = 6
-	chip_name = "viral phenotype key"
-	chip_desc = "A Benn covert infection controller."
-	primary_action = "Seed infection"
-	primary_points = 1
-	primary_delay = 15 SECONDS
-	primary_reason = "infection"
-	primary_target_prompt = "Choose a nearby living victim."
-	role_briefing = "Seed infections into living victims. After 15 minutes, untreated victims convert into new shifters. You can also rend victims and regenerate."
-	var/list/infected_refs = list()
+	chip_name = "ключ нароста Бэнь"
+	chip_desc = "Управляет наростами и расходом массы."
+	role_briefing = "Питайтесь, развивайте наросты и обратите 30% игроков."
+	team_type = /datum/team/cyberpunk_shifters
+	var/stage = 1
+	var/mass = 0
+	var/initial_carrier = TRUE
+	var/list/growths = list()
+	var/datum/status_effect/cyberpunk_shifter_growth/viewed_growth
+
+/datum/antagonist/cyberpunk/major/benn_shifter/on_gain()
+	var/datum/team/cyberpunk_shifters/team = get_team()
+	if(!team.required_conversions)
+		team.required_conversions = max(1, CEILING(length(GLOB.alive_player_list) * 0.3, 1))
+	progress_goal = team.required_conversions
+	. = ..()
+	RegisterSignal(owner.current, COMSIG_LIVING_HEALTHSCAN, PROC_REF(on_shifter_scan))
+	START_PROCESSING(SSobj, src)
+
+/datum/antagonist/cyberpunk/major/benn_shifter/Destroy()
+	if(owner?.current)
+		UnregisterSignal(owner.current, COMSIG_LIVING_HEALTHSCAN)
+	STOP_PROCESSING(SSobj, src)
+	stop_watching()
+	return ..()
+
+/datum/antagonist/cyberpunk/major/benn_shifter/proc/on_shifter_scan(mob/living/scanned, list/report, advanced)
+	SIGNAL_HANDLER
+	if(advanced && !scanned.has_status_effect(/datum/status_effect/cyberpunk_shifter_mimicry))
+		report += span_warning("Обнаружена аномальная биомасса Бэнь.")
+
+/datum/antagonist/cyberpunk/major/benn_shifter/process(seconds_per_tick)
+	var/mob/living/body = owner?.current
+	if(!body || body.stat == DEAD)
+		return
+	var/drained = min(seconds_per_tick * 2, max(0, body.nutrition - NUTRITION_LEVEL_STARVING))
+	if(drained)
+		body.adjust_nutrition(-drained, forced = TRUE)
+		mass = min(mass + drained, 500)
+		stage = max(stage, min(5, 1 + FLOOR(mass / 100, 1)))
+	REMOVE_TRAIT(body, TRAIT_FAT, OBESITY)
 
 /datum/antagonist/cyberpunk/major/benn_shifter/get_chip_options(mob/living/user)
-	return list(primary_action, "Rend victim", "Regenerate", "Status", "Cancel")
+	var/list/options = list("Наросты", "Вернуть обзор", "Голос в наросте", "Status", "Cancel")
+	if(initial_carrier || stage >= 5)
+		options += "Подсадить нарост"
+	if(stage >= 2)
+		options += "Регенерация"
+	if(stage >= 3)
+		options += "Мимикрия"
+	if(stage >= 5)
+		options += "Оглушить щупальцем"
+	var/datum/team/cyberpunk_shifters/team = get_team()
+	if(team.outbreak)
+		options += "Щупальце-кнут"
+	return options
 
 /datum/antagonist/cyberpunk/major/benn_shifter/handle_chip_option(mob/living/user, choice)
 	switch(choice)
-		if("Rend victim")
-			return direct_damage(user, choose_living_target(user, 1, "Choose nearby victim."), 25, BRUTE, "rend")
-		if("Regenerate")
-			user.heal_ordered_damage(20, list(BRUTE, BURN, TOX, OXY))
-			to_chat(user, span_notice("Your unstable tissue knits itself together."))
+		if("Подсадить нарост")
+			return perform_primary_action(user)
+		if("Наросты")
+			var/list/available = list()
+			for(var/datum/status_effect/cyberpunk_shifter_growth/growth in growths)
+				if(!QDELETED(growth.owner) && growth.owner.stat != DEAD)
+					available[REF(growth.owner) + " — [growth.owner.name] ([growth.stage]/5)"] = growth
+			var/selected = tgui_input_list(user, "Выберите носителя.", name, available)
+			var/datum/status_effect/cyberpunk_shifter_growth/growth = available[selected]
+			if(QDELETED(growth) || QDELETED(growth.owner))
+				return FALSE
+			viewed_growth = growth
+			user.reset_perspective(growth.owner)
+			return TRUE
+		if("Вернуть обзор")
+			stop_watching()
+			return TRUE
+		if("Голос в наросте")
+			var/datum/status_effect/cyberpunk_shifter_growth/growth = viewed_growth
+			if(!growth || growth.stage < 4)
+				return FALSE
+			var/message = tgui_input_text(user, "Что услышит носитель?", name, max_length = MAX_MESSAGE_LEN)
+			if(!message || QDELETED(growth) || growth.owner.stat == DEAD)
+				return FALSE
+			to_chat(growth.owner, span_notice("Голос нароста: [html_encode(message)]"))
+			return TRUE
+		if("Регенерация")
+			if(!spend_mass(25, "regenerate", 10 SECONDS))
+				return FALSE
+			user.heal_ordered_damage(25, list(BRUTE, BURN, TOX, OXY))
+			return TRUE
+		if("Мимикрия")
+			if(!spend_mass(40, "mimicry", 1 MINUTES))
+				return FALSE
+			user.apply_status_effect(/datum/status_effect/cyberpunk_shifter_mimicry)
+			return TRUE
+		if("Оглушить щупальцем", "Щупальце-кнут")
+			var/mob/living/target = choose_living_target(user, 3, "Выберите цель.")
+			if(!target || target.stat == DEAD || !spend_mass(20, choice, 8 SECONDS))
+				return FALSE
+			if(choice == "Оглушить щупальцем")
+				target.Paralyze(3 SECONDS)
+			else
+				target.apply_damage(45, BRUTE, BODY_ZONE_CHEST, sharpness = SHARP_EDGED)
+			return TRUE
+		if("Status")
+			to_chat(user, span_notice("Стадия [stage]/5, масса [round(mass)]. Обращено [progress_points]/[progress_goal]."))
 			return TRUE
 	return ..()
 
-/datum/antagonist/cyberpunk/major/benn_shifter/get_primary_targets(mob/living/user)
-	var/list/targets = list()
-	for(var/mob/living/nearby in view(1, user))
-		if(nearby != user && nearby.stat != DEAD)
-			targets += nearby
-	return targets
+/datum/antagonist/cyberpunk/major/benn_shifter/proc/spend_mass(amount, key, delay)
+	if(mass < amount || !action_ready(owner.current, key, delay))
+		return FALSE
+	mass -= amount
+	return TRUE
+
+/datum/antagonist/cyberpunk/major/benn_shifter/proc/stop_watching()
+	if(viewed_growth)
+		owner?.current?.reset_perspective(null)
+		viewed_growth = null
 
 /datum/antagonist/cyberpunk/major/benn_shifter/perform_primary_action(mob/living/user)
-	var/list/targets = get_primary_targets(user)
-	var/mob/living/target = tgui_input_list(user, primary_target_prompt, name, targets)
-	if(!target)
+	var/mob/living/target = choose_living_target(user, 1, "Кому подсадить нарост?")
+	if(!target?.mind || !iscarbon(target) || target.stat == DEAD || target.mind.has_antag_datum(type) || target.has_status_effect(/datum/status_effect/cyberpunk_shifter_growth))
 		return FALSE
-	var/target_ref = REF(target)
-	if(target_ref in infected_refs)
-		to_chat(user, span_warning("[target] is already infected."))
+	if(!do_after(user, 10 SECONDS, target = target) || target.stat == DEAD || target.mind?.has_antag_datum(type))
 		return FALSE
-	user.visible_message(span_warning("[user] injects something into [target]."), span_notice("You start seeding the infection. Hold still."))
-	if(!do_after(user, primary_delay, target = target))
-		to_chat(user, span_warning("The infection was interrupted."))
-		return FALSE
-	infected_refs += target_ref
-	add_progress(primary_points, primary_reason)
-	to_chat(target, span_userdanger("Something cold spreads under your skin."))
-	addtimer(CALLBACK(src, PROC_REF(finish_infection), WEAKREF(target)), 15 MINUTES)
-	return TRUE
+	return !!target.apply_status_effect(/datum/status_effect/cyberpunk_shifter_growth, src)
 
-/datum/antagonist/cyberpunk/major/benn_shifter/proc/finish_infection(datum/weakref/target_ref)
-	var/mob/living/target = target_ref?.resolve()
-	if(!target?.mind || target.stat == DEAD)
-		return FALSE
-	if(target.mind.has_antag_datum(/datum/antagonist/cyberpunk/major/benn_shifter))
-		return FALSE
-	var/datum/antagonist/cyberpunk/major/benn_shifter/new_shifter = new()
-	new_shifter.silent = TRUE
-	target.mind.add_antag_datum(new_shifter)
-	to_chat(target, span_userdanger("The infection finishes rewriting you. You are part of the Benn strain now."))
-	return TRUE
+/datum/status_effect/cyberpunk_shifter_mimicry
+	id = "cyberpunk_shifter_mimicry"
+	duration = 30 SECONDS
+	tick_interval = STATUS_EFFECT_NO_TICK
+	alert_type = null
 
-/datum/antagonist/cyberpunk/major/benn_shifter/extra_roundend_report()
-	return "[..()]<br>Seeded infections: [length(infected_refs)]."
+/datum/status_effect/cyberpunk_shifter_growth
+	id = "cyberpunk_shifter_growth"
+	alert_type = null
+	tick_interval = 2 SECONDS
+	var/stage = 1
+	var/mass = 0
+	var/datum/weakref/origin
+	var/datum/team/cyberpunk_shifters/team
+
+/datum/status_effect/cyberpunk_shifter_growth/on_creation(mob/living/new_owner, datum/antagonist/cyberpunk/major/benn_shifter/shifter)
+	origin = WEAKREF(shifter)
+	team = shifter.get_team()
+	. = ..(new_owner)
+	if(!QDELETED(src))
+		shifter.growths += src
+		RegisterSignal(new_owner, COMSIG_LIVING_HEALTHSCAN, PROC_REF(on_growth_scan))
+
+/datum/status_effect/cyberpunk_shifter_growth/tick(seconds_between_ticks)
+	if(owner.stat == DEAD)
+		qdel(src)
+		return
+	var/drained = min(4 * seconds_between_ticks, max(0, owner.nutrition - NUTRITION_LEVEL_STARVING))
+	if(!drained)
+		return
+	owner.adjust_nutrition(-drained, forced = TRUE)
+	mass += drained
+	stage = min(5, 1 + FLOOR(mass / 120, 1))
+	if(stage < 5 || !owner.mind)
+		return
+	if(!owner.mind.has_antag_datum(/datum/antagonist/cyberpunk/major/benn_shifter))
+		var/datum/antagonist/cyberpunk/major/benn_shifter/shifter = new()
+		shifter.initial_carrier = FALSE
+		shifter.stage = 5
+		shifter.mass = 200
+		owner.mind.add_antag_datum(shifter, team)
+		team.register_conversion(owner.mind)
+		to_chat(owner, span_userdanger("Нарост созрел. Теперь вы оборотень Бэнь."))
+	qdel(src)
+
+/datum/status_effect/cyberpunk_shifter_growth/proc/on_growth_scan(datum/source, list/report, advanced)
+	SIGNAL_HANDLER
+	if(advanced)
+		report += span_warning("Обнаружен паразитарный нарост. Стадия [stage]/5.")
+
+/datum/status_effect/cyberpunk_shifter_growth/on_remove()
+	UnregisterSignal(owner, COMSIG_LIVING_HEALTHSCAN)
+	var/datum/antagonist/cyberpunk/major/benn_shifter/shifter = origin?.resolve()
+	if(shifter)
+		shifter.growths -= src
+		if(shifter.viewed_growth == src)
+			shifter.stop_watching()
+	team = null
 
 /datum/antagonist/cyberpunk/major/benn_prototype
 	name = "Benn Prototype"
@@ -850,6 +1319,9 @@
 	role_briefing = "Harvest DNA to gain points, unlock mutations, then use those mutations for weapons, damage, defense, and movement."
 	var/dna_points = 0
 	var/list/unlocked_abilities = list()
+	var/datum/dna/original_identity
+	var/list/absorbed_identities = list()
+	var/datum/weakref/heart_ref
 
 /datum/antagonist/cyberpunk/major/benn_prototype/get_primary_targets(mob/living/user)
 	var/list/targets = list()
@@ -859,20 +1331,121 @@
 	return targets
 
 /datum/antagonist/cyberpunk/major/benn_prototype/get_chip_options(mob/living/user)
-	return list(primary_action, "Unlock mutation", "Use mutation", "Status", "Cancel")
+	return list(primary_action, "Unlock mutation", "Use mutation", "Принять облик", "Вернуть облик", "Говорить с поглощёнными", "Сдать очко эволюции", "Status", "Cancel")
 
 /datum/antagonist/cyberpunk/major/benn_prototype/handle_chip_option(mob/living/user, choice)
 	if(choice == "Unlock mutation")
 		return unlock_mutation(user)
-	if(choice == "Use mutation")
-		return use_mutation(user)
+	switch(choice)
+		if("Use mutation")
+			return use_mutation(user)
+		if("Принять облик")
+			var/identity_name = tgui_input_list(user, "Выберите поглощённый облик.", name, absorbed_identities)
+			var/datum/dna/identity = absorbed_identities[identity_name]
+			return change_prototype_identity(user, identity)
+		if("Вернуть облик")
+			return change_prototype_identity(user, original_identity)
+		if("Говорить с поглощёнными")
+			var/obj/item/organ/heart/cyberpunk_prototype/heart = heart_ref?.resolve()
+			if(!heart || heart.owner != user)
+				return FALSE
+			var/message = tgui_input_text(user, "Что услышат поглощённые?", name, max_length = MAX_MESSAGE_LEN)
+			if(!message || QDELETED(heart) || heart.owner != user)
+				return FALSE
+			for(var/mob/living/captive in heart.contents)
+				to_chat(captive, span_notice("Прототип: [html_encode(message)]"))
+			return TRUE
+		if("Сдать очко эволюции")
+			if(dna_points < 1 || goal_completed)
+				return FALSE
+			dna_points--
+			add_progress(1, "эволюция")
+			return TRUE
 	return ..()
 
-/datum/antagonist/cyberpunk/major/benn_prototype/perform_primary_action(mob/living/user)
+/datum/antagonist/cyberpunk/major/benn_prototype/on_gain()
 	. = ..()
-	if(.)
-		dna_points++
-		to_chat(user, span_notice("DNA point gained. Available: [dna_points]."))
+	var/mob/living/carbon/human/body = owner.current
+	if(istype(body) && body.dna)
+		original_identity = new()
+		body.dna.copy_dna(original_identity, NONE)
+
+/datum/antagonist/cyberpunk/major/benn_prototype/Destroy()
+	var/obj/item/organ/heart/cyberpunk_prototype/heart = heart_ref?.resolve()
+	heart?.release_husks()
+	QDEL_NULL(original_identity)
+	QDEL_LIST_ASSOC_VAL(absorbed_identities)
+	return ..()
+
+/datum/antagonist/cyberpunk/major/benn_prototype/perform_primary_action(mob/living/carbon/human/user)
+	if(!istype(user))
+		return FALSE
+	var/mob/living/carbon/human/target = choose_living_target(user, 1, "Выберите тело для поглощения.")
+	if(!istype(target) || !target.dna || !isturf(target.loc) || (target.stat == CONSCIOUS && !HAS_TRAIT(target, TRAIT_IMMOBILIZED)))
+		return FALSE
+	if(REF(target.mind || target) in acted_refs)
+		return FALSE
+	if(!do_after(user, primary_delay, target = target) || QDELETED(target) || !user.Adjacent(target) || (target.stat == CONSCIOUS && !HAS_TRAIT(target, TRAIT_IMMOBILIZED)))
+		return FALSE
+	var/obj/item/organ/heart/cyberpunk_prototype/heart = user.get_organ_slot(ORGAN_SLOT_HEART)
+	if(!istype(heart))
+		if(heart_ref?.resolve() || !user.get_organ_slot(ORGAN_SLOT_HEART))
+			return FALSE
+		heart = new(get_turf(user))
+		if(!heart.Insert(user, special = TRUE, movement_flags = DELETE_IF_REPLACED))
+			qdel(heart)
+			return FALSE
+		heart_ref = WEAKREF(heart)
+	var/identity_name = "[target.real_name] ([length(absorbed_identities) + 1])"
+	var/datum/dna/identity = new()
+	target.dna.copy_dna(identity, NONE)
+	absorbed_identities[identity_name] = identity
+	acted_refs += REF(target.mind || target)
+	target.become_husk(REF(heart))
+	ADD_TRAIT(target, TRAIT_STASIS, REF(heart))
+	ADD_TRAIT(target, TRAIT_IMMOBILIZED, REF(heart))
+	target.forceMove(heart)
+	heart.RegisterSignal(target, COMSIG_MOB_SAY, TYPE_PROC_REF(/obj/item/organ/heart/cyberpunk_prototype, on_husk_speech))
+	dna_points++
+	to_chat(user, span_notice("Облик поглощён. Свободные очки мутации: [dna_points]."))
+	return TRUE
+
+/datum/antagonist/cyberpunk/major/benn_prototype/proc/change_prototype_identity(mob/living/carbon/human/user, datum/dna/identity)
+	if(!istype(user) || !user.dna || !identity)
+		return FALSE
+	user.real_name = identity.real_name
+	user.name = identity.real_name
+	user.dna.unique_identity = identity.unique_identity
+	user.dna.unique_features = identity.unique_features
+	user.dna.features = identity.features.Copy()
+	user.updateappearance(mutcolor_update = TRUE)
+	return TRUE
+
+/obj/item/organ/heart/cyberpunk_prototype
+	name = "сердце прототипа"
+
+/obj/item/organ/heart/cyberpunk_prototype/attackby(obj/item/weapon, mob/user, params)
+	if(!owner && weapon.force > 0)
+		release_husks()
+	return ..()
+
+/obj/item/organ/heart/cyberpunk_prototype/Destroy()
+	release_husks()
+	return ..()
+
+/obj/item/organ/heart/cyberpunk_prototype/proc/release_husks()
+	var/turf/location = get_turf(src)
+	for(var/mob/living/captive in contents)
+		UnregisterSignal(captive, COMSIG_MOB_SAY)
+		REMOVE_TRAIT(captive, TRAIT_STASIS, REF(src))
+		REMOVE_TRAIT(captive, TRAIT_IMMOBILIZED, REF(src))
+		captive.forceMove(location)
+
+/obj/item/organ/heart/cyberpunk_prototype/proc/on_husk_speech(mob/living/captive, list/speech_args)
+	SIGNAL_HANDLER
+	if(owner && speech_args[SPEECH_MESSAGE])
+		to_chat(owner, span_notice("Голос поглощённого: [html_encode(speech_args[SPEECH_MESSAGE])]"))
+	speech_args[SPEECH_MESSAGE] = ""
 
 /datum/antagonist/cyberpunk/major/benn_prototype/proc/unlock_mutation(mob/living/user)
 	if(dna_points <= 0)
@@ -902,9 +1475,15 @@
 			new /obj/item/knife/cyberpunk/energy_blade(get_turf(user))
 			to_chat(user, span_notice("An armblade extrudes and hardens nearby."))
 		if("claws")
-			return direct_damage(user, choose_living_target(user, 1, "Choose claw target."), 35, BRUTE, "claws")
+			var/mob/living/target = choose_living_target(user, 1, "Выберите цель.")
+			if(!target)
+				return FALSE
+			target.apply_damage(35, BRUTE, BODY_ZONE_CHEST, sharpness = SHARP_EDGED)
 		if("whip")
-			return direct_damage(user, choose_living_target(user, 4, "Choose whip target."), 20, STAMINA, "whip")
+			var/mob/living/target = choose_living_target(user, 4, "Выберите цель.")
+			if(!target)
+				return FALSE
+			target.apply_damage(20, STAMINA)
 		if("shield")
 			user.heal_ordered_damage(30, list(BRUTE, BURN))
 			to_chat(user, span_notice("A chitin shield absorbs recent trauma."))
@@ -917,7 +1496,6 @@
 			if(landing)
 				user.forceMove(landing)
 			to_chat(user, span_notice("You launch forward in a brutal leap."))
-	add_progress(1, "mutation")
 	return TRUE
 
 /datum/antagonist/cyberpunk/major/benn_prototype/extra_roundend_report()
@@ -933,26 +1511,90 @@
 	primary_points = 3
 	primary_delay = 10 SECONDS
 	primary_reason = "biomass"
-	primary_target_prompt = "Choose nearby biomass or infrastructure."
-	role_briefing = "Assimilate biomass, grow flesh, spawn blobbernauts, and reach critical mass. Critical mass starts a two-minute nuclear purge countdown."
+	primary_target_prompt = "Выберите тело или орган для поглощения."
+	role_briefing = "Assimilate biomass, grow flesh, spawn blobbernauts, and reach critical mass. Critical mass creates a colony core that spreads over the district."
+
+/datum/antagonist/cyberpunk/major/benn_evolutionary/proc/can_absorb_biomass(atom/movable/target)
+	if(QDELETED(target))
+		return FALSE
+	if(iscarbon(target))
+		var/mob/living/carbon/body = target
+		return body.stat == DEAD && (body.mob_biotypes & MOB_ORGANIC) && !(body.mob_biotypes & MOB_ROBOTIC)
+	return istype(target, /obj/item/organ) || istype(target, /obj/item/bodypart)
 
 /datum/antagonist/cyberpunk/major/benn_evolutionary/perform_primary_action(mob/living/user)
-	. = ..()
-	if(.)
-		new /obj/structure/cyberpunk_flesh_growth(get_turf(user))
+	var/list/candidates = list()
+	for(var/atom/movable/nearby in view(1, user))
+		if(can_absorb_biomass(nearby))
+			candidates += nearby
+	var/atom/movable/target = tgui_input_list(user, primary_target_prompt, name, candidates)
+	if(!can_absorb_biomass(target) || !user.Adjacent(target) || !do_after(user, primary_delay, target = target) || !can_absorb_biomass(target))
+		return FALSE
+	var/turf/absorbed_at = get_turf(target)
+	if(iscarbon(target))
+		var/mob/living/carbon/body = target
+		body.gib()
+	else
+		qdel(target)
+	if(!(locate(/obj/structure/cyberpunk_flesh_growth) in absorbed_at))
+		new /obj/structure/cyberpunk_flesh_growth(absorbed_at)
+	add_progress(primary_points, primary_reason)
+	return TRUE
 
 /datum/antagonist/cyberpunk/major/benn_evolutionary/on_goal_completed(reason = "progress")
 	. = ..()
-	priority_announce("A Benn evolutionary mass has reached critical growth. Nuclear purge impact in two minutes.", "City Threat Monitor", sender_override = "Starlight City Network")
-	addtimer(CALLBACK(src, PROC_REF(evolutionary_nuclear_strike)), 2 MINUTES)
+	var/turf/core_turf = get_turf(owner?.current)
+	if(!core_turf)
+		return
+	new /obj/structure/cyberpunk_evolution_colony(core_turf)
+	priority_announce("Колония Бэнь достигла критической массы и начала неконтролируемый рост.", "Биологическая тревога")
 
-/datum/antagonist/cyberpunk/major/benn_evolutionary/proc/evolutionary_nuclear_strike()
-	var/turf/strike_turf = get_turf(owner?.current)
-	if(!strike_turf)
-		return FALSE
-	priority_announce("Nuclear purge impact confirmed.", "City Threat Monitor", sender_override = "Starlight City Network")
-	explosion(strike_turf, devastation_range = 8, heavy_impact_range = 16, light_impact_range = 32, flame_range = 24, flash_range = 32, ignorecap = TRUE, explosion_cause = owner?.current)
-	return TRUE
+/obj/structure/cyberpunk_evolution_colony
+	name = "ядро колонии Бэнь"
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "datadisk0"
+	anchored = TRUE
+	density = TRUE
+	max_integrity = 320
+	var/list/frontier = list()
+	var/list/colonized = list()
+	var/growth_timer
+
+/obj/structure/cyberpunk_evolution_colony/Initialize(mapload)
+	. = ..()
+	var/turf/origin = get_turf(src)
+	colonized[origin] = TRUE
+	expand_frontier(origin)
+	growth_timer = addtimer(CALLBACK(src, PROC_REF(grow)), 0.5 SECONDS, TIMER_STOPPABLE)
+
+/obj/structure/cyberpunk_evolution_colony/Destroy()
+	deltimer(growth_timer)
+	return ..()
+
+/obj/structure/cyberpunk_evolution_colony/proc/expand_frontier(turf/origin)
+	for(var/direction in GLOB.cardinals)
+		var/turf/adjacent = get_step(origin, direction)
+		if(isopenturf(adjacent) && !isspaceturf(adjacent) && !colonized[adjacent])
+			frontier |= adjacent
+
+/obj/structure/cyberpunk_evolution_colony/proc/grow()
+	growth_timer = null
+	var/list/choices = frontier.Copy()
+	for(var/i in 1 to min(3, length(choices)))
+		var/turf/candidate = pick(choices)
+		choices -= candidate
+		if(!isopenturf(candidate) || isspaceturf(candidate) || candidate.density)
+			frontier -= candidate
+			continue
+		if(locate(/obj/machinery/door) in candidate)
+			continue
+		frontier -= candidate
+		colonized[candidate] = TRUE
+		if(!(locate(/obj/structure/cyberpunk_flesh_growth) in candidate))
+			new /obj/structure/cyberpunk_flesh_growth(candidate)
+		expand_frontier(candidate)
+	if(length(frontier))
+		growth_timer = addtimer(CALLBACK(src, PROC_REF(grow)), 0.5 SECONDS, TIMER_STOPPABLE)
 
 /datum/antagonist/cyberpunk/major/benn_evolutionary/get_chip_options(mob/living/user)
 	return list(primary_action, "Grow flesh ring", "Spawn blobbernaut", "Call blobbernaut ghost", "Status", "Cancel")
@@ -960,108 +1602,370 @@
 /datum/antagonist/cyberpunk/major/benn_evolutionary/handle_chip_option(mob/living/user, choice)
 	switch(choice)
 		if("Grow flesh ring")
+			if(!action_ready(user, choice, 20 SECONDS))
+				return FALSE
+			var/grew = FALSE
 			for(var/turf/open/open_turf in range(1, user))
+				if(isspaceturf(open_turf) || (locate(/obj/structure/cyberpunk_flesh_growth) in open_turf))
+					continue
 				new /obj/structure/cyberpunk_flesh_growth(open_turf)
-			add_progress(6, "flesh ring")
-			return TRUE
+				grew = TRUE
+			if(grew)
+				add_progress(6, "flesh ring")
+			return grew
 		if("Spawn blobbernaut")
 			return spawn_antag_asset(user, /mob/living/basic/blob_minion/blobbernaut/independent, "blobbernaut", 5)
 		if("Call blobbernaut ghost")
-			return summon_ghost_asset(user, /mob/living/basic/blob_minion/blobbernaut/independent, "Benn blobbernaut", 5)
+			return summon_ghost_asset(user, /mob/living/basic/blob_minion/blobbernaut/independent/cyberpunk_evolutionary, "порождение Бэнь", 5)
 	return ..()
+
+/mob/living/basic/blob_minion/blobbernaut/independent/cyberpunk_evolutionary
+	name = "порождение колонии Бэнь"
+	var/mutation_points = 0
+	var/list/evolution_mutations = list()
+
+/mob/living/basic/blob_minion/blobbernaut/independent/cyberpunk_evolutionary/Initialize(mapload)
+	. = ..()
+	START_PROCESSING(SSobj, src)
+
+/mob/living/basic/blob_minion/blobbernaut/independent/cyberpunk_evolutionary/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	return ..()
+
+/mob/living/basic/blob_minion/blobbernaut/independent/cyberpunk_evolutionary/process(seconds_per_tick)
+	if(stat != DEAD)
+		mutation_points = min(20, mutation_points + seconds_per_tick * 0.1)
+
+/mob/living/basic/blob_minion/blobbernaut/independent/cyberpunk_evolutionary/verb/select_mutation()
+	set name = "Вырастить мутацию"
+	set category = "Бэнь"
+	if(stat == DEAD || mutation_points < 3)
+		return
+	var/choice = tgui_input_list(src, "Выберите мутацию за три очка.", name, list("Плотная оболочка", "Костяные шипы", "Быстрое восстановление") - evolution_mutations)
+	if(!choice || (choice in evolution_mutations) || mutation_points < 3 || stat == DEAD)
+		return
+	mutation_points -= 3
+	evolution_mutations += choice
+	switch(choice)
+		if("Плотная оболочка")
+			maxHealth += 40
+			heal_ordered_damage(40, list(BRUTE, BURN))
+		if("Костяные шипы")
+			melee_damage_lower += 8
+			melee_damage_upper += 8
+			sharpness = SHARP_EDGED
+		if("Быстрое восстановление")
+			apply_status_effect(/datum/status_effect/cyberpunk_evolution_regeneration)
+
+/datum/status_effect/cyberpunk_evolution_regeneration
+	id = "cyberpunk_evolution_regeneration"
+	tick_interval = 2 SECONDS
+	alert_type = null
+
+/datum/status_effect/cyberpunk_evolution_regeneration/tick(seconds_between_ticks)
+	if(owner.stat != DEAD)
+		owner.heal_ordered_damage(3 * seconds_between_ticks, list(BRUTE, BURN))
 
 /datum/antagonist/cyberpunk/major/wild_iskin
 	name = "Wild ISKIN"
 	pref_flag = ROLE_CYBERPUNK_WILD_ISKIN
-	progress_goal = 20
-	chip_name = "wild iskin trace"
-	chip_desc = "A local trace for network predation."
-	primary_action = "Devour node"
-	primary_points = 1
-	primary_delay = 10 SECONDS
-	primary_reason = "node"
-	primary_target_prompt = "Choose nearby machinery."
-	role_briefing = "Devour machinery as network nodes, create shrouds, burn neural-interface targets, and call trace demons."
+	progress_goal = 3
+	role_briefing = "Вы — дикая альтернатива. Сражайтесь в киберсети и откройте три улучшения демонов."
 
-/datum/antagonist/cyberpunk/major/wild_iskin/get_primary_targets(mob/living/user)
-	var/list/targets = list()
-	for(var/obj/machinery/nearby in view(1, user))
-		targets += nearby
-	return targets
-
-/datum/antagonist/cyberpunk/major/wild_iskin/perform_primary_action(mob/living/user)
-	. = ..()
-	if(.)
-		new /obj/structure/cyberpunk_network_shroud(get_turf(user))
-
-/datum/antagonist/cyberpunk/major/wild_iskin/get_chip_options(mob/living/user)
-	return list(primary_action, "Burn neural target", "Spawn trace demon", "Call trace ghost", "Status", "Cancel")
-
-/datum/antagonist/cyberpunk/major/wild_iskin/handle_chip_option(mob/living/user, choice)
-	switch(choice)
-		if("Burn neural target")
-			var/mob/living/target = choose_living_target(user, 4, "Choose neural target.")
-			if(!target?.has_neural_implant())
-				to_chat(user, span_warning("Target has no neural interface."))
-				return FALSE
-			return direct_damage(user, target, 25, BURN, "neural burn")
-		if("Spawn trace demon")
-			return spawn_antag_asset(user, /mob/living/basic/cyberspace_alternative, "trace demon", 2)
-		if("Call trace ghost")
-			return summon_ghost_asset(user, /mob/living/basic/cyberspace_alternative, "wild ISKIN trace demon", 2)
+/datum/antagonist/cyberpunk/major/wild_iskin/on_gain()
+	var/mob/living/previous_body = owner.current
+	var/datum/cyberspace_layer/layer = SScyberspace?.ensure_ready()
+	var/turf/destination = layer?.get_entry_turf_for(previous_body)
+	if(destination)
+		var/mob/living/basic/cyberspace_alternative/playable_iskin/iskin = new(destination)
+		iskin.network_z = destination.z
+		owner.transfer_to(iskin, force_key_move = TRUE)
+		qdel(previous_body)
 	return ..()
+
+/datum/antagonist/cyberpunk/major/wild_iskin/roundend_report()
+	var/mob/living/basic/cyberspace_alternative/playable_iskin/iskin = owner?.current
+	var/upgrades = istype(iskin) ? length(iskin.improvements) : progress_points
+	return "[printplayer(owner)]<br>Доработано демонов: [upgrades]/[progress_goal]. [goal_completed ? span_greentext("Сетевая эволюция завершена.") : span_redtext("Сетевая эволюция прервана.")] "
+
+/mob/living/basic/cyberspace_alternative/playable_iskin
+	name = "Дикий ИСКИН"
+	ai_controller = null
+	var/network_z
+	var/data = 2
+	var/next_demon
+	var/list/improvements = list()
+
+/mob/living/basic/cyberspace_alternative/playable_iskin/veil_hunt_loop()
+	return
+
+/mob/living/basic/cyberspace_alternative/playable_iskin/Move(atom/newloc, direction, glide_size_override, update_dir)
+	var/turf/destination = get_turf(newloc)
+	if(network_z && destination?.z != network_z)
+		return FALSE
+	return ..()
+
+/mob/living/basic/cyberspace_alternative/playable_iskin/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
+	var/mob/living/basic/cyberspace_alternative/playable_iskin/rival = target
+	var/was_alive = istype(rival) && rival.stat != DEAD
+	. = ..()
+	if(. && was_alive && (QDELETED(rival) || rival.stat == DEAD))
+		data += 3
+		to_chat(src, span_notice("Из конкурента извлечено три блока данных для разработки."))
+
+/mob/living/basic/cyberspace_alternative/playable_iskin/verb/upgrade_demons()
+	set name = "Развить демонов"
+	set category = "ИСКИН"
+	if(stat != CONSCIOUS || data < 2)
+		return
+	var/choice = tgui_input_list(src, "Выберите улучшение за два блока данных.", name, list("Мгновенное применение", "Экономия урона и лечения", "Снять ограничение дальности") - improvements)
+	if(choice && data >= 2 && !(choice in improvements))
+		data -= 2
+		improvements += choice
+		var/datum/antagonist/cyberpunk/major/wild_iskin/antag = mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/wild_iskin)
+		antag?.add_progress(1, "демон доработан")
+
+/mob/living/basic/cyberspace_alternative/playable_iskin/verb/cast_iskin_demon()
+	set name = "Применить демона"
+	set category = "ИСКИН"
+	if(stat != CONSCIOUS || world.time < next_demon)
+		return
+	var/cost = ("Экономия урона и лечения" in improvements) ? 0 : 1
+	if(data < cost)
+		return
+	var/choice = tgui_input_list(src, "Выберите демона.", name, list("Атака", "Восстановление"))
+	if(!choice)
+		return
+	var/mob/living/basic/cyberspace_alternative/target = src
+	if(choice == "Атака")
+		var/list/targets = list()
+		var/unlimited = ("Снять ограничение дальности" in improvements)
+		for(var/mob/living/basic/cyberspace_alternative/alternative in GLOB.mob_living_list)
+			if(alternative != src && alternative.z == z && alternative.stat != DEAD && (unlimited || get_dist(src, alternative) <= 5))
+				targets += alternative
+		target = tgui_input_list(src, "Выберите цель.", name, targets)
+	if(!target || world.time < next_demon || data < cost)
+		return
+	if(!("Мгновенное применение" in improvements) && !do_after(src, 2 SECONDS, target = src))
+		return
+	if(QDELETED(target) || target.stat == DEAD || data < cost || world.time < next_demon)
+		return
+	data -= cost
+	next_demon = world.time + 6 SECONDS
+	if(choice == "Атака")
+		target.apply_damage(30, BRUTE)
+		if(istype(target, /mob/living/basic/cyberspace_alternative/playable_iskin) && (QDELETED(target) || target.stat == DEAD))
+			data += 3
+	else
+		heal_ordered_damage(30, list(BRUTE, BURN))
 
 /datum/antagonist/cyberpunk/major/rogue_ai
 	name = "Rogue AI"
 	pref_flag = ROLE_CYBERPUNK_ROGUE_AI
-	progress_goal = 70
-	chip_name = "rogue ai command shard"
-	chip_desc = "A shard of a broken city intelligence."
-	primary_action = "Subvert system"
-	primary_points = 2
-	primary_delay = 10 SECONDS
-	primary_reason = "subversion"
-	primary_target_prompt = "Choose nearby machinery or neural target."
-	role_briefing = "Subvert machinery and neural targets. You can hijack drones, call ghost drones, and immobilize neural-interface victims."
+	chip_name = "контроллер взбунтовавшегося ИИ"
+	role_briefing = "Захватите 30% сетевых машин и удержите якорь в течение пяти минут."
+	primary_action = "Захватить машину"
+	var/datum/weakref/anchor_ref
+	var/list/machine_pool = list()
+	var/list/controlled = list()
+	var/resource = 0
+	var/next_relocation
+	var/final_at
+	var/finishing_countdown = FALSE
 
-/datum/antagonist/cyberpunk/major/rogue_ai/get_primary_targets(mob/living/user)
-	var/list/targets = list()
-	for(var/obj/machinery/nearby in view(1, user))
-		targets += nearby
-	for(var/mob/living/nearby in view(1, user))
-		if(nearby != user && nearby.has_neural_implant())
-			targets += nearby
-	return targets
-
-/datum/antagonist/cyberpunk/major/rogue_ai/perform_primary_action(mob/living/user)
+/datum/antagonist/cyberpunk/major/rogue_ai/on_gain()
 	. = ..()
-	if(.)
-		SScyberpunk_round?.record_cyberpunk_district_violence(get_area_name(get_turf(user), TRUE), 1, "rogue ai subversion")
+	START_PROCESSING(SSobj, src)
 
-/datum/antagonist/cyberpunk/major/rogue_ai/get_chip_options(mob/living/user)
-	return list(primary_action, "Hijack drone", "Call ghost drone", "Neural command", "Status", "Cancel")
-
-/datum/antagonist/cyberpunk/major/rogue_ai/handle_chip_option(mob/living/user, choice)
-	switch(choice)
-		if("Hijack drone")
-			return spawn_antag_asset(user, /mob/living/basic/drone/syndrone, "hijacked drone", 3)
-		if("Call ghost drone")
-			return summon_ghost_asset(user, /mob/living/basic/drone/syndrone, "rogue AI drone", 3)
-		if("Neural command")
-			var/mob/living/target = choose_living_target(user, 4, "Choose neural target.")
-			if(!target?.has_neural_implant())
-				to_chat(user, span_warning("Target has no neural interface."))
-				return FALSE
-			target.Immobilize(5 SECONDS)
-			return direct_damage(user, target, 20, STAMINA, "neural command")
+/datum/antagonist/cyberpunk/major/rogue_ai/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	var/obj/machinery/anchor = anchor_ref?.resolve()
+	if(anchor)
+		UnregisterSignal(anchor, list(COMSIG_QDELETING, COMSIG_MACHINERY_BROKEN, COMSIG_MACHINERY_POWER_LOST))
 	return ..()
 
-/datum/antagonist/cyberpunk/major/rogue_ai/on_goal_completed(reason = "progress")
+/datum/antagonist/cyberpunk/major/rogue_ai/process(seconds_per_tick)
+	if(!anchor_ref || owner?.current?.stat == DEAD)
+		return
+	var/obj/machinery/anchor = anchor_ref.resolve()
+	if(QDELETED(anchor) || !anchor.is_operational)
+		anchor_lost()
+		return
+	resource = min(400, resource + seconds_per_tick * (1 + length(controlled) * 0.03))
+	if(final_at && world.time >= final_at && !goal_completed)
+		final_at = null
+		for(var/datum/weakref/reference as anything in machine_pool)
+			if(reference.resolve())
+				controlled |= reference
+		goal_completed = TRUE
+		priority_announce("Городская техника перешла под управление взбунтовавшегося ИИ.", "Городская сеть")
+
+/datum/antagonist/cyberpunk/major/rogue_ai/proc/anchor_lost()
+	SIGNAL_HANDLER
+	owner?.current?.death()
+
+/datum/antagonist/cyberpunk/major/rogue_ai/proc/snapshot_machines()
+	var/datum/cyberspace_layer/layer = SScyberspace?.ensure_ready()
+	if(!layer)
+		return FALSE
+	for(var/datum/cyberspace_node/node as anything in layer.nodes)
+		for(var/datum/weakref/reference as anything in node.linked_object_refs)
+			var/obj/machinery/machine = reference.resolve()
+			if(istype(machine) && is_station_level(machine.z))
+				machine_pool |= reference
+	progress_goal = max(1, CEILING(length(machine_pool) * 0.3, 1))
+	return !!length(machine_pool)
+
+/datum/antagonist/cyberpunk/major/rogue_ai/proc/bind_anchor(mob/living/user)
+	if(finishing_countdown || goal_completed || world.time < next_relocation)
+		return FALSE
+	if(!length(machine_pool) && !snapshot_machines())
+		to_chat(user, span_warning("Нет доступных машин в городской сети."))
+		return FALSE
+	var/list/candidates = list()
+	for(var/obj/machinery/machine in view(1, user))
+		if(machine.is_operational && WEAKREF(machine) in machine_pool)
+			candidates += machine
+	var/obj/machinery/target = tgui_input_list(user, "Выберите работающий якорь.", name, candidates)
+	var/obj/machinery/previous = anchor_ref?.resolve()
+	if(!target || target == previous || !do_after(user, 10 SECONDS, target = target) || !target.is_operational || finishing_countdown || world.time < next_relocation || user.stat == DEAD)
+		return FALSE
+	if(previous)
+		if(QDELETED(previous) || !previous.is_operational)
+			anchor_lost()
+			return FALSE
+		UnregisterSignal(previous, list(COMSIG_QDELETING, COMSIG_MACHINERY_BROKEN, COMSIG_MACHINERY_POWER_LOST))
+		resource *= min(clamp(previous.get_integrity() / max(1, previous.max_integrity), 0, 1), clamp(target.get_integrity() / max(1, target.max_integrity), 0, 1))
+		next_relocation = world.time + 20 MINUTES
+	anchor_ref = WEAKREF(target)
+	RegisterSignals(target, list(COMSIG_QDELETING, COMSIG_MACHINERY_BROKEN, COMSIG_MACHINERY_POWER_LOST), PROC_REF(anchor_lost))
+	user.cyberspace_session?.set_engram_anchor(target)
+	return TRUE
+
+/datum/antagonist/cyberpunk/major/rogue_ai/proc/operates_machine(atom/movable/machine)
+	return owner?.current?.stat != DEAD && anchor_ref?.resolve() && (WEAKREF(machine) in controlled)
+
+/datum/antagonist/cyberpunk/major/rogue_ai/perform_primary_action(mob/living/user)
+	if(!anchor_ref?.resolve())
+		to_chat(user, span_warning("Сначала привяжите якорь."))
+		return FALSE
+	var/list/candidates = list()
+	var/atom/center = user.cyberspace_session?.avatar || user
+	var/datum/cyberspace_layer/layer = SScyberspace.global_layer
+	for(var/datum/cyberspace_node/node as anything in layer?.nodes)
+		if(user.cyberspace_session && get_dist(center, layer.resolve_node_turf(node)) > 2)
+			continue
+		for(var/datum/weakref/reference as anything in node.linked_object_refs)
+			if(!(reference in machine_pool) || (reference in controlled))
+				continue
+			var/obj/machinery/machine = reference.resolve()
+			if(machine && (user.cyberspace_session || user.Adjacent(machine)))
+				candidates["[machine.name] · [get_area_name(machine)] · [REF(machine)]"] = machine
+	var/selection = tgui_input_list(user, "Выберите машину.", name, candidates)
+	var/obj/machinery/target = candidates[selection]
+	if(QDELETED(target) || (!finishing_countdown && !do_after(user, 10 SECONDS, target = user)))
+		return FALSE
+	if(QDELETED(target) || user.stat == DEAD)
+		return FALSE
+	controlled |= WEAKREF(target)
+	progress_points = min(progress_goal, length(controlled))
+	if(!finishing_countdown && progress_points >= progress_goal)
+		finishing_countdown = TRUE
+		final_at = world.time + 5 MINUTES
+		priority_announce("Взбунтовавшийся ИИ контролирует 30% техники. Уничтожьте якорь в течение пяти минут.", "Городская сеть")
+	return TRUE
+
+/datum/antagonist/cyberpunk/major/rogue_ai/roundend_report()
+	return "[printplayer(owner)]<br>Машины: [length(controlled)]/[length(machine_pool)]. [goal_completed ? span_greentext("Городская сеть захвачена.") : span_redtext("Полный захват сорван.")]"
+
+/datum/antagonist/cyberpunk/major/rogue_ai/get_chip_options(mob/living/user)
+	return list(primary_action, "Установить или перенести якорь", "Перейти между мирами", "Создать киборга", "Применить боевого демона", "Починить якорь", "Управлять машиной", "Status", "Cancel")
+
+/datum/antagonist/cyberpunk/major/rogue_ai/handle_chip_option(mob/living/user, choice)
+	var/obj/machinery/anchor = anchor_ref?.resolve()
+	switch(choice)
+		if("Установить или перенести якорь")
+			return bind_anchor(user)
+		if("Перейти между мирами")
+			return anchor && user.cyberpunk_antag_project(anchor)
+		if("Создать киборга")
+			if(!anchor || resource < 40 || !action_ready(user, choice, 10 SECONDS))
+				return FALSE
+			resource -= 40
+			new /mob/living/basic/cyberpunk_rogue_cyborg(get_turf(anchor))
+			return TRUE
+		if("Применить боевого демона")
+			var/mob/living/victim = choose_living_target(user, 5, "Выберите владельца нейроинтерфейса.")
+			if(!victim?.has_neural_implant() || victim.stat == DEAD || resource < 15 || !action_ready(user, choice, 6 SECONDS))
+				return FALSE
+			resource -= 15
+			return user.cyberpunk_anchor_demons(victim)
+		if("Починить якорь")
+			if(!anchor || resource < 20)
+				return FALSE
+			resource -= 20
+			anchor.update_integrity(min(anchor.max_integrity, anchor.get_integrity() + 60))
+			return TRUE
+		if("Управлять машиной")
+			return use_remote_machine(user)
+		if("Status")
+			to_chat(user, span_notice("Под контролем [length(controlled)]/[length(machine_pool)]. Ресурс [round(resource)]. [final_at ? DisplayTimeText(max(0, final_at - world.time)) : ""]"))
+			return TRUE
+	return ..()
+
+/datum/antagonist/cyberpunk/major/rogue_ai/proc/use_remote_machine(mob/living/user)
+	var/list/choices = list()
+	for(var/datum/weakref/reference as anything in controlled)
+		var/obj/machinery/machine = reference.resolve()
+		if(machine)
+			choices["[machine.name] · [get_area_name(machine)] · [REF(machine)]"] = machine
+	var/selection = tgui_input_list(user, "Выберите подконтрольную машину.", name, choices)
+	var/obj/machinery/machine = choices[selection]
+	if(!machine || !operates_machine(machine))
+		return FALSE
+	return cyberpunk_antag_toggle_machine(user, machine)
+
+/proc/cyberpunk_antag_toggle_machine(mob/living/user, obj/machinery/machine)
+	if(istype(machine, /obj/machinery/door))
+		return cyberspace_target_toggle_door(user, machine)
+	if(istype(machine, /obj/machinery/light))
+		return cyberspace_target_toggle_light(user, machine)
+	return cyberspace_target_toggle_power(user, machine)
+
+/mob/living/basic/cyberpunk_rogue_cyborg
+	name = "киборг взбунтовавшегося ИИ"
+	desc = "Физическая оболочка, созданная сетевым якорем."
+	icon = 'icons/mob/silicon/robots.dmi'
+	icon_state = "robot"
+	icon_living = "robot"
+	health = 100
+	maxHealth = 100
+	mob_biotypes = MOB_ROBOTIC
+	basic_mob_flags = DEL_ON_DEATH
+	var/next_cast
+
+/mob/living/basic/cyberpunk_rogue_cyborg/Initialize(mapload)
 	. = ..()
-	priority_announce("A rogue city intelligence has reached mass subversion threshold.", "City Network", sender_override = "Starlight City Network")
-	for(var/mob/living/nearby in view(7, owner?.current))
-		if(nearby.has_neural_implant())
-			nearby.Immobilize(10 SECONDS)
+	START_PROCESSING(SSobj, src)
+
+/mob/living/basic/cyberpunk_rogue_cyborg/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	return ..()
+
+/mob/living/basic/cyberpunk_rogue_cyborg/process(seconds_per_tick)
+	if(health <= maxHealth * 0.2)
+		visible_message(span_warning("[src] рассыпается в прах."))
+		dust()
+		return
+	if(world.time < next_cast)
+		return
+	for(var/mob/living/target in view(5, src))
+		if(target == src || target.stat == DEAD || (target.mob_biotypes & MOB_ROBOTIC) || !target.has_neural_implant() || faction_check_atom(target) || target.mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/rogue_ai))
+			continue
+		next_cast = world.time + 6 SECONDS
+		visible_message(span_warning("[src] выпускает боевого демона в [target]."))
+		cyberpunk_anchor_demons(target)
+		return
 
 /datum/antagonist/cyberpunk/major/combat_synthetic
 	name = "Combat Synthetic"
@@ -1077,6 +1981,49 @@
 	role_briefing = "Drain machinery for energy. Spend energy on combat modes: disguise, heavy strike, weapon output, and dampening."
 	var/energy_points = 0
 	var/list/combat_modes = list()
+	var/list/hunted_players = list()
+
+/datum/antagonist/cyberpunk/major/combat_synthetic/on_gain()
+	progress_goal = max(1, CEILING(length(GLOB.alive_player_list) * 0.15, 1))
+	var/mob/living/carbon/human/body = owner.current
+	if(istype(body))
+		body.set_species(/datum/species/android)
+	. = ..()
+	RegisterSignal(SSdcs, COMSIG_GLOB_MOB_DEATH, PROC_REF(on_hunt_kill))
+
+/datum/antagonist/cyberpunk/major/combat_synthetic/Destroy()
+	UnregisterSignal(SSdcs, COMSIG_GLOB_MOB_DEATH)
+	owner?.current?.remove_status_effect(/datum/status_effect/cyberpunk_synthetic_victory)
+	return ..()
+
+/datum/antagonist/cyberpunk/major/combat_synthetic/proc/on_hunt_kill(datum/source, mob/living/victim)
+	SIGNAL_HANDLER
+	if(!victim.mind?.key || !owner?.current?.ckey || victim.lastattackerckey != owner.current.ckey || victim == owner.current || !(victim.mob_biotypes & MOB_ORGANIC) || (victim.mob_biotypes & MOB_ROBOTIC))
+		return
+	if(victim.mind in hunted_players)
+		return
+	hunted_players += victim.mind
+	add_progress(1, "цель устранена")
+
+/datum/antagonist/cyberpunk/major/combat_synthetic/on_goal_completed(reason = "progress")
+	. = ..()
+	owner.current.apply_status_effect(/datum/status_effect/cyberpunk_synthetic_victory)
+
+/datum/status_effect/cyberpunk_synthetic_victory
+	id = "cyberpunk_synthetic_victory"
+	tick_interval = 1 SECONDS
+	alert_type = null
+
+/datum/status_effect/cyberpunk_synthetic_victory/on_apply()
+	owner.AddElement(/datum/element/empprotection, EMP_PROTECT_ALL)
+	return TRUE
+
+/datum/status_effect/cyberpunk_synthetic_victory/on_remove()
+	owner.RemoveElement(/datum/element/empprotection, EMP_PROTECT_ALL)
+
+/datum/status_effect/cyberpunk_synthetic_victory/tick(seconds_between_ticks)
+	if(owner.stat != DEAD)
+		owner.heal_ordered_damage(20 * seconds_between_ticks, list(BRUTE, BURN, TOX, OXY))
 
 /datum/antagonist/cyberpunk/major/combat_synthetic/get_primary_targets(mob/living/user)
 	var/list/targets = list()
@@ -1085,20 +2032,42 @@
 	return targets
 
 /datum/antagonist/cyberpunk/major/combat_synthetic/get_chip_options(mob/living/user)
-	return list(primary_action, "Unlock combat mode", "Use combat mode", "Status", "Cancel")
+	return list(primary_action, "Unlock combat mode", "Use combat mode", "Управлять техникой", "Status", "Cancel")
 
 /datum/antagonist/cyberpunk/major/combat_synthetic/handle_chip_option(mob/living/user, choice)
 	if(choice == "Unlock combat mode")
 		return unlock_combat_mode(user)
 	if(choice == "Use combat mode")
 		return use_combat_mode(user)
+	if(choice == "Управлять техникой")
+		return control_nearby_machine(user)
 	return ..()
 
+/datum/antagonist/cyberpunk/major/combat_synthetic/proc/control_nearby_machine(mob/living/user)
+	if(energy_points < 1)
+		to_chat(user, span_warning("Для команды машине нужна единица энергии."))
+		return FALSE
+	var/list/candidates = list()
+	for(var/obj/machinery/machine in view(5, user))
+		if(cyberspace_target_can_toggle_door(machine) || cyberspace_target_can_toggle_light(machine) || cyberspace_target_can_toggle_power(machine))
+			candidates += machine
+	var/obj/machinery/target = tgui_input_list(user, "Выберите технику поблизости.", name, candidates)
+	if(QDELETED(target) || !(target in view(5, user)) || user.stat != CONSCIOUS || energy_points < 1)
+		return FALSE
+	if(!cyberpunk_antag_toggle_machine(user, target))
+		return FALSE
+	energy_points--
+	return TRUE
+
 /datum/antagonist/cyberpunk/major/combat_synthetic/perform_primary_action(mob/living/user)
-	. = ..()
-	if(.)
-		energy_points++
-		to_chat(user, span_notice("Stored synthetic energy: [energy_points]."))
+	var/list/targets = get_primary_targets(user)
+	var/obj/machinery/target = tgui_input_list(user, primary_target_prompt, name, targets)
+	if(!target || (REF(target) in acted_refs) || !do_after(user, primary_delay, target = target))
+		return FALSE
+	acted_refs += REF(target)
+	energy_points++
+	to_chat(user, span_notice("Запас энергии: [energy_points]."))
+	return TRUE
 
 /datum/antagonist/cyberpunk/major/combat_synthetic/proc/unlock_combat_mode(mob/living/user)
 	if(energy_points < 3)
@@ -1131,12 +2100,15 @@
 				user.name = target.name
 				target.apply_damage(30, BRUTE, BODY_ZONE_HEAD)
 		if("overcharge strike")
-			return direct_damage(user, choose_living_target(user, 1, "Choose strike target."), 45, BRUTE, "overcharge")
+			var/mob/living/target = choose_living_target(user, 1, "Выберите цель.")
+			if(!target)
+				return FALSE
+			target.lastattackerckey = user.ckey
+			target.apply_damage(45, BRUTE, BODY_ZONE_CHEST)
 		if("ballistic calculation")
 			new /obj/item/gun/ballistic/automatic/pistol/cyberpunk/handcannon(get_turf(user))
 		if("damage dampening")
 			user.heal_ordered_damage(40, list(BRUTE, BURN))
-	add_progress(3, "combat mode")
 	return TRUE
 
 /datum/antagonist/cyberpunk/major/combat_synthetic/extra_roundend_report()
@@ -1146,343 +2118,1099 @@
 	name = "Starlight Swarm"
 	pref_flag = ROLE_CYBERPUNK_STARLIGHT_SWARM
 	progress_goal = 10000
-	chip_name = "photon swarm core"
-	chip_desc = "A Starlight energy swarm anchor."
-	primary_action = "Harvest energy"
-	primary_points = 100
-	primary_delay = 8 SECONDS
-	primary_reason = "energy"
-	primary_target_prompt = "Choose nearby victim or power source."
-	role_briefing = "Harvest energy, place pylons, fight in photon form, place photon turrets, and call swarm ghosts."
+	chip_name = "ядро роя Старлайт"
+	role_briefing = "Питайте пилоны, перерабатывайте биомассу и накопите плазму для выброса."
 	team_type = /datum/team/cyberpunk_star_swarm
+	var/next_sphere
 
-/datum/antagonist/cyberpunk/major/starlight_swarm/get_chip_options(mob/living/user)
-	return list(primary_action, "Place pylon", "Photon form", "Place photon turret", "Call swarm ghost", "Status", "Cancel")
+/datum/antagonist/cyberpunk/major/starlight_swarm/on_gain()
+	. = ..()
+	START_PROCESSING(SSobj, src)
 
-/datum/antagonist/cyberpunk/major/starlight_swarm/handle_chip_option(mob/living/user, choice)
-	if(choice == "Place pylon")
-		return place_pylon(user)
-	if(choice == "Photon form")
-		return direct_damage(user, choose_living_target(user, 1, "Choose photon target."), 30, BURN, "photon form")
-	if(choice == "Place photon turret")
-		return spawn_antag_asset(user, /obj/structure/cyberpunk_photon_turret, "photon turret", 500)
-	if(choice == "Call swarm ghost")
-		return summon_ghost_asset(user, /mob/living/basic/cyberspace_alternative, "Starlight swarm wisp", 250)
+/datum/antagonist/cyberpunk/major/starlight_swarm/Destroy()
+	STOP_PROCESSING(SSobj, src)
 	return ..()
 
-/datum/antagonist/cyberpunk/major/starlight_swarm/proc/place_pylon(mob/living/user)
-	var/datum/team/cyberpunk_star_swarm/swarm_team = get_team()
-	var/turf/location = get_turf(user)
-	var/location_ref = REF(location)
-	if(location_ref in swarm_team.pylon_refs)
-		to_chat(user, span_warning("A pylon is already anchored here."))
-		return FALSE
-	if(!do_after(user, 15 SECONDS, target = user))
-		to_chat(user, span_warning("Pylon placement interrupted."))
-		return FALSE
-	swarm_team.pylon_refs += location_ref
-	new /obj/structure/cyberpunk_swarm_pylon(location)
-	add_progress(250, "pylon")
-	return TRUE
+/datum/antagonist/cyberpunk/major/starlight_swarm/process(seconds_per_tick)
+	var/datum/team/cyberpunk_star_swarm/swarm = get_team()
+	if(!goal_completed && length(swarm.pylons) && swarm.biomass > 0)
+		var/processed = min(swarm.biomass, 30 * seconds_per_tick)
+		swarm.biomass -= processed
+		swarm.plasma += processed
+		add_progress(processed, "произведена плазма")
+	if(goal_completed && world.time >= next_sphere)
+		next_sphere = world.time + 10 SECONDS
+		spawn_sphere(swarm)
 
-/datum/antagonist/cyberpunk/major/starlight_swarm/extra_roundend_report()
-	var/datum/team/cyberpunk_star_swarm/swarm_team = get_team()
-	return "[..()]<br>Pylons placed: [length(swarm_team?.pylon_refs)]."
+/datum/antagonist/cyberpunk/major/starlight_swarm/proc/spawn_sphere(datum/team/cyberpunk_star_swarm/swarm)
+	var/list/active_units = list()
+	if(owner?.current?.stat != DEAD && get_turf(owner?.current))
+		active_units += owner.current
+	for(var/mob/living/basic/cyberpunk_swarm_builder/builder in swarm.builders)
+		if(builder.stat != DEAD && get_turf(builder))
+			active_units += builder
+	if(!length(active_units))
+		return
+	var/mob/living/unit = pick(active_units)
+	var/list/preferred = list()
+	for(var/mob/living/player in view(6, unit))
+		if(player == unit || !player.mind?.key || player.stat == DEAD || (player in active_units))
+			continue
+		preferred += get_turf(player)
+	var/turf/destination
+	if(length(preferred))
+		destination = pick(preferred)
+	else
+		var/list/options = list()
+		for(var/turf/open/ground in range(5, unit))
+			if(!ground.density && !isspaceturf(ground))
+				options += ground
+		if(length(options))
+			destination = pick(options)
+	if(destination)
+		new /obj/effect/cyberpunk_plasma_sphere(destination)
+
+/datum/antagonist/cyberpunk/major/starlight_swarm/get_chip_options(mob/living/user)
+	return list("Переработать тело", "Поставить пилон", "Поставить фотонную пушку", "Позвать строителя", "Status", "Cancel")
+
+/datum/antagonist/cyberpunk/major/starlight_swarm/handle_chip_option(mob/living/user, choice)
+	var/datum/team/cyberpunk_star_swarm/swarm = get_team()
+	switch(choice)
+		if("Переработать тело")
+			return swarm.harvest_body(user)
+		if("Поставить пилон")
+			return swarm.place_swarm_structure(user, /obj/structure/cyberpunk_swarm_pylon)
+		if("Поставить фотонную пушку")
+			return swarm.place_swarm_structure(user, /obj/structure/cyberpunk_photon_turret)
+		if("Позвать строителя")
+			if(!action_ready(user, choice, 20 SECONDS))
+				return FALSE
+			var/mob/volunteer = SSpolling.poll_ghost_candidates("Сыграть строителем роя?", check_jobban = ROLE_SENTIENCE, role = ROLE_SENTIENCE, poll_time = 10 SECONDS, amount_to_pick = 1)
+			if(!volunteer?.key || QDELETED(user))
+				return FALSE
+			var/mob/living/basic/cyberpunk_swarm_builder/builder = new(get_turf(user))
+			builder.swarm = swarm
+			swarm.builders += builder
+			builder.PossessByPlayer(volunteer.key)
+			return TRUE
+		if("Status")
+			to_chat(user, span_notice("Биомасса [round(swarm.biomass)]. Плазма [round(swarm.plasma)]/[progress_goal]."))
+			return TRUE
+	return ..()
 
 /datum/antagonist/cyberpunk/major/starlight_swarm/on_goal_completed(reason = "progress")
 	. = ..()
-	priority_announce("A Starlight energy swarm has accumulated a critical clean-energy reserve.", "City Threat Monitor", sender_override = "Starlight City Network")
-	for(var/obj/structure/cyberpunk_swarm_pylon/pylon in world)
-		new /obj/structure/cyberpunk_photon_turret(get_turf(pylon))
+	priority_announce("Рой Старлайт достиг критического запаса плазмы. Начался выброс наносфер.", "Городская тревога")
+
+/datum/team/cyberpunk_star_swarm/proc/powered_at(atom/target)
+	for(var/obj/structure/cyberpunk_swarm_pylon/pylon in pylons)
+		if(!QDELETED(pylon) && pylon.z == target.z && get_dist(pylon, target) <= 5)
+			return TRUE
+	for(var/mob/living/basic/cyberpunk_swarm_builder/builder in builders)
+		if(builder.stat != DEAD && world.time < builder.source_until && builder.z == target.z && get_dist(builder, target) <= 5)
+			return TRUE
+	return FALSE
+
+/datum/team/cyberpunk_star_swarm/proc/select_body(mob/living/user)
+	var/list/corpses = list()
+	for(var/mob/living/body in view(1, user))
+		if(body.stat == DEAD && (body.mob_biotypes & MOB_ORGANIC))
+			corpses += body
+	return tgui_input_list(user, "Выберите тело.", "Рой", corpses)
+
+/datum/team/cyberpunk_star_swarm/proc/harvest_body(mob/living/user)
+	var/mob/living/body = select_body(user)
+	if(!body || !powered_at(body) || !do_after(user, 1 MINUTES, target = body) || QDELETED(body) || body.stat != DEAD || !powered_at(body))
+		return FALSE
+	biomass += 1000
+	qdel(body)
+	return TRUE
+
+/datum/team/cyberpunk_star_swarm/proc/place_swarm_structure(mob/living/user, structure_type)
+	var/turf/location = get_turf(user)
+	if(!location || (locate(structure_type) in location) || !do_after(user, 15 SECONDS, target = user) || (locate(structure_type) in location))
+		return FALSE
+	if(structure_type == /obj/structure/cyberpunk_swarm_pylon)
+		var/obj/structure/cyberpunk_swarm_pylon/pylon = new(location)
+		pylon.swarm = src
+		pylons += pylon
+	else
+		var/obj/structure/cyberpunk_photon_turret/turret = new(location)
+		turret.swarm = src
+	return TRUE
+
+/obj/effect/cyberpunk_plasma_sphere
+	name = "нано-плазменная сфера"
+	icon = 'icons/obj/devices/circuitry_n_data.dmi'
+	icon_state = "datadisk4"
+	color = "#cd6dff"
+	anchored = TRUE
+	light_range = 2
+	light_color = "#cd6dff"
+
+/obj/effect/cyberpunk_plasma_sphere/Initialize(mapload)
+	. = ..()
+	addtimer(CALLBACK(src, PROC_REF(detonate)), 15 SECONDS)
+
+/obj/effect/cyberpunk_plasma_sphere/proc/detonate()
+	explosion(get_turf(src), devastation_range = 0, heavy_impact_range = 1, light_impact_range = 3)
+	qdel(src)
+
+/mob/living/basic/cyberpunk_swarm_builder
+	name = "строитель Роя Старлайт"
+	icon = 'icons/mob/nonhuman-player/netguardian.dmi'
+	icon_state = "netguardian"
+	icon_living = "netguardian"
+	color = "#f4bc43"
+	maxHealth = 100
+	health = 100
+	melee_damage_lower = 10
+	melee_damage_upper = 15
+	melee_damage_type = BURN
+	mob_biotypes = MOB_ROBOTIC
+	var/datum/team/cyberpunk_star_swarm/swarm
+	var/source_until
+	var/zealot = FALSE
+
+/mob/living/basic/cyberpunk_swarm_builder/Initialize(mapload)
+	. = ..()
+	AddElement(/datum/element/empprotection, EMP_PROTECT_ALL)
+
+/mob/living/basic/cyberpunk_swarm_builder/Destroy()
+	if(swarm)
+		swarm.builders -= src
+	return ..()
+
+/mob/living/basic/cyberpunk_swarm_builder/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
+	. = ..()
+	if(!.)
+		return
+	if(!zealot)
+		target.emp_act(EMP_LIGHT)
+		return
+	var/mob/living/victim = target
+	if(istype(victim))
+		victim.adjust_bodytemperature(-20)
+
+/mob/living/basic/cyberpunk_swarm_builder/verb/swarm_construction()
+	set name = "Строительство Роя"
+	set category = "Рой"
+	if(zealot || !swarm || stat != CONSCIOUS)
+		return
+	var/choice = tgui_input_list(src, "Что построить?", "Рой", list("Пилон", "Фотонная пушка", "Переработать тело"))
+	switch(choice)
+		if("Пилон")
+			swarm.place_swarm_structure(src, /obj/structure/cyberpunk_swarm_pylon)
+		if("Фотонная пушка")
+			swarm.place_swarm_structure(src, /obj/structure/cyberpunk_photon_turret)
+		if("Переработать тело")
+			swarm.harvest_body(src)
+
+/mob/living/basic/cyberpunk_swarm_builder/verb/swarm_power()
+	set name = "Подпитка Роя"
+	set category = "Рой"
+	if(zealot || !swarm || stat != CONSCIOUS)
+		return
+	var/list/choices = list()
+	for(var/obj/structure/machine in view(1, src))
+		if(istype(machine, /obj/structure/cyberpunk_swarm_pylon) || istype(machine, /obj/structure/cyberpunk_photon_turret))
+			choices += machine
+	var/obj/structure/choice = tgui_input_list(src, "Выберите источник или пушку.", "Рой", choices)
+	var/obj/structure/cyberpunk_swarm_pylon/pylon = choice
+	if(istype(pylon) && pylon.swarm == swarm && Adjacent(pylon))
+		source_until = world.time + 5 MINUTES
+		qdel(pylon)
+		return
+	var/obj/structure/cyberpunk_photon_turret/turret = choice
+	if(istype(turret) && turret.swarm == swarm && Adjacent(turret))
+		turret.boost_until = world.time + 30 SECONDS
+
+/mob/living/basic/cyberpunk_swarm_builder/verb/become_zealot()
+	set name = "Стать зиалотом"
+	set category = "Рой"
+	if(zealot || !swarm || stat != CONSCIOUS)
+		return
+	var/mob/living/body = swarm.select_body(src)
+	if(!body || !do_after(src, 30 SECONDS, target = body) || QDELETED(body) || body.stat != DEAD || zealot)
+		return
+	qdel(body)
+	zealot = TRUE
+	source_until = 0
+	name = "зиалот Роя Старлайт"
+	melee_damage_type = BRUTE
+	sharpness = SHARP_EDGED
+	melee_damage_lower = 24
+	melee_damage_upper = 36
 
 /datum/antagonist/cyberpunk/major/transformer
 	name = "Transformer"
 	pref_flag = ROLE_CYBERPUNK_TRANSFORMER
-	progress_goal = 5
-	chip_name = "transformer spark"
-	chip_desc = "A machine-awakening spark."
-	primary_action = "Awaken machine"
-	primary_points = 1
-	primary_delay = 15 SECONDS
-	primary_reason = "awakening"
-	primary_target_prompt = "Choose nearby machinery or vehicle."
-	role_briefing = "Awaken machines. After five awakenings, place an autossembler; use weapon forms and call machine ghosts."
-	var/awakened_count = 0
+	chip_name = "ядро Трансформера"
+	role_briefing = "Разбирайте городскую технику и сохраняйте ядро до конца раунда."
+	primary_action = "Разобрать технику"
+	var/parts = 120
+	var/next_empty_warning
+	var/datum/weakref/assembler_ref
 
-/datum/antagonist/cyberpunk/major/transformer/get_primary_targets(mob/living/user)
-	var/list/targets = list()
-	for(var/obj/nearby in view(1, user))
-		if(istype(nearby, /obj/machinery) || istype(nearby, /obj/vehicle))
-			targets += nearby
-	return targets
+/datum/antagonist/cyberpunk/major/transformer/on_gain()
+	. = ..()
+	START_PROCESSING(SSobj, src)
+
+/datum/antagonist/cyberpunk/major/transformer/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	return ..()
+
+/datum/antagonist/cyberpunk/major/transformer/process(seconds_per_tick)
+	var/mob/living/body = owner?.current
+	if(!body || body.stat == DEAD)
+		return
+	parts = max(0, parts - seconds_per_tick * 0.35)
+	if(!parts)
+		body.adjust_brute_loss(seconds_per_tick * 3)
+		if(world.time >= next_empty_warning)
+			next_empty_warning = world.time + 10 SECONDS
+			to_chat(body, span_userdanger("Ядро разваливается без запчастей."))
+
+/datum/antagonist/cyberpunk/major/transformer/roundend_report()
+	var/survived = owner?.current && owner.current.stat != DEAD && parts > 0
+	return "[printplayer(owner)]<br>Запас деталей: [round(parts)]. [survived ? span_greentext("Ядро выжило.") : span_redtext("Ядро потеряно.")]"
 
 /datum/antagonist/cyberpunk/major/transformer/get_chip_options(mob/living/user)
-	var/list/options = list(primary_action)
-	if(awakened_count >= 5)
-		options += "Place autossembler"
-	options += "Transform weapon"
-	options += "Call machine ghost"
-	options += "Status"
-	options += "Cancel"
-	return options
+	return list(primary_action, "Поставить автосборщик", "Починить корпус", "Status", "Cancel")
 
 /datum/antagonist/cyberpunk/major/transformer/handle_chip_option(mob/living/user, choice)
-	if(choice == "Place autossembler")
-		return place_autossembler(user)
-	if(choice == "Transform weapon")
-		var/chosen = tgui_input_list(user, "Choose integrated weapon.", "Transformer Weapon", list("laser", "ion", "plasma", "Cancel"))
-		if(!chosen || chosen == "Cancel")
-			return FALSE
-		switch(chosen)
-			if("laser")
-				new /obj/item/gun/energy/laser/cyberpunk/radiant(get_turf(user))
-			if("ion")
-				new /obj/item/grenade/empgrenade(get_turf(user))
-			if("plasma")
-				new /obj/item/gun/energy/laser/cyberpunk/plasma(get_turf(user))
-		add_progress(1, "weapon")
-		return TRUE
-	if(choice == "Call machine ghost")
-		return summon_ghost_asset(user, /mob/living/basic/drone/syndrone, "awakened transformer machine", 1)
+	switch(choice)
+		if("Поставить автосборщик")
+			return place_autossembler(user)
+		if("Починить корпус")
+			if(parts < 15 || !action_ready(user, choice, 5 SECONDS))
+				return FALSE
+			parts -= 15
+			user.heal_ordered_damage(25, list(BRUTE, BURN))
+			return TRUE
+		if("Status")
+			to_chat(user, span_notice("Запас деталей: [round(parts)]."))
+			return TRUE
 	return ..()
 
 /datum/antagonist/cyberpunk/major/transformer/perform_primary_action(mob/living/user)
-	. = ..()
-	if(.)
-		awakened_count++
-		new /obj/structure/cyberpunk_awakened_machine(get_turf(user))
-
-/datum/antagonist/cyberpunk/major/transformer/proc/place_autossembler(mob/living/user)
-	if(!do_after(user, 20 SECONDS, target = user))
-		to_chat(user, span_warning("Autossembler placement interrupted."))
+	var/list/targets = list()
+	for(var/obj/nearby in view(1, user))
+		if((istype(nearby, /obj/machinery) || istype(nearby, /obj/vehicle)) && !(locate(/mob/living) in nearby.contents))
+			targets += nearby
+	var/obj/target = tgui_input_list(user, "Что разобрать?", name, targets)
+	if(!target || !do_after(user, 15 SECONDS, target = target) || QDELETED(target) || (locate(/mob/living) in target.contents))
 		return FALSE
-	new /obj/structure/cyberpunk_autossembler(get_turf(user))
-	add_progress(2, "autossembler")
+	target.deconstruct(TRUE)
+	if(!QDELETED(target))
+		return FALSE
+	parts = min(400, parts + 45)
 	return TRUE
 
-/datum/antagonist/cyberpunk/major/transformer/extra_roundend_report()
-	return "[..()]<br>Machines awakened: [awakened_count]."
+/datum/antagonist/cyberpunk/major/transformer/proc/place_autossembler(mob/living/user)
+	if(parts < 60 || assembler_ref?.resolve() || !do_after(user, 20 SECONDS, target = user) || parts < 60 || assembler_ref?.resolve())
+		return FALSE
+	var/obj/structure/cyberpunk_autossembler/assembler = new(get_turf(user))
+	assembler.transformer_ref = WEAKREF(src)
+	assembler_ref = WEAKREF(assembler)
+	parts -= 60
+	return TRUE
 
 /datum/antagonist/cyberpunk/major/broker
 	name = "Broker"
 	pref_flag = ROLE_CYBERPUNK_BROKER
 	progress_goal = 3
-	chip_name = "broker anchor key"
-	chip_desc = "A dimensional anchor authorizer."
-	primary_action = "Place anchor"
-	primary_points = 1
+	chip_name = "ключ якоря Брокера"
+	primary_action = "Поставить якорь"
 	primary_delay = 20 SECONDS
-	primary_reason = "anchor"
-	primary_target_prompt = "Choose nearby anchor point."
-	role_briefing = "Place three breach anchors. Use nanite breaches, call nanite ghosts, and deploy broker mech weapons."
-	var/list/anchor_refs = list()
+	role_briefing = "Удержите три якоря до полной зарядки. Тела дают материал для нанитов."
+	var/list/anchors = list()
+	var/material = 0
+
+/datum/antagonist/cyberpunk/major/broker/on_gain()
+	. = ..()
+	START_PROCESSING(SSobj, src)
+
+/datum/antagonist/cyberpunk/major/broker/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	return ..()
+
+/datum/antagonist/cyberpunk/major/broker/process(seconds_per_tick)
+	var/ready = count_charged_anchors()
+	if(!goal_completed && ready == progress_goal)
+		add_progress(ready - progress_points, "три заряженных якоря")
+	else if(!goal_completed)
+		progress_points = ready
+
+/datum/antagonist/cyberpunk/major/broker/proc/count_charged_anchors()
+	var/ready = 0
+	for(var/datum/weakref/reference as anything in anchors)
+		var/obj/structure/cyberpunk_broker_anchor/anchor = reference.resolve()
+		if(anchor?.charge >= anchor.capacity)
+			ready++
+	return ready
+
+/datum/antagonist/cyberpunk/major/broker/proc/count_anchors()
+	var/remaining = 0
+	for(var/datum/weakref/reference as anything in anchors)
+		if(reference.resolve())
+			remaining++
+	return remaining
 
 /datum/antagonist/cyberpunk/major/broker/perform_primary_action(mob/living/user)
 	var/turf/location = get_turf(user)
-	var/location_ref = REF(location)
-	if(location_ref in anchor_refs)
-		to_chat(user, span_warning("An anchor is already placed here."))
+	if(!location || count_anchors() >= 3 || (locate(/obj/structure/cyberpunk_broker_anchor) in location))
 		return FALSE
-	if(!do_after(user, primary_delay, target = user))
-		to_chat(user, span_warning("Anchor placement interrupted."))
+	if(!do_after(user, primary_delay, target = user) || count_anchors() >= 3 || (locate(/obj/structure/cyberpunk_broker_anchor) in location))
 		return FALSE
-	anchor_refs += location_ref
-	new /obj/structure/cyberpunk_broker_anchor(location)
-	add_progress(primary_points, primary_reason)
-	if(progress_points >= progress_goal)
-		priority_announce("Three hostile breach anchors are active. Expect nanite incursions.", "City Threat Monitor", sender_override = "Starlight City Network")
+	var/obj/structure/cyberpunk_broker_anchor/anchor = new(location)
+	anchor.broker_ref = WEAKREF(src)
+	anchors += WEAKREF(anchor)
 	return TRUE
-
-/datum/antagonist/cyberpunk/major/broker/extra_roundend_report()
-	return "[..()]<br>Breach anchors: [length(anchor_refs)]/3."
 
 /datum/antagonist/cyberpunk/major/broker/on_goal_completed(reason = "progress")
 	. = ..()
-	priority_announce("Broker breach anchors are stable. Nanite resistance wave incoming.", "City Threat Monitor", sender_override = "Starlight City Network")
-	for(var/obj/structure/cyberpunk_broker_anchor/anchor in world)
-		for(var/i in 1 to 3)
-			new /mob/living/basic/blob_minion/spore/independent(get_turf(anchor))
+	priority_announce("Три якоря Брокера заряжены. Начинается выброс нанитов.", "Городская сеть")
+	for(var/datum/weakref/reference as anything in anchors)
+		var/obj/structure/cyberpunk_broker_anchor/anchor = reference.resolve()
+		if(anchor)
+			for(var/index in 1 to 3)
+				spawn_nanite(get_turf(anchor))
+
+/datum/antagonist/cyberpunk/major/broker/proc/spawn_nanite(turf/location)
+	var/mob/living/basic/cyberpunk_nanite/nanite = new(location)
+	nanite.broker_ref = WEAKREF(src)
+	return nanite
 
 /datum/antagonist/cyberpunk/major/broker/get_chip_options(mob/living/user)
-	return list(primary_action, "Nanite breach", "Call nanite ghost", "Mech weapon", "Status", "Cancel")
+	return list(primary_action, "Разобрать тело", "Обратить труп", "Создать нанита", "Позвать нанита-призрака", "Status", "Cancel")
 
 /datum/antagonist/cyberpunk/major/broker/handle_chip_option(mob/living/user, choice)
 	switch(choice)
-		if("Nanite breach")
-			for(var/i in 1 to 3)
-				new /mob/living/basic/blob_minion/spore/independent(get_turf(user))
-			add_progress(1, "nanites")
-			return TRUE
-		if("Call nanite ghost")
-			return summon_ghost_asset(user, /mob/living/basic/blob_minion/spore/independent, "Broker nanite", 1)
-		if("Mech weapon")
-			var/chosen = tgui_input_list(user, "Choose broker weapon.", "Broker Arsenal", list("energy sword", "beam gun", "shield pulse", "Cancel"))
-			if(!chosen || chosen == "Cancel")
+		if("Разобрать тело", "Обратить труп")
+			var/mob/living/corpse = cyberpunk_antag_select_corpse(user, name)
+			if(!corpse || istype(corpse, /mob/living/basic/cyberpunk_nanite) || !do_after(user, 1 MINUTES, target = corpse) || QDELETED(corpse) || corpse.stat != DEAD)
 				return FALSE
-			switch(chosen)
-				if("energy sword")
-					new /obj/item/knife/cyberpunk/energy_blade(get_turf(user))
-				if("beam gun")
-					new /obj/item/gun/energy/laser/cyberpunk/plasma(get_turf(user))
-				if("shield pulse")
-					user.heal_ordered_damage(60, list(BRUTE, BURN))
-			add_progress(1, "mech weapon")
+			if(choice == "Обратить труп")
+				return raise_nanite(corpse)
+			material += 25
+			qdel(corpse)
+			return TRUE
+		if("Создать нанита", "Позвать нанита-призрака")
+			if(material < 10 || !action_ready(user, choice, 10 SECONDS))
+				return FALSE
+			if(choice == "Позвать нанита-призрака")
+				var/mob/volunteer = SSpolling.poll_ghost_candidates("Сыграть нанита?", check_jobban = ROLE_SENTIENCE, role = ROLE_SENTIENCE, poll_time = 10 SECONDS, amount_to_pick = 1)
+				if(!volunteer?.key || material < 10 || QDELETED(user))
+					return FALSE
+				material -= 10
+				var/mob/living/basic/cyberpunk_nanite/nanite = spawn_nanite(get_turf(user))
+				nanite.PossessByPlayer(volunteer.key)
+				return TRUE
+			material -= 10
+			spawn_nanite(get_turf(user))
+			return TRUE
+		if("Status")
+			to_chat(user, span_notice("Заряжено якорей [count_charged_anchors()]/3. Материал [material]."))
 			return TRUE
 	return ..()
+
+/datum/antagonist/cyberpunk/major/broker/proc/raise_nanite(mob/living/victim)
+	if(QDELETED(victim) || istype(victim, /mob/living/basic/cyberpunk_nanite))
+		return FALSE
+	var/turf/location = get_turf(victim)
+	if(!location)
+		return FALSE
+	var/mob/living/basic/cyberpunk_nanite/nanite = spawn_nanite(location)
+	if(victim.mind)
+		victim.mind.transfer_to(nanite, force_key_move = TRUE)
+	qdel(victim)
+	return TRUE
+
+/mob/living/basic/cyberpunk_nanite
+	name = "рой нанитов"
+	icon = 'icons/mob/nonhuman-player/netguardian.dmi'
+	icon_state = "netguardian"
+	icon_living = "netguardian"
+	color = "#97b8bb"
+	maxHealth = 85
+	health = 85
+	melee_damage_lower = 8
+	melee_damage_upper = 12
+	sharpness = SHARP_EDGED
+	mob_biotypes = MOB_ROBOTIC
+	speed = 0.5
+	var/datum/weakref/broker_ref
+	var/datum/weakref/conversion_target
+	var/conversion_started
+	var/last_attack
+	var/next_attack
+	var/list/current_route
+	var/list/blocked_chases = list()
+	var/datum/weakref/chase_ref
+	var/datum/weakref/ladder_ref
+	var/turf/stair_exit
+	var/next_route
+	var/next_step
+	var/atomic_wall = FALSE
+	var/death_at
+	var/turf/death_location
+
+/mob/living/basic/cyberpunk_nanite/Initialize(mapload)
+	. = ..()
+	START_PROCESSING(SSfastprocess, src)
+
+/mob/living/basic/cyberpunk_nanite/Destroy()
+	STOP_PROCESSING(SSfastprocess, src)
+	return ..()
+
+/mob/living/basic/cyberpunk_nanite/death(gibbed)
+	. = ..()
+	if(. || stat == DEAD)
+		death_at = world.time
+		death_location = get_turf(src)
+
+/mob/living/basic/cyberpunk_nanite/process(seconds_per_tick)
+	var/datum/antagonist/cyberpunk/major/broker/broker = broker_ref?.resolve()
+	if(!broker)
+		return
+	if(stat == DEAD)
+		var/wait_time = !broker.count_anchors() ? 10 MINUTES : (broker.count_charged_anchors() == 3 ? 2 MINUTES : 5 MINUTES)
+		if(death_at && death_location && world.time >= death_at + wait_time)
+			forceMove(death_location)
+			if(revive(HEAL_ALL, force_grab_ghost = TRUE))
+				death_at = null
+		return
+	if(atomic_wall)
+		conversion_started = null
+		for(var/mob/living/victim in loc)
+			if(victim != src && victim.stat != DEAD)
+				victim.apply_damage(4 * seconds_per_tick, BRUTE, BODY_ZONE_L_LEG, sharpness = SHARP_EDGED)
+				victim.Immobilize(0.5 SECONDS)
+		return
+	var/mob/living/target = conversion_target?.resolve()
+	if(conversion_started && (!target || target.z != z || get_dist(src, target) > 1 || world.time > last_attack + 3 SECONDS))
+		conversion_started = null
+	if(client)
+		return
+	if(world.time >= next_route)
+		next_route = world.time + 2 SECONDS
+		refresh_chase()
+	var/mob/living/prey = chase_ref?.resolve()
+	if(prey && prey.z == z && prey.Adjacent(src) && world.time >= next_attack)
+		next_attack = world.time + 1 SECONDS
+		melee_attack(prey, null)
+		return
+	if(world.time < next_step)
+		return
+	next_step = world.time + 0.2 SECONDS
+	if(length(current_route))
+		var/turf/step = current_route[1]
+		if(Move(step, get_dir(src, step)))
+			current_route.Cut(1, 2)
+		else
+			current_route = null
+		return
+	if(prey && prey.z != z)
+		var/obj/structure/ladder/ladder = ladder_ref?.resolve()
+		if(ladder?.Adjacent(src))
+			INVOKE_ASYNC(ladder, TYPE_PROC_REF(/obj/structure/ladder, use), src, prey.z > z)
+			next_step = world.time + 1 SECONDS
+		else if(stair_exit)
+			zMove(target = stair_exit, z_move_flags = ZMOVE_STAIRS_FLAGS)
+		ladder_ref = null
+		stair_exit = null
+
+/mob/living/basic/cyberpunk_nanite/proc/refresh_chase()
+	current_route = null
+	ladder_ref = null
+	stair_exit = null
+	chase_ref = null
+	var/mob/living/prey
+	var/nearest_distance = INFINITY
+	for(var/datum/weakref/old_target as anything in blocked_chases.Copy())
+		if(!old_target.resolve() || blocked_chases[old_target] <= world.time)
+			blocked_chases -= old_target
+	for(var/mob/living/player in GLOB.alive_player_list)
+		if(player.stat == DEAD || player == src || istype(player, /mob/living/basic/cyberpunk_nanite) || !(player.mob_biotypes & MOB_ORGANIC) || (WEAKREF(player) in blocked_chases))
+			continue
+		var/distance = max(abs(player.x - x), abs(player.y - y)) + abs(player.z - z) * 50
+		if(distance < nearest_distance)
+			nearest_distance = distance
+			prey = player
+	if(!prey)
+		return
+	chase_ref = WEAKREF(prey)
+	if(prey.z == z && prey.Adjacent(src))
+		return
+	var/atom/destination = prey
+	var/min_distance = 1
+	if(prey.z != z)
+		destination = choose_vertical_route(prey.z)
+		min_distance = ladder_ref ? 1 : 0
+		if(destination && (get_turf(src) == get_turf(destination) || (min_distance && Adjacent(destination))))
+			return
+	if(destination)
+		current_route = get_path_to(src, destination, max_distance = 180, mintargetdist = min_distance)
+	if(!length(current_route))
+		ladder_ref = null
+		stair_exit = null
+		chase_ref = null
+		blocked_chases[WEAKREF(prey)] = world.time + 8 SECONDS
+
+/mob/living/basic/cyberpunk_nanite/proc/choose_vertical_route(target_z)
+	var/nearest_distance = INFINITY
+	var/atom/best_entry
+	var/going_up = target_z > z
+	for(var/obj/structure/ladder/ladder as anything in GLOB.ladders)
+		if(ladder.z != z || !(going_up ? ladder.up : ladder.down))
+			continue
+		var/distance = get_dist(src, ladder)
+		if(distance < nearest_distance)
+			nearest_distance = distance
+			best_entry = ladder
+			ladder_ref = WEAKREF(ladder)
+	for(var/obj/structure/stairs/stair as anything in GLOB.stairs)
+		if(!stair.isTerminator())
+			continue
+		var/turf/lower = get_turf(stair)
+		var/turf/upper = get_step_multiz(stair, stair.dir | UP)
+		var/turf/entry = going_up ? lower : upper
+		var/turf/exit = going_up ? upper : lower
+		if(entry?.z != z || !isopenturf(exit) || abs(exit.z - target_z) >= abs(z - target_z))
+			continue
+		var/distance = get_dist(src, entry)
+		if(distance < nearest_distance)
+			nearest_distance = distance
+			best_entry = entry
+			ladder_ref = null
+			stair_exit = exit
+	return best_entry
+
+/mob/living/basic/cyberpunk_nanite/melee_attack(atom/target, list/modifiers, ignore_cooldown = FALSE)
+	var/mob/living/victim = target
+	var/datum/antagonist/cyberpunk/major/broker/broker = broker_ref?.resolve()
+	if(!broker || !istype(victim) || istype(victim, /mob/living/basic/cyberpunk_nanite) || atomic_wall)
+		return FALSE
+	if(!Adjacent(victim))
+		return FALSE
+	if(victim.stat == DEAD)
+		return broker.raise_nanite(victim)
+	if(conversion_target?.resolve() != victim || !conversion_started || world.time > last_attack + 3 SECONDS)
+		conversion_target = WEAKREF(victim)
+		conversion_started = world.time
+	. = ..()
+	if(.)
+		last_attack = world.time
+		if((victim.stat == DEAD && broker.count_charged_anchors() == 3) || world.time >= conversion_started + 1 MINUTES)
+			broker.raise_nanite(victim)
+			conversion_target = null
+			conversion_started = null
+
+/mob/living/basic/cyberpunk_nanite/verb/recall_to_anchor()
+	set name = "Вернуться к якорю"
+	set category = "Наниты"
+	if(stat == DEAD)
+		return
+	var/datum/antagonist/cyberpunk/major/broker/broker = broker_ref?.resolve()
+	var/obj/structure/cyberpunk_broker_anchor/closest
+	var/distance = INFINITY
+	for(var/datum/weakref/reference as anything in broker?.anchors)
+		var/obj/structure/cyberpunk_broker_anchor/anchor = reference.resolve()
+		if(!anchor || anchor.charge < anchor.capacity)
+			continue
+		var/current_distance = get_dist(src, anchor) + abs(z - anchor.z) * world.maxx
+		if(current_distance < distance)
+			closest = anchor
+			distance = current_distance
+	if(closest)
+		forceMove(get_turf(closest))
+		heal_ordered_damage(maxHealth, list(BRUTE, BURN, TOX, OXY))
+
+/mob/living/basic/cyberpunk_nanite/verb/toggle_atomic_wall()
+	set name = "Атомарная стена"
+	set category = "Наниты"
+	if(stat == DEAD)
+		return
+	atomic_wall = !atomic_wall
+	density = !atomic_wall
+	color = atomic_wall ? "#dde9ec" : initial(color)
+	if(atomic_wall)
+		add_movespeed_modifier(/datum/movespeed_modifier/cyberpunk_atomic_wall)
+	else
+		remove_movespeed_modifier(/datum/movespeed_modifier/cyberpunk_atomic_wall)
+
+/datum/movespeed_modifier/cyberpunk_atomic_wall
+	multiplicative_slowdown = 4
 
 /datum/antagonist/cyberpunk/major/liberation_army
 	name = "Liberation Army"
 	pref_flag = ROLE_CYBERPUNK_LIBERATION_ARMY
-	progress_goal = 10000
-	chip_name = "liberation field tablet"
-	chip_desc = "A field tablet for cells, factories, and sabotage accounting."
-	primary_action = "Establish cell"
-	primary_points = 500
-	primary_delay = 20 SECONDS
-	primary_reason = "cell"
-	primary_target_prompt = "Choose nearby structure for a cell."
-	role_briefing = "Build GLA-lite cells, factories, barracks, arms plants, black servers, and tunnel links. Reach the damage threshold to unlock the final bomb-truck phase."
+	chip_name = "планшет Армии спасения"
+	role_briefing = "Поднимите хаос, закажите ядерный грузовик и взорвите его в центре Даунтауна."
+	primary_action = "Развернуть ячейку"
+	progress_goal = 1
 	team_type = /datum/team/cyberpunk_liberation_army
+	var/list/watched_structures = list()
 
-/datum/antagonist/cyberpunk/major/liberation_army/get_primary_targets(mob/living/user)
-	var/list/targets = list()
-	for(var/obj/structure/nearby in view(1, user))
-		targets += nearby
-	return targets
+/datum/antagonist/cyberpunk/major/liberation_army/on_gain()
+	. = ..()
+	var/mob/living/body = owner.current
+	body.faction |= REF(get_team())
+	RegisterSignal(SSdcs, COMSIG_GLOB_MOB_DEATH, PROC_REF(on_liberation_death))
+
+/datum/antagonist/cyberpunk/major/liberation_army/Destroy()
+	UnregisterSignal(SSdcs, COMSIG_GLOB_MOB_DEATH)
+	for(var/datum/weakref/reference as anything in watched_structures)
+		var/obj/target = reference.resolve()
+		if(target)
+			UnregisterSignal(target, COMSIG_QDELETING)
+	return ..()
+
+/datum/antagonist/cyberpunk/major/liberation_army/proc/on_liberation_death(datum/source, mob/living/victim)
+	SIGNAL_HANDLER
+	if(!victim.mind?.key || !owner?.current?.ckey || victim.lastattackerckey != owner.current.ckey || victim.mind.has_antag_datum(type))
+		return
+	var/datum/team/cyberpunk_liberation_army/team = get_team()
+	if(victim.mind in team.casualties)
+		return
+	team.casualties += victim.mind
+	team.chaos += 400
+
+/datum/antagonist/cyberpunk/major/liberation_army/proc/on_liberation_destroyed(obj/target)
+	SIGNAL_HANDLER
+	var/datum/team/cyberpunk_liberation_army/team = get_team()
+	if(target.get_integrity() <= 0 && !(REF(target) in team.wrecks))
+		team.wrecks += REF(target)
+		team.chaos += 150
 
 /datum/antagonist/cyberpunk/major/liberation_army/perform_primary_action(mob/living/user)
 	var/datum/team/cyberpunk_liberation_army/army = get_team()
 	var/turf/location = get_turf(user)
-	var/location_ref = REF(location)
-	if(location_ref in army.established_cells)
-		to_chat(user, span_warning("A cell is already established here."))
+	if(!location || (location in army.established_cells) || !do_after(user, 20 SECONDS, target = user) || (location in army.established_cells))
 		return FALSE
-	. = ..()
-	if(.)
-		army.established_cells += location_ref
-		new /obj/structure/cyberpunk_liberation_cell(location)
-
-/datum/antagonist/cyberpunk/major/liberation_army/get_chip_options(mob/living/user)
-	return list(primary_action, "Build factory", "Build barracks", "Build arms plant", "Build black server", "Build tunnel", "Call volunteer fighter", "Status", "Cancel")
-
-/datum/antagonist/cyberpunk/major/liberation_army/handle_chip_option(mob/living/user, choice)
-	switch(choice)
-		if("Build factory")
-			return build_asset(user, /obj/structure/cyberpunk_liberation_factory, 700, "factory")
-		if("Build barracks")
-			return build_asset(user, /obj/structure/cyberpunk_liberation_barracks, 500, "barracks")
-		if("Build arms plant")
-			return build_asset(user, /obj/structure/cyberpunk_liberation_arms_plant, 500, "arms plant")
-		if("Build black server")
-			return build_asset(user, /obj/structure/cyberpunk_liberation_black_server, 400, "black server")
-		if("Build tunnel")
-			return build_asset(user, /obj/structure/cyberpunk_liberation_tunnel, 250, "tunnel")
-		if("Call volunteer fighter")
-			return summon_ghost_asset(user, /mob/living/simple_animal/hostile/asteroid, "Liberation Army volunteer", 500)
-	return ..()
-
-/datum/antagonist/cyberpunk/major/liberation_army/proc/build_asset(mob/living/user, asset_type, points, reason)
-	if(!action_ready(user, "build_[asset_type]", 45 SECONDS))
-		return FALSE
-	if(!do_after(user, 20 SECONDS, target = user))
-		to_chat(user, span_warning("Construction interrupted."))
-		return FALSE
-	new asset_type(get_turf(user))
-	add_progress(points, reason)
-	get_team()?.get_cyberpunk_faction_resources().add_resource("supplies", points)
+	army.established_cells += location
+	new /obj/structure/cyberpunk_liberation_cell(location)
 	return TRUE
 
-/datum/antagonist/cyberpunk/major/liberation_army/extra_roundend_report()
-	var/datum/team/cyberpunk_liberation_army/army = get_team()
-	return "[..()]<br>Established cells: [length(army?.established_cells)]."
+/datum/antagonist/cyberpunk/major/liberation_army/get_chip_options(mob/living/user)
+	return list(primary_action, "Отметить цель разрушения", "Построить завод", "Построить казармы", "Построить оружейный завод", "Поставить чёрный сервер", "Вырыть тоннель", "Заказать подкрепление", "Status", "Cancel")
 
-/datum/antagonist/cyberpunk/major/liberation_army/on_goal_completed(reason = "progress")
-	. = ..()
-	priority_announce("Liberation Army damage threshold reached. Final bomb-truck phase authorized.", "City Threat Monitor", sender_override = "Starlight City Network")
-	var/turf/drop_turf = get_turf(owner?.current)
-	if(drop_turf)
-		new /obj/vehicle/ridden/atv(drop_turf)
-		new /obj/item/grenade/c4/x4(drop_turf)
-		new /obj/item/gun/ballistic/rocketlauncher/cyberpunk(drop_turf)
+/datum/antagonist/cyberpunk/major/liberation_army/handle_chip_option(mob/living/user, choice)
+	var/datum/team/cyberpunk_liberation_army/army = get_team()
+	switch(choice)
+		if("Отметить цель разрушения")
+			var/list/targets = list()
+			for(var/obj/target in view(1, user))
+				if(target.uses_integrity && (istype(target, /obj/machinery) || istype(target, /obj/structure)))
+					targets += target
+			var/obj/target = tgui_input_list(user, "Выберите объект.", name, targets)
+			if(!target || (WEAKREF(target) in watched_structures))
+				return FALSE
+			watched_structures += WEAKREF(target)
+			RegisterSignal(target, COMSIG_QDELETING, PROC_REF(on_liberation_destroyed))
+			return TRUE
+		if("Построить завод")
+			return build_asset(user, /obj/structure/cyberpunk_liberation_factory)
+		if("Построить казармы")
+			return build_asset(user, /obj/structure/cyberpunk_liberation_barracks)
+		if("Построить оружейный завод")
+			return build_asset(user, /obj/structure/cyberpunk_liberation_arms_plant)
+		if("Поставить чёрный сервер")
+			return build_asset(user, /obj/structure/cyberpunk_liberation_black_server)
+		if("Вырыть тоннель")
+			return build_asset(user, /obj/structure/cyberpunk_liberation_tunnel)
+		if("Заказать подкрепление")
+			if(army.chaos < 250 || !action_ready(user, choice, 20 SECONDS))
+				return FALSE
+			army.chaos -= 250
+			var/mob/living/fighter = new /mob/living/simple_animal/hostile/asteroid(get_turf(user))
+			fighter.faction = list(REF(army))
+			return TRUE
+		if("Status")
+			to_chat(user, span_notice("Хаос [army.chaos]. Ядерный грузовик [army.nuke_ordered ? "заказан" : "доступен для заказа при достаточном хаосе"]."))
+			return TRUE
+	return ..()
+
+/datum/antagonist/cyberpunk/major/liberation_army/proc/build_asset(mob/living/user, asset_type)
+	if(!action_ready(user, "build_[asset_type]", 45 SECONDS) || !do_after(user, 20 SECONDS, target = user))
+		return FALSE
+	var/obj/structure/asset = new asset_type(get_turf(user))
+	var/obj/structure/cyberpunk_liberation_factory/vehicle_factory = asset
+	if(istype(vehicle_factory))
+		vehicle_factory.army = get_team()
+	return TRUE
+
+/datum/antagonist/cyberpunk/major/liberation_army/roundend_report()
+	var/datum/team/cyberpunk_liberation_army/army = get_team()
+	return "[printplayer(owner)]<br>Хаос: [army.chaos]. [army.won ? span_greentext("Ядерная операция завершена.") : span_redtext("Ядерная операция сорвана.")]"
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation
+	name = "техничка Армии спасения"
+	var/datum/team/cyberpunk_liberation_army/army
+	var/projectile_type = /obj/projectile/beam/laser
+	var/firing_delay = 2 SECONDS
+	var/ammunition = 25
+	var/next_shot
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation/attack_hand_secondary(mob/user, list/modifiers)
+	var/datum/antagonist/cyberpunk/major/liberation_army/agent = user.mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/liberation_army)
+	if(agent?.get_team() != army || !army || !(user in buckled_mobs))
+		return ..()
+	if(!ammunition || world.time < next_shot || !projectile_type)
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	var/list/targets = list()
+	for(var/mob/living/victim in view(7, src))
+		if(victim != user && victim.stat != DEAD)
+			targets += victim
+	var/mob/living/victim = tgui_input_list(user, "Выберите цель для вооружения. Заряды: [ammunition].", name, targets)
+	if(!victim || QDELETED(src) || QDELETED(victim) || victim.z != z || get_dist(src, victim) > 7 || !(user in buckled_mobs) || world.time < next_shot || !ammunition)
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	var/turf/origin = get_turf(src)
+	var/obj/projectile/shot = new projectile_type(origin)
+	shot.aim_projectile(victim, origin)
+	shot.firer = user
+	shot.fired_from = src
+	shot.fire()
+	ammunition--
+	next_shot = world.time + firing_delay
+	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation/bombtruck
+	name = "бомбтрак"
+	projectile_type = /obj/projectile/bullet/rocket
+	firing_delay = 8 SECONDS
+	ammunition = 1
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation/rocket_buggy
+	name = "ракетный багги"
+	projectile_type = /obj/projectile/bullet/rocket
+	firing_delay = 8 SECONDS
+	ammunition = 5
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation/tank
+	name = "лёгкий танк Армии спасения"
+	max_integrity = 550
+	projectile_type = /obj/projectile/beam/laser/heavylaser
+	firing_delay = 5 SECONDS
+	ammunition = 12
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation/nuclear
+	name = "ядерный грузовик Армии спасения"
+	projectile_type = null
+	ammunition = 0
+	var/obj/machinery/nuclearbomb/cyberpunk_liberation/warhead
+
+/obj/vehicle/ridden/atv/cyberpunk_liberation/nuclear/attack_hand_secondary(mob/user, list/modifiers)
+	var/datum/antagonist/cyberpunk/major/liberation_army/agent = user.mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/liberation_army)
+	if(agent?.get_team() != army || !army || (user in buckled_mobs) || warhead)
+		return ..()
+	if(!cyberpunk_liberation_nuke_location(src))
+		to_chat(user, span_warning("Подгоните грузовик к центру Даунтауна."))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	to_chat(user, span_notice("Стойте рядом с грузовиком одну минуту для взведения."))
+	if(!do_after(user, 1 MINUTES, target = src) || warhead || !cyberpunk_liberation_nuke_location(src))
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	set_anchored(TRUE)
+	warhead = new(get_turf(src))
+	warhead.army = army
+	warhead.safety = FALSE
+	warhead.timing = TRUE
+	warhead.timer_set = 300
+	warhead.arm_nuke(user)
+	priority_announce("В Даунтауне взведено ядерное устройство. До взрыва пять минут.", "Городская тревога")
+	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+
+/proc/cyberpunk_liberation_nuke_location(atom/device)
+	var/area/location = get_area(device)
+	if(location?.cyberpunk_district_id == "test_ground")
+		return TRUE
+	if(location?.cyberpunk_district_id != "downtown")
+		return FALSE
+	var/turf/device_turf = get_turf(device)
+	var/left = world.maxx
+	var/right = 1
+	var/bottom = world.maxy
+	var/top = 1
+	for(var/turf/district_turf as anything in location.get_turfs_by_zlevel(device_turf.z))
+		left = min(left, district_turf.x)
+		right = max(right, district_turf.x)
+		bottom = min(bottom, district_turf.y)
+		top = max(top, district_turf.y)
+	return abs(device_turf.x - (left + right) * 0.5) <= 12 && abs(device_turf.y - (bottom + top) * 0.5) <= 12
+
+/obj/machinery/nuclearbomb/cyberpunk_liberation
+	name = "боеголовка Армии спасения"
+	anchored = TRUE
+	var/datum/team/cyberpunk_liberation_army/army
+
+/obj/machinery/nuclearbomb/cyberpunk_liberation/actually_explode()
+	if(core && army && cyberpunk_liberation_nuke_location(src))
+		army.won = TRUE
+		for(var/datum/antagonist/cyberpunk/major/liberation_army/member in GLOB.antagonists)
+			if(member.get_team() == army)
+				member.add_progress(1, "подрыв боеголовки")
+	return ..()
 
 /datum/antagonist/cyberpunk/major/data_cult
 	name = "Data Cult"
 	pref_flag = ROLE_CYBERPUNK_DATA_CULT
 	progress_goal = 5000
-	chip_name = "data cult cipher"
-	chip_desc = "A sci-fi cult cipher powered by stolen data."
-	primary_action = "Harvest data"
-	primary_points = 250
-	primary_delay = 10 SECONDS
-	primary_reason = "data"
-	primary_target_prompt = "Choose nearby data source."
-	role_briefing = "Harvest machinery and neural-interface users for data. Induct neural targets and reach critical stolen-data threshold."
+	chip_name = "шифр Культа данных"
+	role_briefing = "Соберите данные всем Культом и призовите Контрл Вавелнгейт."
 	team_type = /datum/team/cyberpunk_data_cult
+	var/next_shield
+	var/next_run
+	var/next_network_ability
 
-/datum/antagonist/cyberpunk/major/data_cult/get_primary_targets(mob/living/user)
-	var/list/targets = list()
-	for(var/obj/machinery/nearby in view(1, user))
-		targets += nearby
-	for(var/mob/living/nearby in view(1, user))
-		if(nearby != user && nearby.has_neural_implant())
-			targets += nearby
-	return targets
+/datum/antagonist/cyberpunk/major/data_cult/on_gain()
+	var/mob/living/body = owner.current
+	body.gender = NEUTER
+	var/datum/team/cyberpunk_data_cult/team = get_team()
+	body.faction |= REF(team)
+	progress_points = min(team.stolen_data, progress_goal)
+	goal_completed = team.summoned
+	. = ..()
 
 /datum/antagonist/cyberpunk/major/data_cult/get_chip_options(mob/living/user)
-	return list(primary_action, "Induct neural target", "Status", "Cancel")
+	return list("Извлечь данные", "Перепрограммировать нейрочип", "Обратить погибшего без чипа", "Призвать Контрл", "Перейти между мирами", "Усыпить в сети", "Скачок в сети", "Щит", "Ускориться", "Status", "Cancel")
 
 /datum/antagonist/cyberpunk/major/data_cult/handle_chip_option(mob/living/user, choice)
-	if(choice == "Induct neural target")
-		return induct_target(user)
+	var/datum/team/cyberpunk_data_cult/team = get_team()
+	switch(choice)
+		if("Извлечь данные")
+			return perform_primary_action(user)
+		if("Перепрограммировать нейрочип")
+			return induct_target(user)
+		if("Обратить погибшего без чипа")
+			var/mob/living/target = cyberpunk_antag_select_corpse(user, name)
+			return cyberpunk_raise_cult_alternative(user, target, team)
+		if("Призвать Контрл")
+			return summon_control(user, team)
+		if("Перейти между мирами")
+			return user.cyberpunk_antag_project(user)
+		if("Усыпить в сети", "Скачок в сети")
+			return use_cult_network_ability(user, choice)
+		if("Щит")
+			if(user.cyberspace_session)
+				return FALSE
+			if(user.has_status_effect(/datum/status_effect/cyberpunk_cult_shield))
+				user.remove_status_effect(/datum/status_effect/cyberpunk_cult_shield)
+				return TRUE
+			if(world.time < next_shield)
+				return FALSE
+			user.apply_status_effect(/datum/status_effect/cyberpunk_cult_shield, src)
+			return TRUE
+		if("Ускориться")
+			if(user.cyberspace_session || world.time < next_run)
+				return FALSE
+			next_run = world.time + 60 SECONDS
+			user.apply_status_effect(/datum/status_effect/cyberpunk_cult_run)
+			return TRUE
+		if("Status")
+			to_chat(user, span_notice("Данные Культа: [team.stolen_data]/[progress_goal]."))
+			return TRUE
 	return ..()
 
+/datum/antagonist/cyberpunk/major/data_cult/proc/use_cult_network_ability(mob/living/user, choice)
+	var/mob/eye/cyberspace_avatar/avatar = user.cyberspace_session?.avatar
+	if(!avatar || world.time < next_network_ability)
+		return FALSE
+	if(choice == "Усыпить в сети")
+		var/list/options = list()
+		for(var/mob/eye/cyberspace_avatar/target in view(7, avatar))
+			if(target != avatar && target.session?.body?.has_neural_implant())
+				options += target
+		var/mob/eye/cyberspace_avatar/target = tgui_input_list(user, "Выберите владельца нейроинтерфейса.", name, options)
+		if(!target?.session?.body || QDELETED(avatar) || get_dist(avatar, target) > 7)
+			return FALSE
+		var/mob/living/victim = target.session.body
+		victim.Sleeping(15 SECONDS)
+		next_network_ability = world.time + 30 SECONDS
+		return TRUE
+	var/list/locations = list()
+	for(var/turf/open/location in view(5, avatar))
+		if(!location.density)
+			locations += location
+	var/turf/destination = tgui_input_list(user, "Куда совершить скачок?", name, locations)
+	if(!destination || QDELETED(avatar) || get_dist(avatar, destination) > 5)
+		return FALSE
+	avatar.forceMove(destination)
+	next_network_ability = world.time + 30 SECONDS
+	return TRUE
+
 /datum/antagonist/cyberpunk/major/data_cult/perform_primary_action(mob/living/user)
-	var/datum/team/cyberpunk_data_cult/cult_team = get_team()
-	var/list/targets = get_primary_targets(user)
-	var/atom/target = tgui_input_list(user, primary_target_prompt, name, targets)
-	if(!target)
+	var/datum/team/cyberpunk_data_cult/team = get_team()
+	var/list/targets = list()
+	for(var/obj/machinery/machine in view(1, user))
+		if(!(WEAKREF(machine) in team.harvested_refs))
+			targets += machine
+	for(var/mob/living/person in view(1, user))
+		if(person != user && person.has_neural_implant() && !(WEAKREF(person) in team.harvested_refs))
+			targets += person
+	var/atom/movable/target = tgui_input_list(user, "Выберите источник данных.", name, targets)
+	if(!target || !do_after(user, 10 SECONDS, target = target) || QDELETED(target) || (WEAKREF(target) in team.harvested_refs))
 		return FALSE
-	var/target_ref = REF(target)
-	if(target_ref in cult_team.harvested_refs)
-		to_chat(user, span_warning("[target] is already harvested."))
+	var/datum/cyberspace_layer/layer = SScyberspace?.ensure_ready()
+	var/datum/cyberspace_node/node = layer?.get_nearest_node(target)
+	var/target_key = node?.get_object_ref_key(target)
+	var/extracted
+	var/mob/living/person = target
+	if(istype(person) && person.mind && person.has_neural_implant())
+		extracted = min(person.mind.cyber_net_data, 500)
+		person.mind.cyber_net_data -= extracted
+	else if(node?.has_object(target))
+		extracted = node.object_net_data_by_ref[target_key]
+		node.object_net_data_by_ref[target_key] = 0
+	if(!extracted)
+		to_chat(user, span_warning("В источнике нет данных."))
 		return FALSE
-	user.visible_message(span_warning("[user] runs a cipher through [target]."), span_notice("You begin harvesting data. Hold still."))
-	if(!do_after(user, primary_delay, target = target))
-		to_chat(user, span_warning("Harvest interrupted."))
-		return FALSE
-	cult_team.harvested_refs += target_ref
-	add_progress(primary_points, primary_reason)
-	cult_team.get_cyberpunk_faction_resources().add_resource("influence", primary_points * 2)
+	team.harvested_refs += WEAKREF(target)
+	team.stolen_data += extracted
+	for(var/datum/antagonist/cyberpunk/major/data_cult/member in GLOB.antagonists)
+		if(member.get_team() == team)
+			member.progress_points = min(team.stolen_data, member.progress_goal)
+	to_chat(user, span_notice("В общий запас передано [extracted] данных."))
 	return TRUE
 
 /datum/antagonist/cyberpunk/major/data_cult/proc/induct_target(mob/living/user)
 	var/list/targets = list()
-	for(var/mob/living/nearby in view(1, user))
-		if(nearby != user && nearby.mind && nearby.has_neural_implant() && !nearby.mind.has_antag_datum(/datum/antagonist/cyberpunk/major/data_cult))
-			targets += nearby
-	var/mob/living/target = tgui_input_list(user, "Choose neural target.", "Data Cult Induction", targets)
+	for(var/mob/living/person in view(1, user))
+		if(person != user && person.mind && person.stat != DEAD && person.has_neural_implant() && !person.mind.has_antag_datum(type))
+			targets += person
+	var/mob/living/target = tgui_input_list(user, "Кого перепрограммировать?", name, targets)
 	if(!target)
 		return FALSE
-	if(!do_after(user, 30 SECONDS, target = target))
-		to_chat(user, span_warning("Induction interrupted."))
+	var/datum/team/cyberpunk_data_cult/team = get_team()
+	var/list/helpers = list(user)
+	for(var/mob/living/helper in view(1, target))
+		var/datum/antagonist/cyberpunk/major/data_cult/member = helper.mind?.has_antag_datum(type)
+		if(helper != user && helper.stat == CONSCIOUS && member?.get_team() == team)
+			helpers += helper
+		if(length(helpers) == 3)
+			break
+	var/delay = (4 - length(helpers)) * 15 SECONDS
+	if(!do_after(user, delay, target = target, extra_checks = CALLBACK(src, PROC_REF(check_induction), target, helpers)))
 		return FALSE
-	var/datum/antagonist/cyberpunk/major/data_cult/new_cultist = new()
-	new_cultist.silent = TRUE
-	target.mind.add_antag_datum(new_cultist, get_team())
-	add_progress(500, "induction")
-	to_chat(target, span_userdanger("The Data Cult opens inside your neural interface."))
+	if(!target.mind || target.mind.has_antag_datum(type) || !target.has_neural_implant())
+		return FALSE
+	target.mind.add_antag_datum(/datum/antagonist/cyberpunk/major/data_cult, team)
 	return TRUE
 
-/datum/antagonist/cyberpunk/major/data_cult/extra_roundend_report()
-	var/datum/team/cyberpunk_data_cult/cult_team = get_team()
-	return "[..()]<br>Harvested sources: [length(cult_team?.harvested_refs)]."
+/datum/antagonist/cyberpunk/major/data_cult/proc/check_induction(mob/living/target, list/helpers)
+	if(QDELETED(target) || target.stat == DEAD || !target.has_neural_implant())
+		return FALSE
+	for(var/mob/living/helper as anything in helpers)
+		if(QDELETED(helper) || helper.stat != CONSCIOUS || !target.Adjacent(helper))
+			return FALSE
+	return TRUE
 
-/datum/antagonist/cyberpunk/major/data_cult/on_goal_completed(reason = "progress")
-	. = ..()
-	priority_announce("A Data Cult has reached a critical stolen-data threshold.", "City Network", sender_override = "Starlight City Network")
-	for(var/mob/living/nearby in view(5, owner?.current))
-		if(nearby.has_neural_implant())
-			nearby.apply_damage(20, BRAIN)
+/datum/antagonist/cyberpunk/major/data_cult/proc/summon_control(mob/living/user, datum/team/cyberpunk_data_cult/team)
+	if(user.cyberspace_session || team.summoned || team.stolen_data < progress_goal || !do_after(user, 15 SECONDS, target = user) || team.summoned || team.stolen_data < progress_goal)
+		return FALSE
+	var/mob/living/carbon/human/cyberpunk_control_wavelengate/control = new(get_turf(user))
+	control.cult = team
+	control.faction |= REF(team)
+	var/obj/item/cyberspace_engram_chip/engram = new(control)
+	engram.bind_body(control, user)
+	var/obj/item/cyberpunk_antag_control_chip/control_chip
+	for(var/obj/item/cyberpunk_antag_control_chip/chip in user.get_all_contents())
+		if(chip.owner_ref?.resolve() == src)
+			control_chip = chip
+			break
+	team.summoned = TRUE
+	user.mind?.transfer_to(control, force_key_move = TRUE)
+	if(control_chip)
+		control_chip.forceMove(control)
+		control.put_in_hands(control_chip)
+	for(var/datum/antagonist/cyberpunk/major/data_cult/member in GLOB.antagonists)
+		if(member.get_team() == team)
+			member.goal_completed = TRUE
+			member.progress_points = member.progress_goal
+	priority_announce("Контрл Вавелнгейт воплотилась. Культ данных победил. Город вступает в финальную фазу.", "Городская сеть")
+	SScyberpunk_round?.start_cyberpunk_antag_finale("data_cult", 3 MINUTES)
+	return TRUE
+
+/mob/living/carbon/human/cyberpunk_control_wavelengate
+	name = "Контрл Вавелнгейт"
+	real_name = "Контрл Вавелнгейт"
+	gender = NEUTER
+	var/datum/team/cyberpunk_data_cult/cult
+
+/mob/living/carbon/human/cyberpunk_control_wavelengate/verb/raise_cult_assistant()
+	set name = "Обратить погибшего"
+	set category = "Культ данных"
+	if(!cult || stat != CONSCIOUS)
+		return
+	var/mob/living/target = cyberpunk_antag_select_corpse(src, name)
+	cyberpunk_raise_cult_alternative(src, target, cult, TRUE)
+
+/proc/cyberpunk_raise_cult_alternative(mob/living/user, mob/living/target, datum/team/cyberpunk_data_cult/team, synthbot = FALSE)
+	if(!target || !team || target.stat != DEAD || (target.has_neural_implant() && !synthbot) || istype(target, /mob/living/basic/cyberspace_alternative) || !do_after(user, 15 SECONDS, target = target) || QDELETED(target) || target.stat != DEAD)
+		return FALSE
+	var/mob/living/assistant
+	if(synthbot)
+		assistant = new /mob/living/basic/cyberpunk_rogue_cyborg(get_turf(target))
+		assistant.name = "синтбот Культа"
+	else
+		assistant = new /mob/living/basic/cyberspace_alternative(get_turf(target))
+	assistant.faction |= REF(team)
+	if(target.mind)
+		target.mind.transfer_to(assistant, force_key_move = TRUE)
+	qdel(target)
+	return TRUE
+
+/datum/status_effect/cyberpunk_cult_shield
+	id = "cyberpunk_cult_shield"
+	tick_interval = STATUS_EFFECT_NO_TICK
+	alert_type = null
+	var/remaining = 1000
+	var/was_opaque
+	var/datum/weakref/cultist_ref
+
+/datum/status_effect/cyberpunk_cult_shield/on_creation(mob/living/body, datum/antagonist/cyberpunk/major/data_cult/cultist)
+	cultist_ref = WEAKREF(cultist)
+	return ..(body)
+
+/datum/status_effect/cyberpunk_cult_shield/on_apply()
+	was_opaque = owner.opacity
+	owner.set_opacity(TRUE)
+	ADD_TRAIT(owner, TRAIT_IMMOBILIZED, REF(src))
+	RegisterSignal(owner, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS, PROC_REF(absorb_damage))
+	return TRUE
+
+/datum/status_effect/cyberpunk_cult_shield/on_remove()
+	UnregisterSignal(owner, COMSIG_MOB_APPLY_DAMAGE_MODIFIERS)
+	REMOVE_TRAIT(owner, TRAIT_IMMOBILIZED, REF(src))
+	owner.set_opacity(was_opaque)
+	var/datum/antagonist/cyberpunk/major/data_cult/cultist = cultist_ref?.resolve()
+	if(cultist)
+		cultist.next_shield = world.time + 30 SECONDS
+
+/datum/status_effect/cyberpunk_cult_shield/proc/absorb_damage(datum/source, list/modifiers, damage)
+	SIGNAL_HANDLER
+	if(damage <= 0 || remaining <= 0)
+		return
+	modifiers += 0
+	remaining -= damage
+	if(remaining <= 0)
+		qdel(src)
+
+/datum/status_effect/cyberpunk_cult_run
+	id = "cyberpunk_cult_run"
+	duration = 30 SECONDS
+	tick_interval = STATUS_EFFECT_NO_TICK
+	alert_type = null
+
+/datum/status_effect/cyberpunk_cult_run/on_apply()
+	owner.add_or_update_variable_movespeed_modifier(/datum/movespeed_modifier/cyberpunk_cult_run, multiplicative_slowdown = -owner.cached_multiplicative_slowdown * 0.5)
+	return TRUE
+
+/datum/status_effect/cyberpunk_cult_run/on_remove()
+	owner.remove_movespeed_modifier(/datum/movespeed_modifier/cyberpunk_cult_run)
+
+/datum/movespeed_modifier/cyberpunk_cult_run
+	variable = TRUE
 
 /obj/structure/cyberpunk_flesh_growth
 	name = "evolutionary flesh growth"
@@ -1497,6 +3225,13 @@
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "datadisk1"
 	density = TRUE
+	anchored = TRUE
+	var/datum/team/cyberpunk_star_swarm/swarm
+
+/obj/structure/cyberpunk_swarm_pylon/Destroy()
+	if(swarm)
+		swarm.pylons -= src
+	return ..()
 
 /obj/structure/cyberpunk_swarm_pylon/attack_hand(mob/living/user, list/modifiers)
 	. = ..()
@@ -1509,10 +3244,16 @@
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "datadisk4"
 	density = TRUE
+	anchored = TRUE
+	var/datum/team/cyberpunk_star_swarm/swarm
 	var/next_fire_at = 0
+	var/boost_until = 0
 
 /obj/structure/cyberpunk_photon_turret/attack_hand(mob/living/user, list/modifiers)
 	. = ..()
+	if(!swarm?.powered_at(src))
+		to_chat(user, span_warning("Нет источника питания Роя поблизости."))
+		return
 	if(world.time < next_fire_at)
 		to_chat(user, span_warning("[src] is recharging for [DisplayTimeText(next_fire_at - world.time)]."))
 		return
@@ -1523,7 +3264,9 @@
 	var/mob/living/target = tgui_input_list(user, "Choose photon target.", "Photon Turret", targets)
 	if(!target)
 		return
-	next_fire_at = world.time + 20 SECONDS
+	if(!swarm?.powered_at(src) || world.time < next_fire_at)
+		return
+	next_fire_at = world.time + (world.time < boost_until ? 10 SECONDS : 20 SECONDS)
 	target.apply_damage(25, BURN, BODY_ZONE_CHEST)
 	visible_message(span_danger("[src] lances [target] with hard light."))
 
@@ -1549,58 +3292,158 @@
 	density = FALSE
 
 /obj/structure/cyberpunk_autossembler
-	name = "autossembler"
-	desc = "A crude autossembler for awakened machines."
+	name = "автосборщик Трансформера"
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "datadisk5"
 	density = TRUE
-	var/next_assembly_at = 0
+	anchored = TRUE
+	var/next_assembly_at
+	var/datum/weakref/transformer_ref
+	var/datum/weakref/occupant_ref
+	var/conversion_timer
+
+/obj/structure/cyberpunk_autossembler/Destroy()
+	eject_occupant()
+	return ..()
 
 /obj/structure/cyberpunk_autossembler/attack_hand(mob/living/user, list/modifiers)
 	. = ..()
-	if(world.time < next_assembly_at)
-		to_chat(user, span_warning("[src] is assembling for [DisplayTimeText(next_assembly_at - world.time)]."))
+	var/datum/antagonist/cyberpunk/major/transformer/transformer = transformer_ref?.resolve()
+	if(!transformer || transformer.owner?.current != user || world.time < next_assembly_at)
 		return
-	var/choice = tgui_input_list(user, "Choose assembly.", "Autossembler", list("speedbike", "repair drone", "Cancel"))
-	if(choice == "speedbike")
+	var/choice = tgui_input_list(user, "Что сделать?", name, list("Байк", "Ремонтный дрон", "Кибернизировать"))
+	if(QDELETED(src) || !Adjacent(user) || world.time < next_assembly_at)
+		return
+	if(choice == "Кибернизировать")
+		begin_conversion(user)
+		return
+	if(!choice || transformer.parts < 20)
+		return
+	transformer.parts -= 20
+	next_assembly_at = world.time + 45 SECONDS
+	if(choice == "Байк")
 		new /obj/vehicle/ridden/speedbike(get_turf(src))
-	if(choice == "repair drone")
+	else
 		new /mob/living/basic/bot/repairbot(get_turf(src))
-	if(choice && choice != "Cancel")
-		next_assembly_at = world.time + 45 SECONDS
+
+/obj/structure/cyberpunk_autossembler/attack_hand_secondary(mob/user, list/modifiers)
+	if(occupant_ref?.resolve())
+		eject_occupant()
+		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
+	return ..()
+
+/obj/structure/cyberpunk_autossembler/proc/begin_conversion(mob/living/user)
+	var/list/candidates = list()
+	for(var/mob/living/carbon/human/target in view(1, src))
+		if(target != user && target.mind && target.stat != DEAD && !target.mind.has_antag_datum(/datum/antagonist/cyberpunk/major/transformer))
+			candidates += target
+	var/mob/living/carbon/human/target = tgui_input_list(user, "Кого загрузить в ядро?", name, candidates)
+	if(!target || QDELETED(src) || !Adjacent(target) || occupant_ref?.resolve())
+		return
+	occupant_ref = WEAKREF(target)
+	ADD_TRAIT(target, TRAIT_IMMOBILIZED, REF(src))
+	target.forceMove(src)
+	conversion_timer = addtimer(CALLBACK(src, PROC_REF(finish_conversion)), 2 MINUTES, TIMER_STOPPABLE)
+
+/obj/structure/cyberpunk_autossembler/proc/finish_conversion()
+	var/mob/living/carbon/human/target = occupant_ref?.resolve()
+	var/datum/antagonist/cyberpunk/major/transformer/transformer = transformer_ref?.resolve()
+	if(target?.mind && target.stat != DEAD && target.loc == src && transformer)
+		target.set_species(/datum/species/android)
+		target.mind.add_antag_datum(/datum/antagonist/cyberpunk/major/transformer)
+		transformer.parts = min(400, transformer.parts + 40)
+	eject_occupant()
+
+/obj/structure/cyberpunk_autossembler/proc/eject_occupant()
+	deltimer(conversion_timer)
+	conversion_timer = null
+	var/mob/living/target = occupant_ref?.resolve()
+	occupant_ref = null
+	if(target)
+		REMOVE_TRAIT(target, TRAIT_IMMOBILIZED, REF(src))
+		if(target.loc == src)
+			target.forceMove(get_turf(src))
 
 /obj/structure/cyberpunk_broker_anchor
-	name = "broker breach anchor"
-	desc = "A hostile breach anchor humming with nanite pressure."
+	name = "якорь Брокера"
+	desc = "Накапливает заряд для выброса нанитов."
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "datadisk6"
 	density = TRUE
+	anchored = TRUE
+	max_integrity = 200
+	var/charge = 0
+	var/capacity = 60
+	var/datum/weakref/broker_ref
+
+/obj/structure/cyberpunk_broker_anchor/Initialize(mapload)
+	. = ..()
+	START_PROCESSING(SSobj, src)
+
+/obj/structure/cyberpunk_broker_anchor/Destroy()
+	STOP_PROCESSING(SSobj, src)
+	return ..()
+
+/obj/structure/cyberpunk_broker_anchor/process(seconds_per_tick)
+	charge = min(capacity, charge + seconds_per_tick)
+	if(charge >= capacity)
+		return PROCESS_KILL
+
+/obj/structure/cyberpunk_broker_anchor/examine(mob/user)
+	. = ..()
+	. += "Заряд [round(charge)]/[capacity]."
 
 /obj/structure/cyberpunk_liberation_factory
-	name = "liberation vehicle factory marker"
+	name = "завод техники Армии спасения"
 	icon = 'icons/obj/devices/circuitry_n_data.dmi'
 	icon_state = "datadisk7"
 	density = TRUE
-	var/next_production_at = 0
+	var/datum/team/cyberpunk_liberation_army/army
+	var/next_production_at
 
 /obj/structure/cyberpunk_liberation_factory/attack_hand(mob/living/user, list/modifiers)
 	. = ..()
-	if(world.time < next_production_at)
-		to_chat(user, span_warning("[src] is producing for [DisplayTimeText(next_production_at - world.time)]."))
+	var/datum/antagonist/cyberpunk/major/liberation_army/agent = user.mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/liberation_army)
+	if(!army || agent?.get_team() != army || world.time < next_production_at)
 		return
-	var/choice = tgui_input_list(user, "Build GLA-lite vehicle.", "Vehicle Factory", list("rocket buggy", "technical", "bomb truck", "Cancel"))
-	switch(choice)
-		if("rocket buggy")
-			new /obj/vehicle/ridden/atv(get_turf(src))
-			new /obj/item/gun/ballistic/rocketlauncher/cyberpunk(get_turf(src))
-		if("technical")
-			new /obj/vehicle/ridden/atv(get_turf(src))
-			new /obj/item/gun/ballistic/automatic/ar/cyberpunk/streetline(get_turf(src))
-		if("bomb truck")
-			new /obj/vehicle/ridden/atv(get_turf(src))
-			new /obj/item/grenade/c4(get_turf(src))
-	if(choice && choice != "Cancel")
-		next_production_at = world.time + 90 SECONDS
+	var/static/list/vehicles = list(
+		"Бомбтрак (650)" = /obj/vehicle/ridden/atv/cyberpunk_liberation/bombtruck,
+		"Ракетный багги (800)" = /obj/vehicle/ridden/atv/cyberpunk_liberation/rocket_buggy,
+		"Техничка (500)" = /obj/vehicle/ridden/atv/cyberpunk_liberation,
+		"Лёгкий танк (1200)" = /obj/vehicle/ridden/atv/cyberpunk_liberation/tank,
+		"Ядерный грузовик (4000)" = /obj/vehicle/ridden/atv/cyberpunk_liberation/nuclear,
+	)
+	var/static/list/prices = list(
+		"Бомбтрак (650)" = 650,
+		"Ракетный багги (800)" = 800,
+		"Техничка (500)" = 500,
+		"Лёгкий танк (1200)" = 1200,
+		"Ядерный грузовик (4000)" = 4000,
+	)
+	var/choice = tgui_input_list(user, "Выберите технику. Хаос: [army.chaos].", name, vehicles)
+	var/vehicle_type = vehicles[choice]
+	var/cost = prices[choice]
+	if(!vehicle_type || QDELETED(src) || !Adjacent(user) || world.time < next_production_at || army.chaos < cost)
+		return
+	var/nuclear = vehicle_type == /obj/vehicle/ridden/atv/cyberpunk_liberation/nuclear
+	if(nuclear && army.nuke_ordered)
+		return
+	var/turf/destination = get_turf(user)
+	var/turf/pickup = get_safe_random_station_turf()
+	if(!pickup || !destination)
+		return
+	var/obj/vehicle/ridden/cyberpunk/avi/courier = new(pickup)
+	var/obj/vehicle/ridden/atv/cyberpunk_liberation/vehicle = new vehicle_type(pickup)
+	vehicle.army = army
+	if(!courier.start_cyberpunk_avi_delivery(pickup, destination, list(vehicle)))
+		qdel(courier)
+		qdel(vehicle)
+		return
+	army.chaos -= cost
+	if(nuclear)
+		army.nuke_ordered = TRUE
+	next_production_at = world.time + 90 SECONDS
+	to_chat(user, span_notice("АВИ доставит технику к месту заказа."))
 
 /obj/structure/cyberpunk_liberation_barracks
 	name = "liberation barracks marker"
@@ -1808,9 +3651,24 @@
 		return null
 	return bandit
 
+/obj/item/cyberpunk_black_market_chip/attackby(obj/item/contraband, mob/user, list/modifiers, list/attack_modifiers)
+	var/mob/living/seller = user
+	var/datum/antagonist/cyberpunk/bandit/bandit = istype(seller) ? get_bandit_for_user(seller) : null
+	if(!bandit || !HAS_TRAIT(contraband, TRAIT_CONTRABAND) || HAS_TRAIT_FROM(contraband, TRAIT_CONTRABAND, "cp_market_stock") || length(contraband.contents))
+		return ..()
+	var/datum/bank_account/account = seller.get_bank_account()
+	if(!account || !seller.dropItemToGround(contraband))
+		return TRUE
+	if(!account.adjust_money(250, "Black market proceeds: [contraband.name]"))
+		seller.put_in_hands(contraband)
+		return TRUE
+	qdel(contraband)
+	to_chat(seller, span_notice("Картель принял контрабанду за 250 кредитов."))
+	return TRUE
+
 /obj/item/cyberpunk_black_market_chip/proc/get_market_actions()
 	return list(
-		list("id" = "sync", "label" = "Sync dirty money", "description" = "Move held illegal cash into your account."),
+		list("id" = "sync", "label" = "Доход и таймер Картеля", "description" = "Чтобы сбыть контрабанду, приложите её к чипу."),
 		list("id" = "status", "label" = "Gang status", "description" = "Show current gang and shared resources."),
 		list("id" = "gang", "label" = "Choose gang", "description" = "Join an existing gang or found a new one."),
 		list("id" = "knife", "label" = "Street knife", "cost" = 250, "description" = "Small blade drop."),
@@ -1936,7 +3794,8 @@
 		to_chat(user, span_warning("Drop coordinates: [drop_turf.x], [drop_turf.y], [drop_turf.z]."))
 		return
 	for(var/item_path in ordered_paths)
-		new item_path(drop_turf)
+		var/obj/item/delivered = new item_path(drop_turf)
+		ADD_TRAIT(delivered, TRAIT_CONTRABAND, "cp_market_stock")
 	to_chat(user, span_notice("A small black market capsule cracks open."))
 	ordered = FALSE
 	drop_turf = null
@@ -1984,9 +3843,11 @@
 		data["valid"] = FALSE
 		return data
 
+	if(!length(spy.spy_tasks))
+		spy.refresh_tasks()
 	var/list/tasks = list()
-	for(var/task in spy.spy_tasks)
-		tasks += list(list("text" = task))
+	for(var/datum/cyberpunk_spy_task/task in spy.spy_tasks)
+		tasks += list(list("text" = "[task.completed ? "✓ " : ""][task.description]"))
 
 	data["valid"] = TRUE
 	data["mode"] = "spy"
@@ -1998,7 +3859,10 @@
 	data["complete"] = spy.goal_completed
 	data["tasks"] = tasks
 	data["completedToday"] = spy.completed_tasks_today
-	data["actions"] = list(list("id" = "upload", "label" = "Upload completion", "description" = "Mark one current task complete and send research credit to your true employer."))
+	data["actions"] = list(\
+		list("id" = "upload", "label" = "Сдать результаты", "description" = "Проверить результаты всех трёх поручений."), \
+		list("id" = "uplink", "label" = "Аплинк трейтора", "description" = "1 ТК = 250 кредитов."), \
+	)
 	return data
 
 /obj/item/cyberpunk_spy_uplink_chip/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
@@ -2017,6 +3881,8 @@
 		if("run_action")
 			if(params["id"] == "upload")
 				spy.complete_task(user)
+			if(params["id"] == "uplink")
+				spy.purchase_supplies(user, src)
 			return TRUE
 		if("refresh")
 			return TRUE
@@ -2074,9 +3940,12 @@
 	data["complete"] = anarchist.goal_completed
 	data["team"] = team?.name
 	data["damageScore"] = team?.damage_score || 0
+	data["intel"] = team?.intel || 0
 	data["actions"] = list(
-		list("id" = "recruit", "label" = "Recruit neural target", "description" = "Choose a nearby neural-interface user. Takes two minutes, interrupted by movement."),
-		list("id" = "sabotage", "label" = "Mark sabotage", "description" = "Choose a nearby machine or structure. Takes ten seconds."),
+		list("id" = "recruit", "label" = "Recruit neural target", "description" = "Минута местной речи в пределах двух клеток. Удар или толчок сбивает попытку."),
+		list("id" = "sabotage", "label" = "Цель погрома", "description" = "Выберите корпоративный объект и уничтожьте его."),
+		list("id" = "armory", "label" = "Аплинк нюкеров", "description" = "1 ТК = 5 разведданных."),
+		list("id" = "tasks", "label" = "Задания ячейки", "description" = "Подобрать цели для погрома, устранения и кражи."),
 	)
 	return data
 
@@ -2095,18 +3964,26 @@
 	switch(action)
 		if("run_action")
 			var/action_id = params["id"]
+			if(action_id == "armory")
+				anarchist.purchase_armory(user, src)
+				return TRUE
+			if(action_id == "tasks")
+				anarchist.generate_pogrom(user)
+				return TRUE
 			if(action_id == "sabotage")
 				var/list/sabotage_targets = list()
 				for(var/obj/nearby in view(1, user))
-					if(istype(nearby, /obj/machinery) || istype(nearby, /obj/structure))
-						sabotage_targets += nearby
-				var/obj/sabotage_target = tgui_input_list(user, "Choose a nearby machine or structure.", "Anarchist Sabotage", sabotage_targets)
+					var/corporation = cyberpunk_antag_corporation(nearby)
+					if(nearby.uses_integrity && (corporation in list("benn", "ryaznov", "starlight")))
+						sabotage_targets["[nearby.name] · [corporation] · [REF(nearby)]"] = nearby
+				var/choice = tgui_input_list(user, "Выберите цель.", "Погром", sabotage_targets)
+				var/obj/sabotage_target = sabotage_targets[choice]
 				if(sabotage_target)
 					anarchist.mark_sabotage(user, sabotage_target)
 				return TRUE
 			if(action_id == "recruit")
 				var/list/targets = list()
-				for(var/mob/living/nearby in view(1, user))
+				for(var/mob/living/nearby in view(2, user))
 					if(nearby == user || !nearby.mind)
 						continue
 					targets += nearby

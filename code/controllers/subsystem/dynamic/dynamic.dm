@@ -127,6 +127,12 @@ SUBSYSTEM_DEF(dynamic)
 		pick_tier(num_real_players)
 	// put rulesets in the queue (if admins didn't)
 	// this will even handle the case in which the tier wants 0 roundstart rulesets
+	// Use the Cyberpunk roster on city maps, with the usual candidate preferences and round tier.
+	if(!length(queued_rulesets) && (SSmapping.current_map?.map_name in list("Bright City", "Cyberpunk Test")))
+		var/roundstart_slots = rulesets_to_spawn[ROUNDSTART]
+		for(var/ruleset_path in pick_roundstart_rulesets(antag_candidates))
+			queue_ruleset(ruleset_path)
+		rulesets_to_spawn[ROUNDSTART] = roundstart_slots
 	if(!length(queued_rulesets))
 		SScyberpunk_round?.cyberpunk_storyteller_pick_roundstart_rulesets(antag_candidates)
 		for(var/category in rulesets_to_spawn)
@@ -242,8 +248,20 @@ SUBSYSTEM_DEF(dynamic)
 	PRIVATE_PROC(TRUE)
 
 	var/list/datum/dynamic_ruleset/roundstart/rulesets = list()
+	var/cyberpunk_map = (SSmapping.current_map?.map_name in list("Bright City", "Cyberpunk Test"))
 	for(var/ruleset_type in subtypesof(/datum/dynamic_ruleset/roundstart))
 		var/datum/dynamic_ruleset/roundstart/ruleset = new ruleset_type(dynamic_config)
+		if(cyberpunk_map && !ispath(ruleset.preview_antag_datum, /datum/antagonist/cyberpunk))
+			qdel(ruleset)
+			continue
+		if(cyberpunk_map)
+			var/eligible = 0
+			for(var/mob/candidate as anything in antag_candidates)
+				if(candidate.client && ruleset.is_valid_candidate(candidate, candidate.client))
+					eligible++
+			if(eligible < ruleset.get_antag_cap(length(antag_candidates), ruleset.min_antag_cap))
+				qdel(ruleset)
+				continue
 		rulesets[ruleset] = ruleset.get_weight(length(antag_candidates), current_tier.tier)
 
 	return rulesets

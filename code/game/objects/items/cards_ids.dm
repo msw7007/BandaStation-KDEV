@@ -821,7 +821,7 @@
 	if(registered_account?.account_id == new_bank_id)
 		to_chat(user, span_warning("Аккаунт уже был присвоен этой карте."))
 		return FALSE
-	var/datum/bank_account/account = SSeconomy.bank_accounts_by_id["[new_bank_id]"]
+	var/datum/bank_account/account = SSeconomy.get_bank_accounts()["[new_bank_id]"]
 	if(isnull(account))
 		to_chat(user, span_warning("Номер счёта является недействительным."))
 		return FALSE
@@ -2005,7 +2005,7 @@
 		return
 
 	var/mob/living/carbon/human/owner = user
-	var/datum/bank_account/account = SSeconomy.bank_accounts_by_id["[owner.account_id]"]
+	var/datum/bank_account/account = SSeconomy.get_bank_accounts()["[owner.account_id]"]
 	if(account)
 		set_account(account)
 		to_chat(user, span_notice("Ваш номер счёта был автоматически назначен."))

@@ -10,8 +10,8 @@ The visual base is TG's default Midnight HUD, `icons/hud/screen_midnight.dmi`:
 filled pixel sprites, broad shaded planes, recognizable silhouettes and dark
 edges. Cyberpunk details add palm plates, a wrist coupler, reinforced clothing
 and a wrist module without replacing that construction with wireframe icons.
-The existing clipped frames retain their geometry from the TGUI CyberpunkPanel
-StyleGuide and the restrained crimson/cyan state hierarchy.
+The HUD uses the supplied pixel frames. Regular and combat controls use red
+frames, with cyan variants for hover and selection.
 
 Empty slots must be barely visible. The fourteen stock TG purpose sprites retain
 their exact native pixel masks and tonal ordering, without enlargement or a bright
@@ -128,6 +128,11 @@ build creates neither.
 The builder extracts its purpose sprites and controls while excluding the stock
 frame. `tg/handcuff.png` is the unmodified handcuff state from
 `icons/obj/weapons/restraints.dmi`.
+
+`sources/contour/ui.dmi` supplies the 16 and 32 pixel HUD backgrounds. The
+builder reads cells by position because their state names repeat. Rectangular
+frames retain the source corners and resize the middle. Combat uses the
+patterned frames. Hover, active and disabled keep their own color states.
 
 `grid.json` selects the large artwork and its native footprint. Current hand art
 is `palette/hand_tg.png`; `palette/hand_tg_generation.json` stores its built-in

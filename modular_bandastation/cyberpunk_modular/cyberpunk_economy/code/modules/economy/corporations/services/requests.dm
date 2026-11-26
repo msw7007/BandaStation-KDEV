@@ -138,7 +138,7 @@
 					if(dispatch_observation_drone(vendor, target, customer, client_business = client_business, client_apartment = client_apartment))
 						break
 
-/datum/cyberpunk_corporation/proc/dispatch_observation_drone(atom/source, atom/target, mob/living/customer, personal = FALSE, datum/cyberpunk_business/client_business, datum/cyberpunk_apartment/client_apartment)
+/datum/cyberpunk_corporation/proc/dispatch_observation_drone(atom/source, atom/target, mob/living/customer, personal = FALSE, datum/cyberpunk_business/client_business, datum/cyberpunk_apartment/client_apartment, aid_edict)
 	var/turf/source_turf = get_turf(source)
 	var/turf/target_turf = get_turf(target)
 	if(!source_turf || !target_turf || observation_targets[REF(target)] > world.time)
@@ -159,6 +159,7 @@
 	if(customer)
 		drone.customer_ref = WEAKREF(customer)
 	drone.free_personal_service = personal
+	drone.local_aid_edict = aid_edict
 	drone.ai_controller.set_blackboard_key(BB_BASIC_MOB_CURRENT_TARGET, target)
 	return TRUE
 
@@ -193,6 +194,7 @@
 	return FALSE
 
 /mob/living/basic/cyberpunk_corporate_agent/service_drone
+	var/local_aid_edict
 	name = "corporate service drone"
 	icon = 'icons/mob/silicon/aibots.dmi'
 	icon_state = "medbot_generic_idle"
@@ -221,7 +223,7 @@
 	var/held_by_customer = customer && target?.loc == customer && customer.Adjacent(src)
 	if(!target || !corporation || (!target.IsReachableBy(src) && !held_by_customer))
 		return FALSE
-	if(!corporation.has_edict(corporation_id == CYBERPUNK_CORP_BENN ? "benn_med_observation" : "ryaznov_tech_observation"))
+	if(local_aid_edict ? (!corporation.has_edict(local_aid_edict) || !corporation.is_subscribed(customer_ref?.resolve())) : !corporation.has_edict(corporation_id == CYBERPUNK_CORP_BENN ? "benn_med_observation" : "ryaznov_tech_observation"))
 		return FALSE
 	var/cost = 0
 	if(corporation_id == CYBERPUNK_CORP_BENN)
@@ -229,6 +231,9 @@
 		if(!istype(patient) || patient.stat == DEAD || patient.health >= patient.maxHealth)
 			return FALSE
 		patient.heal_ordered_damage(corporation.is_subscribed(patient) ? 60 : 35, list(BRUTE, BURN, TOX, OXY))
+		cyberpunk_record_benn_biodata(src, "benn_self_analysis", "Benn treatment drone", branded_service = TRUE)
+		if(ishuman(patient))
+			cyberpunk_collect_benn_dna_sample(patient, "Benn treatment drone: DNA storage")
 		cost = corporation.get_service_cost("medical", patient)
 	else
 		var/obj/repair_target = target
@@ -251,6 +256,7 @@
 		var/obj/machinery/machine = repair_target
 		if(istype(machine))
 			machine.repair_cyberpunk_machine_wear(repair_amount, customer)
+		SScyberpunk_corporations.record_ryaznov_work(repair_target, "ремонт дроном", istype(repair_target, /obj/vehicle) ? 3 : 1)
 		var/obj/item/forcefield_projector/projector = repair_target
 		if(istype(projector))
 			projector.shield_integrity = min(projector.max_shield_integrity, projector.shield_integrity + repair_amount)

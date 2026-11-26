@@ -39,6 +39,7 @@
 							<div id="logo" data-loaded="[round(loading_percentage)]%">
 								<img src="[SSassets.transport.get_asset_url("ss220_logo.png")]">
 							</div>
+							<img id="loading_spinner" src="[SSassets.transport.get_asset_url("title_loading.png")]" width="64" height="64" alt="">
 						</div>
 						<div class="lobby_buttons">
 							[create_default_buttons(viewer, player, discord_linked)]

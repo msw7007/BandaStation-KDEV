@@ -9,7 +9,12 @@
 	return TRUE
 
 /mob/living/carbon/Move(NewLoc, direct)
+	var/atom/old_location = loc
 	. = ..()
+	if(. && loc != old_location && stat != DEAD && !buckled && !(movement_type & MOVETYPES_NOT_TOUCHING_GROUND))
+		var/obj/item/bodypart/chest = get_bodypart(BODY_ZONE_CHEST)
+		if(chest?.blunt_trauma == TRAUMA_CRITICAL && !chest.has_cyberpunk_medical_wrap())
+			chest.apply_organ_spill_damage(0.25, chest.fracture_zone)
 	if(!. || (movement_type & FLOATING)) //floating is easy
 		return
 	if(nutrition <= 0 || stat == DEAD)

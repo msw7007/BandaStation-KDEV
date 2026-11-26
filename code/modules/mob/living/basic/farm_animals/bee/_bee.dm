@@ -66,6 +66,7 @@
 	add_traits(list(TRAIT_SPACEWALK, TRAIT_VENTCRAWLER_ALWAYS), INNATE_TRAIT)
 	generate_bee_visuals()
 	AddElement(/datum/element/simple_flying)
+	AddElement(/datum/element/venomous, /datum/reagent/toxin/histamine, string_numbers_list(list(1, 5)), thrown_effect = TRUE)
 	AddComponent(/datum/component/clickbox, x_offset = -2, y_offset = -2)
 	AddComponent(/datum/component/swarming)
 	AddComponent(/datum/component/obeys_commands, pet_commands)
@@ -167,6 +168,7 @@
 	if(!hydro.can_bee_pollinate())
 		return FALSE
 	hydro.recent_bee_visit = TRUE
+	hydro.pollination_growth_bonus = max(hydro.pollination_growth_bonus, 0.5)
 	addtimer(VARSET_CALLBACK(hydro, recent_bee_visit, FALSE), BEE_TRAY_RECENT_VISIT)
 
 	var/growth = health //Health also means how many bees are in the swarm, roughly.
@@ -189,8 +191,8 @@
 	var/static/list/injection_range
 	if(!injection_range)
 		injection_range = string_numbers_list(list(1, 5))
-	if(beegent) //clear the old since this one is going to have some new value
-		RemoveElement(/datum/element/venomous, beegent.type, injection_range, thrown_effect = TRUE)
+	var/old_venom = beegent?.type || /datum/reagent/toxin/histamine
+	RemoveElement(/datum/element/venomous, old_venom, injection_range, thrown_effect = TRUE)
 	beegent = toxin
 	name = "[initial(name)] ([toxin.name])"
 	real_name = name

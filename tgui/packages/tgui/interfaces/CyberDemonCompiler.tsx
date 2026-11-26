@@ -13,6 +13,8 @@ type Demon = {
   effect: string;
   power: number;
   cast_time: number;
+  physical_range: number;
+  network_range: number;
   duration: number;
   activation_delay: number;
   frequency: number;
@@ -53,13 +55,10 @@ type CyberDemonCompilerData = {
   manufacturers: string[];
   attributes: Choice[];
   skills: Choice[];
+  blocking_key_choices: Choice[];
   deck: Storage;
   disk: Storage;
-  terminal: {
-    present: boolean;
-    name: string;
-    cooldown: number;
-  };
+  terminal: Storage;
   limits: {
     max_specials: number;
     max_custom_memory: number;
@@ -171,6 +170,9 @@ export const CyberDemonCompiler = () => {
   const [frequency, setFrequency] = useState(1);
   const [activationDelay, setActivationDelay] = useState(0);
   const [castTime, setCastTime] = useState(2);
+  const [physicalRange, setPhysicalRange] = useState(6);
+  const [networkRange, setNetworkRange] = useState(12);
+  const [blockingKeys, setBlockingKeys] = useState<string[]>([]);
   const [manufacturer, setManufacturer] = useState('Independent');
   const [targetAttribute, setTargetAttribute] = useState(firstAttribute);
   const [targetSkill, setTargetSkill] = useState(firstSkill);
@@ -210,13 +212,16 @@ export const CyberDemonCompiler = () => {
     setFrequency(demon.frequency || 1);
     setActivationDelay(demon.activation_delay || 0);
     setCastTime(demon.cast_time || 1);
+    setPhysicalRange(demon.physical_range || 6);
+    setNetworkRange(demon.network_range || 12);
+    setBlockingKeys([]);
     setManufacturer(demon.manufacturer || 'Independent');
     setTargetAttribute(demon.target_attribute || firstAttribute);
     setTargetSkill(demon.target_skill || firstSkill);
     setSpecials(demon.specials || []);
   };
 
-  const compileCustom = (target: 'deck' | 'disk') =>
+  const compileCustom = (target: 'deck' | 'disk' | 'terminal') =>
     act('compile_custom', {
       target,
       name,
@@ -227,6 +232,9 @@ export const CyberDemonCompiler = () => {
       frequency,
       activation_delay: activationDelay,
       cast_time: castTime,
+      physical_range: physicalRange,
+      network_range: networkRange,
+      blocking_keys: blockingKeys,
       manufacturer,
       target_attribute: targetAttribute,
       target_skill: targetSkill,
@@ -283,6 +291,8 @@ export const CyberDemonCompiler = () => {
                     <NumberField label="Frequency, /sec" value={frequency} min={1} max={10} onChange={setFrequency} />
                     <NumberField label="Activation, sec" value={activationDelay} min={0} max={120} onChange={setActivationDelay} />
                     <NumberField label="Cast, sec" value={castTime} min={0} max={60} onChange={setCastTime} />
+                    <NumberField label="Physical range" value={physicalRange} min={1} max={20} onChange={setPhysicalRange} />
+                    <NumberField label="Network range" value={networkRange} min={1} max={30} onChange={setNetworkRange} />
                   </div>
                 </Stack.Item>
                 <Stack.Item>
@@ -311,6 +321,24 @@ export const CyberDemonCompiler = () => {
                 </Stack.Item>
                 <Stack.Item>
                   <div style={{ ...cardStyle, borderColor: overCustomLimit ? cy.red : cy.cyanSoft }}>
+                    {!!data.blocking_key_choices?.length && (
+                      <label>
+                        <div style={labelStyle}>Blocking keys</div>
+                        <select
+                          multiple
+                          size={3}
+                          value={blockingKeys}
+                          onChange={(event) =>
+                            setBlockingKeys(Array.from(event.currentTarget.selectedOptions, (option) => option.value).slice(0, 3))
+                          }
+                          style={fieldStyle}
+                        >
+                          {data.blocking_key_choices.map((item) => (
+                            <option key={item.id} value={item.id}>{item.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     <b style={{ color: cy.cyan }}>Preview</b>
                     <div>Memory: {memory}/{data.limits?.max_custom_memory || 8} deck limit</div>
                     <div>Net-data: {netDataCost}</div>
@@ -344,6 +372,19 @@ export const CyberDemonCompiler = () => {
                         Write to disk
                       </Button>
                     </Stack.Item>
+                    {!!data.terminal?.memory_capacity && (
+                      <Stack.Item grow>
+                        <Button
+                          fluid
+                          color="green"
+                          icon="save"
+                          disabled={terminalBusy || memory > data.terminal.free_memory || netDataCost > (data.net_data || 0)}
+                          onClick={() => compileCustom('terminal')}
+                        >
+                          Save to terminal
+                        </Button>
+                      </Stack.Item>
+                    )}
                   </Stack>
                 </Stack.Item>
               </Stack>
@@ -383,6 +424,9 @@ export const CyberDemonCompiler = () => {
                         <Button icon="unlock" disabled={(data.disk.cryptokeys || 0) <= 0} onClick={() => act('upload_cryptokeys')}>
                           Load keys
                         </Button>
+                        <Button.Confirm icon="trash" color="red" disabled={!data.disk.cryptokeys} onClick={() => act('delete_disk_keys')}>
+                          Erase keys
+                        </Button.Confirm>
                       </div>
                     </div>
                   )}
@@ -401,11 +445,38 @@ export const CyberDemonCompiler = () => {
                           >
                             Deck
                           </Button>
-                          <Button icon="trash" color="red" disabled={demon.prebuilt} onClick={() => act('delete_disk', { index: demon.index })} />
+                          <Button.Confirm icon="trash" color="red" onClick={() => act('delete_disk', { index: demon.index })} />
                         </DemonCard>
                       ))}
                   </div>
                 </div>
+                {!!data.terminal?.memory_capacity && (
+                  <StoragePanel
+                    title="Terminal memory"
+                    storage={data.terminal}
+                    emptyText="No terminal available."
+                    renderActions={(demon) => (
+                      <>
+                        <Button icon="copy" onClick={() => loadTemplate(demon)}>Develop copy</Button>
+                        <Button
+                          icon="save"
+                          disabled={!data.disk?.present || demon.memory > data.disk.free_memory}
+                          onClick={() => act('copy_terminal_disk', { index: demon.index })}
+                        >
+                          Disk
+                        </Button>
+                        <Button
+                          icon="download"
+                          disabled={!data.deck?.present || demon.memory > data.deck.free_memory}
+                          onClick={() => act('load_from_terminal', { index: demon.index })}
+                        >
+                          Deck
+                        </Button>
+                        <Button.Confirm icon="trash" color="red" onClick={() => act('delete_terminal', { index: demon.index })} />
+                      </>
+                    )}
+                  />
+                )}
                 <StoragePanel
                   title="Cyberdeck"
                   storage={data.deck}

@@ -48,6 +48,10 @@
 	circuit = /obj/item/circuitboard/machine/ore_redemption/offstation
 	requires_silo = FALSE
 
+/obj/machinery/mineral/ore_redemption/offstation/cyberpunk
+	name = "городская плавильня"
+	req_access = null
+
 /obj/machinery/mineral/ore_redemption/Initialize(mapload)
 	. = ..()
 	if(!GLOB.autounlock_techwebs[/datum/techweb/autounlocking/smelter])
@@ -92,7 +96,7 @@
 		points += gathered_ore.points * point_upgrade * gathered_ore.amount
 
 /// Returns the amount of a specific alloy design, based on the accessible materials
-/obj/machinery/mineral/ore_redemption/proc/can_smelt_alloy(datum/design/design)
+/obj/machinery/mineral/ore_redemption/proc/can_smelt_alloy(datum/design/design, cost_modifier = 1)
 	var/datum/material_container/mat_container = materials.mat_container
 	if(!mat_container || design.make_reagent)
 		return FALSE
@@ -105,7 +109,7 @@
 		if(!amount || !redemption_mat_amount)
 			return FALSE
 
-		var/smeltable_sheets = FLOOR(redemption_mat_amount / amount, 1)
+		var/smeltable_sheets = FLOOR(redemption_mat_amount / (amount * cost_modifier), 1)
 
 		if(!smeltable_sheets)
 			return FALSE
@@ -165,11 +169,12 @@
 		return ..()
 
 	for(var/obj/item/stack/ore/gathered_ore as anything in gathered_ores)
+		var/ore_yield = gathered_ore.get_cyberpunk_ore_yield()
 		var/obj/item/smelted_ore = gathered_ore.on_orm_collection()
 		if(isnull(smelted_ore))
 			continue
 
-		if(materials.insert_item(smelted_ore, ore_multiplier, ID_DATA(user)) <= 0)
+		if(materials.insert_item(smelted_ore, ore_multiplier * ore_yield, ID_DATA(user)) <= 0)
 			unload_mineral(smelted_ore)
 
 	return ITEM_INTERACT_SUCCESS
@@ -197,11 +202,12 @@
 
 	//smelting the ore
 	for(var/obj/item/stack/ore/gathered_ore as anything in ore_list)
+		var/ore_yield = gathered_ore.get_cyberpunk_ore_yield()
 		var/obj/item/smelted_ore = gathered_ore.on_orm_collection()
 		if(isnull(smelted_ore))
 			continue
 
-		if(materials.insert_item(smelted_ore, ore_multiplier, user_data) <= 0)
+		if(materials.insert_item(smelted_ore, ore_multiplier * ore_yield, user_data) <= 0)
 			unload_mineral(smelted_ore) //if rejected unload
 
 	if(!console_notify_timer)
@@ -365,15 +371,40 @@
 				var/mob/living/user = usr
 				user_id_card = user.get_idcard(TRUE)
 			if((check_access(user_id_card) || allowed(usr)) && alloy)
-				var/amount = round(min(text2num(params["sheets"]), 50, can_smelt_alloy(alloy)))
+				var/mob/living/worker = ui.user
+				var/mode = params["qualityMode"]
+				var/cost_modifier = 1
+				var/quality_modifier = 0
+				switch(mode)
+					if("economy")
+						cost_modifier = 0.8
+						quality_modifier = -1
+					if("precision")
+						cost_modifier = 1.4
+						quality_modifier = 1
+				var/batch_limit = ispath(alloy.build_path, /obj/item/stack/sheet) ? 50 : 1
+				var/amount = FLOOR(min(text2num("[params["sheets"]]"), batch_limit, can_smelt_alloy(alloy, cost_modifier)), 1)
 				if(amount < 1) //no negative mats
 					return
-				materials.use_materials(alloy.materials, multiplier = amount, action = "withdrawn", name = "sheets", user_data = ID_DATA(usr))
-				var/atom/movable/output
+				if(istype(worker) && !do_after(worker, (3 + sqrt(amount)) SECONDS * worker.get_cyberpunk_professional_time_multiplier(SKILL_INVENTION), src))
+					return TRUE
+				if(!is_operational || panel_open || materials.mat_container != mat_container || amount > can_smelt_alloy(alloy, cost_modifier))
+					return TRUE
+				var/quality = mat_container.get_materials_resource_quality(alloy.materials, cost_modifier, amount)
+				if(!materials.use_materials(alloy.materials, multiplier = amount * cost_modifier, action = "withdrawn", name = "sheets", user_data = ID_DATA(usr)))
+					return
+				var/obj/item/output
 				if(ispath(alloy.build_path, /obj/item/stack/sheet))
 					output = alloy.create_result(src, amount = amount)
 				else
 					output = alloy.create_result(src)
+				if(!istype(output))
+					return
+				if(quality || quality_modifier)
+					output.set_cyberpunk_output_resource_quality(quality, quality_modifier)
+				if(istype(worker))
+					worker.apply_cyberpunk_invention_quality_bonus(output)
+					worker.reward_character_check_experience(SKILL_INVENTION, 2, FALSE, 1)
 				unload_mineral(output)
 			else
 				to_chat(usr, span_warning("Required access not found."))

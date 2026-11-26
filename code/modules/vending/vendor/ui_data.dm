@@ -41,6 +41,7 @@
 			price = get_cyberpunk_business_vending_price(record.price, record.name),
 			ref = REF(record),
 			colorable = record.colorable,
+			subscriptionOnly = record.cyberpunk_subscription_only,
 		)
 		if(record.cyberpunk_sale_entry)
 			static_record["tier"] = record.cyberpunk_sale_entry.tier
@@ -107,7 +108,14 @@
 /obj/machinery/vending/ui_data(mob/user)
 	maybe_rotate_cyberpunk_sale_stock()
 	. = list()
+	if(can_change_cyberpunk_corporate_markup(user))
+		.["corporateMarkup"] = cyberpunk_corporate_markup_percent
+	.["ryaznovScrapPrice"] = get_ryaznov_scrap_offer(user)
 	.["corporateChip"] = get_cyberpunk_service_chip_offer()
+	.["corporateAid"] = get_cyberpunk_local_aid(user)
+	.["canOrderStock"] = can_order_cyberpunk_starlight_stock(user)
+	.["subscriptionStock"] = can_buy_cyberpunk_subscription_stock(user)
+	.["starlightContractTurnIn"] = can_submit_cyberpunk_starlight_contract(user)
 	.["diagnostics"] = get_cyberpunk_vendor_diagnostic_offer(user)
 	var/datum/cyberpunk_corporation/supply_corporation = get_cyberpunk_supply_corporation()
 	.["cargoTracking"] = supply_corporation?.has_edict("starlight_log_observation") && supply_corporation.is_subscribed(user)
@@ -150,12 +158,36 @@
 		return
 
 	switch(action)
+		if("set_corporate_markup")
+			var/mob/living/customer = ui.user
+			if(!can_change_cyberpunk_corporate_markup(customer))
+				return FALSE
+			var/markup = tgui_input_number(customer, "Наценка в процентах. Введите отрицательное число для скидки.", name, cyberpunk_corporate_markup_percent, 500, -100)
+			if(isnull(markup) || !can_change_cyberpunk_corporate_markup(customer))
+				return FALSE
+			cyberpunk_corporate_markup_percent = round(clamp(markup, -100, 500))
+			update_static_data_for_all_viewers()
+			return TRUE
+		if("sell_ryaznov_scrap")
+			return buy_ryaznov_scrap(ui.user)
 		if("corporate_diagnostics", "print_corporate_diagnostics")
 			return run_cyberpunk_vendor_diagnostics(ui.user, action == "print_corporate_diagnostics")
 		if("attach_cargo_tracker")
 			return attach_starlight_tracking(ui.user)
+		if("submit_starlight_contract")
+			var/mob/living/customer = ui.user
+			if(!istype(customer) || !can_submit_cyberpunk_starlight_contract(customer) || !is_operational || !customer.can_perform_action(src, FORBID_TELEKINESIS_REACH))
+				return FALSE
+			return SSeconomy.submit_cyberpunk_contract_terminal_item(customer, src, customer.get_active_held_item(), CYBERPUNK_CORP_STARLIGHT)
 		if("buy_corporate_chip")
 			return buy_cyberpunk_service_chip(ui.user)
+		if("corporate_local_aid", "corporate_aid_drone")
+			return request_cyberpunk_local_aid(ui.user, action == "corporate_aid_drone")
+		if("order_missing_stock")
+			var/datum/data/vending_product/product = locate(params["ref"])
+			if(!istype(product))
+				return FALSE
+			return order_cyberpunk_starlight_stock(ui.user, product)
 		if("vend")
 			. = vend(params, ui.user)
 		if("select_colors")

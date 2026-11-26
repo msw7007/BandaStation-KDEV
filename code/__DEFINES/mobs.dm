@@ -40,8 +40,6 @@
 #define CARBON_KILL_GRAB_OXYLOSS_RATE (CARBON_OXY_DEATH_DAMAGE / 40)
 /// Oxy damage per second from a missed breath.
 #define CARBON_MISSED_BREATH_OXYLOSS_RATE (CARBON_OXY_DEATH_DAMAGE / 120)
-/// Seconds from hardcrit start to full hardcrit circulatory collapse.
-#define CARBON_HARDCRIT_CIRCULATION_COLLAPSE_TIME 60
 /// Reagent metabolism multiplier during hardcrit circulatory collapse.
 #define CARBON_HARDCRIT_CIRCULATION_METABOLISM_MULTIPLIER 0.8
 //Blood levels
@@ -496,6 +494,8 @@
 #define SHOCK_DELAY_STUN (1 << 7)
 /// Makes the paralyze into a knockdown
 #define SHOCK_KNOCKDOWN (1 << 8)
+/// Shock transmitted from another mob through contact.
+#define SHOCK_CHAIN (1 << 9)
 
 #define INCORPOREAL_MOVE_BASIC 1 /// normal movement, see: [/mob/living/var/incorporeal_move]
 #define INCORPOREAL_MOVE_SHADOW 2 /// leaves a trail of shadows

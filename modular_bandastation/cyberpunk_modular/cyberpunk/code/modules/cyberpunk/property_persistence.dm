@@ -111,6 +111,7 @@
 		"cyberpunk_unload_business_name" = cyberpunk_persistent_read_var(thing, "business_name"),
 		"cyberpunk_machine_modules" = machine_module_types,
 		"cyberpunk_vending_stock" = vending_stock,
+		"cyberpunk_corporate_markup" = vendor?.cyberpunk_corporate_markup_percent,
 		"req_access" = islist(req_access) ? req_access.Copy() : null,
 		"req_one_access" = islist(req_one_access) ? req_one_access.Copy() : null,
 	)
@@ -122,6 +123,9 @@
 		entry["item_quality"] = item.cyberpunk_quality
 		entry["item_manufacturer"] = item.get_cyberpunk_manufacturer()
 		entry["resource_quality"] = item.resource_quality
+		if(item.cyberpunk_recovered_scrap)
+			entry["recovered_scrap"] = TRUE
+			entry["scrap_analyzed"] = item.cyberpunk_scrap_analyzed
 		entry["weapon_assembled"] = item.cyberpunk_weapon_assembled
 		var/obj/item/stack/stack = item
 		var/units = istype(stack) ? stack.get_amount() : 1
@@ -164,11 +168,16 @@
 		entry["cyberpunk_vehicle"] = vehicle.cyberpunk_to_persistent_record()
 	if(depth < 3 && length(thing.contents))
 		var/list/content_records = list()
+		var/obj/machinery/reagentgrinder/grinder = thing
+		if(istype(grinder))
+			entry["has_machine_slots"] = TRUE
 		for(var/atom/movable/content as anything in thing.contents)
 			if(islist(entry["machine_parts"]) && (content in machine.component_parts))
 				continue
 			var/list/content_entry = cyberpunk_persistent_capture_movable(content, base_turf, center, active_terminal, depth + 1)
 			if(content_entry)
+				if(istype(grinder) && content == grinder.beaker)
+					content_entry["machine_slot"] = "beaker"
 				content_records += list(content_entry)
 		if(length(content_records))
 			entry["contents"] = content_records
@@ -276,6 +285,7 @@
 			restored_machine.set_cyberpunk_failure_state(failure)
 	var/obj/machinery/vending/restored_vendor = restored_atom
 	if(istype(restored_vendor) && islist(entry["cyberpunk_vending_stock"]))
+		restored_vendor.cyberpunk_corporate_markup_percent = clamp(entry["cyberpunk_corporate_markup"] || 0, -100, 500)
 		for(var/list/stock_entry as anything in entry["cyberpunk_vending_stock"])
 			for(var/datum/data/vending_product/record as anything in restored_vendor.product_records + restored_vendor.coin_records + restored_vendor.hidden_records)
 				if(stock_entry["path"] ? "[record.product_path]" != stock_entry["path"] : record.name != stock_entry["name"])
@@ -287,8 +297,22 @@
 					record.cyberpunk_warehouse_items = saved_warehouse_items.Copy()
 				break
 	if(islist(entry["contents"]))
+		var/obj/machinery/reagentgrinder/grinder = restored_atom
+		var/obj/item/reagent_containers/legacy_beaker
+		var/beaker_candidates = 0
 		for(var/list/content_entry as anything in entry["contents"])
-			cyberpunk_persistent_restore_movable(content_entry, restored_atom, target_area, center, active_terminal)
+			var/atom/movable/restored_content = cyberpunk_persistent_restore_movable(content_entry, restored_atom, target_area, center, active_terminal)
+			if(!istype(grinder) || !istype(restored_content, /obj/item/reagent_containers))
+				continue
+			if(content_entry["machine_slot"] == "beaker")
+				grinder.beaker = restored_content
+			else if(!entry["has_machine_slots"] && restored_content.is_open_container())
+				legacy_beaker = restored_content
+				beaker_candidates++
+		if(istype(grinder))
+			if(!grinder.beaker && beaker_candidates == 1)
+				grinder.beaker = legacy_beaker
+			grinder.update_appearance(UPDATE_OVERLAYS)
 	if(istype(vehicle) && islist(vehicle_record))
 		vehicle.cyberpunk_after_persistent_restore(vehicle_record)
 	return restored_atom
@@ -327,6 +351,8 @@
 	item.cyberpunk_quality = clamp(round(entry["item_quality"]), 1, 200)
 	item.set_cyberpunk_manufacturer(entry["item_manufacturer"])
 	item.set_resource_quality(entry["resource_quality"])
+	item.cyberpunk_recovered_scrap = !!entry["recovered_scrap"]
+	item.cyberpunk_scrap_analyzed = !!entry["scrap_analyzed"]
 	var/list/materials = list()
 	for(var/material_text in entry["item_materials"])
 		var/material_path = text2path(material_text)

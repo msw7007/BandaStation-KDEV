@@ -163,8 +163,8 @@
 	return
 
 
-///Called to begin metabolization and return the volume of reagent to metabolize
-/datum/reagent/proc/compute_metabolization(mob/living/carbon/affected_mob, seconds_per_tick)
+/// Calculates the amount before applying the remaining volume limit or starting metabolism.
+/datum/reagent/proc/get_metabolization_amount(mob/living/carbon/affected_mob, seconds_per_tick)
 	var/metabolizing_out = metabolization_rate * seconds_per_tick
 	if(!(chemical_flags & REAGENT_UNAFFECTED_BY_METABOLISM))
 		if(chemical_flags & REAGENT_REVERSE_METABOLISM)
@@ -172,6 +172,11 @@
 		else
 			metabolizing_out *= affected_mob.metabolism_efficiency
 		metabolizing_out *= affected_mob.get_reagent_metabolism_organ_multiplier()
+	return metabolizing_out
+
+/// Starts metabolization and returns the volume of reagent to metabolize.
+/datum/reagent/proc/compute_metabolization(mob/living/carbon/affected_mob, seconds_per_tick)
+	var/metabolizing_out = get_metabolization_amount(affected_mob, seconds_per_tick)
 
 	if(!metabolizing)
 		metabolizing = TRUE

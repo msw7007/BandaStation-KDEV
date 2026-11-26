@@ -216,6 +216,7 @@ function MaterialSection(props: MaterialSectionProps) {
   const { compact, searchItem } = props;
 
   const [tab] = useSharedState('tab', 'material');
+  const [qualityMode, setQualityMode] = useState('standard');
 
   const search = createSearch(
     searchItem,
@@ -228,6 +229,28 @@ function MaterialSection(props: MaterialSectionProps) {
 
   return (
     <Section fill scrollable>
+      {tab === 'alloy' && (
+        <Box mb={1}>
+          <Button
+            selected={qualityMode === 'economy'}
+            onClick={() => setQualityMode('economy')}
+          >
+            Экономная
+          </Button>
+          <Button
+            selected={qualityMode === 'standard'}
+            onClick={() => setQualityMode('standard')}
+          >
+            Обычная
+          </Button>
+          <Button
+            selected={qualityMode === 'precision'}
+            onClick={() => setQualityMode('precision')}
+          >
+            Точная
+          </Button>
+        </Box>
+      )}
       <Table>
         {material_filtered.map((material) => (
           <MaterialRow
@@ -244,6 +267,7 @@ function MaterialSection(props: MaterialSectionProps) {
                 act('Smelt', {
                   id: material.id,
                   sheets: amount,
+                  qualityMode,
                 });
               }
             }}

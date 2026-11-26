@@ -1780,6 +1780,8 @@
 /area/cyberpunk/city/corporate/benn)
 "amE" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "medical";
+	req_access = list("corp:benn:specialist");
 	name = "Операционная"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -2909,6 +2911,8 @@
 /area/cyberpunk/city/housing/tenement)
 "apx" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "server";
+	req_access = list("corp:starlight:specialist");
 	name = "Архив накладных"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -3915,6 +3919,8 @@
 /area/cyberpunk/city/government)
 "arT" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "laboratory";
+	req_access = list("corp:benn:specialist");
 	name = "Аналитическая лаборатория"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -3924,6 +3930,8 @@
 /area/cyberpunk/city/corporate/benn)
 "arU" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "laboratory";
+	req_access = list("corp:benn:specialist");
 	name = "Генетическая лаборатория"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -3988,6 +3996,8 @@
 /area/cyberpunk/city/government)
 "asc" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "administration";
+	req_access = list("government:all");
 	name = "Финансы города"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -4003,6 +4013,8 @@
 /area/cyberpunk/city/government)
 "ase" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "administration";
+	req_access = list("government:all");
 	name = "Кабинеты правительства"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -4121,6 +4133,8 @@
 /area/cyberpunk/city/corporate/benn)
 "asw" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "server";
+	req_access = list("government:all");
 	name = "Архив"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -4198,6 +4212,8 @@
 /area/cyberpunk/city/corporate/benn)
 "asI" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "server";
+	req_access = list("corp:benn:specialist");
 	name = "Серверная и архив"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -4279,6 +4295,8 @@
 /area/cyberpunk/city/corporate/benn)
 "asT" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "server";
+	req_access = list("government:all");
 	name = "Серверная"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -4654,6 +4672,8 @@
 /area/cyberpunk/city/corporate/starlight)
 "atQ" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "server";
+	req_access = list("corp:starlight:specialist");
 	name = "Серверная"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -4663,6 +4683,8 @@
 /area/cyberpunk/city/corporate/starlight)
 "atR" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "laboratory";
+	req_access = list("corp:starlight:specialist");
 	name = "Логистическая лаборатория"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -5096,6 +5118,8 @@
 /area/cyberpunk/city/corporate/ryaznov)
 "auW" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "laboratory";
+	req_access = list("corp:ryaznov:specialist");
 	name = "Инженерные лаборатории"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -5250,6 +5274,8 @@
 /area/cyberpunk/city/civic/police)
 "avp" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "laboratory";
+	req_access = list("corp:ryaznov:specialist");
 	name = "Инженерная лаборатория"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -5269,6 +5295,8 @@
 /area/cyberpunk/city/roof)
 "avr" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "server";
+	req_access = list("corp:ryaznov:specialist");
 	name = "Серверная и архив"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -5417,6 +5445,8 @@
 /area/cyberpunk/city/corporate/benn)
 "avM" = (
 /obj/machinery/door/airlock/glass{
+	cyberpunk_access_scope = "laboratory";
+	req_access = list("corp:benn:specialist");
 	name = "Биолаборатория"
 	},
 /obj/effect/turf_decal/stripes/white/line{
@@ -7293,6 +7323,77 @@
 "yjE" = (
 /turf/open/openspace,
 /area/space)
+"abB" = (
+/obj/structure/table/greyscale,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abC" = (
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abD" = (
+/obj/structure/chair,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abE" = (
+/obj/machinery/light/floor,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abF" = (
+/turf/closed/wall,
+/area/cyberpunk/city/business/club/afterlife)
+"abG" = (
+/obj/machinery/door/airlock/glass{
+	name = "Основной зал"
+	},
+/obj/effect/turf_decal/stripes/white/line{
+	name = "Основной зал"
+	},
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abH" = (
+/obj/machinery/door/airlock/glass{
+	name = "Барная стойка"
+	},
+/obj/effect/turf_decal/stripes/white/line{
+	name = "Барная стойка"
+	},
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abI" = (
+/obj/structure/chair,
+/turf/open/floor/wood,
+/area/cyberpunk/city/business/club/afterlife)
+"abJ" = (
+/turf/open/floor/wood,
+/area/cyberpunk/city/business/club/afterlife)
+"abK" = (
+/obj/machinery/light/floor,
+/turf/open/floor/wood,
+/area/cyberpunk/city/business/club/afterlife)
+"abL" = (
+/obj/structure/table/greyscale,
+/turf/open/floor/wood,
+/area/cyberpunk/city/business/club/afterlife)
+"abM" = (
+/obj/machinery/computer/business_terminal/mapped/afterlife,
+/turf/open/floor/iron,
+/area/cyberpunk/city/business/club/afterlife)
+"abP" = (
+/obj/machinery/cyberpunk_bank_server,
+/turf/open/floor/iron/dark/textured,
+/area/cyberpunk/city/government)
+"abQ" = (
+/obj/machinery/computer/corporate_terminal/external_market,
+/turf/open/floor/iron,
+/area/cyberpunk/city/corporate/benn)
+"abX" = (
+/obj/machinery/computer/corporate_terminal/external_market/starlight,
+/turf/open/floor/iron,
+/area/cyberpunk/city/corporate/starlight)
+"acg" = (
+/obj/machinery/computer/corporate_terminal/external_market/ryaznov,
+/turf/open/floor/iron,
+/area/cyberpunk/city/corporate/ryaznov)
 
 (1,1,1) = {"
 aaa
@@ -271699,13 +271800,13 @@ aeA
 aeA
 aeC
 aen
-aez
-aeA
-aeA
-aeA
-aeA
-aeA
-aeC
+abD
+abC
+abC
+abC
+abC
+abC
+abB
 aen
 amq
 amk
@@ -272017,13 +272118,13 @@ aeA
 aeA
 aeA
 aen
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abC
+abC
+abC
+abC
+abC
 aen
 amq
 amr
@@ -272335,13 +272436,13 @@ aeA
 aeA
 aeA
 aen
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abM
+abC
+abC
+abC
+abC
 aen
 amq
 amr
@@ -272653,13 +272754,13 @@ aeA
 aeA
 aeA
 aen
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abC
+abC
+abC
+abC
+abC
 aen
 aqG
 pFU
@@ -272971,13 +273072,13 @@ aeB
 aeA
 aeA
 aen
-aeA
-aeA
-aeA
-aeB
-aeA
-aeA
-aeA
+abC
+abC
+abC
+abE
+abC
+abC
+abC
 aen
 alY
 alY
@@ -273289,13 +273390,13 @@ aeA
 aeA
 aeA
 aen
-aeA
-aeA
-aeB
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abE
+abC
+abC
+abC
+abC
 aen
 alY
 alY
@@ -273607,13 +273708,13 @@ aeA
 aeA
 aeA
 aen
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abC
+abC
+abC
+abC
+abC
 aen
 alY
 alY
@@ -273925,13 +274026,13 @@ aeA
 aeA
 aeA
 aen
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abC
+abC
+abC
+abC
+abC
 aen
 alY
 alY
@@ -274243,13 +274344,13 @@ aeA
 aeA
 aez
 aen
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
-aeA
+abC
+abC
+abC
+abC
+abC
+abC
+abC
 aen
 alY
 alY
@@ -274561,13 +274662,13 @@ aen
 aen
 aen
 aen
-aen
-aen
-aen
-aqq
-aen
-aen
-aen
+abF
+abF
+abF
+abG
+abF
+abF
+abF
 aen
 ama
 ama
@@ -276151,13 +276252,13 @@ aen
 aen
 aen
 aen
-aen
-aen
-aen
-aqC
-aen
-aen
-aen
+abF
+abF
+abF
+abH
+abF
+abF
+abF
 aen
 alY
 alY
@@ -276469,13 +276570,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiE
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abI
 aen
 alY
 alY
@@ -276787,13 +276888,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -277105,13 +277206,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -277423,13 +277524,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -277741,13 +277842,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiG
-aiG
-aiF
-aiF
-aiF
+abJ
+abJ
+abK
+abK
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -278059,13 +278160,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -278377,13 +278478,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -278695,13 +278796,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -279013,13 +279114,13 @@ aeA
 aeA
 aeA
 aen
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
-aiF
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
+abJ
 aen
 alY
 alY
@@ -279331,13 +279432,13 @@ aeA
 aeA
 aeC
 aen
-aiE
-aiF
-aiF
-aiF
-aiF
-aiF
-aiH
+abI
+abJ
+abJ
+abJ
+abJ
+abJ
+abL
 aen
 alY
 alY
@@ -279649,13 +279750,13 @@ aen
 aen
 aen
 aen
-aen
-aen
-aen
-aen
-aen
-aen
-aen
+abF
+abF
+abF
+abF
+abF
+abF
+abF
 aen
 ama
 ama
@@ -325569,7 +325670,7 @@ acc
 acc
 acc
 abR
-abZ
+abQ
 abZ
 abZ
 abR
@@ -331522,7 +331623,7 @@ abU
 abU
 abU
 asT
-abV
+abP
 abV
 abV
 abV
@@ -359709,7 +359810,7 @@ afG
 afG
 afG
 aff
-afl
+abX
 afl
 afl
 afl
@@ -401906,7 +402007,7 @@ akd
 akd
 akd
 ajX
-akb
+acg
 akb
 akb
 akb

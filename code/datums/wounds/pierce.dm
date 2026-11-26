@@ -421,3 +421,10 @@
 	can_be_randomly_generated = FALSE
 	wound_path_to_generate = /datum/wound/pierce/bleed/critical/aorta
 	threshold_minimum = 80
+	viable_zones = list(BODY_ZONE_HEAD, BODY_ZONE_CHEST)
+
+/datum/wound/pierce/bleed/critical/aorta/apply_wound(obj/item/bodypart/limb, silent, datum/wound/old_wound, smited, attack_direction, wound_source, replacing)
+	if(!limb.can_have_aorta_wound())
+		qdel(src)
+		return FALSE
+	return ..()

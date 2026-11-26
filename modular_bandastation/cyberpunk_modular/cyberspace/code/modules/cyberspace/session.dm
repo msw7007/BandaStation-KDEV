@@ -136,6 +136,7 @@
 	if(!destination)
 		return FALSE
 	forceMove(destination)
+	session?.update_engram_veil_clock()
 	update_avatar_shell()
 	return TRUE
 
@@ -198,7 +199,7 @@
 	var/datum/weakref/engram_anchor_ref
 	var/attack_token
 	var/next_veil_response = 0
-	var/session_started_at = 0
+	var/veil_entered_at
 	var/next_passive_net_data = 0
 	var/free_engram = FALSE
 	var/free_engram_stage = 0
@@ -255,7 +256,6 @@
 	avatar_origin = entry_turf
 	add_connection_origin(entry_turf)
 	avatar.assign_body(body, src)
-	session_started_at = world.time
 	next_passive_net_data = world.time + CYBERSPACE_PASSIVE_NET_DATA_INTERVAL
 	if(mode == CYBERSPACE_MODE_AVATAR)
 		relax_physical_body()
@@ -298,9 +298,14 @@
 			end_session(FALSE)
 			return
 	var/atom/movable/anchor = get_engram_anchor()
-	if(mode == CYBERSPACE_MODE_ENGRAM && !anchor && !free_engram)
-		end_session(FALSE)
-		return
+	if(mode == CYBERSPACE_MODE_ENGRAM && !free_engram)
+		if(!anchor)
+			end_session(FALSE)
+			return
+		var/obj/machinery/engrammator/server = istype(anchor, /obj/item/cyberspace_engram_chip) ? anchor.loc : anchor
+		if(istype(server) && !server.is_operational)
+			on_engram_anchor_destroyed(anchor, power_loss = TRUE)
+			return
 	if(mode == CYBERSPACE_MODE_AVATAR)
 		relax_physical_body(FALSE)
 	var/current_distance = get_nearest_safe_origin_distance(avatar)
@@ -479,12 +484,20 @@
 	to_chat(body, span_notice("Your network presence condenses 1 net-data. Total net-data: [body.mind.cyber_net_data]."))
 	return TRUE
 
+/datum/cyberspace_session/proc/update_engram_veil_clock()
+	if(mode != CYBERSPACE_MODE_ENGRAM || !avatar)
+		return
+	if(!istype(get_turf(avatar), /turf/open/indestructible/cyberspace/veil))
+		veil_entered_at = null
+		next_free_engram_growth = 0
+	else if(isnull(veil_entered_at))
+		veil_entered_at = world.time
+
 /datum/cyberspace_session/proc/handle_engram_freedom()
 	if(mode != CYBERSPACE_MODE_ENGRAM || free_engram || !avatar)
 		return FALSE
-	if(!istype(get_turf(avatar), /turf/open/indestructible/cyberspace/veil))
-		return FALSE
-	if(world.time < session_started_at + CYBERSPACE_ENGRAM_FREE_TIME)
+	update_engram_veil_clock()
+	if(isnull(veil_entered_at) || world.time < veil_entered_at + CYBERSPACE_ENGRAM_FREE_TIME)
 		return FALSE
 	free_engram = TRUE
 	free_engram_stage = 0
@@ -498,6 +511,7 @@
 	if(mode != CYBERSPACE_MODE_ENGRAM || !free_engram || free_engram_stage >= CYBERSPACE_FREE_ENGRAM_MAX_GROWTH_STAGE || !avatar)
 		return FALSE
 	if(!istype(get_turf(avatar), /turf/open/indestructible/cyberspace/veil))
+		next_free_engram_growth = 0
 		return FALSE
 	if(!next_free_engram_growth)
 		next_free_engram_growth = world.time + CYBERSPACE_FREE_ENGRAM_GROWTH_INTERVAL
@@ -542,14 +556,16 @@
 		return 1
 	return CYBERSPACE_FREE_ENGRAM_STAGE_THREE_POWER_MULTIPLIER
 
-/datum/cyberspace_session/proc/on_engram_anchor_destroyed(atom/movable/destroyed_anchor)
+/datum/cyberspace_session/proc/on_engram_anchor_destroyed(atom/movable/destroyed_anchor, power_loss = FALSE)
 	if(mode != CYBERSPACE_MODE_ENGRAM || free_engram || !active || !body)
 		return FALSE
 	if(get_engram_anchor() != destroyed_anchor)
 		return FALSE
-	to_chat(body, span_userdanger("Your engram anchor is destroyed before you can break free. Feedback tears through your brain."))
-	body.adjust_organ_loss(ORGAN_SLOT_BRAIN, CYBERSPACE_VEIL_AVATAR_BRAIN_DAMAGE, BRAIN_DAMAGE_DEATH)
+	var/mob/living/anchored_body = body
+	to_chat(anchored_body, span_userdanger(power_loss ? "Your engram anchor loses power. Your signal collapses." : "Your engram anchor is destroyed before you can break free."))
 	end_session(FALSE)
+	anchored_body.adjust_organ_loss(ORGAN_SLOT_BRAIN, BRAIN_DAMAGE_DEATH, BRAIN_DAMAGE_DEATH)
+	anchored_body.death()
 	return TRUE
 
 /datum/cyberspace_session/proc/apply_avatar_damage(amount)
@@ -611,10 +627,37 @@
 	avatar_veil_integrity = max(0, avatar_veil_integrity - amount)
 	if(body)
 		to_chat(body, span_userdanger("An alternative tears into your cyberspace avatar. Integrity: [avatar_veil_integrity]/[CYBERSPACE_VEIL_AVATAR_INTEGRITY]."))
+		apply_alternative_feedback(amount)
 	if(avatar_veil_integrity > 0)
 		return TRUE
 	veil_avatar_destroyed(attacker)
 	return TRUE
+
+/datum/cyberspace_session/proc/apply_alternative_feedback(amount)
+	switch(rand(1, 3))
+		if(1)
+			body.adjust_chromity_overheat(amount)
+			to_chat(body, span_userdanger("The alternative overloads your neural link."))
+		if(2)
+			var/datum/mind/victim = body.mind
+			if(victim?.cyber_net_data > 0)
+				var/stolen = min(victim.cyber_net_data, amount)
+				victim.cyber_net_data -= stolen
+				to_chat(body, span_warning("The alternative steals [stolen] net-data."))
+		if(3)
+			var/obj/item/clothing/gloves/cyberdeck/deck = find_held_cyberdeck(body)
+			if(length(deck?.demons))
+				var/datum/cyberspace_demon/demon = pick(deck.demons)
+				demon.integrity = max(0, demon.integrity - amount * 5)
+				deck.forget_demon(demon)
+				if(demon.integrity <= 0)
+					to_chat(body, span_userdanger("The alternative destroys [demon.demon_name]."))
+					deck.demons -= demon
+					qdel(demon)
+					deck.sync_demon_actions(body)
+					return
+				demon.next_use = max(demon.next_use, world.time + amount SECONDS)
+				to_chat(body, span_warning("The alternative corrupts [demon.demon_name]. The demon is temporarily unavailable."))
 
 /datum/cyberspace_session/proc/veil_avatar_destroyed(mob/living/basic/cyberspace_alternative/killer)
 	if(!active || !body)

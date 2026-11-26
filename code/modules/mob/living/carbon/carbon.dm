@@ -725,6 +725,8 @@
 		if(HAS_TRAIT_FROM(src, TRAIT_DISSECTED, AUTOPSY_TRAIT))
 			REMOVE_TRAIT(src, TRAIT_DISSECTED, AUTOPSY_TRAIT)
 		if(has_cyberpunk_hardcrit_damage() && !HAS_TRAIT(src, TRAIT_NOHARDCRIT))
+			if(stat != HARD_CRIT)
+				set_heartattack(TRUE)
 			set_stat(HARD_CRIT)
 		else if(HAS_TRAIT(src, TRAIT_KNOCKEDOUT))
 			set_stat(UNCONSCIOUS)

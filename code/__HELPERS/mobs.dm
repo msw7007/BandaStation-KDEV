@@ -213,6 +213,9 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 		return FALSE
 	if(!isnum(delay))
 		CRASH("do_after was passed a non-number delay: [delay || "null"].")
+	var/mob/living/living_user = isliving(user) ? user : null
+	if(!(timed_action_flags & IGNORE_INCAPACITATED) && living_user?.is_cyberpunk_neck_choked())
+		return FALSE
 
 	if(!interaction_key && target)
 		interaction_key = target //Use the direct ref to the target
@@ -252,7 +255,6 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 
 	var/endtime = world.time + delay
 	var/starttime = world.time
-	var/mob/living/living_user = isliving(user) ? user : null
 	var/next_stamina_spend = world.time + 1 SECONDS
 	var/cyberpunk_action_grace_until = 0
 	. = TRUE
@@ -268,7 +270,7 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 
 		if(QDELETED(user) \
 			|| (!(timed_action_flags & IGNORE_USER_LOC_CHANGE) && !drifting && user.loc != user_loc) \
-			|| (!(timed_action_flags & IGNORE_INCAPACITATED) && HAS_TRAIT(user, TRAIT_INCAPACITATED)) \
+			|| (!(timed_action_flags & IGNORE_INCAPACITATED) && (HAS_TRAIT(user, TRAIT_INCAPACITATED) || living_user?.is_cyberpunk_neck_choked())) \
 			|| (extra_checks && !extra_checks.Invoke()))
 			. = FALSE
 			break
@@ -289,7 +291,7 @@ GLOBAL_LIST_INIT(skin_tone_names, list(
 			. = FALSE
 			break
 
-		if(progress && living_user && world.time >= next_stamina_spend)
+		if(progress && living_user && !(timed_action_flags & DO_AFTER_DEFER_STAMINA_COST) && world.time >= next_stamina_spend)
 			next_stamina_spend += 1 SECONDS
 			if(!living_user.spend_stamina(STAMINA_COST_PROGRESS_TICK, "progress"))
 				. = FALSE

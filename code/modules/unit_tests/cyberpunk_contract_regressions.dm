@@ -52,7 +52,7 @@
 	var/datum/bank_account/debtor = allocate(__IMPLIED_TYPE__, "Contract debtor", null, 1, FALSE)
 	var/datum/bank_account/creditor = allocate(__IMPLIED_TYPE__, "Contract creditor", null, 1, FALSE)
 	creditor.account_id = "contract_test_[REF(src)]"
-	SSeconomy.bank_accounts_by_id["[creditor.account_id]"] = creditor
+	SSeconomy.get_bank_accounts()["[creditor.account_id]"] = creditor
 	var/datum/cyberpunk_contract/contract = allocate(__IMPLIED_TYPE__)
 	contract.penalty = 100
 	debtor.account_balance = 25
@@ -63,7 +63,8 @@
 	debtor.pay_debt(75)
 	var/paid_total = creditor.account_balance
 	var/outstanding = contract.penalty_outstanding
-	SSeconomy.bank_accounts_by_id -= "[creditor.account_id]"
+	var/list/bank_registry = SSeconomy.get_bank_accounts()
+	bank_registry -= "[creditor.account_id]"
 	TEST_ASSERT_EQUAL(paid_immediately, 25, "Available funds must be paid immediately.")
 	TEST_ASSERT_EQUAL(debt_recorded, 75, "The unpaid balance must become bank debt.")
 	TEST_ASSERT_EQUAL(paid_total, 100, "Debt collection must pay the contractual creditor.")

@@ -78,6 +78,8 @@
 	#define COMPONENT_LIVING_CANCEL_LIFE_PROCESSING (1<<0)
 ///From living/Life(). (deltatime)
 #define COMSIG_LIVING_LIFE "living_life"
+/// Check temperature damage during a Cyberpunk NPC's phantom exposure step. (seconds_per_tick)
+#define COMSIG_LIVING_PHANTOM_TEMPERATURE "living_phantom_temperature"
 ///From living/set_resting(): (new_resting, silent, instant)
 #define COMSIG_LIVING_RESTING "living_resting"
 

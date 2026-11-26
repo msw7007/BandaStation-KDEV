@@ -61,6 +61,9 @@
 
 	if(HAS_TRAIT(src, TRAIT_SOFTSPOKEN) && !HAS_TRAIT(src, TRAIT_SIGN_LANG)) // softspoken trait only applies to spoken languages
 		message_mods[WHISPER_MODE] = MODE_WHISPER
+	if(!forced && !HAS_TRAIT(src, TRAIT_SIGN_LANG) && is_cyberpunk_neck_choked())
+		to_chat(src, span_warning("Вы не можете говорить, пока вас душат."))
+		return
 	if(is_cyberpunk_mouth_grabbed(GRAB_AGGRESSIVE) && !forced)
 		to_chat(src, span_warning("You cannot speak with your mouth held shut."))
 		return

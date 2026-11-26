@@ -101,8 +101,9 @@
 	return terminal.matches_cyberpunk_contract_terminal(destination_text)
 
 
-/datum/cyberpunk_contract_condition/delivery/proc/can_record_terminal_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item, obj/machinery/vending/terminal)
-	if(!contract || !user || !item || !terminal_matches(terminal))
+/datum/cyberpunk_contract_condition/delivery/proc/can_record_terminal_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item, obj/machinery/vending/terminal, corporate_receiver)
+	var/routed_to_corporation = corporate_receiver && contract?.source_corporation == corporate_receiver && destination_kind == "creator"
+	if(!contract || !user || !item || (!routed_to_corporation && !terminal_matches(terminal)))
 		return FALSE
 	if(contract.status != CYBERPUNK_CONTRACT_ACCEPTED || !contract.can_act_as_contractor(user) || item.cyberpunk_contract_id != contract.id || !(item in contract.delivery_items))
 		return FALSE
@@ -111,8 +112,8 @@
 	return TRUE
 
 
-/datum/cyberpunk_contract_condition/delivery/proc/record_terminal_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item, obj/machinery/vending/terminal)
-	if(!can_record_terminal_item(contract, user, item, terminal))
+/datum/cyberpunk_contract_condition/delivery/proc/record_terminal_item(datum/cyberpunk_contract/contract, mob/living/user, obj/item/item, obj/machinery/vending/terminal, corporate_receiver)
+	if(!can_record_terminal_item(contract, user, item, terminal, corporate_receiver))
 		return FALSE
 	delivered_amount = max(delivered_amount, required_amount)
 	contract.delivered_amount = max(contract.delivered_amount, delivered_amount)
@@ -122,13 +123,15 @@
 	return TRUE
 
 
-/datum/controller/subsystem/economy/proc/submit_cyberpunk_contract_terminal_item(mob/living/user, obj/machinery/vending/terminal, obj/item/item)
+/datum/controller/subsystem/economy/proc/submit_cyberpunk_contract_terminal_item(mob/living/user, obj/machinery/vending/terminal, obj/item/item, corporate_receiver)
 	if(!user || !terminal || !item)
 		to_chat(user, span_warning("You need to hold the cargo you want to submit."))
 		return TRUE
 	for(var/contract_id in cyberpunk_contracts)
 		var/datum/cyberpunk_contract/contract = cyberpunk_contracts[contract_id]
 		if(!contract?.can_act_as_contractor(user) || contract.status != CYBERPUNK_CONTRACT_ACCEPTED)
+			continue
+		if(corporate_receiver && contract.source_corporation != corporate_receiver)
 			continue
 		if(contract.contract_type == CYBERPUNK_CONTRACT_MINING)
 			if(contract.try_record_item_condition(CYBERPUNK_CONTRACT_MINING, user, item))
@@ -138,12 +141,12 @@
 		if(contract.contract_type != CYBERPUNK_CONTRACT_DELIVERY)
 			continue
 		for(var/datum/cyberpunk_contract_condition/delivery/condition as anything in contract.completion_conditions)
-			if(!istype(condition) || !condition.can_record_terminal_item(contract, user, item, terminal))
+			if(!istype(condition) || !condition.can_record_terminal_item(contract, user, item, terminal, corporate_receiver))
 				continue
 			if(!user.transferItemToLoc(item, terminal))
 				to_chat(user, span_warning("[item] is stuck in your hand."))
 				return TRUE
-			if(condition.record_terminal_item(contract, user, item, terminal))
+			if(condition.record_terminal_item(contract, user, item, terminal, corporate_receiver))
 				create_cyberpunk_contract_mail(user, terminal, item, contract.creator_name, contract.id, TRUE)
 				to_chat(user, span_notice("You submit [item] for contract #[contract.id]. It is now waiting for [contract.creator_name]."))
 				return TRUE

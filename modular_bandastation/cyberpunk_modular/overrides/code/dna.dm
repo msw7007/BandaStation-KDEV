@@ -278,7 +278,12 @@
 		if(!(mutation.sources & GLOB.standard_mutation_sources))
 			continue
 		mutation_penalty += max(1, abs(mutation.instability) * GET_MUTATION_STABILIZER(mutation))
-	humanoidity = clamp(HUMANOIDITY_DEFAULT - humanoidity_genetic_penalty - mutation_penalty, 0, HUMANOIDITY_DEFAULT)
+	var/infusion_penalty = 0
+	var/mob/living/carbon/patient = holder
+	if(istype(patient))
+		for(var/obj/item/organ/organ as anything in patient.organs)
+			infusion_penalty += organ.cyberpunk_infusion_humanoidity_cost
+	humanoidity = clamp(HUMANOIDITY_DEFAULT - humanoidity_genetic_penalty - mutation_penalty - infusion_penalty, 0, HUMANOIDITY_DEFAULT)
 	if(holder && alert && humanoidity < old_humanoidity)
 		to_chat(holder, span_warning("Your body feels less human."))
 	if(holder && humanoidity <= 0)

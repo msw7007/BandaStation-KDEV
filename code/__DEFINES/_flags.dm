@@ -326,6 +326,8 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define IGNORE_SLOWDOWNS (1<<4)
 /// Cancel the action if the user does another action (mainly via clicking)
 #define DO_AFTER_CHECK_NEXT_MOVE (1<<5)
+/// The action charges stamina itself on completion.
+#define DO_AFTER_DEFER_STAMINA_COST (1<<6)
 
 // Spacevine-related flags
 /// Is the spacevine / flower bud heat resistant

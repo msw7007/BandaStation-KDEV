@@ -137,28 +137,24 @@
 	if(!pickup_turf || !dropoff_turf || !length(cargo_atoms))
 		return FALSE
 	var/obj/vehicle/ridden/cyberpunk/avi/avi = new(pickup_turf)
+	avi.cyberpunk_route_corporation_id = CYBERPUNK_CORP_STARLIGHT
 	if(!avi.start_cyberpunk_avi_delivery(pickup_turf, dropoff_turf, cargo_atoms))
 		qdel(avi)
 		return FALSE
-	if(customer && length(cargo_atoms) == 1)
-		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(CYBERPUNK_CORP_STARLIGHT)
-		if(corporation?.has_edict("starlight_log_observation"))
-			var/datum/cyberpunk_starlight_shipment/shipment = corporation.register_starlight_tracking(customer, cargo_atoms[1])
-			if(shipment)
-				shipment.status = "in transit"
-				shipment.destination = dropoff_turf
-				avi.avi_shipment_ref = WEAKREF(shipment)
+	avi.track_starlight_delivery(customer, cargo_atoms, dropoff_turf)
 	return TRUE
 
-/proc/cyberpunk_request_mule_delivery(atom/pickup, atom/dropoff, list/cargo_atoms)
+/proc/cyberpunk_request_mule_delivery(atom/pickup, atom/dropoff, list/cargo_atoms, mob/living/customer = null)
 	var/turf/pickup_turf = get_turf(pickup)
 	var/turf/dropoff_turf = get_turf(dropoff)
 	if(!pickup_turf || !dropoff_turf || pickup_turf.z != dropoff_turf.z || !length(cargo_atoms))
 		return FALSE
 	var/obj/vehicle/ridden/cyberpunk/cargo/mule = new(pickup_turf)
+	mule.cyberpunk_route_corporation_id = CYBERPUNK_CORP_STARLIGHT
 	if(!mule.start_cyberpunk_mule_delivery(pickup_turf, dropoff_turf, cargo_atoms))
 		qdel(mule)
 		return FALSE
+	mule.track_starlight_delivery(customer, cargo_atoms, dropoff_turf)
 	return TRUE
 
 /proc/cyberpunk_starlight_delivery_cost(transport, list/cargo_atoms)
@@ -179,12 +175,12 @@
 	if(!corporation?.service_auto_enabled || !corporation.dispatch_agent("courier route", 5 MINUTES))
 		customer_account?.adjust_money(cost, "Starlight delivery unavailable refund")
 		return FALSE
-	var/succeeded = transport == "mule" ? cyberpunk_request_mule_delivery(pickup, dropoff, cargo_atoms) : cyberpunk_request_avi_delivery(pickup, dropoff, cargo_atoms, customer)
+	var/succeeded = transport == "mule" ? cyberpunk_request_mule_delivery(pickup, dropoff, cargo_atoms, customer) : cyberpunk_request_avi_delivery(pickup, dropoff, cargo_atoms, customer)
 	if(!succeeded)
 		if(customer)
 			customer_account?.adjust_money(cost, "Starlight delivery refund")
 		return FALSE
-	SScyberpunk_corporations.record_cyberpunk_corporate_activity("starlight", "route", max(1, length(cargo_atoms)), cost, "manual [transport] delivery")
+	corporation.add_funds(cost, "manual [transport] delivery")
 	return TRUE
 
 /proc/cyberpunk_find_security_delivery_turf()

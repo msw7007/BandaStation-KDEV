@@ -5,6 +5,8 @@
 		return TRUE
 	if(A.outdoors)
 		return TRUE
+	if(istype(A, /area/cyberpunk))
+		return FALSE
 	if(istype(A, /area/space))
 		return FALSE
 	if(!A.requires_power && !A.always_unpowered)

@@ -31,6 +31,8 @@ type CouncilEmergency = {
   active: BooleanLike;
   inserted: number;
   required: number;
+  pendingDirective?: string | null;
+  directiveVotes?: number;
   lastDispatch?: string;
 };
 
@@ -306,6 +308,21 @@ const CameraControls = (props: { searchText: string }) => {
                     Last dispatch: {councilEmergency.lastDispatch}
                   </Stack.Item>
                 )}
+                {councilEmergency.pendingDirective != null && (
+                  <Stack.Item>
+                    <NoticeBox>
+                      {councilEmergency.pendingDirective || 'Отмена директивы'}{' '}
+                      · {councilEmergency.directiveVotes} /{' '}
+                      {councilEmergency.required}
+                    </NoticeBox>
+                    <Button
+                      icon="file-signature"
+                      onClick={() => act('council_sign_directive')}
+                    >
+                      Подписать чипом
+                    </Button>
+                  </Stack.Item>
+                )}
                 <Stack.Item>
                   <Stack>
                     <Stack.Item grow>
@@ -314,7 +331,7 @@ const CameraControls = (props: { searchText: string }) => {
                         icon="microchip"
                         onClick={() => act('council_insert_chip')}
                       >
-                        Insert chip
+                        Голосовать чипом
                       </Button>
                     </Stack.Item>
                     <Stack.Item grow>

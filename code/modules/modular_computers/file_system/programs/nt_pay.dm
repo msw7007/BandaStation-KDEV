@@ -36,8 +36,12 @@
 
 		if("GetPayToken")
 			wanted_token = null
-			for(var/account in SSeconomy.bank_accounts_by_id)
-				var/datum/bank_account/acc = SSeconomy.bank_accounts_by_id[account]
+			var/list/accounts = SSeconomy.get_cyberpunk_bank_registry()
+			if(!accounts)
+				wanted_token = "Банковский сервер недоступен."
+				return TRUE
+			for(var/account in accounts)
+				var/datum/bank_account/acc = accounts[account]
 				if(acc.account_holder == params["wanted_name"])
 					wanted_token = "Token: [acc.pay_token]"
 					break
@@ -93,8 +97,12 @@
 			to_chat(user, span_notice("You can't send credits to yourself."))
 		return NT_PAY_SATUS_SENDER_IS_RECEIVER
 
-	for(var/account in SSeconomy.bank_accounts_by_id)
-		var/datum/bank_account/acc = SSeconomy.bank_accounts_by_id[account]
+	var/list/bank_registry = SSeconomy.get_cyberpunk_bank_registry()
+	if(!bank_registry)
+		to_chat(user, span_notice("Правительственный банковский сервер недоступен."))
+		return NT_PAY_STATUS_NO_ACCOUNT
+	for(var/account in bank_registry)
+		var/datum/bank_account/acc = bank_registry[account]
 		if(acc.pay_token == token)
 			recipient = acc
 			break
@@ -107,8 +115,9 @@
 		current_user.bank_card_talk("You cannot afford it.")
 		return NT_PAY_STATUS_INVALID_MONEY
 
+	if(!recipient.transfer_money(current_user, money_to_send))
+		return NT_PAY_STATUS_NO_ACCOUNT
 	recipient.bank_card_talk("You received [money_to_send][MONEY_NAME]. Reason: transfer from [current_user.account_holder]")
-	recipient.transfer_money(current_user, money_to_send)
 	for(var/obj/item/card/id/id_card as anything in recipient.bank_cards)
 		SEND_SIGNAL(id_card, COMSIG_ID_CARD_NTPAY_MONEY_RECEIVED, computer, money_to_send)
 

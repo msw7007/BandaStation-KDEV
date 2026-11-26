@@ -33,27 +33,26 @@
 
 /obj/machinery/power/manufacturing/smelter/process(seconds_per_tick)
 	var/list/stacks = contents - circuit
-	if(!length(stacks))
-		return
-
-	var/list/stacks_preprocess = contents - circuit
-	var/obj/item/stack/ore/ore = stacks_preprocess[length(stacks_preprocess)]
-	if(isnull(ore))
-		return
-	if(isnull(withheld) && surplus() >= power_cost)
+	if(!length(stacks) && !withheld)
+		return PROCESS_KILL
+	if(!withheld && surplus() >= power_cost)
+		var/obj/item/stack/ore/ore = stacks[length(stacks)]
 		icon_state="smelter_on"
 		add_load(power_cost)
-		if(istype(ore))
-			var/obj/item/stack/new_stack = new ore.refined_type(null, min(5, ore.amount), FALSE)
+		if(istype(ore) && ore.refined_type)
+			var/ore_used = min(5, ore.get_amount())
+			var/output_amount = max(1, round(ore_used * ore.get_cyberpunk_ore_yield()))
+			var/obj/item/stack/new_stack = new ore.refined_type(null, output_amount, FALSE)
+			new_stack.set_resource_quality(ore.resource_quality)
 			new_stack.moveToNullspace()
-			ore.use(min(5, ore.amount))
+			ore.use(ore_used)
 			ore = new_stack
 		else
 			ore.fire_act(1400)
 		withheld = ore
 	else if(surplus() < power_cost)
 		icon_state = "smelter"
-	if(send_resource(withheld, dir))
+	if(withheld && send_resource(withheld, dir))
 		withheld = null // nullspace thumbs down
-	if(!length(contents - circuit))
+	if(!withheld && !length(contents - circuit))
 		return PROCESS_KILL //we finished

@@ -48,6 +48,7 @@ type CyberpunkAntagChipData = {
   tasks?: SpyTask[];
   completedToday?: number;
   damageScore?: number;
+  intel?: number;
   actions?: ChipAction[];
 };
 
@@ -162,6 +163,7 @@ export const CyberpunkAntagChip = () => {
     tasks = [],
     completedToday,
     damageScore,
+    intel,
     actions = [],
   } = data;
 
@@ -201,8 +203,11 @@ export const CyberpunkAntagChip = () => {
                       {damageScore}
                     </LabeledList.Item>
                   )}
+                  {intel !== undefined && (
+                    <LabeledList.Item label="Разведданные">{intel}</LabeledList.Item>
+                  )}
                   {completedToday !== undefined && (
-                    <LabeledList.Item label="Uploaded today">
+                    <LabeledList.Item label="Выполнено поручений">
                       {completedToday}
                     </LabeledList.Item>
                   )}

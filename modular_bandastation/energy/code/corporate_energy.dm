@@ -34,7 +34,7 @@
 	return max(1, round((amount / (1 KILO JOULES)) * cyberpunk_energy_price_per_kj))
 
 /datum/cyberpunk_corporation/proc/charge_cyberpunk_energy_customer(account_id, amount, source = "energy sale")
-	var/datum/bank_account/customer = SSeconomy.bank_accounts_by_id["[account_id]"]
+	var/datum/bank_account/customer = SSeconomy.get_bank_accounts()["[account_id]"]
 	var/cost = get_cyberpunk_energy_price(amount)
 	if(!cost)
 		return TRUE

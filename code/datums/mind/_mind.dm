@@ -104,7 +104,6 @@
 	///Spendable points for weapon character skill levels.
 	var/weapon_skill_points = WEAPON_SKILL_POINTS_DEFAULT
 	///Digital access keys learned by this character. Key id -> /datum/cyberspace_cryptokey.
-	var/list/cyber_cryptokeys = list()
 	///Net-data extracted from breached cyberspace nodes.
 	var/cyber_net_data = 0
 	///Skill unlock experience waiting for comfortable sleep conversion.

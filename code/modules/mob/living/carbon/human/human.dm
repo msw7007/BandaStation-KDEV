@@ -499,79 +499,19 @@
 				step_towards(hand, src)
 				to_chat(src, span_warning("[capitalize(singularity.declent_ru(NOMINATIVE))] утягивает [hand.declent_ru(ACCUSATIVE)] от вас!"))
 
-#define CPR_PANIC_SPEED (0.8 SECONDS)
-
-/// Performs CPR on the target after a delay.
+/// Performs CPR through the same cycle and skill checks as other surgical procedures.
 /mob/living/carbon/human/proc/do_cpr(mob/living/carbon/target)
-	if(target == src)
-		return
+	if(target == src || DOING_INTERACTION_WITH_TARGET(src, target))
+		return FALSE
+	if(DOING_INTERACTION(src, HAS_TRAIT(src, TRAIT_HIPPOCRATIC_OATH) ? target : DOAFTER_SOURCE_SURGERY))
+		return FALSE
 
-	var/panicking = FALSE
-
-	do
-		CHECK_DNA_AND_SPECIES(target)
-
-		if (DOING_INTERACTION_WITH_TARGET(src,target))
-			return FALSE
-
-		if (target.stat == DEAD || HAS_TRAIT(target, TRAIT_FAKEDEATH))
-			balloon_alert(src, "[target.ru_p_they()] [genderize_ru(target.gender, "мертв", "мертва", "мертвое", "мертвы")]!")
-			return FALSE
-
-		if (is_mouth_covered())
-			balloon_alert(src, "снимите свою маску!")
-			return FALSE
-
-		if (target.is_mouth_covered())
-			balloon_alert(src, "снимите [target.ru_p_them()] маску!")
-			return FALSE
-
-		if(HAS_TRAIT_FROM(src, TRAIT_NOBREATH, DISEASE_TRAIT))
-			to_chat(src, span_warning("вы не можете дышать!"))
-			return FALSE
-
-		var/obj/item/organ/lungs/human_lungs = get_organ_slot(ORGAN_SLOT_LUNGS)
-		if(isnull(human_lungs))
-			balloon_alert(src, "у вас нет легких!")
-			return FALSE
-		if(human_lungs.organ_flags & ORGAN_FAILING)
-			balloon_alert(src, "ваши легкие слишком повреждены!")
-			return FALSE
-
-		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] пытается провести СЛР [target.declent_ru(DATIVE)]!"), \
-						span_notice("Вы пытаетесь провести СЛР [target.declent_ru(DATIVE)]!... Стойте на месте!"))
-
-		if (!do_after(src, delay = panicking ? CPR_PANIC_SPEED : (3 SECONDS), target = target))
-			balloon_alert(src, "у вас не получается провести СЛР!")
-			return FALSE
-
-		if (target.health > target.crit_threshold)
-			return FALSE
-
-		visible_message(span_notice("[capitalize(declent_ru(NOMINATIVE))] проводит СЛР [target.declent_ru(DATIVE)]!"), span_notice("Вы проводите СЛР [target.declent_ru(DATIVE)]."))
-		if(HAS_MIND_TRAIT(src, TRAIT_MORBID))
-			add_mood_event("morbid_saved_life", /datum/mood_event/morbid_saved_life)
-		else
-			add_mood_event("saved_life", /datum/mood_event/saved_life)
-		log_combat(src, target, "CPRed")
-
-		if (HAS_TRAIT(target, TRAIT_NOBREATH))
-			to_chat(target, span_unconscious("Вы чувствуете глоток свежего воздуха... ощущение, которое вам не знакомо..."))
-		else if (!target.get_organ_slot(ORGAN_SLOT_LUNGS))
-			to_chat(target, span_unconscious("Вы чувствуете глоток свежего воздуха... но вам не становится лучше..."))
-		else
-			target.adjust_oxy_loss(-min(target.get_oxy_loss(), 7))
-			to_chat(target, span_unconscious("Вы чувствуете глоток свежего воздуха, входящий в ваши легкие... Вам становится лучше..."))
-
-		if (target.health <= target.crit_threshold)
-			if (!panicking)
-				to_chat(src, span_warning("[capitalize(target.declent_ru(NOMINATIVE))] всё ещё лежит! Вы стараетесь усерднее!"))
-			panicking = TRUE
-		else
-			panicking = FALSE
-	while (panicking)
-
-#undef CPR_PANIC_SPEED
+	var/datum/surgery_operation/cyberpunk_cpr/cpr = GLOB.operations.operations_by_typepath[/datum/surgery_operation/cyberpunk_cpr]
+	var/block_reason = cpr.get_block_reason(target, src)
+	if(block_reason)
+		balloon_alert(src, block_reason)
+		return FALSE
+	return cpr.try_perform(target, src, IMPLEMENT_HAND, list(OPERATION_TARGET_ZONE = BODY_ZONE_CHEST))
 
 /mob/living/carbon/human/cuff_resist(obj/item/I)
 	if(HAS_TRAIT(src, TRAIT_HULK))

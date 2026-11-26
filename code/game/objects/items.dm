@@ -121,6 +121,8 @@
 	var/cyberpunk_manufacturer = "independent"
 	/// General execution quality. 100 is a normal factory-grade item.
 	var/cyberpunk_quality = 100
+	var/cyberpunk_recovered_scrap = FALSE
+	var/cyberpunk_scrap_analyzed = FALSE
 	/// IC availability band used by shops, contracts, loot and black market systems.
 	var/cyberpunk_rarity = "common"
 	/// Cyberpunk equipment/weapon tier. 0 means derive from stats, modules and material.

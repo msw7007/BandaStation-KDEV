@@ -282,6 +282,9 @@
 	name = "Бизнес: клуб"
 	cyberpunk_world_tags = list("business", "entertainment")
 
+/area/cyberpunk/city/business/club/afterlife
+	name = "Бар «Посмертие»"
+
 /area/cyberpunk/city/business/office
 	name = "Бизнес: офис"
 	cyberpunk_world_tags = list("business", "office")

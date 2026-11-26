@@ -50,6 +50,9 @@
 
 /datum/computer_file/program/corporate_research/can_run(mob/user, loud = FALSE, access_to_check, downloading = FALSE, list/access)
 	var/mob/living/living_user = user
+	var/obj/machinery/modular_computer/preset/corporate_terminal/terminal = computer?.loc
+	if(istype(terminal) && istype(living_user) && terminal.cyberpunk_requires_device_key)
+		return terminal.check_cyberpunk_crypto_access(living_user)
 	var/access_id = cyberpunk_corporation_access_id(corporation_id, "specialist")
 	if(istype(living_user) && living_user.has_cyberpunk_crypto_access(access_id))
 		return TRUE
@@ -70,9 +73,6 @@
 /datum/computer_file/program/corporate_research/proc/can_use_minigame(mob/living/user)
 	if(!istype(user) || !computer || !computer.Adjacent(user))
 		return FALSE
-	var/access_id = cyberpunk_corporation_access_id(corporation_id, "specialist")
-	if(user.has_cyberpunk_crypto_access(access_id))
-		return TRUE
 	return can_run(user, FALSE)
 
 /datum/computer_file/program/corporate_research/proc/complete_corporate_minigame(mob/living/user, completed_game_id)
@@ -180,6 +180,13 @@
 	name = "corporate research terminal"
 	desc = "A restricted corporate computer with preloaded management and research software."
 	starting_programs = list(/datum/computer_file/program/corporations)
+	var/corporation_id = CYBERPUNK_CORP_BENN
+	var/corp_manufacturer = "Benn"
+
+/obj/machinery/modular_computer/preset/corporate_terminal/Initialize(mapload)
+	if(!length(req_access) && !length(req_one_access))
+		req_access = list(cyberpunk_corporation_access_id(corporation_id, "specialist"))
+	return ..()
 
 /obj/machinery/modular_computer/preset/corporate_terminal/benn
 	name = "Benn research terminal"
@@ -192,6 +199,8 @@
 
 /obj/machinery/modular_computer/preset/corporate_terminal/ryaznov
 	name = "Ryaznov research terminal"
+	corporation_id = CYBERPUNK_CORP_RYAZNOV
+	corp_manufacturer = "Ryaznov"
 	starting_programs = list(
 		/datum/computer_file/program/corporations,
 		/datum/computer_file/program/corporate_research/ryaznov_pipe_mania,
@@ -201,6 +210,8 @@
 
 /obj/machinery/modular_computer/preset/corporate_terminal/starlight
 	name = "Starlight research terminal"
+	corporation_id = CYBERPUNK_CORP_STARLIGHT
+	corp_manufacturer = "Starlight"
 	starting_programs = list(
 		/datum/computer_file/program/corporations,
 		/datum/computer_file/program/corporate_research/starlight_minesweeper,
@@ -223,7 +234,9 @@
 	register_cyberpunk_service_source()
 	var/access_id = corporation_id == "government" ? cyberpunk_corporation_access_id(corporation_id) : cyberpunk_corporation_access_id(corporation_id, "head")
 	if(access_id)
-		add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key(access_id))
+		req_one_access = list(access_id, "government:all")
+		if(corporation_id != CYBERPUNK_CORP_GOVERNMENT)
+			req_one_access += "corp:heads"
 
 /obj/machinery/computer/corporate_terminal/attack_hand(mob/user, list/modifiers)
 	var/mob/living/living_user = user
@@ -234,6 +247,8 @@
 	return TRUE
 
 /obj/machinery/computer/corporate_terminal/ui_interact(mob/user, datum/tgui/ui)
+	if(!isliving(user) || !has_cyberpunk_crypto_access(user))
+		return
 	. = ..()
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
@@ -241,7 +256,7 @@
 		ui.open()
 
 /obj/machinery/computer/corporate_terminal/ui_data(mob/user)
-	var/list/data = cyberpunk_corporations_ui_data(user, corporation_id, corporation_id)
+	var/list/data = cyberpunk_corporations_ui_data(user, corporation_id, corporation_id, src)
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
 	var/mob/living/trader = user
 	if(can_access_external_trade(trader, corporation))
@@ -262,16 +277,16 @@
 			return FALSE
 		var/quantity = text2num("[params["quantity"]]")
 		var/price = text2num("[params["price"]]")
-		var/success = action == "external_import" ? order_external_import(corporation, params["item"], quantity, price) : sell_external_export(corporation, trader, params["item"], quantity, price)
+		var/success = action == "external_import" ? order_external_import(corporation, params["item"], quantity, price, trader) : sell_external_export(corporation, trader, params["item"], quantity, price)
 		if(success)
-			to_chat(trader, span_notice(action == "external_import" ? "Заказ оплачен со счёта корпорации. Груз привезут к этому терминалу." : "Товар отправлен за город. Выручка зачислена корпорации."))
+			to_chat(trader, span_notice(action == "external_import" ? "Заказ оплачен со счёта корпорации." : "Товар отправлен за город. Выручка зачислена корпорации."))
 		else
 			to_chat(trader, span_warning(action == "external_import" ? "Заказ не принят. Проверь котировку, бюджет и свободный пол рядом с терминалом." : "Продажа не прошла. Проверь котировку, количество и товар в активной руке."))
 		return TRUE
-	return cyberpunk_corporations_ui_act(action, params, ui.user)
+	return cyberpunk_corporations_ui_act(action, params, ui.user, src)
 
 /obj/machinery/computer/corporate_terminal/proc/can_access_external_trade(mob/living/user, datum/cyberpunk_corporation/corporation)
-	return istype(user) && corporation && !corporation.hidden && corporation.can_manage(user) && is_operational && anchored && isturf(loc) && !is_area_virtual(get_area(src)) && has_cyberpunk_crypto_access(user) && user.can_perform_action(src, FORBID_TELEKINESIS_REACH)
+	return istype(user) && corporation && !corporation.hidden && corporation.can_manage(user, src) && is_operational && anchored && isturf(loc) && !is_area_virtual(get_area(src)) && user.can_perform_action(src, FORBID_TELEKINESIS_REACH)
 
 /obj/machinery/computer/corporate_terminal/proc/get_external_trade_offer(mob/living/user)
 	var/list/catalog = cyberpunk_external_trade_catalog()
@@ -295,7 +310,7 @@
 			return candidate
 	return null
 
-/obj/machinery/computer/corporate_terminal/proc/order_external_import(datum/cyberpunk_corporation/corporation, item_key, quantity, expected_price)
+/obj/machinery/computer/corporate_terminal/proc/order_external_import(datum/cyberpunk_corporation/corporation, item_key, quantity, expected_price, mob/living/customer)
 	if(!istext(item_key) || !isnum(quantity) || quantity < 1 || quantity > 100 || quantity != round(quantity) || !get_external_import_drop_turf())
 		return FALSE
 	var/list/catalog = cyberpunk_external_trade_catalog()
@@ -305,34 +320,111 @@
 	var/cost = quantity * expected_price
 	if(!corporation.charge_funds(cost, "Внешняя закупка: [quantity] × [initial(product.name)]"))
 		return FALSE
-	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_finish_corporate_import), WEAKREF(src), WEAKREF(corporation), get_turf(src), product, quantity, cost), 2 MINUTES)
+	schedule_external_import(corporation, product, quantity, cost, customer)
 	return TRUE
 
-/proc/cyberpunk_finish_corporate_import(datum/weakref/terminal_ref, datum/weakref/corporation_ref, turf/ordered_turf, item_type, quantity, cost)
+/obj/machinery/computer/corporate_terminal/proc/schedule_external_import(datum/cyberpunk_corporation/corporation, product, quantity, cost, mob/living/customer, datum/bank_account/payer)
+	var/track_delivery = corporation.id == CYBERPUNK_CORP_STARLIGHT && corporation.has_edict("starlight_cargo_tracking") && customer
+	var/priority = track_delivery && corporation.has_edict("starlight_trade_subscription") && corporation.is_subscribed(customer)
+	var/datum/weakref/customer_ref = track_delivery ? WEAKREF(customer) : null
+	addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(cyberpunk_finish_corporate_import), WEAKREF(src), WEAKREF(corporation), get_turf(src), product, quantity, cost, payer ? WEAKREF(payer) : null, customer_ref), priority ? 1 MINUTES : 2 MINUTES)
+
+/// A public counter where customers use the corporation as their importer.
+/obj/machinery/computer/corporate_terminal/external_market
+	name = "терминал внешних заказов Бэнь"
+	desc = "Заказы с внешнего рынка за счёт покупателя."
+	circuit = null
+	cyberpunk_public_access = TRUE
+
+/obj/machinery/computer/corporate_terminal/external_market/starlight
+	name = "терминал внешних заказов Старлайт"
+	corporation_id = "starlight"
+	corp_manufacturer = "StarLight"
+
+/obj/machinery/computer/corporate_terminal/external_market/ryaznov
+	name = "терминал внешних заказов Рязнов"
+	corporation_id = "ryaznov"
+	corp_manufacturer = "Ryaznov"
+
+/obj/machinery/computer/corporate_terminal/external_market/attack_hand(mob/user, list/modifiers)
+	ui_interact(user)
+	return TRUE
+
+/obj/machinery/computer/corporate_terminal/external_market/can_access_external_trade(mob/living/user, datum/cyberpunk_corporation/corporation)
+	return istype(user) && corporation && is_operational && anchored && isturf(loc) && !is_area_virtual(get_area(src)) && user.can_perform_action(src, FORBID_TELEKINESIS_REACH)
+
+/obj/machinery/computer/corporate_terminal/external_market/get_external_trade_offer(mob/living/user)
+	var/list/offer = ..()
+	offer["personal"] = TRUE
+	return offer
+
+/obj/machinery/computer/corporate_terminal/external_market/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(!(action in list("external_import", "external_export")))
+		return FALSE
+	var/mob/living/customer = ui.user
+	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(corporation_id)
+	if(!can_access_external_trade(customer, corporation))
+		return FALSE
+	var/quantity = text2num("[params["quantity"]]")
+	var/expected_price = text2num("[params["price"]]")
+	if(action == "external_export")
+		var/sold = sell_external_export(corporation, customer, params["item"], quantity, expected_price, personal = TRUE)
+		to_chat(customer, sold ? span_notice("Товар отправлен за город. Деньги зачислены на твой счёт.") : span_warning("Продажа не прошла. Проверь счёт, котировку и товар в руке."))
+		return TRUE
+	if(!get_external_import_drop_turf())
+		return FALSE
+	var/datum/bank_account/payer = customer.get_bank_account()
+	var/list/catalog = cyberpunk_external_trade_catalog()
+	var/item_key = params["item"]
+	var/obj/item/product = istext(item_key) ? catalog[item_key] : null
+	if(!payer || !product || quantity < 1 || quantity > 100 || quantity != round(quantity) || expected_price != cyberpunk_external_trade_price(product))
+		to_chat(customer, span_warning("Заказ не принят. Проверь банковский счёт и котировку."))
+		return TRUE
+	var/cost = quantity * expected_price
+	if(!payer.adjust_money(-cost, "Внешняя закупка через [corporation.name]"))
+		to_chat(customer, span_warning("На счёте недостаточно средств."))
+		return TRUE
+	schedule_external_import(corporation, product, quantity, cost, customer, payer)
+	to_chat(customer, span_notice("Заказ оплачен."))
+	return TRUE
+
+/proc/cyberpunk_finish_corporate_import(datum/weakref/terminal_ref, datum/weakref/corporation_ref, turf/ordered_turf, item_type, quantity, cost, datum/weakref/payer_ref, datum/weakref/customer_ref)
 	var/obj/machinery/computer/corporate_terminal/terminal = terminal_ref?.resolve()
 	var/datum/cyberpunk_corporation/corporation = corporation_ref?.resolve()
+	var/datum/bank_account/customer_account = payer_ref?.resolve()
 	if(!corporation)
+		customer_account?.adjust_money(cost, "Возврат за внешнюю поставку")
 		return
 	var/turf/drop_turf
 	if(terminal && terminal.corporation_id == corporation.id && terminal.loc == ordered_turf)
 		drop_turf = terminal.get_external_import_drop_turf()
-	if(!drop_turf)
-		var/datum/bank_account/account = corporation.get_account()
+	var/mob/living/customer = customer_ref?.resolve()
+	var/datum/cyberpunk_starlight_shipment/shipment
+	if(drop_turf && customer_ref)
+		var/obj/item/order_type = item_type
+		shipment = corporation.register_starlight_tracking(customer, null, "Внешний заказ: [initial(order_type.name)]")
+	if(!drop_turf || (customer_ref && !shipment))
+		var/datum/bank_account/account = payer_ref ? customer_account : corporation.get_account()
 		account?.adjust_money(cost, "Возврат за внешнюю поставку")
 		corporation.add_history("Внешняя поставка отменена. Точка приёма недоступна.")
 		return
 	var/obj/structure/closet/crate/freight = new(drop_turf)
 	freight.name = "ящик внешней поставки [corporation.name]"
+	if(customer_account)
+		freight.name += " — [customer_account.account_holder]"
 	if(ispath(item_type, /obj/item/stack))
 		new item_type(freight, quantity, FALSE)
 	else
 		for(var/index in 1 to quantity)
 			new item_type(freight)
+	if(shipment)
+		shipment.cargo_ref = WEAKREF(freight)
+		terminal.queue_cyberpunk_starlight_shipment(corporation, customer, shipment, "queued", drop_turf)
 	var/obj/item/product = item_type
 	corporation.add_history("Внешняя поставка прибыла: [quantity] × [initial(product.name)].")
 	terminal.say("Внешняя поставка на месте.")
 
-/obj/machinery/computer/corporate_terminal/proc/sell_external_export(datum/cyberpunk_corporation/corporation, mob/living/user, item_key, quantity, expected_price)
+/obj/machinery/computer/corporate_terminal/proc/sell_external_export(datum/cyberpunk_corporation/corporation, mob/living/user, item_key, quantity, expected_price, personal = FALSE)
 	if(!isnum(quantity) || quantity < 1 || quantity > 100 || quantity != round(quantity))
 		return FALSE
 	var/obj/item/item = user.get_active_held_item()
@@ -342,9 +434,11 @@
 	if(catalog[lowertext(initial(item.name))] != item.type)
 		return FALSE
 	var/price = cyberpunk_external_export_price(item.type)
-	if(!price || expected_price != price || !corporation.get_account())
+	var/datum/bank_account/payee = personal ? user.get_bank_account() : corporation.get_account()
+	if(!price || expected_price != price || !payee || !SSeconomy.is_cyberpunk_bank_online())
 		return FALSE
 	var/item_label = item.name
+	var/is_ryaznov_scrap = corporation.id == CYBERPUNK_CORP_RYAZNOV && item.cyberpunk_recovered_scrap
 	var/obj/item/stack/stack = item
 	if(istype(stack))
 		if(stack.is_cyborg || !stack.use(quantity))
@@ -353,7 +447,17 @@
 		if(quantity != 1 || !user.transferItemToLoc(item, src))
 			return FALSE
 		qdel(item)
-	return corporation.add_funds(quantity * price, "Внешняя продажа: [quantity] × [item_label]")
+	var/description = "Внешняя продажа: [quantity] × [item_label]"
+	if(!personal)
+		if(!corporation.add_funds(quantity * price, description))
+			return FALSE
+	else
+		if(!payee.adjust_money(quantity * price, "Через [corporation.name]. [description]"))
+			return FALSE
+		corporation.add_history("[user.real_name || user.name]: [description]")
+	if(is_ryaznov_scrap)
+		SScyberpunk_corporations.record_ryaznov_scrap(item_label, "продажа обломков", quantity)
+	return TRUE
 
 /obj/machinery/computer/corporate_terminal/benn
 	name = "корпоративный терминал Benn"
@@ -399,8 +503,7 @@
 
 /obj/machinery/computer/corporate_data_terminal/attack_hand(mob/user, list/modifiers)
 	var/mob/living/living_user = user
-	var/access_id = cyberpunk_corporation_access_id(corporation_id, "specialist")
-	if(!istype(living_user) || !living_user.has_cyberpunk_crypto_access(access_id))
+	if(!istype(living_user) || !allowed(living_user))
 		to_chat(user, span_warning("[src] rejects your specialist cryptokey handshake."))
 		return TRUE
 	var/list/games = get_corporate_minigames()
@@ -1461,17 +1564,17 @@
 
 /obj/machinery/computer/security/cyberpunk_council_emergency
 	name = "council emergency monitor"
-	desc = "A council emergency camera monitor. Insert council emergency chips to activate city emergency mode."
+	desc = "Терминал совета для голосований, подтверждения директив и вызова полиции."
 	icon_screen = "security"
 	icon_keyboard = "security_key"
 	light_color = COLOR_RED
 	circuit = /obj/item/circuitboard/computer/cyberpunk_council_emergency
 	network = list(CAMERANET_NETWORK_SS13)
 	resistance_flags = FIRE_PROOF | ACID_PROOF
+	req_one_access = list("city:council", "government:all", "corp:benn:head", "corp:ryaznov:head", "corp:starlight:head")
 
 /obj/machinery/computer/security/cyberpunk_council_emergency/proc/authorized(mob/user)
-	var/mob/living/living_user = user
-	return istype(living_user) && (living_user.has_cyberpunk_crypto_access("city:council") || living_user.has_cyberpunk_crypto_access("government:all"))
+	return isliving(user) && check_cyberpunk_crypto_access(user)
 
 /obj/machinery/computer/security/cyberpunk_council_emergency/ui_interact(mob/user, datum/tgui/ui)
 	if(!authorized(user))
@@ -1487,21 +1590,23 @@
 		"active" = council["emergencyActive"],
 		"inserted" = council["yesVotes"],
 		"required" = council["requiredVotes"],
+		"pendingDirective" = council["pendingDirective"],
+		"directiveVotes" = council["directiveVotes"],
 		"lastDispatch" = islist(last_dispatch) ? last_dispatch["target"] : null,
 	)
 
 /obj/machinery/computer/security/cyberpunk_council_emergency/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
-	if(action in list("council_insert_chip", "council_dispatch_camera", "council_dispatch_area", "council_dispatch_visible"))
+	if(action in list("council_insert_chip", "council_sign_directive", "council_dispatch_camera", "council_dispatch_area", "council_dispatch_visible"))
 		var/mob/living/user = ui.user
 		if(!istype(user))
 			return TRUE
 		switch(action)
-			if("council_insert_chip")
+			if("council_insert_chip", "council_sign_directive")
 				var/obj/item/cyberpunk_council_emergency_chip/chip = user.get_active_held_item()
 				if(!istype(chip))
 					to_chat(user, span_warning("Hold a council emergency chip in your active hand."))
 					return TRUE
-				insert_council_emergency_chip(user, chip)
+				insert_council_emergency_chip(user, chip, action == "council_sign_directive")
 			if("council_dispatch_camera")
 				dispatch_council_emergency_to_camera(user)
 			if("council_dispatch_area")
@@ -1521,13 +1626,11 @@
 		return
 	insert_council_emergency_chip(living_user, chip)
 
-/obj/machinery/computer/security/cyberpunk_council_emergency/proc/insert_council_emergency_chip(mob/living/living_user, obj/item/cyberpunk_council_emergency_chip/chip)
-	if(!SScyberpunk_corporations.insert_cyberpunk_government_emergency_chip(living_user, chip, src))
+/obj/machinery/computer/security/cyberpunk_council_emergency/proc/insert_council_emergency_chip(mob/living/living_user, obj/item/cyberpunk_council_emergency_chip/chip, directive_ballot = FALSE)
+	if(!authorized(living_user) || !SScyberpunk_corporations.insert_cyberpunk_government_emergency_chip(living_user, chip, src, directive_ballot = directive_ballot))
+		to_chat(living_user, span_warning("Чип не принят. Проверь, что он твой и голосование открыто."))
 		return
-	if(!living_user.transferItemToLoc(chip, src))
-		chip.forceMove(src)
 	playsound(src, 'sound/machines/terminal/terminal_insert_disc.ogg', 25, FALSE)
-	visible_message(span_notice("[living_user] inserts [chip] into [src]."))
 	SStgui.update_uis(src)
 
 /obj/machinery/computer/security/cyberpunk_council_emergency/examine(mob/user)

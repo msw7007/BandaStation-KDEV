@@ -4,6 +4,8 @@
  * * accessor - mob trying to access this object, !!CAN BE NULL!! because of telekiesis because we're in hell
  */
 /atom/movable/var/cyberpunk_public_access = FALSE
+/atom/movable/var/cyberpunk_requires_device_key = FALSE
+GLOBAL_LIST_EMPTY(cyberpunk_role_device_targets)
 
 /atom/movable/proc/allowed(mob/accessor)
 	//check if it doesn't require any access at all, or the user is an Adminghost
@@ -48,7 +50,7 @@
 
 //CYBERPUNK BUILD - rebuild and delete before release
 /atom/movable/proc/check_access_list(list/access_list)
-	if(has_cyberpunk_direct_crypto_requirements())
+	if(cyberpunk_requires_device_key || has_cyberpunk_direct_crypto_requirements())
 		return FALSE
 	if(!length(req_access) && !length(req_one_access))
 		return TRUE
@@ -166,31 +168,41 @@
 	var/list/datum/cyberpunk_crypto_key/direct_keys = vars["cyberpunk_crypto_keys"]
 	return length(direct_keys) > 0
 
-/atom/movable/proc/check_cyberpunk_crypto_access(mob/accessor)
+/atom/movable/proc/check_cyberpunk_crypto_access(mob/accessor, required_right = "use", for_role_grant = FALSE)
 	var/mob/living/living_accessor = accessor
 	if(!istype(living_accessor))
 		return FALSE
+	var/obj/machinery/machine = src
+	if(!for_role_grant && istype(machine) && machine.has_cyberpunk_crypto_bypass(living_accessor))
+		return TRUE
+	if(cyberpunk_requires_device_key && !for_role_grant)
+		return has_cyberpunk_network_access(living_accessor, required_right)
 	if(has_cyberpunk_direct_crypto_requirements())
-		return has_cyberpunk_direct_crypto_key(living_accessor)
+		return has_cyberpunk_direct_crypto_key(living_accessor, required_right) || (!for_role_grant && has_cyberpunk_network_access(living_accessor, required_right))
 	if(!length(req_access) && !length(req_one_access))
 		return TRUE
-	if(has_cyberpunk_direct_crypto_key(living_accessor))
+	if(has_cyberpunk_direct_crypto_key(living_accessor, required_right))
 		return TRUE
 
 	for(var/req in req_access)
 		if(!living_accessor.has_cyberpunk_crypto_access(req))
-			return FALSE
+			return !for_role_grant && has_cyberpunk_network_access(living_accessor, required_right)
 
 	if(length(req_one_access))
 		for(var/req in req_one_access)
 			if(living_accessor.has_cyberpunk_crypto_access(req))
 				return TRUE
-		return FALSE
+		return !for_role_grant && has_cyberpunk_network_access(living_accessor, required_right)
 	return TRUE
 
-/atom/movable/proc/check_cyberpunk_crypto_item_access(obj/item/item)
+/atom/movable/proc/check_cyberpunk_crypto_item_access(obj/item/item, for_role_grant = FALSE)
 	if(!item)
 		return FALSE
+	if(cyberpunk_requires_device_key && !for_role_grant)
+		return item.has_cyberpunk_crypto_key(get_cyberpunk_device_key(src), "use")
+	if(!for_role_grant && length(item.cyberpunk_crypto_keys) && (has_cyberpunk_direct_crypto_requirements() || length(req_access) || length(req_one_access)))
+		if(item.has_cyberpunk_crypto_key(get_cyberpunk_device_key(src), "use"))
+			return TRUE
 	if(has_cyberpunk_direct_crypto_requirements())
 		return item_has_cyberpunk_direct_crypto_key(item)
 	if(!length(req_access) && !length(req_one_access))
@@ -209,7 +221,39 @@
 		return FALSE
 	return TRUE
 
-/atom/movable/proc/has_cyberpunk_direct_crypto_key(mob/living/accessor)
+/// Policy keys select the device groups issued with a role or a corporate appointment.
+/mob/living/proc/grant_cyberpunk_role_keys(list/access_ids, card_only = FALSE)
+	var/uses_neural_memory = !card_only && has_neural_implant()
+	var/obj/item/card/id/id_card = get_idcard(FALSE) || get_cyberpunk_access_card()
+	if(!uses_neural_memory && !id_card)
+		return FALSE
+	for(var/access_id in access_ids)
+		var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
+		if(uses_neural_memory)
+			remember_cyberpunk_crypto_key(access_key)
+		else
+			id_card.store_cyberpunk_crypto_key(access_key)
+	for(var/datum/weakref/target_ref as anything in GLOB.cyberpunk_role_device_targets)
+		var/obj/machinery/target = target_ref.resolve()
+		if(!target)
+			continue
+		var/has_access = target.check_cyberpunk_crypto_item_access(id_card, for_role_grant = TRUE) || (uses_neural_memory && target.check_cyberpunk_crypto_access(src, for_role_grant = TRUE))
+		if(!has_access)
+			continue
+		var/datum/cyberspace_cryptokey/device_key = get_cyberpunk_device_key(target)
+		if(uses_neural_memory)
+			remember_cyberpunk_crypto_key(device_key)
+		else
+			id_card.store_cyberpunk_crypto_key(device_key)
+	return TRUE
+
+/atom/movable/proc/has_cyberpunk_network_access(mob/living/user, required_right = "use")
+	if(!user || (!length(user.cyberpunk_crypto_memory) && !user.get_cyberpunk_access_card()))
+		return FALSE
+	var/datum/cyberspace_cryptokey/key = get_cyberpunk_device_key(src)
+	return user.has_cyberpunk_crypto_key(key, required_right) || user.held_or_neck_card_has_cyberpunk_crypto_key(key, required_right)
+
+/atom/movable/proc/has_cyberpunk_direct_crypto_key(mob/living/accessor, required_right = "use")
 	if(!("cyberpunk_crypto_keys" in vars))
 		return FALSE
 	var/list/datum/cyberpunk_crypto_key/direct_keys = vars["cyberpunk_crypto_keys"]
@@ -218,7 +262,7 @@
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in direct_keys)
 		if(!accessor)
 			return FALSE
-		if(accessor.has_cyberpunk_crypto_key(key_datum) || accessor.held_or_neck_card_has_cyberpunk_crypto_key(key_datum))
+		if(accessor.has_cyberpunk_crypto_key(key_datum, required_right) || accessor.held_or_neck_card_has_cyberpunk_crypto_key(key_datum, required_right))
 			return TRUE
 	return FALSE
 
@@ -231,7 +275,7 @@
 	for(var/datum/cyberpunk_crypto_key/key_datum as anything in direct_keys)
 		if(!item)
 			return FALSE
-		if(item.has_cyberpunk_crypto_key(key_datum))
+		if(item.has_cyberpunk_crypto_key(key_datum, "use"))
 			return TRUE
 	return FALSE
 
@@ -257,15 +301,7 @@
 	var/datum/cyberpunk_crypto_key/access_key = create_cyberpunk_crypto_access_key(access_id)
 	if(has_cyberpunk_crypto_key(access_key))
 		return TRUE
-	for(var/obj/item/item as anything in held_items)
-		if(!istype(item, /obj/item/card/id))
-			continue
-		if(item.has_cyberpunk_crypto_exact_access(access_id))
-			return TRUE
-	var/obj/item/neck_item = get_item_by_slot(ITEM_SLOT_NECK)
-	if(istype(neck_item, /obj/item/card/id) && neck_item.has_cyberpunk_crypto_exact_access(access_id))
-		return TRUE
-	return FALSE
+	return held_or_neck_card_has_cyberpunk_crypto_key(access_key)
 
 /obj/item/proc/has_cyberpunk_crypto_access(access_id)
 	if(!access_id)

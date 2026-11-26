@@ -2,26 +2,17 @@
 // Split from cyberimp internals; keep gameplay logic out of organ item definitions.
 
 /datum/mind/proc/remember_cyber_cryptokey(datum/cyberspace_cryptokey/cryptokey)
-	if(!cryptokey?.key)
+	var/mob/living/memory_owner = current
+	if(!cryptokey?.key || !istype(memory_owner))
 		return FALSE
-	if(!cyber_cryptokeys)
-		cyber_cryptokeys = list()
-	cyber_cryptokeys[cryptokey.key] = cryptokey
-	if(ismob(current))
-		var/mob/memory_owner = current
-		memory_owner.remember_data("cryptokey:[cryptokey.key]", list(
-			"key" = cryptokey.key,
-			"manufacturer" = cryptokey.manufacturer,
-			"object_type" = cryptokey.object_type,
-			"area_type" = cryptokey.area_type,
-			"rights" = cryptokey.rights?.Copy(),
-		))
-	return TRUE
+	cryptokey.code = cryptokey.key
+	return memory_owner.remember_cyberpunk_crypto_key(cryptokey)
 
-/datum/mind/proc/has_cyber_cryptokey(datum/cyberspace_cryptokey/cryptokey)
-	if(!cryptokey?.key || !cyber_cryptokeys)
+/datum/mind/proc/has_cyber_cryptokey(datum/cyberspace_cryptokey/cryptokey, required_right = "view")
+	var/mob/living/memory_owner = current
+	if(!cryptokey?.key || !istype(memory_owner))
 		return FALSE
-	return !isnull(cyber_cryptokeys[cryptokey.key])
+	return memory_owner.has_cyberpunk_crypto_key(cryptokey, required_right) || memory_owner.held_or_neck_card_has_cyberpunk_crypto_key(cryptokey, required_right)
 
 /datum/mind/proc/add_cyber_net_data(amount)
 	if(amount <= 0)
@@ -91,7 +82,7 @@
 		return FALSE
 	var/old_count = length(linked_object_refs)
 	linked_object_refs += WEAKREF(target)
-	cryptokeys += new /datum/cyberspace_cryptokey(target)
+	cryptokeys |= get_cyberpunk_device_key(target)
 	var/ref_key = get_object_ref_key(target)
 	var/object_net_data = get_cyberspace_net_data_amount(target)
 	object_ice_by_ref[ref_key] = create_cyber_object_ice(target)
@@ -173,19 +164,17 @@
 	var/max_reserve = max(1, object_ice.get_max_reserve())
 	return clamp(round((object_ice.current_reserve / max_reserve) * 100), 0, 100)
 
-/datum/cyberspace_node/proc/object_key_matches_user(mob/living/user, atom/movable/target)
+/datum/cyberspace_node/proc/object_key_matches_user(mob/living/user, atom/movable/target, required_right = "view")
 	if(!user?.mind || !target)
 		return FALSE
-	var/datum/cyberspace_cryptokey/target_key = new(target)
-	var/result = user.mind.has_cyber_cryptokey(target_key)
-	qdel(target_key)
-	return result
+	return user.mind.has_cyber_cryptokey(get_cyberpunk_device_key(target), required_right)
 
-/datum/cyberspace_node/proc/has_object_access(mob/living/user, atom/movable/target)
+/datum/cyberspace_node/proc/has_object_access(mob/living/user, atom/movable/target, required_right = "view")
 	if(!target)
-		return has_access(user)
+		return has_access(user, required_right = required_right)
 	var/datum/cyber_ice/object_ice = get_object_ice(target)
-	return has_access(user) || object_key_matches_user(user, target) || object_ice?.is_breached()
+	var/has_mapped_access = target.has_cyberpunk_direct_crypto_requirements() || length(target.req_access) || length(target.req_one_access)
+	return get_ice().is_breached() || object_key_matches_user(user, target, required_right) || (has_mapped_access && target.check_cyberpunk_crypto_access(user, required_right)) || object_ice?.is_breached()
 
 /datum/cyberspace_node/proc/get_manufacturer_diversity_count()
 	var/list/seen_manufacturers = list()
@@ -218,16 +207,19 @@
 	session.ui_interact(hacker)
 	return session
 
-/datum/cyberspace_node/proc/has_access(mob/living/user, datum/cyberspace_cryptokey/provided_key = null)
+/datum/cyberspace_node/proc/has_access(mob/living/user, datum/cyberspace_cryptokey/provided_key = null, required_right = "view")
 	if(get_ice().is_breached())
 		return TRUE
 	if(provided_key)
 		for(var/datum/cyberspace_cryptokey/cryptokey as anything in cryptokeys)
-			if(cryptokey.matches(provided_key))
+			if(cryptokey.matches(provided_key) && provided_key.authorizes(required_right))
 				return TRUE
 	if(user?.mind)
 		for(var/datum/cyberspace_cryptokey/cryptokey as anything in cryptokeys)
-			if(user.mind.has_cyber_cryptokey(cryptokey))
+			if(user.mind.has_cyber_cryptokey(cryptokey, required_right))
+				return TRUE
+		for(var/atom/movable/target as anything in get_live_objects())
+			if((target.has_cyberpunk_direct_crypto_requirements() || length(target.req_access) || length(target.req_one_access)) && target.check_cyberpunk_crypto_access(user, required_right))
 				return TRUE
 	return FALSE
 
@@ -237,7 +229,18 @@
 	return clamp(round((node_ice.current_reserve / max_reserve) * 100), 0, 100)
 
 /datum/cyberspace_node/proc/can_use_control_function(mob/living/user, function_id, atom/movable/target = null)
-	var/has_target_access = has_object_access(user, target)
+	var/datum/antagonist/cyberpunk/major/rogue_ai/rogue = user?.mind?.has_antag_datum(/datum/antagonist/cyberpunk/major/rogue_ai)
+	if(target && rogue?.operates_machine(target))
+		return TRUE
+	var/required_right = "control"
+	switch(function_id)
+		if("open_ui", "door_toggle")
+			required_right = "use"
+		if("camera_inspect")
+			required_right = "view"
+		if("settings", "panel_toggle", "contraband_toggle", "apc_nightshift_toggle", "turret_lethal_toggle", "turret_silicon_toggle")
+			required_right = "settings"
+	var/has_target_access = has_object_access(user, target, required_right)
 	var/protection_integrity = target ? get_object_protection_integrity_percent(target) : get_protection_integrity_percent()
 	switch(function_id)
 		if("control")
@@ -298,7 +301,7 @@
 		var/object_data = object_net_data_by_ref[ref_key] || 0
 		extracted_data += object_data
 		net_data = max(0, net_data - object_data)
-		var/datum/cyberspace_cryptokey/object_key = new(object)
+		var/datum/cyberspace_cryptokey/object_key = get_cyberpunk_device_key(object)
 		user.mind?.remember_cyber_cryptokey(object_key)
 	if(extracted_count > 0)
 		extracted_data += round(user.mind?.get_character_perk_effectiveness(SKILL_HACKING, 6) || 0)

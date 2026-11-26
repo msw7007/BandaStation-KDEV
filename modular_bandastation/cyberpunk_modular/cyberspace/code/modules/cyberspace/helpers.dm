@@ -178,6 +178,7 @@
 		|| istype(candidate, /obj/machinery/light) \
 		|| istype(candidate, /obj/machinery/vending) \
 		|| istype(candidate, /obj/machinery/computer) \
+		|| istype(candidate, /obj/machinery/modular_computer/preset/corporate_terminal) \
 		|| istype(candidate, /obj/machinery/airalarm) \
 		|| istype(candidate, /obj/machinery/firealarm) \
 		|| istype(candidate, /obj/machinery/power/apc) \
@@ -220,6 +221,9 @@
 		return target.vars["cyberpunk_manufacturer"] || "independent"
 	if("manufacturer" in target.vars)
 		return target.vars["manufacturer"] || "independent"
+	if(istype(target, /obj/machinery/door))
+		var/area/territory = get_area(target)
+		return territory?.cyberpunk_world_owner || "independent"
 	return "independent"
 
 /proc/get_cyberspace_net_data_amount(atom/movable/target)

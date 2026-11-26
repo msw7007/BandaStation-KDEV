@@ -453,6 +453,12 @@
 		if(findtext(lower_name, "clown") || findtext(lower_name, "mime") || findtext(lower_name, "fedora") || findtext(lower_name, "hat"))
 			item_score += 1
 		item_score += clamp(round((item.custom_price || 0) / max(PAYCHECK_CREW, 1)), 0, 3)
+		item_score += round((item.cyberpunk_quality - 100) / 25)
+		switch(item.cyberpunk_equipment_material)
+			if("fabric", "composite")
+				item_score++
+			if("steel", "plasteel")
+				item_score--
 		item_score -= max(0, item.w_class - WEIGHT_CLASS_NORMAL)
 		if(istype(item, /obj/item/clothing/suit/armor) || istype(item, /obj/item/clothing/head/helmet))
 			item_score -= 1

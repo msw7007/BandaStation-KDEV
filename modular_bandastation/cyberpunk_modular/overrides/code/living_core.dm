@@ -2,6 +2,7 @@
 
 /mob/living/Destroy()
 	clear_partial_wall_occlusion()
+	clear_cyberpunk_choke_timer()
 	clear_cyberpunk_grab_hold_items()
 	QDEL_NULL(cyberpunk_npc_profile)
 	if(vertical_state_timer != TIMER_ID_NULL)
@@ -396,6 +397,10 @@
 		return TRUE
 	var/grabbed_zone = normalize_cyberpunk_grab_zone(grabber.cyberpunk_grab_zone)
 	return active_arm.body_zone == check_zone(grabbed_zone)
+
+/mob/living/proc/is_cyberpunk_neck_choked()
+	var/mob/living/grabber = pulledby
+	return istype(grabber) && grabber.grab_state == GRAB_KILL && grabber.pulling == src && grabber.cyberpunk_grab_zone == BODY_ZONE_PRECISE_NECK
 
 /mob/living/proc/is_cyberpunk_mouth_grabbed(grab_level = GRAB_PASSIVE)
 	var/mob/living/grabber = pulledby
@@ -4373,7 +4378,19 @@
 
 /// Updates the grab state of the mob and updates movespeed
 /mob/living/setGrabState(newstate)
+	if(newstate == GRAB_KILL && grab_state != GRAB_KILL)
+		var/mob/living/target = pulling
+		if(!istype(target) || target.stat == DEAD || stat != CONSCIOUS || HAS_TRAIT(src, TRAIT_INCAPACITATED))
+			return
+		if(cyberpunk_grab_zone != BODY_ZONE_PRECISE_NECK)
+			to_chat(src, span_warning("Чтобы душить, нужно держать цель за шею."))
+			return
+		if(!pay_cyberpunk_choke_upkeep())
+			to_chat(src, span_warning("Вам не хватает выносливости, чтобы начать удушение."))
+			return
 	. = ..()
+	if(grab_state != GRAB_KILL)
+		clear_cyberpunk_choke_timer()
 	switch(grab_state)
 		if(GRAB_PASSIVE)
 			remove_movespeed_modifier(MOVESPEED_ID_MOB_GRAB_STATE)

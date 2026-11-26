@@ -652,6 +652,8 @@
 	// We don't only use istype here, since that will match subtypes, and stack things that shouldn't stack
 	if(!istype(check, merge_type) || check.merge_type != merge_type)
 		return FALSE
+	if(cyberpunk_recovered_scrap != check.cyberpunk_recovered_scrap || cyberpunk_scrap_analyzed != check.cyberpunk_scrap_analyzed)
+		return FALSE
 	if(mats_per_unit ~! check.mats_per_unit) // ~! in case of lists this operator checks only keys, but not values
 		return FALSE
 	if(is_cyborg) // No merging cyborg stacks into other stacks
@@ -779,6 +781,8 @@
 		return null
 	var/obj/item/stack/new_stack = new type(null, amount, FALSE, mats_per_unit)
 	new_stack.copy_evidences(src)
+	new_stack.cyberpunk_recovered_scrap = cyberpunk_recovered_scrap
+	new_stack.cyberpunk_scrap_analyzed = cyberpunk_scrap_analyzed
 	on_stack_split(new_stack, amount)
 	loc.atom_storage?.refresh_views()
 	is_zero_amount(delete_if_zero = TRUE)

@@ -623,6 +623,7 @@
 	preview_antag_datum = /datum/antagonist/cyberpunk/major/wild_iskin
 	pref_flag = ROLE_CYBERPUNK_WILD_ISKIN
 	antag_path = /datum/antagonist/cyberpunk/major/wild_iskin
+	max_antag_cap = 2
 
 /datum/dynamic_ruleset/roundstart/cyberpunk_major_antag/rogue_ai
 	name = "Cyberpunk Rogue AI"
@@ -675,6 +676,8 @@
 	pref_flag = ROLE_CYBERPUNK_DATA_CULT
 	antag_path = /datum/antagonist/cyberpunk/major/data_cult
 	team_path = /datum/team/cyberpunk_data_cult
+	min_antag_cap = 4
+	max_antag_cap = 4
 
 /datum/dynamic_ruleset/roundstart/extended
 	name = "Extended"

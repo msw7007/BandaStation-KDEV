@@ -1,5 +1,5 @@
 //CYBERPUNK CORPORATIONS - corporations UI bridge.
-/proc/cyberpunk_corporations_ui_data(mob/user, selected_corporation_id = null, locked_corporation_id = null)
+/proc/cyberpunk_corporations_ui_data(mob/user, selected_corporation_id = null, locked_corporation_id = null, obj/machinery/computer/corporate_terminal/source_terminal)
 	SScyberpunk_corporations.ensure_cyberpunk_corporations_seeded()
 	var/mob/living/living_user = isliving(user) ? user : null
 	var/list/corporations = list()
@@ -15,7 +15,7 @@
 		var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.cyberpunk_corporations[corporation_id]
 		if(corporation.hidden && !include_hidden && !corporation.can_manage(user) && !corporation.can_vote_council(user))
 			continue
-		var/list/corporation_data = corporation.to_ui_data(include_hidden || corporation.can_manage(user) || corporation.can_vote_council(user), user)
+		var/list/corporation_data = corporation.to_ui_data(include_hidden || corporation.can_manage(user) || corporation.can_vote_council(user), user, source_terminal)
 		if(!corporation_data)
 			continue
 		corporations += list(corporation_data)
@@ -29,10 +29,10 @@
 		"accountName" = user_account?.account_holder,
 		"accountBalance" = user_account?.account_balance || 0,
 		"corporations" = corporations,
-		"selected" = selected_corporation?.to_ui_data(include_hidden || selected_corporation.can_manage(user) || selected_corporation.can_vote_council(user), user),
+		"selected" = selected_corporation?.to_ui_data(include_hidden || selected_corporation.can_manage(user) || selected_corporation.can_vote_council(user), user, source_terminal),
 	)
 
-/proc/cyberpunk_corporations_ui_act(action, list/params, mob/user)
+/proc/cyberpunk_corporations_ui_act(action, list/params, mob/user, obj/machinery/computer/corporate_terminal/source_terminal)
 	var/datum/cyberpunk_corporation/corporation = SScyberpunk_corporations.get_cyberpunk_corporation(params && params["corporation_id"])
 	if(!corporation)
 		return FALSE
@@ -62,10 +62,10 @@
 		"collect_tax_debts",
 		"government_sanction",
 	)
-	if(action == "government_emergency_vote" && !corporation.can_vote_council(user))
+	if((action in list("government_emergency_vote", "government_sign_directive")) && !corporation.can_vote_council(user))
 		to_chat(user, span_warning("Council access denied."))
 		return TRUE
-	if(manage_action && action != "government_emergency_vote" && !corporation.can_manage(user))
+	if(manage_action && action != "government_emergency_vote" && !corporation.can_manage(user, source_terminal))
 		to_chat(user, span_warning("Corporate access denied."))
 		return TRUE
 	if(manage_action && action != "government_emergency_vote")
@@ -202,13 +202,12 @@
 			else
 				to_chat(user, span_warning("Unable to apply this sanction."))
 			return TRUE
-		if("government_emergency_vote")
-			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
+		if("government_emergency_vote", "government_sign_directive")
+			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT || source_terminal?.corporation_id != CYBERPUNK_CORP_GOVERNMENT)
 				return FALSE
-			if(SScyberpunk_corporations.cast_cyberpunk_government_emergency_vote(user, params["vote"]))
-				to_chat(user, span_notice("Emergency vote recorded."))
-			else
-				to_chat(user, span_warning("Unable to record emergency vote."))
+			var/signing = action == "government_sign_directive"
+			if(!SScyberpunk_corporations.cast_cyberpunk_government_emergency_vote(user, signing || params["vote"], source_terminal, signing))
+				to_chat(user, span_warning("Возьми свой чип совета в активную руку и проверь, что голосование открыто."))
 			return TRUE
 		if("government_end_emergency")
 			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
@@ -220,7 +219,7 @@
 			if(corporation.id != CYBERPUNK_CORP_GOVERNMENT)
 				return FALSE
 			if(SScyberpunk_corporations.set_cyberpunk_government_directive(params["text"], user?.name || "government terminal"))
-				to_chat(user, span_notice("Government directive updated."))
+				to_chat(user, span_notice("Директива вынесена на голосование. Для утверждения подпишите её чипами совета."))
 			else
 				to_chat(user, span_warning("Unable to update directive."))
 			return TRUE

@@ -83,6 +83,10 @@
 	},
 /turf/open/floor/iron,
 /area/cyberpunk/city/government)
+"aas" = (
+/obj/structure/closet/secure_closet/cyberpunk_emergency_armory,
+/turf/open/floor/iron,
+/area/cyberpunk/city/government)
 
 (1,1,1) = {"
 aaa
@@ -2080,7 +2084,7 @@ aae
 aae
 aae
 aab
-aad
+aas
 aad
 aad
 aad

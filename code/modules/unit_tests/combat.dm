@@ -153,3 +153,43 @@
 	victim.equip_to_slot_if_possible(new /obj/item/clothing/ears/earmuffs, ITEM_SLOT_EARS)
 	victim.soundbang_act(intensity = SOUNDBANG_NORMAL, deafen_pwr = 20 SECONDS)
 	TEST_ASSERT(!HAS_TRAIT_FROM(victim, TRAIT_DEAF, EAR_DAMAGE), "victim has been deafened despite wearing earmuffs")
+
+/datum/unit_test/cyberpunk_demon_effect_polarity/Run()
+	var/datum/cyberspace_demon/demon = allocate(/datum/cyberspace_demon)
+	for(var/damage_effect in list(CYBER_DEMON_EFFECT_DAMAGE, CYBER_DEMON_EFFECT_BURN, CYBER_DEMON_EFFECT_ACID, CYBER_DEMON_EFFECT_TOX))
+		demon.effect = damage_effect
+		TEST_ASSERT(demon.is_hostile_negative_effect(10), "Positive damage power must be classified as hostile.")
+		TEST_ASSERT(demon.is_hostile_negative_effect(-10), "Damage uses magnitude and is hostile at either sign.")
+	for(var/signed_effect in list(CYBER_DEMON_EFFECT_OVERHEAT, CYBER_DEMON_EFFECT_OVERHEAT_DELTA, CYBER_DEMON_EFFECT_STAMINA))
+		demon.effect = signed_effect
+		TEST_ASSERT(!demon.is_hostile_negative_effect(-10), "Cooling and stamina recovery must not be classified as hostile.")
+		TEST_ASSERT(demon.is_hostile_negative_effect(10), "Heating and stamina loss must be classified as hostile.")
+	for(var/signed_effect in list(CYBER_DEMON_EFFECT_ATTRIBUTE, CYBER_DEMON_EFFECT_SKILL, CYBER_DEMON_EFFECT_MOVE_SPEED, CYBER_DEMON_EFFECT_INTERACTION_SPEED))
+		demon.effect = signed_effect
+		TEST_ASSERT(!demon.is_hostile_negative_effect(10), "Positive stat and speed changes are beneficial.")
+		TEST_ASSERT(demon.is_hostile_negative_effect(-10), "Negative stat and speed changes are hostile.")
+
+/datum/cyberspace_demon/neutralization_test
+	effect = CYBER_DEMON_EFFECT_BURN
+	var/triggered_followup = FALSE
+
+/datum/cyberspace_demon/neutralization_test/requires_neural_living_target()
+	return FALSE
+
+/datum/cyberspace_demon/neutralization_test/apply_neutralization(mob/living/caster, mob/living/target, current_power, effect_duration)
+	return list("blocked" = TRUE)
+
+/datum/cyberspace_demon/neutralization_test/apply_corporate_edict_effects(mob/living/caster, atom/target, current_power, physical_world)
+	triggered_followup = TRUE
+
+/datum/cyberspace_demon/neutralization_test/apply_special_effects(mob/living/caster, atom/target, current_power, physical_world)
+	triggered_followup = TRUE
+
+/datum/unit_test/cyberpunk_demon_blocked_followups/Run()
+	var/mob/living/carbon/human/consistent/caster = allocate(__IMPLIED_TYPE__)
+	var/mob/living/carbon/human/consistent/target = allocate(__IMPLIED_TYPE__)
+	var/datum/cyberspace_demon/neutralization_test/demon = allocate(__IMPLIED_TYPE__)
+	var/burn_before = target.get_fire_loss()
+	TEST_ASSERT(!demon.apply_effect(caster, target, 10, TRUE), "A fully neutralized cast must report that the effect did not land.")
+	TEST_ASSERT(!demon.triggered_followup, "A fully neutralized cast must not trigger edicts or special effects.")
+	TEST_ASSERT_EQUAL(target.get_fire_loss(), burn_before, "A fully neutralized cast must not burn the target.")

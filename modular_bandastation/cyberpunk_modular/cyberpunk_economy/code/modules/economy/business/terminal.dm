@@ -78,6 +78,51 @@
 		return TRUE
 	return cyberpunk_business_terminal_ui_act(action, params, ui.user, src, business_id)
 
+/// A city-owned venue supplied by the map. Its layout is loaded with the map.
+/obj/machinery/computer/business_terminal/mapped
+	var/mapped_business_name
+	var/mapped_business_direction = "general trade"
+	var/mapped_manager_access = "government:all"
+
+/obj/machinery/computer/business_terminal/mapped/Initialize(mapload)
+	. = ..()
+	if(mapload)
+		return INITIALIZE_HINT_LATELOAD
+
+/obj/machinery/computer/business_terminal/mapped/LateInitialize()
+	. = ..()
+	var/area/premises = get_area(src)
+	if(!mapped_business_name || !cyberpunk_is_business_area(premises) || business_id)
+		return
+	var/datum/cyberpunk_business/business = new
+	var/datum/bank_account/business_account = new /datum/bank_account("[mapped_business_name] account", null, 1, TRUE)
+	business.id = SScyberpunk_property.next_cyberpunk_business_id++
+	business.name = mapped_business_name
+	business.direction = mapped_business_direction
+	business.legal = TRUE
+	business.size_class = "mapped"
+	business.registered_to = "city"
+	business.owner_name = "Город"
+	business.account_id = business_account.account_id
+	business.access_id = mapped_manager_access
+	business.terminal = src
+	business.business_area_type = premises.type
+	business.premises_valid = TRUE
+	business.premises_validation = "ok: city premises [premises.name]"
+	SScyberpunk_property.cyberpunk_businesses["[business.id]"] = business
+	business_id = business.id
+	add_cyberpunk_crypto_key(create_cyberpunk_crypto_access_key(mapped_manager_access))
+
+/obj/machinery/computer/business_terminal/mapped/ui_act(action, list/params, datum/tgui/ui, datum/ui_state/state)
+	if(action == "select" || action == "create")
+		return FALSE
+	return ..()
+
+/obj/machinery/computer/business_terminal/mapped/afterlife
+	name = "терминал бара «Посмертие»"
+	mapped_business_name = "Посмертие"
+	mapped_business_direction = "bar"
+
 /obj/machinery/computer/business_terminal/cyberpunk_test
 	var/test_bench_prepared = FALSE
 
